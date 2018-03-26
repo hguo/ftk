@@ -3,6 +3,6 @@
 
 #include <utility>
 
-typedef std::pair<int, int> Interval;
+typedef std::pair<int, int> ftkInterval;
 
 #endif

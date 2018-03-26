@@ -1,21 +1,21 @@
-#ifndef _FEATURE_TRANSITION_MATRIX_H
-#define _FEATURE_TRANSITION_MATRIX_H
+#ifndef _FTK_TRANSITION_MATRIX_H
+#define _FTK_TRANSITION_MATRIX_H
 
 #include <string>
 #include <vector>
 #include <map>
 #include <set>
-#include "common/Interval.h"
-#include "common/FeatureEvents.h"
+#include "ftk/ftkInterval.h"
+#include "ftk/ftkEvents.h"
 
-class FeatureTransitionMatrix {
-  // friend class diy::Serialization<FeatureTransitionMatrix>;
+class ftkTransitionMatrix {
+  // friend class diy::Serialization<ftkTransitionMatrix>;
 public:
-  FeatureTransitionMatrix();
-  FeatureTransitionMatrix(int n0, int n1);
-  FeatureTransitionMatrix(int t0, int t1, int n0, int n1);
-  FeatureTransitionMatrix(Interval, int n0, int n1);
-  ~FeatureTransitionMatrix();
+  ftkTransitionMatrix();
+  ftkTransitionMatrix(int n0, int n1);
+  ftkTransitionMatrix(int t0, int t1, int n0, int n1);
+  ftkTransitionMatrix(Interval, int n0, int n1);
+  ~ftkTransitionMatrix();
 
 public: // IO
   void SetToDummy() {_n0 = _n1 = 0; _match.clear();}
@@ -41,7 +41,7 @@ public: // access
   int n0() const {return _n0;}
   int n1() const {return _n1;}
 
-  Interval GetInterval() const {return _interval;}
+  ftkInterval GetInterval() const {return _interval;}
   void SetInterval(const Interval &i) {_interval = i;}
 
   int colsum(int j) const;
@@ -61,37 +61,7 @@ private:
 
 public:
   // vortex properties
-  std::vector<float> moving_speeds; // length=n0
+  // std::vector<float> moving_speeds; // length=n0
 };
-
-
-///////////
-#if 0
-namespace diy {
-  template <> struct Serialization<FeatureTransitionMatrix> {
-    static void save(diy::BinaryBuffer& bb, const FeatureTransitionMatrix& m) {
-      diy::save(bb, m._interval);
-      diy::save(bb, m._n0);
-      diy::save(bb, m._n1);
-      diy::save(bb, m._match);
-      diy::save(bb, m._lhss);
-      diy::save(bb, m._rhss);
-      diy::save(bb, m._events);
-      diy::save(bb, m.moving_speeds);
-    }
-
-    static void load(diy::BinaryBuffer&bb, FeatureTransitionMatrix& m) {
-      diy::load(bb, m._interval);
-      diy::load(bb, m._n0);
-      diy::load(bb, m._n1);
-      diy::load(bb, m._match);
-      diy::load(bb, m._lhss);
-      diy::load(bb, m._rhss);
-      diy::load(bb, m._events);
-      diy::load(bb, m.moving_speeds);
-    }
-  };
-}
-#endif
 
 #endif

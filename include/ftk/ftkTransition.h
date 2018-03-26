@@ -1,8 +1,8 @@
-#ifndef _FEATURE_TRANSITION_H
-#define _FEATURE_TRANSITION_H
+#ifndef _FTK_TRANSITION_H
+#define _FTK_TRANSITION_H
 
-#include "common/FeatureTransitionMatrix.h"
-#include "common/FeatureSequence.h"
+#include "common/ftkTransitionMatrix.h"
+#include "common/ftkSequence.h"
 #include <utility>
 #include <mutex>
 
@@ -10,12 +10,12 @@
 #include <rocksdb/db.h>
 #endif
 
-class FeatureTransition 
+class ftkTransition 
 {
-  // friend class diy::Serialization<FeatureTransition>;
+  // friend class diy::Serialization<ftkTransition>;
 public:
-  FeatureTransition();
-  ~FeatureTransition();
+  ftkTransition();
+  ~ftkTransition();
   
   // int ts() const {return _ts;}
   // int tl() const {return _tl;}
@@ -27,11 +27,11 @@ public:
   void LoadFromFile(const std::string &dataname, int ts, int tl);
   void SaveToDotFile(const std::string &filename) const;
 
-  FeatureTransitionMatrix& Matrix(Interval intervals);
-  void AddMatrix(const FeatureTransitionMatrix& m);
+  ftkTransitionMatrix& Matrix(Interval intervals);
+  void AddMatrix(const ftkTransitionMatrix& m);
   int Transition(int t, int i, int j) const;
-  // const std::map<int, FeatureTransitionMatrix>& Matrices() const {return _matrices;}
-  std::map<Interval, FeatureTransitionMatrix>& Matrices() {return _matrices;}
+  // const std::map<int, ftkTransitionMatrix>& Matrices() const {return _matrices;}
+  std::map<Interval, ftkTransitionMatrix>& Matrices() {return _matrices;}
 
   void ConstructSequence();
   void PrintSequence() const;
@@ -44,10 +44,10 @@ public:
   int MaxNVorticesPerFrame() const {return _max_nvortices_per_frame;}
   int NVortices(int frame) const;
 
-  const std::vector<struct FeatureSequence> Sequences() const {return _seqs;}
+  const std::vector<struct ftkSequence> Sequences() const {return _seqs;}
   void RandomColorSchemes();
   
-  const std::vector<struct FeatureEvent>& Events() const {return _events;}
+  const std::vector<struct ftkEvent>& Events() const {return _events;}
 
   int TimestepToFrame(int timestep) const {return _frames[timestep];} // confusing.  TODO: change func name
   int Frame(int i) const {return _frames[i];}
@@ -56,51 +56,22 @@ public:
   const std::vector<int>& Frames() const {return _frames;}
 
 private:
-  int NewFeatureSequence(int its);
+  int NewftkSequence(int its);
   std::string NodeToString(int i, int j) const;
 
 private:
   // int _ts, _tl;
   std::vector<int> _frames; // frame IDs
-  std::map<Interval, FeatureTransitionMatrix> _matrices;
-  std::vector<struct FeatureSequence> _seqs;
+  std::map<Interval, ftkTransitionMatrix> _matrices;
+  std::vector<struct ftkSequence> _seqs;
   std::map<std::pair<int, int>, int> _seqmap; // <time, lid>, gid
   std::map<std::pair<int, int>, int> _invseqmap; // <time, gid>, lid
   std::map<int, int> _nvortices_per_frame;
   int _max_nvortices_per_frame;
 
-  std::vector<struct FeatureEvent> _events;
+  std::vector<struct ftkEvent> _events;
 
   std::mutex _mutex;
 };
-
-#if 0
-/////////
-namespace diy {
-  template <> struct Serialization<FeatureTransition> {
-    static void save(diy::BinaryBuffer& bb, const FeatureTransition& m) {
-      diy::save(bb, m._frames);
-      diy::save(bb, m._matrices);
-      diy::save(bb, m._seqs);
-      diy::save(bb, m._seqmap);
-      diy::save(bb, m._invseqmap);
-      diy::save(bb, m._nvortices_per_frame);
-      diy::save(bb, m._max_nvortices_per_frame);
-      diy::save(bb, m._events);
-    }
-
-    static void load(diy::BinaryBuffer&bb, FeatureTransition& m) {
-      diy::load(bb, m._frames);
-      diy::load(bb, m._matrices);
-      diy::load(bb, m._seqs);
-      diy::load(bb, m._seqmap);
-      diy::load(bb, m._invseqmap);
-      diy::load(bb, m._nvortices_per_frame);
-      diy::load(bb, m._max_nvortices_per_frame);
-      diy::load(bb, m._events);
-    }
-  };
-}
-#endif
 
 #endif

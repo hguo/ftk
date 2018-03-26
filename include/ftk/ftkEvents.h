@@ -1,20 +1,20 @@
-#ifndef _FEATURE_EVENTS_H
-#define _FEATURE_EVENTS_H
+#ifndef _FTK_EVENTS_H
+#define _FTK_EVENTS_H
 
 #include <vector>
 #include "common/Interval.h"
 
 enum {
-  FEATURE_EVENT_DUMMY = 0,
-  FEATURE_EVENT_BIRTH = 1,
-  FEATURE_EVENT_DEATH = 2,
-  FEATURE_EVENT_MERGE = 3,
-  FEATURE_EVENT_SPLIT = 4,
-  FEATURE_EVENT_RECOMBINATION = 5, 
-  FEATURE_EVENT_COMPOUND = 6
+  FTK_EVENT_DUMMY = 0,
+  FTK_EVENT_BIRTH = 1,
+  FTK_EVENT_DEATH = 2,
+  FTK_EVENT_MERGE = 3,
+  FTK_EVENT_SPLIT = 4,
+  FTK_EVENT_RECOMBINATION = 5, 
+  FTK_EVENT_COMPOUND = 6
 };
 
-struct FeatureEvent {
+struct ftkEvent {
   int if0, if1;
   int type;
   std::set<int> lhs, rhs; // local ids.
@@ -28,27 +28,5 @@ struct FeatureEvent {
     return strs[e];
   }
 };
-
-#if 0
-namespace diy {
-  template <> struct Serialization<FeatureEvent> {
-    static void save(diy::BinaryBuffer& bb, const FeatureEvent& m) {
-      diy::save(bb, m.if0);
-      diy::save(bb, m.if1);
-      diy::save(bb, m.type);
-      diy::save(bb, m.lhs);
-      diy::save(bb, m.rhs);
-    }
-
-    static void load(diy::BinaryBuffer&bb, FeatureEvent& m) {
-      diy::load(bb, m.if0);
-      diy::load(bb, m.if1);
-      diy::load(bb, m.type);
-      diy::load(bb, m.lhs);
-      diy::load(bb, m.rhs);
-    }
-  };
-}
-#endif
 
 #endif
