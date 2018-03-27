@@ -64,6 +64,7 @@ public:
     // _db->Get(rocksdb::ReadOptions(), key, val);
 #else
     assert(false);
+    return "";
 #endif
   }
 
