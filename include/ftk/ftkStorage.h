@@ -60,7 +60,11 @@ public:
   }
 
   std::string get(const std::string& key) {
+#if FTK_USE_ROCKSDB
     // _db->Get(rocksdb::ReadOptions(), key, val);
+#else
+    assert(false);
+#endif
   }
 
 private:

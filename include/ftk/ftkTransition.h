@@ -1,18 +1,14 @@
 #ifndef _FTK_TRANSITION_H
 #define _FTK_TRANSITION_H
 
-#include "common/ftkTransitionMatrix.h"
-#include "common/ftkSequence.h"
+#include "ftk/ftkTransitionMatrix.h"
+#include "ftk/ftkSequence.h"
+#include "ftk/ftkStorage.h"
 #include <utility>
 #include <mutex>
 
-#if WITH_ROCKSDB
-#include <rocksdb/db.h>
-#endif
-
 class ftkTransition 
 {
-  // friend class diy::Serialization<ftkTransition>;
 public:
   ftkTransition();
   ~ftkTransition();
@@ -20,18 +16,14 @@ public:
   // int ts() const {return _ts;}
   // int tl() const {return _tl;}
 
-#ifdef WITH_ROCKSDB
-  bool LoadFromDB(rocksdb::DB*);
-#endif
-
   void LoadFromFile(const std::string &dataname, int ts, int tl);
   void SaveToDotFile(const std::string &filename) const;
 
-  ftkTransitionMatrix& Matrix(Interval intervals);
+  ftkTransitionMatrix& Matrix(ftkInterval intervals);
   void AddMatrix(const ftkTransitionMatrix& m);
   int Transition(int t, int i, int j) const;
   // const std::map<int, ftkTransitionMatrix>& Matrices() const {return _matrices;}
-  std::map<Interval, ftkTransitionMatrix>& Matrices() {return _matrices;}
+  std::map<ftkInterval, ftkTransitionMatrix>& Matrices() {return _matrices;}
 
   void ConstructSequence();
   void PrintSequence() const;
@@ -62,7 +54,7 @@ private:
 private:
   // int _ts, _tl;
   std::vector<int> _frames; // frame IDs
-  std::map<Interval, ftkTransitionMatrix> _matrices;
+  std::map<ftkInterval, ftkTransitionMatrix> _matrices;
   std::vector<struct ftkSequence> _seqs;
   std::map<std::pair<int, int>, int> _seqmap; // <time, lid>, gid
   std::map<std::pair<int, int>, int> _invseqmap; // <time, gid>, lid

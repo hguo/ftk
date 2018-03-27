@@ -2,7 +2,9 @@
 #define _FTK_EVENTS_H
 
 #include <vector>
-#include "common/Interval.h"
+#include <set>
+#include "ftk/ftkInterval.h"
+#include "ftk/json.hh"
 
 enum {
   FTK_EVENT_DUMMY = 0,
@@ -20,12 +22,32 @@ struct ftkEvent {
   std::set<int> lhs, rhs; // local ids.
   // std::vector<int> lhs_gids, rhs_gids;
 
-  std::map<int, float> dist; // key=timestep, val=dist
-
   static const char* TypeToString(int e) {
     static const char* strs[7] = {
       "dummy", "birth", "death", "merge", "split", "recombination", "compound"};
     return strs[e];
+  }
+
+  std::string toJson() const {
+    nlohmann::json j;
+    
+    j["if0"] = if0; 
+    j["if1"] = if1;
+    j["type"] = type;
+    j["lhs"] = lhs;
+    j["rhs"] = rhs;
+
+    return j.dump();
+  }
+
+  void fromJson(const std::string &str) {
+    auto j = nlohmann::json::parse(str);
+    
+    if0 = j["if0"];
+    if1 = j["if1"];
+    type = j["type"];
+    lhs = j["lhs"].get<std::set<int> >();
+    rhs = j["rhs"].get<std::set<int> >();
   }
 };
 

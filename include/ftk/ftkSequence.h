@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <map>
-#include "common/ftkTransition.h"
+#include "ftk/ftkTransition.h"
 
 struct ftkSequence {
   // int ts, tl; // start and duration
@@ -14,6 +14,28 @@ struct ftkSequence {
 
   // std::vector<int> lhs_gids, rhs_gids;
   // int lhs_event, rhs_event;
+
+  std::string toJson() const {
+    nlohmann::json j;
+    
+    j["its"] = its; 
+    j["itl"] = itl;
+    j["lids"] = lids;
+    j["r"] = r; 
+    j["g"] = g;
+    j["b"] = b;
+
+    return j.dump();
+  }
+
+  void fromJson(const std::string &str) {
+    auto j = nlohmann::json::parse(str);
+    its = j["its"];
+    itl = j["itl"];
+    r = j["r"];
+    g = j["g"];
+    b = j["b"];
+  }
 };
 
 #endif

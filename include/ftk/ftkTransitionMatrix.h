@@ -14,7 +14,7 @@ public:
   ftkTransitionMatrix();
   ftkTransitionMatrix(int n0, int n1);
   ftkTransitionMatrix(int t0, int t1, int n0, int n1);
-  ftkTransitionMatrix(Interval, int n0, int n1);
+  ftkTransitionMatrix(ftkInterval, int n0, int n1);
   ~ftkTransitionMatrix();
 
 public: // IO
@@ -42,7 +42,7 @@ public: // access
   int n1() const {return _n1;}
 
   ftkInterval GetInterval() const {return _interval;}
-  void SetInterval(const Interval &i) {_interval = i;}
+  void SetInterval(const ftkInterval &i) {_interval = i;}
 
   int colsum(int j) const;
   int rowsum(int i) const;
@@ -51,7 +51,7 @@ private:
   // std::string MatrixFileName(const std::string& dataname, int t0, int t1) const;
 
 private:
-  Interval _interval;
+  ftkInterval _interval;
   int _n0, _n1;
   std::vector<int> _match; // match matrix
 
