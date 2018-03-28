@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <map>
-#include "ftk/ftkTransition.h"
+#include "ftk/transition/transition.h"
 
 struct ftkSequence {
   // int ts, tl; // start and duration

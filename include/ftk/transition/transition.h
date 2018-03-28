@@ -1,9 +1,9 @@
 #ifndef _FTK_TRANSITION_H
 #define _FTK_TRANSITION_H
 
-#include "ftk/ftkTransitionMatrix.h"
-#include "ftk/ftkSequence.h"
-#include "ftk/ftkStorage.h"
+#include "ftk/transition/transitionMatrix.h"
+#include "ftk/transition/sequence.h"
+#include "ftk/storage/storage.h"
 #include <utility>
 #include <mutex>
 

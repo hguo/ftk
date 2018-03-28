@@ -5,8 +5,8 @@
 #include <vector>
 #include <map>
 #include <set>
-#include "ftk/ftkInterval.h"
-#include "ftk/ftkEvents.h"
+#include "ftk/transition/interval.h"
+#include "ftk/transition/events.h"
 
 class ftkTransitionMatrix {
   // friend class diy::Serialization<ftkTransitionMatrix>;

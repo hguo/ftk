@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <set>
-#include "ftk/ftkInterval.h"
-#include "ftk/json.hh"
+#include "ftk/transition/interval.h"
+#include "ftk/external/json.hh"
 
 enum {
   FTK_EVENT_DUMMY = 0,

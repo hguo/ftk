@@ -1,6 +1,7 @@
 #ifndef _FTK_ROCKSDB_STORAGE
 #define _FTK_ROCKSDB_STORAGE
 
+#include "ftk/storage/storage.h"
 #include <rocksdb/db.h>
 
 class ftkRocksDBStorage : public ftkStorage {
