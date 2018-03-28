@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <set>
+#include "ftk/base/object.h"
 #include "ftk/transition/interval.h"
 #include "ftk/external/json.hh"
 
@@ -16,7 +17,7 @@ enum {
   FTK_EVENT_COMPOUND = 6
 };
 
-struct ftkEvent {
+struct ftkEvent : public ftkObject {
   int if0, if1;
   int type;
   std::set<int> lhs, rhs; // local ids.
@@ -28,8 +29,11 @@ struct ftkEvent {
     return strs[e];
   }
 
-  std::string toJson() const {
-    nlohmann::json j;
+
+  using json = nlohmann::json;
+
+  json toJson() const {
+    json j;
     
     j["if0"] = if0; 
     j["if1"] = if1;
@@ -37,12 +41,10 @@ struct ftkEvent {
     j["lhs"] = lhs;
     j["rhs"] = rhs;
 
-    return j.dump();
+    return j;
   }
 
-  void fromJson(const std::string &str) {
-    auto j = nlohmann::json::parse(str);
-    
+  void fromJson(json j) {
     if0 = j["if0"];
     if1 = j["if1"];
     type = j["type"];
