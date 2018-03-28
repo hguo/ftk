@@ -17,7 +17,7 @@ public:
   // int tl() const {return _tl;}
 
   void LoadFromFile(const std::string &dataname, int ts, int tl) {} // FIXME
-  void SaveToDotFile(const std::string &filename) const;
+  // void SaveToDotFile(const std::string &filename) const;
 
   ftkTransitionMatrix& Matrix(const ftkInterval &I) {return _matrices[I];}
   inline void AddMatrix(const ftkTransitionMatrix& m);

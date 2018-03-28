@@ -13,13 +13,13 @@ class ftkTransitionMatrix {
 public:
   ftkTransitionMatrix() : _n0(INT_MAX), _n1(INT_MAX) {}
   // ftkTransitionMatrix(int n0, int n1) ;
-  ftkTransitionMatrix(int t0, int t1, int n0, int n1) : _interval(std::make_pair(t0, t1)), _n0(n0), _n1(n1) {}
+  ftkTransitionMatrix(int t0, int t1, int n0, int n1) : _interval(std::make_pair(t0, t1)), _n0(n0), _n1(n1) {_matrix.resize(n0*n1);}
   ftkTransitionMatrix(ftkInterval, int n0, int n1);
   ~ftkTransitionMatrix() {}
 
 public: // IO
-  void SetToDummy() {_n0 = _n1 = 0; _match.clear();}
-  bool Valid() const {return _match.size()>0;}
+  void SetToDummy() {_n0 = _n1 = 0; _matrix.clear();}
+  bool Valid() const {return _matrix.size()>0;}
   inline void Print() const;
   inline void SaveAscii(const std::string& filename) const;
   
@@ -31,10 +31,10 @@ public: // modulars
   inline void Normalize();
  
 public: // access
-  int& operator()(int i, int j) {return _match[i*n1() + j];}
-  int operator()(int i, int j) const {return _match[i*n1() + j];}
-  int& at(int i, int j) {return _match[i*n1() + j];}
-  int at(int i, int j) const {return _match[i*n1() + j];}
+  int& operator()(int i, int j) {return _matrix[i*n1() + j];}
+  int operator()(int i, int j) const {return _matrix[i*n1() + j];}
+  int& at(int i, int j) {return _matrix[i*n1() + j];}
+  int at(int i, int j) const {return _matrix[i*n1() + j];}
 
   int t0() const {return _interval.first;} // timestep
   int t1() const {return _interval.second;}
@@ -53,7 +53,7 @@ private:
 private:
   ftkInterval _interval;
   int _n0, _n1;
-  std::vector<int> _match; // match matrix
+  std::vector<int> _matrix; // match matrix
 
   // modulars
   std::vector<std::set<int> > _lhss, _rhss;
@@ -76,7 +76,7 @@ int ftkTransitionMatrix::colsum(int j) const
 {
   int sum = 0;
   for (int i=0; i<n0(); i++)
-    sum += _match[i*n1() + j];
+    sum += _matrix[i*n1() + j];
   return sum;
 }
 
@@ -84,7 +84,7 @@ int ftkTransitionMatrix::rowsum(int i) const
 {
   int sum = 0;
   for (int j=0; j<n1(); j++) 
-    sum += _match[i*n1() + j];
+    sum += _matrix[i*n1() + j];
   return sum;
 }
 
