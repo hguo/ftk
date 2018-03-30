@@ -4,6 +4,9 @@
 #include <string>
 #include "ftk/external/json.hh"
 
+namespace ftk {
+
+#if 0
 class ftkObject {
 public:
   using json = nlohmann::json;
@@ -20,5 +23,7 @@ public:
     fromJson(j);
   }
 };
+#endif 
+}
 
 #endif

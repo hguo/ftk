@@ -4,7 +4,9 @@
 #include "ftk/storage/storage.h"
 #include <rocksdb/db.h>
 
-class ftkRocksDBStorage : public ftkStorage {
+namespace ftk {
+
+class RocksDBStorage : public ftkStorage {
 public: 
   void open(void *p) {
     _db = static_cast<rocksdb::DB*>(p);
@@ -36,5 +38,7 @@ private:
   rocksdb::DB *_db;
   bool _external_db = false;
 };
+
+}
 
 #endif

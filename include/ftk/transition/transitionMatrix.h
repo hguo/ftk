@@ -8,10 +8,12 @@
 #include "ftk/transition/interval.h"
 #include "ftk/transition/event.h"
 
-class ftkTransitionMatrix {
+namespace ftk {
+
+class TransitionMatrix {
 public:
-  ftkTransitionMatrix() {};
-  ftkTransitionMatrix(int n0, int n1) : _n0(n0), _n1(n1) {}
+  TransitionMatrix() {};
+  TransitionMatrix(int n0, int n1) : _n0(n0), _n1(n1) {}
 
   int n0() const {return _n0;}
   int n1() const {return _n1;}
@@ -22,19 +24,19 @@ public: // sparse matrix access
 
 public: // events
   inline void detectEvents();
-  const std::vector<ftkEvent>& events() const {return _events;}
+  const std::vector<Event>& events() const {return _events;}
 
 private:
   int _n0 = 0, _n1 = 0;
   std::map<int, std::map<int, int> > _matrix; // row, colum, value
 
   // events
-  std::vector<ftkEvent> _events;
+  std::vector<Event> _events;
 };
 
 
 ////// 
-void ftkTransitionMatrix::detectEvents()
+void TransitionMatrix::detectEvents()
 {
   const int n = n0() + n1(); // number of graph nodes
 
@@ -43,7 +45,7 @@ void ftkTransitionMatrix::detectEvents()
     unvisited.insert(i);
 
   while (!unvisited.empty()) {
-    ftkEvent e;
+    Event e;
     std::vector<int> Q;
     Q.push_back(*unvisited.begin());
 
@@ -70,7 +72,7 @@ void ftkTransitionMatrix::detectEvents()
   }
 }
 
-void ftkTransitionMatrix::set(int i, int j, int val)
+void TransitionMatrix::set(int i, int j, int val)
 {
   if (val == 0) {
     if (_matrix.find(i) != _matrix.end()) {
@@ -84,7 +86,7 @@ void ftkTransitionMatrix::set(int i, int j, int val)
     _matrix[i][j] = val;
 }
   
-inline int ftkTransitionMatrix::get(int i, int j) const 
+inline int TransitionMatrix::get(int i, int j) const 
 {
   if (_matrix.find(i) == _matrix.end()) return 0;
   else {
@@ -92,6 +94,8 @@ inline int ftkTransitionMatrix::get(int i, int j) const
     if (vec.find(j) == vec.cend()) return 0;
     else return vec.at(j);
   }
+}
+
 }
 
 #endif

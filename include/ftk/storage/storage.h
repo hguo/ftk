@@ -3,7 +3,9 @@
 
 #include <iostream>
 
-class ftkStorage {
+namespace ftk {
+
+class Storage {
 public: 
   virtual void open(void*) = 0;
   virtual void open(const std::string&) = 0;
@@ -12,5 +14,7 @@ public:
   virtual void put(const std::string& key, const std::string& val) = 0;
   virtual std::string get(const std::string& key) = 0;
 };
+
+}
 
 #endif

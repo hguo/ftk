@@ -7,6 +7,8 @@
 #include "ftk/transition/interval.h"
 #include "ftk/external/json.hh"
 
+namespace ftk {
+
 enum {
   FTK_EVENT_NONE = 0, // no event
   FTK_EVENT_BIRTH = 1,
@@ -17,7 +19,7 @@ enum {
   FTK_EVENT_COMPOUND = 6
 };
 
-struct ftkEvent {
+struct Event {
   std::set<int> lhs, rhs; // local ids on left and right hand sides
 
   int type() const {
@@ -44,5 +46,7 @@ struct ftkEvent {
     return strs[e];
   }
 };
+
+}
 
 #endif

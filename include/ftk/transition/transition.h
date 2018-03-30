@@ -7,11 +7,13 @@
 #include <utility>
 #include <mutex>
 
-class ftkTransition 
+namespace ftk {
+
+class Transition 
 {
 public:
-  ftkTransition() {};
-  ~ftkTransition() {};
+  Transition() {};
+  ~Transition() {};
 
   inline void addInterval(int t0, int n0, int t1, int n1);
   inline void addTransition(int t0, int lid0, int t1, int lid1);
@@ -25,8 +27,8 @@ public:
 
 private:
   std::map<int, int> _intervals; // <time, next time>
-  std::map<int, ftkTransitionMatrix> _matrices; // <time, matrix>
-  std::vector<ftkEvent> _events;
+  std::map<int, TransitionMatrix> _matrices; // <time, matrix>
+  std::vector<Event> _events;
   
   std::map<int, std::map<int, int> > _components; // gid, <t, lid>
   std::map<std::pair<int, int>, int> _labels; // <t, lid>, gid
@@ -36,20 +38,20 @@ private:
 
 
 //// impl
-void ftkTransition::addInterval(int t0, int n0, int t1, int n1)
+void Transition::addInterval(int t0, int n0, int t1, int n1)
 {
   std::unique_lock<std::mutex> lock(_mutex);
   _intervals[t0] = t1;
-  _matrices[t0] = ftkTransitionMatrix(n0, n1);
+  _matrices[t0] = TransitionMatrix(n0, n1);
 }
 
-void ftkTransition::addTransition(int t0, int lid0, int t1, int lid1)
+void Transition::addTransition(int t0, int lid0, int t1, int lid1)
 {
   std::unique_lock<std::mutex> lock(_mutex);
   _matrices[t0].set(lid0, lid1);
 }
   
-int ftkTransition::lid2gid(int t, int lid) const 
+int Transition::lid2gid(int t, int lid) const 
 {
   std::unique_lock<std::mutex> lock(_mutex);
   auto key = std::make_pair(t, lid);
@@ -57,7 +59,7 @@ int ftkTransition::lid2gid(int t, int lid) const
   else return _labels.at(key);
 }
 
-int ftkTransition::gid2lid(int t, int gid) const 
+int Transition::gid2lid(int t, int gid) const 
 {
   std::unique_lock<std::mutex> lock(_mutex);
   if (_components.find(gid) == _components.cend()) return -1;
@@ -68,7 +70,7 @@ int ftkTransition::gid2lid(int t, int gid) const
   }
 }
 
-void ftkTransition::relabel()
+void Transition::relabel()
 {
   std::unique_lock<std::mutex> lock(_mutex);
   
@@ -81,7 +83,7 @@ void ftkTransition::relabel()
   for (auto &kv : _matrices) {
     const int t = kv.first;
     const int t1 = _intervals[t];
-    ftkTransitionMatrix& m = kv.second;
+    TransitionMatrix& m = kv.second;
   
     if (first) {
       first = false;
@@ -112,7 +114,7 @@ void ftkTransition::relabel()
   // printComponents();
 }
 
-void ftkTransition::printComponents() const 
+void Transition::printComponents() const 
 {
   std::unique_lock<std::mutex> lock(_mutex);
   
@@ -122,6 +124,8 @@ void ftkTransition::printComponents() const
       fprintf(stderr, "t=%d, lid=%d\n", kv1.first, kv1.second);
     }
   }
+}
+
 }
 
 #endif
