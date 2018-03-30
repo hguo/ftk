@@ -2,7 +2,7 @@
 #define _FTK_TRANSITION_H
 
 #include "ftk/transition/transitionMatrix.h"
-#include "ftk/transition/sequence.h"
+#include "ftk/transition/event.h"
 #include "ftk/storage/storage.h"
 #include <utility>
 #include <mutex>
@@ -12,70 +12,116 @@ class ftkTransition
 public:
   ftkTransition() {};
   ~ftkTransition() {};
-  
-  // int ts() const {return _ts;}
-  // int tl() const {return _tl;}
 
-  void LoadFromFile(const std::string &dataname, int ts, int tl) {} // FIXME
-  // void SaveToDotFile(const std::string &filename) const;
+  inline void addInterval(int t0, int n0, int t1, int n1);
+  inline void addTransition(int t0, int lid0, int t1, int lid1);
 
-  ftkTransitionMatrix& Matrix(const ftkInterval &I) {return _matrices[I];}
-  inline void AddMatrix(const ftkTransitionMatrix& m);
-  inline int Transition(int t, int i, int j) const;
-  // const std::map<int, ftkTransitionMatrix>& Matrices() const {return _matrices;}
-  std::map<ftkInterval, ftkTransitionMatrix>& Matrices() {return _matrices;}
+  inline void relabel();
 
-  inline void ConstructSequence();
-  inline void PrintSequence() const;
-  // void SequenceGraphColoring();
-  inline void SequenceColor(int gid, unsigned char &r, unsigned char &g, unsigned char &b) const;
+  inline int lid2gid(int t, int lid) const;
+  inline int gid2lid(int t, int gid) const;
 
-  inline int lvid2gvid(int frame, int lvid) const;
-  inline int gvid2lvid(int frame, int gvid) const;
-
-  int MaxNVorticesPerFrame() const {return _max_nvortices_per_frame;}
-  int NVortices(int frame) const;
-
-  const std::vector<struct ftkSequence> Sequences() const {return _seqs;}
-  void RandomColorSchemes();
-  
-  const std::vector<struct ftkEvent>& Events() const {return _events;}
-
-  int TimestepToFrame(int timestep) const {return _frames[timestep];} // confusing.  TODO: change func name
-  int Frame(int i) const {return _frames[i];}
-  int NTimesteps() const {return _frames.size();}
-  void SetFrames(const std::vector<int> frames) {_frames = frames;}
-  const std::vector<int>& Frames() const {return _frames;}
+  inline void printComponents() const;
 
 private:
-  inline int NewSequence(int its);
-  std::string NodeToString(int i, int j) const;
-
-private:
-  // int _ts, _tl;
-  std::vector<int> _frames; // frame IDs
-  std::map<ftkInterval, ftkTransitionMatrix> _matrices;
-  std::vector<struct ftkSequence> _seqs;
-  std::map<std::pair<int, int>, int> _seqmap; // <time, lid>, gid
-  std::map<std::pair<int, int>, int> _invseqmap; // <time, gid>, lid
-  std::map<int, int> _nvortices_per_frame;
-  int _max_nvortices_per_frame;
-
-  std::vector<struct ftkEvent> _events;
+  std::map<int, int> _intervals; // <time, next time>
+  std::map<int, ftkTransitionMatrix> _matrices; // <time, matrix>
+  std::vector<ftkEvent> _events;
+  
+  std::map<int, std::map<int, int> > _components; // gid, <t, lid>
+  std::map<std::pair<int, int>, int> _labels; // <t, lid>, gid
 
   std::mutex _mutex;
 };
 
 
 //// impl
+void ftkTransition::addInterval(int t0, int n0, int t1, int n1)
+{
+  _intervals[t0] = t1;
+  _matrices[t0] = ftkTransitionMatrix(t0, n0, t1, n1);
+}
+
+void ftkTransition::addTransition(int t0, int lid0, int t1, int lid1)
+{
+  _matrices[t0].set(lid0, lid1);
+}
+  
+int ftkTransition::lid2gid(int t, int lid) const 
+{
+  auto key = std::make_pair(t, lid);
+  if (_labels.find(key) == _labels.cend()) return -1; // not found
+  else return _labels.at(key);
+}
+
+int ftkTransition::gid2lid(int t, int gid) const 
+{
+  if (_components.find(gid) == _components.cend()) return -1;
+  else {
+    const auto &component = _components.at(gid);
+    if (component.find(t) == component.cend()) return -1; 
+    else return component.at(t);
+  }
+}
+
+void ftkTransition::relabel()
+{
+  bool first = true;
+  int nComponents = 0;
+
+  _components.clear();
+  _labels.clear();
+
+  for (auto &kv : _matrices) {
+    const int t = kv.first;
+    const int t1 = _intervals[t];
+    ftkTransitionMatrix& m = kv.second;
+  
+    if (first) {
+      first = false;
+      for (int k=0; k<m.n0(); k++) {
+        int gid = nComponents ++; // new component
+        _components[gid][t] = k;
+        _labels[std::make_pair(t, k)] = gid;
+      }
+    }
+
+    if (m.events().size() == 0) m.detectEvents();
+    for (const auto &e : m.events()) {
+      if (e.lhs.size() == 1 && e.rhs.size() == 1) { // no critical event
+        int l = *e.lhs.begin(), r = *e.rhs.begin();
+        int gid = _labels[std::make_pair(t, l)];
+        _components[gid][t1] = r;
+        _labels[std::make_pair(t1, r)] = gid;
+      } else { // event
+        for (const auto &r : e.rhs) {
+          int gid = nComponents ++; // new component
+          _components[gid][t1] = r;
+          _labels[std::make_pair(t1, r)] = gid;
+        }
+      }
+    }
+  }
+
+  // printComponents();
+}
+
+void ftkTransition::printComponents() const 
+{
+  for (const auto &kv : _components) {
+    fprintf(stderr, "componentId=%d\n", kv.first); 
+    for (const auto &kv1 : kv.second) {
+      fprintf(stderr, "t=%d, lid=%d\n", kv1.first, kv1.second);
+    }
+  }
+}
+
+#if 0
 void ftkTransition::ConstructSequence()
 {
   for (int i=0; i<_frames.size()-1; i++) {
     ftkInterval I(_frames[i], _frames[i+1]);
-    // fprintf(stderr, "processing interval {%d, %d}\n", I.first, I.second);
-
     ftkTransitionMatrix &tm = Matrix(I);
-    assert(tm.Valid());
 
     if (i == 0) { // initial
       for (int k=0; k<tm.n0(); k++) {
@@ -194,19 +240,13 @@ void ftkTransition::PrintSequence() const
   }
 }
 
-void ftkTransition::AddMatrix(const ftkTransitionMatrix& m)
-{
-  if (!m.Valid()) return;
-  
-  std::unique_lock<std::mutex> lock(_mutex);
-  _matrices[m.GetInterval()] = m;
-}
-
 void ftkTransition::SequenceColor(int gid, unsigned char &r, unsigned char &g, unsigned char &b) const
 {
   r = _seqs[gid].r;
   g = _seqs[gid].g;
   b = _seqs[gid].b;
 }
+#endif
+
 
 #endif

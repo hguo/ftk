@@ -1,4 +1,4 @@
-# OpenFTK: The Feature Tracking Toolkit
+# OpenFTK: The Feature Tracking Kit
 
 OpenFTK is a library that provides building blocks for feature tracking for scientific visualization.
 
