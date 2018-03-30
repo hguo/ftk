@@ -39,7 +39,7 @@ private:
 void ftkTransition::addInterval(int t0, int n0, int t1, int n1)
 {
   _intervals[t0] = t1;
-  _matrices[t0] = ftkTransitionMatrix(t0, n0, t1, n1);
+  _matrices[t0] = ftkTransitionMatrix(n0, n1);
 }
 
 void ftkTransition::addTransition(int t0, int lid0, int t1, int lid1)

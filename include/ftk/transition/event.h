@@ -18,12 +18,27 @@ enum {
 };
 
 struct ftkEvent {
-  // int if0, if1;
-  int type;
-  std::set<int> lhs, rhs; // local ids.
-  // std::vector<int> lhs_gids, rhs_gids;
+  std::set<int> lhs, rhs; // local ids on left and right hand sides
 
-  static const char* TypeToString(int e) {
+  int type() const {
+    if (lhs.size() == 1 && rhs.size() == 1) { // no event
+      return FTK_EVENT_NONE;
+    } else if (lhs.size() == 0 && rhs.size() == 1) {
+      return FTK_EVENT_BIRTH;
+    } else if (lhs.size() == 1 && rhs.size() == 0) {
+      return FTK_EVENT_DEATH;
+    } else if (lhs.size() == 1 && rhs.size() == 2) {
+      return FTK_EVENT_SPLIT;
+    } else if (lhs.size() == 2 && rhs.size() == 1) { 
+      return FTK_EVENT_MERGE;
+    } else if (lhs.size() == 2 && rhs.size() == 2) { 
+      return FTK_EVENT_RECOMBINATION;
+    } else {
+      return FTK_EVENT_COMPOUND;
+    }
+  }
+
+  static std::string eventTypeToString(int e) {
     static const char* strs[7] = {
       "none", "birth", "death", "merge", "split", "recombination", "compound"};
     return strs[e];
