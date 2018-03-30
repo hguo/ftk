@@ -49,4 +49,20 @@ struct Event {
 
 }
 
+// json
+namespace nlohmann {
+  template <>
+  struct adl_serializer<ftk::Event> {
+    static void to_json(json& j, const ftk::Event &e) {
+      j["type"] = ftk::Event::eventTypeToString(e.type());
+      j["lhs"] = e.lhs;
+      j["rhs"] = e.rhs;
+    }
+
+    static void from_json(const json& j, ftk::Event &e) {
+      // TODO
+    }
+  };
+}
+
 #endif

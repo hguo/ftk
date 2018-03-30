@@ -11,6 +11,8 @@
 namespace ftk {
 
 class TransitionMatrix {
+  friend class nlohmann::adl_serializer<ftk::TransitionMatrix>;
+
 public:
   TransitionMatrix() {};
   TransitionMatrix(int n0, int n1) : _n0(n0), _n1(n1) {}
@@ -68,6 +70,11 @@ void TransitionMatrix::detectEvents()
       }
     }
 
+    // if (e.type() > 0) {
+    //   nlohmann::json j = e;
+    //   fprintf(stderr, "%s\n", j.dump().c_str());
+    // }
+
     _events.push_back(e);
   }
 }
@@ -96,6 +103,23 @@ inline int TransitionMatrix::get(int i, int j) const
   }
 }
 
+}
+
+// json
+namespace nlohmann {
+  template <>
+  struct adl_serializer<ftk::TransitionMatrix> {
+    static void to_json(json& j, const ftk::TransitionMatrix &m) {
+      j["n0"] = m._n0;
+      j["n1"] = m._n1;
+      j["matrix"] = m._matrix;
+      j["events"] = m._events;
+    }
+
+    static void from_json(const json& j, ftk::TransitionMatrix &m) {
+      // TODO
+    }
+  };
 }
 
 #endif
