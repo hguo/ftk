@@ -20,6 +20,7 @@ enum {
 };
 
 struct Event {
+  std::pair<int, int> interval;
   std::set<int> lhs, rhs; // local ids on left and right hand sides
 
   int type() const {
@@ -54,6 +55,7 @@ namespace nlohmann {
   template <>
   struct adl_serializer<ftk::Event> {
     static void to_json(json& j, const ftk::Event &e) {
+      j["interval"] = e.interval;
       j["type"] = ftk::Event::eventTypeToString(e.type());
       j["lhs"] = e.lhs;
       j["rhs"] = e.rhs;

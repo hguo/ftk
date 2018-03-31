@@ -15,8 +15,9 @@ class TransitionMatrix {
 
 public:
   TransitionMatrix() {};
-  TransitionMatrix(int n0, int n1) : _n0(n0), _n1(n1) {}
+  TransitionMatrix(int t0, int n0, int t1, int n1) : _interval(std::make_pair(t0, t1)), _n0(n0), _n1(n1) {}
 
+  std::pair<int, int> interval() const {return _interval;}
   int n0() const {return _n0;}
   int n1() const {return _n1;}
 
@@ -30,6 +31,7 @@ public: // events
 
 private:
   int _n0 = 0, _n1 = 0;
+  std::pair<int, int> _interval;
   std::map<int, std::map<int, int> > _matrix; // row, colum, value
 
   // events
@@ -48,6 +50,7 @@ void TransitionMatrix::detectEvents()
 
   while (!unvisited.empty()) {
     Event e;
+    e.interval = _interval;
     std::vector<int> Q;
     Q.push_back(*unvisited.begin());
 
@@ -69,11 +72,6 @@ void TransitionMatrix::detectEvents()
             Q.push_back(i);
       }
     }
-
-    // if (e.type() > 0) {
-    //   nlohmann::json j = e;
-    //   fprintf(stderr, "%s\n", j.dump().c_str());
-    // }
 
     _events.push_back(e);
   }
@@ -110,14 +108,32 @@ namespace nlohmann {
   template <>
   struct adl_serializer<ftk::TransitionMatrix> {
     static void to_json(json& j, const ftk::TransitionMatrix &m) {
+      j["interval"] = m._interval;
       j["n0"] = m._n0;
       j["n1"] = m._n1;
-      j["matrix"] = m._matrix;
-      j["events"] = m._events;
+
+      std::vector<int> d;
+      for (const auto &kv : m._matrix) {
+        const int i = kv.first;
+        for (const auto &kv1 : kv.second) {
+          const int j = kv1.first;
+          // const int val = kv1.second;
+          d.push_back(i);
+          d.push_back(j);
+          // d.push_back(val);
+        }
+      }
+      j["matrix"] = d;
     }
 
     static void from_json(const json& j, ftk::TransitionMatrix &m) {
-      // TODO
+      m._interval = j["interval"];
+      m._n0 = j["n0"];
+      m._n1 = j["n1"];
+
+      std::vector<int> d = j["matrix"];
+      for (int i=0; i<d.size()/2; i++)
+        m.set(d[i*2], d[i*2+1]);
     }
   };
 }
