@@ -17,22 +17,8 @@ public:
   Transition() {};
   ~Transition() {};
 
-  Transition(const Transition& t) {
-    _matrices = t._matrices;
-    _keyEvents = t._keyEvents;
-    _components = t._components;
-    _labels = t._labels;
-  }
-
-  inline Transition& operator=(const Transition& t) {
-    if (this != &t) {
-      _matrices = t._matrices;
-      _keyEvents = t._keyEvents;
-      _components = t._components;
-      _labels = t._labels;
-    }
-    return *this;
-  }
+  inline Transition(const Transition& t); 
+  inline Transition& operator=(const Transition& t);
 
   inline void addInterval(int t0, int n0, int t1, int n1);
   inline void addTransition(int t0, int lid0, int t1, int lid1);
@@ -56,6 +42,24 @@ private:
 
 
 //// impl
+Transition::Transition(const Transition& t) {
+  _matrices = t._matrices;
+  _keyEvents = t._keyEvents;
+  _components = t._components;
+  _labels = t._labels;
+}
+  
+Transition& Transition::operator=(const Transition& t) 
+{
+  if (this != &t) {
+    _matrices = t._matrices;
+    _keyEvents = t._keyEvents;
+    _components = t._components;
+    _labels = t._labels;
+  }
+  return *this;
+}
+
 void Transition::addInterval(int t0, int n0, int t1, int n1)
 {
   std::unique_lock<std::mutex> lock(_mutex);
@@ -129,7 +133,7 @@ void Transition::relabel()
     }
   }
 
-  printComponents();
+  // printComponents();
 }
 
 #if 0
@@ -153,7 +157,7 @@ void Transition::printComponents() const
   }
 }
 #endif
-
+  
 }
 
 // json
