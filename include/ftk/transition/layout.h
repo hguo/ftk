@@ -2,14 +2,15 @@
 #define _FTK_LAYOUT_H
 
 #include "ftk/transition/transition.h"
+#include <fstream>
 
 namespace ftk {
 
-class TransitionLayout {
-  static generateDotFile(const Transition&, const std::string& filename);
+struct TransitionLayout {
+  static void generateDotFile(const Transition&, const std::string& filename);
 };
 
-void TransitionLayout::saveToDotFile(const Transition& tr, const std::string& filename)
+void TransitionLayout::generateDotFile(const Transition& tr, const std::string& filename)
 {
   using namespace std;
   ofstream ofs(filename.c_str());

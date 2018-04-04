@@ -28,7 +28,7 @@ public:
   inline int lid2gid(int t, int lid) const;
   inline int gid2lid(int t, int gid) const;
 
-  // inline void printComponents() const;
+  inline void printComponents() const;
 
 private:
   std::map<int, TransitionMatrix> _matrices; // <time, matrix>
@@ -136,7 +136,7 @@ void Transition::relabel()
   // printComponents();
 }
 
-#if 0
+#if 1
 void Transition::printComponents() const 
 {
   for (const auto &m : _matrices) {

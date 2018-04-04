@@ -25,6 +25,9 @@ public: // sparse matrix access
   inline void set(int i, int j, int val=1); 
   inline int get(int i, int j) const;
 
+  inline int colsum(int j) const;
+  inline int rowsum(int i) const;
+
 public: // events
   inline void detectEvents();
   const std::vector<Event>& events() const {return _events;}
@@ -40,6 +43,28 @@ private:
 
 
 ////// 
+int TransitionMatrix::rowsum(int i) const
+{
+  if (_matrix.find(i) != _matrix.end()) {
+    const std::map<int, int>& vec = _matrix.at(i);
+    int sum = 0;
+    for (const auto &kv : vec) {
+      sum += kv.second;
+    }
+    return sum;
+  } else return 0;
+}
+
+int TransitionMatrix::colsum(int j) const 
+{
+  int sum = 0;
+  for (const auto &kv : _matrix) {
+    if (kv.second.find(j) != kv.second.end()) 
+      sum += kv.second.at(j);
+  }
+  return sum;
+}
+
 void TransitionMatrix::detectEvents()
 {
   const int n = n0() + n1(); // number of graph nodes
