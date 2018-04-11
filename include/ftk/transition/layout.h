@@ -28,19 +28,19 @@ void TransitionLayout::generateDotFile(const Transition& tr, const std::string& 
   ofs << "ranksep =\"1.0 equally\";" << endl;
   ofs << "node [shape=circle];" << endl;
   // ofs << "node [shape=point];" << endl;
-#if 0 // FIXME TODO
 #if 1
-
-  for (const auto &kv : _matrices) {
+  for (const auto &kv : tr.matrices()) {
     const TransitionMatrix &tm = kv.second;
+    const Interval interval = kv.second.interval();
+
     for (int i=0; i<tm.n0(); i++) {
       for (int j=0; j<tm.n1(); j++) {
         int weight = 1;
         if (tm.rowsum(i) == 1 && tm.colsum(j) == 1) weight = 1000;
 
         if (tm.get(i, j)) {
-          ofs << NodeToString(t, i) << "->" 
-              << NodeToString(t+1, j)
+          ofs << node2str(interval.first, i) << "->" 
+              << node2str(interval.second, j)
               << " [weight = " << weight << "];" << endl;
         }
       }
@@ -48,52 +48,17 @@ void TransitionLayout::generateDotFile(const Transition& tr, const std::string& 
     
     ofs << "{ rank=same; ";
     for (int i=0; i<tm.n0(); i++) {
-      if (i<tm.n0()-1) ofs << NodeToString(t, i) << ", ";
-      else ofs << NodeToString(t, i) << "}" << endl;
+      if (i<tm.n0()-1) ofs << node2str(interval.first, i) << ", ";
+      else ofs << node2str(interval.first, i) << "}" << endl;
     }
 
   }
 
-  for (int t=_ts; t<_ts+_tl-1; t++) {
-    const VortexTransitionMatrix &tm = Matrix(t); 
-  }
-#else
-  // iteration over sequences
-  for (int i=0; i<_seqs.size(); i++) {
-    const VortexSequence &seq = _seqs[i];
-    for (int k=0; k<seq.lids.size(); k++) {
-      const int t = seq.ts + k;
-      const int weight = seq.tl;
-      if (k<seq.lids.size()-1) 
-        ofs << NodeToString(t, seq.lids[k]) << "->";
-      else 
-        ofs << NodeToString(t, seq.lids[k]) 
-            << " [weight = " << weight << "];" << endl;
-    }
-  }
-  // ranks
-  for (int t=_ts; t<_ts+_tl-1; t++) {
-    std::map<int, int>::const_iterator it = _nvortices_per_frame.find(t); 
-    const int n = it->second;
-    ofs << "{ rank=same; ";
-    for (int i=0; i<n; i++) {
-      if (i<n-1) ofs << NodeToString(t, i) << ", ";
-      else ofs << NodeToString(t, i) << " }" << endl;
-    }
-  }
-  // subgraphs
-  for (int i=0; i<_events.size(); i++) {
-    int t = _events[i].t;
-    ofs << "subgraph {";
-    for (std::set<int>::iterator it0 = _events[i].lhs.begin(); it0 != _events[i].lhs.end(); it0 ++) 
-      for (std::set<int>::iterator it1 = _events[i].rhs.begin(); it1 != _events[i].rhs.end(); it1 ++) {
-        ofs << NodeToString(t, *it0) << "->" 
-            << NodeToString(t+1, *it1) << ";" << endl;
-      }
-    ofs << "};" << endl;
-  }
+  // for (int t=_ts; t<_ts+_tl-1; t++) {
+  //   const VortexTransitionMatrix &tm = Matrix(t); 
+  // }
 #endif
-#endif
+
   // node colors
 #if 0 // TODO FIXME
   for (int t=_ts; t<_ts+_tl; t++) {
@@ -121,11 +86,10 @@ void TransitionLayout::generateDotFile(const Transition& tr, const std::string& 
 #endif
     }
   }
+#endif
   ofs << "}" << endl;
   ofs.close();
-#endif
 }
-
 
 }
 

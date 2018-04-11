@@ -28,6 +28,8 @@ public:
   inline int lid2gid(int t, int lid) const;
   inline int gid2lid(int t, int gid) const;
 
+  const std::map<int, TransitionMatrix> &matrices() const {return _matrices;}
+
   inline void printComponents() const;
 
 private:
