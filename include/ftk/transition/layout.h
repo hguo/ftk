@@ -28,7 +28,8 @@ void TransitionLayout::generateDotFile(const Transition& tr, const std::string& 
   ofs << "ranksep =\"1.0 equally\";" << endl;
   ofs << "node [shape=circle];" << endl;
   // ofs << "node [shape=point];" << endl;
-#if 1
+  
+  // nodes and links
   for (const auto &kv : tr.matrices()) {
     const TransitionMatrix &tm = kv.second;
     const Interval interval = kv.second.interval();
@@ -51,42 +52,24 @@ void TransitionLayout::generateDotFile(const Transition& tr, const std::string& 
       if (i<tm.n0()-1) ofs << node2str(interval.first, i) << ", ";
       else ofs << node2str(interval.first, i) << "}" << endl;
     }
-
   }
-
-  // for (int t=_ts; t<_ts+_tl-1; t++) {
-  //   const VortexTransitionMatrix &tm = Matrix(t); 
-  // }
-#endif
 
   // node colors
-#if 0 // TODO FIXME
-  for (int t=_ts; t<_ts+_tl; t++) {
-    std::map<int, int>::const_iterator it = _nvortices_per_frame.find(t); 
-    const int n = it->second;
-    for (int k=0; k<n; k++) {
-      const int nc = 6;
-      int vid = lvid2gvid(t, k);
-      int c = vid % nc;
-      std::string color;
+  for (const auto& kv : tr.labels()) {
+    int c = kv.second % 6;
+    std::string color;
       
-      if (c == 0) color = "blue";
-      else if (c == 1) color = "green";
-      else if (c == 2) color = "cyan";
-      else if (c == 3) color = "red";
-      else if (c == 4) color = "purple";
-      else if (c == 5) color = "yellow";
+    if (c == 0) color = "blue";
+    else if (c == 1) color = "green";
+    else if (c == 2) color = "cyan";
+    else if (c == 3) color = "red";
+    else if (c == 4) color = "purple";
+    else if (c == 5) color = "yellow";
 
-#if HUMAN_READABLE
-      ofs << t << "." << k 
-          << " [style=filled, fillcolor=" << color << "];" << endl;
-#else
-      ofs << t*_max_nvortices_per_frame+k
-          << " [style=filled, fillcolor=" << color << "];" << endl;
-#endif
-    }
+    ofs << node2str(kv.first.first, kv.first.second) 
+        << " [style=filled, fillcolor=" << color << "];" << endl;
   }
-#endif
+  
   ofs << "}" << endl;
   ofs.close();
 }

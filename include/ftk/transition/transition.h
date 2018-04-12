@@ -29,6 +29,7 @@ public:
   inline int gid2lid(int t, int gid) const;
 
   const std::map<int, TransitionMatrix> &matrices() const {return _matrices;}
+  const std::map<std::pair<int, int>, int> &labels() const {return _labels;}
 
   inline void printComponents() const;
 

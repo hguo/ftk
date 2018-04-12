@@ -15,7 +15,7 @@ int main(int argc, char **argv)
   // fprintf(stderr, "%s\n", j.dump().c_str());
 
   ftk::Transition tr = j;
-  // tr.relabel();
+  tr.relabel();
   // tr.printComponents();
 
   ftk::TransitionLayout::generateDotFile(tr, argv[2]);
