@@ -18,7 +18,9 @@ int main(int argc, char **argv)
   tr.relabel();
   // tr.printComponents();
 
-  ftk::TransitionLayout::generateDotFile(tr, argv[2]);
+  ftk::TransitionLayout::generateDotInputFile(tr, "out.dot");
+  system("dot -Tplain out.dot > out.plain");
+  ftk::TransitionLayout::parseDotOutputFile(tr, "out.plain");
 
   return 0;
 }

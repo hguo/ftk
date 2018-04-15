@@ -7,10 +7,11 @@
 namespace ftk {
 
 struct TransitionLayout {
-  static void generateDotFile(const Transition&, const std::string& filename);
+  static void generateDotInputFile(const Transition&, const std::string& filename);
+  static void parseDotOutputFile(const Transition&, const std::string& filename);
 };
 
-void TransitionLayout::generateDotFile(const Transition& tr, const std::string& filename)
+void TransitionLayout::generateDotInputFile(const Transition& tr, const std::string& filename)
 {
   using namespace std;
   ofstream ofs(filename.c_str());
@@ -26,8 +27,8 @@ void TransitionLayout::generateDotFile(const Transition& tr, const std::string& 
   ofs << "ratio = compress;" << endl;
   ofs << "rankdir = LR;" << endl;
   ofs << "ranksep =\"1.0 equally\";" << endl;
-  ofs << "node [shape=circle];" << endl;
-  // ofs << "node [shape=point];" << endl;
+  // ofs << "node [shape=circle];" << endl;
+  ofs << "node [shape=point,width=0,height=0];" << endl;
   
   // nodes and links
   for (const auto &kv : tr.matrices()) {
@@ -72,6 +73,31 @@ void TransitionLayout::generateDotFile(const Transition& tr, const std::string& 
   
   ofs << "}" << endl;
   ofs.close();
+}
+
+void TransitionLayout::parseDotOutputFile(const Transition&, const std::string& filename)
+{
+  using namespace std;
+  ifstream ifs(filename);
+  if (!ifs.is_open()) return;
+
+  float layout_width, layout_height;
+  string str, label, type, shape, color, fillcolor;
+  std::string id;
+  float x, y, w, h;
+
+  ifs >> str >> id /* dummy */ >> layout_width >> layout_height;
+  fprintf(stderr, "layout_width=%f, layout_height=%f\n", layout_width, layout_height);
+  while (1) {
+    ifs >> str;
+    if (str == "node") {
+      ifs >> id >> x >> y >> w >> h >> label >> type >> shape >> color >> fillcolor;
+      fprintf(stderr, "id=%s, x=%f, y=%f, w=%f, h=%f\n", id.c_str(), x, y, w, h);
+    } else 
+      break;
+  }
+
+  ifs.close();
 }
 
 }
