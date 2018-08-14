@@ -7,8 +7,10 @@ namespace ftk {
 
 class Storage {
 public: 
-  virtual void open(void*) = 0;
-  virtual void open(const std::string&) = 0;
+  virtual ~Storage() {}
+
+  virtual bool open(void*) {return false;}
+  virtual bool open(const std::string&) = 0;
   virtual void close() = 0;
 
   virtual void put(const std::string& key, const std::string& val) = 0;

@@ -1,1 +1,21 @@
-add_executable (testftk main.cpp)
+set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+add_executable (test_layout test_layout.cpp)
+
+find_package (RocksDB)
+if (RocksDB_FOUND)
+  include_directories (${RocksDB_INCLUDE_DIR})
+  add_executable (test_rocksdb test_storage.cpp)
+  target_link_libraries (test_rocksdb ${RocksDB_LIBRARY})
+  set_target_properties (test_rocksdb PROPERTIES COMPILE_FLAGS "-DFTK_USE_ROCKSDB")
+endif ()
+
+find_package (LevelDB)
+if (LevelDB_FOUND)
+  include_directories (${LevelDB_INCLUDE_DIR})
+  add_executable (test_leveldb test_storage.cpp)
+  target_link_libraries (test_leveldb ${LevelDB_LIBRARY})
+  set_target_properties (test_leveldb PROPERTIES COMPILE_FLAGS "-DFTK_USE_LEVELDB")
+endif ()
+
+add_executable (test_fs test_storage.cpp)
