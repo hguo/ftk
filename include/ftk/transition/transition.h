@@ -166,7 +166,7 @@ void Transition::printComponents() const
 // json
 namespace nlohmann {
   template <>
-  struct adl_serializer<ftk::Transition> {
+  struct nlohmann::adl_serializer<ftk::Transition> {
     static void to_json(json& j, const ftk::Transition &t) {
       j["matrices"] = t._matrices;
       // j["keyEvents"] = t._keyEvents;

@@ -15,6 +15,7 @@ int main(int argc, char **argv)
 #else
   ftk::Storage *store = new ftk::DirStorage;
 #endif
+
   store->open("/tmp/ftkdb");
   store->put("key", "val");
   delete store;
