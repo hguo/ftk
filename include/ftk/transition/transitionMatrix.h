@@ -20,6 +20,8 @@ public:
   std::pair<int, int> interval() const {return _interval;}
   int n0() const {return _n0;}
   int n1() const {return _n1;}
+  int t0() const {return _interval.first;}
+  int t1() const {return _interval.second;}
 
 public: // sparse matrix access
   inline void set(int i, int j, int val=1); 
@@ -133,7 +135,8 @@ namespace nlohmann {
   template <>
   struct adl_serializer<ftk::TransitionMatrix> {
     static void to_json(json& j, const ftk::TransitionMatrix &m) {
-      j["interval"] = m._interval;
+      j["t0"] = m._interval.first;
+      j["t1"] = m._interval.second;
       j["n0"] = m._n0;
       j["n1"] = m._n1;
 
@@ -148,15 +151,15 @@ namespace nlohmann {
           // d.push_back(val);
         }
       }
-      j["matrix"] = d;
+      j["transition"] = d;
     }
 
     static void from_json(const json& j, ftk::TransitionMatrix &m) {
-      m._interval = j["interval"];
+      m._interval = std::make_pair<int, int>(j["t0"], j["t1"]);
       m._n0 = j["n0"];
       m._n1 = j["n1"];
 
-      std::vector<int> d = j["matrix"];
+      std::vector<int> d = j["transition"];
       for (int i=0; i<d.size()/2; i++)
         m.set(d[i*2], d[i*2+1]);
     }
