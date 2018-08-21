@@ -135,8 +135,10 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::relabel()
   auto components = extractConnectedComponents<Node>(
       [this](Node n) {
         std::set<Node> neighbors;
-        neighbors.insert(leftLinks[n].begin(), leftLinks[n].end());
-        neighbors.insert(rightLinks[n].begin(), rightLinks[n].end());
+        if (leftLinks[n].size() == 1) // nodes need to be simply connected
+          neighbors.insert(leftLinks[n].begin(), leftLinks[n].end());
+        if (rightLinks[n].size() == 1)
+          neighbors.insert(rightLinks[n].begin(), rightLinks[n].end());
         return neighbors;
       }, allNodes);
 
@@ -208,9 +210,9 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generateD
   ofstream ofs(filename.c_str());
   if (!ofs.is_open()) return;
 
-  auto node2str = [](Node n) {
+  auto node2str = [this](Node n) {
     std::stringstream ss; 
-    ss << n.first << "." << n.second;
+    ss << "T" << n.first << "L" << n.second << "G" << getGlobalLabel(n.first, n.second);
     return ss.str();
   };
 
