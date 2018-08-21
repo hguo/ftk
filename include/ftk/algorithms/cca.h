@@ -6,30 +6,30 @@
 
 namespace ftk {
 
-#if 0
 template <class IdType>
-TransitionMatrix associateConnectedComponents(
+std::vector<std::pair<IdType, IdType> > trackConnectedComponents(
     const std::vector<std::set<IdType> > &components0,
     const std::vector<std::set<IdType> > &components1) 
 {
-  auto checkIntersection = [](const std::set<IdType>& s0, const std::set<IdType>& s1) {
-    for (const auto &e0 : s0) {
+  auto overlaps = [](const std::set<IdType>& s0, const std::set<IdType>& s1) {
+    for (const auto &e0 : s0) 
       if (s1.find(e0) != s1.end()) return true;
-    }
     return false;
   };
 
-  TransitionMatrix mat;
+  std::vector<std::pair<IdType, IdType> > mat;
 
   for (size_t i = 0; i < components0.size(); i ++) {
     for (size_t j = 0; j < components1.size(); j ++) {
-      if (checkIntersection(components0[i], components1[j])) {
-        mat.set(i, j);
+      if (overlaps(components0[i], components1[j])) {
+        mat.push_back(std::make_pair(i, j));
       }
     }
   }
+
+  return mat;
 }
-#endif
+
 
 template <class IdType>
 std::vector<std::set<IdType> > extractConnectedComponents(
@@ -93,7 +93,7 @@ std::vector<std::set<IdType> > extractConnectedComponents(
     const std::function<std::set<IdType>(IdType) >& neighbors,
     const std::function<bool(IdType)>& criterion)
 {
-  fprintf(stderr, "finding qualified...\n");
+  // fprintf(stderr, "finding qualified...\n");
   // find qualified
   std::set<IdType> qualified;
   for (IdType i=0; i<nNodes; i++) 

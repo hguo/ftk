@@ -188,7 +188,7 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEve
     auto components = extractConnectedComponents<Node>(intervalNeighbors, intervalNodes);
     // fprintf(stderr, "====%zu\n", components.size());
     for (auto component : components) {
-      if (component.size() > 2) {
+      if (component.size() != 2) {
         Event<TimeIndexType, LabelIdType> e;
         e.interval = std::make_pair(t0, t1);
         for (auto n : component) {
@@ -196,6 +196,7 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEve
           else e.rhs.insert(n.second);
         }
         events[t0].push_back(e);
+        
         // nlohmann::json j = e;
         // fprintf(stderr, "%s\n", j.dump().c_str());
       }
