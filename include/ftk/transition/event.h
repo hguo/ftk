@@ -3,8 +3,6 @@
 
 #include <vector>
 #include <set>
-#include "ftk/base/object.h"
-#include "ftk/transition/interval.h"
 #include "ftk/external/json.hh"
 
 namespace ftk {

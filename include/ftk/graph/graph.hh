@@ -171,6 +171,7 @@ template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class
 void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEvents()
 {
   const auto timesteps = getTimesteps();
+  if (timesteps.size() < 2) return; // no intervals available
 
   // iterator over intervals
   for (size_t i = 0; i < timesteps.size() - 1; i ++) {
@@ -197,7 +198,7 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEve
         }
         events[t0].push_back(e);
         
-        // nlohmann::json j = e;
+        // json j = e;
         // fprintf(stderr, "%s\n", j.dump().c_str());
       }
     }
