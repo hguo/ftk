@@ -33,6 +33,8 @@ public:
   void detectEvents();
   void relabel();
 
+  void generateDotFile(const std::string& filename) const;
+
 private:
   typedef std::pair<TimeIndexType, LabelIdType> Node;
   
@@ -75,7 +77,7 @@ GlobalLabelIdType Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightTyp
 {
   auto it = nodeToGlobalLabelMap.find(std::make_pair(t, l));
   if (it != nodeToGlobalLabelMap.end()) 
-    return *it;
+    return it->second;
   else
     return GlobalLabelIdType(-1); // TODO
 }
@@ -197,6 +199,70 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEve
       }
     }
   }
+}
+
+template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
+void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generateDotFile(const std::string& filename) const 
+{
+  using namespace std;
+  ofstream ofs(filename.c_str());
+  if (!ofs.is_open()) return;
+
+  auto node2str = [](Node n) {
+    std::stringstream ss; 
+    ss << n.first << "." << n.second;
+    return ss.str();
+  };
+
+  ofs << "digraph {" << endl;
+  ofs << "ratio = compress;" << endl;
+  ofs << "rankdir = LR;" << endl;
+  ofs << "ranksep =\"1.0 equally\";" << endl;
+  ofs << "node [shape=circle];" << endl;
+  // ofs << "node [shape=point,width=0,height=0];" << endl;
+ 
+  for (const auto &kv : nodes) {
+    for (const auto &n : kv.second) {
+      auto globalLabel = getGlobalLabel(n.first, n.second);
+      int c = globalLabel % 6;
+      std::string color;
+        
+      if (c == 0) color = "blue";
+      else if (c == 1) color = "green";
+      else if (c == 2) color = "cyan";
+      else if (c == 3) color = "red";
+      else if (c == 4) color = "purple";
+      else if (c == 5) color = "yellow";
+
+      ofs << node2str(n)
+          << " [style=filled, fillcolor=" << color << "];" << endl;
+    }
+
+    ofs << "{rank=same; ";
+    for (auto n : kv.second) {
+      ofs << node2str(n) << ",";
+    }
+    ofs.seekp(-1, std::ios_base::end);
+    ofs << "}" << endl;
+  }
+
+  for (const auto &kv : rightLinks) {
+    const auto lNode = kv.first;
+    // const int weight = kv.second.size() == 1 ? TODO: colsum & rowsum
+    for (const auto &rNode : kv.second) {
+      ofs << node2str(lNode) << "->" 
+          << node2str(rNode) << endl;
+          // << " [weight = " << weight << "];" << endl;
+    }
+  }
+
+#if 0
+  // node colors
+  for (const auto& kv : tr.labels()) {
+  }
+#endif 
+  ofs << "}" << endl;
+  ofs.close();
 }
 
 }
