@@ -32,7 +32,7 @@ public: // sparse matrix access
 
 public: // events
   inline void detectEvents();
-  const std::vector<Event>& events() const {return _events;}
+  const std::vector<Event<int, int> >& events() const {return _events;}
 
 private:
   int _n0 = 0, _n1 = 0;
@@ -40,7 +40,7 @@ private:
   std::map<int, std::map<int, int> > _matrix; // row, colum, value
 
   // events
-  std::vector<Event> _events;
+  std::vector<Event<int, int> > _events;
 };
 
 
@@ -76,7 +76,7 @@ void TransitionMatrix::detectEvents()
     unvisited.insert(i);
 
   while (!unvisited.empty()) {
-    Event e;
+    Event<int, int> e;
     e.interval = _interval;
     std::vector<int> Q;
     Q.push_back(*unvisited.begin());
