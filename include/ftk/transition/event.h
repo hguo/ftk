@@ -19,9 +19,10 @@ enum {
   FTK_EVENT_COMPOUND = 6
 };
 
+template <class IdType, class LabelType>
 struct Event {
-  std::pair<int, int> interval;
-  std::set<int> lhs, rhs; // local ids on left and right hand sides
+  std::pair<IdType, IdType> interval;
+  std::set<LabelType> lhs, rhs; // local ids on left and right hand sides
 
   int type() const {
     if (lhs.size() == 1 && rhs.size() == 1) { // no event
@@ -52,16 +53,16 @@ struct Event {
 
 // json
 namespace nlohmann {
-  template <>
-  struct adl_serializer<ftk::Event> {
-    static void to_json(json& j, const ftk::Event &e) {
+  template <class IdType, class LabelType>
+  struct adl_serializer<ftk::Event<IdType, LabelType> > {
+    static void to_json(json& j, const ftk::Event<IdType, LabelType> &e) {
       j["interval"] = e.interval;
-      j["type"] = ftk::Event::eventTypeToString(e.type());
+      j["type"] = ftk::Event<IdType, LabelType>::eventTypeToString(e.type());
       j["lhs"] = e.lhs;
       j["rhs"] = e.rhs;
     }
 
-    static void from_json(const json& j, ftk::Event &e) {
+    static void from_json(const json& j, ftk::Event<IdType, LabelType> &e) {
       // TODO
     }
   };

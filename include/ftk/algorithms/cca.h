@@ -1,10 +1,12 @@
 #ifndef _CCA_H
 #define _CCA_H
 
-#include "ftk/transition/transitionMatrix.h"
+// #include "ftk/transition/transitionMatrix.h"
+#include "ftk/algorithms/bfs.h"
 
 namespace ftk {
 
+#if 0
 template <class IdType>
 TransitionMatrix associateConnectedComponents(
     const std::vector<std::set<IdType> > &components0,
@@ -27,15 +29,35 @@ TransitionMatrix associateConnectedComponents(
     }
   }
 }
+#endif
 
 template <class IdType>
 std::vector<std::set<IdType> > extractConnectedComponents(
-    const std::function<std::set<IdType>(size_t) >& neighbors,
-    std::set<IdType> qualified)
+    const std::function<std::set<IdType>(IdType) >& neighbors,
+    const std::set<IdType> &qualified_)
 {
+#if 0
   // extract connected components
+  // std::set<IdType> qualified(qualified_);
   std::vector<std::set<IdType> > components;
+  std::set<IdType> visited;
 
+  while (!qualified.empty()) {
+    IdType seed = *qualified.begin();
+    std::set<IdType> component;
+
+    bfs<IdType>(seed, neighbors, 
+        [&component, &visited](IdType i) {component.insert(i); visited.insert(i);}, 
+        [&qualified, &visited](IdType i) {return qualified.find(i) != qualified.end() && visited.find(i) == visited.end();});
+    
+    components.emplace_back(component);
+  }
+
+  return components;
+#endif
+
+  std::set<IdType> qualified(qualified_);
+  std::vector<std::set<IdType> > components;
   std::set<IdType> Q;
 
   while (!qualified.empty()) {
@@ -68,7 +90,7 @@ std::vector<std::set<IdType> > extractConnectedComponents(
 template <class IdType>
 std::vector<std::set<IdType> > extractConnectedComponents(
     IdType nNodes,
-    const std::function<std::set<IdType>(size_t) >& neighbors,
+    const std::function<std::set<IdType>(IdType) >& neighbors,
     const std::function<bool(IdType)>& criterion)
 {
   fprintf(stderr, "finding qualified...\n");
