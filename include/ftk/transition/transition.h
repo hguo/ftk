@@ -35,7 +35,7 @@ public:
 
 private:
   std::map<int, TransitionMatrix> _matrices; // <time, matrix>
-  std::vector<Event> _keyEvents;
+  std::vector<Event<int, int> > _keyEvents;
   
   std::map<int, std::map<int, int> > _components; // gid, <t, lid>
   std::map<std::pair<int, int>, int> _labels; // <t, lid>, gid
