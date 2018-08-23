@@ -1,7 +1,6 @@
 #ifndef _CCA_H
 #define _CCA_H
 
-// #include "ftk/transition/transitionMatrix.h"
 #include "ftk/algorithms/bfs.h"
 
 namespace ftk {
@@ -31,9 +30,9 @@ std::vector<std::pair<IdType, IdType> > trackConnectedComponents(
 }
 
 
-template <class IdType>
+template <class IdType, class ContainerType>
 std::vector<std::set<IdType> > extractConnectedComponents(
-    const std::function<std::set<IdType>(IdType) >& neighbors,
+    const std::function<ContainerType(IdType) >& neighbors,
     const std::set<IdType> &qualified_)
 {
 #if 0
@@ -87,10 +86,10 @@ std::vector<std::set<IdType> > extractConnectedComponents(
   return components;
 }
 
-template <class IdType>
+template <class IdType, class ContainerType>
 std::vector<std::set<IdType> > extractConnectedComponents(
     IdType nNodes,
-    const std::function<std::set<IdType>(IdType) >& neighbors,
+    const std::function<ContainerType(IdType) >& neighbors,
     const std::function<bool(IdType)>& criterion)
 {
   // fprintf(stderr, "finding qualified...\n");

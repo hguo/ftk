@@ -138,7 +138,7 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::relabel()
     allNodes.insert(kv.second.begin(), kv.second.end());
   }
 
-  auto components = extractConnectedComponents<Node>(
+  auto components = extractConnectedComponents<Node, std::set<Node> >(
       [this](Node n) {
         std::set<Node> neighbors;
         if (leftLinks[n].size() == 1) // nodes need to be simply connected
@@ -192,7 +192,7 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEve
       else return leftLinks[n];
     };
 
-    auto components = extractConnectedComponents<Node>(intervalNeighbors, intervalNodes);
+    auto components = extractConnectedComponents<Node, std::set<Node> >(intervalNeighbors, intervalNodes);
     // fprintf(stderr, "====%zu\n", components.size());
     for (auto component : components) {
       if (component.size() != 2) {
