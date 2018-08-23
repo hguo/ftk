@@ -219,9 +219,10 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generateD
   if (!ofs.is_open()) return;
 
   auto node2str = [this](Node n) {
-    std::stringstream ss; 
-    ss << "T" << n.first << "L" << n.second << "G" << getGlobalLabel(n.first, n.second);
-    return ss.str();
+    return "T" + std::to_string(n.first) + "L" + std::to_string(n.second) + "G" + std::to_string(getGlobalLabel(n.first, n.second));
+    // std::stringstream ss; 
+    // ss << "T" << n.first << "L" << n.second << "G" << getGlobalLabel(n.first, n.second);
+    // return ss.str();
   };
 
   ofs << "digraph {" << endl;

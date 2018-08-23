@@ -29,7 +29,6 @@ std::vector<std::pair<IdType, IdType> > trackConnectedComponents(
   return mat;
 }
 
-
 template <class IdType, class ContainerType>
 std::vector<std::set<IdType> > extractConnectedComponents(
     const std::function<ContainerType(IdType) >& neighbors,
@@ -84,6 +83,22 @@ std::vector<std::set<IdType> > extractConnectedComponents(
   }
 
   return components;
+}
+
+
+template <class IdType, class ArrayType, class LabelType>
+void labelConnectedComponents()
+#if 0
+    IdType nNodes,
+    ArrayType labels,
+    const std::function<bool(IdType)>& hasLabel,
+    const std::function<LabelType(IdType)>& getLabel,
+    const std::function<void(IdType, LabelType)& setLabel,
+    const std::function<ContainerType(IdType) >& neighbors,
+    const std::function<bool(IdType)>& criterion)
+#endif // TODO
+{
+
 }
 
 template <class IdType, class ContainerType>
