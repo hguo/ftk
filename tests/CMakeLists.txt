@@ -1,6 +1,6 @@
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_executable (test_layout test_layout.cpp)
+# add_executable (test_layout test_layout.cpp)
 
 find_package (RocksDB)
 if (RocksDB_FOUND)
@@ -19,3 +19,5 @@ if (LevelDB_FOUND)
 endif ()
 
 add_executable (test_fs test_storage.cpp)
+
+add_executable (test_uf ct.cpp)

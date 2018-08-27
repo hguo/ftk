@@ -6,7 +6,7 @@
 namespace ftk {
 
 template <class IdType>
-std::set<size_t> Get4Neighbors2DRegular(IdType w, IdType h, IdType id) {
+std::set<IdType> Get4Neighbors2DRegular(IdType w, IdType h, IdType id) {
   auto nid2nidx = [w](IdType id, IdType &i, IdType &j) {
     j = id / w;
     i = id - j * w;
@@ -29,7 +29,7 @@ std::set<size_t> Get4Neighbors2DRegular(IdType w, IdType h, IdType id) {
 }
 
 template <class IdType>
-std::set<size_t> Get8Neighbors2DRegular(IdType w, IdType h, IdType id) {
+std::set<IdType> Get8Neighbors2DRegular(IdType w, IdType h, IdType id) {
   auto nid2nidx = [w](IdType id, IdType &i, IdType &j) {
     j = id / w;
     i = id - j * w;
@@ -62,7 +62,7 @@ std::set<size_t> Get8Neighbors2DRegular(IdType w, IdType h, IdType id) {
 }
 
 template <class IdType>
-std::set<size_t> Get6Neighbors3DRegular(IdType w, IdType h, IdType d, IdType id) 
+std::set<IdType> Get6Neighbors3DRegular(IdType w, IdType h, IdType d, IdType id) 
 {
   const IdType s = w * h;
 
@@ -97,10 +97,10 @@ std::set<size_t> Get6Neighbors3DRegular(IdType w, IdType h, IdType d, IdType id)
 }
 
 template <class IdType>
-std::set<size_t> Get18Neighbors3DRegular(IdType W, IdType H, IdType D, IdType id);
+std::set<IdType> Get18Neighbors3DRegular(IdType W, IdType H, IdType D, IdType id);
 
 template <class IdType>
-std::set<size_t> Get26Neighbors3DRegular(IdType w, IdType h, IdType d, IdType id)
+std::set<IdType> Get26Neighbors3DRegular(IdType w, IdType h, IdType d, IdType id)
 {
   const IdType s = w * h;
 
