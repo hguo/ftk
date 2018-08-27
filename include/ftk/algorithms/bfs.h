@@ -4,12 +4,14 @@
 #include <queue>
 #include <set>
 
-template <class Node>
+namespace ftk {
+
+template <class Node, class ContainerType>
 void bfs(
     Node seed, 
-    const std::function<std::set<Node>(Node)>& neighbors,
-    const std::function<void(Node)>& operation,
-    const std::function<bool(Node)>& criterion = [](Node){return true;}) 
+    const std::function<ContainerType(Node)> &neighbors,
+    const std::function<void(Node)> &operation,
+    std::function<bool(Node)> criterion = [](Node){return true;}) 
 {
   if (!criterion(seed)) return;
 
@@ -30,6 +32,8 @@ void bfs(
       }
     }
   }
+}
+
 }
 
 #endif

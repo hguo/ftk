@@ -6,7 +6,7 @@
 namespace ftk {
 
 template <class IdType>
-std::vector<std::pair<IdType, IdType> > trackConnectedComponents(
+std::set<std::pair<IdType, IdType> > trackConnectedComponents(
     const std::vector<std::set<IdType> > &components0,
     const std::vector<std::set<IdType> > &components1) 
 {
@@ -16,17 +16,17 @@ std::vector<std::pair<IdType, IdType> > trackConnectedComponents(
     return false;
   };
 
-  std::vector<std::pair<IdType, IdType> > mat;
+  std::set<std::pair<IdType, IdType> > results;
 
   for (size_t i = 0; i < components0.size(); i ++) {
     for (size_t j = 0; j < components1.size(); j ++) {
       if (overlaps(components0[i], components1[j])) {
-        mat.push_back(std::make_pair(i, j));
+        results.insert(std::make_pair(i, j));
       }
     }
   }
 
-  return mat;
+  return results;
 }
 
 template <class IdType, class ContainerType>
@@ -85,22 +85,6 @@ std::vector<std::set<IdType> > extractConnectedComponents(
   return components;
 }
 
-
-template <class IdType, class ArrayType, class LabelType>
-void labelConnectedComponents()
-#if 0
-    IdType nNodes,
-    ArrayType labels,
-    const std::function<bool(IdType)>& hasLabel,
-    const std::function<LabelType(IdType)>& getLabel,
-    const std::function<void(IdType, LabelType)& setLabel,
-    const std::function<ContainerType(IdType) >& neighbors,
-    const std::function<bool(IdType)>& criterion)
-#endif // TODO
-{
-
-}
-
 template <class IdType, class ContainerType>
 std::vector<std::set<IdType> > extractConnectedComponents(
     IdType nNodes,
@@ -115,6 +99,20 @@ std::vector<std::set<IdType> > extractConnectedComponents(
       qualified.insert(i);
   
   fprintf(stderr, "#qualified=%zu\n", qualified.size());
+
+  return extractConnectedComponents(neighbors, qualified);
+}
+
+template <class IdType, class ContainerType>
+std::vector<std::set<IdType> > extractConnectedComponents(
+    const ContainerType& nodes,
+    const std::function<ContainerType(IdType) >& neighbors,
+    const std::function<bool(IdType)>& criterion)
+{
+  std::set<IdType> qualified;
+  for (const auto &n : nodes)
+    if (criterion(n))
+      qualified.insert(n);
 
   return extractConnectedComponents(neighbors, qualified);
 }
