@@ -2,6 +2,7 @@
 #define _FTK_SWEEP_AND_MERGE_H
 
 #include <queue>
+#include "ftk/basic/union_find.h"
 #include "ftk/basic/contour_tree.h"
 
 namespace ftk {
@@ -83,7 +84,7 @@ contour_tree<IdType> build_join_tree(IdType nn,
     const std::vector<IdType> &inverse_order,
     const std::function<std::set<IdType>(IdType)> &neighbors)
 {
-  ftk::quick_union<IdType> uf(nn);
+  quick_union<IdType> uf(nn);
   contour_tree<IdType> jt;
 
   for (int i=nn-1; i>=0; i--) {
@@ -109,7 +110,7 @@ contour_tree<IdType> build_split_tree(IdType nn,
     const std::vector<IdType> &inverse_order,
     const std::function<std::set<IdType>(IdType)> &neighbors)
 {
-  ftk::quick_union<IdType> uf(nn);
+  quick_union<IdType> uf(nn);
   contour_tree<IdType> st;
 
   for (int i=0; i<nn; i++) {

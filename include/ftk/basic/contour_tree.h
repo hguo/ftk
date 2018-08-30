@@ -76,12 +76,22 @@ struct contour_tree {
     else return std::set<IdType>();
   }
 
+  void print() const {
+    fprintf(stdout, "graph {\n");
+    for (const auto &kv : upper_links) {
+      IdType i = kv.first;
+      for (const auto j : kv.second) 
+        fprintf(stdout, "%zu -- %zu\n", i, j);
+    }
+    fprintf(stdout, "}\n");
+  }
+
   template <class ValueType>
   void print_with_values(const std::function<ValueType(IdType)>& value) const {
     for (const auto &kv : upper_links) {
       IdType i = kv.first;
       for (const auto j : kv.second) {
-        fprintf(stderr, "%zu(%f) <--> %zu(%f)\n", 
+        fprintf(stderr, "%zu(%f) -- %zu(%f);\n", 
             i, value(i), j, value(j));
       }
     }
@@ -90,13 +100,12 @@ struct contour_tree {
   void reduce() { // remove all nodes whose up-degree and down-degree are both 1
     std::vector<IdType> to_remove;
     for (auto i : nodes) 
-      if (upper_degree(i) == 1 && lower_degree(i) == 1) 
+      if (upper_degree(i) == 1 && lower_degree(i) == 1) {
         to_remove.push_back(i);
+      }
 
     for (auto i : to_remove) {
-      nodes.erase(i);
-      upper_links.erase(i);
-      lower_links.erase(i);
+      reduce_node(i);
     }
   }
 
