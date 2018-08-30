@@ -87,6 +87,19 @@ struct contour_tree {
     }
   }
 
+  void reduce() { // remove all nodes whose up-degree and down-degree are both 1
+    std::vector<IdType> to_remove;
+    for (auto i : nodes) 
+      if (upper_degree(i) == 1 && lower_degree(i) == 1) 
+        to_remove.push_back(i);
+
+    for (auto i : to_remove) {
+      nodes.erase(i);
+      upper_links.erase(i);
+      lower_links.erase(i);
+    }
+  }
+
 protected:
   std::set<IdType> nodes;
   std::map<IdType, std::set<IdType> > upper_links, lower_links;
