@@ -1,7 +1,6 @@
-#include <ftk/algorithms/uf.h>
 #include <ftk/mesh/mesh.h>
 #include <ftk/mesh/access.h>
-#include <ftk/algorithms/uf.h>
+#include <ftk/basic/union_find.h>
 #include <functional>
 #include <sstream>
 #include <vector>
@@ -166,7 +165,7 @@ void buildTree(int nn,
     const std::function<double(size_t)> &value,
     const std::function<std::set<size_t>(size_t)> &neighbors)
 {
-  ftk::QuickUnion<size_t> uf(nn);
+  ftk::quick_union<size_t> uf(nn);
   Tree<size_t> st, jt, ct;
 
   // split tree

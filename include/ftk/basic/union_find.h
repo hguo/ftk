@@ -10,9 +10,9 @@
 namespace ftk {
 
 template <class IdType=size_t>
-struct QuickUnion
+struct quick_union
 {
-  QuickUnion(IdType size) {
+  quick_union(IdType size) {
     id.resize(size);
     reset();
   }
@@ -45,9 +45,9 @@ protected:
 };
 
 template <class IdType=size_t>
-struct WeightedQuickUnion : public QuickUnion<IdType>
+struct weighted_quick_union : public quick_union<IdType>
 {
-  WeightedQuickUnion(IdType size) : QuickUnion<IdType>(size) {
+  weighted_quick_union(IdType size) : quick_union<IdType>(size) {
     sz.resize(size, 1);
   }
   
@@ -56,10 +56,10 @@ struct WeightedQuickUnion : public QuickUnion<IdType>
     IdType j = root(q);
 
     if (sz[i] < sz[j]) {
-      QuickUnion<IdType>::id[i] = j; 
+      quick_union<IdType>::id[i] = j; 
       sz[j] += sz[i];
     } else {
-      QuickUnion<IdType>::id[j] = i;
+      quick_union<IdType>::id[j] = i;
       sz[i] += sz[j];
     }
   }
