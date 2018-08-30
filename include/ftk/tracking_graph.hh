@@ -14,33 +14,33 @@
 namespace ftk {
 
 template <class TimeIndexType=size_t, class LabelIdType=size_t, class GlobalLabelIdType=size_t, class WeightType=int>
-class Graph {
+class tracking_graph {
 public:
-  Graph(); 
+  tracking_graph(); 
 
-  std::vector<TimeIndexType> getTimesteps() const;
+  std::vector<TimeIndexType> get_timesteps() const;
 
-  bool hasGlobalLabel(TimeIndexType t, LabelIdType l) const;
-  GlobalLabelIdType getGlobalLabel(TimeIndexType t, LabelIdType l) const;
+  bool has_global_label(TimeIndexType t, LabelIdType l) const;
+  GlobalLabelIdType get_global_label(TimeIndexType t, LabelIdType l) const;
 
-  bool hasNode(TimeIndexType t, LabelIdType l) const;
-  bool hasEdge(TimeIndexType t0, LabelIdType l0, TimeIndexType t1, LabelIdType l1) const;
+  bool has_node(TimeIndexType t, LabelIdType l) const;
+  bool has_edge(TimeIndexType t0, LabelIdType l0, TimeIndexType t1, LabelIdType l1) const;
   
-  void addNode(TimeIndexType t, LabelIdType l);
-  void addEdge(TimeIndexType t0, LabelIdType l0, TimeIndexType t1, LabelIdType l1);
+  void add_node(TimeIndexType t, LabelIdType l);
+  void add_edge(TimeIndexType t0, LabelIdType l0, TimeIndexType t1, LabelIdType l1);
 
-  const std::map<TimeIndexType, std::vector<Event<TimeIndexType, LabelIdType> > > &getEvents() const {return events;}
+  const std::map<TimeIndexType, std::vector<Event<TimeIndexType, LabelIdType> > > &get_events() const {return events;}
 
-  void detectEvents();
+  void detect_events();
   void relabel();
 
-  void generateDotFile(const std::string& filename) const;
+  void generate_dot_file(const std::string& filename) const;
 
 private:
   typedef std::pair<TimeIndexType, LabelIdType> Node;
   
   std::map<TimeIndexType, std::set<Node> > nodes;
-  std::map<Node, std::set<Node> > leftLinks, rightLinks;
+  std::map<Node, std::set<Node> > left_links, right_links;
 
   std::map<Node, GlobalLabelIdType> nodeToGlobalLabelMap;
   std::map<GlobalLabelIdType, std::set<Node> > globalLabelToNodeMap;
@@ -67,19 +67,19 @@ private:
 ////////////////////////////////////////////
   
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::Graph() : 
-  resetGlobalLabelCallback(std::bind(&Graph::defaultResetGlobalLabels, this)),
-  newGlobalLabelCallback(std::bind(&Graph::defaultNewGlobalLabel, this))
+tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::tracking_graph() : 
+  resetGlobalLabelCallback(std::bind(&tracking_graph::defaultResetGlobalLabels, this)),
+  newGlobalLabelCallback(std::bind(&tracking_graph::defaultNewGlobalLabel, this))
 {}
 
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-bool Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::hasGlobalLabel(TimeIndexType t, LabelIdType l) const 
+bool tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::has_global_label(TimeIndexType t, LabelIdType l) const 
 {
   return nodeToGlobalLabelMap.find(std::make_pair(t, l)) != nodeToGlobalLabelMap.end();
 }
 
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-GlobalLabelIdType Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::getGlobalLabel(TimeIndexType t, LabelIdType l) const 
+GlobalLabelIdType tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::get_global_label(TimeIndexType t, LabelIdType l) const 
 {
   auto it = nodeToGlobalLabelMap.find(std::make_pair(t, l));
   if (it != nodeToGlobalLabelMap.end()) 
@@ -89,19 +89,19 @@ GlobalLabelIdType Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightTyp
 }
 
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-bool Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::hasNode(TimeIndexType t, LabelIdType l) const 
+bool tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::has_node(TimeIndexType t, LabelIdType l) const 
 {
   std::unique_lock<std::mutex> lock(mutex);
   return nodes.find(std::make_pair(t, l)) != nodes.end();
 }
   
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-bool Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::hasEdge(TimeIndexType t0, LabelIdType l0, TimeIndexType t1, LabelIdType l1) const 
+bool tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::has_edge(TimeIndexType t0, LabelIdType l0, TimeIndexType t1, LabelIdType l1) const 
 {
   std::unique_lock<std::mutex> lock(mutex);
   
-  auto it = rightLinks.find(std::make_pair(t0, l0)); 
-  if (it == rightLinks.end()) 
+  auto it = right_links.find(std::make_pair(t0, l0)); 
+  if (it == right_links.end()) 
     return false;
   else if (it->find(std::make_pair(t1, l1)) == it->end())
     return false;
@@ -109,14 +109,14 @@ bool Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::hasEdge(T
 }
   
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::addNode(TimeIndexType t, LabelIdType l) 
+void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::add_node(TimeIndexType t, LabelIdType l) 
 {
   std::unique_lock<std::mutex> lock(mutex);
   nodes[t].insert(std::make_pair(t, l));
 }
   
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::addEdge(TimeIndexType t0, LabelIdType l0, TimeIndexType t1, LabelIdType l1) 
+void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::add_edge(TimeIndexType t0, LabelIdType l0, TimeIndexType t1, LabelIdType l1) 
 {
   std::unique_lock<std::mutex> lock(mutex);
 
@@ -126,12 +126,12 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::addEdge(T
   nodes[t0].insert(n0);
   nodes[t1].insert(n1); 
 
-  leftLinks[n1].insert(n0);
-  rightLinks[n0].insert(n1);
+  left_links[n1].insert(n0);
+  right_links[n0].insert(n1);
 }
   
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::relabel()
+void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::relabel()
 {
   std::set<Node> allNodes;
   for (const auto &kv : nodes) {
@@ -141,10 +141,10 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::relabel()
   auto components = extractConnectedComponents<Node, std::set<Node> >(
       [this](Node n) {
         std::set<Node> neighbors;
-        if (leftLinks[n].size() == 1) // nodes need to be simply connected
-          neighbors.insert(leftLinks[n].begin(), leftLinks[n].end());
-        if (rightLinks[n].size() == 1)
-          neighbors.insert(rightLinks[n].begin(), rightLinks[n].end());
+        if (left_links[n].size() == 1) // nodes need to be simply connected
+          neighbors.insert(left_links[n].begin(), left_links[n].end());
+        if (right_links[n].size() == 1)
+          neighbors.insert(right_links[n].begin(), right_links[n].end());
         return neighbors;
       }, allNodes);
 
@@ -164,7 +164,7 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::relabel()
 }
 
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-std::vector<TimeIndexType> Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::getTimesteps() const
+std::vector<TimeIndexType> tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::get_timesteps() const
 {
   std::vector<TimeIndexType> timesteps;
   for (auto kv : nodes)
@@ -174,9 +174,9 @@ std::vector<TimeIndexType> Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, 
 }
 
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEvents()
+void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detect_events()
 {
-  const auto timesteps = getTimesteps();
+  const auto timesteps = get_timesteps();
   if (timesteps.size() < 2) return; // no intervals available
 
   // iterator over intervals
@@ -188,8 +188,8 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEve
     for (auto n : nodes[t1]) intervalNodes.insert(n);
 
     auto intervalNeighbors = [this, t0](Node n) {
-      if (n.first == t0) return rightLinks[n];
-      else return leftLinks[n];
+      if (n.first == t0) return right_links[n];
+      else return left_links[n];
     };
 
     auto components = extractConnectedComponents<Node, std::set<Node> >(intervalNeighbors, intervalNodes);
@@ -212,16 +212,16 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detectEve
 }
 
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generateDotFile(const std::string& filename) const 
+void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generate_dot_file(const std::string& filename) const 
 {
   using namespace std;
   ofstream ofs(filename.c_str());
   if (!ofs.is_open()) return;
 
   auto node2str = [this](Node n) {
-    return "T" + std::to_string(n.first) + "L" + std::to_string(n.second) + "G" + std::to_string(getGlobalLabel(n.first, n.second));
+    return "T" + std::to_string(n.first) + "L" + std::to_string(n.second) + "G" + std::to_string(get_global_label(n.first, n.second));
     // std::stringstream ss; 
-    // ss << "T" << n.first << "L" << n.second << "G" << getGlobalLabel(n.first, n.second);
+    // ss << "T" << n.first << "L" << n.second << "G" << get_global_label(n.first, n.second);
     // return ss.str();
   };
 
@@ -234,7 +234,7 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generateD
  
   for (const auto &kv : nodes) {
     for (const auto &n : kv.second) {
-      auto globalLabel = getGlobalLabel(n.first, n.second);
+      auto globalLabel = get_global_label(n.first, n.second);
       int c = globalLabel % 6;
       std::string color;
         
@@ -257,7 +257,7 @@ void Graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generateD
     ofs << "}" << endl;
   }
 
-  for (const auto &kv : rightLinks) {
+  for (const auto &kv : right_links) {
     const auto lNode = kv.first;
     // const int weight = kv.second.size() == 1 ? TODO: colsum & rowsum
     for (const auto &rNode : kv.second) {

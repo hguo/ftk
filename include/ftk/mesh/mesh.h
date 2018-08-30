@@ -29,6 +29,36 @@ std::set<IdType> Get4Neighbors2DRegular(IdType w, IdType h, IdType id) {
 }
 
 template <class IdType>
+std::set<IdType> Get6Neighbors2DRegular(IdType w, IdType h, IdType id) {
+  auto nid2nidx = [w](IdType id, IdType &i, IdType &j) {
+    j = id / w;
+    i = id - j * w;
+  };
+
+  auto nidx2nid = [w](IdType i, IdType j) {
+    return i + w * j;
+  };
+
+  IdType i, j;
+  nid2nidx(id, i, j);
+  
+  IdType i0 = (i > 0)   ? (i - 1) : 0, 
+         i1 = (i < w-1) ? (i + 1) : w - 1, 
+         j0 = (j > 0)   ? (j - 1) : 0,
+         j1 = (j < h-1) ? (j + 1) : h - 1;
+
+  std::set<IdType> nb;
+  nb.insert(nidx2nid(i0, j ));
+  nb.insert(nidx2nid(i0, j1));
+  nb.insert(nidx2nid(i , j1));
+  nb.insert(nidx2nid(i , j0));
+  nb.insert(nidx2nid(i1, j ));
+  nb.insert(nidx2nid(i1, j0));
+
+  return nb;
+}
+
+template <class IdType>
 std::set<IdType> Get8Neighbors2DRegular(IdType w, IdType h, IdType id) {
   auto nid2nidx = [w](IdType id, IdType &i, IdType &j) {
     j = id / w;

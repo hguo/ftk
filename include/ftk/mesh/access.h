@@ -1,5 +1,5 @@
-#ifndef _LERP_H
-#define _LERP_H
+#ifndef _ACCESS_H
+#define _ACCESS_H
 
 namespace ftk {
 

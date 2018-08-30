@@ -14,7 +14,11 @@ struct QuickUnion
 {
   QuickUnion(IdType size) {
     id.resize(size);
-    for (IdType i=0; i<size; i++)
+    reset();
+  }
+
+  void reset() {
+    for (IdType i=0; i<id.size(); i++)
       id[i] = i;
   }
   
