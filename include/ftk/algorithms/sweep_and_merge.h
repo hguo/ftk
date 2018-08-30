@@ -6,6 +6,38 @@
 
 namespace ftk {
 
+template <class IdType, class ValueType>
+contour_tree<IdType> build_contour_tree(IdType nn,
+    const std::vector<ValueType> &vector,
+    const std::function<std::set<IdType>(IdType)> &neighbors);
+
+template <class IdType, class ValueType>
+contour_tree<IdType> build_contour_tree(IdType nn,
+    const std::function<ValueType(IdType)> &value,
+    const std::function<std::set<IdType>(IdType)> &neighbors);
+
+// internal functions
+template <class IdType>
+contour_tree<IdType> merge_join_and_split_trees(IdType nn, contour_tree<IdType>& jt, contour_tree<IdType>& st);
+
+template <class IdType>
+contour_tree<IdType> build_join_tree(IdType nn, 
+    const std::vector<IdType> &order,
+    const std::vector<IdType> &inverse_order,
+    const std::function<std::set<IdType>(IdType)> &neighbors);
+
+template <class IdType>
+contour_tree<IdType> build_split_tree(IdType nn, 
+    const std::vector<IdType> &order,
+    const std::vector<IdType> &inverse_order,
+    const std::function<std::set<IdType>(IdType)> &neighbors);
+}
+
+
+////////////////////////////
+// implementations
+namespace ftk {
+
 template <class IdType>
 contour_tree<IdType> merge_join_and_split_trees(IdType nn, contour_tree<IdType>& jt, contour_tree<IdType>& st)
 {
