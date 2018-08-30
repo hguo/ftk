@@ -20,4 +20,4 @@ endif ()
 
 add_executable (test_storage_fs test_storage.cpp)
 
-add_executable (test_union_find test_union_find.cpp)
+add_executable (test_sweep_and_merge test_sweep_and_merge.cpp)
