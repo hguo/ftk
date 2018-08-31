@@ -1,4 +1,4 @@
-#include <ftk/mesh/mesh.h>
+#include <ftk/mesh/regular_mesh_2d.h>
 #include <ftk/mesh/access.h>
 #include <ftk/basic/union_find.h>
 #include <ftk/basic/contour_tree.h>
@@ -22,7 +22,8 @@ int main(int argc, char **argv)
 #endif
 
   auto ct = ftk::build_contour_tree<size_t, double>(W*H, values, 
-      std::bind(ftk::Get6Neighbors2DRegular<size_t>, W, H, std::placeholders::_1));
+      // std::bind(ftk::Get6Neighbors2DRegular<size_t>, W, H, std::placeholders::_1));
+      std::bind(&ftk::regular_mesh_2d<size_t>::get8neighbors, W, H, std::placeholders::_1));
 
   // ct.print_with_values<double>( [&values](size_t i) {return values[i];} );
   ct.reduce();
