@@ -1,13 +1,13 @@
 #ifndef _FTK_DIR_STORAGE
 #define _FTK_DIR_STORAGE
 
-#include "ftk/storage/storage.h"
+#include "ftk/storage/base.h"
 #include <sys/stat.h>
 #include <errno.h>
 
 namespace ftk {
 
-class DirStorage : public Storage {
+class storage_native: public storage {
 public: 
   bool open(const std::string& dbname) {
     return false;

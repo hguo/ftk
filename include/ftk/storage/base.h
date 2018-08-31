@@ -6,9 +6,9 @@
 
 namespace ftk {
 
-class Storage {
+class storage {
 public: 
-  virtual ~Storage() {}
+  virtual ~storage() {}
 
   virtual bool open(void*) {return false;}
   virtual bool open(const std::string&) = 0;

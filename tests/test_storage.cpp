@@ -1,24 +1,23 @@
 #if FTK_USE_LEVELDB
-#include "ftk/storage/leveldbStorage.h"
+#include "ftk/storage/leveldb.h"
 #elif FTK_USE_ROCKSDB
-#include "ftk/storage/rocksdbStorage.h"
+#include "ftk/storage/rocksdb.h"
 #else
-#include "ftk/storage/dirStorage.h"
+#include "ftk/storage/native.h"
 #endif
 
 int main(int argc, char **argv) 
 {
 #if FTK_USE_LEVELDB
-  ftk::Storage *store = new ftk::LevelDBStorage;
+  std::shared_ptr<ftk::storage> s(new ftk::storage_leveldb);
 #elif FTK_USE_ROCKSDB
-  ftk::Storage *store = new ftk::RocksDBStorage;
+  std::shared_ptr<ftk::storage> s(new ftk::storage_rocksdb);
 #else
-  ftk::Storage *store = new ftk::DirStorage;
+  std::shared_ptr<ftk::storage> s(new ftk::storage_native);
 #endif
 
-  store->open("/tmp/ftkdb");
-  store->put("key", "val");
-  delete store;
+  s->open("/tmp/ftkdb");
+  s->put("key", "val");
 
   return 0;
 }

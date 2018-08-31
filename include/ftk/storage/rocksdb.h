@@ -1,25 +1,25 @@
-#ifndef _FTK_LEVELDB_STORAGE
-#define _FTK_LEVELDB_STORAGE
+#ifndef _FTK_ROCKSDB_STORAGE
+#define _FTK_ROCKSDB_STORAGE
 
-#include "ftk/storage/storage.h"
-#include <leveldb/db.h>
+#include "ftk/storage/base.h"
+#include <rocksdb/db.h>
 
 namespace ftk {
 
-class LevelDBStorage : public Storage {
+class storage_rocksdb : public storage {
 public: 
   bool open(void *p) {
-    _db = static_cast<leveldb::DB*>(p);
+    _db = static_cast<rocksdb::DB*>(p);
     _external_db = true;
     return true;
   }
 
   bool open(const std::string& dbname) {
-    leveldb::Options options;
+    rocksdb::Options options;
     options.create_if_missing = true;
-    leveldb::Status status = leveldb::DB::Open(options, dbname.c_str(), &_db);
-    return status.ok();
+    rocksdb::Status status = rocksdb::DB::Open(options, dbname.c_str(), &_db);
     // assert(status.ok());
+    return status.ok();
   }
 
   void close() {
@@ -28,17 +28,17 @@ public:
   }
 
   void put(const std::string& key, const std::string& val) {
-    _db->Put(leveldb::WriteOptions(), key, val);
+    _db->Put(rocksdb::WriteOptions(), key, val);
   }
 
   std::string get(const std::string& key) {
     std::string val;
-    _db->Get(leveldb::ReadOptions(), key, &val);
+    _db->Get(rocksdb::ReadOptions(), key, &val);
     return val;
   }
 
 private:
-  leveldb::DB *_db;
+  rocksdb::DB *_db;
   bool _external_db = false;
 };
 
