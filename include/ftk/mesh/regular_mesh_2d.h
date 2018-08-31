@@ -16,6 +16,17 @@ struct regular_mesh_2d {
     return i + w * j;
   };
 
+
+  template <class ValueType>
+  ValueType& at(ValueType *p, IdType w, IdType h, IdType i, IdType j) {
+    return p[nidx2nid(w, h, i, j)];
+  }
+  
+  template <class ValueType>
+  const ValueType& at(const ValueType *p, IdType w, IdType h, IdType i, IdType j) {
+    return p[nidx2nid(w, h, i, j)];
+  }
+
   static std::set<IdType> get4neighbors(IdType w, IdType h, IdType id) {
     IdType i, j;
     nid2nidx(w, h, id, i, j);

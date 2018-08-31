@@ -1,5 +1,4 @@
 #include <ftk/mesh/regular_mesh_2d.h>
-#include <ftk/mesh/access.h>
 #include <ftk/basic/union_find.h>
 #include <ftk/basic/contour_tree.h>
 #include <ftk/algorithms/sweep_and_merge.h>
