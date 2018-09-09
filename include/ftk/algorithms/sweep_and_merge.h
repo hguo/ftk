@@ -87,18 +87,23 @@ contour_tree<IdType> build_join_tree(IdType nn,
   quick_union<IdType> uf(nn);
   contour_tree<IdType> jt;
 
-  for (int i=nn-1; i>=0; i--) {
+  for (IdType i=nn-1; i<nn; i--) {
     jt.add_node(order[i]);
+    bool is_minima = true;
     for (auto j : neighbors(order[i])) {
       j = inverse_order[j];
+      // fprintf(stderr, "i=%zu(%zu), j=%zu(%zu)\n", order[i], i, order[j], j);
       if (j > i) {
         IdType ri = uf.root(i), rj = uf.root(j);
         if (ri != rj) {
           jt.add_arc(order[ri], order[rj]);
           uf.unite(rj, ri);
-        }
-      }
+        } 
+      } else
+        is_minima = false;
     }
+    if (is_minima)
+      fprintf(stderr, "minima: %zu\n", order[i]);
   }
 
   return jt;
@@ -113,8 +118,9 @@ contour_tree<IdType> build_split_tree(IdType nn,
   quick_union<IdType> uf(nn);
   contour_tree<IdType> st;
 
-  for (int i=0; i<nn; i++) {
+  for (IdType i=0; i<nn; i++) {
     st.add_node(order[i]);
+    bool is_maxima = true;
     for (auto j : neighbors(order[i])) {
       j = inverse_order[j];
       if (j < i) {
@@ -123,8 +129,11 @@ contour_tree<IdType> build_split_tree(IdType nn,
           st.add_arc(order[rj], order[ri]);
           uf.unite(rj, ri);
         }
-      }
+      } else 
+        is_maxima = false;
     }
+    if (is_maxima) 
+      fprintf(stderr, "maxima: %zu\n", order[i]);
   }
 
   return st;

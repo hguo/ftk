@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 
   auto ct = ftk::build_contour_tree<size_t, double>(W*H, values, 
       // std::bind(ftk::Get6Neighbors2DRegular<size_t>, W, H, std::placeholders::_1));
-      std::bind(&ftk::regular_mesh_2d<size_t>::get8neighbors, W, H, std::placeholders::_1));
+      std::bind(&ftk::regular_mesh_2d<size_t>::get6neighbors, W, H, std::placeholders::_1));
 
   // ct.print_with_values<double>( [&values](size_t i) {return values[i];} );
   ct.reduce();

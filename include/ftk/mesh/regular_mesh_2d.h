@@ -16,7 +16,6 @@ struct regular_mesh_2d {
     return i + w * j;
   };
 
-
   template <class ValueType>
   ValueType& at(ValueType *p, IdType w, IdType h, IdType i, IdType j) {
     return p[nidx2nid(w, h, i, j)];
@@ -56,6 +55,8 @@ struct regular_mesh_2d {
     nb.insert(nidx2nid(w, h, i , j0));
     nb.insert(nidx2nid(w, h, i1, j ));
     nb.insert(nidx2nid(w, h, i1, j0));
+    
+    nb.erase(nidx2nid(w, h, i, j ));
 
     return nb;
   }
@@ -79,6 +80,8 @@ struct regular_mesh_2d {
     nb.insert(nidx2nid(w, h, i0, j1));
     nb.insert(nidx2nid(w, h, i,  j1));
     nb.insert(nidx2nid(w, h, i1, j1));
+    
+    nb.erase(nidx2nid(w, h, i, j ));
 
     return nb;
   }
