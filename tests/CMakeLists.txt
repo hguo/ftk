@@ -18,6 +18,12 @@ if (LevelDB_FOUND)
   set_target_properties (test_storage_leveldb PROPERTIES COMPILE_FLAGS "-DFTK_USE_LEVELDB")
 endif ()
 
+find_package (NetCDF)
+if (NETCDF_FOUND)
+  include_directories (${NETCDF_INCLUDES})
+  add_executable (test_parallel_vector ${NETCDF_LIBRARIES})
+endif ()
+
 add_executable (test_storage_fs test_storage.cpp)
 
 add_executable (test_sweep_and_merge test_sweep_and_merge.cpp)

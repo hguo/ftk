@@ -1,6 +1,6 @@
-#include <ftk/mesh/regular_mesh_2d.h>
 #include <ftk/basic/union_find.h>
 #include <ftk/basic/contour_tree.h>
+#include <ftk/mesh_graph/regular_2d.h>
 #include <ftk/algorithms/sweep_and_merge.h>
 
 int main(int argc, char **argv)
