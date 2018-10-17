@@ -27,5 +27,6 @@ endif ()
 
 add_executable (test_storage_fs test_storage.cpp)
 add_executable (test_sweep_and_merge test_sweep_and_merge.cpp)
+add_executable (test_invmat2x2 test_invmat2x2.cpp)
 add_executable (test_invmat3x3 test_invmat3x3.cpp)
 add_executable (test_invmat4x4 test_invmat4x4.cpp)

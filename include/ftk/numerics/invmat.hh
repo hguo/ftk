@@ -4,6 +4,22 @@
 namespace ftk {
 
 template <class ValueType>
+inline ValueType invmat2x2(const ValueType m[9], ValueType inv[9]) // returns the determinant
+{
+  inv[0] = m[3];
+  inv[1] = -m[1];
+  inv[2] = -m[2];
+  inv[3] = m[0];
+
+  ValueType det = m[0]*m[3] - m[1]*m[2];
+  ValueType invdet = ValueType(1) / det;
+  for (int i = 0; i < 4; i++)
+    inv[i] = inv[i] * invdet;
+
+  return det;
+}
+
+template <class ValueType>
 inline ValueType invmat3x3(const ValueType m[9], ValueType inv[9]) // returns the determinant
 {
   inv[0] =   m[4]*m[8] - m[5]*m[7];
