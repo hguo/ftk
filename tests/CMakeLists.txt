@@ -20,11 +20,11 @@ endif ()
 
 find_package (NetCDF)
 if (NETCDF_FOUND)
-  include_directories (${NETCDF_INCLUDES})
+  include_directories (${NETCDF_INCLUDE_DIR})
   add_executable (test_parallel_vector test_parallel_vector) 
-  target_link_libraries (test_parallel_vector ${NETCDF_LIBRARIES})
+  target_link_libraries (test_parallel_vector ${NETCDF_LIBRARY})
 endif ()
 
 add_executable (test_storage_fs test_storage.cpp)
-
 add_executable (test_sweep_and_merge test_sweep_and_merge.cpp)
+add_executable (test_invmat test_invmat.cpp)
