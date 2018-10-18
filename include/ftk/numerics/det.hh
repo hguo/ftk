@@ -1,6 +1,8 @@
 #ifndef _FTK_INVMAT_H
 #define _FTK_INVMAT_H
 
+#include <iostream>
+
 namespace ftk {
 
 template <class ValueType>
