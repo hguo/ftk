@@ -3,14 +3,14 @@
 
 int main(int argc, char **argv)
 {
-  float m3x3[] = {0.9102779, 0.44108077, 0.72642273, 0.39278198, 0.95680469, 0.02683596, 0.05335823, 0.86960914, 0.43971526};
-  float invm3x3[9];
+  float m[] = {0.9102779, 0.44108077, 0.72642273, 0.39278198, 0.95680469, 0.02683596, 0.05335823, 0.86960914, 0.43971526};
+  float inv[9];
 
-  float det = ftk::invmat3x3(m3x3, invm3x3);
+  float det = ftk::invmat3(m, inv);
 
   fprintf(stderr, "det=%f\n", det);
   for (int i=0; i<9; i++) {
-    fprintf(stderr, "%f\n", invm3x3[i]);
+    fprintf(stderr, "%f\n", inv[i]);
   }
 
   return 0;

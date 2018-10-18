@@ -4,7 +4,7 @@
 namespace ftk {
 
 template <class ValueType>
-inline ValueType invmat2x2(const ValueType m[9], ValueType inv[9]) // returns the determinant
+inline ValueType invmat2(const ValueType m[9], ValueType inv[9]) // returns the determinant
 {
   inv[0] = m[3];
   inv[1] = -m[1];
@@ -20,7 +20,7 @@ inline ValueType invmat2x2(const ValueType m[9], ValueType inv[9]) // returns th
 }
 
 template <class ValueType>
-inline ValueType invmat3x3(const ValueType m[9], ValueType inv[9]) // returns the determinant
+inline ValueType invmat3(const ValueType m[9], ValueType inv[9]) // returns the determinant
 {
   inv[0] =   m[4]*m[8] - m[5]*m[7];
   inv[1] = - m[1]*m[8] + m[2]*m[7];
@@ -42,7 +42,7 @@ inline ValueType invmat3x3(const ValueType m[9], ValueType inv[9]) // returns th
 }
 
 template <class ValueType>
-inline ValueType invmat4x4(const ValueType m[16], ValueType inv[16]) // returns det
+inline ValueType invmat4(const ValueType m[16], ValueType inv[16]) // returns det
 {
   inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15]
            + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
