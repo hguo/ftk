@@ -6,7 +6,7 @@
 class MeshGraphRegular2D : public MeshGraph {
 private:
   int d[2];
-  bool pbc[2];
+  bool pbc[2]; // periodic boundary conditions
 
 private:
   void nid2nidx(NodeIdType id, int nidx[2]) const;
