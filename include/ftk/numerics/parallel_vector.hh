@@ -6,11 +6,11 @@
 namespace ftk {
 
 template <typename ValueType>
-inline bool parallel_vector(const ValueType v[9], const ValueType w[9], ValueType lambda[3])
+inline bool parallel_vector(const ValueType V[9], const ValueType W[9], ValueType lambda[3])
 {
   ValueType invV[9], invW[9];
-  const auto detV = invmat3(v, invV),
-             detW = invmat3(v, invW);
+  const auto detV = invmat3(V, invV),
+             detW = invmat3(W, invW);
   
   ValueType m[9];
   if (detW > detV) mulmat3(invW, V, m);

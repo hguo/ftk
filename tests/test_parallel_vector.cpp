@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <netcdf.h>
+#include <ftk/numerics/parallel_vector.hh>
 
 #define NC_SAFE_CALL(call) {\
   int retval = call;\
