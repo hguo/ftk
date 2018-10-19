@@ -1,7 +1,41 @@
-#include "MeshGraphRegular3DTets.h"
-#include <cstring>
-#include <climits>
+#ifndef _MESHGRAPH_REGULAR3DTETS_H
+#define _MESHGRAPH_REGULAR3DTETS_H
 
+#include "MeshGraphRegular3D.h"
+
+namespace ftk {
+
+class MeshGraphRegular3DTets : public MeshGraphRegular3D {
+public: // nid is the same as regular3D
+  void eid2eidx(EdgeIdType id, int eidx[4]) const;
+  EdgeIdType eidx2eid(const int eidx[4]) const;
+  
+  void fid2fidx(FaceIdType id, int fidx[4]) const;
+  FaceIdType fidx2fid(const int fidx[4]) const;
+
+  void cid2cidx(CellIdType id, int cidx[4]) const;
+  CellIdType cidx2cid(const int cidx[4]) const;
+  
+  bool valid_eidx(const int eidx[4]) const;
+  bool valid_fidx(const int fidx[4]) const;
+  bool valid_cidx(const int cidx[4]) const;
+
+public:
+  MeshGraphRegular3DTets(int d[3], bool pbc[3]);
+
+  EdgeIdType NEdges() const;
+  FaceIdType NFaces() const;
+  CellIdType NCells() const;
+
+  CEdge Edge(EdgeIdType i, bool nodes_only=false) const;
+  CFace Face(FaceIdType i, bool nodes_only=false) const;
+  CCell Cell(CellIdType i, bool nodes_only=false) const;
+};
+
+}
+
+///////////////////// 
+namespace ftk {
 MeshGraphRegular3DTets::MeshGraphRegular3DTets(int d[3], bool pbc[3])
   : MeshGraphRegular3D(d, pbc)
 {
@@ -271,38 +305,38 @@ EdgeIdType MeshGraphRegular3DTets::NCells() const
   return d[0]*d[1]*d[2];
 }
 
-void MeshGraphRegular3DTets::eid2eidx(unsigned int id, int idx[4]) const
+void MeshGraphRegular3DTets::eid2eidx(EdgeIdType id, int idx[4]) const
 {
   unsigned int nid = id / 7;
   nid2nidx(nid, idx);
   idx[3] = id % 7;
 }
 
-void MeshGraphRegular3DTets::fid2fidx(unsigned int id, int idx[4]) const
+void MeshGraphRegular3DTets::fid2fidx(FaceIdType id, int idx[4]) const
 {
   unsigned int nid = id / 12;
   nid2nidx(nid, idx);
   idx[3] = id % 12;
 }
 
-void MeshGraphRegular3DTets::cid2cidx(unsigned int id, int idx[4]) const
+void MeshGraphRegular3DTets::cid2cidx(CellIdType id, int idx[4]) const
 {
   unsigned int nid = id / 6;
   nid2nidx(nid, idx);
   idx[3] = id % 6;
 }
 
-unsigned int MeshGraphRegular3DTets::eidx2eid(const int idx[4]) const
+EdgeIdType MeshGraphRegular3DTets::eidx2eid(const int idx[4]) const
 {
   return nidx2nid(idx)*7 + idx[3];
 }
 
-unsigned int MeshGraphRegular3DTets::fidx2fid(const int idx[4]) const
+FaceIdType MeshGraphRegular3DTets::fidx2fid(const int idx[4]) const
 {
   return nidx2nid(idx)*12 + idx[3];
 }
 
-unsigned int MeshGraphRegular3DTets::cidx2cid(const int idx[4]) const
+CellIdType MeshGraphRegular3DTets::cidx2cid(const int idx[4]) const
 {
   return nidx2nid(idx)*6 + idx[3];
 }
@@ -357,3 +391,6 @@ bool MeshGraphRegular3DTets::valid_cidx(const int idx[4]) const
   return true;
 }
 
+}
+
+#endif

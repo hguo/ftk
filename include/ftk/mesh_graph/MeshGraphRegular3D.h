@@ -1,7 +1,52 @@
-#include "MeshGraphRegular3D.h"
-#include <cstring>
-#include <climits>
+#ifndef _MESHGRAPH_REGULAR3D_H
+#define _MESHGRAPH_REGULAR3D_H
 
+#include "MeshGraph.h"
+
+namespace ftk {
+
+class MeshGraphRegular3D : public MeshGraph {
+protected:
+  int d[3];
+  bool pbc[3];
+
+public:
+  void nid2nidx(NodeIdType id, int nidx[3]) const;
+  NodeIdType nidx2nid(const int nidx[3]) const; // modIdx'ed
+
+  void eid2eidx(EdgeIdType id, int eidx[4]) const;
+  EdgeIdType eidx2eid(const int eidx[4]) const;
+  
+  void fid2fidx(FaceIdType id, int fidx[4]) const;
+  FaceIdType fidx2fid(const int fidx[4]) const;
+
+  void cid2cidx(CellIdType id, int cidx[4]) const;
+  CellIdType cidx2cid(const int cidx[4]) const;
+  
+  bool valid_nidx(const int nidx[3]) const;
+  bool valid_eidx(const int eidx[4]) const;
+  bool valid_fidx(const int fidx[4]) const;
+  bool valid_cidx(const int cidx[3]) const;
+
+public:
+  MeshGraphRegular3D(int d[3], bool pbc[3]);
+
+  EdgeIdType NEdges() const;
+  FaceIdType NFaces() const;
+  CellIdType NCells() const;
+
+  CEdge Edge(EdgeIdType i, bool nodes_only=false) const;
+  CFace Face(FaceIdType i, bool nodes_only=false) const;
+  CCell Cell(CellIdType i, bool nodes_only=false) const;
+
+public:
+  std::vector<FaceIdType> GetBoundaryFaceIds(int type) const; // 0: YZ, 1: ZX, 2: XY
+};
+
+}
+
+/////////////
+namespace ftk {
 MeshGraphRegular3D::MeshGraphRegular3D(int d_[3], bool pbc_[3])
 {
   memcpy(d, d_, sizeof(int)*3);
@@ -166,7 +211,7 @@ EdgeIdType MeshGraphRegular3D::NCells() const
   return d[0]*d[1]*d[2];
 }
 
-void MeshGraphRegular3D::nid2nidx(unsigned int id, int idx[3]) const
+void MeshGraphRegular3D::nid2nidx(NodeIdType id, int idx[3]) const
 {
   int s = d[0] * d[1]; 
   int k = id / s; 
@@ -176,26 +221,26 @@ void MeshGraphRegular3D::nid2nidx(unsigned int id, int idx[3]) const
   idx[0] = i; idx[1] = j; idx[2] = k;
 }
 
-void MeshGraphRegular3D::eid2eidx(unsigned int id, int idx[4]) const
+void MeshGraphRegular3D::eid2eidx(EdgeIdType id, int idx[4]) const
 {
   unsigned int nid = id / 3;
   nid2nidx(nid, idx);
   idx[3] = id % 3;
 }
 
-void MeshGraphRegular3D::fid2fidx(unsigned int id, int idx[4]) const
+void MeshGraphRegular3D::fid2fidx(FaceIdType id, int idx[4]) const
 {
   unsigned int nid = id / 3;
   nid2nidx(nid, idx);
   idx[3] = id % 3;
 }
 
-void MeshGraphRegular3D::cid2cidx(unsigned int id, int idx[3]) const
+void MeshGraphRegular3D::cid2cidx(CellIdType id, int idx[3]) const
 {
   nid2nidx(id, idx);
 }
 
-unsigned int MeshGraphRegular3D::nidx2nid(const int idx_[3]) const
+NodeIdType MeshGraphRegular3D::nidx2nid(const int idx_[3]) const
 {
   int idx[3] = {idx_[0], idx_[1], idx_[2]};
   for (int i=0; i<3; i++) {
@@ -206,17 +251,17 @@ unsigned int MeshGraphRegular3D::nidx2nid(const int idx_[3]) const
   return idx[0] + d[0] * (idx[1] + d[1] * idx[2]); 
 }
 
-unsigned int MeshGraphRegular3D::eidx2eid(const int idx[4]) const
+EdgeIdType MeshGraphRegular3D::eidx2eid(const int idx[4]) const
 {
   return nidx2nid(idx)*3 + idx[3];
 }
 
-unsigned int MeshGraphRegular3D::fidx2fid(const int idx[4]) const
+FaceIdType MeshGraphRegular3D::fidx2fid(const int idx[4]) const
 {
   return nidx2nid(idx)*3 + idx[3];
 }
 
-unsigned int MeshGraphRegular3D::cidx2cid(const int idx[3]) const
+CellIdType MeshGraphRegular3D::cidx2cid(const int idx[3]) const
 {
   return nidx2nid(idx);
 }
@@ -319,3 +364,7 @@ std::vector<FaceIdType> MeshGraphRegular3D::GetBoundaryFaceIds(int type) const
 
   return fids;
 }
+
+}
+
+#endif
