@@ -2,8 +2,8 @@
 #define _FTK_EIG_H
 
 #include <ftk/numerics/trace.hh>
-#include <ftk/numerics/mulmat.hh>
 #include <ftk/numerics/det.hh>
+#include <ftk/numerics/mulmat.hh>
 #include <ftk/numerics/cubic_solve.hh>
 #include <iostream>
 

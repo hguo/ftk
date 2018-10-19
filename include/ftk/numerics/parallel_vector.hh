@@ -1,6 +1,7 @@
 #ifndef _FTK_PARALLEL_VECTOR_H
 #define _FTK_PARALLEL_VECTOR_H
 
+#include <ftk/numerics/invmat.hh>
 #include <ftk/numerics/eig.hh>
 
 namespace ftk {
@@ -11,12 +12,13 @@ inline bool parallel_vector(const ValueType V[9], const ValueType W[9], ValueTyp
   ValueType invV[9], invW[9];
   const auto detV = invmat3(V, invV),
              detW = invmat3(W, invW);
-  
+
+  fprintf(stderr, "detV=%f, detW=%f\n", detV, detW);
+
   ValueType m[9];
   if (detW > detV) mulmat3(invW, V, m);
   else mulmat3(invV, W, m);
 
-  bool found = false;
   std::complex<ValueType> eig[3], eigvec[3][3];
   eig3(m, eig, eigvec);
 
@@ -30,6 +32,8 @@ inline bool parallel_vector(const ValueType V[9], const ValueType W[9], ValueTyp
     lambda[2] = l[2] / sum;
     return true;
   }
+
+  return false;
 }
 
 }

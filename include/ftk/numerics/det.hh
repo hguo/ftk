@@ -1,5 +1,5 @@
-#ifndef _FTK_INVMAT_H
-#define _FTK_INVMAT_H
+#ifndef _FTK_DET_H
+#define _FTK_DET_H
 
 #include <iostream>
 

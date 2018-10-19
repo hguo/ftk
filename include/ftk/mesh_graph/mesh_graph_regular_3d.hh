@@ -33,7 +33,7 @@ public:
   FaceIdType NFaces() const;
   CellIdType NCells() const;
 
-  CEdge Edge(EdgeIdType i, bool nodes_only=false) const;
+  edge Edge(EdgeIdType i, bool nodes_only=false) const;
   CFace Face(FaceIdType i, bool nodes_only=false) const;
   CCell Cell(CellIdType i, bool nodes_only=false) const;
 
