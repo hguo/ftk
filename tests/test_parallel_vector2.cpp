@@ -77,10 +77,31 @@ void derive_grad()
   }
 }
 
+void sweep_faces() 
+{
+  int dims[3] = {W, H, D};
+  bool pbc[3] = {0};
+  ftk::MeshGraphRegular3DTets mg(dims, pbc);
+
+  for (auto i = 0; i < mg.NFaces(); i++) {
+    const auto f = mg.Face(i, true);
+#if 0
+    int nidx0[3], nidx1[3], nidx2[3];
+    mg.nid2nidx(f.nodes[0], nidx0);
+    mg.nid2nidx(f.nodes[1], nidx1);
+    mg.nid2nidx(f.nodes[2], nidx2);
+#endif
+
+    if (f.Valid()) 
+      fprintf(stderr, "%llu, %llu, %llu\n", f.nodes[0], f.nodes[1], f.nodes[2]);
+  }
+}
+
 int main(int argc, char **argv)
 {
   open_tornado_nc(argv[1]);
   derive_grad();
+  sweep_faces();
 
   // fprintf(stderr, "%f\n", texel3D<float>(gradV, 9, W, H, D, 0, 64, 64, 64));
   // fprintf(stderr, "%f\n", texel3D<float>(V, 3, W, H, D, 0, 64, 64, 64));
