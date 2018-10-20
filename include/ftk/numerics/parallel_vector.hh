@@ -13,11 +13,12 @@ inline bool parallel_vector(const ValueType V[9], const ValueType W[9], ValueTyp
   const auto detV = invmat3(V, invV),
              detW = invmat3(W, invW);
 
-  fprintf(stderr, "detV=%f, detW=%f\n", detV, detW);
+  if (detW < 1e-4) return false;
 
   ValueType m[9];
-  if (detW > detV) mulmat3(invW, V, m);
-  else mulmat3(invV, W, m);
+  mulmat3(invW, V, m);
+  // if (detW > detV) mulmat3(invW, V, m);
+  // else mulmat3(invV, W, m);
 
   std::complex<ValueType> eig[3], eigvec[3][3];
   eig3(m, eig, eigvec);

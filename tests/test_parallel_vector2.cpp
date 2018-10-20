@@ -85,15 +85,28 @@ void sweep_faces()
 
   for (auto i = 0; i < mg.NFaces(); i++) {
     const auto f = mg.Face(i, true);
-#if 0
-    int nidx0[3], nidx1[3], nidx2[3];
-    mg.nid2nidx(f.nodes[0], nidx0);
-    mg.nid2nidx(f.nodes[1], nidx1);
-    mg.nid2nidx(f.nodes[2], nidx2);
-#endif
+    if (f.Valid()) {
+      const float v[] = {
+        V[f.nodes[0]*3], V[f.nodes[1]*3], V[f.nodes[2]*3], 
+        V[f.nodes[0]*3+1], V[f.nodes[1]*3+1], V[f.nodes[2]*3+1], 
+        V[f.nodes[0]*3+2], V[f.nodes[1]*3+2], V[f.nodes[2]*3+2]
+      };
 
-    if (f.Valid()) 
-      fprintf(stderr, "%llu, %llu, %llu\n", f.nodes[0], f.nodes[1], f.nodes[2]);
+      float w[9]; // gradV * V
+      for (int k = 0; k < 3; k ++) {
+        float grad[9];
+        for (int l = 0; l < 9; l ++) 
+          grad[l] = gradV[f.nodes[k]*9 + l];
+
+        ftk::mulmat3v(grad, v, w);
+      }
+
+      float lambda[3];
+      auto b = ftk::parallel_vector(v, w, lambda);
+      if (b) {
+        fprintf(stderr, "%llu, %llu, %llu\n", f.nodes[0], f.nodes[1], f.nodes[2]);
+      }
+    }
   }
 }
 
