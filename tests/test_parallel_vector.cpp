@@ -21,12 +21,13 @@ int main(int argc, char **argv)
       ftk::barycentric_interpolation3(V, lambda, v);
       ftk::barycentric_interpolation3(W, lambda, w);
       ftk::cross_product(v, w, c);
-      cn = ftk::vecnorm2<3>(v);
+      cn = ftk::vecnorm2<3>(c);
 
       for (int k=0; k<3; k++) 
         r[k] = v[k] / w[k];
 
-      if (cn >= 1e-3) { 
+      // if (cn <= 1e-3) { 
+      if (1) {
         fprintf(stderr, "lambda={%f, %f, %f}, v={%f, %f, %f}, w={%f, %f, %f}, ||v x w||=%f\n", 
             lambda[0], lambda[1], lambda[2],
             v[0], v[1], v[2], w[0], w[1], w[2], cn);

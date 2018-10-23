@@ -104,7 +104,9 @@ void sweep_faces()
       float lambda[3];
       auto b = ftk::parallel_vector(v, w, lambda);
       if (b) {
-        fprintf(stderr, "%llu, %llu, %llu\n", f.nodes[0], f.nodes[1], f.nodes[2]);
+        fprintf(stderr, "face={%llu, %llu, %llu}, lambda={%f, %f, %f}\n", 
+            f.nodes[0], f.nodes[1], f.nodes[2],
+            lambda[0], lambda[1], lambda[2]);
       }
     }
   }
