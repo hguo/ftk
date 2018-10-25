@@ -16,7 +16,7 @@ namespace ftk {
 template <class TimeIndexType=size_t, class LabelIdType=size_t, class GlobalLabelIdType=size_t, class WeightType=int>
 class tracking_graph {
 public:
-  tracking_graph(); 
+  tracking_graph();
 
   std::vector<TimeIndexType> get_timesteps() const;
 
@@ -148,7 +148,7 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
         return neighbors;
       }, allNodes);
 
-  fprintf(stderr, "#components=%zu\n", components.size());
+  // fprintf(stderr, "#components=%zu\n", components.size());
 
   nodeToGlobalLabelMap.clear();
   globalLabelToNodeMap.clear();
