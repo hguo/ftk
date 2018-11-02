@@ -23,6 +23,8 @@ if (NETCDF_FOUND)
   include_directories (${NETCDF_INCLUDE_DIR})
   add_executable (test_parallel_vector2 test_parallel_vector2) 
   target_link_libraries (test_parallel_vector2 ${NETCDF_LIBRARY})
+  add_executable (test_parallel_vector3 test_parallel_vector3) 
+  target_link_libraries (test_parallel_vector3 ${NETCDF_LIBRARY})
 endif ()
 
 add_executable (test_storage_fs test_storage.cpp)

@@ -29,6 +29,9 @@ inline bool parallel_vector(const ValueType V[9], const ValueType W[9], ValueTyp
   const auto detV = invmat3(V, invV),
              detW = invmat3(W, invW);
 
+  // print_mat3x3("V", V);
+  // print_mat3x3("W", W);
+  // fprintf(stderr, "devV=%f, devW=%f\n", detV, detW);
   if (isnan_mat3x3(invW) || isnan_mat3x3(invV)) return false;
   // if (detW < 1e-4) return false;
 
@@ -58,7 +61,7 @@ inline bool parallel_vector(const ValueType V[9], const ValueType W[9], ValueTyp
     lambda[2] = l[2] / sum;
     if (isnan(lambda[0]) || isnan(lambda[1]) || isnan(lambda[2])) continue;
 
-#if 1
+#if 0
     print_mat3x3("V", V);
     print_mat3x3("invV", invV);
     print_mat3x3("W", W);

@@ -2,7 +2,9 @@
 #include <vector>
 #include <netcdf.h>
 #include <ftk/numerics/parallel_vector.hh>
-#include <ftk/numerics/transpose.hh>
+#include <ftk/numerics/cross_product.hh>
+#include <ftk/numerics/norm.hh>
+#include <ftk/numerics/barycentric_interpolation.hh>
 #include <ftk/mesh_graph/MeshGraphRegular3DTets.h>
 
 #define NC_SAFE_CALL(call) {\
@@ -26,9 +28,9 @@ T& texel3D(std::vector<T> &p, int nv, int W, int H, int D, int v, int x, int y, 
 }
 
 const int W=128, H=128, D=128;
-std::vector<float> V, gradV;
+std::vector<float> VV, WW;
 
-void open_tornado_nc(const std::string& filename)
+void open_tornado_nc(const std::string& filename, std::vector<float> &V)
 {
   int ncid; 
   int varid[3]; 
@@ -39,7 +41,6 @@ void open_tornado_nc(const std::string& filename)
   const size_t n = W*H*D;
   std::vector<float> uu(n), vv(n), ww(n);
   V.resize(3*n);
-  gradV.resize(9*n);
 
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) ); 
   NC_SAFE_CALL( nc_inq_varid(ncid, varname_u.c_str(), &varid[0]) ); 
@@ -57,28 +58,7 @@ void open_tornado_nc(const std::string& filename)
   }
 }
 
-void derive_grad()
-{
-  for (int i=1; i<W-1; i++) {
-    for (int j=1; j<H-1; j++) {
-      for (int k=1; k<D-1; k++) {
-        for (int v=0; v<3; v++) {
-          texel3D<float>(gradV, 9, W, H, D, v*3, i, j, k) = 
-            0.5 * (texel3D<float>(V, 3, W, H, D, v, i+1, j, k) 
-                - texel3D<float>(V, 3, W, H, D, v, i-1, j, k));
-          texel3D<float>(gradV, 9, W, H, D, v*3+1, i, j, k) = 
-            0.5 * (texel3D<float>(V, 3, W, H, D, v, i, j+1, k) -
-            texel3D<float>(V, 3, W, H, D, v, i, j-1, k));
-          texel3D<float>(gradV, 9, W, H, D, v*3+2, i, j, k) = 
-            0.5 * (texel3D<float>(V, 3, W, H, D, v, i, j, k+1) -
-            texel3D<float>(V, 3, W, H, D, v, i, j, k-1));
-        }
-      }
-    }
-  }
-}
-
-void sweep_faces() 
+void sweep_faces(const std::vector<float> &V, const std::vector<float> &V1) 
 {
   int dims[3] = {W, H, D};
   bool pbc[3] = {0};
@@ -87,33 +67,39 @@ void sweep_faces()
   for (auto i = 0; i < mg.NFaces(); i++) {
     const auto f = mg.Face(i, true);
     if (f.Valid()) {
-      const float v[] = {
+      const float VV[] = {
         V[f.nodes[0]*3], V[f.nodes[1]*3], V[f.nodes[2]*3], 
         V[f.nodes[0]*3+1], V[f.nodes[1]*3+1], V[f.nodes[2]*3+1], 
         V[f.nodes[0]*3+2], V[f.nodes[1]*3+2], V[f.nodes[2]*3+2]
       };
-
-      float w[9]; // gradV * V
-      for (int k = 0; k < 3; k ++) {
-        float grad[9];
-        for (int l = 0; l < 9; l ++) 
-          grad[l] = gradV[f.nodes[k]*9 + l];
-
-        float gradT[9]; // transpose of grad
-        ftk::transpose3(grad, gradT);
-
-        ftk::mulmat3v(grad, v, w);
-        // ftk::mulmat3v(gradT, v, w);
-        // fprintf(stderr, "gradV*V={%f, %f, %f}\n", w[0], w[1], w[2]);
-      }
+      
+      const float WW[] = {
+        V1[f.nodes[0]*3], V1[f.nodes[1]*3], V1[f.nodes[2]*3], 
+        V1[f.nodes[0]*3+1], V1[f.nodes[1]*3+1], V1[f.nodes[2]*3+1], 
+        V1[f.nodes[0]*3+2], V1[f.nodes[1]*3+2], V1[f.nodes[2]*3+2]
+      };
 
       float lambda[3];
-      auto b = ftk::parallel_vector(v, w, lambda);
-      // fprintf(stderr, "v={%f, %f, %f}, w={%f, %f, %f}\n", v[0], v[1], v[2], w[0], w[1], w[2]);
+      auto b = ftk::parallel_vector(VV, WW, lambda);
       if (b) {
-        fprintf(stderr, "face={%llu, %llu, %llu}, lambda={%f, %f, %f}\n", 
-            f.nodes[0], f.nodes[1], f.nodes[2],
-            lambda[0], lambda[1], lambda[2]);
+        float v[3], w[3], r[3], c[3], cn;
+        ftk::barycentric_interpolation3(VV, lambda, v);
+        ftk::barycentric_interpolation3(WW, lambda, w);
+        ftk::cross_product(v, w, c);
+        cn = ftk::vecnorm2<3>(c);
+
+        for (int k=0; k<3; k++) 
+          r[k] = v[k] / w[k];
+
+        // if (cn <= 1e-3) { 
+        if (1) {
+          fprintf(stderr, "face={%llu, %llu, %llu}, lambda={%f, %f, %f}\n", 
+              f.nodes[0], f.nodes[1], f.nodes[2],
+              lambda[0], lambda[1], lambda[2]);
+          fprintf(stderr, "lambda={%f, %f, %f}, v={%f, %f, %f}, w={%f, %f, %f}, ||v x w||=%f\n", 
+              lambda[0], lambda[1], lambda[2],
+              v[0], v[1], v[2], w[0], w[1], w[2], cn);
+        }
       }
     }
   }
@@ -121,9 +107,9 @@ void sweep_faces()
 
 int main(int argc, char **argv)
 {
-  open_tornado_nc(argv[1]);
-  derive_grad();
-  sweep_faces();
+  open_tornado_nc(argv[1], VV);
+  open_tornado_nc(argv[2], WW);
+  sweep_faces(VV, WW);
 
   // fprintf(stderr, "%f\n", texel3D<float>(gradV, 9, W, H, D, 0, 64, 64, 64));
   // fprintf(stderr, "%f\n", texel3D<float>(V, 3, W, H, D, 0, 64, 64, 64));
