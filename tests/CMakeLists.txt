@@ -2,6 +2,9 @@ set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # add_executable (test_layout test_layout.cpp)
 
+# find_package (Eigen3 REQUIRED)
+# include_directories (${EIGEN3_INCLUDE_DIR})
+
 find_package (RocksDB)
 if (RocksDB_FOUND)
   include_directories (${RocksDB_INCLUDE_DIR})

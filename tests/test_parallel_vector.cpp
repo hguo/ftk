@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 
       // if (cn <= 1e-3) { 
       if (1) {
-        fprintf(stderr, "lambda={%f, %f, %f}, v={%f, %f, %f}, w={%f, %f, %f}, ||v x w||=%f\n", 
+        fprintf(stderr, "[%d] lambda={%f, %f, %f}, v={%f, %f, %f}, w={%f, %f, %f}, ||v x w||=%f\n", i,
             lambda[0], lambda[1], lambda[2],
             v[0], v[1], v[2], w[0], w[1], w[2], cn);
       }

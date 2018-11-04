@@ -20,9 +20,9 @@ inline void cubic_solve(ValueType b, ValueType c, ValueType d, std::complex<Valu
 
   if(disc > 0) { // one root real, two are complex
     s = r + sqrt(disc);
-    s = ((s < 0) ? pow(-s, (1.0/3.0)) : pow(s, (1.0/3.0)));
+    s = ((s < 0) ? -pow(-s, (1.0/3.0)) : pow(s, (1.0/3.0)));
     t = r - sqrt(disc);
-    t = ((t < 0) ? pow(-t, (1.0/3.0)) : pow(t, (1.0/3.0)));
+    t = ((t < 0) ? -pow(-t, (1.0/3.0)) : pow(t, (1.0/3.0)));
     x[0].real(-term1 + s + t);
     term1 += (s + t)/2.0;
     x[1].real(-term1);

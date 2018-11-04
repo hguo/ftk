@@ -26,18 +26,20 @@ template <typename ValueType>
 inline void eig3(const ValueType m[9], std::complex<ValueType> eig[3], std::complex<ValueType> eigvec[3][3]) 
 {
   // using std::complex;
-  const auto b = -trace3(m),
-             c = m[4]*m[8] + m[0]*m[8] + m[0]*m[4] - m[1]*m[3] - m[5]*m[7] - m[2]*m[6],
-             d = -det3(m);
+  const ValueType b = -trace3(m),
+                  c = m[4]*m[8] + m[0]*m[8] + m[0]*m[4] - m[1]*m[3] - m[5]*m[7] - m[2]*m[6],
+                  d = -det3(m);
 
   cubic_solve(b, c, d, eig);
 
   for (int i=0; i<3; i++) 
     eigvec3(m, eig[i], eigvec[i]);
 
-#if 0
+#if 1
   fprintf(stderr, "matrix:\n[[%f, %f, %f], [%f, %f, %f], [%f, %f, %f]]\neigenvalues:\n[%f+j%f, %f+j%f, %f+j%f]\n", 
       m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], 
+      eig[0].real(), eig[0].imag(), eig[1].real(), eig[1].imag(), eig[2].real(), eig[2].imag());
+  fprintf(stderr, "eigs_impl0: (%f, %f), (%f, %f), (%f, %f)\n", 
       eig[0].real(), eig[0].imag(), eig[1].real(), eig[1].imag(), eig[2].real(), eig[2].imag());
   for (int k=0; k<3; k++)
     fprintf(stderr, "eigenvector%d: %f+j%f, %f+j%f, %f+j%f\n", k,
