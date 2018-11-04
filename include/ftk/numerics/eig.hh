@@ -35,7 +35,7 @@ inline void eig3(const ValueType m[9], std::complex<ValueType> eig[3], std::comp
   for (int i=0; i<3; i++) 
     eigvec3(m, eig[i], eigvec[i]);
 
-#if 1
+#if 0
   fprintf(stderr, "matrix:\n[[%f, %f, %f], [%f, %f, %f], [%f, %f, %f]]\neigenvalues:\n[%f+j%f, %f+j%f, %f+j%f]\n", 
       m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], 
       eig[0].real(), eig[0].imag(), eig[1].real(), eig[1].imag(), eig[2].real(), eig[2].imag());
