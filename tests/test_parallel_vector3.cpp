@@ -86,7 +86,7 @@ void sweep_faces(const std::vector<float> &V, const std::vector<float> &V1)
         ftk::barycentric_interpolation3(VV, lambda, v);
         ftk::barycentric_interpolation3(WW, lambda, w);
         ftk::cross_product(v, w, c);
-        cn = ftk::vecnorm2<3>(c);
+        cn = ftk::norm2_3(c);
 
         for (int k=0; k<3; k++) 
           r[k] = v[k] / w[k];

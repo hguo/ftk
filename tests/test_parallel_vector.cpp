@@ -21,7 +21,7 @@ int main(int argc, char **argv)
       ftk::barycentric_interpolation3(V, lambda, v);
       ftk::barycentric_interpolation3(W, lambda, w);
       ftk::cross_product(v, w, c);
-      cn = ftk::vecnorm2<3>(c);
+      cn = ftk::norm2_3(c);
 
       for (int k=0; k<3; k++) 
         r[k] = v[k] / w[k];
