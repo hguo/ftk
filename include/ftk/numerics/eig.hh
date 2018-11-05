@@ -5,6 +5,7 @@
 #include <ftk/numerics/det.hh>
 #include <ftk/numerics/mulmat.hh>
 #include <ftk/numerics/cubic_solve.hh>
+#include <ftk/numerics/quartic_solve.hh>
 #include <iostream>
 
 namespace ftk {
@@ -45,6 +46,26 @@ inline void eig3(const ValueType m[9], std::complex<ValueType> eig[3], std::comp
     fprintf(stderr, "eigenvector%d: %f+j%f, %f+j%f, %f+j%f\n", k,
         eigvec[k][0].real(), eigvec[k][0].imag(), eigvec[k][1].real(), eigvec[k][1].imag(), eigvec[k][2].real(), eigvec[k][2].imag());
 #endif
+}
+
+template <typename ValueType>
+inline void eig4(const ValueType m[16], std::complex<ValueType> eig[4], std::complex<ValueType> eigvec[4][4]) 
+{
+  const ValueType a0 = det4(m), 
+                  a1 =  m[0]  * m[11] * m[14] - m[0]  * m[10] * m[15] - m[11] * m[12] * m[2] + m[10] * m[12] * m[3]
+                      + m[1]  * m[10] * m[4]  + m[1]  * m[15] * m[4]  - m[13] * m[3]  * m[4] - m[0]  * m[10] * m[5]
+                      + m[11] * m[14] * m[5]  - m[0]  * m[15] * m[5]  - m[10] * m[15] * m[5] + m[12] * m[3]  * m[5]
+                      - m[11] * m[13] * m[6]  - m[1]  * m[12] * m[7]  + m[0]  * m[13] * m[7] + m[10] * m[13] * m[7]
+                      + m[15] * m[2]  * m[8]  - m[14] * m[3]  * m[8]  + m[2]  * m[5]  * m[8] - m[1]  * m[6]  * m[8]
+                      - m[2]  * m[4]  * m[9]  + m[0]  * m[6]  * m[9]  + m[15] * m[6]  * m[9] - m[14] * m[7]  * m[9],
+                  a2 =  m[0]  * m[10] - m[11] * m[14] + m[0]  * m[15] + m[10] * m[15]
+                      - m[12] * m[3]  - m[1]  * m[4]  + m[0]  * m[5]  + m[10] * m[5]
+                      + m[15] * m[5]  - m[13] * m[7]  - m[2]  * m[8]  - m[6]  * m[9],
+                  a3 = -trace4(m);
+
+  quartic_solve(a3, a2, a1, a0, eig); 
+
+  // TODO
 }
 
 }
