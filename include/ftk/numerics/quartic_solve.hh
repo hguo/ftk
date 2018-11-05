@@ -6,15 +6,39 @@
 
 namespace ftk {
 
-template <typename ValueType>
-inline void quartic_solve(ValueType b, ValueType c, ValueType d, ValueType e, std::complex<ValueType> x[4])
+// the followings are based on the code from https://github.com/sidneycadot/quartic/blob/master/solve-quartic.cc
+template <typename T>
+static std::complex<T> complex_sqrt(const std::complex<T> & z)
 {
-#if 0
-  const ValueType delta = 
-      256*e*e*e - 192*b*d*e*e - 128*c*c*e*e + 144*c*d*d*e - 27*d*d*d*d
-    + 144*b*b*c*e*e - 6*b*b*d*d*e - 80*b*c*c*d*e + 18*b*c*d*d*d + 16*c*c*c*c*e
-    - 4*c*c*c*d*d - 27*b*b*b*b*e*e + 18*b*b*b*c*d*e - 4*b*b
-#endif
+  return pow(z, T(1)/T(2));
+}
+
+template <typename T>
+static std::complex<T> complex_cbrt(const std::complex<T> & z)
+{
+  return pow(z, T(1)/T(3));
+}
+
+// a * x^4 + b * x^3 + c * x^2 + d * x + e == 0
+template <typename T>
+void quartic_solve(T b_, T c_, T d_, T e_, std::complex<T> roots[4])
+{
+  // The algorithm below was derived by solving the quartic in Mathematica, and simplifying the resulting expression by hand.
+  const std::complex<T> b(b_), c(c_), d(d_), e(e_);
+
+  const std::complex<T> Q1 = c * c - T(3) * b * d + T(12) * e;
+  const std::complex<T> Q2 = T(2) * c * c * c - T(9) * b * c * d + T(27) * d * d + T(27) * b * b * e - T(72) * c * e;
+  const std::complex<T> Q3 = T(8) * b * c - T(16) * d - T(2) * b * b * b;
+  const std::complex<T> Q4 = T(3) * b * b - T(8) * c;
+
+  const std::complex<T> Q5 = complex_cbrt(Q2 / T(2) + complex_sqrt(Q2 * Q2 / T(4) - Q1 * Q1 * Q1));
+  const std::complex<T> Q6 = (Q1 / Q5 + Q5) / T(3);
+  const std::complex<T> Q7 = T(2) * complex_sqrt(Q4 / T(12) + Q6);
+
+  roots[0] = (-b - Q7 - complex_sqrt(T(4) * Q4 / T(6) - T(4) * Q6 - Q3 / Q7)) / T(4);
+  roots[1] = (-b - Q7 + complex_sqrt(T(4) * Q4 / T(6) - T(4) * Q6 - Q3 / Q7)) / T(4);
+  roots[2] = (-b + Q7 - complex_sqrt(T(4) * Q4 / T(6) - T(4) * Q6 + Q3 / Q7)) / T(4);
+  roots[3] = (-b + Q7 + complex_sqrt(T(4) * Q4 / T(6) - T(4) * Q6 + Q3 / Q7)) / T(4);
 }
 
 }
