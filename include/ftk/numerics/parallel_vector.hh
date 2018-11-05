@@ -9,13 +9,6 @@
 namespace ftk {
 
 template <typename ValueType>
-inline void print_mat3x3(const std::string &name, const ValueType V[])
-{
-  fprintf(stderr, "%s=[[%.10f, %.10f, %.10f], [%.10f, %.10f, %.10f], [%.10f, %.10f, %.10f]]\n",
-      name.c_str(), V[0], V[1], V[2], V[3], V[4], V[5], V[6], V[7], V[8]);
-}
-
-template <typename ValueType>
 inline bool isnan_mat3x3(const ValueType m[])
 {
   for (int i=0; i<9; i++) 
@@ -90,6 +83,8 @@ inline bool parallel_vector1(const ValueType V[9], const ValueType W[9], ValueTy
   // print_mat3x3("V", V);
   // print_mat3x3("W", W);
 
+  if (V1.determinant() == 0 || W1.determinant() == 0) return false;
+
   Eigen::GeneralizedEigenSolver<Eigen::Matrix<ValueType, 3, 3> > ges;
   ges.compute(V1, W1);
 #if 0 
@@ -105,11 +100,26 @@ inline bool parallel_vector1(const ValueType V[9], const ValueType W[9], ValueTy
   std::cerr << "eigvectors_impl1(1):\n" << ges.eigenvectors().col(1) << std::endl;
   std::cerr << "eigvectors_impl1(2):\n" << ges.eigenvectors().col(2) << std::endl;
 #endif 
+  
+  // std::cout << "eigvecs:\n" << ges.eigenvectors() << std::endl;
   for (int i=0; i<3; i++) {
-    auto eig = ges.eigenvalues()(i);
-    auto vec = ges.eigenvectors().col(i);
+    const std::complex<ValueType> eig = ges.eigenvalues()(i);
+    const Eigen::Matrix<std::complex<ValueType>, 3, 1> vec = ges.eigenvectors().col(i);
+
+    if (eig.imag() != 0) continue;
+    const ValueType sum = vec.sum().real(); // ges.eigenvectors().col(i)(0).real() + ges.eigenvectors().col(i)(1).real() + ges.eigenvectors().col(i)(2).real();
+    lambda[0] = vec(0).real() / sum; 
+    lambda[1] = vec(1).real() / sum;
+    lambda[2] = vec(2).real() / sum;
+    if (lambda[0] * lambda[1] < 0 || lambda[0] * lambda[2] < 0) continue;
+    if (isnan(lambda[0]) || isnan(lambda[1]) || isnan(lambda[2])) continue;
+    return true;
+
+#if 0
     if (vec.imag().norm() == 0 && eig.imag() == 0) { // all real values
-      ValueType sum = vec.real().sum();
+      // std::cout << "eigvec" << i << ":\n" << vec << std::endl;
+      const ValueType sum = vec.real().sum();
+      fprintf(stderr, "sum=%.12f\n", sum);
       // if (isnan(sum) || isinf(sum) || sum < 1e-6) continue;
       if (isnan(sum) || isinf(sum)) continue;
       lambda[0] = vec(0).real() / sum;
@@ -120,6 +130,7 @@ inline bool parallel_vector1(const ValueType V[9], const ValueType W[9], ValueTy
       // std::cerr << "vec:" << vec << std::endl;
       return true;
     }
+#endif
   }
 
   return false;
