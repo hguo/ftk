@@ -22,7 +22,7 @@ inline void normalize2_3(T v[])
 template <typename T>
 inline void normalize2_4(T v[])
 {
-  normalize2_vector<3,T>(v);
+  normalize2_vector<4,T>(v);
 }
 
 }

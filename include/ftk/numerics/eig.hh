@@ -22,6 +22,8 @@ inline void eigvec3(const ValueType m[9], std::complex<ValueType> lambda, std::c
   v[0] = Dx / D;
   v[1] = Dy / D;
   v[2] = std::complex<ValueType>(ValueType(1), ValueType(0));
+
+  normalize2_3(v);
 }
 
 template <typename ValueType>

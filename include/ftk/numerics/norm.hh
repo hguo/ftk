@@ -8,7 +8,7 @@ inline T norm2_vector(const T v[])
 {
   T norm(0);
   for (int i=0; i<n; i++) 
-    norm = v[i] * v[i];
+    norm += v[i] * v[i];
   return norm;
 }
 
