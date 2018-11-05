@@ -72,6 +72,12 @@ inline bool solve_parallel_vector_barycentric(const ValueType V[9], const ValueT
   return false;
 }
 
+template <typename ValueType>
+inline bool solve_parallel_vector_bilinear(const ValueType V[12], const ValueType W[12], ValueType lambda[2])
+{
+  // TODO
+}
+
 #if 0
 template <typename ValueType>
 inline bool parallel_vector1(const ValueType V[9], const ValueType W[9], ValueType lambda[3])

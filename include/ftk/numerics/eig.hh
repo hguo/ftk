@@ -6,7 +6,7 @@
 #include <ftk/numerics/mulmat.hh>
 #include <ftk/numerics/cubic_solve.hh>
 #include <ftk/numerics/quartic_solve.hh>
-#include <ftk/numerics/normalize.hh>
+#include <ftk/numerics/vector_normalization.hh>
 #include <iostream>
 
 namespace ftk {
@@ -23,7 +23,7 @@ inline void eigvec3(const ValueType m[9], std::complex<ValueType> lambda, std::c
   v[1] = Dy / D;
   v[2] = std::complex<ValueType>(ValueType(1), ValueType(0));
 
-  normalize2_3(v);
+  vector_normalization2_3(v);
 }
 
 template <typename ValueType>
@@ -65,7 +65,7 @@ inline void eigvec4(const ValueType m[16], std::complex<ValueType> lambda, std::
   v[2] = Dz / D;
   v[3] = std::complex<ValueType>(ValueType(1), ValueType(0));
 
-  normalize2_4(v);
+  vector_normalization2_4(v);
 }
 
 template <typename ValueType>

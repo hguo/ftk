@@ -4,7 +4,7 @@
 namespace ftk {
 
 template <int n, typename T>
-inline T norm2_vector(const T v[])
+inline T vector_norm2(const T v[])
 {
   T norm(0);
   for (int i=0; i<n; i++) 
@@ -13,15 +13,15 @@ inline T norm2_vector(const T v[])
 }
 
 template <typename T>
-inline T norm2_3(const T v[])
+inline T vector_norm2_3(const T v[])
 {
-  return norm2_vector<3,T>(v);
+  return vector_norm2<3,T>(v);
 }
 
 template <typename T>
-inline T norm2_4(const T v[])
+inline T vector_norm2_4(const T v[])
 {
-  return norm2_vector<3,T>(v);
+  return vector_norm2<3,T>(v);
 }
 
 }
