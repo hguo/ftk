@@ -29,10 +29,16 @@ set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # add_executable (test_storage_fs test_storage.cpp)
 # add_executable (test_sweep_and_merge test_sweep_and_merge.cpp)
+# add_executable (test_invmat2 test_invmat2.cpp)
+# add_executable (test_invmat3 test_invmat3.cpp)
+# add_executable (test_invmat4 test_invmat4.cpp)
 # add_executable (test_eig3 test_eig3.cpp)
+# add_executable (test_eig4 test_eig4.cpp)
 # add_executable (test_det3 test_det3.cpp)
+# add_executable (test_det4 test_det4.cpp)
 # add_executable (test_cubic_solve test_cubic_solve.cpp)
-# add_executable (test_parallel_vector test_parallel_vector)
+# add_executable (test_quartic_solve test_quartic_solve.cpp)
+# add_executable (test_solve_parallel_vector_barycentric test_solve_parallel_vector_barycentric.cpp)
 
 # Load settings for the gtest project.
 set (GTEST_ROOT "" CACHE PATH "The root directory of the gtest install prefix.")
