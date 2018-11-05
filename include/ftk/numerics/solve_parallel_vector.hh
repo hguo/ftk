@@ -17,7 +17,7 @@ inline bool isnan_mat3x3(const ValueType m[])
 }
 
 template <typename ValueType>
-inline bool parallel_vector(const ValueType V[9], const ValueType W[9], ValueType lambda[3])
+inline bool solve_parallel_vector_barycentric(const ValueType V[9], const ValueType W[9], ValueType lambda[3])
 {
   ValueType invV[9], invW[9];
   const auto detV = invmat3(V, invV),

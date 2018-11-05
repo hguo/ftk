@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include <ftk/numerics/parallel_vector.hh>
+#include <ftk/numerics/solve_parallel_vector.hh>
 #include <ftk/numerics/cross_product.hh>
 #include <ftk/numerics/norm.hh>
 #include <ftk/numerics/barycentric_interpolation.hh>
@@ -15,7 +15,7 @@ int main(int argc, char **argv)
       W[k] = (double)rand() / RAND_MAX - 0.5;
     }
 
-    auto b = ftk::parallel_vector(V, W, lambda);
+    auto b = ftk::solve_parallel_vector_barycentric(V, W, lambda);
     if (b) {
       double v[3], w[3], r[3], c[3], cn;
       ftk::barycentric_interpolation3(V, lambda, v);
