@@ -6,7 +6,7 @@
 namespace ftk {
 
 template <class IdType>
-std::set<std::pair<IdType, IdType> > trackConnectedComponents(
+std::set<std::pair<IdType, IdType> > track_connected_components(
     const std::vector<std::set<IdType> > &components0,
     const std::vector<std::set<IdType> > &components1) 
 {
@@ -30,7 +30,7 @@ std::set<std::pair<IdType, IdType> > trackConnectedComponents(
 }
 
 template <class IdType, class ContainerType>
-std::vector<std::set<IdType> > extractConnectedComponents(
+std::vector<std::set<IdType> > extract_connected_components(
     const std::function<ContainerType(IdType) >& neighbors,
     const std::set<IdType> &qualified_)
 {
@@ -86,7 +86,7 @@ std::vector<std::set<IdType> > extractConnectedComponents(
 }
 
 template <class IdType, class ContainerType>
-std::vector<std::set<IdType> > extractConnectedComponents(
+std::vector<std::set<IdType> > extract_connected_components(
     IdType nNodes,
     const std::function<ContainerType(IdType) >& neighbors,
     const std::function<bool(IdType)>& criterion)
@@ -100,11 +100,11 @@ std::vector<std::set<IdType> > extractConnectedComponents(
   
   fprintf(stderr, "#qualified=%zu\n", qualified.size());
 
-  return extractConnectedComponents(neighbors, qualified);
+  return extract_connected_components(neighbors, qualified);
 }
 
 template <class IdType, class ContainerType>
-std::vector<std::set<IdType> > extractConnectedComponents(
+std::vector<std::set<IdType> > extract_connected_components(
     const ContainerType& nodes,
     const std::function<ContainerType(IdType) >& neighbors,
     const std::function<bool(IdType)>& criterion)
@@ -114,7 +114,7 @@ std::vector<std::set<IdType> > extractConnectedComponents(
     if (criterion(n))
       qualified.insert(n);
 
-  return extractConnectedComponents(neighbors, qualified);
+  return extract_connected_components(neighbors, qualified);
 }
 
 }

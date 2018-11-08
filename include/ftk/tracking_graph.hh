@@ -138,7 +138,7 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
     allNodes.insert(kv.second.begin(), kv.second.end());
   }
 
-  auto components = extractConnectedComponents<Node, std::set<Node> >(
+  auto components = extract_connected_components<Node, std::set<Node> >(
       [this](Node n) {
         std::set<Node> neighbors;
         if (left_links[n].size() == 1) // nodes need to be simply connected
@@ -192,7 +192,7 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
       else return left_links[n];
     };
 
-    auto components = extractConnectedComponents<Node, std::set<Node> >(intervalNeighbors, intervalNodes);
+    auto components = extract_connected_components<Node, std::set<Node> >(intervalNeighbors, intervalNodes);
     // fprintf(stderr, "====%zu\n", components.size());
     for (auto component : components) {
       if (component.size() != 2) {
