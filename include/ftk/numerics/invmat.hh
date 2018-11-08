@@ -42,6 +42,29 @@ inline ValueType invmat3(const ValueType m[9], ValueType inv[9]) // returns the 
 }
 
 template <class ValueType>
+inline ValueType invmat3(const ValueType m[3][3], ValueType inv[3][3]) // returns the determinant
+{
+  inv[0][0] =   m[1][1]*m[2][2] - m[1][2]*m[2][1];
+  inv[0][1] = - m[0][1]*m[2][2] + m[0][2]*m[2][1];
+  inv[0][2] =   m[0][1]*m[1][2] - m[0][2]*m[1][1];
+  inv[1][0] = - m[1][0]*m[2][2] + m[1][2]*m[2][0];
+  inv[1][1] =   m[0][0]*m[2][2] - m[0][2]*m[2][0];
+  inv[1][2] = - m[0][0]*m[1][2] + m[0][2]*m[1][0];
+  inv[2][0] =   m[1][0]*m[2][1] - m[1][1]*m[2][0];
+  inv[2][1] = - m[0][0]*m[2][1] + m[0][1]*m[2][0];
+  inv[2][2] =   m[0][0]*m[1][1] - m[0][1]*m[1][0];
+  
+  ValueType det = m[0][0]*inv[0][0] + m[0][1]*inv[1][0] + m[0][2]*inv[2][0];
+  ValueType invdet = ValueType(1) / det;
+
+  for (int i=0; i<3; i++)
+    for (int j=0; j<3; j++)
+      inv[i][j] = inv[i][j] * invdet;
+
+  return det;
+}
+
+template <class ValueType>
 inline ValueType invmat4(const ValueType m[16], ValueType inv[16]) // returns det
 {
   inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15]

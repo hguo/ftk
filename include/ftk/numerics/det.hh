@@ -20,6 +20,14 @@ inline ValueType det3(const ValueType m[9])
 }
 
 template <class ValueType>
+inline ValueType det3(const ValueType m[3][3]) // untested
+{
+  return m[0][0] * (m[1][1]*m[2][2] - m[1][2]*m[2][1])
+    + m[0][1] * (-m[1][0]*m[2][2] + m[1][2]*m[2][0])
+    + m[0][2] * (m[1][0]*m[2][1] - m[1][1]*m[2][0]);
+}
+
+template <class ValueType>
 inline ValueType det4(const ValueType m[16])
 {
   return 

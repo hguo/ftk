@@ -10,6 +10,12 @@ inline ValueType trace3(ValueType m[])
 }
 
 template <typename ValueType>
+inline ValueType trace3(ValueType m[3][3]) // untested
+{
+  return m[0][0] + m[1][1] + m[2][2];
+}
+
+template <typename ValueType>
 inline ValueType trace4(ValueType m[]) 
 {
   return m[0] + m[5] + m[10] + m[15];

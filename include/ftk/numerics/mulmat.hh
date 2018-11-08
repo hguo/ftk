@@ -31,6 +31,19 @@ void mulmat3(const ValueType A[9], const ValueType B[9], ValueType C[9])
   }
 }
 
+template <class ValueType>
+void mulmat3(const ValueType A[3][3], const ValueType B[3][3], ValueType C[3][3])
+{
+  for (int i=0; i<3; i++) {
+    for (int j=0; j<3; j++) {
+      ValueType dot = ValueType(0);
+      for (int k=0; k<3; k++)
+        dot += A[i][k] * B[k][j];
+      C[i][j] = dot;
+    }
+  }
+}
+
 }
 
 #endif

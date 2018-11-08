@@ -27,6 +27,20 @@ inline void eigvec3(const ValueType m[9], std::complex<ValueType> lambda, std::c
 }
 
 template <typename ValueType>
+inline void eigvec3(const ValueType m[3][3], std::complex<ValueType> lambda, std::complex<ValueType> v[3])
+{
+  std::complex<ValueType> D = (m[0][0] - lambda) * (m[2][2] - lambda) - m[0][1] * m[1][0], 
+    Dx = -m[0][2] * (m[1][1] - lambda) + m[0][1] * m[1][2],
+    Dy = -m[1][2] * (m[0][0] - lambda) + m[0][2] * m[1][0];
+
+  v[0] = Dx / D;
+  v[1] = Dy / D;
+  v[2] = std::complex<ValueType>(ValueType(1), ValueType(0));
+
+  vector_normalization2_3(v);
+}
+
+template <typename ValueType>
 inline void eig3(const ValueType m[9], std::complex<ValueType> eig[3], std::complex<ValueType> eigvec[3][3]) 
 {
   // using std::complex;
@@ -38,17 +52,23 @@ inline void eig3(const ValueType m[9], std::complex<ValueType> eig[3], std::comp
 
   for (int i=0; i<3; i++) 
     eigvec3(m, eig[i], eigvec[i]);
+}
 
-#if 0
-  fprintf(stderr, "matrix:\n[[%f, %f, %f], [%f, %f, %f], [%f, %f, %f]]\neigenvalues:\n[%f+j%f, %f+j%f, %f+j%f]\n", 
-      m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8], 
-      eig[0].real(), eig[0].imag(), eig[1].real(), eig[1].imag(), eig[2].real(), eig[2].imag());
-  fprintf(stderr, "eigs_impl0: (%f, %f), (%f, %f), (%f, %f)\n", 
-      eig[0].real(), eig[0].imag(), eig[1].real(), eig[1].imag(), eig[2].real(), eig[2].imag());
-  for (int k=0; k<3; k++)
-    fprintf(stderr, "eigenvector%d: %f+j%f, %f+j%f, %f+j%f\n", k,
-        eigvec[k][0].real(), eigvec[k][0].imag(), eigvec[k][1].real(), eigvec[k][1].imag(), eigvec[k][2].real(), eigvec[k][2].imag());
-#endif
+template <typename ValueType>
+inline void eig3(
+    const ValueType m[3][3], 
+    std::complex<ValueType> eig[3], 
+    std::complex<ValueType> eigvec[3][3]) // untested
+{
+  // using std::complex;
+  const ValueType b = -trace3(m),
+                  c = m[1][1]*m[2][2] + m[0][0]*m[2][2] + m[0][0]*m[1][1] - m[0][1]*m[1][0] - m[1][2]*m[2][1] - m[0][2]*m[2][0],
+                  d = -det3(m);
+
+  cubic_solve(b, c, d, eig);
+
+  for (int i=0; i<3; i++) 
+    eigvec3(m, eig[i], eigvec[i]);
 }
 
 // compute eigenvector for a given matrix and one of its eigenvalue

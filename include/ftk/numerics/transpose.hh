@@ -1,20 +1,23 @@
 #ifndef _FTK_TRANSPOSE_H
 #define _FTK_TRANSPOSE_H
 
+#include <algorithm>
+#include <utility>
+
 namespace ftk {
 
 template <typename ValueType>
 void transpose2(ValueType m[4])
 {
-  swap(m[1], m[2]);
+  std::swap(m[1], m[2]);
 }
 
 template <typename ValueType>
 void transpose3(ValueType m[9]) 
 {
-  swap(m[1], m[3]);
-  swap(m[2], m[6]);
-  swap(m[5], m[7]);
+  std::swap(m[1], m[3]);
+  std::swap(m[2], m[6]);
+  std::swap(m[5], m[7]);
 }
 
 template <typename ValueType>
@@ -34,12 +37,12 @@ void transpose3(const ValueType a[9], ValueType b[9])
 template <typename ValueType>
 void transpose4(ValueType m[16]) 
 {
-  swap(m[1], m[4]);
-  swap(m[2], m[8]);
-  swap(m[3], m[12]);
-  swap(m[6], m[9]);
-  swap(m[7], m[13]);
-  swap(m[11], m[14]);
+  std::swap(m[1], m[4]);
+  std::swap(m[2], m[8]);
+  std::swap(m[3], m[12]);
+  std::swap(m[6], m[9]);
+  std::swap(m[7], m[13]);
+  std::swap(m[11], m[14]);
 }
 
 }
