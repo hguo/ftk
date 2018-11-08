@@ -22,7 +22,7 @@ public:
 
   void cid2cidx(CellIdType id, int cidx[4]) const;
   CellIdType cidx2cid(const int cidx[4]) const;
-  
+
   bool valid_nidx(const int nidx[3]) const;
   bool valid_eidx(const int eidx[4]) const;
   bool valid_fidx(const int fidx[4]) const;
