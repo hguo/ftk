@@ -2,76 +2,60 @@
 #define _MESH_GRAPH_HH
 
 #include <set>
+#include <vector>
 
 namespace ftk {
 
-template <typename IndexType>
-class mesh_graph {
-public:
-  // 0, 0: node-node links through edges
-  virtual std::set<IndexType> links00(IndexType i) 
-  {return std::set<IndexType>();}
+template <typename index_type=size_t, typename chirality_type=signed char>
+struct mesh_graph {
+  virtual index_type n(int d) const = 0; // number of d-elements
+  virtual bool valid(int d, index_type i) = 0; // check if d-element i is valid
 
-  // 0, 1: node-edge links
-  virtual std::set<IndexType> links01(IndexType i) 
-  {return std::set<IndexType>();}
+  // children of mesh elements
+  virtual std::vector<std::pair<index_type, chirality_type> > links_edge_node(index_type i) = 0; // returns a list of nodes with chirality=1
+  virtual std::vector<std::pair<index_type, chirality_type> > links_face_edge(index_type i) = 0; // returns a list of edges with chirality=1
+  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_face(index_type i) = 0; // returns a list of faces with chirality=1
   
-  // 0, 2: node-face links
-  virtual std::set<IndexType> links02(IndexType i)
-  {return std::set<IndexType>();}
-  
-  // 0, 3: node-cell links (usually directly available from mesh)
-  virtual std::set<IndexType> links03(IndexType i)
-  {return std::set<IndexType>();}
-  
-  // 1, 0: edge-node links
-  virtual std::set<IndexType> links10(IndexType i)
-  {return std::set<IndexType>();}
-  
-  // 1, 1: eddg-edge links (an edge links to another edge if they share the same node)
-  virtual std::set<IndexType> links11(IndexType i)
-  {return std::set<IndexType>();}
-  
-  // 1, 2: edge-face links
-  virtual std::set<IndexType> links12(IndexType i)
-  {return std::set<IndexType>();}
-  
-  // 1, 3: edge-cell links
-  virtual std::set<IndexType> links13(IndexType i)
-  {return std::set<IndexType>();}
-  
-  // 2, 0: face-node links
-  virtual std::set<IndexType> links20(IndexType i)
-  {return std::set<IndexType>();}
-  
-  // 2, 1: face-edge links
-  virtual std::set<IndexType> links21(IndexType i)
-  {return std::set<IndexType>();}
-  
-  // 2, 2: face-face links (a face links to another face if they share the same edge)
-  virtual std::set<IndexType> links22(IndexType i)
-  {return std::set<IndexType>();}
+  virtual std::vector<std::pair<index_type, chirality_type> > children(int d, index_type i) { // d-1
+    if (d == 1) return links_edge_node(i); 
+    else if (d == 2) return links_face_edge(i);
+    else if (d == 3) return links_cell_face(i);
+    else return std::vector<std::pair<index_type, chirality_type>>();
+  }
 
-  // 2, 3: face-cell links
-  virtual std::set<IndexType> links23(IndexType i)
-  {return std::set<IndexType>();}
+  // parents of mesh elements
+  virtual std::vector<std::pair<index_type, chirality_type> > links_node_edge(index_type i) = 0;
+  virtual std::vector<std::pair<index_type, chirality_type> > links_edge_face(index_type i) = 0;
+  virtual std::vector<std::pair<index_type, chirality_type> > links_face_cell(index_type i) = 0;
+  
+  virtual std::vector<std::pair<index_type, chirality_type> > parents(int d, index_type i) { // d+1
+    if (d == 0) return links_node_edge(i);
+    else if (d == 1) return links_edge_face(i);
+    else if (d == 2) return links_face_cell(i);
+    else return std::vector<std::pair<index_type, chirality_type>>();
+  }
 
-  // 3, 0: cell-node links
-  virtual std::set<IndexType> links30(IndexType i)
-  {return std::set<IndexType>();}
 
-  // 3, 1: cell-edge links
-  virtual std::set<IndexType> links31(IndexType i)
-  {return std::set<IndexType>();}
+  // derived links that are optional
+  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_nodes(index_type i) {
+    return std::vector<std::pair<index_type, chirality_type> >();
+  }
 
-  // 3, 2: cell-face links
-  virtual std::set<IndexType> links32(IndexType i)
-  {return std::set<IndexType>();}
+  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_edges(index_type i) { // usually not useful
+    return std::vector<std::pair<index_type, chirality_type> >();
+  }
 
-  // 3, 3: cell-cell links (a cell links to another cell if they share the same face)
-  virtual std::set<IndexType> links33(IndexType i)
-  {return std::set<IndexType>();}
-}
+  virtual std::vector<std::pair<index_type, chirality_type>> links_face_nodes(index_type i) {
+    std::vector<std::pair<index_type, chirality_type>> results;
+    const auto edges = links_face_edge(i);
+    for (auto i = 0; i < edges.size(); i ++) {
+      const auto edge = edges[i];
+      const auto nodes = links_edge_node(edge.first);
+      results.push_back(edge.second == 1 ? nodes[1] : nodes[0]);
+    }
+    return results;
+  }
+};
 
 }
 
