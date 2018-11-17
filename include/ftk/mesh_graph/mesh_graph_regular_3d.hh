@@ -102,9 +102,12 @@ std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d<index_
 links_edge_node(index_type id)
 {
   std::vector<std::pair<index_type, chirality_type> > results;
- 
+
   int idx[4];
   eid2eidx(id, idx);
+  // fprintf(stderr, "-eid=%lu, eidx={%d, %d, %d, %d}, valid=%d\n",
+  //     id, idx[0], idx[1], idx[2], idx[3], valid_eidx(idx));
+
   if (!valid_eidx(idx)) return results;
      
   const int &i = idx[0], &j = idx[1], &k = idx[2], &type = idx[3];
@@ -127,8 +130,10 @@ links_face_edge(index_type id)
   std::vector<std::pair<index_type, chirality_type> > results;
   
   int idx[4];
-  eid2eidx(id, idx);
-  if (!valid_eidx(idx)) return results;
+  fid2fidx(id, idx);
+  // fprintf(stderr, "fid=%lu, fidx={%d, %d, %d, %d}, valid=%d\n",
+  //     id, idx[0], idx[1], idx[2], idx[3], valid_fidx(idx));
+  if (!valid_fidx(idx)) return results;
   
   const int &i = idx[0], &j = idx[1], &k = idx[2], &t = idx[3];
   const int edges_idx[3][4][4] = {
@@ -295,22 +300,36 @@ void mesh_graph_regular_3d<index_type, chirality_type>::cid2cidx(index_type id, 
 }
 
 template <typename index_type, typename chirality_type>
-bool mesh_graph_regular_3d<index_type, chirality_type>::valid_eidx(const int eidx[4]) const
+bool mesh_graph_regular_3d<index_type, chirality_type>::
+valid_eidx(const int eidx[4]) const
 {
+  // fprintf(stderr, "eidx=%d, %d, %d, %d\n", eidx[0], eidx[1], eidx[2], eidx[3]);
   if (eidx[3]<0 || eidx[3]>=3) return false;
   else {
+    int o[3] = {0};
     for (int i=0; i<3; i++) 
       if (pbc[i]) {
         if (eidx[i]<0 || eidx[i]>=d[i]) return false;
       } else {
-        if (eidx[i]<0 || eidx[i]>=d[i]-1) return false;
+        // if (eidx[i]<0 || eidx[i]>=d[i]-1) return false;
+        if (eidx[i]<0 || eidx[i]>d[i]-1) return false;
+        else if (eidx[i] == d[i]-1) o[i] = 1;
       }
-    return true;
+
+    const int sum = o[0] + o[1] + o[2];
+    if (sum == 0) return true;
+    else if (sum > 2) return false;
+    else if (o[0] && eidx[3] == 0) return false; 
+    else if (o[1] && eidx[3] == 1) return false;
+    else if (o[2] && eidx[3] == 2) return false;
+    else return true;
+    // return true;
   }
 }
 
 template <typename index_type, typename chirality_type>
-bool mesh_graph_regular_3d<index_type, chirality_type>::valid_fidx(const int fidx[4]) const
+bool mesh_graph_regular_3d<index_type, chirality_type>::
+valid_fidx(const int fidx[4]) const
 {
   if (fidx[3]<0 || fidx[3]>=3) return false;
   else {

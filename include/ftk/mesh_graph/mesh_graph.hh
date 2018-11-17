@@ -8,6 +8,8 @@ namespace ftk {
 
 template <typename index_type=size_t, typename chirality_type=signed char>
 struct mesh_graph {
+  virtual ~mesh_graph() {}
+
   virtual index_type n(int d) const = 0; // number of d-elements
   virtual bool valid(int d, index_type i) = 0; // check if d-element i is valid
 
@@ -37,17 +39,20 @@ struct mesh_graph {
 
 
   // derived links that are optional
-  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_nodes(index_type i) {
+  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_node(index_type i) {
     return std::vector<std::pair<index_type, chirality_type> >();
   }
 
-  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_edges(index_type i) { // usually not useful
+  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_edge(index_type i) { // usually not useful
     return std::vector<std::pair<index_type, chirality_type> >();
   }
 
-  virtual std::vector<std::pair<index_type, chirality_type>> links_face_nodes(index_type i) {
+  virtual std::vector<std::pair<index_type, chirality_type>> links_face_node(index_type i) {
     std::vector<std::pair<index_type, chirality_type>> results;
+    if (!valid(2, i)) return results;
+
     const auto edges = links_face_edge(i);
+
     for (auto i = 0; i < edges.size(); i ++) {
       const auto edge = edges[i];
       const auto nodes = links_edge_node(edge.first);

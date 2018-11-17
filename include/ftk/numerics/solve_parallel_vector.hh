@@ -58,9 +58,9 @@ inline int solve_parallel_vector_barycentric(const ValueType V[3][3], const Valu
   transpose3(WW);
   
   ValueType lambda1[9];
-  const auto n = solve_parallel_vector_barycentric(VV, WW, lambda);
+  const auto n = solve_parallel_vector_barycentric(VV, WW, lambda1);
   for (int i = 0; i < n; i ++)
-    for (int j = 0; j < n; j ++)
+    for (int j = 0; j < 3; j ++)
       lambda[i][j] = lambda1[i*3+j];
 
   return n;

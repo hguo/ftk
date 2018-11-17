@@ -23,7 +23,9 @@ public:
   std::vector<std::pair<index_type, chirality_type> > links_node_edge(index_type i);
   std::vector<std::pair<index_type, chirality_type> > links_edge_face(index_type i);
   std::vector<std::pair<index_type, chirality_type> > links_face_cell(index_type i);
-  
+ 
+  std::vector<std::pair<index_type, chirality_type> > links_face_node(index_type i);
+
   ///////////////////
   bool valid_eidx(const int eidx[4]) const;
   bool valid_fidx(const int fidx[4]) const;
@@ -87,17 +89,41 @@ links_face_edge(index_type id)
   std::vector<std::pair<index_type, chirality_type> > results;
   
   int idx[4];
-  eid2eidx(id, idx);
-  if (!valid_eidx(idx)) return results;
+  fid2fidx(id, idx);
+  if (!valid_fidx(idx)) return results;
   
   const int &i = idx[0], &j = idx[1], &k = idx[2], &t = idx[3];
-  const int edges_idx[3][4][4] = {
-    {{i, j, k, 1}, {i, j+1, k, 2}, {i, j, k+1, 1}, {i, j, k, 2}},
-    {{i, j, k, 2}, {i, j, k+1, 0}, {i+1, j, k, 2}, {i, j, k, 0}},
-    {{i, j, k, 0}, {i+1, j, k, 1}, {i, j+1, k, 0}, {i, j, k, 1}}};
-  const chirality_type edges_chi[4] = {1, 1, -1, -1};
-  for (int p=0; p<4; p++) 
-    results.push_back(std::make_pair(eidx2eid(edges_idx[t][p]), edges_chi[p]));
+  const int edges_idx[12][3][4] = {
+    {{i, j, k, 0}, {i+1, j, k, 2}, {i, j, k, 1}}, 
+    {{i, j, k, 1}, {i, j+1, k, 0}, {i, j, k, 2}}, 
+    {{i, j, k, 0}, {i+1, j, k, 3}, {i, j, k, 4}}, 
+    {{i, j, k, 3}, {i, j, k+1, 0}, {i, j, k, 4}}, 
+    {{i, j, k, 2}, {i, j, k, 5}, {i, j, k, 3}}, 
+    {{i, j, k, 5}, {i, j, k+1, 2}, {i, j+1, k, 3}}, 
+    {{i, j, k, 2}, {i, j, k, 6}, {i, j, k, 4}}, 
+    {{i, j, k, 6}, {i+1, j, k+1, 2}, {i, j+1, k, 4}}, 
+    {{i, j, k, 5}, {i, j, k+1, 0}, {i, j, k, 6}}, 
+    {{i, j+1, k, 0}, {i, j, k, 6}, {i+1, j, k, 5}}, 
+    {{i, j, k, 1}, {i+1, j, k, 5}, {i, j, k, 4}}, 
+    {{i, j, k, 5}, {i, j, k+1, 1}, {i, j+1, k, 4}}
+  }; 
+  const chirality_type edges_chi[12][3] = {
+    {1, 1, -1}, 
+    {1, -1, -1}, 
+    {1, 1, -1}, 
+    {1, 1, -1}, 
+    {1, 1, -1}, 
+    {1, 1, -1}, 
+    {1, 1, -1}, 
+    {1, 1, -1}, 
+    {1, 1, -1}, 
+    {-1, 1, -1},
+    {1, 1, -1}, 
+    {1, 1, -1}
+  };
+  
+  for (int p=0; p<3; p++) 
+    results.push_back(std::make_pair(eidx2eid(edges_idx[t][p]), edges_chi[t][p]));
 
   return results;
 }
@@ -113,16 +139,24 @@ links_cell_face(index_type id)
   if (!valid_cidx(idx)) return results;
 
   const int &i = idx[0], &j = idx[1], &k = idx[2], &t = idx[3];
-  const int faces_fidx[6][4] = {
-    {i, j, k, 0}, // type0, yz
-    {i, j, k, 1}, // type1, zx
-    {i, j, k, 2}, // type2, xy
-    {i+1, j, k, 0}, // type0, yz
-    {i, j+1, k, 1}, // type1, zx
-    {i, j, k+1, 2}};  // type2, xy
-  const chirality_type faces_chi[6] = {-1, -1, -1, 1, 1, 1};
-  for (int p=0; p<6; p++) 
-    results.push_back(std::make_pair(fidx2fid(faces_fidx[p]), faces_chi[p]));
+  const int faces_fidx[6][4][4] = {
+    {{i, j, k, 0}, {i, j, k, 2}, {i+1, j, k, 4}, {i, j, k, 10}}, 
+    {{i, j, k, 11}, {i, j, k, 5}, {i, j, k+1, 1}, {i, j+1, k, 3}},
+    {{i, j, k, 4}, {i, j, k, 6}, {i, j, k, 8}, {i, j, k, 3}}, 
+    {{i, j, k, 9}, {i, j+1, k, 2}, {i, j, k, 7}, {i+1, j, k, 5}}, 
+    {{i, j, k, 8}, {i, j, k, 11}, {i, j, k+1, 0}, {i, j, k, 7}},
+    {{i, j, k, 1}, {i, j, k, 10}, {i, j, k, 9}, {i, j, k, 6}}
+  };
+  const chirality_type faces_chi[6][4] = {
+    {-1, 1, 1, -1}, 
+    {-1, 1, 1, 1}, 
+    {-1, 1, 1, -1},
+    {-1, -1, 1, -1}, 
+    {-1, 1, 1, -1}, 
+    {-1, 1, 1, -1}
+  };
+  for (int p=0; p<4; p++)
+    results.push_back(std::make_pair(fidx2fid(faces_fidx[t][p]), faces_chi[t][p]));
 
   return results;
 }
@@ -170,22 +204,69 @@ links_face_cell(index_type id)
   std::vector<std::pair<index_type, chirality_type> > results;
   
   int idx[4];
-  cid2cidx(id, idx);
-  if (!valid_cidx(idx)) return results;
+  fid2fidx(id, idx);
+  if (!valid_fidx(idx)) return results;
 
   const int &i = idx[0], &j = idx[1], &k = idx[2], &t = idx[3];
-  const int contained_cells_cidx[3][2][3] = {
-    {{i, j, k}, {i-1, j, k}}, 
-    {{i, j, k}, {i, j-1, k}},
-    {{i, j, k}, {i, j, k-1}}};
-  const chirality_type contained_cells_chi[2] = {-1, 1};
-  // const int contained_cells_fid[3][2] = {
-  //   {0, 3}, {1, 4}, {2, 5}};
-  for (int p=0; p<2; p++) {
-    results.push_back(std::make_pair(cidx2cid(contained_cells_cidx[t][p]), contained_cells_chi[p]));
-    // face.contained_cells.push_back(cidx2cid(contained_cells_cidx[t][p]));
-    // face.contained_cells_chirality.push_back(contained_cells_chi[p]);
-    // face.contained_cells_fid.push_back(contained_cells_fid[t][p]);
+  const int contained_cells_cidx[12][2][4] = {
+    {{i, j, k, 0}, {i, j, k-1, 4}},  // ABC
+    {{i, j, k, 5}, {i, j, k-1, 1}},  // ACD
+    {{i, j, k, 0}, {i, j-1, k, 3}},  // ABF
+    {{i, j, k, 2}, {i, j-1, k, 1}},  // AEF
+    {{i, j, k, 2}, {i-1, j, k, 0}},  // ADE
+    {{i, j, k, 1}, {i-1, j, k, 3}},  // DEH
+    {{i, j, k, 2}, {i, j, k, 5}},    // ADF
+    {{i, j, k, 4}, {i, j, k, 3}},    // DFG
+    {{i, j, k, 2}, {i, j, k, 4}},    // DEF
+    {{i, j, k, 3}, {i, j, k, 5}},    // CDF
+    {{i, j, k, 0}, {i, j, k, 5}},    // ACF
+    {{i, j, k, 1}, {i, j, k, 4}}     // DEG
+  }; 
+  const chirality_type contained_cells_chi[12][2] = {
+    {-1, 1}, {-1, 1}, {1, -1}, {-1, 1}, {-1, 1}, {1, -1}, 
+    {1, -1}, {-1, 1}, {1, -1}, {-1, 1}, {-1, 1}, {-1, 1}
+  };
+  
+  for (int p=0; p<2; p++) 
+    results.push_back(std::make_pair(cidx2cid(contained_cells_cidx[t][p]), contained_cells_chi[t][p]));
+
+  return results;
+}
+
+template <typename index_type, typename chirality_type>
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+links_face_node(index_type id)
+{
+  // return mesh_graph<index_type, chirality_type>::links_face_node(id);
+
+  std::vector<std::pair<index_type, chirality_type> > results;
+  
+  int idx[4];
+  fid2fidx(id, idx);
+  if (!valid_fidx(idx)) return results;
+
+  const int &i = idx[0], &j = idx[1], &k = idx[2], &t = idx[3];
+  static const int nodes_idx[12][3][3] = { // 12 types of faces
+    {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}}, // ABC
+    {{0, 0, 0}, {1, 1, 0}, {0, 1, 0}}, // ACD
+    {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}}, // ABF
+    {{0, 0, 0}, {0, 0, 1}, {1, 0, 1}}, // AEF
+    {{0, 0, 0}, {0, 1, 0}, {0, 0, 1}}, // ADE
+    {{0, 1, 0}, {0, 0, 1}, {0, 1, 1}}, // DEH
+    {{0, 0, 0}, {0, 1, 0}, {1, 0, 1}}, // ADF
+    {{0, 1, 0}, {1, 0, 1}, {1, 1, 1}}, // DFG
+    {{0, 1, 0}, {0, 0, 1}, {1, 0, 1}}, // DEF
+    {{1, 1, 0}, {0, 1, 0}, {1, 0, 1}}, // CDF
+    {{0, 0, 0}, {1, 1, 0}, {1, 0, 1}}, // ACF
+    {{0, 1, 0}, {0, 0, 1}, {1, 1, 1}}  // DEG
+  };
+
+  const int type = idx[3];
+  for (int p=0; p<3; p++) {
+    int nidx[3];
+    for (int q=0; q<3; q++) 
+      nidx[q] = idx[q] + nodes_idx[type][p][q];
+    results.push_back(std::make_pair(mesh_graph_regular_3d<index_type, chirality_type>::nidx2nid(nidx), 0)); 
   }
 
   return results;
@@ -237,15 +318,31 @@ template <typename index_type, typename chirality_type>
 bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_eidx(const int eidx[4]) const
 {
   if (eidx[3]<0 || eidx[3]>=7) return false;
-  else {
-    for (int i=0; i<3; i++)
-      if (mesh_graph_regular_3d<index_type, chirality_type>::pbc[i]) {
-        if (eidx[i] < 0 || eidx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]) return false;
+  static const int nodes_idx[7][2][3] = { // 7 types of edges
+    {{0, 0, 0}, {1, 0, 0}}, // AB
+    {{0, 0, 0}, {1, 1, 0}}, // AC
+    {{0, 0, 0}, {0, 1, 0}}, // AD
+    {{0, 0, 0}, {0, 0, 1}}, // AE
+    {{0, 0, 0}, {1, 0, 1}}, // AF
+    {{0, 1, 0}, {0, 0, 1}}, // DE
+    {{0, 1, 0}, {1, 0, 1}}, // DF
+  };
+  
+  for (int dim=0; dim<3; dim++) {
+    for (int i=0; i<2; i++) {
+      const int p = eidx[dim] + nodes_idx[eidx[3]][i][dim];
+      // fprintf(stderr, "type=%d, dim=%d, i=%d, p=%d\n", eidx[3], dim, i, p);
+      if (p < 0) return false;
+      else if (mesh_graph_regular_3d<index_type, chirality_type>::pbc[dim]) {
+        if (p >= mesh_graph_regular_3d<index_type, chirality_type>::d[dim]) 
+          return false;
       } else {
-        if (eidx[i] < 0 || eidx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]-1) return false;
+        if (p != p % mesh_graph_regular_3d<index_type, chirality_type>::d[dim])
+          return false;
       }
-    return true;
+    }
   }
+  return true;
 }
 
 template <typename index_type, typename chirality_type>
