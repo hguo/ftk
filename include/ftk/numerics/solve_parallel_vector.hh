@@ -66,6 +66,38 @@ inline int solve_parallel_vector_barycentric(const ValueType V[3][3], const Valu
   return n;
 }
 
+template <typename T>
+inline int solve_parallel_vector_bibarycentric(const T V[4][3], const T W[4][3], T lambda[6][2])
+{
+  T X0[3][3] = {{0, 0, 0}, 
+                {1, 0, 0},
+                {0, 1, 0}};
+  T X1[3][3] = {{1, 0, 0}, 
+                {1, 1, 0},
+                {0, 1, 0}};
+  
+  T V0[] = {V[0][0], V[0][1], V[0][2], V[1][0], V[1][1], V[1][2], V[2][0], V[2][1], V[2][2]},
+    W0[] = {W[0][0], W[0][1], W[0][2], W[1][0], W[1][1], W[1][2], W[2][0], W[2][1], W[2][2]}, 
+    V1[] = {V[0][0], V[0][1], V[0][2], V[2][0], V[2][1], V[2][2], V[3][0], V[3][1], V[3][2]}, 
+    W1[] = {W[0][0], W[0][1], W[0][2], W[2][0], W[2][1], W[2][2], W[3][0], W[3][1], W[3][2]};
+
+  transpose3(V0);
+  transpose3(W0);
+  transpose3(V1);
+  transpose3(W1);
+
+  // TODO
+  T p[3];
+#if 0
+  if (find_zero_triangle(R0, I0, X0, p)) {
+    pos[0] = p[0]; 
+    pos[1] = p[1];
+    return true;
+  } else 
+    return false;
+#endif
+}
+
 template <typename ValueType>
 inline bool solve_parallel_vector_bilinear(const ValueType V[12], const ValueType W[12], ValueType lambda[2])
 {
