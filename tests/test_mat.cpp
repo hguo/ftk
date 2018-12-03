@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <ftk/numerics/invmat.hh>
+#include <ftk/numeric/invmat.hh>
 
 class MatrixTest : public testing::Test {
  public:

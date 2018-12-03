@@ -1,9 +1,9 @@
 #include <iostream>
 #include <vector>
-#include <ftk/numerics/solve_parallel_vector.hh>
-#include <ftk/numerics/cross_product.hh>
-#include <ftk/numerics/vector_norm.hh>
-#include <ftk/numerics/barycentric_interpolation.hh>
+#include <ftk/numeric/parallel_vector_solver.hh>
+#include <ftk/numeric/cross_product.hh>
+#include <ftk/numeric/vector_norm.hh>
+#include <ftk/numeric/barycentric_interpolation.hh>
 
 int main(int argc, char **argv)
 {

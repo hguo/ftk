@@ -1,12 +1,12 @@
 #ifndef _FTK_EIG_H
 #define _FTK_EIG_H
 
-#include <ftk/numerics/trace.hh>
-#include <ftk/numerics/det.hh>
-#include <ftk/numerics/mulmat.hh>
-#include <ftk/numerics/cubic_solve.hh>
-#include <ftk/numerics/quartic_solve.hh>
-#include <ftk/numerics/vector_normalization.hh>
+#include <ftk/numeric/trace.hh>
+#include <ftk/numeric/det.hh>
+#include <ftk/numeric/mulmat.hh>
+#include <ftk/numeric/cubic_solver.hh>
+#include <ftk/numeric/quartic_solver.hh>
+#include <ftk/numeric/vector_normalization.hh>
 #include <iostream>
 
 namespace ftk {

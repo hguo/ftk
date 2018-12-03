@@ -1,10 +1,10 @@
-#ifndef _FTK_PARALLEL_VECTOR_H
-#define _FTK_PARALLEL_VECTOR_H
+#ifndef _FTK_PARALLEL_VECTOR_SOLVER_H
+#define _FTK_PARALLEL_VECTOR_SOLVER_H
 
-#include <ftk/numerics/invmat.hh>
-#include <ftk/numerics/eig.hh>
-#include <ftk/numerics/transpose.hh>
-#include <ftk/numerics/isnan.hh>
+#include <ftk/numeric/invmat.hh>
+#include <ftk/numeric/eigen_solver.hh>
+#include <ftk/numeric/transpose.hh>
+#include <ftk/numeric/isnan.hh>
 
 namespace ftk {
 

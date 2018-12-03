@@ -1,7 +1,7 @@
 #ifndef _FTK_NORMALIZE_H
 #define _FTK_NORMALIZE_H
 
-#include <ftk/numerics/vector_norm.hh>
+#include <ftk/numeric/vector_norm.hh>
 
 namespace ftk {
 
