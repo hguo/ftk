@@ -57,11 +57,17 @@ inline ValueType det4(const ValueType m[16])
     - m[12] * m[2] * m[7] * m[9];
 }
 
+// template <class T>
+// inline T det2(T m0, T m1, T m2, T m3)
+// {
+//   T m[] = {m0, m1, m2, m3};
+//   return det2(m);
+// }
+
 template <class T>
-inline T det2(T m0, T m1, T m2, T m3)
+inline T det2(T m00, T m01, T m10, T m11)
 {
-  T m[] = {m0, m1, m2, m3};
-  return det2(m);
+  return m00*m11 - m10*m01;
 }
 
 template <class T>
