@@ -5,10 +5,17 @@
 
 namespace ftk {
 
+template <typename T>
+inline void print2x2(const std::string &name, const T m[2][2])
+{
+  fprintf(stderr, "%s=[[%.10f, %.10f], [%.10f, %.10f]]\n",
+      name.c_str(), m[0][0], m[0][1], m[1][0], m[1][1]);
+}
+
 template <typename ValueType>
 inline void print2x2(const std::string &name, const ValueType m[])
 {
-  fprintf(stderr, "%s=[[%.10f, %.10f], [%.10f, %.10f]\n",
+  fprintf(stderr, "%s=[[%.10f, %.10f], [%.10f, %.10f]]\n",
       name.c_str(), m[0], m[1], m[2], m[3]);
 }
 

@@ -1,7 +1,7 @@
 #ifndef _FTK_PARALLEL_VECTOR_SOLVER_H
 #define _FTK_PARALLEL_VECTOR_SOLVER_H
 
-#include <ftk/numeric/invmat.hh>
+#include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/eigen_solver.hh>
 #include <ftk/numeric/transpose.hh>
 #include <ftk/numeric/isnan.hh>
@@ -12,14 +12,14 @@ template <typename ValueType>
 inline int solve_parallel_vector_barycentric(const ValueType V[9], const ValueType W[9], ValueType lambda[9])
 {
   ValueType invV[9], invW[9];
-  const auto detV = invmat3(V, invV),
-             detW = invmat3(W, invW);
+  const auto detV = matrix_inverse3(V, invV),
+             detW = matrix_inverse3(W, invW);
 
   if (isnan_mat3x3(invW) || isnan_mat3x3(invV)) return false;
   // if (detW < 1e-4) return false;
 
   ValueType m[9];
-  mulmat3(invW, V, m);
+  matrix_matrix_multiplication_3x3_3x3(invW, V, m);
   // if (detW > detV) mulmat3(invW, V, m); 
   // else mulmat3(invV, W, m); // very wrong...
 

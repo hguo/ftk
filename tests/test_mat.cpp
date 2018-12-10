@@ -1,18 +1,17 @@
 #include <gtest/gtest.h>
-
-#include <ftk/numeric/invmat.hh>
+#include <ftk/numeric/matrix_inverse.hh>
 
 class MatrixTest : public testing::Test {
  public:
   const float kEps = 1e-5;
 };
 
-TEST_F(MatrixTest, invmat2) {
+TEST_F(MatrixTest, matrix_inverse2) {
   float m[] = {0.72758122, 0.31241218,
                0.84617905, 0.82793148};
   float inv[4];
 
-  float det = ftk::invmat2(m, inv);
+  float det = ftk::matrix_inverse2(m, inv);
 
   EXPECT_NEAR(0.3380307546139767, det, kEps);
 
@@ -22,13 +21,13 @@ TEST_F(MatrixTest, invmat2) {
   EXPECT_NEAR( 2.15241131, inv[3], kEps);
 }
 
-TEST_F(MatrixTest, invmat3) {
+TEST_F(MatrixTest, matrix_inverse3) {
   float m[] = {0.9102779,  0.44108077, 0.72642273,
                0.39278198, 0.95680469, 0.02683596,
                0.05335823, 0.86960914, 0.43971526};
   float inv[9];
 
-  float det = ftk::invmat3(m, inv);
+  float det = ftk::matrix_inverse3(m, inv);
 
   EXPECT_NEAR(0.49721770782016816, det, kEps);
 
@@ -43,14 +42,14 @@ TEST_F(MatrixTest, invmat3) {
   EXPECT_NEAR( 1.40322755, inv[8], kEps);
 }
 
-TEST_F(MatrixTest, invmat4) {
+TEST_F(MatrixTest, matrix_inverse4) {
   float m[] = {0.37116367, 0.16844887, 0.99227088, 0.71275718,
                0.88786179, 0.19169413, 0.33589513, 0.40073562,
                0.47178621, 0.34809309, 0.46421167, 0.64434074,
                0.9928173,  0.22639279, 0.8466231,  0.48266757};
   float inv[16];
 
-  float det = ftk::invmat4(m, inv);
+  float det = ftk::matrix_inverse4(m, inv);
 
   EXPECT_NEAR(-0.036813207788038683, det, kEps);
 

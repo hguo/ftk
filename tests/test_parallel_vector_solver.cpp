@@ -3,7 +3,7 @@
 #include <ftk/numeric/parallel_vector_solver.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
-#include <ftk/numeric/barycentric_interpolation.hh>
+#include <ftk/numeric/linear_interpolation.hh>
 
 int main(int argc, char **argv)
 {
@@ -18,10 +18,10 @@ int main(int argc, char **argv)
     const auto n = ftk::solve_parallel_vector_barycentric(V, W, lambda);
     for (int j = 0; j < n; j ++) {
       double v[3], w[3], r[3], c[3], cn;
-      ftk::barycentric_interpolation3(V, lambda+j*3, v);
-      ftk::barycentric_interpolation3(W, lambda+j*3, w);
+      ftk::linear_interpolation3_3(V, lambda+j*3, v);
+      ftk::linear_interpolation3_3(W, lambda+j*3, w);
       ftk::cross_product(v, w, c);
-      cn = ftk::vector_norm2_3(c);
+      cn = ftk::vector_2norm_3(c);
 
       for (int k=0; k<3; k++) 
         r[k] = v[k] / w[k];

@@ -3,13 +3,33 @@
 
 #include <ftk/numeric/trace.hh>
 #include <ftk/numeric/det.hh>
-#include <ftk/numeric/mulmat.hh>
+#include <ftk/numeric/matrix_multiplication.hh>
 #include <ftk/numeric/cubic_solver.hh>
 #include <ftk/numeric/quartic_solver.hh>
 #include <ftk/numeric/vector_normalization.hh>
 #include <iostream>
 
 namespace ftk {
+
+template <typename T>
+inline void solve_eigenvalues_real_symmetric2(T m00, T m10, T m11, T eig[2])
+{
+  const T b = -(m00 + m11), c = m00*m11 - m10*m10;
+  const T sqrt_delta = sqrt(b*b - 4*c);
+  
+  eig[0] = 0.5*(-b+sqrt_delta);
+  eig[1] = 0.5*(-b-sqrt_delta);
+
+  if (abs(eig[0]) < abs(eig[1]))
+    std::swap(eig[0], eig[1]);
+}
+
+template <typename T>
+inline void solve_eigenvalues_real_symmetric2(T m[2][2], T eig[2])
+{
+  return solve_eigenvalues_real_symmetric2(m[0][0], m[1][0], m[1][1], eig);
+}
+
 
 // compute eigenvector for a given matrix and one of its eigenvalue
 template <typename T>
@@ -38,19 +58,6 @@ inline void eigvec3(const T m[3][3], std::complex<T> lambda, std::complex<T> v[3
   v[2] = std::complex<T>(T(1), T(0));
 
   vector_normalization2_3(v);
-}
-
-template <typename T>
-inline void eigensolver_real_symmetric2(T m00, T m10, T m11, T eig[2])
-{
-  const T b = -(m00 + m11), c = m00*m11 - m10*m10;
-  const T sqrt_delta = sqrt(b*b - 4*c);
-  
-  eig[0] = 0.5*(-b+sqrt_delta);
-  eig[1] = 0.5*(-b-sqrt_delta);
-
-  if (abs(eig[0]) < abs(eig[1]))
-    std::swap(eig[0], eig[1]);
 }
 
 template <typename T>

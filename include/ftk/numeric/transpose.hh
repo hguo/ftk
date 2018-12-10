@@ -6,22 +6,31 @@
 
 namespace ftk {
 
-template <typename ValueType>
-void transpose2(ValueType m[4])
+template <typename T>
+void transpose2(const T A[2][2], T B[2][2])
+{
+  B[0][0] = A[0][0];
+  B[0][1] = A[1][0];
+  B[1][0] = A[0][1];
+  B[1][1] = A[1][1];
+}
+
+template <typename T>
+void transpose2(T m[4])
 {
   std::swap(m[1], m[2]);
 }
 
-template <typename ValueType>
-void transpose3(ValueType m[9]) 
+template <typename T>
+void transpose3(T m[9]) 
 {
   std::swap(m[1], m[3]);
   std::swap(m[2], m[6]);
   std::swap(m[5], m[7]);
 }
 
-template <typename ValueType>
-void transpose3(const ValueType a[9], ValueType b[9]) 
+template <typename T>
+void transpose3(const T a[9], T b[9]) 
 {
   b[0] = a[0];
   b[1] = a[3];
@@ -34,8 +43,8 @@ void transpose3(const ValueType a[9], ValueType b[9])
   b[8] = a[8];
 }
 
-template <typename ValueType>
-void transpose4(ValueType m[16]) 
+template <typename T>
+void transpose4(T m[16]) 
 {
   std::swap(m[1], m[4]);
   std::swap(m[2], m[8]);

@@ -12,7 +12,7 @@ bool inverse_linear_interpolation1(T v[2], T lambda[1])
 }
 
 template <typename T>
-bool inverse_linear_interpolation2(const T u[3], const T v[3], T lambda[3])
+bool inverse_linear_interpolation3_2(const T u[3], const T v[3], T lambda[3])
 {
   const T A[2][2] = {
     {u[0] - u[2], u[1] - u[2]}, 

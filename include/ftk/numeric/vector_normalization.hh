@@ -8,7 +8,7 @@ namespace ftk {
 template <int n, typename T>
 inline void vector_normalization2(T v[])
 {
-  T norm = vector_norm2<n, T>(v);
+  T norm = vector_2norm<n, T>(v);
   for (int i=0; i<n; i++) 
     v[i] /= norm;
 }
