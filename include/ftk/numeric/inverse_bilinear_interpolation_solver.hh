@@ -5,11 +5,11 @@ namespace ftk {
 
 // find the zero point in [0, 1]x[0, 1] quad, using generalized eigenvalue problem
 template <typename T>
-bool inverse_bilinear_interpolation(T v[4][2], T pos[2])
+bool inverse_bilinear_interpolation(const T u[4], const T v[4], T pos[2])
 {
   // find_zero_unit_quad_bilinear(const T re[4], const T im[4], T pos[2], T epsilon=0)
-  T f00 = v[0][0], f10 = v[1][0], f01 = v[3][0], f11 = v[2][0], // counter-clockwise
-    g00 = v[0][1], g10 = v[1][1], g01 = v[3][1], g11 = v[2][1];
+  T f00 = u[0], f10 = u[1], f01 = u[3], f11 = u[2], // counter-clockwise
+    g00 = v[0], g10 = v[1], g01 = v[3], g11 = v[2];
   T A0 = f00 - f10 - f01 + f11,  // Axy + Bx + Cy + D = 0
     B0 = f10 - f00, 
     C0 = f01 - f00, 
