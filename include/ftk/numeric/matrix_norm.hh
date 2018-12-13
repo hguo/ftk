@@ -11,7 +11,7 @@ template <typename T>
 inline T matrix_1norm_real2x2(const T m[2][2])
 {
   // simply the maximum absolute column sum of the matrix (wikipedia)
-  return std::max(m[0][0] + m[1][0], m[0][1] + m[1][1]);
+  return std::max(std::abs(m[0][0]) + std::abs(m[1][0]), std::abs(m[0][1]) + std::abs(m[1][1]));
 }
 
 template <typename T>
@@ -33,7 +33,7 @@ template <typename T>
 inline T matrix_inf_norm_real2x2(const T m[2][2])
 {
   // simply the maximum absolute row sum of the matrix (wikipedia)
-  return std::max(m[0][0] + m[0][1], m[1][0] + m[1][1]);
+  return std::max(std::abs(m[0][0]) + std::abs(m[0][1]), std::abs(m[1][0]) + std::abs(m[1][1]));
 }
 
 template <typename T>
