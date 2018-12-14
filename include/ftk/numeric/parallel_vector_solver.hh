@@ -4,6 +4,7 @@
 #include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/eigen_solver.hh>
 #include <ftk/numeric/transpose.hh>
+#include <ftk/characteristic_polynomial.hh>
 #include <ftk/numeric/isnan.hh>
 
 namespace ftk {
@@ -102,6 +103,34 @@ template <typename ValueType>
 inline bool solve_parallel_vector_bilinear(const ValueType V[12], const ValueType W[12], ValueType lambda[2])
 {
   // TODO
+}
+
+
+template <typename T>
+inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
+{
+  const T A[3][3] = { // linear transformation part
+    {V[0][0] - V[3][0], V[1][0] - V[3][0], V[2][0] - V[3][0]}, 
+    {V[0][1] - V[3][1], V[1][0] - V[3][1], V[2][0] - V[3][1]}, 
+    {V[0][2] - V[3][2], V[1][0] - V[3][2], V[2][0] - V[3][2]}
+  };
+  const T B[3][3] = {
+    {W[0][0] - W[3][0], W[1][0] - W[3][0], W[2][0] - W[3][0]}, 
+    {W[0][1] - W[3][1], W[1][0] - W[3][1], W[2][0] - W[3][1]}, 
+    {W[0][2] - W[3][2], W[1][0] - W[3][2], W[2][0] - W[3][2]}
+  }
+  const T a[3] = {V[3][0], V[3][1], V[3][2]};
+  const T b[3] = {W[3][0], W[3][1], W[3][2]};
+
+  // coefficients for Q
+  characteristic_polynomial_3x3(A, B, Q);
+#if 0 // WIP
+  const T adj[3][3][3] = { // adjugate matrix, each component is a polynomial
+    {{}, {}, {}},
+    {{}, {}, {}},
+    {{}, {}, {}}
+  }
+#endif
 }
 
 }

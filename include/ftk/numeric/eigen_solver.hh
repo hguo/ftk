@@ -75,8 +75,8 @@ inline void eig3(const T m[9], std::complex<T> eig[3], std::complex<T> eigvec[3]
 {
   // using std::complex;
   const T b = -trace3(m),
-                  c = m[4]*m[8] + m[0]*m[8] + m[0]*m[4] - m[1]*m[3] - m[5]*m[7] - m[2]*m[6],
-                  d = -det3(m);
+          c = m[4]*m[8] + m[0]*m[8] + m[0]*m[4] - m[1]*m[3] - m[5]*m[7] - m[2]*m[6],
+          d = -det3(m);
 
   cubic_solve(b, c, d, eig);
 
@@ -92,8 +92,8 @@ inline void eig3(
 {
   // using std::complex;
   const T b = -trace3(m),
-                  c = m[1][1]*m[2][2] + m[0][0]*m[2][2] + m[0][0]*m[1][1] - m[0][1]*m[1][0] - m[1][2]*m[2][1] - m[0][2]*m[2][0],
-                  d = -det3(m);
+          c = m[1][1]*m[2][2] + m[0][0]*m[2][2] + m[0][0]*m[1][1] - m[0][1]*m[1][0] - m[1][2]*m[2][1] - m[0][2]*m[2][0],
+          d = -det3(m);
 
   cubic_solve(b, c, d, eig);
 
