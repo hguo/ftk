@@ -18,6 +18,7 @@ void characteristic_polynomial_3x3(const T A[3][3], T P[4])
 }
 
 // used for generalized eigensolver
+template <typename T>
 void characteristic_polynomial_3x3(const T A[3][3], const T B[3][3], T P[4])
 {
   P[0] = det3(A);

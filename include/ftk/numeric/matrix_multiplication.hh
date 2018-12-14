@@ -53,6 +53,12 @@ void matrix_matrix_multiplication_3x3_3x3(const T A[3][3], const T B[3][3], T C[
   }
 }
 
+template <class T>
+void matrix_square_3x3(const T M[3][3], T M2[3][3])
+{
+  matrix_matrix_multiplication_3x3_3x3(M, M, M2);
+}
+
 }
 
 #endif
