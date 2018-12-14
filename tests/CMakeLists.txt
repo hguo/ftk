@@ -41,6 +41,7 @@ set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 add_executable (test_norm2 test_norm2.cpp)
 add_executable (test_lambda2 test_lambda2.cpp)
 add_executable (test_parallel_vector_solver test_parallel_vector_solver.cpp)
+add_executable (test_parallel_vector_solver2 test_parallel_vector_solver2.cpp)
 add_executable (test_mesh_graph test_mesh_graph.cpp)
 
 # Load settings for the gtest project.
