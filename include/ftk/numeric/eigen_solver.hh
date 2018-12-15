@@ -4,9 +4,11 @@
 #include <ftk/numeric/trace.hh>
 #include <ftk/numeric/det.hh>
 #include <ftk/numeric/matrix_multiplication.hh>
+#include <ftk/numeric/quadratic_solver.hh>
 #include <ftk/numeric/cubic_solver.hh>
 #include <ftk/numeric/quartic_solver.hh>
 #include <ftk/numeric/vector_normalization.hh>
+#include <ftk/numeric/characteristic_polynomial.hh>
 #include <iostream>
 
 namespace ftk {
@@ -25,11 +27,27 @@ inline void solve_eigenvalues_real_symmetric2(T m00, T m10, T m11, T eig[2])
 }
 
 template <typename T>
-inline void solve_eigenvalues_real_symmetric2(T m[2][2], T eig[2])
+inline void solve_eigenvalues_real_symmetric2(const T m[2][2], T eig[2])
 {
   return solve_eigenvalues_real_symmetric2(m[0][0], m[1][0], m[1][1], eig);
 }
 
+template <typename T>
+inline void solve_generalized_eigenvalues_real2x2(const T A[2][2], const T B[2][2], std::complex<T> eig[2])
+{
+  T P[3];
+  characteristic_polynomial_2x2(A, B, P);
+  // characteristic_polynomial_2x2(A[0][0], A[0][1], A[1][0], A[1][1], B[0][0], B[0][1], B[1][0], B[1][1], P);
+  solve_quadratic(P, eig);
+}
+
+template <typename T>
+inline void solve_generalized_eigenvalues_real3x3(const T A[3][3], const T B[3][3], std::complex<T> eig[3])
+{
+  T P[4];
+  characteristic_polynomial_3x3(A, B, P);
+  solve_cubic(P, eig);
+}
 
 // compute eigenvector for a given matrix and one of its eigenvalue
 template <typename T>
@@ -49,7 +67,7 @@ inline void eigvec3(const T m[9], std::complex<T> lambda, std::complex<T> v[3])
 template <typename T>
 inline void eigvec3(const T m[3][3], std::complex<T> lambda, std::complex<T> v[3])
 {
-  std::complex<T> D = (m[0][0] - lambda) * (m[2][2] - lambda) - m[0][1] * m[1][0], 
+  std::complex<T> D = (m[0][0] - lambda) * (m[1][1] - lambda) - m[0][1] * m[1][0], 
     Dx = -m[0][2] * (m[1][1] - lambda) + m[0][1] * m[1][2],
     Dy = -m[1][2] * (m[0][0] - lambda) + m[0][2] * m[1][0];
 
@@ -73,12 +91,11 @@ inline void eig2(const T m[2][2], std::complex<T> eig[2], std::complex<T> eigvec
 template <typename T>
 inline void eig3(const T m[9], std::complex<T> eig[3], std::complex<T> eigvec[3][3]) 
 {
-  // using std::complex;
   const T b = -trace3(m),
           c = m[4]*m[8] + m[0]*m[8] + m[0]*m[4] - m[1]*m[3] - m[5]*m[7] - m[2]*m[6],
           d = -det3(m);
 
-  cubic_solve(b, c, d, eig);
+  solve_cubic(b, c, d, eig);
 
   for (int i=0; i<3; i++) 
     eigvec3(m, eig[i], eigvec[i]);
@@ -86,19 +103,23 @@ inline void eig3(const T m[9], std::complex<T> eig[3], std::complex<T> eigvec[3]
 
 template <typename T>
 inline void eig3(
-    const T m[3][3], 
+    const T M[3][3], 
     std::complex<T> eig[3], 
     std::complex<T> eigvec[3][3]) // untested
 {
-  // using std::complex;
-  const T b = -trace3(m),
-          c = m[1][1]*m[2][2] + m[0][0]*m[2][2] + m[0][0]*m[1][1] - m[0][1]*m[1][0] - m[1][2]*m[2][1] - m[0][2]*m[2][0],
-          d = -det3(m);
-
-  cubic_solve(b, c, d, eig);
+#if 1
+  T P[4];
+  characteristic_polynomial_3x3(M, P);
+  solve_cubic(P, eig); // b, c, d, eig);
+#else
+  const T b = -trace3(M),
+          c = M[1][1]*M[2][2] + M[0][0]*M[2][2] + M[0][0]*M[1][1] - M[0][1]*M[1][0] - M[1][2]*M[2][1] - M[0][2]*M[2][0],
+          d = -det3(M);
+  solve_cubic(b, c, d, eig);
+#endif
 
   for (int i=0; i<3; i++) 
-    eigvec3(m, eig[i], eigvec[i]);
+    eigvec3(M, eig[i], eigvec[i]);
 }
 
 // compute eigenvector for a given matrix and one of its eigenvalue

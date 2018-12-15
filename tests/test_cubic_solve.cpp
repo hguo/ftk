@@ -1,11 +1,16 @@
-#include <ftk/numerics/cubic_solve.hh>
+#include <ftk/numeric/cubic_solver.hh>
 #include <iostream>
 
 int main(int argc, char **argv)
 {
   std::complex<float> x[3];
-  ftk::cubic_solve<float>(43, 1, 3, x);
+  ftk::solve_cubic<float>(43, 1, 3, x);
 
+  for (int i=0; i<3; i++)
+    fprintf(stderr, "x%d = %f + i*%f\n", i, x[i].real(), x[i].imag());
+
+  float P[4] = {3.f, 1.f, 43.f, 1.f};
+  ftk::solve_cubic<float>(P, x);
   for (int i=0; i<3; i++)
     fprintf(stderr, "x%d = %f + i*%f\n", i, x[i].real(), x[i].imag());
 

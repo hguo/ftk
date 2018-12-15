@@ -1,24 +1,13 @@
 #ifndef _FTK_QUARTIC_SOLVE_H
 #define _FTK_QUARTIC_SOLVE_H
 
-#include <math.h>
+#include <cmath>
 #include <complex>
+#include <ftk/numeric/sqrt.hh>
 
 namespace ftk {
 
 // the followings are based on the code from https://github.com/sidneycadot/quartic/blob/master/solve-quartic.cc
-template <typename T>
-static std::complex<T> complex_sqrt(const std::complex<T> & z)
-{
-  return pow(z, T(1)/T(2));
-}
-
-template <typename T>
-static std::complex<T> complex_cbrt(const std::complex<T> & z)
-{
-  return pow(z, T(1)/T(3));
-}
-
 // a * x^4 + b * x^3 + c * x^2 + d * x + e == 0
 template <typename T>
 void quartic_solve(T b_, T c_, T d_, T e_, std::complex<T> roots[4])

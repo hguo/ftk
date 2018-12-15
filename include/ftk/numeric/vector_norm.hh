@@ -9,7 +9,7 @@ inline T vector_2norm(const T v[])
   T norm(0);
   for (int i=0; i<n; i++) 
     norm += v[i] * v[i];
-  return norm;
+  return sqrt(norm);
 }
 
 template <typename T>

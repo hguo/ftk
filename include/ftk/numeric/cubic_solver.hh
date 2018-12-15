@@ -1,15 +1,15 @@
-#ifndef _FTK_CUBIC_SOLVE_H
-#define _FTK_CUBIC_SOLVE_H
+#ifndef _FTK_CUBIC_SOLVER_H
+#define _FTK_CUBIC_SOLVER_H
 
-#include <math.h>
+#include <cmath>
 #include <complex>
 
 namespace ftk {
 
-template <typename ValueType>
-inline void cubic_solve(ValueType b, ValueType c, ValueType d, std::complex<ValueType> x[3])
+template <typename T>
+inline void solve_cubic(T b, T c, T d, std::complex<T> x[3])
 {
-  ValueType disc, q, r, dum1, s, t, term1, r13;
+  T disc, q, r, dum1, s, t, term1, r13;
 
   q = (3.0*c - (b*b))/9.0; 
   r = (-(27.0*d) + b*(9.0*c - 2.0*(b*b)))/54.0;
@@ -51,6 +51,16 @@ inline void cubic_solve(ValueType b, ValueType c, ValueType d, std::complex<Valu
       return;
     }
   }
+}
+
+template <typename T>
+inline void solve_cubic(const T coef[4], std::complex<T> x[3])
+{
+  solve_cubic(
+      coef[2] / coef[3], 
+      coef[1] / coef[3], 
+      coef[0] / coef[3], 
+      x);
 }
 
 }

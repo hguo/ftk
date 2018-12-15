@@ -45,8 +45,8 @@ inline int solve_parallel_vector_barycentric(const ValueType V[9], const ValueTy
     // return true;
   }
 
-  if (n_solutions)
-    fprintf(stderr, "n_solutions=%d\n", n_solutions);
+  // if (n_solutions)
+  //   fprintf(stderr, "n_solutions=%d\n", n_solutions);
   return n_solutions;
   // return false;
 }
@@ -108,18 +108,18 @@ inline bool solve_parallel_vector_bilinear(const ValueType V[12], const ValueTyp
 
 
 template <typename T>
-inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], T Q[4], T P[3][4])
+inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
 {
 #if 1 // WIP
   const T A[3][3] = { // linear transformation
     {V[0][0] - V[3][0], V[1][0] - V[3][0], V[2][0] - V[3][0]}, 
-    {V[0][1] - V[3][1], V[1][0] - V[3][1], V[2][0] - V[3][1]}, 
-    {V[0][2] - V[3][2], V[1][0] - V[3][2], V[2][0] - V[3][2]}
+    {V[0][1] - V[3][1], V[1][1] - V[3][1], V[2][1] - V[3][1]}, 
+    {V[0][2] - V[3][2], V[1][2] - V[3][2], V[2][2] - V[3][2]}
   };
   const T B[3][3] = {
     {W[0][0] - W[3][0], W[1][0] - W[3][0], W[2][0] - W[3][0]}, 
-    {W[0][1] - W[3][1], W[1][0] - W[3][1], W[2][0] - W[3][1]}, 
-    {W[0][2] - W[3][2], W[1][0] - W[3][2], W[2][0] - W[3][2]}
+    {W[0][1] - W[3][1], W[1][1] - W[3][1], W[2][1] - W[3][1]}, 
+    {W[0][2] - W[3][2], W[1][2] - W[3][2], W[2][2] - W[3][2]}
   };
   const T a[3] = {V[3][0], V[3][1], V[3][2]};
   const T b[3] = {W[3][0], W[3][1], W[3][2]};
@@ -134,13 +134,13 @@ inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], 
 
   T adj[3][3][3]; // build adjugate matrix
   characteristic_polynomial_2x2(A[1][1], A[1][2], A[2][1], A[2][2], B[1][1], B[1][2], B[2][1], B[2][2], adj[0][0]);
-  characteristic_polynomial_2x2(A[1][0], A[1][2], A[2][0], A[2][2], B[1][0], B[1][2], B[2][0], B[2][2], adj[0][1]);
-  characteristic_polynomial_2x2(A[1][0], A[1][1], A[2][0], A[2][1], B[1][0], B[1][1], B[2][0], B[2][0], adj[0][2]);
-  characteristic_polynomial_2x2(A[0][1], A[0][2], A[2][1], A[2][2], B[0][1], B[0][2], B[2][1], B[2][2], adj[1][0]);
+  characteristic_polynomial_2x2(A[1][0], A[1][2], A[2][0], A[2][2], B[1][0], B[1][2], B[2][0], B[2][2], adj[1][0]);
+  characteristic_polynomial_2x2(A[1][0], A[1][1], A[2][0], A[2][1], B[1][0], B[1][1], B[2][0], B[2][1], adj[2][0]);
+  characteristic_polynomial_2x2(A[0][1], A[0][2], A[2][1], A[2][2], B[0][1], B[0][2], B[2][1], B[2][2], adj[0][1]);
   characteristic_polynomial_2x2(A[0][0], A[0][2], A[2][0], A[2][2], B[0][0], B[0][2], B[2][0], B[2][2], adj[1][1]);
-  characteristic_polynomial_2x2(A[0][0], A[0][1], A[2][0], A[2][1], B[0][0], B[0][1], B[2][0], B[2][1], adj[1][2]);
-  characteristic_polynomial_2x2(A[0][1], A[0][2], A[1][1], A[1][2], B[0][1], B[0][2], B[1][1], B[1][2], adj[2][0]);
-  characteristic_polynomial_2x2(A[0][0], A[0][2], A[1][0], A[1][2], B[0][0], B[0][2], B[1][0], B[1][2], adj[2][1]);
+  characteristic_polynomial_2x2(A[0][0], A[0][1], A[2][0], A[2][1], B[0][0], B[0][1], B[2][0], B[2][1], adj[2][1]);
+  characteristic_polynomial_2x2(A[0][1], A[0][2], A[1][1], A[1][2], B[0][1], B[0][2], B[1][1], B[1][2], adj[0][2]);
+  characteristic_polynomial_2x2(A[0][0], A[0][2], A[1][0], A[1][2], B[0][0], B[0][2], B[1][0], B[1][2], adj[1][2]);
   characteristic_polynomial_2x2(A[0][0], A[0][1], A[1][0], A[1][1], B[0][0], B[0][1], B[1][0], B[1][1], adj[2][2]);
   polynomial_scalar_multiplication(adj[0][1], 2, T(-1));
   polynomial_scalar_multiplication(adj[1][0], 2, T(-1));
@@ -149,13 +149,18 @@ inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], 
 
   for (int i = 0; i < 3; i ++) {
     T poly[4] = {0};
-    for (int j = 0; j < 3; j ++) 
+    for (int j = 0; j < 4; j ++) 
       P[i][j] = 0; // clear results
     for (int j = 0; j <3; j ++) {
       polynomial_multiplication(adj[i][j], 2, rhs[j], 1, poly);
       polynomial_add_in_place(P[i], 3, poly, 3);
     }
   }
+
+  P[3][0] = Q[0] - P[0][0] - P[1][0] - P[2][0];
+  P[3][1] = Q[1] - P[0][1] - P[1][1] - P[2][1];
+  P[3][2] = Q[2] - P[0][2] - P[1][2] - P[2][2];
+  P[3][3] = Q[3] - P[0][3] - P[1][3] - P[2][3];
 #endif
 }
 

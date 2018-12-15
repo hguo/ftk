@@ -5,30 +5,36 @@
 
 namespace ftk {
 
-template <class ValueType>
-inline ValueType det2(const ValueType m[4])
+template <typename T>
+inline T det2(const T A[2][2])
+{
+  return A[0][0] * A[1][1] - A[1][0] * A[0][1];
+}
+
+template <class T>
+inline T det2(const T m[4])
 {
   return m[0]*m[3] - m[1]*m[2];
 }
 
-template <class ValueType>
-inline ValueType det3(const ValueType m[9])
+template <class T>
+inline T det3(const T m[9])
 {
   return m[0] * (m[4]*m[8] - m[5]*m[7])
     + m[1] * (-m[3]*m[8] + m[5]*m[6])
     + m[2] * (m[3]*m[7] - m[4]*m[6]);
 }
 
-template <class ValueType>
-inline ValueType det3(const ValueType m[3][3]) // untested
+template <class T>
+inline T det3(const T m[3][3]) // untested
 {
   return m[0][0] * (m[1][1]*m[2][2] - m[1][2]*m[2][1])
     + m[0][1] * (-m[1][0]*m[2][2] + m[1][2]*m[2][0])
     + m[0][2] * (m[1][0]*m[2][1] - m[1][1]*m[2][0]);
 }
 
-template <class ValueType>
-inline ValueType det4(const ValueType m[16])
+template <class T>
+inline T det4(const T m[16])
 {
   return 
       m[1] * m[11] * m[14] * m[4] 
