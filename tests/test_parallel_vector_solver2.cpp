@@ -65,6 +65,8 @@ int main(int argc, char **argv)
         if (rootsP[i][j].imag() == 0) {
           const double lambda = rootsP[i][j].real();
           const double valQ = ftk::polynomial_evaluate(Q, 3, lambda);
+          const double dPdLambda = ftk::polynomial_derivative_evaluate(P[i], 3, lambda);
+          const double dPQ = dPdLambda / valQ;
           double x[4]; 
           for (int k = 0; k < 4; k ++) 
             if (k == i) x[k] = 0; // avoid floating error around 0
@@ -72,7 +74,9 @@ int main(int argc, char **argv)
                        // x3 = 1 - x0 - x1 - x2;
           if (x[0] >= 0 && x[0] < 1 && x[1] >= 0 && x[1] < 1 && x[2] >= 0 && x[2] < 1 && x[3] >= 0 && x[3] < 1) {
           // if (1) {
-            fprintf(stderr, "lambda=%f, Q(lambda)=%f, x={%f, %f, %f, %f}\n", lambda, valQ, x[0], x[1], x[2], x[3]);
+            fprintf(stderr, "lambda=%f, Q(lambda)=%f, d(P%d/Q)=%f, x={%f, %f, %f, %f}\n", 
+                lambda, valQ, i, dPQ,
+                x[0], x[1], x[2], x[3]);
           }
         }
       }

@@ -9,19 +9,24 @@ template <typename T>
 T polynomial_evaluate(const T P[], int m, T x)
 {
   T y(0);
-
-#if 1
   for (int i = 0; i <= m; i ++) 
     y += P[i] * std::pow(x, i);
-#else
-  for (int i = 0; i <= m; i ++) {
-    T p(1);
-    for (int j = 0; j < i; j ++) 
-      p *= x;
-    y += P[i] * p;
-  }
-#endif
+  return y;
+}
 
+template <typename T>
+void polynomial_derivative(const T P[], int m, T R[])
+{
+  for (int i = 0; i < m; i ++) 
+    R[i] = P[i+1] * (i+1);
+}
+
+template <typename T>
+T polynomial_derivative_evaluate(const T P[], int m, T x)
+{
+  T y(0);
+  for (int i = 0; i < m; i++)
+    y += P[i+1] * (i+1) * std::pow(x, i);
   return y;
 }
 
