@@ -7,7 +7,7 @@
 
 int main(int argc, char **argv)
 {
-  for (int i=0; i<10000; i++) {
+  for (int i=0; i<1000000; i++) {
     double V[4][3], W[4][3];
     double Q[4], P[4][4];
 
@@ -17,6 +17,7 @@ int main(int argc, char **argv)
         W[i][j] = (double)rand() / RAND_MAX - 0.5;
       }
 
+#if 0
     fprintf(stderr, "====================\n");
     for (int i = 0; i < 4; i ++) {
       double Vp[3][3], Wp[3][3];
@@ -36,6 +37,7 @@ int main(int argc, char **argv)
           fprintf(stderr, "face %d, x={%f, %f, %f}\n", i, x[k][0], x[k][1], x[k][2]);
       }
     }
+#endif
 
 #if 1
     ftk::solve_parallel_vector_tetrahedron(V, W, Q, P);
@@ -45,7 +47,8 @@ int main(int argc, char **argv)
     for (int i = 0; i < 4; i ++)
       ftk::solve_cubic(P[i], rootsP[i]);
 
-    fprintf(stderr, "------\n");
+    // fprintf(stderr, "------\n");
+    fprintf(stderr, "====================\n");
     fprintf(stderr, "Q = %f, %f, %f, %f, roots=(%f, %f), (%f, %f), (%f, %f)\n", 
         Q[0], Q[1], Q[2], Q[3], 
         rootsQ[0].real(), rootsQ[0].imag(), 
@@ -60,6 +63,7 @@ int main(int argc, char **argv)
           rootsP[i][2].real(), rootsP[i][2].imag());
     
     // std::vector<std::pair<double, std::array<double, 3> > > pv_points; 
+    int n_solutions = 0;
     for (int i = 0; i < 4; i ++) {
       for (int j = 0; j < 3; j ++ ) {
         if (rootsP[i][j].imag() == 0) {
@@ -74,6 +78,7 @@ int main(int argc, char **argv)
                        // x3 = 1 - x0 - x1 - x2;
           if (x[0] >= 0 && x[0] < 1 && x[1] >= 0 && x[1] < 1 && x[2] >= 0 && x[2] < 1 && x[3] >= 0 && x[3] < 1) {
           // if (1) {
+            n_solutions ++;
             fprintf(stderr, "lambda=%f, Q(lambda)=%f, d(P%d/Q)=%f, x={%f, %f, %f, %f}\n", 
                 lambda, valQ, i, dPQ,
                 x[0], x[1], x[2], x[3]);
@@ -81,6 +86,8 @@ int main(int argc, char **argv)
         }
       }
     }
+
+    fprintf(stderr, "n_solutions=%d\n", n_solutions);
 #endif
   }
 
