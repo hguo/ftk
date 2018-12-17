@@ -19,6 +19,14 @@ void matrix_vector_multiplication_3x3(const T A[9], const T b[3], T c[3])
 }
 
 template <class T>
+void matrix_vector_multiplication_3x3(const T A[3][3], const T b[3], T c[3])
+{
+  c[0] = A[0][0] * b[0] + A[0][1] * b[1] + A[0][2] * b[2];
+  c[1] = A[1][0] * b[0] + A[1][1] * b[1] + A[1][2] * b[2];
+  c[2] = A[2][0] * b[0] + A[2][1] * b[1] + A[2][2] * b[2];
+}
+
+template <class T>
 void matrix_matrix_multiplication_2x2_2x2(const T A[2][2], const T B[2][2], T C[2][2])
 {
   C[0][0] = A[0][0]*B[0][0] + A[0][1]*B[1][0];

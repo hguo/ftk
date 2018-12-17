@@ -82,7 +82,7 @@ template <typename T>
 inline void eig2(const T m[2][2], std::complex<T> eig[2], std::complex<T> eigvec[2])
 {
   const T b = -trace2(m), c = det2(m);
-  qudratic_solver(b, c, eig);
+  quadratic_solver(b, c, eig);
 
   for (int i=0; i<2; i++) 
     eigvec2(m, eig[i], eigvec[i]);

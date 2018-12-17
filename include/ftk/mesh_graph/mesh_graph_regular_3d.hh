@@ -12,24 +12,30 @@ struct mesh_graph_regular_3d : public mesh_graph<index_type, chirality_type> {
 protected:
   int d[3] = {256, 256, 256}; // dimensions
   bool pbc[3] = {0, 0, 0}; // periodic boundary conditions
+  int lb[3] = {0, 0, 0}, 
+      ub[3] = {0, 0, 0};
 
 public:
   mesh_graph_regular_3d(int d_[3]) {
     d[0] = d_[0]; d[1] = d_[1]; d[2] = d_[2];
+    ub[0] = d[0]-1; ub[1] = d[1]-1; ub[2] = d[2]-1;
   }
   
   mesh_graph_regular_3d(int d_[3], bool pbc_[3]) {
     d[0] = d_[0]; d[1] = d_[1]; d[2] = d_[2];
     pbc[0] = pbc_[0]; pbc[1] = pbc_[1]; pbc[2] = pbc_[2];
+    ub[0] = d[0]-1; ub[1] = d[1]-1; ub[2] = d[2]-1;
   }
 
   mesh_graph_regular_3d(int W, int H, int D) {
     d[0] = W; d[1] = H; d[2] = D;
+    ub[0] = d[0]-1; ub[1] = d[1]-1; ub[2] = d[2]-1;
   }
 
   mesh_graph_regular_3d(int W, int H, int D, bool pbcx, bool pbcy, bool pbcz) :
     mesh_graph_regular_3d(W, H, D) {
     pbc[0] = pbcx; pbc[1] = pbcy; pbc[2] = pbcz;
+    ub[0] = d[0]-1; ub[1] = d[1]-1; ub[2] = d[2]-1;
   }
 
 public:
@@ -43,7 +49,9 @@ public:
   std::vector<std::pair<index_type, chirality_type> > links_node_edge(index_type i);
   std::vector<std::pair<index_type, chirality_type> > links_edge_face(index_type i);
   std::vector<std::pair<index_type, chirality_type> > links_face_cell(index_type i);
- 
+
+  std::vector<std::pair<index_type, chirality_type> > links_cell_node(index_type i);
+
   ///////////////////
   bool valid_nidx(const int nidx[3]) const;
   virtual bool valid_eidx(const int eidx[4]) const;
@@ -95,6 +103,31 @@ bool mesh_graph_regular_3d<index_type, chirality_type>::valid(int dim, index_typ
     cid2cidx(i, idx);
     return valid_cidx(idx);
   } else return false;
+}
+
+template <typename index_type, typename chirality_type>
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d<index_type, chirality_type>::
+links_cell_node(index_type id)
+{
+  std::vector<std::pair<index_type, chirality_type> > results;
+  
+  int idx[4];
+  cid2cidx(id, idx);
+  if (!valid_cidx(idx)) return results;
+  const int i = idx[0], j = idx[1], k = idx[2], t = idx[3];
+
+  const int nodes_idx[6][4][3] = {
+    {{i, j, k}, {i+1, j, k}, {i+1, j+1, k}, {i+1, j, k+1}}, 
+    {{i, j+1, k}, {i, j, k+1}, {i+1, j+1, k+1}, {i, j+1, k+1}}, 
+    {{i, j, k}, {i, j+1, k}, {i, j, k+1}, {i+1, j, k+1}}, 
+    {{i+1, j+1, k}, {i, j+1, k}, {i+1, j, k+1}, {i+1, j+1, k+1}}, 
+    {{i, j+1, k}, {i, j, k+1}, {i+1, j, k+1}, {i+1, j+1, k+1}}, 
+    {{i, j, k}, {i+1, j+1, k}, {i, j+1, k}, {i+1, j, k+1}}
+  };
+
+  for (int i=0; i<4; i++)
+    results.push_back(std::make_pair(nidx2nid(nodes_idx[t][i]), 0));
+  return results;
 }
 
 template <typename index_type, typename chirality_type>
@@ -261,7 +294,9 @@ template <typename index_type, typename chirality_type>
 bool mesh_graph_regular_3d<index_type, chirality_type>::valid_nidx(const int idx[3]) const
 {
   for (int i=0; i<3; i++) 
-    if (idx[i]<0 || idx[i]>=d[i]) 
+    // if (idx[i]<0 || idx[i]>=d[i]) 
+    //   return false;
+    if (idx[i]<lb[i] || idx[i]>ub[i])
       return false;
   return true;
 }

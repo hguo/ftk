@@ -30,8 +30,10 @@ inline T linear_solver2_cond(const T A[2][2], const T b[2], T x[2])
 template <typename T>
 inline T linear_solver3(const T A[3][3], const T b[3], T x[3])
 {
-  // TODO 
-  return T(0);
+  T invA[3][3];
+  const T det = matrix_inverse3(A, invA);
+  matrix_vector_multiplication_3x3(invA, b, x);
+  return det;
 }
 
 }
