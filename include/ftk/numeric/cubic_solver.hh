@@ -6,8 +6,11 @@
 
 namespace ftk {
 
+// This function returns the discriminant.  
+// If disc > 0, we have one real and two complex conjugate roots.
+// If disc <= 0, we have three roots; the roots may be multiple.
 template <typename T>
-inline void solve_cubic(T b, T c, T d, std::complex<T> x[3])
+inline T solve_cubic(T b, T c, T d, std::complex<T> x[3]) 
 {
   T disc, q, r, dum1, s, t, term1, r13;
 
@@ -30,7 +33,7 @@ inline void solve_cubic(T b, T c, T d, std::complex<T> x[3])
     term1 = sqrt(3.0)*(-t + s)/2;
     x[1].imag(term1);
     x[2].imag(-term1);
-    return;
+    // return;
   } else { // the remaining options are all real
     x[1].imag(0);
     x[2].imag(0);
@@ -39,7 +42,7 @@ inline void solve_cubic(T b, T c, T d, std::complex<T> x[3])
       x[0].real(-term1 + 2.0*r13);
       x[1].real(-(r13 + term1));
       x[2].real(-(r13 + term1));
-      return;
+      // return;
     } else { // all roots are real and unequal
       q = -q;
       dum1 = q*q*q;
@@ -48,9 +51,11 @@ inline void solve_cubic(T b, T c, T d, std::complex<T> x[3])
       x[0].real(-term1 + r13*cos(dum1/3.0));
       x[1].real(-term1 + r13*cos((dum1 + 2.0*M_PI)/3.0));
       x[2].real(-term1 + r13*cos((dum1 + 4.0*M_PI)/3.0));
-      return;
+      // return;
     }
   }
+  
+  return disc; 
 }
 
 template <typename T>
