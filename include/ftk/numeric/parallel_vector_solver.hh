@@ -33,7 +33,7 @@ inline int solve_parallel_vector_barycentric(const T V[9], const T W[9], T lambd
 
   int n_solutions = 0;
   for (int i=0; i<3; i++) {
-    if (isnan(eig[i].real()) || eig[i].imag() != 0) continue; // non-real eigenvalue
+    if (std::isnan(eig[i].real()) || eig[i].imag() != 0) continue; // non-real eigenvalue
     T l[3] = {eigvec[i][0].real(), eigvec[i][1].real(), eigvec[i][2].real()};
     if (l[0] < 0 || l[1] < 0) continue;
     const auto sum = l[0] + l[1] + l[2];
@@ -41,7 +41,7 @@ inline int solve_parallel_vector_barycentric(const T V[9], const T W[9], T lambd
     mu[n_solutions*3+1] = l[1] / sum;
     mu[n_solutions*3+2] = l[2] / sum;
     lambda[n_solutions] = eig[i].real();
-    if (isnan(mu[0]) || isnan(mu[1]) || isnan(mu[2])) continue;
+    if (std::isnan(mu[0]) || std::isnan(mu[1]) || std::isnan(mu[2])) continue;
     n_solutions ++;
     // return true;
   }

@@ -6,6 +6,7 @@
 #include <ftk/numeric/matrix_addition.hh>
 #include <ftk/numeric/eigen_solver.hh>
 #include <complex>
+#include <algorithm>
 
 namespace ftk {
 

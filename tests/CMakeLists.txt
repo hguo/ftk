@@ -47,14 +47,14 @@ add_executable (test_parallel_vector_solver2 test_parallel_vector_solver2.cpp)
 add_executable (test_mesh_graph test_mesh_graph.cpp)
 
 # Load settings for the gtest project.
-set (GTEST_ROOT "" CACHE PATH "The root directory of the gtest install prefix.")
-find_package (GTest REQUIRED)
-include_directories ("${GTEST_INCLUDE_DIRS}")
+# set (GTEST_ROOT "" CACHE PATH "The root directory of the gtest install prefix.")
+# find_package (GTest REQUIRED)
+# include_directories ("${GTEST_INCLUDE_DIRS}")
 
 # Add the test's executables to the project.
-add_executable (test_mat test_mat.cpp)
+# add_executable (test_mat test_mat.cpp)
 
-target_link_libraries (test_mat ${GTEST_BOTH_LIBRARIES})
+# target_link_libraries (test_mat ${GTEST_BOTH_LIBRARIES})
 
 # Add tests to the project.
-add_test (AllTestsInMatrix test_mat)
+# add_test (AllTestsInMatrix test_mat)

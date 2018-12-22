@@ -1,5 +1,6 @@
 #include <ftk/mesh_graph/mesh_graph_regular_3d.hh>
 #include <ftk/mesh_graph/mesh_graph_regular_3d_tets.hh>
+#include <iostream>
 
 int main(int argc, char **argv)
 {
