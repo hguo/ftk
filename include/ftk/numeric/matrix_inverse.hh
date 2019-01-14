@@ -1,5 +1,5 @@
-#ifndef _FTK_INVMAT_H
-#define _FTK_INVMAT_H
+#ifndef _FTK_MATRIX_INVERSE_H
+#define _FTK_MATRIX_INVERSE_H
 
 namespace ftk {
 

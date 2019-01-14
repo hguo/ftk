@@ -13,7 +13,7 @@ T cond_real2x2(const T A[2][2])
   matrix_inverse2(A, invA);
 
   // return matrix_2norm_real2x2(invA) * matrix_2norm_real2x2(A);
-  return matrix_1norm_real2x2(invA) * matrix_1norm_real2x2(A);
+  return matrix_1norm_real2x2<T>(invA) * matrix_1norm_real2x2(A);
 }
 
 }

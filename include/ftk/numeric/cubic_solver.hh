@@ -59,9 +59,62 @@ inline T solve_cubic(T b, T c, T d, std::complex<T> x[3])
 }
 
 template <typename T>
+inline int solve_cubic_real(T b, T c, T d, T x[3]) // returns the number of real roots
+{
+  T disc, q, r, dum1, s, t, term1, r13;
+
+  q = (3.0*c - (b*b))/9.0; 
+  r = (-(27.0*d) + b*(9.0*c - 2.0*(b*b)))/54.0;
+  disc = q*q*q + r*r;
+
+  term1 = b / 3.0;
+
+  if(disc > 0) { // one root real, two are complex
+    s = r + sqrt(disc);
+    s = ((s < 0) ? -pow(-s, (1.0/3.0)) : pow(s, (1.0/3.0)));
+    t = r - sqrt(disc);
+    t = ((t < 0) ? -pow(-t, (1.0/3.0)) : pow(t, (1.0/3.0)));
+
+    x[0] = -term1 + s + t;
+    return 1;
+  } else { // the remaining options are all real
+    if (disc == 0) { // all roots real, at least two are equal.
+      r13 = ((r < 0) ? -pow(-r,(1.0/3.0)) : pow(r,(1.0/3.0)));
+      x[0] = -term1 + 2.0 * r13;
+      x[1] = -(r13 + term1);
+
+      if (x[0] == x[1]) return 1;
+      else return 2;
+    } else { // all roots are real and unequal
+      q = -q;
+      dum1 = q*q*q;
+      dum1 = acos(r/sqrt(dum1));
+      r13 = 2.0*sqrt(q);
+      x[0] = -term1 + r13*cos(dum1/3.0);
+      x[1] = -term1 + r13*cos((dum1 + 2.0*M_PI)/3.0);
+      x[2] = -term1 + r13*cos((dum1 + 4.0*M_PI)/3.0);
+      return 3;
+    }
+  }
+}
+
+
+template <typename T>
 inline void solve_cubic(const T coef[4], std::complex<T> x[3])
 {
   solve_cubic(
+      coef[2] / coef[3], 
+      coef[1] / coef[3], 
+      coef[0] / coef[3], 
+      x);
+}
+
+template <typename T>
+inline int solve_cubic_real(const T coef[4], T x[3])
+{
+  if (coef[3] == T(0) || std::isnan(coef[3]) || std::isinf(coef[3])) 
+    return solve_quadratic_real(coef, x);
+  else return solve_cubic_real(
       coef[2] / coef[3], 
       coef[1] / coef[3], 
       coef[0] / coef[3], 

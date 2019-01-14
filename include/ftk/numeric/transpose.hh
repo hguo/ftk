@@ -44,6 +44,28 @@ void transpose3(const T a[9], T b[9])
 }
 
 template <typename T>
+void transpose3(T A[3][3])
+{
+  std::swap(A[0][1], A[1][0]);
+  std::swap(A[0][2], A[2][0]);
+  std::swap(A[1][2], A[2][1]);
+}
+
+template <typename T>
+void transpose3(const T A[3][3], T B[3][3])
+{
+  B[0][0] = A[0][0];
+  B[0][1] = A[1][0];
+  B[0][2] = A[2][0];
+  B[1][0] = A[0][1];
+  B[1][1] = A[1][1];
+  B[1][2] = A[2][1];
+  B[2][0] = A[0][2];
+  B[2][1] = A[1][2];
+  B[2][2] = A[2][2];
+}
+
+template <typename T>
 void transpose4(T m[16]) 
 {
   std::swap(m[1], m[4]);

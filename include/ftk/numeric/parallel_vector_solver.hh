@@ -3,10 +3,14 @@
 
 #include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/eigen_solver.hh>
+#include <ftk/numeric/linear_solver.hh>
+#include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/transpose.hh>
 #include <ftk/numeric/characteristic_polynomial.hh>
 #include <ftk/numeric/polynomial.hh>
 #include <ftk/numeric/isnan.hh>
+#include <ftk/numeric/print.hh>
 
 namespace ftk {
 
@@ -52,6 +56,7 @@ inline int solve_parallel_vector_barycentric(const T V[9], const T W[9], T lambd
   // return false;
 }
 
+#if 0
 template <typename T>
 inline int solve_parallel_vector_barycentric(const T V[3][3], const T W[3][3], T lambda[3], T mu[3][3])
 {
@@ -68,6 +73,68 @@ inline int solve_parallel_vector_barycentric(const T V[3][3], const T W[3][3], T
 
   return n;
 }
+#else
+template <typename T>
+inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3])
+{
+  T V[3][3], W[3][3]; // transposed V and W
+  transpose3(VV, V);
+  transpose3(WW, W);
+
+  T P[4]; // characteristic polynomial
+  characteristic_polynomial_3x3(VV, WW, P);
+
+  T l[3];
+  const int n_roots = solve_cubic_real(P, l);
+  int n_solutions = 0;
+
+  for (int i = 0; i < n_roots; i ++) {
+    const T M[2][2] = {
+      {(V[0][0] - V[0][2]) - l[i] * (W[0][0] - W[0][2]), (V[0][1] - V[0][2]) - l[i] * (W[0][1] - W[0][2])}, 
+      {(V[1][0] - V[1][2]) - l[i] * (W[1][0] - W[1][2]), (V[1][1] - V[1][2]) - l[i] * (W[1][1] - W[1][2])}
+    };
+    const T b[2] = {
+      -(V[0][2] - l[i]*W[0][2]), 
+      -(V[1][2] - l[i]*W[1][2])
+    };
+    T nu[3];
+    const auto det = solve_linear_real2x2(M, b, nu);
+    nu[2] = T(1) - nu[0] - nu[1];
+
+    // if (det == T(0)) {
+    //   fprintf(stderr, "FATAL: det(M)=0, P={%f, %f, %f, %f}, n_roots=%d, i=%d, lambda=%f, nu={%f, %f, %f}\n", 
+    //       P[0], P[1], P[2], P[3], n_roots, i, l[i], nu[0], nu[1], nu[2]);
+    //   print3x3("V", VV);
+    //   print3x3("W", WW);
+    // }
+
+    if (det == T(0)) continue;
+    if (nu[0] >= 0 && nu[0] < 1 && nu[1] >= 0 && nu[1] < 1 && nu[2] >= 0 && nu[2] < 1) {
+      // check interpolation results
+      double v[3], w[3], c[3]; 
+      ftk::linear_interpolation3_3(VV, nu, v);
+      ftk::linear_interpolation3_3(WW, nu, w);
+      ftk::cross_product(v, w, c);
+      const double norm = ftk::vector_2norm_3(c);
+      if (norm > 1e-3) continue; // reject
+      
+      const int j = n_solutions ++;
+      lambda[j] = l[i];
+      mu[j][0] = nu[0]; 
+      mu[j][1] = nu[1];
+      mu[j][2] = nu[2];
+    }
+  }
+ 
+  // if (n_solutions > 0) 
+  //   if (P[3] == T(0) || std::isinf(P[3]) || std::isnan(P[3])) {
+  //     fprintf(stderr, "WARN: degeneracy case, P={%f, %f, %f, %f}, n_roots=%d, n_solutions=%d\n", 
+  //         P[0], P[1], P[2], P[3], n_roots, n_solutions); 
+  //   }
+
+  return n_solutions;
+}
+#endif
 
 template <typename T>
 inline int solve_parallel_vector_bibarycentric(const T V[4][3], const T W[4][3], T mu[6][2])

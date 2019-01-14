@@ -40,10 +40,11 @@ add_executable (test_polynomial test_polynomial.cpp)
 # add_executable (test_det4 test_det4.cpp)
 add_executable (test_cubic_solve test_cubic_solve.cpp)
 # add_executable (test_quartic_solve test_quartic_solve.cpp)
-add_executable (test_norm2 test_norm2.cpp)
+# add_executable (test_norm2 test_norm2.cpp)
 add_executable (test_lambda2 test_lambda2.cpp)
 add_executable (test_parallel_vector_solver test_parallel_vector_solver.cpp)
 add_executable (test_parallel_vector_solver2 test_parallel_vector_solver2.cpp)
+add_executable (test_parallel_vector_solver3 test_parallel_vector_solver3.cpp)
 add_executable (test_mesh_graph test_mesh_graph.cpp)
 
 # Load settings for the gtest project.
