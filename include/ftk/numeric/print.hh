@@ -50,6 +50,13 @@ inline void print3x4(const std::string &name, const T m[])
 }
 
 template <typename T>
+inline void print4x3(const std::string &name, const T A[4][3])
+{
+  fprintf(stderr, "%s=[[%.10f, %.10f, %.10f], [%.10f, %.10f, %.10f], [%.10f, %.10f, %.10f], [%.10f, %.10f, %.10f]]\n", 
+      name.c_str(), A[0][0], A[0][1], A[0][2], A[1][0], A[1][1], A[1][2], A[2][0], A[2][1], A[2][2], A[3][0], A[3][1], A[3][2]);
+}
+
+template <typename T>
 inline void print4x4(const std::string &name, const T m[])
 {
   fprintf(stderr, "%s=[[%.10f, %.10f, %.10f, %.10f], [%.10f, %.10f, %.10f, %.10f], [%.10f, %.10f, %.10f, %.10f], [%.10f, %.10f, %.10f, %.10f]]\n",

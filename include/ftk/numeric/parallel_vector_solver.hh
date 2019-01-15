@@ -82,7 +82,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
   transpose3(WW, W);
 
   T P[4]; // characteristic polynomial
-  characteristic_polynomial_3x3(VV, WW, P);
+  characteristic_polynomial_3x3(V, W, P);
 
   T l[3];
   const int n_roots = solve_cubic_real(P, l);
@@ -100,6 +100,10 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
     T nu[3];
     const auto det = solve_linear_real2x2(M, b, nu);
     nu[2] = T(1) - nu[0] - nu[1];
+    
+    // fprintf(stderr, "lambda=%f, nu={%f, %f, %f}, det=%f\n", l[i], nu[0], nu[1], nu[2], det);
+    // print2x2("M", M);
+    // fprintf(stderr, "b={%f, %f}\n", b[0], b[1]);
 
     // if (det == T(0)) {
     //   fprintf(stderr, "FATAL: det(M)=0, P={%f, %f, %f, %f}, n_roots=%d, i=%d, lambda=%f, nu={%f, %f, %f}\n", 
