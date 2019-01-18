@@ -25,22 +25,24 @@ inline T linear_solver3(const T A[3][3], const T b[3], T x[3])
 
 template <typename T> // returns determinant
 // inline T linear_solver2(const T A[2][2], const T b[2], T x[2])
-inline T solve_linear_real2x2(const T A[2][2], const T b[2], T x[2])
+inline T solve_linear_real2x2(const T A[2][2], const T b[2], T x[2], const T epsilon=1e-6)
 {
   const T D  = A[0][0]*A[1][1] - A[0][1]*A[1][0],
           Dx = b[0]   *A[1][1] - A[0][1]*b[1],
           Dy = A[0][0]*b[1]    - b[0]   *A[1][0];
 
-  x[0] = Dx / D;
+  x[0] = Dx / D; 
   x[1] = Dy / D;
+  // x[0] = (Dx + epsilon) / (D + epsilon);
+  // x[1] = (Dy + epsilon) / (D + epsilon);
   
   return D;
 }
 
 template <typename T>
-inline T solve_linear_real1(const T P[2], T x[1])
+inline T solve_linear_real1(const T P[2], T x[1], const T epsilon = 1e-6)
 {
-  if (P[1] == T(0) || std::isinf(P[1]) || std::isnan(P[1])) return 0;
+  if (std::abs(P[1]) < epsilon || std::isinf(P[1]) || std::isnan(P[1])) return 0;
   else {
     if (std::isinf(P[0]) || std::isnan(P[0])) return 0; 
     else {

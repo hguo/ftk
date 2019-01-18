@@ -59,7 +59,7 @@ inline T solve_cubic(T b, T c, T d, std::complex<T> x[3])
 }
 
 template <typename T>
-inline int solve_cubic_real(T b, T c, T d, T x[3]) // returns the number of real roots
+inline int solve_cubic_real(T b, T c, T d, T x[3], const T epsilon = 1e-6) // returns the number of real roots
 {
   T disc, q, r, dum1, s, t, term1, r13;
 
@@ -88,7 +88,7 @@ inline int solve_cubic_real(T b, T c, T d, T x[3]) // returns the number of real
     } else { // all roots are real and unequal
       q = -q;
       dum1 = q*q*q;
-      dum1 = acos(r/sqrt(dum1));
+      dum1 = acos(r/(sqrt(dum1)));
       r13 = 2.0*sqrt(q);
       x[0] = -term1 + r13*cos(dum1/3.0);
       x[1] = -term1 + r13*cos((dum1 + 2.0*M_PI)/3.0);
@@ -110,10 +110,13 @@ inline void solve_cubic(const T coef[4], std::complex<T> x[3])
 }
 
 template <typename T>
-inline int solve_cubic_real(const T coef[4], T x[3])
+inline int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-6)
 {
-  if (coef[3] == T(0) || std::isnan(coef[3]) || std::isinf(coef[3])) 
-    return solve_quadratic_real(coef, x);
+  if (std::abs(coef[3]) < epsilon || std::isnan(coef[3]) || std::isinf(coef[3])) {
+  // if (coef[3] == T(0) || std::isnan(coef[3]) || std::isinf(coef[3])) 
+    // fprintf(stderr, "%f, %f, %f, %f\n", coef[0], coef[1], coef[2], coef[3]);
+    return solve_quadratic_real(coef, x, epsilon);
+  }
   else return solve_cubic_real(
       coef[2] / coef[3], 
       coef[1] / coef[3], 

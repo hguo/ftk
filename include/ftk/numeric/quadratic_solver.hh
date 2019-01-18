@@ -22,9 +22,9 @@ inline void solve_quadratic(const T P[3], std::complex<T> x[2])
 }
 
 template <typename T>
-inline int solve_quadratic_real(const T P[3], T x[2])
+inline int solve_quadratic_real(const T P[3], T x[2], const T epsilon = 1e-6)
 {
-  if (P[2] == T(0) || std::isinf(P[2]) || std::isnan(P[2])) return solve_linear_real1(P, x);
+  if (std::abs(P[2]) < epsilon || std::isinf(P[2]) || std::isnan(P[2])) return solve_linear_real1(P, x);
 
   const T delta = P[1]*P[1] - 4*P[2]*P[0];
   if (delta > 0) {

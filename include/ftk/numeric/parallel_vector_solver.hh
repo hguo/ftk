@@ -75,7 +75,7 @@ inline int solve_parallel_vector_barycentric(const T V[3][3], const T W[3][3], T
 }
 #else
 template <typename T>
-inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3])
+inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3], const T epsilon=1e-10)
 {
   T V[3][3], W[3][3]; // transposed V and W
   transpose3(VV, V);
@@ -85,7 +85,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
   characteristic_polynomial_3x3(V, W, P);
 
   T l[3];
-  const int n_roots = solve_cubic_real(P, l);
+  const int n_roots = solve_cubic_real(P, l, epsilon); 
   int n_solutions = 0;
 
   for (int i = 0; i < n_roots; i ++) {
@@ -98,7 +98,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
       -(V[1][2] - l[i]*W[1][2])
     };
     T nu[3];
-    const auto det = solve_linear_real2x2(M, b, nu);
+    const auto det = solve_linear_real2x2(M, b, nu, T(0)); // epsilon);
     nu[2] = T(1) - nu[0] - nu[1];
     
     // fprintf(stderr, "lambda=%f, nu={%f, %f, %f}, det=%f\n", l[i], nu[0], nu[1], nu[2], det);
@@ -112,15 +112,22 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
     //   print3x3("W", WW);
     // }
 
-    if (det == T(0)) continue;
+    // if (det == T(0)) continue;
+    // if (std::abs(det) < epsilon) continue;
     if (nu[0] >= 0 && nu[0] < 1 && nu[1] >= 0 && nu[1] < 1 && nu[2] >= 0 && nu[2] < 1) {
+#if 0
       // check interpolation results
       double v[3], w[3], c[3]; 
       ftk::linear_interpolation3_3(VV, nu, v);
       ftk::linear_interpolation3_3(WW, nu, w);
       ftk::cross_product(v, w, c);
       const double norm = ftk::vector_2norm_3(c);
-      if (norm > 1e-3) continue; // reject
+      if (norm > 1e-3) {
+        fprintf(stderr, "rejecting: nu={%f, %f, %f}, v={%f, %f, %f}, w={%f, %f, %f}, c={%f, %f, %f}, norm=%f\n", 
+            nu[0], nu[1], nu[2], v[0], v[1], v[2], w[0], w[1], w[2], c[0], c[1], c[2], norm);
+        continue; // reject
+      }
+#endif
       
       const int j = n_solutions ++;
       lambda[j] = l[i];

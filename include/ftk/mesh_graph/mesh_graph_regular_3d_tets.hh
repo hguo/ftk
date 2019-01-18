@@ -318,6 +318,7 @@ template <typename index_type, typename chirality_type>
 bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_eidx(const int eidx[4]) const
 {
   if (eidx[3]<0 || eidx[3]>=7) return false;
+#if 0 // legacy version that takes care of pbc
   static const int nodes_idx[7][2][3] = { // 7 types of edges
     {{0, 0, 0}, {1, 0, 0}}, // AB
     {{0, 0, 0}, {1, 1, 0}}, // AC
@@ -343,30 +344,77 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_eidx(const in
     }
   }
   return true;
+#else
+  const int type = eidx[3]; 
+  const int edge_node_offsets[7][2][3] = {
+    {{0, 0, 0}, {1, 0, 0}}, 
+    {{0, 0, 0}, {1, 1, 0}}, 
+    {{0, 0, 0}, {0, 1, 0}}, 
+    {{0, 0, 0}, {0, 0, 1}}, 
+    {{0, 0, 0}, {1, 0, 1}}, 
+    {{0, 1, 0}, {0, 0, 1}}, 
+    {{0, 1, 0}, {1, 0, 1}}};
+
+  int nidx0[3], nidx1[3];
+  for (int p = 0; p < 1; p ++) {
+    nidx0[p] = eidx[p] + edge_node_offsets[type][0][p]; // TODO: pbc
+    nidx1[p] = eidx[p] + edge_node_offsets[type][1][p];
+  }
+
+  return mesh_graph_regular_3d<index_type, chirality_type>::valid_nidx(nidx0) 
+    && mesh_graph_regular_3d<index_type, chirality_type>::valid_nidx(nidx1);
+#endif
 }
 
 template <typename index_type, typename chirality_type>
 bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_fidx(const int fidx[4]) const
 {
   if (fidx[3]<0 || fidx[3]>=12) return false;
-  else {
-    int o[3] = {0};
-    for (int i=0; i<3; i++)
-      if (mesh_graph_regular_3d<index_type, chirality_type>::pbc[i]) {
-        if (fidx[i] < 0 || fidx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]) return false;
-      } else {
-        if (fidx[i] < 0 || fidx[i] > mesh_graph_regular_3d<index_type, chirality_type>::d[i]-1) return false;
-        else if (fidx[i] == mesh_graph_regular_3d<index_type, chirality_type>::d[i]-1) o[i] = 1;
-      }
-    
-    const int sum = o[0] + o[1] + o[2];
-    if (sum == 0) return true;
-    else if (o[0] + o[1] + o[2] > 1) return false;
-    else if (o[0] && (fidx[3] == 4 || fidx[3] == 5)) return true;
-    else if (o[1] && (fidx[3] == 2 || fidx[3] == 3)) return true; 
-    else if (o[2] && (fidx[3] == 0 || fidx[3] == 1)) return true;
-    else return false;
+#if 0 // legacy code that handles pbc
+  int o[3] = {0};
+  for (int i=0; i<3; i++)
+    if (mesh_graph_regular_3d<index_type, chirality_type>::pbc[i]) {
+      if (fidx[i] < 0 || fidx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]) return false;
+    } else {
+      if (fidx[i] < 0 || fidx[i] > mesh_graph_regular_3d<index_type, chirality_type>::d[i]-1) return false;
+      else if (fidx[i] == mesh_graph_regular_3d<index_type, chirality_type>::d[i]-1) o[i] = 1;
+    }
+  
+  const int sum = o[0] + o[1] + o[2];
+  if (sum == 0) return true;
+  else if (o[0] + o[1] + o[2] > 1) return false;
+  else if (o[0] && (fidx[3] == 4 || fidx[3] == 5)) return true;
+  else if (o[1] && (fidx[3] == 2 || fidx[3] == 3)) return true; 
+  else if (o[2] && (fidx[3] == 0 || fidx[3] == 1)) return true;
+  else return false;
+#else
+  const int type = fidx[3];
+  static const int face_node_idx[12][3][3] = { // 12 types of faces
+    {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}}, // ABC
+    {{0, 0, 0}, {1, 1, 0}, {0, 1, 0}}, // ACD
+    {{0, 0, 0}, {1, 0, 0}, {1, 0, 1}}, // ABF
+    {{0, 0, 0}, {0, 0, 1}, {1, 0, 1}}, // AEF
+    {{0, 0, 0}, {0, 1, 0}, {0, 0, 1}}, // ADE
+    {{0, 1, 0}, {0, 0, 1}, {0, 1, 1}}, // DEH
+    {{0, 0, 0}, {0, 1, 0}, {1, 0, 1}}, // ADF
+    {{0, 1, 0}, {1, 0, 1}, {1, 1, 1}}, // DFG
+    {{0, 1, 0}, {0, 0, 1}, {1, 0, 1}}, // DEF
+    {{1, 1, 0}, {0, 1, 0}, {1, 0, 1}}, // CDF
+    {{0, 0, 0}, {1, 1, 0}, {1, 0, 1}}, // ACF
+    {{0, 1, 0}, {0, 0, 1}, {1, 1, 1}}  // DEG
+  };
+
+  int nidxs[3][3];
+  for (int p = 0; p < 3; p ++) {
+    for (int q = 0; q < 3; q ++) {
+      nidxs[p][q] = fidx[q] + face_node_idx[type][p][q];
+    }
   }
+  
+  return mesh_graph_regular_3d<index_type, chirality_type>::valid_nidx(nidxs[0]) 
+    && mesh_graph_regular_3d<index_type, chirality_type>::valid_nidx(nidxs[1])
+    && mesh_graph_regular_3d<index_type, chirality_type>::valid_nidx(nidxs[2]);
+#endif
 }
 
 template <typename index_type, typename chirality_type>
@@ -378,7 +426,9 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_cidx(const in
     if (mesh_graph_regular_3d<index_type, chirality_type>::pbc[i]) {
       if (idx[i] < 0 || idx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]) return false;
     } else {
-      if (idx[i] < 0 || idx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]-1) return false;
+      if (idx[i] < mesh_graph_regular_3d<index_type, chirality_type>::lb[i] 
+          || idx[i] > mesh_graph_regular_3d<index_type, chirality_type>::ub[i]) return false;
+      // if (idx[i] < 0 || idx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]-1) return false;
     }
   return true;
 }

@@ -12,6 +12,8 @@ struct mesh_graph_regular_3d : public mesh_graph<index_type, chirality_type> {
 protected:
   int d[3] = {256, 256, 256}; // dimensions
   bool pbc[3] = {0, 0, 0}; // periodic boundary conditions
+
+public: // TODO: move to protected; add assigner
   int lb[3] = {0, 0, 0}, 
       ub[3] = {0, 0, 0};
 
