@@ -114,7 +114,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
 
     // if (det == T(0)) continue;
     // if (std::abs(det) < epsilon) continue;
-    if (nu[0] >= 0 && nu[0] < 1 && nu[1] >= 0 && nu[1] < 1 && nu[2] >= 0 && nu[2] < 1) {
+    if (nu[0] >= -epsilon && nu[0] < 1+epsilon && nu[1] >= -epsilon && nu[1] < 1+epsilon && nu[2] >= -epsilon && nu[2] < 1+epsilon) {
 #if 0
       // check interpolation results
       double v[3], w[3], c[3]; 

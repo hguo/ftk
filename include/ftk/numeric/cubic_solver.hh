@@ -110,7 +110,7 @@ inline void solve_cubic(const T coef[4], std::complex<T> x[3])
 }
 
 template <typename T>
-inline int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-6)
+inline int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-8)
 {
   if (std::abs(coef[3]) < epsilon || std::isnan(coef[3]) || std::isinf(coef[3])) {
   // if (coef[3] == T(0) || std::isnan(coef[3]) || std::isinf(coef[3])) 
