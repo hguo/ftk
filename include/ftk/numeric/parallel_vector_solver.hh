@@ -76,7 +76,7 @@ inline int solve_parallel_vector_barycentric(const T V[3][3], const T W[3][3], T
 }
 #else
 template <typename T>
-inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3], const T epsilon=1e-9)
+inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3], const T epsilon=1e-6)
 {
   T V[3][3], W[3][3]; // transposed V and W
   transpose3(VV, V);
@@ -98,8 +98,9 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
   // print3x3("V", V);
   // print3x3("W", W);
 
-  T l[3];
-  const int n_roots = solve_cubic_real(P, l, epsilon); 
+  T l[3] = {0};
+  const int n_roots = solve_cubic_real(P, l, epsilon);
+  // fprintf(stderr, "n_roots=%d, roots={%f, %f, %f}\n", n_roots, l[0], l[1], l[2]);
   int n_solutions = 0;
 
   for (int i = 0; i < n_roots; i ++) {
@@ -115,10 +116,10 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
     };
     T nu[3];
     // const auto det = solve_linear_real2x2(M, b, nu, T(0)); // epsilon);
-    const auto det = solve_least_square3x2(M, b, nu, T(0));
+    const auto cond = solve_least_square3x2(M, b, nu, T(0));
     nu[2] = T(1) - nu[0] - nu[1];
     
-    // fprintf(stderr, "lambda=%f, nu={%f, %f, %f}, det=%f\n", l[i], nu[0], nu[1], nu[2], det);
+    // fprintf(stderr, "lambda=%f, nu={%.20f, %.20f, %.20f}, cond=%.20f\n", l[i], nu[0], nu[1], nu[2], cond);
     // print3x2("M", M);
     // fprintf(stderr, "b={%f, %f, %f}\n", b[0], b[1], b[2]);
 
@@ -128,10 +129,13 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
     //   print3x3("V", VV);
     //   print3x3("W", WW);
     // }
-
-    // if (det == T(0)) continue;
-    // if (std::abs(det) < epsilon) continue;
+    // if (std::abs(det) <= epsilon) continue; // FIXME: fixed threshold
     if (nu[0] >= -epsilon && nu[0] <= 1+epsilon && nu[1] >= -epsilon && nu[1] <= 1+epsilon && nu[2] >= -epsilon && nu[2] <= 1+epsilon) {
+    // if (nu[0] >= 0 && nu[0] <= 1 && nu[1] >= 0 && nu[1] <= 1 && nu[2] >= 0 && nu[2] <= 1) {
+      if (cond > 1e10) {
+        fprintf(stderr, "rejecting by condition number, cond=%f, lambda=%f\n", cond, l[i]);
+        continue; // bad condition number
+      }
 #if 0
       // check interpolation results
       double v[3], w[3], c[3]; 

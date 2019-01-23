@@ -46,7 +46,7 @@ inline T solve_linear_real1(const T P[2], T x[1], const T epsilon = 1e-6)
   else {
     if (std::isinf(P[0]) || std::isnan(P[0])) return 0; 
     else {
-      x[0] = P[0] / P[1];
+      x[0] = - P[0] / P[1];
       return 1;
     }
   }
@@ -63,12 +63,13 @@ inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T ep
 
   T invATA[2][2];
   const T det = matrix_inverse2(ATA, invATA);
+  const T cond = cond_real2x2(ATA);
 
   T invATAAT[2][3];
   matrix_matrix_multiplication_2x2_2x3(invATA, AT, invATAAT);
 
   matrix_vector_multiplication_2x3(invATAAT, b, x);
-  return det;
+  return cond;
 }
 
 }

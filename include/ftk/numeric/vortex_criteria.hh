@@ -22,7 +22,7 @@ inline T vortex_lambda2_criterion(const T J[3][3])
   matrix_square_3x3(O, squareO);
 
   T M[3][3];
-  matrix_addition_3x3(squareS, squareO, M);
+  matrix_addition3x3(squareS, squareO, M);
 
   std::complex<T> eig[3];
   std::complex<T> eigvec[3][3];

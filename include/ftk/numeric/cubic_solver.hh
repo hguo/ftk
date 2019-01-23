@@ -59,7 +59,7 @@ inline T solve_cubic(T b, T c, T d, std::complex<T> x[3])
 }
 
 template <typename T>
-inline int solve_cubic_real(T b, T c, T d, T x[3], const T epsilon = 1e-6) // returns the number of real roots
+inline int solve_cubic_real(T b, T c, T d, T x[3], const T epsilon = 1e-9) // returns the number of real roots
 {
   T disc, q, r, dum1, s, t, term1, r13;
 
@@ -110,7 +110,7 @@ inline void solve_cubic(const T coef[4], std::complex<T> x[3])
 }
 
 template <typename T>
-inline int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-8)
+inline int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-9)
 {
   if (std::abs(coef[3]) < epsilon || std::isnan(coef[3]) || std::isinf(coef[3])) {
   // if (coef[3] == T(0) || std::isnan(coef[3]) || std::isinf(coef[3])) 
