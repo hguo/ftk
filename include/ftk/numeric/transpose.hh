@@ -76,6 +76,17 @@ void transpose4(T m[16])
   std::swap(m[11], m[14]);
 }
 
+template <typename T>
+void transpose3x2(const T A[3][2], T B[2][3])
+{
+  B[0][0] = A[0][0]; 
+  B[0][1] = A[1][0]; 
+  B[0][2] = A[2][0];
+  B[1][0] = A[0][1];
+  B[1][1] = A[1][1];
+  B[1][2] = A[2][1];
+}
+
 }
 
 #endif

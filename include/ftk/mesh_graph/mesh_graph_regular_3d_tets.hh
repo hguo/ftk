@@ -39,6 +39,12 @@ public:
 
   void cid2cidx(index_type id, int cidx[4]) const;
   index_type cidx2cid(const int cidx[4]) const;
+
+  template <typename T>
+  bool locate_point(
+      const T x[3], // input coordinates
+      index_type nids[4], // output node ids
+      T mu[4]); // barycentric coordinates
 };
 
 //////////////////////////////////
@@ -432,6 +438,32 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_cidx(const in
     }
   return true;
 }
+
+#if 0
+template <typename index_type, typename chirality_type>
+index_type mesh_graph_regular_3d_tets<index_type, chirality_type>::locate_point(
+    const T x[3], index_type nids[4], T mu[4])
+{
+  int corner[3] = {
+    static_cast<int>(x[0]), 
+    static_cast<int>(x[1]), 
+    static_cast<int>(x[2])
+  };
+
+  if (corner[0] < lb[0] || corner[0] > ub[0] 
+      || corner[1] < lb[1] || corner[1] > ub[1]
+      || corner[2] < lb[2] || corner[2] > ub[2])
+    return index_type(-1);
+
+  T y[3] = {
+    x[0] - corner[0], 
+    x[1] - corner[1], 
+    x[2] - corner[2]
+  }; 
+
+  // TBA
+}
+#endif
 
 }
 

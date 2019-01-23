@@ -2,6 +2,7 @@
 #define _FTK_PARALLEL_VECTOR_SOLVER_H
 
 #include <ftk/numeric/matrix_inverse.hh>
+#include <ftk/numeric/matrix_addition.hh>
 #include <ftk/numeric/eigen_solver.hh>
 #include <ftk/numeric/linear_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -75,35 +76,51 @@ inline int solve_parallel_vector_barycentric(const T V[3][3], const T W[3][3], T
 }
 #else
 template <typename T>
-inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3], const T epsilon=1e-10)
+inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3], const T epsilon=1e-9)
 {
   T V[3][3], W[3][3]; // transposed V and W
   transpose3(VV, V);
   transpose3(WW, W);
 
+#if 0
+  // check if V or W is singular
+  if (std::abs(det3(V)) < epsilon || std::abs(det3(W)) < epsilon) return 0;
+
+  // check if V-W is singular
+  T VW[3][3];
+  matrix_subtraction3x3(V, W, VW);
+  if (std::abs(det3(V)) < epsilon) return 0;
+#endif
+
   T P[4]; // characteristic polynomial
   characteristic_polynomial_3x3(V, W, P);
+  // fprintf(stderr, "characteristic_polynomial: %f, %f, %f, %f\n", P[0], P[1], P[2], P[3]);
+  // print3x3("V", V);
+  // print3x3("W", W);
 
   T l[3];
   const int n_roots = solve_cubic_real(P, l, epsilon); 
   int n_solutions = 0;
 
   for (int i = 0; i < n_roots; i ++) {
-    const T M[2][2] = {
+    const T M[3][2] = {
       {(V[0][0] - V[0][2]) - l[i] * (W[0][0] - W[0][2]), (V[0][1] - V[0][2]) - l[i] * (W[0][1] - W[0][2])}, 
-      {(V[1][0] - V[1][2]) - l[i] * (W[1][0] - W[1][2]), (V[1][1] - V[1][2]) - l[i] * (W[1][1] - W[1][2])}
+      {(V[1][0] - V[1][2]) - l[i] * (W[1][0] - W[1][2]), (V[1][1] - V[1][2]) - l[i] * (W[1][1] - W[1][2])},
+      {(V[2][0] - V[2][2]) - l[i] * (W[2][0] - W[2][2]), (V[2][1] - V[2][2]) - l[i] * (W[2][1] - W[2][2])}
     };
-    const T b[2] = {
+    const T b[3] = {
       -(V[0][2] - l[i]*W[0][2]), 
-      -(V[1][2] - l[i]*W[1][2])
+      -(V[1][2] - l[i]*W[1][2]),
+      -(V[2][2] - l[i]*W[2][2])
     };
     T nu[3];
-    const auto det = solve_linear_real2x2(M, b, nu, T(0)); // epsilon);
+    // const auto det = solve_linear_real2x2(M, b, nu, T(0)); // epsilon);
+    const auto det = solve_least_square3x2(M, b, nu, T(0));
     nu[2] = T(1) - nu[0] - nu[1];
     
     // fprintf(stderr, "lambda=%f, nu={%f, %f, %f}, det=%f\n", l[i], nu[0], nu[1], nu[2], det);
-    // print2x2("M", M);
-    // fprintf(stderr, "b={%f, %f}\n", b[0], b[1]);
+    // print3x2("M", M);
+    // fprintf(stderr, "b={%f, %f, %f}\n", b[0], b[1], b[2]);
 
     // if (det == T(0)) {
     //   fprintf(stderr, "FATAL: det(M)=0, P={%f, %f, %f, %f}, n_roots=%d, i=%d, lambda=%f, nu={%f, %f, %f}\n", 
@@ -114,7 +131,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
 
     // if (det == T(0)) continue;
     // if (std::abs(det) < epsilon) continue;
-    if (nu[0] >= -epsilon && nu[0] < 1+epsilon && nu[1] >= -epsilon && nu[1] < 1+epsilon && nu[2] >= -epsilon && nu[2] < 1+epsilon) {
+    if (nu[0] >= -epsilon && nu[0] <= 1+epsilon && nu[1] >= -epsilon && nu[1] <= 1+epsilon && nu[2] >= -epsilon && nu[2] <= 1+epsilon) {
 #if 0
       // check interpolation results
       double v[3], w[3], c[3]; 

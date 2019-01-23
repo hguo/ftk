@@ -52,6 +52,25 @@ inline T solve_linear_real1(const T P[2], T x[1], const T epsilon = 1e-6)
   }
 }
 
+template <typename T>
+inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T epsilon = 1e-9)
+{
+  T AT[2][3];
+  transpose3x2(A, AT);
+
+  T ATA[2][2];
+  matrix_matrix_multiplication_2x3_3x2(AT, A, ATA);
+
+  T invATA[2][2];
+  const T det = matrix_inverse2(ATA, invATA);
+
+  T invATAAT[2][3];
+  matrix_matrix_multiplication_2x2_2x3(invATA, AT, invATAAT);
+
+  matrix_vector_multiplication_2x3(invATAAT, b, x);
+  return det;
+}
+
 }
 
 #endif
