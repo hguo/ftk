@@ -26,17 +26,20 @@ inline int solve_quadratic_real(const T P[3], T x[2], const T epsilon = 1e-8)
 {
   if (std::abs(P[2]) < epsilon || std::isinf(P[2]) || std::isnan(P[2])) 
     return solve_linear_real1(P, x);
-
-  const T delta = P[1]*P[1] - 4*P[2]*P[0];
-  if (delta > 0) {
-    x[0] = (-P[1] + sqrt(delta)) / (2 * P[2]);
-    x[1] = (-P[1] - sqrt(delta)) / (2 * P[2]);
-    return 2;
-  } else if (delta == T(0)) {
-    x[0] = -P[1] / (2 * P[2]);
-    return 1;
-  } else 
-    return 0;
+  else if (std::abs(P[0]) < epsilon || std::isinf(P[0]) || std::isnan(P[0]))
+    return solve_linear_real1(P+1, x);
+  else {
+    const T delta = P[1]*P[1] - 4*P[2]*P[0];
+    if (delta > 0) {
+      x[0] = (-P[1] + sqrt(delta)) / (2 * P[2]);
+      x[1] = (-P[1] - sqrt(delta)) / (2 * P[2]);
+      return 2;
+    } else if (delta == T(0)) {
+      x[0] = -P[1] / (2 * P[2]);
+      return 1;
+    } else 
+      return 0;
+  }
 }
 
 }

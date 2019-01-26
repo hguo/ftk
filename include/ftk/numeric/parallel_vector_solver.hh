@@ -134,15 +134,13 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
     // if (std::abs(det) <= epsilon) continue; // FIXME: fixed threshold
     if (nu[0] >= -epsilon && nu[0] <= 1+epsilon && nu[1] >= -epsilon && nu[1] <= 1+epsilon && nu[2] >= -epsilon && nu[2] <= 1+epsilon) {
     // if (nu[0] >= 0 && nu[0] <= 1 && nu[1] >= 0 && nu[1] <= 1 && nu[2] >= 0 && nu[2] <= 1) {
-      if (cond > 1e9) {
+      if (cond > 1e9) { // bad condition number
         double v[3], w[3], c[3]; 
         ftk::linear_interpolation3_3(VV, nu, v);
         ftk::linear_interpolation3_3(WW, nu, w);
         ftk::cross_product(v, w, c);
         const double norm = ftk::vector_2norm_3(c);
-       
-        continue; // bad condition number
-#if 0
+#if 1
         fprintf(stderr, "rejecting by condition number, P={%f, %f, %f, %f}, n_roots=%d, roots={%f, %f, %f}, lambda=%f, nu={%f, %f, %f}, cond=%f, ||v x w||=%f\n", 
             P[0], P[1], P[2], P[3], n_roots, l[0], l[1], l[2], 
             l[i], nu[0], nu[1], nu[2], cond, norm);
@@ -151,6 +149,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
         print3x2("M", M);
         print3("b", b);
 #endif
+        continue; // bad condition number
       }
 #if 0
       // check interpolation results

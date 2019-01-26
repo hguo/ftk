@@ -113,9 +113,9 @@ template <typename T>
 inline int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-9)
 {
   if (std::abs(coef[3]) < epsilon || std::isnan(coef[3]) || std::isinf(coef[3])) {
-  // if (coef[3] == T(0) || std::isnan(coef[3]) || std::isinf(coef[3])) 
-    // fprintf(stderr, "%f, %f, %f, %f\n", coef[0], coef[1], coef[2], coef[3]);
     return solve_quadratic_real(coef, x, epsilon);
+  } else if (std::abs(coef[0]) < epsilon || std::isnan(coef[0]) || std::isinf(coef[0])) {
+    return solve_quadratic_real(coef+1, x, epsilon);
   }
   else return solve_cubic_real(
       coef[2] / coef[3], 
