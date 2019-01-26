@@ -40,7 +40,7 @@ inline T solve_linear_real2x2(const T A[2][2], const T b[2], T x[2], const T eps
 }
 
 template <typename T>
-inline T solve_linear_real1(const T P[2], T x[1], const T epsilon = 1e-6)
+inline int solve_linear_real1(const T P[2], T x[1], const T epsilon = 1e-6)
 {
   if (std::abs(P[1]) < epsilon || std::isinf(P[1]) || std::isnan(P[1])) return 0;
   else {
