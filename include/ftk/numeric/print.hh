@@ -36,6 +36,13 @@ inline void print3x3(const std::string &name, const T m[])
 }
 
 template <typename T>
+inline void print3(const std::string &name, const T m[3])
+{
+  fprintf(stderr, "%s=[%.10f, %.10f, %.10f]\n", 
+      name.c_str(), m[0], m[1], m[2]);
+}
+
+template <typename T>
 inline void print3x2(const std::string &name, const T m[3][2])
 {
   fprintf(stderr, "%s=[[%.10f, %.10f], [%.10f, %.10f], [%.10f, %.10f]]\n",

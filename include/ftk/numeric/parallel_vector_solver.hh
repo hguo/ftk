@@ -104,6 +104,8 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
   int n_solutions = 0;
 
   for (int i = 0; i < n_roots; i ++) {
+    if (std::abs(l[i]) < epsilon) continue;
+
     const T M[3][2] = {
       {(V[0][0] - V[0][2]) - l[i] * (W[0][0] - W[0][2]), (V[0][1] - V[0][2]) - l[i] * (W[0][1] - W[0][2])}, 
       {(V[1][0] - V[1][2]) - l[i] * (W[1][0] - W[1][2]), (V[1][1] - V[1][2]) - l[i] * (W[1][1] - W[1][2])},
@@ -132,9 +134,23 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
     // if (std::abs(det) <= epsilon) continue; // FIXME: fixed threshold
     if (nu[0] >= -epsilon && nu[0] <= 1+epsilon && nu[1] >= -epsilon && nu[1] <= 1+epsilon && nu[2] >= -epsilon && nu[2] <= 1+epsilon) {
     // if (nu[0] >= 0 && nu[0] <= 1 && nu[1] >= 0 && nu[1] <= 1 && nu[2] >= 0 && nu[2] <= 1) {
-      if (cond > 1e10) {
-        fprintf(stderr, "rejecting by condition number, cond=%f, lambda=%f\n", cond, l[i]);
+      if (cond > 1e9) {
+        double v[3], w[3], c[3]; 
+        ftk::linear_interpolation3_3(VV, nu, v);
+        ftk::linear_interpolation3_3(WW, nu, w);
+        ftk::cross_product(v, w, c);
+        const double norm = ftk::vector_2norm_3(c);
+       
         continue; // bad condition number
+#if 0
+        fprintf(stderr, "rejecting by condition number, P={%f, %f, %f, %f}, n_roots=%d, roots={%f, %f, %f}, lambda=%f, nu={%f, %f, %f}, cond=%f, ||v x w||=%f\n", 
+            P[0], P[1], P[2], P[3], n_roots, l[0], l[1], l[2], 
+            l[i], nu[0], nu[1], nu[2], cond, norm);
+        print3x3("V", VV);
+        print3x3("W", WW);
+        print3x2("M", M);
+        print3("b", b);
+#endif
       }
 #if 0
       // check interpolation results
