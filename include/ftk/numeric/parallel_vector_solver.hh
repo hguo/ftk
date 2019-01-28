@@ -187,7 +187,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
 template <typename T>
 inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lambda[2], T mu[2], const T epsilon = 1e-9)
 {
-  const double P[3][2] = { // rhs
+  const T P[3][2] = { // rhs
     {V[1][0], -W[1][0]},
     {V[1][1], -W[1][1]},
     {V[1][2], -W[1][2]}
@@ -196,32 +196,57 @@ inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lamb
   if (norm < epsilon)
     return std::numeric_limits<int>::max(); // unlimited.
 
-  const double Q[3][2] = { // lhs
+  const T Q[3][2] = { // lhs
     {V[1][0]-V[0][0], W[0][0]-W[1][0]},
     {V[1][1]-V[0][1], W[0][1]-W[1][1]},
     {V[1][2]-V[0][2], W[0][2]-W[1][2]}
   };
 
-  double E0[3], E1[3], F0[3], F1[3];
-  polynomial_multiplication(P[0], 1, Q[1], 1, E0);
-  polynomial_multiplication(P[1], 1, Q[0], 1, E1);
-  polynomial_multiplication(P[0], 1, Q[2], 1, F0);
-  polynomial_multiplication(P[2], 1, Q[0], 1, F1);
+  // print2x3("V", V);
+  // print2x3("W", W);
+  //print3x2("P", P);
+  //print3x2("Q", Q);
 
-  double E[3], F[3];
-  polynomial_sub(E0, 2, E1, 2, E);
-  polynomial_sub(F0, 2, F1, 2, F);
+  T E[3][3], F[3][3];
+  polynomial_multiplication(P[1], 1, Q[2], 1, E[0]);
+  polynomial_multiplication(P[2], 1, Q[1], 1, F[0]);
+  polynomial_multiplication(P[0], 1, Q[2], 1, E[1]);
+  polynomial_multiplication(P[2], 1, Q[0], 1, F[1]);
+  polynomial_multiplication(P[0], 1, Q[1], 1, E[2]);
+  polynomial_multiplication(P[1], 1, Q[0], 1, F[2]);
 
-  double C[3];
-  cross_product(E, F, C);
+  T H[3][3];
+  for (int i = 0; i < 3; i ++)
+    polynomial_sub(E[i], 2, F[i], 2, H[i]);
 
-  if (vector_2norm_3(C) < epsilon) {
-    double l[2], nu[2];
-    const int n_roots = solve_quadratic_real(E, l);
+  T C[3];
+  cross_product(H[0], H[1], C);
+  // fprintf(stderr, "E={%f, %f, %f}, F={%f, %f, %f}, C={%f, %f, %f}, normC=%.20f\n", 
+  //     E[0], E[1], E[2], F[0], F[1], F[2], C[0], C[1], C[2], vector_2norm_3(C));
+
+  if (vector_2norm_3(H[0]) > epsilon && vector_2norm_3(H[1]) > epsilon && vector_2norm_3(C) < epsilon) {
+    T l[2], nu[2];
+    const int n_roots = solve_quadratic_real(H[0], l);
+    // fprintf(stderr, "n_roots=%d, l={%f, %f}\n", n_roots, l[0], l[1]);
     int n = 0;
     for (int i = 0; i < n_roots; i ++) {
-      // if (std::abs(l[i]) < epsilon) continue;
+      if (std::abs(l[i]) < epsilon) continue;
+      // if (std::abs(polynomial_evaluate(Q[0], 1, l[i])) < epsilon) continue;
+#if 0
+      const T A[3] = {
+        polynomial_evaluate(P[0], 1, l[i]), 
+        polynomial_evaluate(P[1], 1, l[i]), 
+        polynomial_evaluate(P[2], 1, l[i])
+      }, B[3] = {
+        polynomial_evaluate(Q[0], 1, l[i]), 
+        polynomial_evaluate(Q[1], 1, l[i]), 
+        polynomial_evaluate(Q[2], 1, l[i])
+      };
+      fprintf(stderr, "A={%f, %f, %f}, B={%f, %f, %f}\n", 
+          A[0], A[1], A[2], B[0], B[1], B[2]);
+#endif
       nu[i] = polynomial_evaluate(P[0], 1, l[i]) / polynomial_evaluate(Q[0], 1, l[i]);
+      // fprintf(stderr, "l=%f, nu=%.20f\n", l[i], nu[i]);
       if (nu[i] >= -epsilon && nu[i] < 1+epsilon) {
         lambda[n] = l[i];
         mu[n] = nu[i];
