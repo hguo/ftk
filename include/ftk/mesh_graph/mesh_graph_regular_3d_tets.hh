@@ -362,7 +362,7 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_eidx(const in
     {{0, 1, 0}, {1, 0, 1}}};
 
   int nidx0[3], nidx1[3];
-  for (int p = 0; p < 1; p ++) {
+  for (int p = 0; p < 3; p ++) {
     nidx0[p] = eidx[p] + edge_node_offsets[type][0][p]; // TODO: pbc
     nidx1[p] = eidx[p] + edge_node_offsets[type][1][p];
   }

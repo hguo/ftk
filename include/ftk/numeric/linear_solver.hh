@@ -3,6 +3,7 @@
 
 #include <ftk/numeric/det.hh>
 #include <ftk/numeric/cond.hh>
+#include <ftk/numeric/inner_product.hh>
 
 namespace ftk {
 
@@ -50,6 +51,16 @@ inline int solve_linear_real1(const T P[2], T x[1], const T epsilon = 1e-6)
       return 1;
     }
   }
+}
+
+template <typename T>
+inline T solve_least_square3x1(const T a[3], const T b[3], T &x) // ax=b
+{
+  const T inner_product_a = inner_product(a, a), 
+          inner_product_ab = inner_product(a, b);
+  const T inv_inner_product_a = T(1) / inner_product_a;
+  x = inner_product_ab * inv_inner_product_a;
+  return inv_inner_product_a; // cond
 }
 
 template <typename T>

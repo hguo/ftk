@@ -10,6 +10,7 @@
 #include <ftk/numeric/transpose.hh>
 #include <ftk/numeric/characteristic_polynomial.hh>
 #include <ftk/numeric/polynomial.hh>
+#include <ftk/numeric/matrix_norm.hh>
 #include <ftk/numeric/isnan.hh>
 #include <ftk/numeric/print.hh>
 
@@ -182,6 +183,55 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
   return n_solutions;
 }
 #endif
+
+template <typename T>
+inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lambda[2], T mu[2], const T epsilon = 1e-9)
+{
+  const double P[3][2] = { // rhs
+    {V[1][0], -W[1][0]},
+    {V[1][1], -W[1][1]},
+    {V[1][2], -W[1][2]}
+  };
+  const T norm = matrix_frobenius_norm_real3x2(P);
+  if (norm < epsilon)
+    return std::numeric_limits<int>::max(); // unlimited.
+
+  const double Q[3][2] = { // lhs
+    {V[1][0]-V[0][0], W[0][0]-W[1][0]},
+    {V[1][1]-V[0][1], W[0][1]-W[1][1]},
+    {V[1][2]-V[0][2], W[0][2]-W[1][2]}
+  };
+
+  double E0[3], E1[3], F0[3], F1[3];
+  polynomial_multiplication(P[0], 1, Q[1], 1, E0);
+  polynomial_multiplication(P[1], 1, Q[0], 1, E1);
+  polynomial_multiplication(P[0], 1, Q[2], 1, F0);
+  polynomial_multiplication(P[2], 1, Q[0], 1, F1);
+
+  double E[3], F[3];
+  polynomial_sub(E0, 2, E1, 2, E);
+  polynomial_sub(F0, 2, F1, 2, F);
+
+  double C[3];
+  cross_product(E, F, C);
+
+  if (vector_2norm_3(C) < epsilon) {
+    double l[2], nu[2];
+    const int n_roots = solve_quadratic_real(E, l);
+    int n = 0;
+    for (int i = 0; i < n_roots; i ++) {
+      // if (std::abs(l[i]) < epsilon) continue;
+      nu[i] = polynomial_evaluate(P[0], 1, l[i]) / polynomial_evaluate(Q[0], 1, l[i]);
+      if (nu[i] >= -epsilon && nu[i] < 1+epsilon) {
+        lambda[n] = l[i];
+        mu[n] = nu[i];
+        n ++;
+      }
+    }
+    return n;
+  } else 
+    return 0;
+}
 
 template <typename T>
 inline int solve_parallel_vector_bibarycentric(const T V[4][3], const T W[4][3], T mu[6][2])

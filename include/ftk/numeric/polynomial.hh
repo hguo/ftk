@@ -22,7 +22,7 @@ void polynomial_derivative(const T P[], int m, T R[])
 }
 
 template <typename T>
-T polynomial_derivative_evaluate(const T P[], int m, T x)
+T polynomial_evaluate_derivative(const T P[], int m, T x)
 {
   T y(0);
   for (int i = 0; i < m; i++)
@@ -49,10 +49,28 @@ void polynomial_add(const T P[], int m, const T Q[], int n, T R[])
 }
 
 template <typename T>
+void polynomial_sub(const T P[], int m, const T Q[], int n, T R[]) 
+{
+  if (m >= n)
+    for (int i = 0; i <= m; i ++)
+      if (i <= n) R[i] = P[i] - Q[i];
+      else R[i] = P[i];
+  else 
+    polynomial_sub(Q, n, P, m, R);
+}
+
+template <typename T>
 void polynomial_add_in_place(T P[], int m, const T Q[], int n) // m >= n
 {
   for (int i = 0; i <= n; i ++)
     P[i] += Q[i];
+}
+
+template <typename T>
+void polynomial_sub_in_place(T P[], int m, const T Q[], int n) // m >= n
+{
+  for (int i = 0; i <= n; i ++)
+    P[i] -= Q[i];
 }
 
 template <typename T>
