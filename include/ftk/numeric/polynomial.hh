@@ -6,6 +6,24 @@
 namespace ftk {
 
 template <typename T>
+bool polynomial_equals_to_zero(const T P[], int m, const T epsilon=1e-9)
+{
+  for (int i = 0; i <= m; i ++) 
+    if (std::abs(P[i]) > epsilon) 
+      return false;
+  return true;
+}
+
+template <typename T>
+bool polynomial_equals_to_constant(const T P[], int m, const T epsilon=1e-9)
+{
+  for (int i = 1; i <= m; i ++) 
+    if (std::abs(P[i]) > epsilon) 
+      return false;
+  return true;
+}
+
+template <typename T>
 T polynomial_evaluate(const T P[], int m, T x)
 {
   T y(0);
