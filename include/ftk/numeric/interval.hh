@@ -16,6 +16,20 @@ struct basic_interval {
   basic_interval(T l, T u) : _lower(l), _upper(u) {}
   basic_interval(T v) : _lower(v), _upper(v) {}
 
+  static T upper_inf() {
+    if (std::numeric_limits<T>::has_infinity)
+      return std::numeric_limits<T>::infinity();
+    else 
+      return std::numeric_limits<T>::max();
+  }
+
+  static T lower_inf() {
+    if (std::numeric_limits<T>::has_infinity)
+      return -std::numeric_limits<T>::infinity();
+    else 
+      return std::numeric_limits<T>::min();
+  }
+
   static basic_interval<T> empty_interval() {
     return basic_interval<T>();
   }
@@ -27,13 +41,13 @@ struct basic_interval {
   }
 
   void set_to_empty() {
-    _lower = std::numeric_limits<T>::max();
-    _upper = -std::numeric_limits<T>::max();
+    _lower = lower_inf();
+    _upper = upper_inf(); 
   }
 
   void set_to_complete() {
-    _lower = -std::numeric_limits<T>::max();
-    _upper = std::numeric_limits<T>::max();
+    _lower = lower_inf();
+    _upper = upper_inf();
   }
 
   void set_to_singleton(T x) {
@@ -47,8 +61,8 @@ struct basic_interval {
   bool upper_open() const {return _upper_open;}
 
   bool complete() const {
-    return lower() == -std::numeric_limits<T>::max() && 
-      upper() == std::numeric_limits<T>::max();
+    return lower() == lower_inf() && 
+      upper() == upper_inf(); 
   }
 
   bool empty() const {return lower() > upper();}
