@@ -1,5 +1,5 @@
-#ifndef _FTK_CUBIC_SOLVER_H
-#define _FTK_CUBIC_SOLVER_H
+#ifndef _FTK_CUBIC_SOLVER_HH
+#define _FTK_CUBIC_SOLVER_HH
 
 #include <cmath>
 #include <complex>

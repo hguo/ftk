@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   I.join(15, 25);
   I.join(30, 60);
   I.join(0, 10);
-  // I.intersect(-10, 10);
+  // I.intersect(15);
 
   // I.intersect(ftk::basic_interval<long long int>::complete_interval());
 

@@ -140,10 +140,10 @@ template <typename T>
 struct disjoint_intervals {
   disjoint_intervals() {}
   disjoint_intervals(T l, T u) {
-    intervals.insert(basic_interval<T>(l, u));
+    _subintervals.insert(basic_interval<T>(l, u));
   }
   disjoint_intervals(T v) {
-    intervals.insert(basic_interval<T>(v));
+    _subintervals.insert(basic_interval<T>(v));
   }
 
   static disjoint_intervals<T> empty_interval() {
@@ -157,33 +157,33 @@ struct disjoint_intervals {
   }
 
   void set_to_empty() {
-    intervals.clear();
+    _subintervals.clear();
   }
 
   void set_to_complete() {
     basic_interval<T> i;
     i.set_to_complete();
-    intervals.clear();
-    intervals.insert(i);
+    _subintervals.clear();
+    _subintervals.insert(i);
   }
  
   bool empty() const {
-    return intervals.empty();
+    return subintervals().empty();
   }
 
   bool singleton() const {
-    return intervals.size() == 1 && 
-      intervals.begin()->singleton();
+    return subintervals().size() == 1 && 
+      subintervals().begin()->singleton();
   }
 
   bool contains(T x) const {
-    for (const auto &I : intervals)
+    for (const auto &I : subintervals())
       if (I.contains(x)) return true;
     return false;
   }
 
   bool overlaps(const basic_interval<T> &i) const {
-    for (const auto &j : intervals)
+    for (const auto &j : subintervals())
       if (j.overlaps(i)) return true;
     return false;
   }
@@ -198,8 +198,8 @@ struct disjoint_intervals {
     std::list<typename std::set<basic_interval<T> >::iterator> to_erase;
     basic_interval<T> ii = i;
 
-    for (typename std::set<basic_interval<T> >::iterator it = intervals.begin(); 
-        it != intervals.end(); it ++) {
+    for (typename std::set<basic_interval<T> >::iterator it = _subintervals.begin(); 
+        it != _subintervals.end(); it ++) {
       if (it->overlaps(ii)) {
         ii.join(*it);
         to_erase.push_back(it);
@@ -207,9 +207,9 @@ struct disjoint_intervals {
     }
 
     for (auto it : to_erase)
-      intervals.erase(it);
+      _subintervals.erase(it);
 
-    intervals.insert(ii);
+    _subintervals.insert(ii);
   }
   
   void intersect(T l, T u) {
@@ -218,7 +218,7 @@ struct disjoint_intervals {
 
   void intersect(const basic_interval<T>& i) {
     disjoint_intervals<T> I;
-    for (const auto &j : intervals) {
+    for (const auto &j : subintervals()) {
       auto k = i;
       k.intersect(j);
       I.join(k); 
@@ -233,18 +233,21 @@ struct disjoint_intervals {
     if (i.empty()) 
       os << "{empty}";
     else if (i.singleton())
-      os << *i.intervals.begin(); 
+      os << *i.subintervals().begin(); 
     else {
       std::stringstream ss;
-      for (const auto &I : i.intervals) 
-        ss << I << "U";
+      for (const auto &i : i.subintervals()) 
+        ss << i << "U";
       os << ss.str().substr(0, ss.str().size()-1);
     }
     return os;
   }
 
+  std::set<basic_interval<T> >& subintervals() {return _subintervals;}
+  const std::set<basic_interval<T> >& subintervals() const {return _subintervals;}
+
 private:
-  std::set<basic_interval<T> > intervals;
+  std::set<basic_interval<T> > _subintervals;
 };
 
 }
