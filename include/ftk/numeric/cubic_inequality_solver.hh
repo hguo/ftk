@@ -1,18 +1,20 @@
 #ifndef _FTK_CUBIC_INEQUALITY_SOLVER_HH
 #define _FTK_CUBIC_INEQUALITY_SOLVER_HH
 
-#include <ftk/numeric/interval.hh>
+#include <ftk/numeric/disjoint_intervals.hh>
 #include <ftk/numeric/cubic_solver.hh>
 #include <ftk/numeric/polynomial.hh>
 #include <vector>
 
 namespace ftk {
 
+// returns all intervals that P(x)>=0
 template <typename T>
-inline disjoint_intervals<T> solve_cubic_inequality_real(const T P[4], const T epsilon=1e-9) // returns all intervals that P(x)>=0
+inline disjoint_intervals<T> solve_cubic_inequality_real(
+    const T P[4], const T epsilon=1e-9)
 {
   T x[3]; // roots
-  int n_roots = solve_cubic_real(P, x, epsilon);
+  const int n_roots = solve_cubic_real(P, x, epsilon);
 
   if (n_roots == 0) {
     disjoint_intervals<T> I;

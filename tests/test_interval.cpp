@@ -1,5 +1,4 @@
-#include <ftk/numeric/interval.hh>
-#include <ftk/numeric/interval.hh>
+#include <ftk/numeric/disjoint_intervals.hh>
 #include <iostream>
 
 int main(int argc, char **argv)
