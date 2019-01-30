@@ -43,6 +43,8 @@ struct basic_interval {
 
   T lower() const {return _lower;}
   T upper() const {return _upper;}
+  bool lower_open() const {return _lower_open;}
+  bool upper_open() const {return _upper_open;}
 
   bool complete() const {
     return lower() == -std::numeric_limits<T>::max() && 
@@ -112,8 +114,13 @@ struct basic_interval {
       os << "{empty}";
     else if (i.singleton())
       os << "{" << i.lower() << "}";
-    else 
-      os << "[" << i.lower() << "," << i.upper() << "]";
+    else {
+      if (i.lower_open()) os << "(";
+      else os << "[";
+      os << i.lower() << "," << i.upper(); 
+      if (i.upper_open()) os << ")";
+      else os << "]";
+    }
     return os;
   }
 
@@ -125,6 +132,7 @@ struct basic_interval {
 
 private:
   T _lower, _upper;
+  bool _lower_open=false, _upper_open=false;
 };
 
 //////////////////////////
@@ -229,7 +237,7 @@ struct disjoint_intervals {
     else {
       std::stringstream ss;
       for (const auto &I : i.intervals) 
-        ss << I << ",";
+        ss << I << "U";
       os << ss.str().substr(0, ss.str().size()-1);
     }
     return os;
