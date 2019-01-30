@@ -30,6 +30,19 @@ struct basic_interval {
       return std::numeric_limits<T>::min();
   }
 
+  void set_lower_open() {_lower_open = true;}
+  void set_lower_closed() {_lower_open = false;}
+  void set_upper_open() {_upper_open = true;}
+  void set_upper_closed() {_upper_open = false;}
+  void set_open() {
+    set_lower_open();
+    set_upper_open();
+  }
+  void set_closed() {
+    set_lower_closed();
+    set_upper_closed();
+  }
+
   static basic_interval<T> empty_interval() {
     return basic_interval<T>();
   }
@@ -77,12 +90,12 @@ struct basic_interval {
     else return (upper() + lower()) / 2;
   }
 
-  bool overlaps(const basic_interval<T> &i) const {
+  bool overlaps(const basic_interval<T> &i) const { // FIXME: open intervals
     if (lower() > i.upper() || upper() < i.lower()) return false;
     else return true;
   }
 
-  bool join(const basic_interval<T>& i) {
+  bool join(const basic_interval<T>& i) { // FIXME: open intervals
     if (overlaps(i)) {
       _lower = std::min(lower(), i.lower());
       _upper = std::max(upper(), i.upper());
@@ -91,7 +104,7 @@ struct basic_interval {
     else return false; // not possible because there is no overlaps
   }
 
-  void intersect(const basic_interval<T> &i) {
+  void intersect(const basic_interval<T> &i) { // FIXME: open intervals
     if (overlaps(i)) {
       _lower = std::max(lower(), i.lower());
       _upper = std::min(upper(), i.upper());
