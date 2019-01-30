@@ -70,8 +70,14 @@ struct basic_interval {
 
   T lower() const {return _lower;}
   T upper() const {return _upper;}
-  bool lower_open() const {return _lower_open;}
-  bool upper_open() const {return _upper_open;}
+  bool lower_open() const {
+    if (lower_unbounded()) return true;
+    else return _lower_open;
+  }
+  bool upper_open() const {
+    if (upper_unbounded()) return true; 
+    else return _upper_open;
+  }
   bool lower_bounded() const {
     return lower() != lower_inf();
   }
@@ -100,8 +106,8 @@ struct basic_interval {
   T sample() const {
     if (complete()) return T(0);
     else if (singleton()) return lower();
-    else if (upper_unbounded()) return lower() + T(1);
-    else if (lower_unbounded()) return upper() - T(1);
+    else if (upper_unbounded()) return lower() + T(1000000L);
+    else if (lower_unbounded()) return upper() - T(1000000L);
     else return (upper() + lower()) / T(2);
   }
 
@@ -159,7 +165,14 @@ struct basic_interval {
     else {
       if (i.lower_open()) os << "(";
       else os << "[";
-      os << i.lower() << "," << i.upper(); 
+
+      if (i.lower_unbounded()) os << "-inf";
+      else os << i.lower(); 
+      os << ",";
+
+      if (i.upper_unbounded()) os << "+inf";
+      else os << i.upper();
+
       if (i.upper_open()) os << ")";
       else os << "]";
     }

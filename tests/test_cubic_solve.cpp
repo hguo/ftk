@@ -1,5 +1,6 @@
 #include <ftk/numeric/cubic_solver.hh>
 #include <ftk/numeric/cubic_inequality_solver.hh>
+#include <ftk/numeric/cubic_rational_inequality_solver.hh>
 #include <iostream>
 
 int main(int argc, char **argv)
@@ -16,13 +17,16 @@ int main(int argc, char **argv)
   for (int i=0; i<3; i++)
     fprintf(stderr, "x%d = %f + i*%f\n", i, x[i].real(), x[i].imag());
 #endif
-  // float P[4] = {24.f, -22.f, -4.f, 2.f};
-  float P[4] = {3.f, 1.f, 43.f, 1.f};
-  float x[3];
-  int n_roots = ftk::solve_cubic_real<float>(P, x);
-  fprintf(stderr, "n_roots=%d, roots={%f, %f, %f}\n", n_roots, x[0], x[1], x[2]);
+  const float P[4] = {3.f, 1.f, 43.f, 1.f};
+  const float Q[4] = {24.f, -22.f, -4.f, 2.f};
+  // float x[3];
+  // int n_roots = ftk::solve_cubic_real<float>(P, x);
+  // fprintf(stderr, "n_roots=%d, roots={%f, %f, %f}\n", n_roots, x[0], x[1], x[2]);
 
-  const auto I = ftk::solve_cubic_inequality_real(P);
+  // const auto I = ftk::solve_cubic_inequality_real(P);
+  // std::cerr << I << std::endl;
+  
+  const auto I = ftk::solve_cubic_rational_inequality(P, Q);
   std::cerr << I << std::endl;
 
   return 0;

@@ -95,6 +95,9 @@ struct disjoint_intervals {
     *this = I;
   }
 
+  // disjoint_intervals<T> complement() const { // TODO
+  // }
+
   friend std::ostream& operator<<(std::ostream& os, 
       const disjoint_intervals<T>& i) 
   {
