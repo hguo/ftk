@@ -69,7 +69,7 @@ int main(int argc, char **argv)
         if (rootsP[i][j].imag() == 0) {
           const double lambda = rootsP[i][j].real();
           const double valQ = ftk::polynomial_evaluate(Q, 3, lambda);
-          const double dPdLambda = ftk::polynomial_derivative_evaluate(P[i], 3, lambda);
+          const double dPdLambda = ftk::polynomial_evaluate_derivative(P[i], 3, lambda);
           const double dPQ = dPdLambda / valQ;
           double x[4]; 
           for (int k = 0; k < 4; k ++) 

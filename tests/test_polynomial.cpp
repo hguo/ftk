@@ -21,7 +21,7 @@ int main(int argc, char **argv)
   ftk::polynomial_derivative(p0, 2, p);
   ftk::print_polynomial("p", p, 1);
 
-  fprintf(stderr, "eval_p(2)=%f\n", ftk::polynomial_derivative_evaluate(p0, 2, 2.f));
+  fprintf(stderr, "eval_p(2)=%f\n", ftk::polynomial_evaluate_derivative(p0, 2, 2.f));
   fprintf(stderr, "eval_p(2)=%f\n", ftk::polynomial_evaluate(p, 1, 2.f));
 
   return 0;
