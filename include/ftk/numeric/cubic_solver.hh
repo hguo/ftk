@@ -1,6 +1,7 @@
 #ifndef _FTK_CUBIC_SOLVER_HH
 #define _FTK_CUBIC_SOLVER_HH
 
+#include <ftk/numeric/quadratic_solver.hh>
 #include <cmath>
 #include <complex>
 

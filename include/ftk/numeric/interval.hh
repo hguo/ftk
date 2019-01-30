@@ -72,6 +72,18 @@ struct basic_interval {
   T upper() const {return _upper;}
   bool lower_open() const {return _lower_open;}
   bool upper_open() const {return _upper_open;}
+  bool lower_bounded() const {
+    return lower() != lower_inf();
+  }
+  bool upper_bounded() const {
+    return upper() != upper_inf();
+  }
+  bool lower_unbounded() const {
+    return !lower_bounded();
+  }
+  bool upper_unbounded() const {
+    return !upper_bounded();
+  }
 
   bool complete() const {
     return lower() == lower_inf() && 
@@ -86,8 +98,11 @@ struct basic_interval {
   }
 
   T sample() const {
-    if (singleton()) return lower();
-    else return (upper() + lower()) / 2;
+    if (complete()) return T(0);
+    else if (singleton()) return lower();
+    else if (upper_unbounded()) return lower() + T(1);
+    else if (lower_unbounded()) return upper() - T(1);
+    else return (upper() + lower()) / T(2);
   }
 
   bool overlaps(const basic_interval<T> &i) const { // FIXME: open intervals
