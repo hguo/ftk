@@ -1,9 +1,12 @@
-#ifndef _FTK_CLOSED_INTERVAL_HH
-#define _FTK_CLOSED_INTERVAL_HH
+#ifndef _FTK_INTERVAL_HH
+#define _FTK_INTERVAL_HH
 
 #include <limits>
 #include <algorithm>
+#include <sstream>
 #include <iostream>
+#include <set>
+#include <list>
 
 namespace ftk {
 
@@ -41,6 +44,11 @@ struct basic_interval {
 
   bool contains(T x) const {
     return x >= lower() && x <= upper();
+  }
+
+  T sample() const {
+    if (singleton()) return lower();
+    else return (upper() + lower()) / 2;
   }
 
   bool overlaps(const basic_interval<T> &i) const {
@@ -98,8 +106,100 @@ struct basic_interval {
     return os;
   }
 
+  friend bool operator<(const basic_interval<T>& i, 
+      const basic_interval<T>& j)
+  {
+    return i.lower() < j.lower();
+  }
+
 private:
   T _lower, _upper;
+};
+
+//////////////////////////
+template <typename T>
+struct disjoint_intervals {
+  disjoint_intervals() {}
+  disjoint_intervals(T l, T u) {
+    intervals.insert(basic_interval<T>(l, u));
+  }
+  disjoint_intervals(T v) {
+    intervals.insert(basic_interval<T>(v));
+  }
+
+  void set_to_empty() {
+    intervals.clear();
+  }
+
+  void set_to_complete() {
+    basic_interval<T> i;
+    i.set_to_complete();
+    intervals.clear();
+    intervals.insert(i);
+  }
+ 
+  bool empty() const {
+    return intervals.empty();
+  }
+
+  bool singleton() const {
+    return intervals.size() == 1 && 
+      intervals.begin()->singleton();
+  }
+
+  bool contains(T x) const {
+    for (const auto &I : intervals)
+      if (I.contains(x)) return true;
+    return false;
+  }
+
+  bool overlaps(const basic_interval<T> &i) const {
+    for (const auto &j : intervals)
+      if (j.overlaps(i)) return true;
+    return false;
+  }
+
+  void join(T l, T u) {
+    join(basic_interval<T>(l, u));
+  }
+
+  void join(const basic_interval<T>& i) {
+    std::list<typename std::set<basic_interval<T> >::iterator> to_erase;
+    basic_interval<T> ii = i;
+
+    for (typename std::set<basic_interval<T> >::iterator it = intervals.begin(); 
+        it != intervals.end(); it ++) {
+      if (it->overlaps(ii)) {
+        ii.join(*it);
+        to_erase.push_back(it);
+      }
+    }
+
+    for (auto it : to_erase)
+      intervals.erase(it);
+
+    intervals.insert(ii);
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, 
+      const disjoint_intervals<T>& i) 
+  {
+    // fprintf(stderr, "%d, %d\n", i.lower(), i.upper());
+    if (i.empty()) 
+      os << "{empty}";
+    else if (i.singleton())
+      os << *i.intervals.begin(); 
+    else {
+      std::stringstream ss;
+      for (const auto &I : i.intervals) 
+        ss << I << ",";
+      os << ss.str().substr(0, ss.str().size()-1);
+    }
+    return os;
+  }
+
+private:
+  std::set<basic_interval<T> > intervals;
 };
 
 }
