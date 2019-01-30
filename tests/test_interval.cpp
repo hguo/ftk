@@ -8,12 +8,15 @@ int main(int argc, char **argv)
   // std::cout << intersect(I, I1) << std::endl;
 
   ftk::disjoint_intervals<long long int> I(10);
-  I.set_to_complete();
+  // I.set_to_complete();
   I.join(20, 30);
   I.join(-10, -5);
   I.join(15, 25);
   I.join(30, 60);
   I.join(0, 10);
+  // I.intersect(-10, 10);
+
+  // I.intersect(ftk::basic_interval<long long int>::complete_interval());
 
   std::cout << I << std::endl;
 

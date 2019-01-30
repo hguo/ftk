@@ -16,6 +16,16 @@ struct basic_interval {
   basic_interval(T l, T u) : _lower(l), _upper(u) {}
   basic_interval(T v) : _lower(v), _upper(v) {}
 
+  static basic_interval<T> empty_interval() {
+    return basic_interval<T>();
+  }
+
+  static basic_interval<T> complete_interval() {
+    basic_interval<T> i;
+    i.set_to_complete();
+    return i;
+  }
+
   void set_to_empty() {
     _lower = std::numeric_limits<T>::max();
     _upper = -std::numeric_limits<T>::max();
@@ -85,7 +95,8 @@ struct basic_interval {
     return k;
   }
 
-  friend basic_interval<T> intersect(const basic_interval<T> &i, 
+  friend basic_interval<T> intersect(
+      const basic_interval<T> &i, 
       const basic_interval<T> &j)
   {
     basic_interval<T> k = i;
@@ -127,6 +138,16 @@ struct disjoint_intervals {
     intervals.insert(basic_interval<T>(v));
   }
 
+  static disjoint_intervals<T> empty_interval() {
+    return disjoint_intervals<T>();
+  }
+
+  static disjoint_intervals<T> complete_interval() {
+    disjoint_intervals<T> I;
+    I.set_to_complete();
+    return I;
+  }
+
   void set_to_empty() {
     intervals.clear();
   }
@@ -164,6 +185,8 @@ struct disjoint_intervals {
   }
 
   void join(const basic_interval<T>& i) {
+    if (i.empty()) return; 
+
     std::list<typename std::set<basic_interval<T> >::iterator> to_erase;
     basic_interval<T> ii = i;
 
@@ -179,6 +202,20 @@ struct disjoint_intervals {
       intervals.erase(it);
 
     intervals.insert(ii);
+  }
+  
+  void intersect(T l, T u) {
+    intersect(basic_interval<T>(l, u));
+  }
+
+  void intersect(const basic_interval<T>& i) {
+    disjoint_intervals<T> I;
+    for (const auto &j : intervals) {
+      auto k = i;
+      k.intersect(j);
+      I.join(k); 
+    }
+    *this = I;
   }
 
   friend std::ostream& operator<<(std::ostream& os, 
