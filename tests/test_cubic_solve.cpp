@@ -27,6 +27,7 @@ int main(int argc, char **argv)
   // std::cerr << I << std::endl;
   
   const auto I = ftk::solve_cubic_rational_inequality(P, Q);
+  // const auto I = ftk::solve_cubic_rational_inequality_quantized(P, Q);
   std::cerr << I << std::endl;
 
   return 0;

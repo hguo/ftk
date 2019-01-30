@@ -15,6 +15,18 @@ struct disjoint_intervals {
     _subintervals.insert(basic_interval<T>(v));
   }
 
+  // conversion from quantized intervals
+  disjoint_intervals(const disjoint_intervals<long long>& I, 
+      const long long factor = 1000000000L) 
+  {
+    const T epsilon = T(1) / T(factor);
+    for (auto i : I.subintervals()) { // TODO: consider open intervals
+      const auto lb = i.lower_bounded() ? (i.lower() * epsilon) : (basic_interval<T>::lower_inf()), 
+                 ub = i.upper_bounded() ? (i.upper() * epsilon) : (basic_interval<T>::upper_inf());
+      join(basic_interval<T>(lb, ub));
+    }
+  }
+
   static disjoint_intervals<T> empty_interval() {
     return disjoint_intervals<T>();
   }

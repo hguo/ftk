@@ -56,36 +56,36 @@ void polynomial_copy(const T P[], int m, T Q[])
 }
 
 template <typename T>
-void polynomial_add(const T P[], int m, const T Q[], int n, T R[]) 
+void polynomial_addition(const T P[], int m, const T Q[], int n, T R[]) 
 {
   if (m >= n)
     for (int i = 0; i <= m; i ++)
       if (i <= n) R[i] = P[i] + Q[i];
       else R[i] = P[i];
   else 
-    polynomial_add(Q, n, P, m, R);
+    polynomial_addition(Q, n, P, m, R);
 }
 
 template <typename T>
-void polynomial_sub(const T P[], int m, const T Q[], int n, T R[]) 
+void polynomial_subtraction(const T P[], int m, const T Q[], int n, T R[]) 
 {
   if (m >= n)
     for (int i = 0; i <= m; i ++)
       if (i <= n) R[i] = P[i] - Q[i];
       else R[i] = P[i];
   else 
-    polynomial_sub(Q, n, P, m, R);
+    polynomial_subtraction(Q, n, P, m, R);
 }
 
 template <typename T>
-void polynomial_add_in_place(T P[], int m, const T Q[], int n) // m >= n
+void polynomial_addition_in_place(T P[], int m, const T Q[], int n) // m >= n
 {
   for (int i = 0; i <= n; i ++)
     P[i] += Q[i];
 }
 
 template <typename T>
-void polynomial_sub_in_place(T P[], int m, const T Q[], int n) // m >= n
+void polynomial_subtraction_in_place(T P[], int m, const T Q[], int n) // m >= n
 {
   for (int i = 0; i <= n; i ++)
     P[i] -= Q[i];

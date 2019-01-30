@@ -8,8 +8,8 @@
 namespace ftk {
   
 template <typename T>
-inline disjoint_intervals<long long> solve_cubic_rational_inequality_quntized(
-    const T P[], const T Q[], const T factor = 1000000000L)
+inline disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
+    const T P[], const T Q[], const long long factor = 1000000000L)
 {
   const T epsilon = T(1) / T(factor);
 
@@ -73,19 +73,22 @@ inline disjoint_intervals<long long> solve_cubic_rational_inequality_quntized(
 
 template <typename T>
 inline disjoint_intervals<T> solve_cubic_rational_inequality(
-    const T P[], const T Q[], const T factor = 1000000000L)
+    const T P[], const T Q[], const long long factor = 1000000000L)
 {
-  const auto I0 = solve_cubic_rational_inequality_quntized(P, Q, factor);
-  const T epsilon = T(1) / T(factor);
+  const auto I0 = solve_cubic_rational_inequality_quantized(P, Q, factor);
+  return disjoint_intervals<T>(I0, factor);
 
+#if 0
+  const T epsilon = T(1) / T(factor);
   disjoint_intervals<T> I;
-  for (auto i : I0.subintervals()) {
+  for (auto i : I0.subintervals()) { // TODO: consider open intervals
     const auto lb = i.lower_bounded() ? (i.lower() * epsilon) : (basic_interval<T>::lower_inf()), 
                ub = i.upper_bounded() ? (i.upper() * epsilon) : (basic_interval<T>::upper_inf());
     I.join(basic_interval<T>(lb, ub));
   }
 
   return I;
+#endif
 }
 
 }

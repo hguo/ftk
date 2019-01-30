@@ -12,7 +12,7 @@ int main(int argc, char **argv)
   ftk::print_polynomial("p1", p1, 1);
 
   // ftk::polynomial_multiplication(p0, 2, p1, 1, p);
-  ftk::polynomial_add_in_place(p0, 2, p1, 1);
+  ftk::polynomial_addition_in_place(p0, 2, p1, 1);
   ftk::polynomial_scalar_multiplication(p0, 2.f, 2.f);
   ftk::print_polynomial("p0", p0, 2);
 

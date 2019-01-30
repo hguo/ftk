@@ -5,6 +5,7 @@
 #include <ftk/numeric/matrix_addition.hh>
 #include <ftk/numeric/eigen_solver.hh>
 #include <ftk/numeric/linear_solver.hh>
+#include <ftk/numeric/cubic_rational_inequality_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/transpose.hh>
@@ -340,7 +341,7 @@ inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], 
       P[i][j] = 0; // clear results
     for (int j = 0; j <3; j ++) {
       polynomial_multiplication(adj[i][j], 2, rhs[j], 1, poly);
-      polynomial_add_in_place(P[i], 3, poly, 3);
+      polynomial_addition_in_place(P[i], 3, poly, 3);
     }
   }
 
@@ -348,6 +349,36 @@ inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], 
   P[3][1] = Q[1] - P[0][1] - P[1][1] - P[2][1];
   P[3][2] = Q[2] - P[0][2] - P[1][2] - P[2][2];
   P[3][3] = Q[3] - P[0][3] - P[1][3] - P[2][3];
+}
+
+template <typename T>
+disjoint_intervals<long long> solve_parallel_vector_tetrahedron_inequalities_quantized(
+    const T V[4][3], const T W[4][3], const long long factor = 1000000000L)
+{
+  T Q[4], P[4][4], QP[4][4];
+  solve_parallel_vector_tetrahedron(V, W, Q, P);
+
+  disjoint_intervals<long long> I;
+  I.set_to_complete();
+
+  for (int i = 0; i < 4; i ++) {
+    polynomial_subtraction(Q, 3, P, 3, QP[i]); // QP[i] = Q - P[i]
+
+    const auto I0 = solve_cubic_rational_inequality_quantized(P, Q, factor);
+    const auto I1 = solve_cubic_rational_inequality_quantized(QP, Q, factor);
+
+    I.intersect(I0);
+    I.intersect(I1);
+  }
+
+  return I;
+}
+
+template <typename T>
+void solve_parallel_vector_tetrahedron_inequalities(const T V[4][3], const T W[4][3], const long long factor = 1000000000L)
+{
+  const auto I = solve_parallel_vector_tetrahedron_inequalities_quantized(V, W, factor);
+  return disjoint_intervals<T>(I, factor);
 }
 
 }
