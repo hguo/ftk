@@ -3,23 +3,24 @@
 
 #include <limits>
 #include <algorithm>
+#include <iostream>
 
 namespace ftk {
 
 template <typename T>
 struct basic_interval {
   basic_interval() {set_to_empty();}
-  basic_interval(T l, T u) : _lower(l), _upper(l) {}
+  basic_interval(T l, T u) : _lower(l), _upper(u) {}
   basic_interval(T v) : _lower(v), _upper(v) {}
 
   void set_to_empty() {
-    _lower = std::numeric_limits<T>::infinity();
-    _upper = -std::numeric_limits<T>::infinity();
+    _lower = std::numeric_limits<T>::max();
+    _upper = -std::numeric_limits<T>::max();
   }
 
   void set_to_complete() {
-    _lower = -std::numeric_limits<T>::infinity();
-    _upper = std::numeric_limits<T>::infinity();
+    _lower = -std::numeric_limits<T>::max();
+    _upper = std::numeric_limits<T>::max();
   }
 
   void set_to_singleton(T x) {
@@ -31,8 +32,8 @@ struct basic_interval {
   T upper() const {return _upper;}
 
   bool complete() const {
-    return lower() == -std::numeric_limits<T>::infinity() && 
-      upper() == std::numeric_limits<T>::infinity();
+    return lower() == -std::numeric_limits<T>::max() && 
+      upper() == std::numeric_limits<T>::max();
   }
 
   bool empty() const {return lower() > upper();}
@@ -51,8 +52,9 @@ struct basic_interval {
     if (overlaps(i)) {
       _lower = std::min(lower(), i.lower());
       _upper = std::max(upper(), i.upper());
+      return true;
     }
-    else return false; // not possible because there is no overlapss
+    else return false; // not possible because there is no overlaps
   }
 
   void intersect(const basic_interval<T> &i) {
@@ -67,8 +69,11 @@ struct basic_interval {
   friend basic_interval<T> join(const basic_interval<T> &i, 
       const basic_interval<T> &j)
   {
-    basic_interval<T> k = i;
-    k.join(j);
+    basic_interval<T> k;
+    if (i.overlaps(j)) {
+      k = i;
+      k.join(j);
+    }
     return k;
   }
 
@@ -78,6 +83,19 @@ struct basic_interval {
     basic_interval<T> k = i;
     k.intersect(j);
     return k;
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, 
+      const basic_interval<T>& i) 
+  {
+    // fprintf(stderr, "%d, %d\n", i.lower(), i.upper());
+    if (i.empty()) 
+      os << "{empty}";
+    else if (i.singleton())
+      os << "{" << i.lower() << "}";
+    else 
+      os << "[" << i.lower() << "," << i.upper() << "]";
+    return os;
   }
 
 private:
