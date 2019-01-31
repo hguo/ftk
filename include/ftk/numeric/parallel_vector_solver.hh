@@ -370,14 +370,16 @@ disjoint_intervals<long long> solve_parallel_vector_tetrahedron_inequalities_qua
     //     i, QP[i][0], QP[i][1], QP[i][2], QP[i][3]);
 
     const disjoint_intervals<long long> I0 = solve_cubic_rational_inequality_quantized(P[i], Q, factor);
-    std::cerr << "I0: " << I0 << std::endl;
-    const disjoint_intervals<long long> I1 = solve_cubic_rational_inequality_quantized(QP[i], Q, factor);
-    std::cerr << "I1: " << I1 << std::endl;
-
-    I.intersect(I0);
-    I.intersect(I1);
+    // std::cerr << "I0: " << disjoint_intervals<T>(I0, factor) << std::endl;
     
-    std::cerr << "I: " << I << std::endl;
+    I.intersect(I0);
+    // std::cerr << "I: " << disjoint_intervals<T>(I, factor) << std::endl;
+    
+    const disjoint_intervals<long long> I1 = solve_cubic_rational_inequality_quantized(QP[i], Q, factor);
+    // std::cerr << "I1: " << disjoint_intervals<T>(I1, factor) << std::endl;
+    
+    I.intersect(I1);
+    // std::cerr << "I: " << disjoint_intervals<T>(I, factor) << std::endl;
   }
 
   return I;

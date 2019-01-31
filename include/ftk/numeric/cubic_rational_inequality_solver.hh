@@ -17,65 +17,43 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
   T p[3] = {0}, q[3] = {0}; // roots of P and Q, respectively
   const int np = solve_cubic_real(P, p, epsilon);
   const int nq = solve_cubic_real(Q, q, epsilon);
-  const int n_roots = np + nq;
 
-  std::set<std::pair<long long, bool> > roots; // the boolean value indicates whether the root is from Q
-  
+  // fprintf(stderr, "P={%f, %f, %f, %f}, np=%d, roots={%f, %f, %f}\n", 
+  //     P[0], P[1], P[2], P[3], np, p[0], p[1], p[2]);
+  // fprintf(stderr, "Q={%f, %f, %f, %f}, nq=%d, roots={%f, %f, %f}\n", 
+  //     Q[0], Q[1], Q[2], Q[3], nq, q[0], q[1], q[2]);
+
+  std::vector<std::pair<long long, bool> > critical_values; // the boolean value indicates whether the critical value is from Q
+ 
+  // adding roots to critical values
   for (int i = 0; i < np; i ++)
-    roots.insert(std::make_pair(p[i] * T(factor), false));
+    critical_values.push_back(std::make_pair(p[i] * T(factor), false));
   for (int i = 0; i < nq; i ++)
-    roots.insert(std::make_pair(q[i] * T(factor), true));
+    critical_values.push_back(std::make_pair(q[i] * T(factor), true));
 
-  if (roots.size() == 0) { // neither P or Q has roots
-    if (std::abs(Q[0]) < epsilon)
-      I.set_to_empty();
-    else if (P[0] / Q[0] >= T(0))
-      I.set_to_complete();
-  } else {
-    int i = 0;
-    std::vector<basic_interval<long long> > subintervals;
+  // adding infinities to critical values
+  critical_values.push_back(std::make_pair(basic_interval<long long>::lower_inf(), false));
+  critical_values.push_back(std::make_pair(basic_interval<long long>::upper_inf(), false));
 
-    for (auto it = roots.begin(); it != roots.end(); it ++) {
-      if (i == 0) { // first root
-        basic_interval<long long> ii(basic_interval<long long>::lower_inf(), it->first);
-        if (it->second)
-          ii.set_upper_open();
-        subintervals.push_back(ii);
-        // fprintf(stderr, "First interval, root=%lld\n", *it);
-        // std::cerr << subintervals[0] << std::endl;
-      }
-      else if (i == roots.size() - 1) { // last root
-        basic_interval<long long> ii(it->first, basic_interval<long long>::upper_inf());
-        if (it->second)
-          ii.set_lower_open();
-        subintervals.push_back(ii);
-        break;
-      }
-      else {
-        auto it1 = std::next(it);
-        basic_interval<long long> ii(it->first, it1->first);
-        if (it->second)
-          ii.set_lower_open();
-        if (it1->second)
-          ii.set_upper_open();
-        subintervals.push_back(ii);
-        // subintervals.push_back(basic_interval<long long>(it->first, (std::next(it)->first)));
-      }
-      i ++;
-    }
-    // for (auto i : subintervals)
-    //   std::cerr << i << std::endl;
+  // sort critical values
+  std::sort(critical_values.begin(), critical_values.end());
 
-    for (auto i : subintervals) {
-      const T x = i.sample() * epsilon;
-      const T y = rational_evaluate(P, 3, Q, 3, x);
-      // std::cerr << "Interval: " << i << std::endl;
-      // std::cerr << "Sample: " << x << ", Value: " << y << std::endl;
-      if (y >= T(0)) I.join(i);
-    }
+  // adding subintervals
+  for (int i = 0; i < critical_values.size() - 1; i ++) { // the size is at least 2
+    const auto cv0 = critical_values[i], cv1 = critical_values[i+1];
+    basic_interval<long long> ii(cv0.first, cv1.first);
+
+    if (cv0.second) ii.set_lower_open();
+    if (cv1.second) ii.set_upper_open();
+        
+    // std::cerr << i << "checking interval: " << ii << std::endl;
+    
+    const T x = ii.sample() * epsilon;
+    const T y = rational_evaluate(P, 3, Q, 3, x);
+    // std::cerr << "sample: " << x << ", value: " << y << std::endl;
+    if (y >= T(0)) I.join(ii);
   }
-
-  // std::cerr << I << std::endl;
+  
   return I;
 }
 
