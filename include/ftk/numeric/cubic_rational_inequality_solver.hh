@@ -12,25 +12,19 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
     const T P[3], const T Q[3], const long long factor = 1000000000L)
 {
   const T epsilon = T(1) / T(factor);
+  disjoint_intervals<long long> I;
 
   T p[3] = {0}, q[3] = {0}; // roots of P and Q, respectively
   const int np = solve_cubic_real(P, p, epsilon);
   const int nq = solve_cubic_real(Q, q, epsilon);
   const int n_roots = np + nq;
-  
-  // fprintf(stderr, "np=%d, roots={%f, %f, %f}\n", 
-  //     np, p[0], p[1], p[2]);
-  // fprintf(stderr, "nq=%d, roots={%f, %f, %f}\n", 
-  //     nq, q[0], q[1], q[2]);
 
-  std::set<long long> roots;
+  std::set<std::pair<long long, bool> > roots; // the boolean value indicates whether the root is from Q
   
   for (int i = 0; i < np; i ++)
-    roots.insert(p[i] * T(factor));
+    roots.insert(std::make_pair(p[i] * T(factor), false));
   for (int i = 0; i < nq; i ++)
-    roots.insert(q[i] * T(factor));
-
-  disjoint_intervals<long long> I;
+    roots.insert(std::make_pair(q[i] * T(factor), true));
 
   if (roots.size() == 0) { // neither P or Q has roots
     if (std::abs(Q[0]) < epsilon)
@@ -43,16 +37,29 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
 
     for (auto it = roots.begin(); it != roots.end(); it ++) {
       if (i == 0) { // first root
-        subintervals.push_back(basic_interval<long long>(basic_interval<long long>::lower_inf(), *it));
+        basic_interval<long long> ii(basic_interval<long long>::lower_inf(), it->first);
+        if (it->second)
+          ii.set_upper_open();
+        subintervals.push_back(ii);
         // fprintf(stderr, "First interval, root=%lld\n", *it);
         // std::cerr << subintervals[0] << std::endl;
       }
       else if (i == roots.size() - 1) { // last root
-        subintervals.push_back(basic_interval<long long>(*it, basic_interval<long long>::upper_inf()));
+        basic_interval<long long> ii(it->first, basic_interval<long long>::upper_inf());
+        if (it->second)
+          ii.set_lower_open();
+        subintervals.push_back(ii);
         break;
       }
       else {
-        subintervals.push_back(basic_interval<long long>(*it, *(std::next(it))));
+        auto it1 = std::next(it);
+        basic_interval<long long> ii(it->first, it1->first);
+        if (it->second)
+          ii.set_lower_open();
+        if (it1->second)
+          ii.set_upper_open();
+        subintervals.push_back(ii);
+        // subintervals.push_back(basic_interval<long long>(it->first, (std::next(it)->first)));
       }
       i ++;
     }
