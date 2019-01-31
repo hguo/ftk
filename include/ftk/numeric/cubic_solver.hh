@@ -116,15 +116,16 @@ int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-9)
   if (std::abs(coef[3]) < epsilon || std::isnan(coef[3]) || std::isinf(coef[3])) {
     return solve_quadratic_real(coef, x, epsilon);
   } else if (std::abs(coef[0]) < epsilon || std::isnan(coef[0]) || std::isinf(coef[0])) {
-    const auto n = solve_quadratic_real(coef+1, x, epsilon);
-    x[n+1] = T(0);
-    return n+1;
-  }
-  else return solve_cubic_real(
+    auto n = solve_quadratic_real(coef+1, x, epsilon);
+    x[n++] = T(0);
+    return n;
+  } else {
+    return solve_cubic_real(
       coef[2] / coef[3], 
       coef[1] / coef[3], 
       coef[0] / coef[3], 
       x);
+  }
 }
 
 }

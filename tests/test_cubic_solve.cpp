@@ -17,18 +17,27 @@ int main(int argc, char **argv)
   for (int i=0; i<3; i++)
     fprintf(stderr, "x%d = %f + i*%f\n", i, x[i].real(), x[i].imag());
 #endif
-  const float P[4] = {3.f, 1.f, 43.f, 1.f};
-  const float Q[4] = {24.f, -22.f, -4.f, 2.f};
+  // const float P[4] = {3.f, 1.f, 43.f, 1.f};
+  // const float Q[4] = {24.f, -22.f, -4.f, 2.f};
+
+  const double P[4] = {0.000000, 14592.000000, 0.000000, -4435968.000000};
+  const double Q[4] = {-32224.000000, -1706080.000000, -7171968.000000, 17743872.000000};
   // float x[3];
   // int n_roots = ftk::solve_cubic_real<float>(P, x);
   // fprintf(stderr, "n_roots=%d, roots={%f, %f, %f}\n", n_roots, x[0], x[1], x[2]);
 
   // const auto I = ftk::solve_cubic_inequality_real(P);
   // std::cerr << I << std::endl;
-  
-  const auto I = ftk::solve_cubic_rational_inequality(P, Q);
+
+  double x[3], y[3];
+  const int np = ftk::solve_cubic_real(P, x);
+  fprintf(stderr, "np=%d, x={%f, %f, %f}\n", np, x[0], x[1], x[2]);
+  // const int nq = ftk::solve_cubic_real(Q, y);
+  // fprintf(stderr, "nq=%d, x={%f, %f, %f}\n", np, y[0], y[1], y[2]);
+
+  // const auto I = ftk::solve_cubic_rational_inequality(P, Q);
   // const auto I = ftk::solve_cubic_rational_inequality_quantized(P, Q);
-  std::cerr << I << std::endl;
+  // std::cerr << I << std::endl;
 
   return 0;
 }
