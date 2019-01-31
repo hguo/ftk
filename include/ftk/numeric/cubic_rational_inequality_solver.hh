@@ -9,11 +9,11 @@ namespace ftk {
   
 template <typename T>
 disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
-    const T P[], const T Q[], const long long factor = 1000000000L)
+    const T P[3], const T Q[3], const long long factor = 1000000000L)
 {
   const T epsilon = T(1) / T(factor);
 
-  T p[3], q[3]; // roots of P and Q, respectively
+  T p[3] = {0}, q[3] = {0}; // roots of P and Q, respectively
   const int np = solve_cubic_real(P, p, epsilon);
   const int nq = solve_cubic_real(Q, q, epsilon);
   const int n_roots = np + nq;

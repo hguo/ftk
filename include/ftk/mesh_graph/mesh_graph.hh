@@ -3,6 +3,7 @@
 
 #include <set>
 #include <vector>
+#include <cstddef>
 
 namespace ftk {
 

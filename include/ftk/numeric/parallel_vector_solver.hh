@@ -355,7 +355,7 @@ template <typename T>
 disjoint_intervals<long long> solve_parallel_vector_tetrahedron_inequalities_quantized(
     const T V[4][3], const T W[4][3], const long long factor = 1000000000L)
 {
-  T Q[4], P[4][4], QP[4][4];
+  T Q[4] = {0}, P[4][4] = {0}, QP[4][4] = {0};
   solve_parallel_vector_tetrahedron(V, W, Q, P);
 
   disjoint_intervals<long long> I;

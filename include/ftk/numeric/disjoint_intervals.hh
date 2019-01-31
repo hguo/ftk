@@ -133,8 +133,8 @@ struct disjoint_intervals {
       os << *i.subintervals().begin(); 
     else {
       std::stringstream ss;
-      for (const auto &i : i.subintervals()) 
-        ss << i << "U";
+      for (const auto &ii : i.subintervals()) 
+        ss << ii << "U";
       os << ss.str().substr(0, ss.str().size()-1);
     }
     return os;
