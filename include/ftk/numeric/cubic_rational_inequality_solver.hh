@@ -8,16 +8,16 @@
 namespace ftk {
   
 template <typename T>
-inline disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
+disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
     const T P[], const T Q[], const long long factor = 1000000000L)
 {
   const T epsilon = T(1) / T(factor);
 
   T p[3], q[3]; // roots of P and Q, respectively
-  const int np = solve_cubic_real(P, p, epsilon), 
-            nq = solve_cubic_real(Q, q, epsilon);
+  const int np = solve_cubic_real(P, p, epsilon);
+  const int nq = solve_cubic_real(Q, q, epsilon);
   const int n_roots = np + nq;
-
+  
   // fprintf(stderr, "np=%d, roots={%f, %f, %f}\n", 
   //     np, p[0], p[1], p[2]);
   // fprintf(stderr, "nq=%d, roots={%f, %f, %f}\n", 
@@ -31,6 +31,7 @@ inline disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
     roots.insert(q[i] * T(factor));
 
   disjoint_intervals<long long> I;
+
   if (roots.size() == 0) { // neither P or Q has roots
     if (std::abs(Q[0]) < epsilon)
       I.set_to_empty();
@@ -50,14 +51,13 @@ inline disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
         subintervals.push_back(basic_interval<long long>(*it, basic_interval<long long>::upper_inf()));
         break;
       }
-      else subintervals.push_back(basic_interval<long long>(*it, *(std::next(it))));
+      else {
+        subintervals.push_back(basic_interval<long long>(*it, *(std::next(it))));
+      }
       i ++;
     }
-
-    // fprintf(stderr, "roots:\n");
-    // for (auto r : roots) {
-    //   fprintf(stderr, "%lld\n", r);
-    // }
+    // for (auto i : subintervals)
+    //   std::cerr << i << std::endl;
 
     for (auto i : subintervals) {
       const T x = i.sample() * epsilon;
@@ -68,11 +68,12 @@ inline disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
     }
   }
 
+  // std::cerr << I << std::endl;
   return I;
 }
 
 template <typename T>
-inline disjoint_intervals<T> solve_cubic_rational_inequality(
+disjoint_intervals<T> solve_cubic_rational_inequality(
     const T P[], const T Q[], const long long factor = 1000000000L)
 {
   const auto I0 = solve_cubic_rational_inequality_quantized(P, Q, factor);

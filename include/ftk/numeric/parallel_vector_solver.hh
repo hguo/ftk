@@ -362,20 +362,30 @@ disjoint_intervals<long long> solve_parallel_vector_tetrahedron_inequalities_qua
   I.set_to_complete();
 
   for (int i = 0; i < 4; i ++) {
-    polynomial_subtraction(Q, 3, P, 3, QP[i]); // QP[i] = Q - P[i]
+    polynomial_subtraction(Q, 3, P[i], 3, QP[i]); // QP[i] = Q - P[i]
 
-    const auto I0 = solve_cubic_rational_inequality_quantized(P, Q, factor);
-    const auto I1 = solve_cubic_rational_inequality_quantized(QP, Q, factor);
+    // fprintf(stderr, "Q={%f, %f, %f, %f}, P[%d]={%f, %f, %f, %f}, QP[%d]={%f, %f, %f, %f}\n", 
+    //     Q[0], Q[1], Q[2], Q[3], 
+    //     i, P[i][0], P[i][1], P[i][2], P[i][3], 
+    //     i, QP[i][0], QP[i][1], QP[i][2], QP[i][3]);
+
+    const disjoint_intervals<long long> I0 = solve_cubic_rational_inequality_quantized(P[i], Q, factor);
+    std::cerr << "I0: " << I0 << std::endl;
+    const disjoint_intervals<long long> I1 = solve_cubic_rational_inequality_quantized(QP[i], Q, factor);
+    std::cerr << "I1: " << I1 << std::endl;
 
     I.intersect(I0);
     I.intersect(I1);
+    
+    std::cerr << "I: " << I << std::endl;
   }
 
   return I;
 }
 
 template <typename T>
-void solve_parallel_vector_tetrahedron_inequalities(const T V[4][3], const T W[4][3], const long long factor = 1000000000L)
+disjoint_intervals<T> solve_parallel_vector_tetrahedron_inequalities(
+    const T V[4][3], const T W[4][3], const long long factor = 1000000000L)
 {
   const auto I = solve_parallel_vector_tetrahedron_inequalities_quantized(V, W, factor);
   return disjoint_intervals<T>(I, factor);

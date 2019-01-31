@@ -107,6 +107,19 @@ struct disjoint_intervals {
     *this = I;
   }
 
+  void intersect(const disjoint_intervals<T>& J) {
+    disjoint_intervals<T> I;
+
+    for (const auto &i : subintervals()) 
+      for (const auto &j : J.subintervals()) {
+        auto ii = i; 
+        ii.intersect(j);
+        // std::cerr << "ij: " << ii << std::endl;
+        I.join(ii); // intersect(i, j));
+      }
+    *this = I;
+  }
+
   // disjoint_intervals<T> complement() const { // TODO
   // }
 

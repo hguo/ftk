@@ -54,8 +54,8 @@ struct basic_interval {
   }
 
   void set_to_empty() {
-    _lower = lower_inf();
-    _upper = upper_inf(); 
+    _lower = upper_inf();
+    _upper = lower_inf(); 
   }
 
   void set_to_complete() {
