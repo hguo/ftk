@@ -74,9 +74,15 @@ struct basic_interval {
     if (lower_unbounded()) return true;
     else return _lower_open;
   }
+  bool lower_closed() const {
+    return !lower_open();
+  }
   bool upper_open() const {
     if (upper_unbounded()) return true; 
     else return _upper_open;
+  }
+  bool upper_closed() const {
+    return !upper_open();
   }
   bool lower_bounded() const {
     return lower() != lower_inf();
@@ -91,16 +97,36 @@ struct basic_interval {
     return !upper_bounded();
   }
 
+  basic_interval<T> hull() const {
+    basic_interval<T> I = *this;
+    I.set_lower_closed();
+    I.set_upper_closed();
+    return I;
+  }
+
   bool complete() const {
     return lower() == lower_inf() && 
       upper() == upper_inf(); 
   }
 
-  bool empty() const {return lower() > upper();}
-  bool singleton() const {return lower() == upper();}
+  bool empty() const {
+    if (lower() > upper()) return true;
+    else if (lower() == upper() && (lower_open() || upper_open()))
+      return true;
+    else return false;
+    // return lower() > upper();
+  }
+
+  bool singleton() const {
+    return lower() == upper() && lower_closed() && upper_closed();
+  }
 
   bool contains(T x) const {
-    return x >= lower() && x <= upper();
+    if (singleton()) return x == lower();
+    else if (x == lower() && lower_closed()) return true;
+    else if (x == upper() && upper_closed()) return true;
+    else return x > lower() && x < upper();
+    // return x >= lower() && x <= upper();
   }
 
   T sample() const {
@@ -111,24 +137,43 @@ struct basic_interval {
     else return (upper() + lower()) / T(2);
   }
 
-  bool overlaps(const basic_interval<T> &i) const { // FIXME: open intervals
+  bool overlaps(const basic_interval<T> &i) const { 
     if (lower() > i.upper() || upper() < i.lower()) return false;
+    else if (upper() == i.lower() && (upper_open() || i.lower_open())) return false;
+    else if (lower() == i.upper() && (lower_open() || i.upper_open())) return false;
     else return true;
   }
 
-  bool join(const basic_interval<T>& i) { // FIXME: open intervals
-    if (overlaps(i)) {
+  bool join(const basic_interval<T>& i) { 
+    if (lower() > i.upper() || upper() < i.lower()) return false;
+    else if (upper() == i.lower() && upper_open() && i.lower_open()) return false;
+    else if (lower() == i.upper() && lower_open() && i.upper_open()) return false;
+    else {
       _lower = std::min(lower(), i.lower());
       _upper = std::max(upper(), i.upper());
       return true;
     }
-    else return false; // not possible because there is no overlaps
   }
 
   void intersect(const basic_interval<T> &i) { // FIXME: open intervals
     if (overlaps(i)) {
-      _lower = std::max(lower(), i.lower());
-      _upper = std::min(upper(), i.upper());
+      if (lower() == i.lower()) {
+        if (i.lower_open()) set_lower_open();
+      } else if (lower() < i.lower()) {
+        _lower = i.lower();
+        _lower_open = i.lower_open();
+      } else { // lower() > i.lower()
+        // nothing needs to be done.
+      }
+
+      if (upper() == i.upper()) {
+        if (i.upper_open()) set_upper_open();
+      } else if (upper() > i.upper()) {
+        _upper = i.upper();
+        _upper_open = i.upper_open();
+      } else { // upper() < i.upper()
+        // nothing needs to be done.
+      }
     } else {
       set_to_empty();
     }
