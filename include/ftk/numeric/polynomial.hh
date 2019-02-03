@@ -116,6 +116,13 @@ void polynomial_scalar_multiplication(const T P[], int m, T scalar, const T R[])
     R[i] = P[i] * scalar;
 }
 
+// A = BQ + R
+template <typename T>
+void polynomial_long_division(const T A[], int m, const T B[], int n, T Q[], T R[])
+{
+
+}
+
 }
 
 #endif

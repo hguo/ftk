@@ -223,7 +223,7 @@ inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lamb
 
   T H[3][3];
   for (int i = 0; i < 3; i ++)
-    polynomial_sub(E[i], 2, F[i], 2, H[i]);
+    polynomial_subtraction(E[i], 2, F[i], 2, H[i]);
 
   T C[3];
   cross_product(H[0], H[1], C);

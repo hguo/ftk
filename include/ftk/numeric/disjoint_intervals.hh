@@ -47,7 +47,12 @@ struct disjoint_intervals {
     _subintervals.clear();
     _subintervals.insert(i);
   }
- 
+
+  bool complete() const {
+    return subintervals().size() == 1 
+      && subintervals().begin()->complete();
+  }
+
   bool empty() const {
     return subintervals().empty();
   }

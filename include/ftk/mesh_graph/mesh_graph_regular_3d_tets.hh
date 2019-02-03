@@ -58,7 +58,7 @@ index_type mesh_graph_regular_3d_tets<index_type, chirality_type>::n(int dim) co
   } else if (dim == 2) { // faces
     return 12 * n(0); // roughly 12 faces for each node
   } else if (dim == 3) { // cells
-    return n(0); // roughly the same number as nodes
+    return 6 * n(0);
   } else return index_type(0);
 }
 
