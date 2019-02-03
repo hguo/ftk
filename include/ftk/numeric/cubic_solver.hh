@@ -128,6 +128,62 @@ int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-9)
   }
 }
 
+////////////////
+
+template <typename T>
+std::map<T, int> solve_cubic_real_multiplicity(T b, T c, T d)
+{
+  std::map<T, int> roots;
+  T disc, q, r, dum1, s, t, term1, r13;
+
+  q = (T(3)*c - (b*b))/T(9); 
+  r = (-(T(27)*d) + b*(T(9)*c - T(2)*(b*b)))/T(54);
+  disc = q*q*q + r*r;
+
+  term1 = b / T(3);
+
+  if(disc > 0) { // one root real, two are complex
+    s = r + sqrt(disc);
+    s = ((s < 0) ? -pow(-s, (T(1)/T(3))) : pow(s, (T(1)/T(3))));
+    t = r - sqrt(disc);
+    t = ((t < 0) ? -pow(-t, (T(1)/T(3))) : pow(t, (T(1)/T(3))));
+
+    roots[-term1 + s + t] ++;
+  } else { // the remaining options are all real
+    if (disc == 0) { // all roots real, at least two are equal.
+      r13 = ((r < 0) ? -pow(-r, (T(1)/T(3))) : pow(r, T(1)/T(3)));
+      roots[-term1 + T(2) * r13] ++;
+      roots[-(r13 + term1)] += 2; // multiple roots
+    } else { // all roots are real and unequal
+      q = -q;
+      dum1 = q * q * q;
+      dum1 = acos(r/(sqrt(dum1)));
+      r13 = T(2) * sqrt(q);
+      roots[-term1 + r13*cos(dum1/T(3))] ++;
+      roots[-term1 + r13*cos((dum1 + T(2)*M_PI)/T(3))] ++;
+      roots[-term1 + r13*cos((dum1 + T(4)*M_PI)/T(3))] ++;
+    }
+  }
+  return roots;
+}
+
+template <typename T>
+std::map<T, int> solve_cubic_real_multiplicity(const T P[4], const T epsilon = 1e-9)
+{
+  if (std::abs(P[3]) < epsilon || std::isnan(P[3]) || std::isinf(P[3])) {
+    return solve_quadratic_real_multiplicity(P, epsilon);
+  } else if (std::abs(P[0]) < epsilon || std::isnan(P[0]) || std::isinf(P[0])) {
+    auto roots = solve_quadratic_real_multiplicity(P+1, epsilon);
+    roots[T(0)] ++;
+    return roots;
+  } else {
+    return solve_cubic_real_multiplicity(
+      P[2] / P[3], 
+      P[1] / P[3], 
+      P[0] / P[3]);
+  }
+}
+
 }
 
 #endif

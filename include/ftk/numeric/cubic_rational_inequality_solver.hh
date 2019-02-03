@@ -22,21 +22,36 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
     return I;
   }
 
-  T p[3] = {0}, q[3] = {0}; // roots of P and Q, respectively
-  const int np = solve_cubic_real(P, p, epsilon);
-  const int nq = solve_cubic_real(Q, q, epsilon);
+  // real roots of P and Q
+  const auto real_roots_p = solve_cubic_real_multiplicity(P), 
+             real_roots_q = solve_cubic_real_multiplicity(Q);
 
-  // fprintf(stderr, "P={%f, %f, %f, %f}, np=%d, roots={%f, %f, %f}\n", 
-  //     P[0], P[1], P[2], P[3], np, p[0], p[1], p[2]);
-  // fprintf(stderr, "Q={%f, %f, %f, %f}, nq=%d, roots={%f, %f, %f}\n", 
-  //     Q[0], Q[1], Q[2], Q[3], nq, q[0], q[1], q[2]);
-
-  // critical values
+  // quantized roots of P and Q;  critical values
+  std::map<long long, int> quantized_roots_p, quantized_roots_q;
   std::vector<long long> critical_values;
-  for (int i = 0; i < np; i ++)
-    critical_values.push_back(p[i] * T(factor));
-  for (int i = 0; i < np; i ++)
-    critical_values.push_back(q[i] * T(factor));
+  
+  for (const auto kv : real_roots_p) {
+    const long long v = kv.first * T(factor);
+    quantized_roots_p[v] = kv.second;
+    critical_values.push_back(v);
+  }
+  for (const auto kv : real_roots_q) {
+    const long long v = kv.first * T(factor);
+    quantized_roots_q[v] = kv.second;
+    critical_values.push_back(v);
+  }
+
+#if 0
+  std::cerr << "roots of Q: ";
+  for (const auto kv : real_roots_q) 
+    std::cerr << "(" << kv.first << "," << kv.second << ")";
+  std::cerr << std::endl;
+  
+  std::cerr << "roots of P: ";
+  for (const auto kv : real_roots_p) 
+    std::cerr << "(" << kv.first << "," << kv.second << ")";
+  std::cerr << std::endl;
+#endif
 
   // adding infinities to critical values
   critical_values.push_back(basic_interval<long long>::lower_inf());
@@ -47,10 +62,21 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
 
   // singularities
   std::set<long long> singularities;
-  for (int i = 0; i < nq; i ++) {
-    if (!isfinite(evaluate_rational(P, Q, 3, q[i])))
-      singularities.insert(q[i] * T(factor));
+  for (auto &kv : quantized_roots_q) {
+    if (quantized_roots_p.find(kv.first) != quantized_roots_p.end()) { // remove "canceled" roots of Q
+      while (quantized_roots_p[kv.first] > 0 && quantized_roots_q[kv.first] > 0) {
+        quantized_roots_p[kv.first] --;
+        quantized_roots_q[kv.first] --;
+        // fprintf(stderr, "reducing multiple roots %lld\n", kv.first);
+      }
+    }
+    if (kv.second > 0) {
+      // fprintf(stderr, "adding singularity %lld\n", kv.first);
+      singularities.insert(kv.first);
+    }
   }
+
+  // fprintf(stderr, "#singularities=%lu\n", singularities.size());
   
   // adding subintervals
   for (int i = 0; i < critical_values.size() - 1; i ++) { // the size is at least 2

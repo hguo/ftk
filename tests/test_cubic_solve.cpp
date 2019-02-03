@@ -5,6 +5,16 @@
 
 int main(int argc, char **argv)
 {
+  const double P[4] = {0, 504, -1332, 17388};
+  auto roots = ftk::solve_cubic_real_multiplicity(P);
+  for (auto kv : roots) 
+    fprintf(stderr, "%f, %d\n", kv.first, kv.second);
+  return 1;
+}
+
+#if 0
+int main(int argc, char **argv)
+{
 #if 0
   std::complex<float> x[3];
   ftk::solve_cubic<float>(43, 1, 3, x);
@@ -47,3 +57,5 @@ x0 = 14.311690 + i*0.000000
 x1 = -28.655846 + i*-0.263968
 x2 = -28.655846 + i*0.263968
 */
+
+#endif
