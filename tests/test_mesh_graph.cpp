@@ -5,6 +5,26 @@
 int main(int argc, char **argv)
 {
   ftk::mesh_graph_regular_3d_tets<> mg(128, 128, 128);
+  mg.lb[0] = mg.lb[1] = mg.lb[2] = 2;
+  mg.ub[0] = mg.ub[1] = mg.ub[2] = 128 - 3;
+
+  size_t cid = 12229180; // 11638625; // 11540317; // 10852241; // 10753933; // 12327482;
+  int cidx[4];
+  mg.cid2cidx(cid, cidx);
+
+  fprintf(stderr, "cid=%lu, cidx={%d, %d, %d, %d}, valid=%d\n", 
+      cid, cidx[0], cidx[1], cidx[2], cidx[3], mg.valid_cidx(cidx));
+
+  const auto neighbor_cells = mg.links_cell_face_cell(cid);
+  fprintf(stderr, "#neighbors=%lu\n", neighbor_cells.size());
+
+  return 0;
+}
+
+#if 0
+int main(int argc, char **argv)
+{
+  ftk::mesh_graph_regular_3d_tets<> mg(128, 128, 128);
 #if 0
   size_t eid = 889;
   int eidx[4];
@@ -66,3 +86,4 @@ int main(int argc, char **argv)
 
   return 0;
 }
+#endif

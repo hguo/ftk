@@ -26,10 +26,16 @@ bool polynomial_equals_to_constant(const T P[], int m, const T epsilon=std::nume
 template <typename T>
 T polynomial_evaluate(const T P[], int m, T x)
 {
-  T y(0);
-  for (int i = 0; i <= m; i ++) 
-    y += P[i] * std::pow(x, i);
-  return y;
+  if (m == 0) return P[0];
+  else if (m == 1) return std::fma(P[1], x, P[0]); // P[1]*x + P[0]
+  else if (m == 2) return std::fma(P[2], x*x, polynomial_evaluate(P, 1, x));
+  else if (m == 3) return std::fma(P[3], x*x*x, polynomial_evaluate(P, 2, x));
+  else {
+    T y(0);
+    for (int i = 0; i <= m; i ++) 
+      y += P[i] * std::pow(x, i);
+    return y;
+  }
 }
 
 template <typename T>

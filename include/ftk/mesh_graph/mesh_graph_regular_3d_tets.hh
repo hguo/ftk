@@ -31,7 +31,7 @@ public:
   ///////////////////
   bool valid_eidx(const int eidx[4]) const;
   bool valid_fidx(const int fidx[4]) const;
-  bool valid_cidx(const int cidx[3]) const;
+  bool valid_cidx(const int cidx[4]) const;
   
   void eid2eidx(index_type id, int eidx[4]) const;
   index_type eidx2eid(const int eidx[4]) const;
@@ -509,7 +509,7 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_fidx(const in
 }
 
 template <typename index_type, typename chirality_type>
-bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_cidx(const int idx[3]) const
+bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_cidx(const int idx[4]) const
 {
   if (idx[3]<0 || idx[3]>=6) return false; // 6 types of tets
 
@@ -518,7 +518,7 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_cidx(const in
       if (idx[i] < 0 || idx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]) return false;
     } else {
       if (idx[i] < mesh_graph_regular_3d<index_type, chirality_type>::lb[i] 
-          || idx[i] > mesh_graph_regular_3d<index_type, chirality_type>::ub[i]) return false;
+          || idx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::ub[i]) return false;
       // if (idx[i] < 0 || idx[i] >= mesh_graph_regular_3d<index_type, chirality_type>::d[i]-1) return false;
     }
   return true;
