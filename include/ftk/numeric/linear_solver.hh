@@ -26,7 +26,7 @@ inline T linear_solver3(const T A[3][3], const T b[3], T x[3])
 
 template <typename T> // returns determinant
 // inline T linear_solver2(const T A[2][2], const T b[2], T x[2])
-inline T solve_linear_real2x2(const T A[2][2], const T b[2], T x[2], const T epsilon=1e-6)
+inline T solve_linear_real2x2(const T A[2][2], const T b[2], T x[2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   const T D  = A[0][0]*A[1][1] - A[0][1]*A[1][0],
           Dx = b[0]   *A[1][1] - A[0][1]*b[1],
@@ -41,7 +41,7 @@ inline T solve_linear_real2x2(const T A[2][2], const T b[2], T x[2], const T eps
 }
 
 template <typename T>
-inline int solve_linear_real1(const T P[2], T x[1], const T epsilon = 1e-6)
+inline int solve_linear_real1(const T P[2], T x[1], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   if (std::abs(P[1]) < epsilon || std::isinf(P[1]) || std::isnan(P[1])) return 0;
   else {
@@ -64,7 +64,7 @@ inline T solve_least_square3x1(const T a[3], const T b[3], T &x) // ax=b
 }
 
 template <typename T>
-inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T epsilon = 1e-9)
+inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   T AT[2][3];
   transpose3x2(A, AT);

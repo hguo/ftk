@@ -23,7 +23,10 @@ struct disjoint_intervals {
     for (auto i : I.subintervals()) { // TODO: consider open intervals
       const auto lb = i.lower_bounded() ? (i.lower() * epsilon) : (basic_interval<T>::lower_inf()), 
                  ub = i.upper_bounded() ? (i.upper() * epsilon) : (basic_interval<T>::upper_inf());
-      join(basic_interval<T>(lb, ub));
+      basic_interval<T> ii(lb, ub);
+      if (i.lower_open()) ii.set_lower_open();
+      if (i.upper_open()) ii.set_upper_open();
+      join(ii); // basic_interval<T>(lb, ub));
     }
   }
 

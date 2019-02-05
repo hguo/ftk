@@ -25,6 +25,8 @@ public:
   std::vector<std::pair<index_type, chirality_type> > links_face_cell(index_type i);
  
   std::vector<std::pair<index_type, chirality_type> > links_face_node(index_type i);
+  std::vector<std::pair<index_type, chirality_type> > links_cell_node(index_type i);
+  std::vector<std::pair<index_type, chirality_type> > links_node_cell(index_type i);
 
   ///////////////////
   bool valid_eidx(const int eidx[4]) const;
@@ -235,6 +237,89 @@ links_face_cell(index_type id)
   
   for (int p=0; p<2; p++) 
     results.push_back(std::make_pair(cidx2cid(contained_cells_cidx[t][p]), contained_cells_chi[t][p]));
+
+  return results;
+}
+
+template <typename index_type, typename chirality_type>
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+links_node_cell(index_type id)
+{
+  // fprintf(stderr, "calling links_node_cell\n");
+  std::vector<std::pair<index_type, chirality_type> > results;
+  int nidx[3];
+  mesh_graph_regular_3d<index_type, chirality_type>::nid2nidx(id, nidx);
+  if (!mesh_graph_regular_3d<index_type, chirality_type>::valid_nidx(nidx)) return results;
+
+  static const int contained_cells[23][4] = {
+    {0, 0, 0, 1}, // A, ABCF
+    {0, 0, 0, 2}, // A, ADEF
+    {0, 0, 0, 5}, // A, ACDF
+    {1, 0, 0, 0}, // B, ABCF
+    {0, 1, 0, 1}, // D, DEGH
+    {0, 1, 0, 2}, // D, ADEF
+    {0, 1, 0, 3}, // D, CDFG
+    {0, 1, 0, 4}, // D, DEFG
+    {0, 1, 0, 5}, // D, ACDF
+    {1, 1, 0, 0}, // C, ABCF
+    {1, 1, 0, 3}, // C, CDFG
+    {1, 1, 0, 5}, // C, ACDF
+    {0, 0, 1, 1}, // E, DEGH
+    {0, 0, 1, 2}, // E, ADEF
+    {0, 0, 1, 4}, // E, DEFG
+    {1, 0, 1, 0}, // F, ABCF
+    {1, 0, 1, 2}, // F, ADEF
+    {1, 0, 1, 3}, // F, CDFG
+    {1, 0, 1, 4}, // F, DEFG
+    {1, 0, 1, 5}, // F, ACDF
+    {1, 1, 1, 1}, // G, DEGH
+    {1, 1, 1, 3}, // G, CDFG
+    {1, 1, 1, 4}  // G, DEFG
+  };
+
+  for (int i = 0; i < 23; i ++) {
+    int cidx[4] = {
+      -contained_cells[i][0] + nidx[0], 
+      -contained_cells[i][1] + nidx[1], 
+      -contained_cells[i][2] + nidx[2], 
+       contained_cells[i][3]};
+
+    if (valid_cidx(cidx)) {
+      index_type cid = cidx2cid(cidx);
+      // fprintf(stderr, "adding %d: %d, %d, %d, %d\n", cid, cidx[0], cidx[1], cidx[2], cidx[3]);
+      results.push_back(std::make_pair(cid, 0));
+    }
+  }
+
+  return results;
+}
+
+template <typename index_type, typename chirality_type>
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+links_cell_node(index_type id)
+{
+  // fprintf(stderr, "calling links_cell_node\n");
+  std::vector<std::pair<index_type, chirality_type> > results;
+  int cidx[4];
+  cid2cidx(id, cidx);
+  if (!valid_cidx(cidx)) return results;
+
+  static const int nodes_idx[6][4][3] = {
+    {{0, 0, 0}, {1, 0, 0}, {1, 1, 0}, {1, 0, 1}}, // ABCF
+    {{0, 1, 0}, {0, 0, 1}, {1, 1, 1}, {0, 1, 1}}, // DEGH
+    {{0, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 0, 1}}, // ADEF
+    {{1, 1, 0}, {0, 1, 0}, {1, 0, 1}, {1, 1, 1}}, // CDFG
+    {{0, 1, 0}, {0, 0, 1}, {1, 0, 1}, {1, 1, 1}}, // DEFG
+    {{0, 0, 0}, {1, 1, 0}, {0, 1, 0}, {1, 0, 1}}  // ACDF
+  };
+
+  const int type = cidx[3];
+  for (int p=0; p<4; p++) {
+    int nidx[3];
+    for (int q=0; q<3; q++) 
+      nidx[q] = cidx[q] + nodes_idx[type][p][q];
+    results.push_back(std::make_pair(mesh_graph_regular_3d<index_type, chirality_type>::nidx2nid(nidx), 0)); 
+  }
 
   return results;
 }

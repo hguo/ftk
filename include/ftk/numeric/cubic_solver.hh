@@ -60,7 +60,7 @@ T solve_cubic(T b, T c, T d, std::complex<T> x[3])
 }
 
 template <typename T>
-int solve_cubic_real(T b, T c, T d, T x[3], const T epsilon = 1e-9) // returns the number of real roots
+int solve_cubic_real(T b, T c, T d, T x[3], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   T disc, q, r, dum1, s, t, term1, r13;
 
@@ -111,11 +111,12 @@ void solve_cubic(const T coef[4], std::complex<T> x[3])
 }
 
 template <typename T>
-int solve_cubic_real(const T coef[4], T x[3], const T epsilon = 1e-9)
+int solve_cubic_real(const T coef[4], T x[3], const T epsilon = std::numeric_limits<T>::epsilon())
 {
-  if (std::abs(coef[3]) < epsilon || std::isnan(coef[3]) || std::isinf(coef[3])) {
+  if (std::abs(coef[3]) <= epsilon || std::isnan(coef[3]) || std::isinf(coef[3])) {
+    // fprintf(stderr, "downgrading, eps=%.20f\n", epsilon);
     return solve_quadratic_real(coef, x, epsilon);
-  } else if (std::abs(coef[0]) < epsilon || std::isnan(coef[0]) || std::isinf(coef[0])) {
+  } else if (std::abs(coef[0]) <= epsilon || std::isnan(coef[0]) || std::isinf(coef[0])) {
     auto n = solve_quadratic_real(coef+1, x, epsilon);
     x[n++] = T(0);
     return n;
@@ -168,11 +169,11 @@ std::map<T, int> solve_cubic_real_multiplicity(T b, T c, T d)
 }
 
 template <typename T>
-std::map<T, int> solve_cubic_real_multiplicity(const T P[4], const T epsilon = 1e-9)
+std::map<T, int> solve_cubic_real_multiplicity(const T P[4], const T epsilon = std::numeric_limits<T>::epsilon()) // 1e-9)
 {
-  if (std::abs(P[3]) < epsilon || std::isnan(P[3]) || std::isinf(P[3])) {
+  if (std::abs(P[3]) <= epsilon || std::isnan(P[3]) || std::isinf(P[3])) {
     return solve_quadratic_real_multiplicity(P, epsilon);
-  } else if (std::abs(P[0]) < epsilon || std::isnan(P[0]) || std::isinf(P[0])) {
+  } else if (std::abs(P[0]) <= epsilon || std::isnan(P[0]) || std::isinf(P[0])) {
     auto roots = solve_quadratic_real_multiplicity(P+1, epsilon);
     roots[T(0)] ++;
     return roots;

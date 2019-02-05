@@ -23,11 +23,11 @@ inline void solve_quadratic(const T P[3], std::complex<T> x[2])
 }
 
 template <typename T>
-inline int solve_quadratic_real(const T P[3], T x[2], const T epsilon = 1e-8)
+inline int solve_quadratic_real(const T P[3], T x[2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
-  if (std::abs(P[2]) < epsilon || std::isinf(P[2]) || std::isnan(P[2])) 
+  if (std::abs(P[2]) <= epsilon || std::isinf(P[2]) || std::isnan(P[2])) 
     return solve_linear_real1(P, x);
-  else if (std::abs(P[0]) < epsilon || std::isinf(P[0]) || std::isnan(P[0])) {
+  else if (std::abs(P[0]) <= epsilon || std::isinf(P[0]) || std::isnan(P[0])) {
     const int n = solve_linear_real1(P+1, x);
     x[n+1] = T(0);
     return n+1;
@@ -49,15 +49,15 @@ inline int solve_quadratic_real(const T P[3], T x[2], const T epsilon = 1e-8)
 /////
 
 template <typename T>
-std::map<T, int> solve_quadratic_real_multiplicity(const T P[3], const T epsilon = 1e-9)
+std::map<T, int> solve_quadratic_real_multiplicity(const T P[3], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   std::map<T, int> roots;
 
-  if (std::abs(P[2]) < epsilon || std::isnan(P[2]) || std::isinf(P[2])) {
+  if (std::abs(P[2]) <= epsilon || std::isnan(P[2]) || std::isinf(P[2])) {
     T x;
     if (solve_linear_real1(P, &x) == 1)
       roots[x] = 1;
-  } else if (std::abs(P[0]) < epsilon || std::isnan(P[0]) || std::isinf(P[0])) {
+  } else if (std::abs(P[0]) <= epsilon || std::isnan(P[0]) || std::isinf(P[0])) {
     T x;
     if (solve_linear_real1(P+1, &x) == 1)
       roots[x] = 1;

@@ -132,8 +132,8 @@ struct basic_interval {
   T sample() const {
     if (complete()) return T(92372068577507L); // FIXME: it is just a random number for now. 
     else if (singleton()) return lower();
-    else if (upper_unbounded()) return lower() + T(1000000L);
-    else if (lower_unbounded()) return upper() - T(1000000L);
+    else if (upper_unbounded()) return lower() + T(1000000000L);
+    else if (lower_unbounded()) return upper() - T(1000000000L);
     else return (upper() + lower()) / T(2);
   }
 

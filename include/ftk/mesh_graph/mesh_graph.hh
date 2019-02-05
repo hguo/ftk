@@ -38,17 +38,20 @@ struct mesh_graph {
     else return std::vector<std::pair<index_type, chirality_type>>();
   }
 
-
   // derived links that are optional
   virtual std::vector<std::pair<index_type, chirality_type> > links_cell_node(index_type i) {
-    return std::vector<std::pair<index_type, chirality_type> >();
+    return std::vector<std::pair<index_type, chirality_type> >(); // TODO
+  }
+
+  virtual std::vector<std::pair<index_type, chirality_type> > links_node_cell(index_type i) {
+    return std::vector<std::pair<index_type, chirality_type> > (); // TODO
   }
 
   virtual std::vector<std::pair<index_type, chirality_type> > links_cell_edge(index_type i) { // usually not useful
     return std::vector<std::pair<index_type, chirality_type> >();
   }
 
-  virtual std::vector<std::pair<index_type, chirality_type>> links_face_node(index_type i) {
+  virtual std::vector<std::pair<index_type, chirality_type> > links_face_node(index_type i) {
     std::vector<std::pair<index_type, chirality_type>> results;
     if (!valid(2, i)) return results;
 
@@ -60,6 +63,35 @@ struct mesh_graph {
       results.push_back(edge.second == 1 ? nodes[1] : nodes[0]);
     }
     return results;
+  }
+
+  // second-degree derived links
+  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_node_cell(index_type i) {
+    std::vector<std::pair<index_type, chirality_type> > cells;
+    const auto nodes = links_cell_node(i);
+    for (const auto n : nodes) {
+      const auto my_cells = links_node_cell(n.first);
+      for (const auto c: my_cells) {
+        if (c.first != i) {
+          cells.push_back(std::make_pair(c.first, 0));
+        }
+      }
+    }
+    return cells;
+  }
+
+  virtual std::vector<std::pair<index_type, chirality_type> > links_cell_face_cell(index_type i) {
+    std::vector<std::pair<index_type, chirality_type> > cells;
+    const auto faces = links_cell_face(i);
+    for (const auto f : faces) {
+      const auto my_cells = links_face_cell(f.first);
+      for (const auto c: my_cells) {
+        if (c.first != i) {
+          cells.push_back(std::make_pair(c.first, 0));
+        }
+      }
+    }
+    return cells;
   }
 };
 

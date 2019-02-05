@@ -6,7 +6,7 @@
 namespace ftk {
 
 template <typename T>
-T evaluate_rational(const T P[], const T Q[], int n, T x, const T epsilon = 1e-9)
+T evaluate_rational(const T P[], const T Q[], int n, T x, const T epsilon = std::numeric_limits<T>::epsilon())
 {
   // fprintf(stderr, "P=%f, Q=%f\n", 
   //     polynomial_evaluate(P, n, x), 
@@ -24,7 +24,7 @@ T evaluate_rational(const T P[], const T Q[], int n, T x, const T epsilon = 1e-9
 }
 
 template <typename T>
-T evaluate_rational_infinity(const T P[], const T Q[], int n, const T epsilon = 1e-9)
+T evaluate_rational_infinity(const T P[], const T Q[], int n, const T epsilon = std::numeric_limits<T>::epsilon())
 {
   if (std::abs(Q[n]) < epsilon) {
     if (n > 0 && std::abs(P[n]) < epsilon) 

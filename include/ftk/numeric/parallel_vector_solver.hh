@@ -78,7 +78,7 @@ inline int solve_parallel_vector_barycentric(const T V[3][3], const T W[3][3], T
 }
 #else
 template <typename T>
-inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3], const T epsilon=1e-6)
+inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3], const T epsilon = std::numeric_limits<T>::epsilon()) // was 1e-6
 {
   T V[3][3], W[3][3]; // transposed V and W
   transpose3(VV, V);
@@ -106,7 +106,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
   int n_solutions = 0;
 
   for (int i = 0; i < n_roots; i ++) {
-    if (std::abs(l[i]) < epsilon) continue;
+    if (std::abs(l[i]) <= epsilon) continue;
 
     const T M[3][2] = {
       {(V[0][0] - V[0][2]) - l[i] * (W[0][0] - W[0][2]), (V[0][1] - V[0][2]) - l[i] * (W[0][1] - W[0][2])}, 
@@ -191,7 +191,7 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
 #endif
 
 template <typename T>
-inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lambda[2], T mu[2], const T epsilon = 1e-9)
+inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lambda[2], T mu[2], const T epsilon = std::numeric_limits<T>::epsilon()) // 1e-9)
 {
   const T P[3][2] = { // rhs
     {V[1][0], -W[1][0]},
@@ -199,7 +199,7 @@ inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lamb
     {V[1][2], -W[1][2]}
   };
   const T norm = matrix_frobenius_norm_real3x2(P);
-  if (norm < epsilon)
+  if (norm <= epsilon)
     return std::numeric_limits<int>::max(); // unlimited.
 
   const T Q[3][2] = { // lhs
@@ -230,13 +230,13 @@ inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lamb
   // fprintf(stderr, "E={%f, %f, %f}, F={%f, %f, %f}, C={%f, %f, %f}, normC=%.20f\n", 
   //     E[0], E[1], E[2], F[0], F[1], F[2], C[0], C[1], C[2], vector_2norm_3(C));
 
-  if (vector_2norm_3(H[0]) > epsilon && vector_2norm_3(H[1]) > epsilon && vector_2norm_3(C) < epsilon) {
+  if (vector_2norm_3(H[0]) > epsilon && vector_2norm_3(H[1]) > epsilon && vector_2norm_3(C) <= epsilon) {
     T l[2], nu[2];
     const int n_roots = solve_quadratic_real(H[0], l);
     // fprintf(stderr, "n_roots=%d, l={%f, %f}\n", n_roots, l[0], l[1]);
     int n = 0;
     for (int i = 0; i < n_roots; i ++) {
-      if (std::abs(l[i]) < epsilon) continue;
+      if (std::abs(l[i]) <= epsilon) continue;
       // if (std::abs(polynomial_evaluate(Q[0], 1, l[i])) < epsilon) continue;
 #if 0
       const T A[3] = {
@@ -253,7 +253,7 @@ inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lamb
 #endif
       nu[i] = polynomial_evaluate(P[0], 1, l[i]) / polynomial_evaluate(Q[0], 1, l[i]);
       // fprintf(stderr, "l=%f, nu=%.20f\n", l[i], nu[i]);
-      if (nu[i] >= -epsilon && nu[i] < 1+epsilon) {
+      if (nu[i] >= -epsilon && nu[i] <= 1+epsilon) {
         lambda[n] = l[i];
         mu[n] = nu[i];
         n ++;

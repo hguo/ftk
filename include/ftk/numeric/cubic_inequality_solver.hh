@@ -11,7 +11,7 @@ namespace ftk {
 // returns all intervals that P(x)>=0
 template <typename T>
 inline disjoint_intervals<T> solve_cubic_inequality_real(
-    const T P[4], const T epsilon=1e-9)
+    const T P[4], const T epsilon=std::numeric_limits<T>::epsilon())
 {
   T x[3]; // roots
   const int n_roots = solve_cubic_real(P, x, epsilon);

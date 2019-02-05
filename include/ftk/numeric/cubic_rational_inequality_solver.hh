@@ -3,6 +3,8 @@
 
 #include <ftk/numeric/cubic_inequality_solver.hh>
 #include <ftk/numeric/rational.hh>
+#include <map>
+#include <set>
 
 namespace ftk {
 
@@ -28,17 +30,16 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
 
   // quantized roots of P and Q;  critical values
   std::map<long long, int> quantized_roots_p, quantized_roots_q;
-  std::vector<long long> critical_values;
   
   for (const auto kv : real_roots_p) {
     const long long v = kv.first * T(factor);
     quantized_roots_p[v] = kv.second;
-    critical_values.push_back(v);
+    // critical_values.insert(v);
   }
   for (const auto kv : real_roots_q) {
     const long long v = kv.first * T(factor);
     quantized_roots_q[v] = kv.second;
-    critical_values.push_back(v);
+    // critical_values.insert(v);
   }
 
 #if 0
@@ -52,13 +53,6 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
     std::cerr << "(" << kv.first << "," << kv.second << ")";
   std::cerr << std::endl;
 #endif
-
-  // adding infinities to critical values
-  critical_values.push_back(basic_interval<long long>::lower_inf());
-  critical_values.push_back(basic_interval<long long>::upper_inf());
-  
-  // sort critical values
-  std::sort(critical_values.begin(), critical_values.end());
 
   // singularities
   std::set<long long> singularities;
@@ -76,22 +70,55 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
     }
   }
 
-  // fprintf(stderr, "#singularities=%lu\n", singularities.size());
+#if 0
+  fprintf(stderr, "singularities:\n");
+  for (auto s : singularities)
+    fprintf(stderr, "**%lld\n", s);
+#endif
+
+  // adding quantized roots of P and Q to critical values
+  std::set<long long> critical_values;
+  for (const auto kv : quantized_roots_p) {
+    if (kv.second > 0)
+      critical_values.insert(kv.first);
+  }
+  for (const auto kv : quantized_roots_q) {
+    if (kv.second > 0)
+      critical_values.insert(kv.first);
+  }
+
+  // adding infinities to critical values
+  critical_values.insert(basic_interval<long long>::lower_inf());
+  critical_values.insert(basic_interval<long long>::upper_inf());
+
+  // sort critical values
+  std::vector<long long> sorted_critical_values;
+  for (auto v : critical_values)
+    sorted_critical_values.push_back(v);
+  // std::sort(critical_values.begin(), critical_values.end());
+ 
+#if 0
+  fprintf(stderr, "sorted critical values:\n");
+  for (int i = 0; i < sorted_critical_values.size(); i ++)
+    fprintf(stderr, "##%lld\n", sorted_critical_values[i]);
+#endif
   
   // adding subintervals
-  for (int i = 0; i < critical_values.size() - 1; i ++) { // the size is at least 2
-    const auto v0 = critical_values[i], v1 = critical_values[i+1];
+  for (int i = 0; i < sorted_critical_values.size() - 1; i ++) { // the size is at least 2
+    const auto v0 = sorted_critical_values[i], v1 = sorted_critical_values[i+1];
     basic_interval<long long> ii(v0, v1);
     
     if (singularities.find(v0) != singularities.end()) ii.set_lower_open();
     if (singularities.find(v1) != singularities.end()) ii.set_upper_open();
         
-    // std::cerr << i << "checking interval: " << ii << std::endl;
-    
     const T x = ii.sample() * epsilon; // FIXME: avoid sampling on Q's roots
     const T y = evaluate_rational(P, Q, 3, x);
+    // std::cerr << i << "checking interval: " << ii << std::endl;
     // std::cerr << "sample: " << x << ", value: " << y << std::endl;
-    if (y >= T(0)) I.join(ii);
+    if (y >= T(0)) {
+      I.join(ii);
+      // std::cerr << "joining interval " << ii << " I=" << I << std::endl;
+    }
   }
   
   return I;

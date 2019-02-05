@@ -6,7 +6,7 @@
 namespace ftk {
 
 template <typename T>
-bool polynomial_equals_to_zero(const T P[], int m, const T epsilon=1e-9)
+bool polynomial_equals_to_zero(const T P[], int m, const T epsilon=std::numeric_limits<T>::epsilon())
 {
   for (int i = 0; i <= m; i ++) 
     if (std::abs(P[i]) > epsilon) 
@@ -15,7 +15,7 @@ bool polynomial_equals_to_zero(const T P[], int m, const T epsilon=1e-9)
 }
 
 template <typename T>
-bool polynomial_equals_to_constant(const T P[], int m, const T epsilon=1e-9)
+bool polynomial_equals_to_constant(const T P[], int m, const T epsilon=std::numeric_limits<T>::epsilon())
 {
   for (int i = 1; i <= m; i ++) 
     if (std::abs(P[i]) > epsilon) 
