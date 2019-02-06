@@ -8,7 +8,7 @@
 int main(int argc, char **argv)
 {
   double V[4][3], W[4][3];
-#if 0
+#if 1
   V[0][0] = 0;  V[0][1] = 0;  V[0][2] = 38;
   V[1][0] = 8;  V[1][1] = 0;  V[1][2] = 0;
   V[2][0] = 3;  V[2][1] = 38;  V[2][2] = 0;
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
   W[3][0] = 608;  W[3][1] = 48;  W[3][2] = 152;
 #endif
 
-#if 1
+#if 0
   V[0][0] = 0;  V[0][1] = -8;  V[0][2] = 0;
   V[1][0] = 32;  V[1][1] = 0;  V[1][2] = -8;
   V[2][0] = -38;  V[2][1] = -3;  V[2][2] = 0;
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
   // auto I = ftk::solve_parallel_vector_tetrahedron_inequalities(V, W);
   auto I = ftk::solve_parallel_vector_tetrahedron_inequalities_quantized(V, W);
-  std::cerr << I << std::endl;
+  std::cerr << std::get<0>(I) << std::endl;
   
   return 0;
 }

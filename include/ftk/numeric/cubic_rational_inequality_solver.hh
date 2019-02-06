@@ -10,18 +10,20 @@ namespace ftk {
 
 // returns all intervals that P(x)/Q(x)>=0
 template <typename T>
-disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
+std::tuple<disjoint_intervals<long long>, std::map<long long, T> >
+solve_cubic_rational_inequality_quantized(
     const T P[4], const T Q[4], const long long factor = 1000000000L)
 {
   const T epsilon = T(1) / T(factor);
   disjoint_intervals<long long> I;
+  std::map<long long, T> quantized_roots;
   
   if (polynomial_equals_to_zero(P, 3)) { // if the numerator is zero, there is no need to compute the intervals.
     I.set_to_complete();
-    return I;
+    return std::make_tuple(I, quantized_roots);
   } else if (polynomial_equals_to_zero(Q, 3)) { // if the denominator is zero, there is no need to compute the intervals as well.
     I.set_to_empty();
-    return I;
+    return std::make_tuple(I, quantized_roots);
   }
 
   // real roots of P and Q
@@ -34,12 +36,12 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
   for (const auto kv : real_roots_p) {
     const long long v = kv.first * T(factor);
     quantized_roots_p[v] = kv.second;
-    // critical_values.insert(v);
+    quantized_roots[v] = kv.first;
   }
   for (const auto kv : real_roots_q) {
     const long long v = kv.first * T(factor);
     quantized_roots_q[v] = kv.second;
-    // critical_values.insert(v);
+    quantized_roots[v] = kv.first;
   }
 
 #if 0
@@ -120,15 +122,15 @@ disjoint_intervals<long long> solve_cubic_rational_inequality_quantized(
       // std::cerr << "joining interval " << ii << " I=" << I << std::endl;
     }
   }
-  
-  return I;
+
+  return std::make_tuple(I, quantized_roots);
 }
 
 template <typename T>
 disjoint_intervals<T> solve_cubic_rational_inequality(
     const T P[4], const T Q[4], const long long factor = 1000000000L)
 {
-  const auto I0 = solve_cubic_rational_inequality_quantized(P, Q, factor);
+  const auto I0 = std::get<0>(solve_cubic_rational_inequality_quantized(P, Q, factor)); // TODO
   return disjoint_intervals<T>(I0, factor);
 
 #if 0

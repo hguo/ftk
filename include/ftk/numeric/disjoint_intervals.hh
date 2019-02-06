@@ -14,10 +14,12 @@ struct disjoint_intervals {
   disjoint_intervals(T v) {
     _subintervals.insert(basic_interval<T>(v));
   }
+  // disjoint_intervals(const disjoint_intervals<T>&) {};
+  // disjoint_intervals(disjoint_intervals<T>&&) = default;
 
   // conversion from quantized intervals
   disjoint_intervals(const disjoint_intervals<long long>& I, 
-      const long long factor = 1000000000L) 
+      const long long factor) //  = 1000000000L) 
   {
     const T epsilon = T(1) / T(factor);
     for (auto i : I.subintervals()) { // TODO: consider open intervals

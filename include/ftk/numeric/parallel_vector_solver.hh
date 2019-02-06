@@ -352,12 +352,14 @@ inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], 
 }
 
 template <typename T>
-disjoint_intervals<long long> solve_parallel_vector_tetrahedron_inequalities_quantized(
+std::tuple<disjoint_intervals<long long>, std::map<long long, T> >
+solve_parallel_vector_tetrahedron_inequalities_quantized(
     const T V[4][3], const T W[4][3], const long long factor = 1000000000L)
 {
   T Q[4] = {0}, P[4][4] = {0}, QP[4][4] = {0};
   solve_parallel_vector_tetrahedron(V, W, Q, P);
 
+  std::map<long long, T> quantized_roots;
   disjoint_intervals<long long> I;
   I.set_to_complete();
 
@@ -369,20 +371,23 @@ disjoint_intervals<long long> solve_parallel_vector_tetrahedron_inequalities_qua
     //     i, P[i][0], P[i][1], P[i][2], P[i][3], 
     //     i, QP[i][0], QP[i][1], QP[i][2], QP[i][3]);
 
-    const disjoint_intervals<long long> I0 = solve_cubic_rational_inequality_quantized(P[i], Q, factor);
-    // std::cerr << "I0: " << disjoint_intervals<T>(I0, factor) << std::endl;
+    const auto r0 = solve_cubic_rational_inequality_quantized(P[i], Q, factor);
+    // std::cerr << "I0: " << disjoint_intervals<T>(std::get<0>(r0), factor) << std::endl;
+    // std::cerr << "I0: " << std::get<0>(r0) << std::endl;
     
-    I.intersect(I0);
+    I.intersect(std::get<0>(r0));
+    quantized_roots.insert(std::get<1>(r0).begin(), std::get<1>(r0).end());
     // std::cerr << "I: " << disjoint_intervals<T>(I, factor) << std::endl;
     
-    const disjoint_intervals<long long> I1 = solve_cubic_rational_inequality_quantized(QP[i], Q, factor);
-    // std::cerr << "I1: " << disjoint_intervals<T>(I1, factor) << std::endl;
+    const auto r1 = solve_cubic_rational_inequality_quantized(QP[i], Q, factor);
+    // std::cerr << "I1: " << disjoint_intervals<T>(std::get<0>(r1), factor) << std::endl;
     
-    I.intersect(I1);
+    I.intersect(std::get<0>(r1));
+    quantized_roots.insert(std::get<1>(r1).begin(), std::get<1>(r1).end());
     // std::cerr << "I: " << disjoint_intervals<T>(I, factor) << std::endl;
   }
 
-  return I;
+  return std::make_tuple(I, quantized_roots);
 }
 
 template <typename T>

@@ -3,6 +3,7 @@
 #include <ftk/numeric/cubic_rational_inequality_solver.hh>
 #include <iostream>
 
+#if 0
 int main(int argc, char **argv)
 {
   const double P[4] = {0, 504, -1332, 17388};
@@ -11,8 +12,9 @@ int main(int argc, char **argv)
     fprintf(stderr, "%f, %d\n", kv.first, kv.second);
   return 1;
 }
+#endif
 
-#if 0
+#if 1
 int main(int argc, char **argv)
 {
 #if 0
@@ -39,15 +41,15 @@ int main(int argc, char **argv)
   // const auto I = ftk::solve_cubic_inequality_real(P);
   // std::cerr << I << std::endl;
 
-  double x[3], y[3];
-  const int np = ftk::solve_cubic_real(P, x);
-  fprintf(stderr, "np=%d, x={%f, %f, %f}\n", np, x[0], x[1], x[2]);
+  // double x[3], y[3];
+  // const int np = ftk::solve_cubic_real(P, x);
+  // fprintf(stderr, "np=%d, x={%f, %f, %f}\n", np, x[0], x[1], x[2]);
   // const int nq = ftk::solve_cubic_real(Q, y);
   // fprintf(stderr, "nq=%d, x={%f, %f, %f}\n", np, y[0], y[1], y[2]);
 
   // const auto I = ftk::solve_cubic_rational_inequality(P, Q);
-  // const auto I = ftk::solve_cubic_rational_inequality_quantized(P, Q);
-  // std::cerr << I << std::endl;
+  const auto I = ftk::solve_cubic_rational_inequality_quantized(P, Q);
+  std::cerr << std::get<0>(I) << std::endl;
 
   return 0;
 }
