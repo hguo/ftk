@@ -1,17 +1,17 @@
-#ifndef _MESH_GRAPH_REGULAR_3D_TETS_HH
-#define _MESH_GRAPH_REGULAR_3D_TETS_HH
+#ifndef _MESH_GRAPH_REGULAR_SIMPLEX_3D_HH
+#define _MESH_GRAPH_REGULAR_SIMPLEX_3D_HH
 
 #include <ftk/mesh_graph/mesh_graph_regular_3d.hh>
 
 namespace ftk {
 
 template <typename index_type=size_t, typename chirality_type=signed char>
-struct mesh_graph_regular_3d_tets : public mesh_graph_regular_3d<index_type, chirality_type> {
+struct mesh_graph_regular_simplex_3d : public mesh_graph_regular_3d<index_type, chirality_type> {
 public:
-  mesh_graph_regular_3d_tets(int d_[3]) : mesh_graph_regular_3d<index_type, chirality_type>(d_) {}
-  mesh_graph_regular_3d_tets(int d_[3], bool pbc_[3]) : mesh_graph_regular_3d<index_type, chirality_type>(d_, pbc_) {}
-  mesh_graph_regular_3d_tets(int W, int H, int D) : mesh_graph_regular_3d<index_type, chirality_type>(W, H, D) {}
-  mesh_graph_regular_3d_tets(int W, int H, int D, bool pbcx, bool pbcy, bool pbcz) : mesh_graph_regular_3d<index_type, chirality_type>(W, H, D, pbcx, pbcy, pbcz) {}
+  mesh_graph_regular_simplex_3d(int d_[3]) : mesh_graph_regular_3d<index_type, chirality_type>(d_) {}
+  mesh_graph_regular_simplex_3d(int d_[3], bool pbc_[3]) : mesh_graph_regular_3d<index_type, chirality_type>(d_, pbc_) {}
+  mesh_graph_regular_simplex_3d(int W, int H, int D) : mesh_graph_regular_3d<index_type, chirality_type>(W, H, D) {}
+  mesh_graph_regular_simplex_3d(int W, int H, int D, bool pbcx, bool pbcy, bool pbcz) : mesh_graph_regular_3d<index_type, chirality_type>(W, H, D, pbcx, pbcy, pbcz) {}
 
 public:
   index_type n(int d) const;
@@ -51,7 +51,7 @@ public:
 
 //////////////////////////////////
 template <typename index_type, typename chirality_type>
-index_type mesh_graph_regular_3d_tets<index_type, chirality_type>::n(int dim) const
+index_type mesh_graph_regular_simplex_3d<index_type, chirality_type>::n(int dim) const
 {
   if (dim == 0) { // nodes
     return mesh_graph_regular_3d<index_type, chirality_type>::n(dim);
@@ -65,7 +65,7 @@ index_type mesh_graph_regular_3d_tets<index_type, chirality_type>::n(int dim) co
 }
 
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_edge_node(index_type id)
 {
   std::vector<std::pair<index_type, chirality_type> > results;
@@ -91,7 +91,7 @@ links_edge_node(index_type id)
 }
   
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_face_edge(index_type id)
 {
   std::vector<std::pair<index_type, chirality_type> > results;
@@ -137,7 +137,7 @@ links_face_edge(index_type id)
 }
 
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_cell_face(index_type id)
 {
   std::vector<std::pair<index_type, chirality_type> > results;
@@ -170,7 +170,7 @@ links_cell_face(index_type id)
 }
 
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_node_edge(index_type i)
 {
   std::vector<std::pair<index_type, chirality_type> > results;
@@ -179,7 +179,7 @@ links_node_edge(index_type i)
 }
 
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_edge_face(index_type id)
 {
   std::vector<std::pair<index_type, chirality_type> > results;
@@ -206,7 +206,7 @@ links_edge_face(index_type id)
 }
 
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_face_cell(index_type id)
 {
   std::vector<std::pair<index_type, chirality_type> > results;
@@ -242,7 +242,7 @@ links_face_cell(index_type id)
 }
 
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_node_cell(index_type id)
 {
   // fprintf(stderr, "calling links_node_cell\n");
@@ -295,7 +295,7 @@ links_node_cell(index_type id)
 }
 
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_cell_node(index_type id)
 {
   // fprintf(stderr, "calling links_cell_node\n");
@@ -325,7 +325,7 @@ links_cell_node(index_type id)
 }
 
 template <typename index_type, typename chirality_type>
-std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_3d_tets<index_type, chirality_type>::
+std::vector<std::pair<index_type, chirality_type> > mesh_graph_regular_simplex_3d<index_type, chirality_type>::
 links_face_node(index_type id)
 {
   // return mesh_graph<index_type, chirality_type>::links_face_node(id);
@@ -364,25 +364,25 @@ links_face_node(index_type id)
 }
 
 template <typename index_type, typename chirality_type>
-index_type mesh_graph_regular_3d_tets<index_type, chirality_type>::eidx2eid(const int idx[4]) const
+index_type mesh_graph_regular_simplex_3d<index_type, chirality_type>::eidx2eid(const int idx[4]) const
 {
   return mesh_graph_regular_3d<index_type>::nidx2nid(idx)*7 + idx[3];
 }
 
 template <typename index_type, typename chirality_type>
-index_type mesh_graph_regular_3d_tets<index_type, chirality_type>::fidx2fid(const int idx[4]) const
+index_type mesh_graph_regular_simplex_3d<index_type, chirality_type>::fidx2fid(const int idx[4]) const
 {
   return mesh_graph_regular_3d<index_type>::nidx2nid(idx)*12 + idx[3];
 }
 
 template <typename index_type, typename chirality_type>
-index_type mesh_graph_regular_3d_tets<index_type, chirality_type>::cidx2cid(const int idx[3]) const
+index_type mesh_graph_regular_simplex_3d<index_type, chirality_type>::cidx2cid(const int idx[3]) const
 {
   return mesh_graph_regular_3d<index_type>::nidx2nid(idx)*6 + idx[3];
 }
 
 template <typename index_type, typename chirality_type>
-void mesh_graph_regular_3d_tets<index_type, chirality_type>::eid2eidx(index_type id, int idx[4]) const
+void mesh_graph_regular_simplex_3d<index_type, chirality_type>::eid2eidx(index_type id, int idx[4]) const
 {
   unsigned int nid = id / 7;
   mesh_graph_regular_3d<index_type>::nid2nidx(nid, idx);
@@ -390,7 +390,7 @@ void mesh_graph_regular_3d_tets<index_type, chirality_type>::eid2eidx(index_type
 }
 
 template <typename index_type, typename chirality_type>
-void mesh_graph_regular_3d_tets<index_type, chirality_type>::fid2fidx(index_type id, int idx[4]) const
+void mesh_graph_regular_simplex_3d<index_type, chirality_type>::fid2fidx(index_type id, int idx[4]) const
 {
   unsigned int nid = id / 12;
   mesh_graph_regular_3d<index_type>::nid2nidx(nid, idx);
@@ -398,7 +398,7 @@ void mesh_graph_regular_3d_tets<index_type, chirality_type>::fid2fidx(index_type
 }
 
 template <typename index_type, typename chirality_type>
-void mesh_graph_regular_3d_tets<index_type, chirality_type>::cid2cidx(index_type id, int idx[3]) const
+void mesh_graph_regular_simplex_3d<index_type, chirality_type>::cid2cidx(index_type id, int idx[3]) const
 {
   unsigned int nid = id / 6;
   mesh_graph_regular_3d<index_type>::nid2nidx(nid, idx);
@@ -406,7 +406,7 @@ void mesh_graph_regular_3d_tets<index_type, chirality_type>::cid2cidx(index_type
 }
 
 template <typename index_type, typename chirality_type>
-bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_eidx(const int eidx[4]) const
+bool mesh_graph_regular_simplex_3d<index_type, chirality_type>::valid_eidx(const int eidx[4]) const
 {
   if (eidx[3]<0 || eidx[3]>=7) return false;
 #if 0 // legacy version that takes care of pbc
@@ -458,7 +458,7 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_eidx(const in
 }
 
 template <typename index_type, typename chirality_type>
-bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_fidx(const int fidx[4]) const
+bool mesh_graph_regular_simplex_3d<index_type, chirality_type>::valid_fidx(const int fidx[4]) const
 {
   if (fidx[3]<0 || fidx[3]>=12) return false;
 #if 0 // legacy code that handles pbc
@@ -509,7 +509,7 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_fidx(const in
 }
 
 template <typename index_type, typename chirality_type>
-bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_cidx(const int idx[4]) const
+bool mesh_graph_regular_simplex_3d<index_type, chirality_type>::valid_cidx(const int idx[4]) const
 {
   if (idx[3]<0 || idx[3]>=6) return false; // 6 types of tets
 
@@ -526,7 +526,7 @@ bool mesh_graph_regular_3d_tets<index_type, chirality_type>::valid_cidx(const in
 
 #if 0
 template <typename index_type, typename chirality_type>
-index_type mesh_graph_regular_3d_tets<index_type, chirality_type>::locate_point(
+index_type mesh_graph_regular_simplex_3d<index_type, chirality_type>::locate_point(
     const T x[3], index_type nids[4], T mu[4])
 {
   int corner[3] = {

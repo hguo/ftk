@@ -1,10 +1,10 @@
 #include <ftk/mesh_graph/mesh_graph_regular_3d.hh>
-#include <ftk/mesh_graph/mesh_graph_regular_3d_tets.hh>
+#include <ftk/mesh_graph/mesh_graph_regular_simplex_3d.hh>
 #include <iostream>
 
 int main(int argc, char **argv)
 {
-  ftk::mesh_graph_regular_3d_tets<> mg(128, 128, 128);
+  ftk::mesh_graph_regular_simplex_3d<> mg(128, 128, 128);
   mg.lb[0] = mg.lb[1] = mg.lb[2] = 2;
   mg.ub[0] = mg.ub[1] = mg.ub[2] = 128 - 3;
 
