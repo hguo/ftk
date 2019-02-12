@@ -47,7 +47,7 @@ add_executable (test_parallel_vector_solver test_parallel_vector_solver.cpp)
 add_executable (test_parallel_vector_solver2 test_parallel_vector_solver2.cpp)
 add_executable (test_parallel_vector_solver3 test_parallel_vector_solver3.cpp)
 add_executable (test_parallel_vector_solver4 test_parallel_vector_solver4.cpp)
-add_executable (test_mesh_graph test_mesh_graph.cpp)
+# add_executable (test_mesh_graph test_mesh_graph.cpp)
 add_executable (test_interval test_interval.cpp)
 add_executable (test_interpolation test_interpolation.cpp)
 

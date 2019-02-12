@@ -1,0 +1,3 @@
+[submodule "hypermesh"]
+	path = hypermesh
+	url = git@github.com:hguo/hypermesh.git
