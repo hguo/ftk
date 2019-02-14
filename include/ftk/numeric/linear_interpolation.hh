@@ -4,6 +4,12 @@
 namespace ftk {
 
 template <typename T>
+inline T linear_interpolation3(const T v[3], const T mu[3])
+{
+  return v[0] * mu[0] + v[1] * mu[1] + v[2] * mu[2];
+}
+
+template <typename T>
 inline void linear_interpolation3_3(const T V[9], const T mu[3], T v[3])
 {
   v[0] = V[0] * mu[0] + V[1] * mu[1] + V[2] * mu[2];
