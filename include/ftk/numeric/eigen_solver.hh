@@ -17,7 +17,9 @@ template <typename T>
 inline void solve_eigenvalues_real_symmetric2(T m00, T m10, T m11, T eig[2])
 {
   const T b = -(m00 + m11), c = m00*m11 - m10*m10;
-  const T sqrt_delta = sqrt(b*b - 4*c);
+  // const T delta = b*b - 4*c;
+  const T delta = std::fma(b, b, -4*c); 
+  const T sqrt_delta = delta < 0 ? 0 : std::sqrt(delta); // in theory, delta should not be less than 0
   
   eig[0] = 0.5*(-b+sqrt_delta);
   eig[1] = 0.5*(-b-sqrt_delta);
