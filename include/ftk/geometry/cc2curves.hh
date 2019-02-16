@@ -19,10 +19,13 @@ std::vector<std::vector<NodeType>> connected_component_to_linear_components(
   for (const auto node : connected_component) {
     std::vector<NodeType> valid_neighbors;
     for (const auto neighbor : neighbors(node))
-      if (connected_component.find(neighbor) != connected_component.end())
+      if (neighbor != node && connected_component.find(neighbor) != connected_component.end())
         valid_neighbors.push_back(neighbor);
 
-    if (valid_neighbors.size() > 2) special_nodes.insert(node);
+    if (valid_neighbors.size() > 2) {
+      // std::cerr << "deg=" << valid_neighbors.size() << "," << node << std::endl;
+      special_nodes.insert(node);
+    }
     else ordinary_nodes.insert(node);
   }
 
@@ -39,6 +42,7 @@ std::vector<std::vector<NodeType>> connected_component_to_linear_components(
       }, ordinary_nodes);
 
   // sort the linear graphs
+  // fprintf(stderr, "#nodes=%lu, #linear graphs=%lu\n", connected_component.size(), cc.size());
   for (auto &c : cc) {
     std::list<NodeType> trace;
     std::set<NodeType> visited;
@@ -46,26 +50,32 @@ std::vector<std::vector<NodeType>> connected_component_to_linear_components(
     auto seed = *c.begin();
     visited.insert(seed);
     trace.push_back(seed);
+    c.erase(c.begin());
 
-    std::cerr << "seed: " << seed << std::endl;
+    // fprintf(stderr, "#node=%lu\n", c.size());
+    // std::cerr << "seed: " << seed << std::endl;
 
-    const auto seed_neighbors = neighbors(seed);
+    std::set<NodeType> seed_neighbors; 
+    for (auto my_neighbor : neighbors(seed))
+      if (ordinary_nodes.find(my_neighbor) != ordinary_nodes.end())
+        seed_neighbors.insert(my_neighbor);
+
     if (seed_neighbors.size() == 0) break;
-
     for (int dir = 0; dir < 2; dir ++) {
       NodeType current = dir == 0 ? (*seed_neighbors.begin()) : (*seed_neighbors.rbegin());
-      fprintf(stderr, "dir=%d\n", dir);
+      // fprintf(stderr, "dir=%d\n", dir);
       while (1) {
-        std::cerr << "current: " << current << std::endl;
-        
         if (dir == 0) trace.push_back(current);
         else (trace.push_front(current));
+
         visited.insert(current);
         c.erase(current);
 
         bool found_next = false;
         for (auto my_neighbor : neighbors(current)) {
-          if (c.find(my_neighbor) != c.end() && 
+          if (my_neighbor != current && 
+              c.find(my_neighbor) != c.end() && 
+              // connected_component.find(my_neighbor) != connected_component.end() &&
               // special_nodes.find(my_neighbor) != special_nodes.end() && // TODO: handle special nodes
               visited.find(my_neighbor) == visited.end()) 
           {
@@ -73,14 +83,17 @@ std::vector<std::vector<NodeType>> connected_component_to_linear_components(
             current = my_neighbor;
             break;
           }
-          else continue;
         }
         if (!found_next) break;
       }
       if (seed_neighbors.size() == 1) break; // only one direction available
     }
-    fprintf(stderr, "trace.size=%lu\n", trace.size());
+    // fprintf(stderr, "trace.size=%lu\n", trace.size());
+
+    linear_components.push_back(std::vector<NodeType>({trace.begin(), trace.end()}));
   }
+  
+  return linear_components;
 }
 
 }
