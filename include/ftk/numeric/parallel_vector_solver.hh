@@ -297,7 +297,50 @@ inline int solve_parallel_vector_bibarycentric(const T V[4][3], const T W[4][3],
 }
 
 template <typename T>
-inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
+inline void parallel_vector_polynomials_triangle(const T V[3][2], const T W[3][2], T Q[3], T P[3][3])
+{
+  const T A[2][2] = { // linear transformation
+    {V[0][0] - V[2][0], V[1][0] - V[2][0]}, 
+    {V[0][1] - V[2][1], V[1][1] - V[2][1]}
+  };
+  const T B[2][2] = {
+    {W[0][0] - W[2][0], W[1][0] - W[2][0]}, 
+    {W[0][1] - W[2][1], W[1][1] - W[2][1]}
+  };
+  const T a[2] = {V[2][0], V[2][1]};
+  const T b[2] = {W[2][0], W[2][1]};
+  
+  const T rhs[2][2] = {
+    {-a[0], b[0]}, 
+    {-a[1], b[1]}
+  };
+
+  // coefs for Q
+  characteristic_polynomial_2x2(A, B, Q);
+
+  T adj[2][2][2] = { // adjugate matrix
+    {{ A[1][1], -B[1][1]}, {-A[0][1],  B[0][1]}}, 
+    {{-A[1][0],  B[1][0]}, { A[0][0], -B[0][0]}}
+  };
+
+  for (int i = 0; i < 2; i ++) {
+    T poly[2] = {0};
+    for (int j = 0; j < 3; j ++)
+      P[i][j] = 0; // clear results
+    for (int j = 0; j < 2; j ++) {
+      polynomial_multiplication(adj[i][j], 1, rhs[j], 1, poly);
+      polynomial_addition_in_place(P[i], 2, poly, 2);
+    }
+  }
+
+  Q[2][0] = Q[0] - P[0][0] - P[1][0];
+  Q[2][1] = Q[1] - P[0][1] - P[1][1];
+  Q[2][2] = Q[2] - P[0][2] - P[1][2];
+}
+
+template <typename T>
+// inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
+inline void parallel_vector_polynomials_tetrahedron(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
 {
   const T A[3][3] = { // linear transformation
     {V[0][0] - V[3][0], V[1][0] - V[3][0], V[2][0] - V[3][0]}, 
@@ -357,7 +400,8 @@ solve_parallel_vector_tetrahedron_inequalities_quantized(
     const T V[4][3], const T W[4][3], const long long factor = 1000000000L, const T epsilon=std::numeric_limits<T>::epsilon())
 {
   T Q[4] = {0}, P[4][4] = {0}, QP[4][4] = {0};
-  solve_parallel_vector_tetrahedron(V, W, Q, P);
+  // solve_parallel_vector_tetrahedron(V, W, Q, P);
+  parallel_vector_polynomials_tetrahedron(V, W, Q, P);
 
   std::map<long long, T> quantized_roots;
   disjoint_intervals<long long> I;
