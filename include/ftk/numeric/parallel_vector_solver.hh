@@ -5,6 +5,7 @@
 #include <ftk/numeric/matrix_addition.hh>
 #include <ftk/numeric/eigen_solver.hh>
 #include <ftk/numeric/linear_solver.hh>
+#include <ftk/numeric/quadratic_rational_inequality_solver.hh>
 #include <ftk/numeric/cubic_rational_inequality_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/cross_product.hh>
@@ -333,9 +334,37 @@ inline void parallel_vector_polynomials_triangle(const T V[3][2], const T W[3][2
     }
   }
 
-  Q[2][0] = Q[0] - P[0][0] - P[1][0];
-  Q[2][1] = Q[1] - P[0][1] - P[1][1];
-  Q[2][2] = Q[2] - P[0][2] - P[1][2];
+  P[2][0] = Q[0] - P[0][0] - P[1][0];
+  P[2][1] = Q[1] - P[0][1] - P[1][1];
+  P[2][2] = Q[2] - P[0][2] - P[1][2];
+}
+
+template <typename T>
+std::tuple<disjoint_intervals<long long>, std::map<long long, T>>
+solve_parallel_vector_triangle_inequalities_quantized(
+    const T V[3][2], const T W[3][2], const long long factor = 1000000000L, 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  T Q[3] = {0}, P[3][3] = {0}, QP[3][3] = {0};
+  parallel_vector_polynomials_triangle(V, W, Q, P);
+
+  std::map<long long, T> quantized_roots;
+  disjoint_intervals<long long> I;
+  I.set_to_complete();
+
+  for (int i = 0; i < 3; i ++) {
+    polynomial_subtraction(Q, 2, P[i], 2, QP[i]);
+
+    const auto r0 = solve_quadratic_rational_inequality_quantized(P[i], Q, factor, epsilon);
+    I.intersect(std::get<0>(r0));
+    quantized_roots.insert(std::get<1>(r0).begin(), std::get<1>(r0).end());
+
+    const auto r1 = solve_quadratic_rational_inequality_quantized(QP[i], Q, factor, epsilon);
+    I.intersect(std::get<0>(r1));
+    quantized_roots.insert(std::get<1>(r1).begin(), std::get<1>(r1).end());
+  }
+
+  return std::make_tuple(I, quantized_roots);
 }
 
 template <typename T>
@@ -397,10 +426,10 @@ inline void parallel_vector_polynomials_tetrahedron(const T V[4][3], const T W[4
 template <typename T>
 std::tuple<disjoint_intervals<long long>, std::map<long long, T> >
 solve_parallel_vector_tetrahedron_inequalities_quantized(
-    const T V[4][3], const T W[4][3], const long long factor = 1000000000L, const T epsilon=std::numeric_limits<T>::epsilon())
+    const T V[4][3], const T W[4][3], const long long factor = 1000000000L, 
+    const T epsilon=std::numeric_limits<T>::epsilon())
 {
   T Q[4] = {0}, P[4][4] = {0}, QP[4][4] = {0};
-  // solve_parallel_vector_tetrahedron(V, W, Q, P);
   parallel_vector_polynomials_tetrahedron(V, W, Q, P);
 
   std::map<long long, T> quantized_roots;
