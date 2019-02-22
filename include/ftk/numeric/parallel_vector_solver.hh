@@ -356,7 +356,7 @@ inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2]
   };
 
   for (int i = 0; i < 2; i ++) {
-    T poly[2] = {0};
+    T poly[3] = {0};
     for (int j = 0; j < 3; j ++)
       P[i][j] = 0; // clear results
     for (int j = 0; j < 2; j ++) {

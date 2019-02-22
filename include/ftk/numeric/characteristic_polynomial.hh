@@ -9,7 +9,7 @@ namespace ftk {
 template <typename T>
 void characteristic_polynomial_2x2(const T A[2][2], T P[3])
 {
-  P[2] = 1;
+  P[2] = T(1);
   P[1] = -trace2(A);
   P[0] = det2(A);
 }
