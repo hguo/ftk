@@ -288,7 +288,7 @@ inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2],
   int n_solutions = 0;
 
   for (int i = 0; i < n_roots; i ++) {
-    if (std::abs(l[i] <= epsilon)) continue;
+    if (std::abs(l[i]) <= epsilon) continue;
 
     const T a[2] = {
       (V[0][0] - V[0][1]) - l[i] * (W[0][0] - W[0][1]), 
@@ -317,12 +317,12 @@ inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2],
         print2x2("W", WW);
         continue;
       }
-    }
 
-    const int j = n_solutions ++;
-    lambda[j] = l[i];
-    mu[j][0] = nu[0];
-    mu[j][1] = nu[1];
+      const int j = n_solutions ++;
+      lambda[j] = l[i];
+      mu[j][0] = nu[0];
+      mu[j][1] = nu[1];
+    }
   }
 
   return n_solutions;

@@ -10,7 +10,7 @@ inline T linear_interpolation2(const T v[2], const T mu[2])
 }
 
 template <typename T>
-inline T linear_interpolation2_2(const T V[2][2], const T mu[2], T v[2])
+inline void linear_interpolation2_2(const T V[2][2], const T mu[2], T v[2])
 {
   v[0] = V[0][0] * mu[0] + V[1][0] * mu[1];
   v[1] = V[0][1] * mu[0] + V[1][1] * mu[1];
