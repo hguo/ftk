@@ -7,7 +7,7 @@
 namespace ftk {
 
 template <typename T>
-void transpose2(const T A[2][2], T B[2][2])
+void transpose2x2(const T A[2][2], T B[2][2])
 {
   B[0][0] = A[0][0];
   B[0][1] = A[1][0];
@@ -16,13 +16,13 @@ void transpose2(const T A[2][2], T B[2][2])
 }
 
 template <typename T>
-void transpose2(T m[4])
+void transpose2x2(T m[4])
 {
   std::swap(m[1], m[2]);
 }
 
 template <typename T>
-void transpose3(T m[9]) 
+void transpose3x3(T m[9]) 
 {
   std::swap(m[1], m[3]);
   std::swap(m[2], m[6]);
@@ -30,7 +30,7 @@ void transpose3(T m[9])
 }
 
 template <typename T>
-void transpose3(const T a[9], T b[9]) 
+void transpose3x3(const T a[9], T b[9]) 
 {
   b[0] = a[0];
   b[1] = a[3];
@@ -44,7 +44,7 @@ void transpose3(const T a[9], T b[9])
 }
 
 template <typename T>
-void transpose3(T A[3][3])
+void transpose3x3(T A[3][3])
 {
   std::swap(A[0][1], A[1][0]);
   std::swap(A[0][2], A[2][0]);
@@ -52,7 +52,7 @@ void transpose3(T A[3][3])
 }
 
 template <typename T>
-void transpose3(const T A[3][3], T B[3][3])
+void transpose3x3(const T A[3][3], T B[3][3])
 {
   B[0][0] = A[0][0];
   B[0][1] = A[1][0];
@@ -66,7 +66,7 @@ void transpose3(const T A[3][3], T B[3][3])
 }
 
 template <typename T>
-void transpose4(T m[16]) 
+void transpose4x4(T m[16]) 
 {
   std::swap(m[1], m[4]);
   std::swap(m[2], m[8]);

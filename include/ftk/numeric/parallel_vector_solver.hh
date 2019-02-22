@@ -18,6 +18,7 @@
 
 namespace ftk {
 
+#if 0
 template <typename T>
 inline int solve_parallel_vector_barycentric(const T V[9], const T W[9], T lambda[3], T mu[9])
 {
@@ -59,27 +60,11 @@ inline int solve_parallel_vector_barycentric(const T V[9], const T W[9], T lambd
   return n_solutions;
   // return false;
 }
+#endif
 
-#if 0
 template <typename T>
-inline int solve_parallel_vector_barycentric(const T V[3][3], const T W[3][3], T lambda[3], T mu[3][3])
-{
-  T VV[] = {V[0][0], V[0][1], V[0][2], V[1][0], V[1][1], V[1][2], V[2][0], V[2][1], V[2][2]};
-  T WW[] = {W[0][0], W[0][1], W[0][2], W[1][0], W[1][1], W[1][2], W[2][0], W[2][1], W[2][2]};
-  transpose3(VV);
-  transpose3(WW);
-  
-  T mu1[9];
-  const auto n = solve_parallel_vector_barycentric(VV, WW, lambda, mu1);
-  for (int i = 0; i < n; i ++)
-    for (int j = 0; j < 3; j ++)
-      mu[i][j] = mu1[i*3+j];
-
-  return n;
-}
-#else
-template <typename T>
-inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3], T lambda[3], T mu[3][3], const T epsilon = std::numeric_limits<T>::epsilon()) // was 1e-6
+inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3], 
+    T lambda[3], T mu[3][3], const T epsilon = std::numeric_limits<T>::epsilon()) // was 1e-6
 {
   T V[3][3], W[3][3]; // transposed V and W
   transpose3(VV, V);
@@ -189,10 +174,9 @@ inline int solve_parallel_vector_barycentric(const T VV[3][3], const T WW[3][3],
 
   return n_solutions;
 }
-#endif
 
 template <typename T>
-inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lambda[2], T mu[2], const T epsilon = std::numeric_limits<T>::epsilon()) // 1e-9)
+inline int solve_parallel_vector3_simplex1(const T V[2][3], const T W[2][3], T lambda[2], T mu[2], const T epsilon = std::numeric_limits<T>::epsilon()) // 1e-9)
 {
   const T P[3][2] = { // rhs
     {V[1][0], -W[1][0]},
@@ -265,6 +249,7 @@ inline int solve_parallel_vector_linear(const T V[2][3], const T W[2][3], T lamb
     return 0;
 }
 
+#if 0
 template <typename T>
 inline int solve_parallel_vector_bibarycentric(const T V[4][3], const T W[4][3], T mu[6][2])
 {
@@ -284,21 +269,67 @@ inline int solve_parallel_vector_bibarycentric(const T V[4][3], const T W[4][3],
   transpose3(W0);
   transpose3(V1);
   transpose3(W1);
-
-  // TODO
-  T p[3];
-#if 0
-  if (find_zero_triangle(R0, I0, X0, p)) {
-    pos[0] = p[0]; 
-    pos[1] = p[1];
-    return true;
-  } else 
-    return false;
+}
 #endif
+
+template <typename T>
+inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2], 
+    T lambda[2], T mu[2][2], const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  T V[2][2], W[2][2];
+  transpose2x2(VV, V);
+  transpose2x2(WW, W);
+
+  T P[3];
+  characteristic_polynomial_2x2(V, W, P);
+
+  T l[2] = {0};
+  const int n_roots = solve_quadratic_real(P, l, epsilon);
+  int n_solutions = 0;
+
+  for (int i = 0; i < n_roots; i ++) {
+    if (std::abs(l[i] <= epsilon)) continue;
+
+    const T a[2] = {
+      (V[0][0] - V[0][1]) - l[i] * (W[0][0] - W[0][1]), 
+      (V[1][0] - V[1][1]) - l[i] * (W[1][0] - W[1][1])
+    };
+    const T b[2] = {
+      -(V[0][1] - l[i] * W[0][1]),
+      -(V[1][1] - l[i] * W[1][1])
+    };
+
+    T nu[2];
+    const auto cond = solve_least_square2x1(a, b, nu[0]);
+    nu[1] = T(1) - nu[0];
+
+    if (nu[0] >= -epsilon && nu[0] <= 1+epsilon && 
+        nu[1] >= -epsilon && nu[1] <= 1+epsilon) 
+    {
+      double v[2], w[2];
+      ftk::linear_interpolation2_2(VV, nu, v);
+      ftk::linear_interpolation2_2(WW, nu, w);
+      const double c = ftk::cross_product2(v, w);
+      if (c > 1e-2) {
+        fprintf(stderr, "rejecting: nu={%f, %f}, v={%f, %f}, w={%f, %f}, c=%f\n", 
+            nu[0], nu[1], v[0], v[1], w[0], w[1], c);
+        print2x2("V", VV);
+        print2x2("W", WW);
+        continue;
+      }
+    }
+
+    const int j = n_solutions ++;
+    lambda[j] = l[i];
+    mu[j][0] = nu[0];
+    mu[j][1] = nu[1];
+  }
+
+  return n_solutions;
 }
 
 template <typename T>
-inline void parallel_vector_polynomials_triangle(const T V[3][2], const T W[3][2], T Q[3], T P[3][3])
+inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2], const T W[3][2], T Q[3], T P[3][3])
 {
   const T A[2][2] = { // linear transformation
     {V[0][0] - V[2][0], V[1][0] - V[2][0]}, 
@@ -341,12 +372,12 @@ inline void parallel_vector_polynomials_triangle(const T V[3][2], const T W[3][2
 
 template <typename T>
 std::tuple<disjoint_intervals<long long>, std::map<long long, T>>
-solve_parallel_vector_triangle_inequalities_quantized(
+solve_parallel_vector2_simplex2_inequalities_quantized(
     const T V[3][2], const T W[3][2], const long long factor = 1000000000L, 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   T Q[3] = {0}, P[3][3] = {0}, QP[3][3] = {0};
-  parallel_vector_polynomials_triangle(V, W, Q, P);
+  characteristic_polynomials_parallel_vector2_simplex2(V, W, Q, P);
 
   std::map<long long, T> quantized_roots;
   disjoint_intervals<long long> I;
@@ -368,8 +399,7 @@ solve_parallel_vector_triangle_inequalities_quantized(
 }
 
 template <typename T>
-// inline void solve_parallel_vector_tetrahedron(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
-inline void parallel_vector_polynomials_tetrahedron(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
+inline void characteristic_polynomials_parallel_vector3_simplex3(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
 {
   const T A[3][3] = { // linear transformation
     {V[0][0] - V[3][0], V[1][0] - V[3][0], V[2][0] - V[3][0]}, 
@@ -425,12 +455,12 @@ inline void parallel_vector_polynomials_tetrahedron(const T V[4][3], const T W[4
 
 template <typename T>
 std::tuple<disjoint_intervals<long long>, std::map<long long, T> >
-solve_parallel_vector_tetrahedron_inequalities_quantized(
+solve_parallel_vector3_simplex3_inequalities_quantized(
     const T V[4][3], const T W[4][3], const long long factor = 1000000000L, 
     const T epsilon=std::numeric_limits<T>::epsilon())
 {
   T Q[4] = {0}, P[4][4] = {0}, QP[4][4] = {0};
-  parallel_vector_polynomials_tetrahedron(V, W, Q, P);
+  characteristic_polynomials_parallel_vector3_simplex3(V, W, Q, P);
 
   std::map<long long, T> quantized_roots;
   disjoint_intervals<long long> I;
@@ -464,10 +494,10 @@ solve_parallel_vector_tetrahedron_inequalities_quantized(
 }
 
 template <typename T>
-disjoint_intervals<T> solve_parallel_vector_tetrahedron_inequalities(
+disjoint_intervals<T> solve_parallel_vector3_simplex3_inequalities(
     const T V[4][3], const T W[4][3], const long long factor = 1000000000L, const T epsilon=std::numeric_limits<T>::epsilon())
 {
-  const auto [I, R] = solve_parallel_vector_tetrahedron_inequalities_quantized(V, W, factor, epsilon);
+  const auto [I, R] = solve_parallel_vector3_simplex3_inequalities_quantized(V, W, factor, epsilon);
   return disjoint_intervals<T>(I, factor);
 }
 
