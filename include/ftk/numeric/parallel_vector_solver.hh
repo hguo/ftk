@@ -387,11 +387,19 @@ solve_parallel_vector2_simplex2_inequalities_quantized(
     polynomial_subtraction(Q, 2, P[i], 2, QP[i]);
 
     const auto r0 = solve_quadratic_rational_inequality_quantized(P[i], Q, factor, epsilon);
+    // std::cerr << "I: " << I << std::endl;
+    // fprintf(stderr, "P: %f, %f, %f\n", P[i][0], P[i][1], P[i][2]);
+    // std::cerr << "J: " << std::get<0>(r0) << std::endl;
     I.intersect(std::get<0>(r0));
+    // std::cerr << "I: " << I << std::endl;
     quantized_roots.insert(std::get<1>(r0).begin(), std::get<1>(r0).end());
 
     const auto r1 = solve_quadratic_rational_inequality_quantized(QP[i], Q, factor, epsilon);
+    // std::cerr << "I: " << I << std::endl;
+    // fprintf(stderr, "P: %f, %f, %f\n", QP[i][0], QP[i][1], QP[i][2]);
+    // std::cerr << "J: " << std::get<0>(r1) << std::endl;
     I.intersect(std::get<0>(r1));
+    // std::cerr << "I: " << I << std::endl;
     quantized_roots.insert(std::get<1>(r1).begin(), std::get<1>(r1).end());
   }
 

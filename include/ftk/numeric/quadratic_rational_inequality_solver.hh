@@ -27,6 +27,12 @@ solve_quadratic_rational_inequality_quantized(
   const auto real_roots_p = solve_quadratic_real_multiplicity(P, epsilon), 
              real_roots_q = solve_quadratic_real_multiplicity(Q, epsilon);
 
+  // fprintf(stderr, "P=%f, %f, %f\n", P[0], P[1], P[2]);
+  // for (auto kv : real_roots_p) 
+  //   fprintf(stderr, "root_p: %f, %d\n", kv.first, kv.second);
+  // for (auto kv : real_roots_q) 
+  //   fprintf(stderr, "root_q: %f, %d\n", kv.first, kv.second);
+
   std::map<long long, int> quantized_roots_p, quantized_roots_q;
 
   for (const auto kv : real_roots_p) {
@@ -53,6 +59,9 @@ solve_quadratic_rational_inequality_quantized(
       singularities.insert(kv.first);
   }
 
+  // for (auto s : singularities)
+  //   fprintf(stderr, "singularity: %lld\n", s);
+
   std::set<long long> critical_values;
   for (const auto kv : quantized_roots_p) {
     if (kv.second > 0)
@@ -74,14 +83,23 @@ solve_quadratic_rational_inequality_quantized(
     const auto v0 = sorted_critical_values[i], v1 = sorted_critical_values[i+1];
     basic_interval<long long> ii(v0, v1);
 
+    // fprintf(stderr, "checkong basic interval %lld, %lld; %d, %d\n", v0, v1, 
+    //     singularities.find(v0) != singularities.end(), 
+    //     singularities.find(v1) != singularities.end());
+
     if (singularities.find(v0) != singularities.end()) ii.set_lower_open();
     if (singularities.find(v1) != singularities.end()) ii.set_upper_open();
 
-    const T x = ii.sample() / factor;
+    const T x = T(ii.sample()) / factor;
     const T y = evaluate_rational(P, Q, 2, x);
 
-    if (y >= T(0)) 
+    if (y >= T(0)) {
+      // fprintf(stderr, "x=%.20f, y=%.20f\n", x, y);
+      // std::cerr << "I_: " << I << std::endl;
       I.join(ii);
+      // std::cerr << "ii: " << ii << std::endl;
+      // std::cerr << "I': " << I << std::endl;
+    }
   }
 
   return std::make_tuple(I, quantized_roots);

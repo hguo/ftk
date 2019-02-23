@@ -112,7 +112,7 @@ solve_cubic_rational_inequality_quantized(
     if (singularities.find(v0) != singularities.end()) ii.set_lower_open();
     if (singularities.find(v1) != singularities.end()) ii.set_upper_open();
         
-    const T x = ii.sample() / factor; // FIXME: avoid sampling on Q's roots
+    const T x = T(ii.sample()) / factor; // FIXME: avoid sampling on Q's roots
     const T y = evaluate_rational(P, Q, 3, x);
     // std::cerr << i << "checking interval: " << ii << std::endl;
     // std::cerr << "sample: " << x << ", value: " << y << std::endl;
