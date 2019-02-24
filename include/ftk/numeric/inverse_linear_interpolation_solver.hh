@@ -29,11 +29,13 @@ bool inverse_linear_interpolation3_2(const T u[3], const T v[3], T lambda[3]) //
          lambda[2] >= T(0) && lambda[2] < T(1);
 }
 
+#if 0 // TODO
 template <typename T>
 bool inverse_linear_interpolation3(T v[4][3], T lambda[3])
 {
   return 0;
 }
+#endif
 
 template <typename T>
 bool inverse_linear_interpolation4_3(const T V[4][3], T lambda[4])

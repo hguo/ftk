@@ -44,6 +44,36 @@ inline void solve_generalized_eigenvalues_real2x2(const T A[2][2], const T B[2][
 }
 
 template <typename T>
+inline void solve_eigenvalues_real_symmetric3(const T A[3][3], T x[3]/*eig[3]*/)
+{
+  T P[4];
+  characteristic_polynomial_3x3(A, P);
+  const T b = P[2], c = P[1], d = P[0];
+
+  T disc, q, r, dum1, s, t, term1, r13;
+
+  q = (3.0*c - (b*b))/9.0; 
+  r = (-(27.0*d) + b*(9.0*c - 2.0*(b*b)))/54.0;
+  disc = q*q*q + r*r; // std::max(T(0), q*q*q + r*r); // enforcing disc to be less or equal than 0
+  term1 = (b/3.0);
+
+  if (disc >= T(0)) { // all roots real, at least two are equal.
+    r13 = ((r < 0) ? -pow(-r,(1.0/3.0)) : pow(r,(1.0/3.0)));
+    x[0] = -term1 + 2.0*r13;
+    x[1] = -(r13 + term1);
+    x[2] = -(r13 + term1);
+  } else { // all roots are real and unequal
+    q = -q;
+    dum1 = q*q*q;
+    dum1 = acos(r/sqrt(dum1));
+    r13 = 2.0*sqrt(q);
+    x[0] = -term1 + r13*cos(dum1/3.0);
+    x[1] = -term1 + r13*cos((dum1 + 2.0*M_PI)/3.0);
+    x[2] = -term1 + r13*cos((dum1 + 4.0*M_PI)/3.0);
+  }
+}
+
+template <typename T>
 inline void solve_generalized_eigenvalues_real3x3(const T A[3][3], const T B[3][3], std::complex<T> eig[3])
 {
   T P[4];
