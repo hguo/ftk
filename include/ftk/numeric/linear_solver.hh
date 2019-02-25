@@ -4,6 +4,7 @@
 #include <ftk/numeric/det.hh>
 #include <ftk/numeric/cond.hh>
 #include <ftk/numeric/inner_product.hh>
+#include <ftk/numeric/print.hh>
 
 namespace ftk {
 
@@ -90,6 +91,29 @@ inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T ep
   matrix_matrix_multiplication_2x2_2x3(invATA, AT, invATAAT);
 
   matrix_vector_multiplication_2x3(invATAAT, b, x);
+  return cond;
+}
+
+template <typename T>
+inline T solve_least_square3x2_2(const T A[3][2], const T B[3][2], T x[2][2], const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  // print3x2("A", A);
+  T AT[2][3];
+  transpose3x2(A, AT);
+
+  T ATA[2][2];
+  matrix_matrix_multiplication_2x3_3x2(AT, A, ATA);
+  // print2x2("ATA", ATA);
+
+  T invATA[2][2];
+  const T det = matrix_inverse2(ATA, invATA);
+  const T cond = cond_real2x2(ATA);
+  // print2x2("invATA", invATA);
+
+  T invATAAT[2][3];
+  matrix_matrix_multiplication_2x2_2x3(invATA, AT, invATAAT);
+
+  matrix_matrix_multiplication_2x3_3x2(invATAAT, B, x);
   return cond;
 }
 

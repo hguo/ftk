@@ -14,7 +14,7 @@
 namespace ftk {
 
 template <typename T>
-inline void solve_eigenvalues_real_symmetric2(T m00, T m10, T m11, T eig[2])
+inline void solve_eigenvalues_real_symmetric2x2(T m00, T m10, T m11, T eig[2])
 {
   const T b = -(m00 + m11), c = m00*m11 - m10*m10;
   // const T delta = b*b - 4*c;
@@ -29,9 +29,24 @@ inline void solve_eigenvalues_real_symmetric2(T m00, T m10, T m11, T eig[2])
 }
 
 template <typename T>
-inline void solve_eigenvalues_real_symmetric2(const T m[2][2], T eig[2])
+inline void solve_eigenvalues_real_symmetric2x2(const T m[2][2], T eig[2])
 {
-  return solve_eigenvalues_real_symmetric2(m[0][0], m[1][0], m[1][1], eig);
+  return solve_eigenvalues_real_symmetric2x2(m[0][0], m[1][0], m[1][1], eig);
+}
+
+template <typename T>
+inline void solve_eigenvectors_real2x2(const T M[2][2], const T eig[2], T eigvecs[2][2])
+{
+  for (int i = 0; i < 2; i ++) {
+    const T a[2] = {
+      {M[0][0] - eig[i] - M[0][1]}, 
+      {M[1][0] - M[1][1] + eig[i]}
+    };
+    const T b[2] = {-M[0][1], -M[1][1]};
+
+    solve_least_square2x1(a, b, eigvecs[i][0]);
+    eigvecs[i][1] = T(1) - eigvecs[i][0];
+  }
 }
 
 template <typename T>
@@ -81,6 +96,10 @@ inline void solve_generalized_eigenvalues_real3x3(const T A[3][3], const T B[3][
   solve_cubic(P, eig);
 }
 
+
+
+
+/////////////////////////// legacy code
 // compute eigenvector for a given matrix and one of its eigenvalue
 template <typename T>
 inline void eigvec3(const T m[9], std::complex<T> lambda, std::complex<T> v[3])
