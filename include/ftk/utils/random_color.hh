@@ -1,9 +1,17 @@
-#include "RandomColor.h"
-#include "ZColor.h"
-#include <algorithm>
-#include <cstdlib>
+#ifndef _FTK_RANDOM_COLOR_H
+#define _FTK_RANDOM_COLOR_H
 
-void generate_random_colors(int count, std::vector<unsigned char>& colors)
+#include <vector>
+#include <string>
+
+namespace ftk {
+
+void generate_random_colors(int count, std::vector<unsigned char>& colors);
+void generate_colors(int count, std::vector<unsigned char>& colors);
+
+
+/////////////////////////
+inline void generate_random_colors(int count, std::vector<unsigned char>& colors)
 {
   const double saturation = 0.7, 
                intensity = 0.5;
@@ -44,7 +52,7 @@ void generate_random_colors(int count, std::vector<unsigned char>& colors)
   }
 }
 
-void generate_colors(int count, std::vector<unsigned char>& colors)
+inline void generate_colors(int count, std::vector<unsigned char>& colors)
 {
   const double saturation = 0.7, 
                intensity = 0.5;
@@ -68,3 +76,7 @@ void generate_colors(int count, std::vector<unsigned char>& colors)
   }
 }
 
+
+}
+
+#endif
