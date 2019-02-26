@@ -4,6 +4,7 @@
 #include <ftk/numeric/quadratic_solver.hh>
 #include <ftk/numeric/rational.hh>
 #include <ftk/numeric/disjoint_intervals.hh>
+#include <vector>
 
 namespace ftk {
 

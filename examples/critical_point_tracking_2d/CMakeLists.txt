@@ -1,0 +1,1 @@
+add_executable (example_critical_point_tracking_2d main.cpp)
