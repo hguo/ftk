@@ -1,5 +1,5 @@
-#ifndef _GRAPH_HH
-#define _GRAPH_HH
+#ifndef _FTK_TRACKING_GRAPH_HH
+#define _FTK_TRACKING_GRAPH_HH
 
 #include <map>
 #include <set>
@@ -8,8 +8,8 @@
 #include <mutex>
 #include <functional>
 #include <fstream>
-#include "ftk/algorithms/cca.h"
-#include "ftk/transition/event.h"
+#include <ftk/algorithms/cca.hh>
+#include <ftk/tracking_graph/event.hh>
 
 namespace ftk {
 

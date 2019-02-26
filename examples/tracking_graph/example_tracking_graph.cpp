@@ -1,4 +1,4 @@
-#include <ftk/tracking_graph.hh>
+#include <ftk/tracking_graph/tracking_graph.hh>
 #include <fstream>
 #include <iostream>
 

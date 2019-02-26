@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <set>
-#include "ftk/external/json.hh"
+#include <ftk/external/json.hh>
 
 namespace ftk {
 
