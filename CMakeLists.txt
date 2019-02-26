@@ -45,16 +45,22 @@ install (DIRECTORY
   ${CMAKE_CURRENT_SOURCE_DIR}/hypermesh/include/hypermesh
   DESTINATION include)
 
+set (FTK_INCLUDE_DIR 
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/hypermesh/include)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake)
+
 include (CMakePackageConfigHelpers)
 set (FTK_ROOT_DIR ${CMAKE_INSTALL_PREFIX})
 set (FTK_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   PATH_VARS FTK_INCLUDE_DIR FTK_ROOT_DIR
   INSTALL_DESTINATION lib/cmake
   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
-install (FILES ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION lib/cmake)
 
 #export (PACKAGE FTK)
