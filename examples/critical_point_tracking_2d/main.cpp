@@ -14,7 +14,7 @@
 #include <hypermesh/regular_simplex_mesh.hh>
 
 const int DW = 128, DH = 128; // the dimensionality of the data is DW*DH
-const int DT = 32; // number of timesteps
+const int DT = 16; // number of timesteps
 const float scaling_factor = 15; // the factor that controls the scale of the synthesize data
 
 hypermesh::ndarray<float> scalar, grad, hess;
@@ -27,6 +27,8 @@ struct intersection_t {
 };
   
 std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
+
+std::vector<std::vector<std::vector<float>>> trajectories;
 
 
 template <typename T> // the synthetic function
@@ -150,9 +152,8 @@ void trace_intersections()
 
   // connected components
   auto cc = ftk::extract_connected_components<element_t, std::set<element_t>>(neighbors, qualified_elements);
-  fprintf(stderr, "#cc=%lu\n", cc.size());
+  // fprintf(stderr, "#cc=%lu\n", cc.size());
 
-  std::vector<std::vector<std::vector<float>>> trajectories;
   for (int i = 0; i < cc.size(); i ++) {
 
     std::vector<std::vector<float>> mycurves;
@@ -179,12 +180,29 @@ void track_critical_points()
   trace_intersections();
 }
 
+void print_trajectories()
+{
+  printf("We found %lu trajectories:\n", trajectories.size());
+  for (int i = 0; i < trajectories.size(); i ++) {
+    const auto &curves = trajectories[i];
+    printf("-Trajectory %d has %lu components:\n", i, curves.size());
+    for (int j = 0; j < curves.size(); j ++) {
+      const auto &curve = curves[j];
+      printf("--Curve %d:\n", j);
+      for (int k = 0; k < curve.size()/3; k ++) {
+        printf("---x=(%f, %f), t=%f\n", curve[k*3], curve[k*3+1], curve[k*3+2]);
+      }
+    }
+  }
+}
+
 int main(int argc, char **argv)
 {
   generate_scalar_data();
   derive_gradients();
   derive_hessians();
   track_critical_points();
+  print_trajectories();
 
   return 0;
 }

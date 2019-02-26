@@ -63,4 +63,6 @@ configure_package_config_file(
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION lib/cmake)
 
-#export (PACKAGE FTK)
+if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
+  find_package (VTK QUIET)  
+endif ()
