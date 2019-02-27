@@ -50,6 +50,14 @@ inline void solve_eigenvectors_real2x2(const T M[2][2], const T eig[2], T eigvec
 }
 
 template <typename T>
+inline int solve_real_eigenvalues_real2x2(const T M[2][2], T eig[2])
+{
+  T P[3];
+  characteristic_polynomial_2x2(M, P);
+  return solve_quadratic_real(P, eig);
+}
+
+template <typename T>
 inline void solve_generalized_eigenvalues_real2x2(const T A[2][2], const T B[2][2], std::complex<T> eig[2])
 {
   T P[3];

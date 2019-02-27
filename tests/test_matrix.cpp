@@ -62,6 +62,24 @@ TEST_F(matrix_test, solve_eigenvalues_real_symmetric2x2) {
   }
 }
 
+TEST_F(matrix_test, solve_real_eigenvalues_real2x2) {
+  double A[2][2], eig[2];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand2x2(A);
+    int nroots = ftk::solve_real_eigenvalues_real2x2(A, eig);
+
+    for (int i = 0; i < nroots; i ++) {
+      double B[2][2] = {
+        {A[0][0] - eig[i], A[0][1]}, 
+        {A[1][0], A[1][1] - eig[i]}
+      };
+
+      const double det = ftk::det2(B);
+      EXPECT_NEAR(0.0, det, epsilon);
+    }
+  }
+}
+
 TEST_F(matrix_test, solve_eigenvalues_real_symmetric3x3) {
   double A[3][3], eig[3];
   for (int run = 0; run < nruns; run ++) {
