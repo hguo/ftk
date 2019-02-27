@@ -107,7 +107,7 @@ inline T solve_least_square3x2_2(const T A[3][2], const T B[3][2], T x[2][2], co
   // print2x2("ATA", ATA);
 
   T invATA[2][2];
-  const T det = matrix_inverse2(ATA, invATA);
+  const T det = matrix_inverse2x2(ATA, invATA);
   const T cond = cond_real2x2(ATA);
   // print2x2("invATA", invATA);
 
