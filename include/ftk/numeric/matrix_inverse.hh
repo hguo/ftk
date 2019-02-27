@@ -4,7 +4,7 @@
 namespace ftk {
 
 template <class T>
-inline T matrix_inverse2(const T m[2][2], T inv[2][2])
+inline T matrix_inverse2x2(const T m[2][2], T inv[2][2])
 {
   const T det = m[0][0]*m[1][1] - m[0][1]*m[1][0];
   const T invdet = T(1) / det;
@@ -56,7 +56,7 @@ inline T matrix_inverse3(const T m[9], T inv[9]) // returns the determinant
 }
 
 template <class T>
-inline T matrix_inverse3(const T m[3][3], T inv[3][3]) // returns the determinant
+inline T matrix_inverse3x3(const T m[3][3], T inv[3][3]) // returns the determinant
 {
   inv[0][0] =   m[1][1]*m[2][2] - m[1][2]*m[2][1];
   inv[0][1] = - m[0][1]*m[2][2] + m[0][2]*m[2][1];

@@ -1,5 +1,5 @@
-#ifndef _FTK_EIG_H
-#define _FTK_EIG_H
+#ifndef _FTK_EIGEN_SOLVER_HH
+#define _FTK_EIGEN_SOLVER_HH
 
 #include <ftk/numeric/trace.hh>
 #include <ftk/numeric/det.hh>
@@ -59,7 +59,7 @@ inline void solve_generalized_eigenvalues_real2x2(const T A[2][2], const T B[2][
 }
 
 template <typename T>
-inline void solve_eigenvalues_real_symmetric3(const T A[3][3], T x[3]/*eig[3]*/)
+inline void solve_eigenvalues_real_symmetric3x3(const T A[3][3], T x[3]/*eig[3]*/)
 {
   T P[4];
   characteristic_polynomial_3x3(A, P);
@@ -95,9 +95,6 @@ inline void solve_generalized_eigenvalues_real3x3(const T A[3][3], const T B[3][
   characteristic_polynomial_3x3(A, B, P);
   solve_cubic(P, eig);
 }
-
-
-
 
 /////////////////////////// legacy code
 // compute eigenvector for a given matrix and one of its eigenvalue

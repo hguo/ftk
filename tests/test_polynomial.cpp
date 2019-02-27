@@ -1,28 +1,47 @@
+#include <gtest/gtest.h>
 #include <ftk/numeric/polynomial.hh>
-#include <ftk/numeric/print.hh>
-#include <iostream>
+#include <ftk/numeric/quadratic_solver.hh>
+#include <ftk/numeric/cubic_solver.hh>
+#include <random>
 
-int main(int argc, char **argv)
+class polynomial_test : public testing::Test {
+public:
+  const int nruns = 100000;
+  const double epsilon = 1e-10;
+  
+  std::random_device rd{};
+  std::mt19937 gen{rd()};
+  std::normal_distribution<> d{0, 1};
+};
+
+TEST_F(polynomial_test, solve_quadratic_real)
 {
-  float p0[3] = {1, 1, 1}, 
-        p1[2] = {1, 1};
-  float p[4];
-
-  ftk::print_polynomial("p0", p0, 2);
-  ftk::print_polynomial("p1", p1, 1);
-
-  // ftk::polynomial_multiplication(p0, 2, p1, 1, p);
-  ftk::polynomial_addition_in_place(p0, 2, p1, 1);
-  ftk::polynomial_scalar_multiplication(p0, 2.f, 2.f);
-  ftk::print_polynomial("p0", p0, 2);
-
-  fprintf(stderr, "eval_p0(2)=%f\n", ftk::polynomial_evaluate(p0, 2, 2.f));
-
-  ftk::polynomial_derivative(p0, 2, p);
-  ftk::print_polynomial("p", p, 1);
-
-  fprintf(stderr, "eval_p(2)=%f\n", ftk::polynomial_evaluate_derivative(p0, 2, 2.f));
-  fprintf(stderr, "eval_p(2)=%f\n", ftk::polynomial_evaluate(p, 1, 2.f));
-
-  return 0;
+  double P[3], x[2];
+  for (int run = 0; run < nruns; run ++) {
+    for (int i = 0; i < 3; i ++)
+      P[i] = d(gen);
+    
+    int nroots = ftk::solve_quadratic_real(P, x);
+    for (int i = 0; i < nroots; i ++) {
+      double val = ftk::polynomial_evaluate(P, 2, x[i]);
+      EXPECT_NEAR(0.0, val, epsilon);
+    }
+  }
 }
+
+#if 0
+TEST_F(polynomial_test, solve_cubic_real)
+{
+  double P[4], x[3];
+  for (int run = 0; run < nruns; run ++) {
+    for (int i = 0; i < 4; i ++)
+      P[i] = d(gen);
+    
+    int nroots = ftk::solve_cubic_real(P, x);
+    for (int i = 0; i < nroots; i ++) {
+      double val = ftk::polynomial_evaluate(P, 3, x[i]);
+      EXPECT_NEAR(0.0, val, epsilon);
+    }
+  }
+}
+#endif

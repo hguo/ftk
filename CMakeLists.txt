@@ -28,6 +28,7 @@ option (FTK_BUILD_EXAMPLES "Build the example programs." OFF)
 
 # If FTK_BUILD_TESTS is on, enable testing.
 if (FTK_BUILD_TESTS)
+  find_package (GTest REQUIRED)
   enable_testing ()
   add_subdirectory (tests)
 endif ()
