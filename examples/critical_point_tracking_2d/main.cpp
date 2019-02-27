@@ -15,6 +15,13 @@
 
 #if HAVE_VTK
 #include <ftk/geometry/curve2vtk.hh>
+#include <vtkPolyDataMapper.h>
+#include <vtkTubeFilter.h>
+#include <vtkActor.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkInteractorStyleTrackballCamera.h>
 #endif
 
 const int DW = 128, DH = 128; // the dimensionality of the data is DW*DH
@@ -201,6 +208,46 @@ void print_trajectories()
   }
 }
 
+#if HAVE_VTK
+void start_vtk_window()
+{
+  auto vtkcurves = ftk::curves2vtk(trajectories);
+  // vtkcurves->Print(std::cerr);
+
+  vtkSmartPointer<vtkTubeFilter> tubeFilter = vtkSmartPointer<vtkTubeFilter>::New();
+  tubeFilter->SetInputData(vtkcurves);
+  tubeFilter->SetRadius(.01);
+  tubeFilter->SetNumberOfSides(50);
+  tubeFilter->Update();
+  
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  // mapper->SetInputData(vtkcurves);
+  mapper->SetInputConnection(tubeFilter->GetOutputPort());
+
+  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper);
+
+  // a renderer and render window
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+  renderWindow->AddRenderer(renderer);
+
+  // add the actors to the scene
+  renderer->AddActor(actor);
+  renderer->SetBackground(1, 1, 1); // Background color white
+
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
+    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = 
+      vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+  renderWindowInteractor->SetInteractorStyle( style );
+
+  renderWindowInteractor->Start();
+}
+#endif
+
 int main(int argc, char **argv)
 {
   generate_scalar_data();
@@ -209,7 +256,8 @@ int main(int argc, char **argv)
   track_critical_points();
 
 #if HAVE_VTK
-  ftk::write_curves_vtk(trajectories, "trajectories.vtp");
+  start_vtk_window();
+  // ftk::write_curves_vtk(trajectories, "trajectories.vtp");
 #else
   print_trajectories();
 #endif
