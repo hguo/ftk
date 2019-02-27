@@ -26,18 +26,6 @@ include_directories (${CMAKE_CURRENT_SOURCE_DIR}/hypermesh/include)
 option (FTK_BUILD_TESTS "Build the test programs." OFF)
 option (FTK_BUILD_EXAMPLES "Build the example programs." OFF)
 
-# If FTK_BUILD_TESTS is on, enable testing.
-if (FTK_BUILD_TESTS)
-  find_package (GTest REQUIRED)
-  enable_testing ()
-  add_subdirectory (tests)
-endif ()
-
-# If FTK_BUILD_EXAMPLES is on, add the examples subdirectory to the build.
-if (FTK_BUILD_EXAMPLES)
-  add_subdirectory (examples)
-endif ()
-
 install (DIRECTORY 
   ${CMAKE_CURRENT_SOURCE_DIR}/include/ftk 
   DESTINATION include)
@@ -65,5 +53,18 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION lib/cmake)
 
 if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
-  find_package (VTK QUIET)  
+  find_package (VTK QUIET)
 endif ()
+
+# If FTK_BUILD_TESTS is on, enable testing.
+if (FTK_BUILD_TESTS)
+  find_package (GTest REQUIRED)
+  enable_testing ()
+  add_subdirectory (tests)
+endif ()
+
+# If FTK_BUILD_EXAMPLES is on, add the examples subdirectory to the build.
+if (FTK_BUILD_EXAMPLES)
+  add_subdirectory (examples)
+endif ()
+

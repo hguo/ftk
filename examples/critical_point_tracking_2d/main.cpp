@@ -13,6 +13,10 @@
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
 
+#if HAVE_VTK
+#include <ftk/geometry/curve2vtk.hh>
+#endif
+
 const int DW = 128, DH = 128; // the dimensionality of the data is DW*DH
 const int DT = 16; // number of timesteps
 const float scaling_factor = 15; // the factor that controls the scale of the synthesize data
@@ -25,9 +29,10 @@ std::mutex mutex;
 struct intersection_t {
   float x[3]; // the spacetime coordinates of the trajectory
 };
-  
+ 
 std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
 
+// the output trajectories
 std::vector<std::vector<std::vector<float>>> trajectories;
 
 
@@ -202,7 +207,12 @@ int main(int argc, char **argv)
   derive_gradients();
   derive_hessians();
   track_critical_points();
+
+#if HAVE_VTK
+  ftk::write_curves_vtk(trajectories, "trajectories.vtp");
+#else
   print_trajectories();
+#endif
 
   return 0;
 }

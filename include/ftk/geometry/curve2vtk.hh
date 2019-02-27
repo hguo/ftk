@@ -42,15 +42,18 @@ curves2vtk(const std::vector<std::vector<T>>& curves)
 
 template <typename T>
 vtkSmartPointer<vtkPolyData>
-curves2vtk(const std::vector<std::vector<std::vector<float>>>& curve_groups)
+curves2vtk(const std::vector<std::vector<std::vector<T>>>& curve_groups)
 {
   std::vector<std::vector<T>> curves;
   for (const auto &g : curve_groups)
-    curves.push_back(g);
+    for (const auto &c : g)
+      curves.push_back(c);
+
+  return curves2vtk(curves);
 }
 
 template <typename T>
-void write_curves_vtk(const std::vector<std::vector<std::vector<float>>>& curve_groups, const std::string& filename)
+void write_curves_vtk(const std::vector<std::vector<std::vector<T>>>& curve_groups, const std::string& filename)
 {
   auto poly = curves2vtk(curve_groups);
   vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
@@ -60,7 +63,7 @@ void write_curves_vtk(const std::vector<std::vector<std::vector<float>>>& curve_
 }
 
 template <typename T>
-void write_curves_vtk(const std::vector<std::vector<float>>& curves, const std::string& filename)
+void write_curves_vtk(const std::vector<std::vector<T>>& curves, const std::string& filename)
 {
   auto poly = curves2vtk(curves);
   vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
