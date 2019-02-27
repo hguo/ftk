@@ -29,7 +29,7 @@ TEST_F(polynomial_test, solve_quadratic_real)
   }
 }
 
-#if 0
+#if 1
 TEST_F(polynomial_test, solve_cubic_real)
 {
   double P[4], x[3];

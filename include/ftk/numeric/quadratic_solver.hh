@@ -5,7 +5,7 @@
 #include <map>
 #include <complex>
 #include <ftk/numeric/sqrt.hh>
-#include <ftk/numeric/linear_solver.hh>
+#include <ftk/numeric/linear_solver1.hh>
 
 namespace ftk {
 
