@@ -18,7 +18,7 @@ FTK is still in its early alpha stage, thus examples, documents, and tests are s
 
 * IO: interfaces to stage multiple timesteps of the inputs and to store outputs in key-value stores (LevelDB, RocksDB, and Mochi), file systems, and in situ staging areas
 
-## Installation guidelines
+## Download, build, and install
 
 You may include FTK headers and call FTK functions directly from your C++ code, because FTK is header-only.  However, you also need to manually check out the [Hypermesh](https://github.com/hguo/hypermesh) repository to use all functions provided by FTK, as instructed below. 
 
@@ -64,7 +64,15 @@ $ tree $FTK_INSTALL_DIR
         └── FTKConfig.cmake
 ```
 
-#### Find FTK in CMake
+### Build FTK examples
+
+```bash
+$ cd $FTK_SOURCE_DIR/build
+$ cmake .. -DFTK_BUILD_EXAMPLES=1
+$ make
+```
+
+### Include FTK in your CMake project
 
 You may use the FTK installation in your own CMakeLists.txt file:
 
@@ -77,14 +85,6 @@ When you configure your build, please specify FTK_DIR with CMake:
 
 ```bash
 $ cmake -DFTK_DIR=$FTK_INSTALL_DIR/lib/cmake
-```
-
-### Build FTK examples
-
-```bash
-$ cd $FTK_SOURCE_DIR/build
-$ cmake .. -DFTK_BUILD_EXAMPLES=1
-$ make
 ```
 
 ## Applications that use FTK
