@@ -18,44 +18,6 @@ inline T matrix_inverse2x2(const T m[2][2], T inv[2][2])
 }
 
 template <class T>
-inline T matrix_inverse2(const T m[4], T inv[4]) // returns the determinant
-{
-  inv[0] = m[3];
-  inv[1] = -m[1];
-  inv[2] = -m[2];
-  inv[3] = m[0];
-
-  const T det = m[0]*m[3] - m[1]*m[2];
-  const T invdet = T(1) / det;
-  for (int i = 0; i < 4; i++)
-    inv[i] = inv[i] * invdet;
-
-  return det;
-}
-
-template <class T>
-inline T matrix_inverse3(const T m[9], T inv[9]) // returns the determinant
-{
-  inv[0] =   m[4]*m[8] - m[5]*m[7];
-  inv[1] = - m[1]*m[8] + m[2]*m[7];
-  inv[2] =   m[1]*m[5] - m[2]*m[4];
-  inv[3] = - m[3]*m[8] + m[5]*m[6];
-  inv[4] =   m[0]*m[8] - m[2]*m[6];
-  inv[5] = - m[0]*m[5] + m[2]*m[3];
-  inv[6] =   m[3]*m[7] - m[4]*m[6];
-  inv[7] = - m[0]*m[7] + m[1]*m[6];
-  inv[8] =   m[0]*m[4] - m[1]*m[3];
-  
-  T det = m[0]*inv[0] + m[1]*inv[3] + m[2]*inv[6];
-  T invdet = T(1) / det;
-
-  for (int i=0; i<9; i++)
-    inv[i] = inv[i] * invdet;
-
-  return det;
-}
-
-template <class T>
 inline T matrix_inverse3x3(const T m[3][3], T inv[3][3]) // returns the determinant
 {
   inv[0][0] =   m[1][1]*m[2][2] - m[1][2]*m[2][1];

@@ -4,6 +4,7 @@
 #include <ftk/numeric/det.hh>
 #include <ftk/numeric/cond.hh>
 #include <ftk/numeric/inner_product.hh>
+#include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/print.hh>
 
 namespace ftk {
@@ -20,7 +21,7 @@ template <typename T>
 inline T linear_solver3(const T A[3][3], const T b[3], T x[3])
 {
   T invA[3][3];
-  const T det = matrix_inverse3(A, invA);
+  const T det = matrix_inverse3x3(A, invA);
   matrix_vector_multiplication_3x3(invA, b, x);
   return det;
 }
@@ -84,7 +85,7 @@ inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T ep
   matrix_matrix_multiplication_2x3_3x2(AT, A, ATA);
 
   T invATA[2][2];
-  const T det = matrix_inverse2(ATA, invATA);
+  const T det = matrix_inverse2x2(ATA, invATA);
   const T cond = cond_real2x2(ATA);
 
   T invATAAT[2][3];

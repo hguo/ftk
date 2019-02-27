@@ -67,8 +67,8 @@ inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3],
     T lambda[3], T mu[3][3], const T epsilon = std::numeric_limits<T>::epsilon()) // was 1e-6
 {
   T V[3][3], W[3][3]; // transposed V and W
-  transpose3(VV, V);
-  transpose3(WW, W);
+  transpose3x3(VV, V);
+  transpose3x3(WW, W);
 
 #if 0
   // check if V or W is singular
