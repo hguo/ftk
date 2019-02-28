@@ -1,1 +1,1 @@
-add_executable (example_tracking_graph example_tracking_graph)
+add_executable (ex_tracking_graph ex_tracking_graph.cpp)
