@@ -115,7 +115,7 @@ TEST_F(matrix_test, solve_eigenvalues_real_symmetric3x3) {
   double A[3][3], eig[3];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand_symmetric3x3(A);
-    ftk::solve_eigenvalues_real_symmetric3x3(A, eig);
+    ftk::solve_eigenvalues_symmetric3x3(A, eig);
 
     for (int i = 0; i < 3; i ++) {
       double B[3][3] = {

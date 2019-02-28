@@ -14,7 +14,7 @@
 namespace ftk {
 
 template <typename T>
-inline void solve_eigenvalues_real_symmetric3x3(const T A[3][3], T x[3]/*eig[3]*/)
+inline void solve_eigenvalues_symmetric3x3(const T A[3][3], T x[3]/*eig[3]*/)
 {
   T P[4];
   characteristic_polynomial_3x3(A, P);
@@ -44,13 +44,15 @@ inline void solve_eigenvalues_real_symmetric3x3(const T A[3][3], T x[3]/*eig[3]*
 }
 
 template <typename T>
-inline void solve_generalized_eigenvalues_real3x3(const T A[3][3], const T B[3][3], std::complex<T> eig[3])
+inline void solve_generalized_eigenvalues3x3(const T A[3][3], const T B[3][3], std::complex<T> eig[3])
 {
   T P[4];
   characteristic_polynomial_3x3(A, B, P);
   solve_cubic(P, eig);
 }
 
+
+#if 0
 /////////////////////////// legacy code
 // compute eigenvector for a given matrix and one of its eigenvalue
 template <typename T>
@@ -162,6 +164,7 @@ inline void eig4(const T m[16], std::complex<T> eig[4], std::complex<T> eigvec[4
   for (int i=0; i<4; i++)
     eigvec4(m, eig[i], eigvec[i]);
 }
+#endif 
 
 }
 
