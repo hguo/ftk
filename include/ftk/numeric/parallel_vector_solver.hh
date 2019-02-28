@@ -145,8 +145,8 @@ inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3],
 #if 1
       // check interpolation results
       double v[3], w[3], c[3]; 
-      ftk::linear_interpolation3_3(VV, nu, v);
-      ftk::linear_interpolation3_3(WW, nu, w);
+      ftk::linear_interpolation_2simplex_vector3(VV, nu, v);
+      ftk::linear_interpolation_2simplex_vector3(WW, nu, w);
       ftk::cross_product(v, w, c);
       const double norm = ftk::vector_2norm_3(c);
       if (norm > 1e-2) {
@@ -307,8 +307,8 @@ inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2],
         nu[1] >= -epsilon && nu[1] <= 1+epsilon) 
     {
       double v[2], w[2];
-      ftk::linear_interpolation2_2(VV, nu, v);
-      ftk::linear_interpolation2_2(WW, nu, w);
+      ftk::linear_interpolation_1simplex_vector2(VV, nu, v);
+      ftk::linear_interpolation_1simplex_vector2(WW, nu, w);
       const double c = ftk::cross_product2(v, w);
       if (c > 1e-2) {
         fprintf(stderr, "rejecting: nu={%f, %f}, v={%f, %f}, w={%f, %f}, c=%f\n", 

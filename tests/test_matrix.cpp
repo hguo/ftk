@@ -3,6 +3,7 @@
 #include <ftk/numeric/matrix_multiplication.hh>
 #include <ftk/numeric/eigen_solver.hh>
 #include <ftk/numeric/rand.hh>
+#include <ftk/numeric/linear_solver.hh>
 #include <ftk/numeric/print.hh>
 
 class matrix_test : public testing::Test {
@@ -16,7 +17,7 @@ TEST_F(matrix_test, matrix_inverse2) {
   for (int run = 0; run < nruns; run ++) {
     ftk::rand2x2(A);
     ftk::matrix_inverse2x2(A, invA);
-    ftk::matrix_matrix_multiplication_2x2_2x2(A, invA, I);
+    ftk::matrix2x2_matrix2x2_multiplication(A, invA, I);
 
     EXPECT_NEAR(1.0, I[0][0], epsilon);
     EXPECT_NEAR(0.0, I[0][1], epsilon);
@@ -30,7 +31,7 @@ TEST_F(matrix_test, matrix_inverse3) {
   for (int run = 0; run < nruns; run ++) {
     ftk::rand3x3(A);
     ftk::matrix_inverse3x3(A, invA);
-    ftk::matrix_matrix_multiplication_3x3_3x3(A, invA, I);
+    ftk::matrix3x3_matrix3x3_multiplication(A, invA, I);
 
     EXPECT_NEAR(1.0, I[0][0], epsilon);
     EXPECT_NEAR(0.0, I[0][1], epsilon);
@@ -41,6 +42,35 @@ TEST_F(matrix_test, matrix_inverse3) {
     EXPECT_NEAR(0.0, I[2][0], epsilon);
     EXPECT_NEAR(0.0, I[2][1], epsilon);
     EXPECT_NEAR(1.0, I[2][2], epsilon);
+  }
+}
+
+TEST_F(matrix_test, solve_linear2x2) {
+  double A[2][2], b[2], x[2], bb[2];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand2x2(A);
+    ftk::rand2(b);
+    ftk::solve_linear2x2(A, b, x);
+
+    ftk::matrix2x2_vector2_multiplication(A, x, bb);
+
+    EXPECT_NEAR(b[0], bb[0], epsilon);
+    EXPECT_NEAR(b[1], bb[1], epsilon);
+  }
+}
+
+TEST_F(matrix_test, solve_linear3x3) {
+  double A[3][3], b[3], x[3], bb[3];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand3x3(A);
+    ftk::rand3(b);
+    ftk::solve_linear3x3(A, b, x);
+
+    ftk::matrix3x3_vector3_multiplication(A, x, bb);
+
+    EXPECT_NEAR(b[0], bb[0], epsilon);
+    EXPECT_NEAR(b[1], bb[1], epsilon);
+    EXPECT_NEAR(b[2], bb[2], epsilon);
   }
 }
 

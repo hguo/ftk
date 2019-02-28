@@ -101,17 +101,17 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 {
   if (!f.valid()) return; // check if the 2-simplex is valid
   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
-  float gradx[3], grady[3], value[3];
+  float g[3][2], value[3];
 
   for (int i = 0; i < 3; i ++) {
-    gradx[i] = grad(0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    grady[i] = grad(1, vertices[i][0], vertices[i][1], vertices[i][2]);
+    g[i][0] = grad(0, vertices[i][0], vertices[i][1], vertices[i][2]);
+    g[i][1] = grad(1, vertices[i][0], vertices[i][1], vertices[i][2]);
     value[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
   }
  
   float mu[3];
-  bool succ = ftk::inverse_linear_interpolation3_2(gradx, grady, mu);
-  float val = ftk::linear_interpolation3(value, mu);
+  bool succ = ftk::inverse_linear_interpolation_2simplex_vector2(g, mu);
+  float val = ftk::linear_interpolation_2simplex(value, mu);
   
   if (!succ) return;
 
@@ -121,9 +121,9 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     hessxy[i] = hess(0, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
     hessyy[i] = hess(1, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
   }
-  float hxx = ftk::linear_interpolation3(hessxx, mu),
-        hxy = ftk::linear_interpolation3(hessxy, mu), 
-        hyy = ftk::linear_interpolation3(hessyy, mu);
+  float hxx = ftk::linear_interpolation_2simplex(hessxx, mu),
+        hxy = ftk::linear_interpolation_2simplex(hessxy, mu), 
+        hyy = ftk::linear_interpolation_2simplex(hessyy, mu);
   float eig[2];
   ftk::solve_eigenvalues_real_symmetric2x2(hxx, hxy, hyy, eig);
 
@@ -134,7 +134,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
         X[i][j] = vertices[i][j];
 
     intersection_t intersection;
-    ftk::linear_interpolation3_3(X, mu, intersection.x);
+    ftk::linear_interpolation_2simplex_vector3(X, mu, intersection.x);
 
     {
       std::lock_guard<std::mutex> guard(mutex);
