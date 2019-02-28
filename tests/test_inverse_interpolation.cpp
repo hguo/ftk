@@ -6,7 +6,7 @@
 class inverse_interpolation_test : public testing::Test {
 public:
   const int nruns = 100000;
-  const double epsilon = 1e-10;
+  const double epsilon = 1e-9;
 };
 
 TEST_F(inverse_interpolation_test, inverse_linear_interpolation_2simplex_vector2) {

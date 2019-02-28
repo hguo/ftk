@@ -125,7 +125,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
         hxy = ftk::linear_interpolation_2simplex(hessxy, mu), 
         hyy = ftk::linear_interpolation_2simplex(hessyy, mu);
   float eig[2];
-  ftk::solve_eigenvalues_real_symmetric2x2(hxx, hxy, hyy, eig);
+  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
 
   if (eig[0] < 0 && eig[1] < 0) { 
     float X[3][3];

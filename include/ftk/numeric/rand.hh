@@ -1,6 +1,7 @@
 #ifndef _FTK_RAND_HH
 #define _FTK_RAND_HH
 
+#include <numeric>
 #include <random>
 
 namespace ftk {

@@ -3,7 +3,8 @@
 
 #include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/matrix_addition.hh>
-#include <ftk/numeric/eigen_solver.hh>
+#include <ftk/numeric/eigen_solver2.hh>
+#include <ftk/numeric/eigen_solver3.hh>
 #include <ftk/numeric/linear_solver.hh>
 #include <ftk/numeric/quadratic_rational_inequality_solver.hh>
 #include <ftk/numeric/cubic_rational_inequality_solver.hh>

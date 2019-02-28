@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 #include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/matrix_multiplication.hh>
-#include <ftk/numeric/eigen_solver.hh>
+#include <ftk/numeric/eigen_solver2.hh>
+#include <ftk/numeric/eigen_solver3.hh>
 #include <ftk/numeric/rand.hh>
 #include <ftk/numeric/linear_solver.hh>
 #include <ftk/numeric/print.hh>
@@ -78,7 +79,7 @@ TEST_F(matrix_test, solve_eigenvalues_real_symmetric2x2) {
   double A[2][2], eig[2];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand_symmetric2x2(A);
-    ftk::solve_eigenvalues_real_symmetric2x2(A, eig);
+    ftk::solve_eigenvalues_symmetric2x2(A, eig);
 
     for (int i = 0; i < 2; i ++) {
       double B[2][2] = {
@@ -96,7 +97,7 @@ TEST_F(matrix_test, solve_real_eigenvalues_real2x2) {
   double A[2][2], eig[2];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand2x2(A);
-    int nroots = ftk::solve_real_eigenvalues_real2x2(A, eig);
+    int nroots = ftk::solve_eigenvalues2x2(A, eig);
 
     for (int i = 0; i < nroots; i ++) {
       double B[2][2] = {
