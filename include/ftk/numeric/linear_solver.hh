@@ -1,5 +1,5 @@
-#ifndef _FTK_LINEAR_SOLVE3_H
-#define _FTK_LINEAR_SOLVE3_H
+#ifndef _FTK_LINEAR_SOLVE_H
+#define _FTK_LINEAR_SOLVE_H
 
 #include <ftk/numeric/det.hh>
 #include <ftk/numeric/cond.hh>
@@ -38,16 +38,16 @@ inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T ep
   transpose3x2(A, AT);
 
   T ATA[2][2];
-  matrix_matrix_multiplication_2x3_3x2(AT, A, ATA);
+  matrix2x3_matrix3x2_multiplication(AT, A, ATA);
 
   T invATA[2][2];
   const T det = matrix_inverse2x2(ATA, invATA);
   const T cond = cond_real2x2(ATA);
 
   T invATAAT[2][3];
-  matrix_matrix_multiplication_2x2_2x3(invATA, AT, invATAAT);
+  matrix2x2_matrix2x3_multiplication(invATA, AT, invATAAT);
 
-  matrix_vector_multiplication_2x3(invATAAT, b, x);
+  matrix2x3_vector3_multiplication(invATAAT, b, x);
   return cond;
 }
 
