@@ -1,4 +1,3 @@
-#include <ftk/numeric/parallel_vector_solver.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>

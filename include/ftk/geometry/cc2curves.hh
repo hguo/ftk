@@ -2,6 +2,7 @@
 #define _FTK_CC2CURVE_HH
 
 #include <ftk/algorithms/cca.hh>
+#include <list>
 #include <set>
 
 namespace ftk {

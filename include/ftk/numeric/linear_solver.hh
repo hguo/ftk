@@ -59,7 +59,7 @@ inline T solve_least_square3x2_2(const T A[3][2], const T B[3][2], T x[2][2], co
   transpose3x2(A, AT);
 
   T ATA[2][2];
-  matrix_matrix_multiplication_2x3_3x2(AT, A, ATA);
+  matrix2x3_matrix3x2_multiplication(AT, A, ATA);
   // print2x2("ATA", ATA);
 
   T invATA[2][2];
@@ -68,9 +68,9 @@ inline T solve_least_square3x2_2(const T A[3][2], const T B[3][2], T x[2][2], co
   // print2x2("invATA", invATA);
 
   T invATAAT[2][3];
-  matrix_matrix_multiplication_2x2_2x3(invATA, AT, invATAAT);
+  matrix2x2_matrix2x3_multiplication(invATA, AT, invATAAT);
 
-  matrix_matrix_multiplication_2x3_3x2(invATAAT, B, x);
+  matrix2x3_matrix3x2_multiplication(invATAAT, B, x);
   return cond;
 }
 

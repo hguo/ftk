@@ -1,6 +1,9 @@
 #ifndef _FTK_LINEAR_SOLVE1_H
 #define _FTK_LINEAR_SOLVE1_H
 
+#include <ftk/numeric/inner_product.hh>
+#include <ftk/numeric/cross_product.hh>
+
 namespace ftk {
 
 template <typename T>

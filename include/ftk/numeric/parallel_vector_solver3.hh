@@ -1,5 +1,5 @@
-#ifndef _FTK_PARALLEL_VECTOR_SOLVER_H
-#define _FTK_PARALLEL_VECTOR_SOLVER_H
+#ifndef _FTK_PARALLEL_VECTOR_SOLVER3_H
+#define _FTK_PARALLEL_VECTOR_SOLVER3_H
 
 #include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/matrix_addition.hh>
@@ -19,50 +19,6 @@
 
 namespace ftk {
 
-#if 0
-template <typename T>
-inline int solve_parallel_vector_barycentric(const T V[9], const T W[9], T lambda[3], T mu[9])
-{
-  T invV[9], invW[9];
-  const auto detV = matrix_inverse3(V, invV),
-             detW = matrix_inverse3(W, invW);
-
-  if (isnan_mat3x3(invW) || isnan_mat3x3(invV)) return false;
-  // if (detW < 1e-4) return false;
-
-  T m[9];
-  matrix_matrix_multiplication_3x3_3x3(invW, V, m);
-  // if (detW > detV) mulmat3(invW, V, m); 
-  // else mulmat3(invV, W, m); // very wrong...
-
-  std::complex<T> eig[3], eigvec[3][3];
-  eig3(m, eig, eigvec);
-
-  // fprintf(stderr, "eigs_impl0: (%f, %f), (%f, %f), (%f, %f)\n", 
-  //     eig[0].real(), eig[0].imag(), eig[1].real(), eig[1].imag(), eig[2].real(), eig[2].imag());
-
-  int n_solutions = 0;
-  for (int i=0; i<3; i++) {
-    if (std::isnan(eig[i].real()) || eig[i].imag() != 0) continue; // non-real eigenvalue
-    T l[3] = {eigvec[i][0].real(), eigvec[i][1].real(), eigvec[i][2].real()};
-    if (l[0] < 0 || l[1] < 0) continue;
-    const auto sum = l[0] + l[1] + l[2];
-    mu[n_solutions*3+0] = l[0] / sum;
-    mu[n_solutions*3+1] = l[1] / sum;
-    mu[n_solutions*3+2] = l[2] / sum;
-    lambda[n_solutions] = eig[i].real();
-    if (std::isnan(mu[0]) || std::isnan(mu[1]) || std::isnan(mu[2])) continue;
-    n_solutions ++;
-    // return true;
-  }
-
-  // if (n_solutions)
-  //   fprintf(stderr, "n_solutions=%d\n", n_solutions);
-  return n_solutions;
-  // return false;
-}
-#endif
-
 template <typename T>
 inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3], 
     T lambda[3], T mu[3][3], const T epsilon = std::numeric_limits<T>::epsilon()) // was 1e-6
@@ -71,25 +27,11 @@ inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3],
   transpose3x3(VV, V);
   transpose3x3(WW, W);
 
-#if 0
-  // check if V or W is singular
-  if (std::abs(det3(V)) < epsilon || std::abs(det3(W)) < epsilon) return 0;
-
-  // check if V-W is singular
-  T VW[3][3];
-  matrix_subtraction3x3(V, W, VW);
-  if (std::abs(det3(V)) < epsilon) return 0;
-#endif
-
   T P[4]; // characteristic polynomial
   characteristic_polynomial_3x3(V, W, P);
-  // fprintf(stderr, "characteristic_polynomial: %f, %f, %f, %f\n", P[0], P[1], P[2], P[3]);
-  // print3x3("V", V);
-  // print3x3("W", W);
 
   T l[3] = {0};
   const int n_roots = solve_cubic_real(P, l, epsilon);
-  // fprintf(stderr, "n_roots=%d, roots={%f, %f, %f}\n", n_roots, l[0], l[1], l[2]);
   int n_solutions = 0;
 
   for (int i = 0; i < n_roots; i ++) {
@@ -248,163 +190,6 @@ inline int solve_parallel_vector3_simplex1(const T V[2][3], const T W[2][3], T l
     return n;
   } else 
     return 0;
-}
-
-#if 0
-template <typename T>
-inline int solve_parallel_vector_bibarycentric(const T V[4][3], const T W[4][3], T mu[6][2])
-{
-  T X0[3][3] = {{0, 0, 0}, 
-                {1, 0, 0},
-                {0, 1, 0}};
-  T X1[3][3] = {{1, 0, 0}, 
-                {1, 1, 0},
-                {0, 1, 0}};
-  
-  T V0[] = {V[0][0], V[0][1], V[0][2], V[1][0], V[1][1], V[1][2], V[2][0], V[2][1], V[2][2]},
-    W0[] = {W[0][0], W[0][1], W[0][2], W[1][0], W[1][1], W[1][2], W[2][0], W[2][1], W[2][2]}, 
-    V1[] = {V[0][0], V[0][1], V[0][2], V[2][0], V[2][1], V[2][2], V[3][0], V[3][1], V[3][2]}, 
-    W1[] = {W[0][0], W[0][1], W[0][2], W[2][0], W[2][1], W[2][2], W[3][0], W[3][1], W[3][2]};
-
-  transpose3(V0);
-  transpose3(W0);
-  transpose3(V1);
-  transpose3(W1);
-}
-#endif
-
-template <typename T>
-inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2], 
-    T lambda[2], T mu[2][2], const T epsilon = std::numeric_limits<T>::epsilon())
-{
-  T V[2][2], W[2][2];
-  transpose2x2(VV, V);
-  transpose2x2(WW, W);
-
-  T P[3];
-  characteristic_polynomial_2x2(V, W, P);
-
-  T l[2] = {0};
-  const int n_roots = solve_quadratic_real(P, l, epsilon);
-  int n_solutions = 0;
-
-  for (int i = 0; i < n_roots; i ++) {
-    if (std::abs(l[i]) <= epsilon) continue;
-
-    const T a[2] = {
-      (V[0][0] - V[0][1]) - l[i] * (W[0][0] - W[0][1]), 
-      (V[1][0] - V[1][1]) - l[i] * (W[1][0] - W[1][1])
-    };
-    const T b[2] = {
-      -(V[0][1] - l[i] * W[0][1]),
-      -(V[1][1] - l[i] * W[1][1])
-    };
-
-    T nu[2];
-    const auto cond = solve_least_square2x1(a, b, nu[0]);
-    nu[1] = T(1) - nu[0];
-
-    if (nu[0] >= -epsilon && nu[0] <= 1+epsilon && 
-        nu[1] >= -epsilon && nu[1] <= 1+epsilon) 
-    {
-      double v[2], w[2];
-      ftk::linear_interpolation_1simplex_vector2(VV, nu, v);
-      ftk::linear_interpolation_1simplex_vector2(WW, nu, w);
-      const double c = ftk::cross_product2(v, w);
-      if (c > 1e-2) {
-        fprintf(stderr, "rejecting: nu={%f, %f}, v={%f, %f}, w={%f, %f}, c=%f\n", 
-            nu[0], nu[1], v[0], v[1], w[0], w[1], c);
-        print2x2("V", VV);
-        print2x2("W", WW);
-        continue;
-      }
-
-      const int j = n_solutions ++;
-      lambda[j] = l[i];
-      mu[j][0] = nu[0];
-      mu[j][1] = nu[1];
-    }
-  }
-
-  return n_solutions;
-}
-
-template <typename T>
-inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2], const T W[3][2], T Q[3], T P[3][3])
-{
-  const T A[2][2] = { // linear transformation
-    {V[0][0] - V[2][0], V[1][0] - V[2][0]}, 
-    {V[0][1] - V[2][1], V[1][1] - V[2][1]}
-  };
-  const T B[2][2] = {
-    {W[0][0] - W[2][0], W[1][0] - W[2][0]}, 
-    {W[0][1] - W[2][1], W[1][1] - W[2][1]}
-  };
-  const T a[2] = {V[2][0], V[2][1]};
-  const T b[2] = {W[2][0], W[2][1]};
-  
-  const T rhs[2][2] = {
-    {-a[0], b[0]}, 
-    {-a[1], b[1]}
-  };
-
-  // coefs for Q
-  characteristic_polynomial_2x2(A, B, Q);
-
-  T adj[2][2][2] = { // adjugate matrix
-    {{ A[1][1], -B[1][1]}, {-A[0][1],  B[0][1]}}, 
-    {{-A[1][0],  B[1][0]}, { A[0][0], -B[0][0]}}
-  };
-
-  for (int i = 0; i < 2; i ++) {
-    T poly[3] = {0};
-    for (int j = 0; j < 3; j ++)
-      P[i][j] = 0; // clear results
-    for (int j = 0; j < 2; j ++) {
-      polynomial_multiplication(adj[i][j], 1, rhs[j], 1, poly);
-      polynomial_addition_in_place(P[i], 2, poly, 2);
-    }
-  }
-
-  P[2][0] = Q[0] - P[0][0] - P[1][0];
-  P[2][1] = Q[1] - P[0][1] - P[1][1];
-  P[2][2] = Q[2] - P[0][2] - P[1][2];
-}
-
-template <typename T>
-std::tuple<disjoint_intervals<long long>, std::map<long long, T>>
-solve_parallel_vector2_simplex2_inequalities_quantized(
-    const T V[3][2], const T W[3][2], const long long factor = 1000000000L, 
-    const T epsilon = std::numeric_limits<T>::epsilon())
-{
-  T Q[3] = {0}, P[3][3] = {0}, QP[3][3] = {0};
-  characteristic_polynomials_parallel_vector2_simplex2(V, W, Q, P);
-
-  std::map<long long, T> quantized_roots;
-  disjoint_intervals<long long> I;
-  I.set_to_complete();
-
-  for (int i = 0; i < 3; i ++) {
-    polynomial_subtraction(Q, 2, P[i], 2, QP[i]);
-
-    const auto r0 = solve_quadratic_rational_inequality_quantized(P[i], Q, factor, epsilon);
-    // std::cerr << "I: " << I << std::endl;
-    // fprintf(stderr, "P: %f, %f, %f\n", P[i][0], P[i][1], P[i][2]);
-    // std::cerr << "J: " << std::get<0>(r0) << std::endl;
-    I.intersect(std::get<0>(r0));
-    // std::cerr << "I: " << I << std::endl;
-    quantized_roots.insert(std::get<1>(r0).begin(), std::get<1>(r0).end());
-
-    const auto r1 = solve_quadratic_rational_inequality_quantized(QP[i], Q, factor, epsilon);
-    // std::cerr << "I: " << I << std::endl;
-    // fprintf(stderr, "P: %f, %f, %f\n", QP[i][0], QP[i][1], QP[i][2]);
-    // std::cerr << "J: " << std::get<0>(r1) << std::endl;
-    I.intersect(std::get<0>(r1));
-    // std::cerr << "I: " << I << std::endl;
-    quantized_roots.insert(std::get<1>(r1).begin(), std::get<1>(r1).end());
-  }
-
-  return std::make_tuple(I, quantized_roots);
 }
 
 template <typename T>
