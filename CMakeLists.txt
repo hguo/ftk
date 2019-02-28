@@ -55,6 +55,7 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
 if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
   find_package (VTK QUIET)
   include (${VTK_USE_FILE})
+  find_package (NetCDF QUIET)
 endif ()
 
 # If FTK_BUILD_TESTS is on, enable testing.
