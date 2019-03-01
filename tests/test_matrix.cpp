@@ -75,7 +75,7 @@ TEST_F(matrix_test, solve_linear3x3) {
   }
 }
 
-TEST_F(matrix_test, solve_eigenvalues_real_symmetric2x2) {
+TEST_F(matrix_test, solve_eigenvalues_symmetric2x2) {
   double A[2][2], eig[2];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand_symmetric2x2(A);
@@ -93,7 +93,7 @@ TEST_F(matrix_test, solve_eigenvalues_real_symmetric2x2) {
   }
 }
 
-TEST_F(matrix_test, solve_real_eigenvalues_real2x2) {
+TEST_F(matrix_test, solve_eigenvalues2x2) {
   double A[2][2], eig[2];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand2x2(A);
@@ -111,7 +111,24 @@ TEST_F(matrix_test, solve_real_eigenvalues_real2x2) {
   }
 }
 
-TEST_F(matrix_test, solve_eigenvalues_real_symmetric3x3) {
+TEST_F(matrix_test, solve_eigenvectors2x2)
+{
+  double A[2][2], eig[2], eigvecs[2][2], x[2];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand2x2(A);
+    int nroots = ftk::solve_eigenvalues2x2(A, eig);
+    ftk::solve_eigenvectors2x2(A, nroots, eig, eigvecs);
+
+    for (int i = 0; i < nroots; i ++) {
+      ftk::matrix2x2_vector2_multiplication(A, eigvecs[i], x);
+      double c = ftk::cross_product2(eigvecs[i], x);
+
+      EXPECT_NEAR(0.0, 0, epsilon);
+    }
+  }
+}
+
+TEST_F(matrix_test, solve_eigenvalues_symmetric3x3) {
   double A[3][3], eig[3];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand_symmetric3x3(A);

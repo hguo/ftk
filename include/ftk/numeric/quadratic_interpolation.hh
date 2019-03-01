@@ -48,7 +48,21 @@ bool quadratic_interpolation_coefficients(const T f[6], const T x[3][2], T Q[3][
 }
 
 template <typename T>
-bool quadratic_interpolation_gradient(const T Q[3][3], const T x[3][2], T grad[3][2]){
+T quadratic_interpolation(const T Q[3][3], const T x[2])
+{
+  return Q[0][0] * x[0] * x[0] 
+    + T(2) * Q[0][1] * x[0] * x[1] 
+    + T(2) * Q[0][2] * x[0]
+    + Q[1][1] * x[1] * x[1]
+    + T(2) * Q[1][2] * x[1]
+    + Q[2][2];
+}
+
+/**
+ * @param grad  gradient vector on three vertices
+ */
+template <typename T>
+bool quadratic_interpolation_gradient(const T Q[3][3], const T x[3][2], T grad[3][2]) {
 	for(int i=0; i<3; i++){
 		grad[i][0] = 2 * Q[0][0] * x[i][0] + (Q[0][1] + Q[1][0]) * x[i][1] + (Q[0][2] + Q[2][0]);
 		grad[i][1] = (Q[0][1] + Q[1][0]) * x[i][0] + 2 * Q[1][1] * x[i][1] + (Q[1][2] + Q[2][1]);
