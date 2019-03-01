@@ -30,6 +30,20 @@ struct basic_interval {
       return std::numeric_limits<T>::min();
   }
 
+  void set_lower(T l) {_lower = l;}
+  void set_upper(T u) {_upper = u;}
+  void set_lower_inf() {
+    if (std::numeric_limits<T>::has_infinity)
+      _lower = -std::numeric_limits<T>::infinity();
+    else 
+      _upper = std::numeric_limits<T>::min();
+  }
+  void set_upper_inf() {
+    if (std::numeric_limits<T>::has_infinity)
+      _upper = std::numeric_limits<T>::infinity();
+    else 
+      _upper = std::numeric_limits<T>::max();
+  }
   void set_lower_open() {_lower_open = true;}
   void set_lower_closed() {_lower_open = false;}
   void set_upper_open() {_upper_open = true;}

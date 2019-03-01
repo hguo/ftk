@@ -43,9 +43,9 @@ inline int solve_eigenvalues2x2(const T M[2][2], T eig[2])
 }
 
 template <typename T>
-inline void solve_eigenvectors2x2(const T M[2][2], const T eig[2], T eigvecs[2][2])
+inline void solve_eigenvectors2x2(const T M[2][2], int n, const T eig[2], T eigvecs[2][2])
 {
-  for (int i = 0; i < 2; i ++) {
+  for (int i = 0; i < n; i ++) {
     const T a[2] = {
       {M[0][0] - eig[i] - M[0][1]}, 
       {M[1][0] - M[1][1] + eig[i]}
