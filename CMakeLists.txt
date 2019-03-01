@@ -54,7 +54,7 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
 
 if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
   find_package (VTK QUIET)
-  if(VTK_FOUND)
+  if (VTK_FOUND)
     include (${VTK_USE_FILE})
   endif ()
 endif ()
