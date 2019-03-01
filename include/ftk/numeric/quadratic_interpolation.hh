@@ -51,7 +51,7 @@ template <typename T>
 bool quadratic_interpolation_gradient(const T Q[3][3], const T x[3][2], T grad[3][2]){
 	for(int i=0; i<3; i++){
 		grad[i][0] = 2 * Q[0][0] * x[i][0] + (Q[0][1] + Q[1][0]) * x[i][1] + (Q[0][2] + Q[2][0]);
-		grad[i][1] = (Q[0][1] + Q[1][0]) * x[i][0] + 2 * Q[1][1] * x[i][1] * x[i][1] + (Q[1][2] + Q[2][1]);
+		grad[i][1] = (Q[0][1] + Q[1][0]) * x[i][0] + 2 * Q[1][1] * x[i][1] + (Q[1][2] + Q[2][1]);
 	}
 	return true;
 }
