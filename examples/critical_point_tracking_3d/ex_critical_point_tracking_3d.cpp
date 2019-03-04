@@ -23,9 +23,8 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #endif
 
-const int DW = 128, DH = 128; // the dimensionality of the data is DW*DH
-const int DT = 16; // number of timesteps
-const float scaling_factor = 15; // the factor that controls the scale of the synthesize data
+const int DW = 128, DH = 128, DD = 128;// the dimensionality of the data is DW*DH
+const int DT = 10; // number of timesteps
 
 hypermesh::ndarray<float> scalar, grad, hess;
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
@@ -41,36 +40,14 @@ std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
 // the output trajectories
 std::vector<std::vector<std::vector<float>>> trajectories;
 
-
-template <typename T> // the synthetic function
-T f(T x, T y, T t) 
-{
-  return cos(x*cos(t)-y*sin(t))*sin(x*sin(t)+y*cos(t));
-}
-
-void generate_scalar_data()
-{
-  scalar.reshape({(size_t)DW, (size_t)DH, (size_t)DT});
-  for (int k = 0; k < DT; k ++) {
-    for (int j = 0; j < DH; j ++) {
-      for (int i = 0; i < DW; i ++) {
-        const float x = (((float)i / (DW-1)) - 0.5) * scaling_factor,
-                    y = (((float)j / (DH-1)) - 0.5) * scaling_factor, 
-                    t = ((float)k / (DT-1)) + 1e-4;
-        scalar(i, j, k) = f(x, y, t);
-      }
-    }
-  }
-}
-
 void derive_gradients()
 {
   grad.reshape({2, (size_t)DW, (size_t)DH, (size_t)DT});
   for (int k = 0; k < DT; k ++) {
     for (int j = 1; j < DH-1; j ++) {
       for (int i = 1; i < DW-1; i ++) {
-        grad(0, i, j, k) = 0.5 * (scalar(i+1, j, k) - scalar(i-1, j, k)) * (DW-1) / scaling_factor;
-        grad(1, i, j, k) = 0.5 * (scalar(i, j+1, k) - scalar(i, j-1, k)) * (DH-1) / scaling_factor;
+        grad(0, i, j, k) = 0.5 * (scalar(i+1, j, k) - scalar(i-1, j, k)) * (DW-1);
+        grad(1, i, j, k) = 0.5 * (scalar(i, j+1, k) - scalar(i, j-1, k)) * (DH-1);
       }
     }
   }
@@ -249,14 +226,18 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
-  generate_scalar_data();
+  size_t starts[4] = {0, 0, 0, 0}, 
+         sizes[4]  = {size_t(DT), size_t(DD), size_t(DH), size_t(DW)};
+  scalar.from_netcdf(argv[1], "vorts", starts, sizes);
+
+#if 0
   derive_gradients();
   derive_hessians();
   track_critical_points();
+#endif
 
 #if HAVE_VTK
   start_vtk_window();
-  // ftk::write_curves_vtk(trajectories, "trajectories.vtp");
 #else
   print_trajectories();
 #endif
