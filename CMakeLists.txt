@@ -37,6 +37,8 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION lib/cmake)
 
 if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
+  find_package (Threads REQUIRED)
+  set (CMAKE_THREAD_PREFER_PTHREAD)
   find_package (VTK QUIET)
   if (VTK_FOUND)
     include (${VTK_USE_FILE})
