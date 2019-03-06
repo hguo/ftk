@@ -9,6 +9,7 @@
 #include <ftk/numeric/quartic_solver.hh>
 #include <ftk/numeric/vector_normalization.hh>
 #include <ftk/numeric/characteristic_polynomial.hh>
+#include <ftk/numeric/print.hh>
 #include <iostream>
 
 namespace ftk {
@@ -39,6 +40,8 @@ inline int solve_eigenvalues2x2(const T M[2][2], T eig[2])
 {
   T P[3];
   characteristic_polynomial_2x2(M, P);
+  // print2x2("M", M);
+  // fprintf(stderr, "P=%f, %f, %f\n", P[0], P[1], P[2]);
   return solve_quadratic_real(P, eig);
 }
 
@@ -47,13 +50,14 @@ inline void solve_eigenvectors2x2(const T M[2][2], int n, const T eig[2], T eigv
 {
   for (int i = 0; i < n; i ++) {
     const T a[2] = {
-      {M[0][0] - eig[i] - M[0][1]}, 
-      {M[1][0] - M[1][1] + eig[i]}
+      M[0][0] - eig[i] - M[0][1], 
+      M[1][0] - M[1][1] + eig[i]
     };
-    const T b[2] = {-M[0][1], -M[1][1]};
+    const T b[2] = {-M[0][1], -M[1][1] + eig[i]};
 
     solve_least_square2x1(a, b, eigvecs[i][0]);
     eigvecs[i][1] = T(1) - eigvecs[i][0];
+    vector_normalization2_2(eigvecs[i]);
   }
 }
 

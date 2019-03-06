@@ -10,7 +10,7 @@
 class matrix_test : public testing::Test {
 public:
   const int nruns = 100000;
-  const double epsilon = 1e-10;
+  const double epsilon = 1e-9;
 };
 
 TEST_F(matrix_test, matrix_inverse2) {
@@ -119,11 +119,14 @@ TEST_F(matrix_test, solve_eigenvectors2x2)
     int nroots = ftk::solve_eigenvalues2x2(A, eig);
     ftk::solve_eigenvectors2x2(A, nroots, eig, eigvecs);
 
+    // ftk::print2x2("A", A);
     for (int i = 0; i < nroots; i ++) {
       ftk::matrix2x2_vector2_multiplication(A, eigvecs[i], x);
-      double c = ftk::cross_product2(eigvecs[i], x);
+      // fprintf(stderr, "i=%d, eig=%f, eigvec={%f, %f}, x={%f, %f}\n", 
+      //     i, eig[i], eigvecs[i][0], eigvecs[i][1], x[0], x[1]);
 
-      EXPECT_NEAR(0.0, 0, epsilon);
+      EXPECT_NEAR(eig[i] * eigvecs[i][0], x[0], epsilon);
+      EXPECT_NEAR(eig[i] * eigvecs[i][1], x[1], epsilon);
     }
   }
 }
@@ -146,3 +149,23 @@ TEST_F(matrix_test, solve_eigenvalues_symmetric3x3) {
     }
   }
 }
+
+TEST_F(matrix_test, solve_eigenvectors3x3)
+{
+  const int nroots = 3; // for now, we use symetric matrix for testing
+  double A[3][3], eig[3], eigvecs[3][3], x[3], c[3];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand_symmetric3x3(A);
+    ftk::solve_eigenvalues_symmetric3x3(A, eig);
+    ftk::solve_eigenvectors3x3(A, nroots, eig, eigvecs);
+
+    for (int i = 0; i < nroots; i ++) {
+      ftk::matrix3x3_vector3_multiplication(A, eigvecs[i], x);
+
+      EXPECT_NEAR(eig[i] * eigvecs[i][0], x[0], epsilon);
+      EXPECT_NEAR(eig[i] * eigvecs[i][1], x[1], epsilon);
+      EXPECT_NEAR(eig[i] * eigvecs[i][2], x[2], epsilon);
+    }
+  }
+}
+

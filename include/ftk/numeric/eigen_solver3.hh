@@ -3,6 +3,7 @@
 
 #include <ftk/numeric/trace.hh>
 #include <ftk/numeric/det.hh>
+#include <ftk/numeric/linear_solver.hh>
 #include <ftk/numeric/matrix_multiplication.hh>
 #include <ftk/numeric/quadratic_solver.hh>
 #include <ftk/numeric/cubic_solver.hh>
@@ -51,6 +52,27 @@ inline void solve_generalized_eigenvalues3x3(const T A[3][3], const T B[3][3], s
   solve_cubic(P, eig);
 }
 
+template <typename T>
+inline void solve_eigenvectors3x3(const T A[3][3], int n, const T eig[3], T eigvecs[3][3])
+{
+  for (int i = 0; i < n; i ++) {
+    const T M[3][2] = {
+      {A[0][0] - eig[i] - A[0][2], A[0][1] - A[0][2]}, 
+      {A[1][0] - A[1][2], A[1][1] - eig[i] - A[1][2]},
+      {A[2][0] - A[2][2] + eig[i], A[2][1] - A[2][2] + eig[i]}
+    };
+    const T b[3] = {-A[0][2], -A[1][2], -A[2][2] + eig[i]};
+
+    double x[2];
+    solve_least_square3x2(M, b, x);
+
+    double nu[3] = {x[0], x[1], T(1) - x[0] - x[1]};
+    vector_normalization2_3(nu);
+
+    for (int j = 0; j < 3; j ++)
+      eigvecs[i][j] = nu[j];
+  }
+}
 
 #if 0
 /////////////////////////// legacy code
