@@ -1,6 +1,8 @@
 #ifndef _FTK_DISJOINT_INTERVALS_HH
 #define _FTK_DISJOINT_INTERVALS_HH
 
+#include <random>
+#include <algorithm>
 #include <ftk/numeric/basic_interval.hh>
 
 namespace ftk {
@@ -132,6 +134,19 @@ struct disjoint_intervals {
 
   // disjoint_intervals<T> complement() const { // TODO
   // }
+
+  T sample() const {
+    if (empty()) return std::nan("0");
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    std::vector<basic_interval<T>> my_subintervals;
+    for (const auto &ii : _subintervals)
+      my_subintervals.push_back(ii);
+    std::shuffle(my_subintervals.begin(), my_subintervals.end(), g);
+    return my_subintervals[0].sample();
+  }
 
   friend std::ostream& operator<<(std::ostream& os, 
       const disjoint_intervals<T>& i) 
