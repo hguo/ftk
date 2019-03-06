@@ -185,9 +185,9 @@ void trace_intersections()
       // fprintf(stderr, "curve:\n");
       for (int k = 0; k < linear_graphs[j].size(); k ++) {
         auto p = intersections[linear_graphs[j][k]];
-        mycurve.push_back(p.x[0]);
-        mycurve.push_back(p.x[1]);
-        mycurve.push_back(p.x[2]);
+        mycurve.push_back(p.x[0] / (DW-1));
+        mycurve.push_back(p.x[1] / (DH-1));
+        mycurve.push_back(p.x[2] / (DD-1));
         // fprintf(stderr, "p={%f, %f, %f}\n", p.x[0], p.x[1], p.x[2]);
       }
       mycurves.emplace_back(mycurve);
@@ -282,6 +282,7 @@ void start_vtk_window()
   renderer->AddActor(actor);
   renderer->SetBackground(1, 1, 1); // Background color white
 
+  renderer->SetUseDepthPeelingForVolumes(true);
   renderer->AddVolume(volume);
 
   vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
@@ -309,13 +310,10 @@ int main(int argc, char **argv)
   track_critical_points();
 #endif
 
-  print_trajectories();
-#if 0
 #if HAVE_VTK
   start_vtk_window();
 #else
   print_trajectories();
-#endif
 #endif
 
   return 0;
