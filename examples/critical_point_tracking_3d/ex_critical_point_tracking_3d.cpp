@@ -1,3 +1,5 @@
+#include <mutex>
+
 #if HAVE_NETCDF
 #include <netcdf.h>
 #endif
@@ -209,7 +211,7 @@ void track_critical_points()
   m.set_lb_ub({2, 2, 2, 0}, {DW-3, DH-3, DD-3, DT-1}); // set the lower and upper bounds of the mesh
   m.element_for(3, check_simplex); // iterate over all 3-simplices
 
-  // trace_intersections();
+  trace_intersections();
 }
 
 void print_trajectories()
@@ -222,7 +224,7 @@ void print_trajectories()
       const auto &curve = curves[j];
       printf("--Curve %d:\n", j);
       for (int k = 0; k < curve.size()/3; k ++) {
-        printf("---x=(%f, %f), t=%f\n", curve[k*3], curve[k*3+1], curve[k*3+2]);
+        printf("---x=(%f, %f, %f)\n", curve[k*3], curve[k*3+1], curve[k*3+2]);
       }
     }
   }
