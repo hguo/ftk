@@ -39,11 +39,16 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
 if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
   find_package (Threads REQUIRED)
   set (CMAKE_THREAD_PREFER_PTHREAD)
+
   find_package (VTK QUIET)
   if (VTK_FOUND)
     include (${VTK_USE_FILE})
   endif ()
+
   find_package (NetCDF QUIET)
+  if (NETCDF_FOUND)
+    include_directories (${NETCDF_INCLUDE_DIR})
+  endif ()
 endif ()
 
 # If FTK_BUILD_TESTS is on, enable testing.

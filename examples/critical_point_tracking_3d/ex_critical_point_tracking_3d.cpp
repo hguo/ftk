@@ -36,7 +36,7 @@
 #include <hypermesh/regular_simplex_mesh.hh>
 
 const int DW = 128, DH = 128, DD = 128;// the dimensionality of the data is DW*DH
-const int DT = 5; // number of timesteps
+const int DT = 2; // number of timesteps
 
 hypermesh::ndarray<float> scalar, grad, hess;
 hypermesh::regular_simplex_mesh m(4); // the 4D space-time mesh
