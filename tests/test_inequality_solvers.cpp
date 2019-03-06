@@ -20,3 +20,27 @@ TEST_F(inequality_test, linear_inequality_test) {
     EXPECT_GE(y, 0.0);
   }
 }
+
+TEST_F(inequality_test, linear_inequality_test2) {
+  const int n = 2;
+  double P[n][2];
+  ftk::disjoint_intervals<double> I;
+
+  for (int run = 0; run < nruns; run ++) {
+    I.set_to_complete();
+    ftk::rand<double, n, 2>(P);
+    for (int i = 0; i < n; i ++) {
+      auto ii = ftk::solve_linear_inequality(P[i][1], P[i][0]);
+      I.intersect(ii);
+    }
+
+    if (I.empty()) continue; // TODO: check false positives
+    // std::cerr << I << std::endl;
+    
+    auto x = I.sample();
+    for (int i = 0; i < n; i ++) {
+      auto y = ftk::polynomial_evaluate(P[i], 1, x);
+      EXPECT_GE(y, 0.0);
+    }
+  }
+}
