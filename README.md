@@ -6,7 +6,7 @@ FTK is still in its early alpha stage, thus examples, documents, and tests are s
 
 ## Major components in FTK
 
-* [Hypermesh](https://github.com/hguo/hypermesh) (now is an independent library): data structures for high-dimensional meshes and mesh elements including *n*-simplices, *n*-cubes, and *n*-prisms; utilities to generalize given 2D/3D structured/unstructured meshes into 3D/4D spacetime meshes
+* Hypermesh: data structures for high-dimensional meshes and mesh elements including *n*-simplices, *n*-cubes, and *n*-prisms; utilities to generalize given 2D/3D structured/unstructured meshes into 3D/4D spacetime meshes
 
 * Numeric: root-find algorithms for inverse interpolations and parallel vector operators in *n*-simplices, *n*-cubes, and simplex-prisms; lightweight linear algebra utilities to support root-finding
 
@@ -20,23 +20,17 @@ FTK is still in its early alpha stage, thus examples, documents, and tests are s
 
 ## Download, build, and install
 
-You may include FTK headers and call FTK functions directly from your C++ code, because FTK is header-only.  However, you also need to manually check out the [Hypermesh](https://github.com/hguo/hypermesh) repository to use all functions provided by FTK, as instructed below. 
+You may include FTK headers and call FTK functions directly from your C++ code, because FTK is header-only.  
 
 ### Checkout FTK source from Git
 
-Please do remember to init submodules when you checkout FTK source from Git, in order to make Hypermesh checked out in the FTK directory.
-
 ```bash
 $ git clone https://github.com/hguo/ftk $FTK_SOURCE_DIR
-$ cd $FTK_SOURCE_DIR
-$ git submodule update --init --recursive
 ```
-
-You need to add both \$FTK_DIR/include and \$FTK_DIR/hypermesh/include directories to the include paths of your compiler.  
 
 ### Installation (optional)
 
-You may install both FTK and Hypermesh libraries to the same directory.  The installation will also generate FTKConfig.cmake in the installation path, such that you can use find_package(FTK) to find and use FTK in your CMakeLists.txt
+You may install FTK to an designated path.  The installation will also generate FTKConfig.cmake in the installation path, such that you can use find_package(FTK) to find and use FTK in your CMakeLists.txt
 
 ```bash
 $ git clone https://github.com/hguo/ftk $FTK_SOURCE_DIR
