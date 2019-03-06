@@ -34,15 +34,15 @@
 #include <hypermesh/regular_simplex_mesh.hh>
 
 const int DW = 128, DH = 128, DD = 128;// the dimensionality of the data is DW*DH
-const int DT = 10; // number of timesteps
+const int DT = 5; // number of timesteps
 
 hypermesh::ndarray<float> scalar, grad, hess;
-hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
+hypermesh::regular_simplex_mesh m(4); // the 4D space-time mesh
 
 std::mutex mutex;
 
 struct intersection_t {
-  float x[3]; // the spacetime coordinates of the trajectory
+  float x[4]; // the spacetime coordinates of the trajectory
 };
  
 std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
@@ -52,12 +52,15 @@ std::vector<std::vector<std::vector<float>>> trajectories;
 
 void derive_gradients()
 {
-  grad.reshape({2, (size_t)DW, (size_t)DH, (size_t)DT});
-  for (int k = 0; k < DT; k ++) {
-    for (int j = 1; j < DH-1; j ++) {
-      for (int i = 1; i < DW-1; i ++) {
-        grad(0, i, j, k) = 0.5 * (scalar(i+1, j, k) - scalar(i-1, j, k)) * (DW-1);
-        grad(1, i, j, k) = 0.5 * (scalar(i, j+1, k) - scalar(i, j-1, k)) * (DH-1);
+  grad.reshape({3, DW, DH, DD, DT});
+  for (int t = 0; t < DT; t ++) {
+    for (int k = 1; k < DD-1; k ++) {
+      for (int j = 1; j < DH-1; j ++) {
+        for (int i = 1; i < DW-1; i ++) {
+          grad(0, i, j, k, t) = 0.5 * (scalar(i+1, j, k, t) - scalar(i-1, j, k, t));
+          grad(1, i, j, k, t) = 0.5 * (scalar(i, j+1, k, t) - scalar(i, j-1, k, t));
+          grad(2, i, j, k, t) = 0.5 * (scalar(i, j, k+1, t) - scalar(i, j, k-1, t));
+        }
       }
     }
   }
@@ -65,65 +68,83 @@ void derive_gradients()
 
 void derive_hessians()
 {
-  hess.reshape({2, 2, (size_t)DW, (size_t)DH, (size_t)DT});
-  for (int k = 0; k < DT; k ++) {
-    for (int j = 2; j < DH-2; j ++) {
-      for (int i = 2; i < DW-2; i ++) {
-        const float H00 = hess(0, 0, i, j, k) = // ddf/dx2
-          0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1) / 15;
-        const float H01 = hess(0, 1, i, j, k) = // ddf/dxdy
-          0.5 * (grad(0, i, j+1, k) - grad(0, i, j-1, k)) * (DH-1) / 15;
-        const float H10 = hess(1, 0, i, j, k) = // ddf/dydx
-          0.5 * (grad(1, i+1, j, k) - grad(1, i-1, j, k)) * (DW-1) / 15;
-        const float H11 = hess(1, 1, i, j, k) = // ddf/dy2
-          0.5 * (grad(1, i, j+1, k) - grad(1, i, j-1, k)) * (DH-1) / 15;
+  hess.reshape({3, 3, DW, DH, DD, DT});
+
+  for (int t = 0; t < DT; t ++) {
+    for (int k = 0; k < DD; k ++) {
+      for (int j = 2; j < DH-2; j ++) {
+        for (int i = 2; i < DW-2; i ++) {
+          const float H00 = hess(0, 0, i, j, k, t) = // ddf/dx2
+            0.5 * (grad(0, i+1, j, k, t) - grad(0, i-1, j, k, t));
+          const float H01 = hess(0, 1, i, j, k, t) = // ddf/dxdy
+            0.5 * (grad(0, i, j+1, k, t) - grad(0, i, j-1, k, t));
+          const float H02 = hess(0, 2, i, j, k, t) = // ddf/dxdz
+            0.5 * (grad(0, i, j, k+1, t) - grad(0, i, j, k-1, t));
+
+          const float H10 = hess(1, 0, i, j, k, t) = // ddf/dydx
+            0.5 * (grad(1, i+1, j, k, t) - grad(1, i-1, j, k, t));
+          const float H11 = hess(1, 1, i, j, k, t) = // ddf/dy2
+            0.5 * (grad(1, i, j+1, k, t) - grad(1, i, j-1, k, t));
+          const float H12 = hess(1, 2, i, j, k, t) = // ddf/dydz
+            0.5 * (grad(1, i, j, k+1, t) - grad(1, i, j, k-1, t));
+
+          const float H20 = hess(2, 0, i, j, k, t) = // ddf/dydx
+            0.5 * (grad(2, i+1, j, k, t) - grad(2, i-1, j, k, t));
+          const float H21 = hess(2, 1, i, j, k, t) = // ddf/dy2
+            0.5 * (grad(2, i, j+1, k, t) - grad(2, i, j-1, k, t));
+          const float H22 = hess(2, 2, i, j, k, t) = // ddf/dydz
+            0.5 * (grad(2, i, j, k+1, t) - grad(2, i, j, k-1, t));
+        }
       }
     }
   }
 }
 
-void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
+void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
 {
-  if (!f.valid()) return; // check if the 2-simplex is valid
-  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
-  float g[3][2], value[3];
-
-  for (int i = 0; i < 3; i ++) {
-    g[i][0] = grad(0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    g[i][1] = grad(1, vertices[i][0], vertices[i][1], vertices[i][2]);
-    value[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
-  }
- 
-  float mu[3];
-  bool succ = ftk::inverse_linear_interpolation_2simplex_vector2(g, mu);
-  float val = ftk::linear_interpolation_2simplex(value, mu);
+  if (!s.valid()) return; // check if the 3-simplex is valid
   
+  const auto &vertices = s.vertices();
+  float X[4][4], g[4][3], value[4];
+
+  for (int i = 0; i < 4; i ++) {
+    for (int j = 0; j < 3; j ++)
+      g[i][j] = grad(j, vertices[i][0], vertices[i][1], vertices[i][2], vertices[i][3]);
+    for (int j = 0; j < 4; j ++)
+      X[i][j] = vertices[i][j];
+    value[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2], vertices[i][3]);
+  }
+
+  // check intersection
+  float mu[4], x[4];
+  bool succ = ftk::inverse_linear_interpolation_3simplex_vector3(g, mu);
   if (!succ) return;
 
-  float hessxx[3], hessxy[3], hessyy[3];
-  for (int i = 0; i < vertices.size(); i ++) {
-    hessxx[i] = hess(0, 0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    hessxy[i] = hess(0, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
-    hessyy[i] = hess(1, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
-  }
-  float hxx = ftk::linear_interpolation_2simplex(hessxx, mu),
-        hxy = ftk::linear_interpolation_2simplex(hessxy, mu), 
-        hyy = ftk::linear_interpolation_2simplex(hessyy, mu);
-  float eig[2];
-  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
+  // check hessian
+  float H[4][3][3], h[3][3];
+  for (int i = 0; i < 4; i ++)
+    for (int j = 0; j < 3; j ++)
+      for (int k = 0; k < 3; k ++)
+        H[i][j][k] = hess(j, k, vertices[i][0], vertices[i][1], vertices[i][2], vertices[i][3]);
+  ftk::linear_interpolation_3simplex_matrix3x3(H, mu, h);
 
-  if (eig[0] < 0 && eig[1] < 0) { 
-    float X[3][3];
-    for (int i = 0; i < vertices.size(); i ++)
-      for (int j = 0; j < 3; j ++)
-        X[i][j] = vertices[i][j];
+  float eig[3];
+  ftk::solve_eigenvalues_symmetric3x3(h, eig);
+  // fprintf(stderr, "eig=%f, %f, %f\n", eig[0], eig[1], eig[2]);
 
-    intersection_t intersection;
-    ftk::linear_interpolation_2simplex_vector3(X, mu, intersection.x);
-
+  if (eig[0] < 0 && eig[1] < 0 && eig[2] < 0) { // local maxima
+    // dump results
+    float val = ftk::linear_interpolation_3simplex(value, mu);
+    ftk::linear_interpolation_3simplex_vector4(X, mu, x);
+   
+    intersection_t p;
+    p.x[0] = x[0]; p.x[1] = x[1]; p.x[2] = x[2]; p.x[3] = x[3];
     {
       std::lock_guard<std::mutex> guard(mutex);
-      intersections[f] = intersection;
+      intersections[s] = p;
+    
+      std::cerr << s << std::endl;
+      fprintf(stderr, "x={%f, %f, %f, %f}\n", x[0], x[1], x[2], x[3]);
     }
   }
 }
@@ -136,45 +157,59 @@ void trace_intersections()
   for (const auto &f : intersections)
     qualified_elements.insert(f.first);
 
-  auto neighbors = [](element_t f) {
+  // std::function<std::set<face_t>(face_t)> neighbors = 
+  auto neighbors = [](element_t e) {
     std::set<element_t> neighbors;
-    const auto cells = f.side_of();
-    for (const auto c : cells) {
-      const auto elements = c.sides();
-      for (const auto f1 : elements)
-        neighbors.insert(f1);
+    const auto hypercells = e.side_of();
+    for (const auto c : hypercells) {
+      const auto sides = c.sides();
+      for (const auto s : sides)
+        neighbors.insert(s);
     }
     return neighbors;
   };
 
-  // connected components
   auto cc = ftk::extract_connected_components<element_t, std::set<element_t>>(neighbors, qualified_elements);
-  // fprintf(stderr, "#cc=%lu\n", cc.size());
+  fprintf(stderr, "#cc=%lu\n", cc.size());
 
   for (int i = 0; i < cc.size(); i ++) {
+    // auto mycolor = QColor::fromHslF((float)rand()/RAND_MAX, 0.5, 0.5);
+    // cc_colors.push_back(mycolor);
 
     std::vector<std::vector<float>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
       std::vector<float> mycurve, mycolors;
+      // fprintf(stderr, "curve:\n");
       for (int k = 0; k < linear_graphs[j].size(); k ++) {
         auto p = intersections[linear_graphs[j][k]];
-        mycurve.push_back(p.x[0] / (DW-1));
-        mycurve.push_back(p.x[1] / (DH-1));
-        mycurve.push_back(p.x[2] / (DT-1));
+        mycurve.push_back(p.x[0]);
+        mycurve.push_back(p.x[1]);
+        mycurve.push_back(p.x[2]);
+        // fprintf(stderr, "p={%f, %f, %f}\n", p.x[0], p.x[1], p.x[2]);
       }
       mycurves.emplace_back(mycurve);
+      // tubes.push_back(ftk::curve2tube<float>(mycurve, mycolors, 12, 0.005));
     }
     trajectories.emplace_back(mycurves);
   }
+
+#if 0
+  int i = 0;
+  for (const auto c : cc) {
+    for (const auto f : c)
+      intersections[f].label = i;
+    i ++;
+  }
+#endif
 }
 
 void track_critical_points()
 {
-  m.set_lb_ub({1, 1, 0}, {DW-2, DH-2, DT-1}); // set the lower and upper bounds of the mesh
-  m.element_for(2, check_simplex); // iterate over all 2-simplices
+  m.set_lb_ub({2, 2, 2, 0}, {DW-3, DH-3, DD-3, DT-1}); // set the lower and upper bounds of the mesh
+  m.element_for(3, check_simplex); // iterate over all 3-simplices
 
-  trace_intersections();
+  // trace_intersections();
 }
 
 void print_trajectories()
@@ -266,16 +301,19 @@ int main(int argc, char **argv)
   scalar.reshape(DW, DH, DD, DT);
   scalar.from_netcdf(argv[1], "vort", starts, sizes);
 
-#if 0
+#if 1
   derive_gradients();
   derive_hessians();
   track_critical_points();
 #endif
 
+  print_trajectories();
+#if 0
 #if HAVE_VTK
   start_vtk_window();
 #else
   print_trajectories();
+#endif
 #endif
 
   return 0;
