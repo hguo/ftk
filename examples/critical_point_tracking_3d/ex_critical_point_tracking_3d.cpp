@@ -215,6 +215,7 @@ void start_vtk_window()
   property->SetScalarOpacity(opacityFun);
   property->SetInterpolationTypeToLinear();
 
+  volumeMapper->SetInputData(imageData);
   volume->SetProperty(property);
   volume->SetMapper(volumeMapper);
 
@@ -243,6 +244,8 @@ void start_vtk_window()
   // add the actors to the scene
   renderer->AddActor(actor);
   renderer->SetBackground(1, 1, 1); // Background color white
+
+  renderer->AddVolume(volume);
 
   vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
     vtkSmartPointer<vtkRenderWindowInteractor>::New();
