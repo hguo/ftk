@@ -1,3 +1,24 @@
+#if HAVE_NETCDF
+#include <netcdf.h>
+#endif
+
+#if HAVE_VTK
+#include <ftk/geometry/curve2vtk.hh>
+#include <vtkPolyDataMapper.h>
+#include <vtkImageData.h>
+#include <vtkVolume.h>
+#include <vtkVolumeProperty.h>
+#include <vtkSmartVolumeMapper.h>
+#include <vtkColorTransferFunction.h>
+#include <vtkPiecewiseFunction.h>
+#include <vtkTubeFilter.h>
+#include <vtkActor.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#endif
+
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
@@ -11,17 +32,6 @@
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
-
-#if HAVE_VTK
-#include <ftk/geometry/curve2vtk.hh>
-#include <vtkPolyDataMapper.h>
-#include <vtkTubeFilter.h>
-#include <vtkActor.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#endif
 
 const int DW = 128, DH = 128, DD = 128;// the dimensionality of the data is DW*DH
 const int DT = 10; // number of timesteps
@@ -56,7 +66,6 @@ void derive_gradients()
 void derive_hessians()
 {
   hess.reshape({2, 2, (size_t)DW, (size_t)DH, (size_t)DT});
-
   for (int k = 0; k < DT; k ++) {
     for (int j = 2; j < DH-2; j ++) {
       for (int i = 2; i < DW-2; i ++) {
@@ -187,6 +196,29 @@ void print_trajectories()
 #if HAVE_VTK
 void start_vtk_window()
 {
+  // initialize volume data
+  vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
+  imageData->SetDimensions(DW, DH, DD);
+  imageData->AllocateScalars(VTK_FLOAT, 1);
+
+  float *ptr = static_cast<float*>(imageData->GetScalarPointer(0, 0, 0));
+  for (int i = 0; i < DW*DH*DD; i ++)
+    ptr[i] = scalar[i];
+
+  vtkSmartPointer<vtkVolume> volume = vtkVolume::New();
+  vtkSmartPointer<vtkSmartVolumeMapper> volumeMapper = vtkSmartVolumeMapper::New();
+  vtkSmartPointer<vtkColorTransferFunction> colorFun = vtkColorTransferFunction::New();
+  vtkSmartPointer<vtkPiecewiseFunction> opacityFun = vtkPiecewiseFunction::New();
+
+  vtkSmartPointer<vtkVolumeProperty> property = vtkVolumeProperty::New();
+  property->SetColor(colorFun);
+  property->SetScalarOpacity(opacityFun);
+  property->SetInterpolationTypeToLinear();
+
+  volume->SetProperty(property);
+  volume->SetMapper(volumeMapper);
+
+  // render curves
   auto vtkcurves = ftk::curves2vtk(trajectories);
   // vtkcurves->Print(std::cerr);
 
@@ -228,7 +260,8 @@ int main(int argc, char **argv)
 {
   size_t starts[4] = {0, 0, 0, 0}, 
          sizes[4]  = {size_t(DT), size_t(DD), size_t(DH), size_t(DW)};
-  scalar.from_netcdf(argv[1], "vorts", starts, sizes);
+  scalar.reshape(DW, DH, DD, DT);
+  scalar.from_netcdf(argv[1], "vort", starts, sizes);
 
 #if 0
   derive_gradients();
