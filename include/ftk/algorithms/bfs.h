@@ -3,6 +3,7 @@
 
 #include <queue>
 #include <set>
+#include <functional>
 
 namespace ftk {
 
