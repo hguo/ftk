@@ -84,14 +84,14 @@ inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2]
     {V[0][1] - V[2][1], V[1][1] - V[2][1]}
   };
   T invA[2][2];
-  ftk::matrix_inverse2x2(A, invA);
+  T det = ftk::matrix_inverse2x2(A, invA);
 
   P[0][0] =-(invA[0][0] * V[2][0] + invA[0][1] * V[2][1]);
   P[0][1] =  invA[0][0] * w[0] + invA[0][1] * w[1];
   P[1][0] =-(invA[1][0] * V[2][0] + invA[1][1] * V[2][1]);
   P[1][1] =  invA[1][0] * w[0] + invA[1][1] * w[1];
-  // P[2][0] = T(1) - P[0][0] - P[1][0];
-  // P[2][1] =-(P[0][1] + P[1][1]);
+  P[2][0] = T(1) - P[0][0] - P[1][0];
+  P[2][1] =-(P[0][1] + P[1][1]);
 }
 
 template <typename T>
@@ -137,23 +137,23 @@ inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2]
 }
 
 template <typename T>
-disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(const T V[3][2], const T w[2])
+// disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(const T V[3][2], const T w[2])
+disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(const T P[3][2], const T w[2])
 {
   disjoint_intervals<T> I;
   I.set_to_complete();
 
-  T P[3][2];
-
-  characteristic_polynomials_parallel_vector2_simplex2(V, w, P);
+  // T P[3][2] = {0};
+  // characteristic_polynomials_parallel_vector2_simplex2(V, w, P);
+ 
   I.intersect( solve_linear_inequality(P[0][1], P[0][0]) );
-  I.intersect( solve_linear_inequality(-P[0][1], T(1) - P[0][0]) );
+  I.intersect( solve_linear_inequality(-P[0][1], 1 - P[0][0]) );
   I.intersect( solve_linear_inequality(P[1][1], P[1][0]) );
-  I.intersect( solve_linear_inequality(-P[1][1], T(1) - P[1][0]) );
-  // I.intersect( solve_linear_inequality(P[2][1], P[2][0]) );
-  // I.intersect( solve_linear_inequality(-P[2][1], T(1) - P[2][0]) );
+  I.intersect( solve_linear_inequality(-P[1][1], 1 - P[1][0]) );
+  I.intersect( solve_linear_inequality(P[2][1], P[2][0]) );
+  I.intersect( solve_linear_inequality(-P[2][1], T(1) - P[2][0]) );
 
-  print3x2("P", P);
-  std::cerr << I << std::endl;
+  // std::cerr << I << std::endl;
 
   return I;
 }
