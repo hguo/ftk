@@ -1,3 +1,5 @@
+#include <mutex>
+
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
