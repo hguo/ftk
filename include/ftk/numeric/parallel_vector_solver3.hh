@@ -30,6 +30,18 @@ inline bool verify_parallel_vector3(const T v[3], const T w[3], const T epsilon 
 }
 
 template <typename T>
+inline bool verify_parallel_vector3_simplex1(
+    const T V[2][3], const T W[2][3], const T mu[2], 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double v[3], w[3];
+  ftk::linear_interpolation_1simplex_vector3(V, mu, v);
+  ftk::linear_interpolation_1simplex_vector3(W, mu, w);
+
+  return verify_parallel_vector3(v, w, epsilon);
+}
+
+template <typename T>
 inline bool verify_parallel_vector3_simplex2(const T V[3][3], const T W[3][3], const T mu[3], 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
@@ -140,7 +152,10 @@ inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3],
 }
 
 template <typename T>
-inline int solve_parallel_vector3_simplex1(const T V[2][3], const T W[2][3], T lambda[2], T mu[2], const T epsilon = std::numeric_limits<T>::epsilon()) // 1e-9)
+inline int solve_parallel_vector3_simplex1(
+    const T V[2][3], const T W[2][3], 
+    T lambda[2], T mu[2][2], 
+    const T epsilon = std::numeric_limits<T>::epsilon()) // 1e-9)
 {
   const T P[3][2] = { // rhs
     {V[1][0], -W[1][0]},
@@ -204,7 +219,8 @@ inline int solve_parallel_vector3_simplex1(const T V[2][3], const T W[2][3], T l
       // fprintf(stderr, "l=%f, nu=%.20f\n", l[i], nu[i]);
       if (nu[i] >= -epsilon && nu[i] <= 1+epsilon) {
         lambda[n] = l[i];
-        mu[n] = nu[i];
+        mu[n][0] = nu[i];
+        mu[n][1] = 1 - nu[i];
         n ++;
       }
     }

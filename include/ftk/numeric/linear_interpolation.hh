@@ -17,6 +17,14 @@ inline void linear_interpolation_1simplex_vector2(const T V[2][2], const T mu[2]
 }
 
 template <typename T>
+inline void linear_interpolation_1simplex_vector3(const T V[2][3], const T mu[2], T v[3])
+{
+  v[0] = V[0][0] * mu[0] + V[1][0] * mu[1];
+  v[1] = V[0][1] * mu[0] + V[1][1] * mu[1];
+  v[2] = V[0][2] * mu[0] + V[1][2] * mu[1];
+}
+
+template <typename T>
 inline T linear_interpolation_2simplex(const T v[3], const T mu[3])
 {
   return v[0] * mu[0] + v[1] * mu[1] + v[2] * mu[2];
