@@ -30,6 +30,17 @@ inline bool verify_parallel_vector3(const T v[3], const T w[3], const T epsilon 
 }
 
 template <typename T>
+inline bool verify_parallel_vector3_simplex2(const T V[3][3], const T W[3][3], const T mu[3], 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double v[3], w[3];
+  ftk::linear_interpolation_2simplex_vector3(V, mu, v);
+  ftk::linear_interpolation_2simplex_vector3(W, mu, w);
+
+  return verify_parallel_vector3(v, w, epsilon);
+}
+
+template <typename T>
 inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3], 
     T lambda[3], T mu[3][3], const T epsilon = std::numeric_limits<T>::epsilon()) // was 1e-6
 {
