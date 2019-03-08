@@ -21,6 +21,33 @@
 namespace ftk {
 
 template <typename T>
+inline bool verify_parallel_vector2(const T v[2], const T w[2], const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  const double c = ftk::cross_product2(v, w); // cross product
+  return std::abs(c) <= epsilon;
+}
+
+template <typename T>
+inline bool verify_parallel_vector2_simplex1(const T V[2][2], const T W[2][2], const T mu[2], 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double v[2], w[2];
+  ftk::linear_interpolation_1simplex_vector2(V, mu, v);
+  ftk::linear_interpolation_1simplex_vector2(W, mu, w);
+  return verify_parallel_vector2(v, w, epsilon);
+}
+
+template <typename T>
+inline bool verify_parallel_vector2_simplex2(const T V[3][2], const T W[3][2], const T mu[3],
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double v[2], w[2];
+  ftk::linear_interpolation_2simplex_vector2(V, mu, v);
+  ftk::linear_interpolation_2simplex_vector2(W, mu, w);
+  return verify_parallel_vector2(v, w, epsilon);
+}
+
+template <typename T>
 inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2], 
     T lambda[2], T mu[2][2], const T epsilon = std::numeric_limits<T>::epsilon())
 {

@@ -20,6 +20,16 @@
 namespace ftk {
 
 template <typename T>
+inline bool verify_parallel_vector3(const T v[3], const T w[3], const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double c[3];
+  ftk::cross_product(v, w, c);
+  
+  const double norm = ftk::vector_2norm_3(c);
+  return norm <= epsilon;
+}
+
+template <typename T>
 inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3], 
     T lambda[3], T mu[3][3], const T epsilon = std::numeric_limits<T>::epsilon()) // was 1e-6
 {
