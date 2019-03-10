@@ -48,6 +48,15 @@ inline bool verify_parallel_vector2_simplex2(const T V[3][2], const T W[3][2], c
 }
 
 template <typename T>
+inline bool verify_parallel_vector2_simplex2(const T V[3][2], const T w[2], const T mu[3], 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double v[2];
+  ftk::linear_interpolation_2simplex_vector2(V, mu, v);
+  return verify_parallel_vector2(v, w, epsilon);
+}
+
+template <typename T>
 inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2], 
     T lambda[2], T mu[2][2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
