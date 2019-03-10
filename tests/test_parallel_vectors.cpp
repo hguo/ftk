@@ -58,18 +58,23 @@ TEST_F(parallel_vectors_test, parallel_vector2_simplex2_inequality_const_w) {
     auto I = ftk::solve_parallel_vector2_simplex2_inequalities(P, w);
     if (I.empty()) continue;
 
-    lambda = I.sample();
-    for (int i = 0; i < 3; i ++) 
-      mu[i] = ftk::polynomial_evaluate(P[i], 1, lambda); 
+    for (int k = 0; k < 3; k ++) {
+      if (k == 0) lambda = I.sample();
+      else if (k == 1) lambda = I.subintervals().begin()->lower();
+      else if (k == 2) lambda = I.subintervals().begin()->upper();
 
-    const double sum = std::abs(mu[0]) + std::abs(mu[1]) + std::abs(mu[2]);
-    bool inside = (sum <= 1 + epsilon);
-    if (!inside) {
-      fprintf(stderr, "lambda=%f, mu=%f, %f, %f\n", lambda, mu[0], mu[1], mu[2]);
+      for (int i = 0; i < 3; i ++) 
+        mu[i] = ftk::polynomial_evaluate(P[i], 1, lambda); 
+
+      const double sum = std::abs(mu[0]) + std::abs(mu[1]) + std::abs(mu[2]);
+      bool inside = (sum <= 1 + epsilon);
+      if (!inside) {
+        fprintf(stderr, "lambda=%f, mu=%f, %f, %f\n", lambda, mu[0], mu[1], mu[2]);
+      }
+
+      bool succ = ftk::verify_parallel_vector2_simplex2(V, w, mu, epsilon);
+      EXPECT_TRUE(inside && succ);
     }
-
-    bool succ = ftk::verify_parallel_vector2_simplex2(V, w, mu, epsilon);
-    EXPECT_TRUE(inside && succ);
   }
 }
 
@@ -83,9 +88,8 @@ TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector2_simple
     ftk::characteristic_polynomials_parallel_vector2_simplex2(V, W, Q, P);
 
     lambda = ((double)rand() / RAND_MAX - 0.5) * 10000;
-    mu[0] = ftk::evaluate_rational(P[0], Q, 2, lambda); 
-    mu[1] = ftk::evaluate_rational(P[1], Q, 2, lambda);
-    mu[2] = ftk::evaluate_rational(P[2], Q, 2, lambda); // 1 - mu[0] - mu[1];
+    for (int i = 0; i < 3; i ++)
+      mu[i] = ftk::evaluate_rational(P[i], Q, 2, lambda); 
 
     bool succ = ftk::verify_parallel_vector2_simplex2(V, W, mu, epsilon);
     if (!succ) {
