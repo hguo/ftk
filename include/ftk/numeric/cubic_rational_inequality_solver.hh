@@ -12,9 +12,8 @@ namespace ftk {
 template <typename T>
 std::tuple<disjoint_intervals<long long>, std::map<long long, T> >
 solve_cubic_rational_inequality_quantized(
-    const T P[4], const T Q[4], const long long factor = 1000000000L)
+    const T P[4], const T Q[4], const long long factor = 1000000000L, const T epsilon=std::numeric_limits<T>::epsilon())
 {
-  const T epsilon = T(1) / T(factor);
   disjoint_intervals<long long> I;
   std::map<long long, T> quantized_roots;
   
@@ -27,8 +26,8 @@ solve_cubic_rational_inequality_quantized(
   }
 
   // real roots of P and Q
-  const auto real_roots_p = solve_cubic_real_multiplicity(P), 
-             real_roots_q = solve_cubic_real_multiplicity(Q);
+  const auto real_roots_p = solve_cubic_real_multiplicity(P, epsilon), 
+             real_roots_q = solve_cubic_real_multiplicity(Q, epsilon);
 
   // quantized roots of P and Q;  critical values
   std::map<long long, int> quantized_roots_p, quantized_roots_q;
@@ -113,7 +112,7 @@ solve_cubic_rational_inequality_quantized(
     if (singularities.find(v0) != singularities.end()) ii.set_lower_open();
     if (singularities.find(v1) != singularities.end()) ii.set_upper_open();
         
-    const T x = ii.sample() * epsilon; // FIXME: avoid sampling on Q's roots
+    const T x = T(ii.sample()) / factor; // FIXME: avoid sampling on Q's roots
     const T y = evaluate_rational(P, Q, 3, x);
     // std::cerr << i << "checking interval: " << ii << std::endl;
     // std::cerr << "sample: " << x << ", value: " << y << std::endl;
@@ -128,9 +127,9 @@ solve_cubic_rational_inequality_quantized(
 
 template <typename T>
 disjoint_intervals<T> solve_cubic_rational_inequality(
-    const T P[4], const T Q[4], const long long factor = 1000000000L)
+    const T P[4], const T Q[4], const long long factor = 1000000000L, const T epsilon=std::numeric_limits<T>::epsilon())
 {
-  const auto I0 = std::get<0>(solve_cubic_rational_inequality_quantized(P, Q, factor)); // TODO
+  const auto I0 = std::get<0>(solve_cubic_rational_inequality_quantized(P, Q, factor, epsilon)); // TODO
   return disjoint_intervals<T>(I0, factor);
 
 #if 0

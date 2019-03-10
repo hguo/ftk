@@ -1,3 +1,3 @@
-# add_executable (test_layout test_layout.cpp)
-
-add_executable (example_tracking_graph example_tracking_graph)
+add_subdirectory (tracking_graph)
+add_subdirectory (critical_point_tracking_2d)
+add_subdirectory (critical_point_tracking_3d)

@@ -3,35 +3,29 @@
 
 namespace ftk {
 
-template <class T, int N, int K, int M>
-void matrix_matrix_multiplication(const T A[N][K], const T B[K][M], T C[N][M])
-{
-  // 
-}
-
 template <class T>
-void matrix_scalar_multiplication_3x3(const T A[9], T b, T C[9])
+void matrix3x3_scalar_multiplication(const T A[9], T b, T C[9])
 {
   for (int i=0; i<9; i++) 
     C[i] = A[i]*b;
 }
 
 template <class T>
-void matrix_vector_multiplication_2x2(const T A[2][2], const T b[2], T x[2])
+void matrix2x2_vector2_multiplication(const T A[2][2], const T b[2], T x[2])
 {
   x[0] = A[0][0] * b[0] + A[0][1] * b[1];
   x[1] = A[1][0] * b[0] + A[1][1] * b[1];
 }
 
 template <class T>
-void matrix_vector_multiplication_2x3(const T A[2][3], const T b[3], T x[2])
+void matrix2x3_vector3_multiplication(const T A[2][3], const T b[3], T x[2])
 {
   x[0] = A[0][0] * b[0] + A[0][1] * b[1] + A[0][2] * b[2];
   x[1] = A[1][0] * b[0] + A[1][1] * b[1] + A[1][2] * b[2];
 }
 
 template <class T>
-void matrix_vector_multiplication_3x3(const T A[9], const T b[3], T c[3]) 
+void matrix3x3_vector3_multiplication(const T A[9], const T b[3], T c[3]) 
 {
   c[0] = A[0] * b[0] + A[1] * b[1] + A[2] * b[2];
   c[1] = A[3] * b[0] + A[4] * b[1] + A[5] * b[2];
@@ -39,7 +33,7 @@ void matrix_vector_multiplication_3x3(const T A[9], const T b[3], T c[3])
 }
 
 template <class T>
-void matrix_vector_multiplication_3x3(const T A[3][3], const T b[3], T c[3])
+void matrix3x3_vector3_multiplication(const T A[3][3], const T b[3], T c[3])
 {
   c[0] = A[0][0] * b[0] + A[0][1] * b[1] + A[0][2] * b[2];
   c[1] = A[1][0] * b[0] + A[1][1] * b[1] + A[1][2] * b[2];
@@ -47,7 +41,7 @@ void matrix_vector_multiplication_3x3(const T A[3][3], const T b[3], T c[3])
 }
 
 template <class T>
-void matrix_matrix_multiplication_2x2_2x2(const T A[2][2], const T B[2][2], T C[2][2])
+void matrix2x2_matrix2x2_multiplication(const T A[2][2], const T B[2][2], T C[2][2])
 {
   C[0][0] = A[0][0]*B[0][0] + A[0][1]*B[1][0];
   C[0][1] = A[0][0]*B[0][1] + A[0][1]*B[1][1];
@@ -56,7 +50,7 @@ void matrix_matrix_multiplication_2x2_2x2(const T A[2][2], const T B[2][2], T C[
 }
 
 template <class T>
-void matrix_matrix_multiplication_2x2_2x3(const T A[2][2], const T B[2][3], T C [2][3])
+void matrix2x2_matrix2x3_multiplication(const T A[2][2], const T B[2][3], T C [2][3])
 {
   C[0][0] = A[0][0]*B[0][0] + A[0][1]*B[1][0];
   C[0][1] = A[0][0]*B[0][1] + A[0][1]*B[1][1];
@@ -67,7 +61,7 @@ void matrix_matrix_multiplication_2x2_2x3(const T A[2][2], const T B[2][3], T C 
 }
 
 template <class T>
-void matrix_matrix_multiplication_3x3_3x3(const T A[9], const T B[9], T C[9])
+void matrix3x3_matrix3x3_multiplication(const T A[9], const T B[9], T C[9])
 {
   for (int i=0; i<3; i++) {
     for (int j=0; j<3; j++) {
@@ -80,7 +74,7 @@ void matrix_matrix_multiplication_3x3_3x3(const T A[9], const T B[9], T C[9])
 }
 
 template <class T>
-void matrix_matrix_multiplication_3x3_3x3(const T A[3][3], const T B[3][3], T C[3][3])
+void matrix3x3_matrix3x3_multiplication(const T A[3][3], const T B[3][3], T C[3][3])
 {
   for (int i=0; i<3; i++) {
     for (int j=0; j<3; j++) {
@@ -93,13 +87,13 @@ void matrix_matrix_multiplication_3x3_3x3(const T A[3][3], const T B[3][3], T C[
 }
 
 template <class T>
-void matrix_square_3x3(const T M[3][3], T M2[3][3])
+void matrix3x3_square(const T M[3][3], T M2[3][3])
 {
   matrix_matrix_multiplication_3x3_3x3(M, M, M2);
 }
 
 template <class T>
-void matrix_matrix_multiplication_2x3_3x2(const T A[2][3], const T B[3][2], T C[2][2])
+void matrix2x3_matrix3x2_multiplication(const T A[2][3], const T B[3][2], T C[2][2])
 {
   C[0][0] = A[0][0]*B[0][0] + A[0][1]*B[1][0] + A[0][2]*B[2][0];
   C[0][1] = A[0][0]*B[0][1] + A[0][1]*B[1][1] + A[0][2]*B[2][1];

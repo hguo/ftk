@@ -2,7 +2,8 @@
 #define _FTK_MATRIX_NORM_HH
 
 #include <ftk/numeric/matrix_multiplication.hh>
-#include <ftk/numeric/eigen_solver.hh>
+#include <ftk/numeric/eigen_solver2.hh>
+#include <ftk/numeric/eigen_solver3.hh>
 #include <ftk/numeric/transpose.hh>
 
 namespace ftk {
