@@ -9,6 +9,8 @@ set (FTK_VERSION ${FTK_MAJOR_VERSION}.${FTK_MINOR_VERSION}.${FTK_PATCH_VERSION})
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 include_directories (${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 option (FTK_BUILD_TESTS "Build the test programs." OFF)
@@ -35,9 +37,17 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION lib/cmake)
 
 if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
+  find_package (Threads REQUIRED)
+  set (CMAKE_THREAD_PREFER_PTHREAD)
+
   find_package (VTK QUIET)
   if (VTK_FOUND)
     include (${VTK_USE_FILE})
+  endif ()
+
+  find_package (NetCDF QUIET)
+  if (NETCDF_FOUND)
+    include_directories (${NETCDF_INCLUDE_DIR})
   endif ()
 endif ()
 

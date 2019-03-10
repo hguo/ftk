@@ -1,8 +1,10 @@
 #ifndef _BFS_H
 #define _BFS_H
 
+#include <functional>
 #include <queue>
 #include <set>
+#include <functional>
 
 namespace ftk {
 
