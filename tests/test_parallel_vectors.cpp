@@ -73,6 +73,27 @@ TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector2_simple
   }
 }
 
+TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector3_simplex2)
+{
+  double V[4][3], W[4][3], Q[4], P[4][4];
+  double lambda, mu[4];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand4x3(V);
+    ftk::rand4x3(W);
+
+    ftk::characteristic_polynomials_parallel_vector3_simplex3(V, W, Q, P);
+    lambda = ((double)rand() / RAND_MAX - 0.5) * 10000;
+    mu[0] = ftk::evaluate_rational(P[0], Q, 3, lambda); 
+    mu[1] = ftk::evaluate_rational(P[1], Q, 3, lambda);
+    mu[2] = ftk::evaluate_rational(P[2], Q, 3, lambda); 
+    mu[3] = ftk::evaluate_rational(P[3], Q, 3, lambda); 
+    
+    bool succ = ftk::verify_parallel_vector3_simplex3(V, W, mu, epsilon);
+
+    EXPECT_TRUE(succ);
+  }
+}
+
 TEST_F(parallel_vectors_test, solve_parallel_vector3_simplex1) {
   double V[2][3], W[2][3], lambda[2], mu[2][2];
   for (int run = 0; run < nruns; run ++) {
