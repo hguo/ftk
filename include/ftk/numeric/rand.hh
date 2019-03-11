@@ -66,6 +66,12 @@ void rand_symmetric2x2(T M[2][2])
 }
 
 template <typename T>
+void rand2x3(T M[2][3])
+{
+  rand<T, 2, 3>(M);
+}
+
+template <typename T>
 void rand3x3(T M[3][3])
 {
   rand<T, 3, 3>(M);

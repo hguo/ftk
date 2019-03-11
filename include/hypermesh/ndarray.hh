@@ -23,6 +23,14 @@ struct ndarray {
   void reshape(const std::vector<size_t> &dims_);
   void reshape(const std::vector<size_t> &dims, T val);
 
+  void reshape(size_t n0) {reshape({n0});}
+  void reshape(size_t n0, size_t n1) {reshape({n0, n1});}
+  void reshape(size_t n0, size_t n1, size_t n2) {reshape({n0, n1, n2});}
+  void reshape(size_t n0, size_t n1, size_t n2, size_t n3) {reshape({n0, n1, n2, n3});}
+  void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4) {reshape({n0, n1, n2, n3, n4});}
+  void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5) {reshape({n0, n1, n2, n3, n4, n5});}
+  void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshape({n0, n1, n2, n3, n4, n5, n6});}
+
   size_t index(const std::vector<size_t>& idx) const;
 
   T& at(const std::vector<size_t>& idx) {return p[index(idx)];}
