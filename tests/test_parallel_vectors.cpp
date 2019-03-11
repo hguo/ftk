@@ -47,7 +47,7 @@ TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector2_simple
   }
 }
 
-TEST_F(parallel_vectors_test, parallel_vector2_simplex2_inequality_const_w) {
+TEST_F(parallel_vectors_test, parallel_vector2_simplex2_inequality_const_w_const_w) {
   double V[3][2], w[2], P[3][2];
   double lambda, mu[3], v[2];
   for (int run = 0; run < nruns; run ++) {
@@ -100,6 +100,44 @@ TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector2_simple
       fprintf(stderr, "mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
     }
     EXPECT_TRUE(succ);
+  }
+}
+
+TEST_F(parallel_vectors_test, parallel_vector2_simplex2_inequality) {
+  double V[3][2], W[3][2], Q[3], P[3][3];
+  double lambda, mu[3], v[2], w[2];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand3x2(V);
+    ftk::rand3x2(W);
+
+    ftk::characteristic_polynomials_parallel_vector2_simplex2(V, W, Q, P);
+    auto [I, R] = ftk::solve_parallel_vector2_simplex2_inequalities_quantized(Q, P);
+    if (I.empty()) continue;
+
+    std::vector<long long> quantized_lambdas;
+    std::vector<double> lambdas;
+    for (const auto ii : I.subintervals()) {
+      lambdas.push_back(ii.lower());
+      lambdas.push_back(ii.upper());
+      lambdas.push_back(ii.sample());
+    }
+
+    for (int i = 0; i < lambdas.size(); i ++) {
+      const double lambda = lambdas[i];
+      if (!std::isnormal(lambda)) continue;
+
+      for (int i = 0; i < 3; i ++) 
+        mu[i] = ftk::polynomial_evaluate(P[i], 1, lambda); 
+
+      const double sum = std::abs(mu[0]) + std::abs(mu[1]) + std::abs(mu[2]);
+      bool inside = (sum <= 1 + epsilon);
+      if (!inside) {
+        fprintf(stderr, "lambda=%f, mu=%f, %f, %f\n", lambda, mu[0], mu[1], mu[2]);
+      }
+
+      bool succ = ftk::verify_parallel_vector2_simplex2(V, W, mu, epsilon);
+      EXPECT_TRUE(inside && succ);
+    }
   }
 }
 

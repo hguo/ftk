@@ -197,11 +197,14 @@ disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(const T P[3][
 template <typename T>
 std::tuple<disjoint_intervals<long long>, std::map<long long, T>>
 solve_parallel_vector2_simplex2_inequalities_quantized(
-    const T V[3][2], const T W[3][2], const long long factor = 1000000000L, 
+    const T Q[3], const T P[3][3], 
+    // const T V[3][2], const T W[3][2], 
+    const long long factor = 1000000000L, 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
-  T Q[3] = {0}, P[3][3] = {0}, QP[3][3] = {0};
-  characteristic_polynomials_parallel_vector2_simplex2(V, W, Q, P);
+  // T Q[3] = {0}, P[3][3] = {0}, QP[3][3] = {0};
+  // characteristic_polynomials_parallel_vector2_simplex2(V, W, Q, P);
+  T QP[3][3] = {0};
 
   std::map<long long, T> quantized_roots;
   disjoint_intervals<long long> I;
@@ -228,6 +231,17 @@ solve_parallel_vector2_simplex2_inequalities_quantized(
   }
 
   return std::make_tuple(I, quantized_roots);
+}
+
+template <typename T>
+disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(
+    const T Q[3], const T P[3][3], 
+    // const T V[3][2], const T W[3][2], 
+    const long long factor = 1000000000L, 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  const auto [I, R] = solve_parallel_vector2_simplex2_inequalities_quantized(Q, P, factor, epsilon);
+  return disjoint_intervals<T>(I, factor);
 }
 
 }
