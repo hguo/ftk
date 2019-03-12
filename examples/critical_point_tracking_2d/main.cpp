@@ -326,8 +326,7 @@ int main(int argc, char **argv)
     scalar.from_binary_file_sequence(pattern);
   }
  
-#if 0
-  m.set_lb_ub({1, 1, 0}, {DW-2, DH-2, DT-1}); // set the lower and upper bounds of the mesh
+  m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // set the lower and upper bounds of the mesh
 
   if (!filename_dump_r.empty()) {
     read_dump_file(filename_dump_r);
@@ -341,7 +340,6 @@ int main(int argc, char **argv)
     write_dump_file(filename_dump_w);
 
   trace_intersections();
-#endif
 
   if (show_qt) {
 #if HAVE_QT
