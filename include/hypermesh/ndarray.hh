@@ -5,6 +5,7 @@
 #include <array>
 #include <numeric>
 #include <tuple>
+#include <glob.h>
 
 namespace hypermesh {
 
@@ -74,6 +75,7 @@ struct ndarray {
 
   void from_binary_file(const std::string& filename);
   void from_binary_file(FILE *fp);
+  void from_binary_file_sequence(const std::string& pattern);
   void to_binary_file(const std::string& filename);
   void to_binary_file(FILE *fp);
 
@@ -83,6 +85,8 @@ struct ndarray {
   void to_netcdf(const std::string& filename, const std::string& varname);
   void to_netcdf(int ncid, const std::string& varname);
   void to_netcdf(int ncid, int varid);
+
+  static std::vector<std::string> glob(const std::string &pattern);
 
   // statistics
   std::tuple<T, T> min_max() const;
@@ -106,6 +110,37 @@ template <typename T>
 void ndarray<T>::from_binary_file(FILE *fp)
 {
   fread(&p[0], sizeof(T), nelem(), fp);
+}
+
+template <typename T>
+std::vector<std::string> ndarray<T>::glob(const std::string& pattern)
+{
+  std::vector<std::string> filenames;
+  glob_t results; 
+  ::glob(pattern.c_str(), 0, NULL, &results); 
+  for (int i=0; i<results.gl_pathc; i++)
+    filenames.push_back(results.gl_pathv[i]); 
+  globfree(&results);
+  return filenames;
+}
+
+template <typename T>
+void ndarray<T>::from_binary_file_sequence(const std::string& pattern)
+{
+  const auto filenames = ndarray<T>::glob(pattern);
+  if (filenames.size() == 0) return;
+
+  std::vector<size_t> mydims = dims;
+  mydims[nd() - 1] = filenames.size();
+  reshape(mydims);
+ 
+  size_t npt = std::accumulate(dims.begin(), dims.end()-1, 1, std::multiplies<size_t>());
+  for (int i = 0; i < filenames.size(); i ++) {
+    // fprintf(stderr, "loading %s\n", filenames[i].c_str());
+    FILE *fp = fopen(filenames[i].c_str(), "rb");
+    fread(&p[npt*i], sizeof(T), npt, fp);
+    fclose(fp);
+  }
 }
 
 #ifdef _NETCDF_ // defined in netcdf.h

@@ -299,7 +299,6 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
-  std::vector<std::string> filenames;
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   bool show_qt = false, show_vtk = false;
@@ -323,9 +322,11 @@ int main(int argc, char **argv)
   if (pattern.empty()) {
     scalar = generate_synthetic_data<float>(DW, DH, DT);
   } else {
-
+    scalar.reshape(DW, DH, 0);
+    scalar.from_binary_file_sequence(pattern);
   }
-  
+ 
+#if 0
   m.set_lb_ub({1, 1, 0}, {DW-2, DH-2, DT-1}); // set the lower and upper bounds of the mesh
 
   if (!filename_dump_r.empty()) {
@@ -340,6 +341,7 @@ int main(int argc, char **argv)
     write_dump_file(filename_dump_w);
 
   trace_intersections();
+#endif
 
   if (show_qt) {
 #if HAVE_QT
