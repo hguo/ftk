@@ -1,4 +1,4 @@
-#include "../common/cxxopts.hpp"
+#include <cxxopts.hpp>
 #include <mutex>
 
 #include <ftk/numeric/print.hh>
@@ -14,6 +14,11 @@
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
+
+#if HAVE_QT
+#include "widget.h"
+#include <QApplication>
+#endif
 
 #if HAVE_VTK
 #include <ftk/geometry/curve2vtk.hh>
@@ -332,6 +337,15 @@ int main(int argc, char **argv)
 
   if (show_qt) {
 #if HAVE_QT
+    QApplication app(argc, argv);
+    QGLFormat fmt = QGLFormat::defaultFormat();
+    fmt.setSampleBuffers(true);
+    fmt.setSamples(16);
+    QGLFormat::setDefaultFormat(fmt);
+
+    CGLWidget *widget = new CGLWidget(scalar);
+    widget->show();
+    return app.exec();
 #else
     fprintf(stderr, "Error: the executable is not compiled with Qt\n");
 #endif
