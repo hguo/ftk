@@ -200,7 +200,6 @@ void trace_intersections()
 
 void scan_intersections() 
 {
-  m.set_lb_ub({1, 1, 0}, {DW-2, DH-2, DT-1}); // set the lower and upper bounds of the mesh
   m.element_for(2, check_simplex); // iterate over all 2-simplices
 }
 
@@ -218,6 +217,39 @@ void print_trajectories()
       }
     }
   }
+}
+
+void read_dump_file(const std::string& f)
+{
+  FILE *fp = fopen(f.c_str(), "rb");
+  if (!fp) return;
+
+  fseek(fp, 0L, SEEK_END);
+  const auto sz = ftell(fp);
+  const auto n = sz / sizeof(std::pair<size_t, intersection_t>);
+  fseek(fp, 0L, SEEK_SET);
+  
+  std::vector<std::pair<size_t, intersection_t>> vector;
+  vector.resize(n);
+
+  fread((void*)(&vector[0]), sizeof(std::pair<size_t, intersection_t>), vector.size(), fp);
+  fclose(fp);
+
+  for (const auto &i : vector) {
+    hypermesh::regular_simplex_mesh_element e(m, 2, i.first);
+    intersections[e] = i.second;
+  }
+}
+
+void write_dump_file(const std::string& f)
+{
+  std::vector<std::pair<size_t, intersection_t>> vector;
+  for (const auto &i : intersections)
+    vector.push_back(std::make_pair(i.first.to_integer<size_t>(), i.second));
+
+  FILE *fp = fopen(f.c_str(), "wb");
+  fwrite((void*)(&vector[0]), sizeof(std::pair<size_t, intersection_t>), vector.size(), fp);
+  fclose(fp);
 }
 
 #if HAVE_VTK
@@ -263,11 +295,14 @@ void start_vtk_window()
 int main(int argc, char **argv)
 {
   std::string filename, format;
+  std::string filename_dump_r, filename_dump_w;
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
   options.add_options()
     ("i,input", "input file name", cxxopts::value<std::string>(filename))
+    ("read-dump", "read dump file", cxxopts::value<std::string>(filename_dump_r))
+    ("write-dump", "write dump file", cxxopts::value<std::string>(filename_dump_w))
     ("f,format", "input file format", cxxopts::value<std::string>(format))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
@@ -277,13 +312,22 @@ int main(int argc, char **argv)
     ("d,debug", "enable debugging");
 
   auto results = options.parse(argc, argv);
-  fprintf(stderr, "dims=%d, %d, %d\n", DW, DH, DT);
+  // fprintf(stderr, "dims=%d, %d, %d\n", DW, DH, DT);
 
   scalar = generate_synthetic_data<float>(DW, DH, DT);
-  grad = derive_gradients2(scalar);
-  hess = derive_hessians2(grad);
+  m.set_lb_ub({1, 1, 0}, {DW-2, DH-2, DT-1}); // set the lower and upper bounds of the mesh
 
-  scan_intersections();
+  if (!filename_dump_r.empty()) {
+    read_dump_file(filename_dump_r);
+  } else {
+    grad = derive_gradients2(scalar);
+    hess = derive_hessians2(grad);
+    scan_intersections();
+  }
+
+  if (!filename_dump_w.empty())
+    write_dump_file(filename_dump_w);
+
   trace_intersections();
 
   if (show_qt) {
