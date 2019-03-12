@@ -299,16 +299,17 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
-  std::string filename, format;
+  std::vector<std::string> filenames;
+  std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
   options.add_options()
-    ("i,input", "input file name", cxxopts::value<std::string>(filename))
+    ("i,input", "input file name pattern", cxxopts::value<std::string>(pattern))
+    ("f,format", "input file format", cxxopts::value<std::string>(format)->default_value("float32"))
     ("read-dump", "read dump file", cxxopts::value<std::string>(filename_dump_r))
     ("write-dump", "write dump file", cxxopts::value<std::string>(filename_dump_w))
-    ("f,format", "input file format", cxxopts::value<std::string>(format))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
@@ -319,7 +320,12 @@ int main(int argc, char **argv)
   auto results = options.parse(argc, argv);
   // fprintf(stderr, "dims=%d, %d, %d\n", DW, DH, DT);
 
-  scalar = generate_synthetic_data<float>(DW, DH, DT);
+  if (pattern.empty()) {
+    scalar = generate_synthetic_data<float>(DW, DH, DT);
+  } else {
+
+  }
+  
   m.set_lb_ub({1, 1, 0}, {DW-2, DH-2, DT-1}); // set the lower and upper bounds of the mesh
 
   if (!filename_dump_r.empty()) {
