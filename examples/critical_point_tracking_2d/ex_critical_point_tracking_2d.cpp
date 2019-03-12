@@ -1,3 +1,4 @@
+#include "../common/cxxopts.hpp"
 #include <mutex>
 
 #include <ftk/numeric/print.hh>
@@ -25,9 +26,8 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #endif
 
-const int DW = 128, DH = 128; // the dimensionality of the data is DW*DH
-const int DT = 16; // number of timesteps
-const float scaling_factor = 15; // the factor that controls the scale of the synthesize data
+int DW, DH; // the dimensionality of the data is DW*DH
+int DT; // number of timesteps
 
 hypermesh::ndarray<float> scalar, grad, hess;
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
@@ -50,52 +50,65 @@ T f(T x, T y, T t)
   return cos(x*cos(t)-y*sin(t))*sin(x*sin(t)+y*cos(t));
 }
 
-void generate_scalar_data()
+template <typename T>
+hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
 {
-  scalar.reshape({(size_t)DW, (size_t)DH, (size_t)DT});
+  hypermesh::ndarray<T> scalar;
+  scalar.reshape(DW, DH, DT);
+
+  const T scaling_factor = 15; // the factor that controls the shape of the synthesize data
   for (int k = 0; k < DT; k ++) {
     for (int j = 0; j < DH; j ++) {
       for (int i = 0; i < DW; i ++) {
-        const float x = (((float)i / (DW-1)) - 0.5) * scaling_factor,
-                    y = (((float)j / (DH-1)) - 0.5) * scaling_factor, 
-                    t = ((float)k / (DT-1)) + 1e-4;
+        const T x = ((T(i) / (DW-1)) - 0.5) * scaling_factor,
+                y = ((T(j) / (DH-1)) - 0.5) * scaling_factor, 
+                t = (T(k) / (DT-1)) + 1e-4;
         scalar(i, j, k) = f(x, y, t);
       }
     }
   }
+
+  return scalar;
 }
 
-void derive_gradients()
+template <typename T>
+hypermesh::ndarray<T> derive_gradients2(const hypermesh::ndarray<T>& scalar)
 {
-  grad.reshape({2, (size_t)DW, (size_t)DH, (size_t)DT});
+  hypermesh::ndarray<T> grad;
+  grad.reshape(2, scalar.dim(0), scalar.dim(1), scalar.dim(2));
+  
   for (int k = 0; k < DT; k ++) {
     for (int j = 1; j < DH-1; j ++) {
       for (int i = 1; i < DW-1; i ++) {
-        grad(0, i, j, k) = 0.5 * (scalar(i+1, j, k) - scalar(i-1, j, k)) * (DW-1) / scaling_factor;
-        grad(1, i, j, k) = 0.5 * (scalar(i, j+1, k) - scalar(i, j-1, k)) * (DH-1) / scaling_factor;
+        grad(0, i, j, k) = 0.5 * (scalar(i+1, j, k) - scalar(i-1, j, k)) * (DW-1);
+        grad(1, i, j, k) = 0.5 * (scalar(i, j+1, k) - scalar(i, j-1, k)) * (DH-1);
       }
     }
   }
+  return grad;
 }
 
-void derive_hessians()
+template <typename T>
+hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
 {
-  hess.reshape({2, 2, (size_t)DW, (size_t)DH, (size_t)DT});
+  hypermesh::ndarray<T> hess;
+  hess.reshape(2, grad.dim(0), grad.dim(1), grad.dim(2), grad.dim(3));
 
   for (int k = 0; k < DT; k ++) {
     for (int j = 2; j < DH-2; j ++) {
       for (int i = 2; i < DW-2; i ++) {
-        const float H00 = hess(0, 0, i, j, k) = // ddf/dx2
+        const T H00 = hess(0, 0, i, j, k) = // ddf/dx2
           0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1) / 15;
-        const float H01 = hess(0, 1, i, j, k) = // ddf/dxdy
+        const T H01 = hess(0, 1, i, j, k) = // ddf/dxdy
           0.5 * (grad(0, i, j+1, k) - grad(0, i, j-1, k)) * (DH-1) / 15;
-        const float H10 = hess(1, 0, i, j, k) = // ddf/dydx
+        const T H10 = hess(1, 0, i, j, k) = // ddf/dydx
           0.5 * (grad(1, i+1, j, k) - grad(1, i-1, j, k)) * (DW-1) / 15;
-        const float H11 = hess(1, 1, i, j, k) = // ddf/dy2
+        const T H11 = hess(1, 1, i, j, k) = // ddf/dy2
           0.5 * (grad(1, i, j+1, k) - grad(1, i, j-1, k)) * (DH-1) / 15;
       }
     }
   }
+  return hess;
 }
 
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
@@ -185,12 +198,10 @@ void trace_intersections()
   }
 }
 
-void track_critical_points()
+void scan_intersections() 
 {
   m.set_lb_ub({1, 1, 0}, {DW-2, DH-2, DT-1}); // set the lower and upper bounds of the mesh
   m.element_for(2, check_simplex); // iterate over all 2-simplices
-
-  trace_intersections();
 }
 
 void print_trajectories()
@@ -251,17 +262,45 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
-  generate_scalar_data();
-  derive_gradients();
-  derive_hessians();
-  track_critical_points();
+  std::string filename, format;
+  bool show_qt = false, show_vtk = false;
 
-#if HAVE_VTK
-  start_vtk_window();
-  // ftk::write_curves_vtk(trajectories, "trajectories.vtp");
+  cxxopts::Options options(argv[0]);
+  options.add_options()
+    ("i,input", "input file name", cxxopts::value<std::string>(filename))
+    ("f,format", "input file format", cxxopts::value<std::string>(format))
+    ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
+    ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
+    ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
+    ("vtk", "visualization with vtk", cxxopts::value<bool>(show_vtk))
+    ("qt", "visualization with qt", cxxopts::value<bool>(show_qt))
+    ("d,debug", "enable debugging");
+
+  auto results = options.parse(argc, argv);
+  fprintf(stderr, "dims=%d, %d, %d\n", DW, DH, DT);
+
+  scalar = generate_synthetic_data<float>(DW, DH, DT);
+  grad = derive_gradients2(scalar);
+  hess = derive_hessians2(grad);
+
+  scan_intersections();
+  trace_intersections();
+
+  if (show_qt) {
+#if HAVE_QT
 #else
-  print_trajectories();
+    fprintf(stderr, "Error: the executable is not compiled with Qt\n");
 #endif
+  } else if (show_vtk) {
+#if HAVE_VTK
+    start_vtk_window();
+    // ftk::write_curves_vtk(trajectories, "trajectories.vtp");
+#else
+    fprintf(stderr, "Error: the executable is not compiled with VTK\n");
+#endif
+  } else {
+    print_trajectories();
+  }
 
   return 0;
 }
