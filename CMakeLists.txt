@@ -45,6 +45,10 @@ if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
     include (${VTK_USE_FILE})
   endif ()
 
+  find_package (OpenGL QUIET)
+  find_package (Qt5Widgets QUIET)
+  find_package (Qt5OpenGL QUIET)
+
   find_package (NetCDF QUIET)
   if (NETCDF_FOUND)
     include_directories (${NETCDF_INCLUDE_DIR})
