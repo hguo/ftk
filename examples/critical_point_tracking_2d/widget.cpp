@@ -56,6 +56,15 @@ CGLWidget::~CGLWidget()
 {
 }
 
+void CGLWidget::set_trajectories(const std::vector<std::vector<std::vector<float>>>& traj)
+{
+  trajectories = traj;
+  colors.clear();
+
+  for (int i = 0; i < traj.size(); i ++)
+    colors.push_back(QColor::fromHslF((float)rand()/RAND_MAX, 0.5, 0.5));
+}
+
 void CGLWidget::mousePressEvent(QMouseEvent* e)
 {
   trackball.mouse_rotate(e->x(), e->y()); 
@@ -230,44 +239,18 @@ void CGLWidget::paintGL()
   glEnd();
 #endif
 
-#if 0
   // glScalef(1.f/DW, 1.f/DH, 1.f/DT);
   glLineWidth(4.0);
-  for (int i = 0; i < curves.size(); i ++) {
-    glColor3f(cc_colors[i].redF(), cc_colors[i].greenF(), cc_colors[i].blueF());
-    for (int j = 0; j < curves[i].size(); j ++) {
-      const auto &c = curves[i][j];
+  for (int i = 0; i < trajectories.size(); i ++) {
+    glColor3f(colors[i].redF(), colors[i].greenF(), colors[i].blueF());
+    for (int j = 0; j < trajectories[i].size(); j ++) {
+      const auto &c = trajectories[i][j];
       glBegin(GL_LINE_STRIP);
-      // glBegin(GL_POINTS);
       for (int k = 0; k < c.size()/3; k ++)
         glVertex3f(c[k*3], c[k*3+1], c[k*3+2]);
       glEnd();
     }
   }
-#endif
-
-#if 0
-  glPushAttrib(GL_ENABLE_BIT);
-  glEnable(GL_DEPTH_TEST); 
-  glEnable(GL_LIGHTING); 
-  glEnable(GL_LIGHT0); 
-  glEnable(GL_LIGHT1);
-
-  for (const auto tube : tubes) {
-    glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT); 
-    glEnableClientState(GL_VERTEX_ARRAY); 
-    glEnableClientState(GL_NORMAL_ARRAY); 
-    glEnableClientState(GL_COLOR_ARRAY); 
-
-    glVertexPointer(3, GL_FLOAT, 0, std::get<1>(tube).data()); 
-    glNormalPointer(GL_FLOAT, 0, std::get<2>(tube).data());
-    glColorPointer(3, GL_FLOAT, 0, std::get<3>(tube).data());
-    glDrawElements(GL_TRIANGLES, std::get<0>(tube).size(), GL_UNSIGNED_INT, std::get<0>(tube).data());
-    glPopClientAttrib(); 
-  }
-  glPopAttrib();
-#endif
-
   glPopMatrix();
 
   CHECK_GLERROR();

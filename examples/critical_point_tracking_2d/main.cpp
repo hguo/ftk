@@ -344,6 +344,7 @@ int main(int argc, char **argv)
     QGLFormat::setDefaultFormat(fmt);
 
     CGLWidget *widget = new CGLWidget(scalar);
+    widget->set_trajectories(trajectories);
     widget->show();
     return app.exec();
 #else

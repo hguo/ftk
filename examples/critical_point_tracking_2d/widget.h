@@ -31,8 +31,8 @@ public:
   CGLWidget(const hypermesh::ndarray<float> &scalar, const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
   ~CGLWidget(); 
 
-  void update_texture();
-
+  void set_trajectories(const std::vector<std::vector<std::vector<float>>>& traj);
+  
 protected:
   void initializeGL(); 
   void resizeGL(int w, int h); 
@@ -42,6 +42,9 @@ protected:
   void mouseMoveEvent(QMouseEvent*);
   void keyPressEvent(QKeyEvent*); 
   void wheelEvent(QWheelEvent*); 
+  
+private:
+  void update_texture();
 
 private: // camera
   CGLTrackball trackball;
@@ -58,16 +61,8 @@ private:
   const hypermesh::ndarray<float>& scalar;
   float scalar_min, scalar_max;
 
-#if 0
-  hypermesh::regular_simplex_mesh m;
-  std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
-  std::mutex intersections_mutex;
-
-  std::vector<QColor> cc_colors;
-  std::vector<std::vector<std::vector<float>>> curves;
-
-  std::vector<std::tuple<std::vector<unsigned int>, std::vector<float>, std::vector<float>, std::vector<float>>> tubes;
-#endif
+  std::vector<std::vector<std::vector<float>>> trajectories;
+  std::vector<QColor> colors;
 }; 
 
 #endif
