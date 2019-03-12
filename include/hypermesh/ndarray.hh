@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <numeric>
+#include <tuple>
 
 namespace hypermesh {
 
@@ -82,6 +83,9 @@ struct ndarray {
   void to_netcdf(const std::string& filename, const std::string& varname);
   void to_netcdf(int ncid, const std::string& varname);
   void to_netcdf(int ncid, int varid);
+
+  // statistics
+  std::tuple<T, T> min_max() const;
 
 private:
   std::vector<size_t> dims, s;
@@ -169,6 +173,19 @@ size_t ndarray<T>::index(const std::vector<size_t>& idx) const {
   for (size_t j = 1; j < nd(); j ++)
     i += idx[j] * s[j];
   return i;
+}
+
+template <typename T>
+std::tuple<T, T> ndarray<T>::min_max() const {
+  T min = std::numeric_limits<T>::max(), 
+    max = std::numeric_limits<T>::min();
+
+  for (size_t i = 0; i < nelem(); i ++) {
+    min = std::min(min, at(i));
+    max = std::max(max, at(i));
+  }
+
+  return std::make_tuple(min, max);
 }
 
 }

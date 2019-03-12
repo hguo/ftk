@@ -56,6 +56,7 @@ private:
   int DW, DH, DT;
 
   const hypermesh::ndarray<float>& scalar;
+  float scalar_min, scalar_max;
 
 #if 0
   hypermesh::regular_simplex_mesh m;

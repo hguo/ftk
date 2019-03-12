@@ -46,6 +46,10 @@ CGLWidget::CGLWidget(const hypermesh::ndarray<float> &s, const QGLFormat& fmt, Q
   DW = s.dim(0);
   DH = s.dim(1);
   DT = s.dim(2);
+
+  auto [min, max] = scalar.min_max();
+  scalar_min = min; 
+  scalar_max = max;
 }
 
 CGLWidget::~CGLWidget()
@@ -154,6 +158,8 @@ void CGLWidget::initializeGL()
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+  update_texture();
 }
 
 void CGLWidget::resizeGL(int w, int h)
@@ -274,7 +280,7 @@ void CGLWidget::update_texture()
 
   for (int j = 0; j < DH; j ++) {
     for (int i = 0; i < DW; i ++) {
-      const auto s = scalar(i, j, current_t);
+      const auto s = (scalar(i, j, current_t) - scalar_min) / (scalar_max - scalar_min) * 255;
       colors(0, i, j) = s; 
       colors(1, i, j) = 255 - s;
       colors(2, i, j) = 0;
