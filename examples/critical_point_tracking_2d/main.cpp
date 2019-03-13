@@ -341,26 +341,24 @@ int main(int argc, char **argv)
     ("vtk", "visualization with vtk", cxxopts::value<bool>(show_vtk))
     ("qt", "visualization with qt", cxxopts::value<bool>(show_qt))
     ("d,debug", "enable debugging");
-
   auto results = options.parse(argc, argv);
-  // fprintf(stderr, "dims=%d, %d, %d\n", DW, DH, DT);
 
-  if (pattern.empty()) {
+  if (pattern.empty()) { // if the input data is not given, generate a synthetic data for the demo
     scalar = generate_synthetic_data<float>(DW, DH, DT);
-  } else {
+  } else { // load the binary data
     scalar.reshape(DW, DH, 0);
     scalar.from_binary_file_sequence(pattern);
     DT = scalar.dim(2);
   }
  
-  m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // set the lower and upper bounds of the mesh
+  m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
-  if (!filename_traj_r.empty()) {
+  if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);
-  } else {
-    if (!filename_dump_r.empty()) {
+  } else { // otherwise do the analysis
+    if (!filename_dump_r.empty()) { // if the dump file is given, skill the sweep step; otherwise do sweep-and-trace
       read_dump_file(filename_dump_r);
-    } else {
+    } else { // derive gradients and do the sweep
       grad = derive_gradients2(scalar);
       hess = derive_hessians2(grad);
       scan_intersections();
