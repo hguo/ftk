@@ -156,6 +156,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
         X[i][j] = vertices[i][j];
 
     intersection_t I;
+    I.eid = f.to_integer();
     ftk::linear_interpolation_2simplex_vector3(X, mu, I.x);
     I.val = ftk::linear_interpolation_2simplex(value, mu);
 
@@ -236,26 +237,26 @@ void read_dump_file(const std::string& f)
 
   fseek(fp, 0L, SEEK_END);
   const auto sz = ftell(fp);
-  const auto n = sz / sizeof(std::pair<size_t, intersection_t>);
+  const auto n = sz / sizeof(intersection_t);
   fseek(fp, 0L, SEEK_SET);
   
-  std::vector<std::pair<size_t, intersection_t>> vector;
+  std::vector<intersection_t> vector;
   vector.resize(n);
 
-  fread((void*)(&vector[0]), sizeof(std::pair<size_t, intersection_t>), vector.size(), fp);
+  fread((void*)(&vector[0]), sizeof(intersection_t), vector.size(), fp);
   fclose(fp);
 
   for (const auto &i : vector) {
-    hypermesh::regular_simplex_mesh_element e(m, 2, i.first);
-    intersections[e] = i.second;
+    hypermesh::regular_simplex_mesh_element e(m, 2, i.eid);
+    intersections[e] = i;
   }
 }
 
 void write_dump_file(const std::string& f)
 {
-  std::vector<std::pair<size_t, intersection_t>> vector;
+  std::vector<intersection_t> vector;
   for (const auto &i : intersections)
-    vector.push_back(std::make_pair(i.first.to_integer<size_t>(), i.second));
+    vector.push_back(i.second);
 
   FILE *fp = fopen(f.c_str(), "wb");
   fwrite((void*)(&vector[0]), sizeof(std::pair<size_t, intersection_t>), vector.size(), fp);
