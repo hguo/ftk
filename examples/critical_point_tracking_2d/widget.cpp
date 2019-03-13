@@ -58,7 +58,23 @@ CGLWidget::~CGLWidget()
 
 void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj)
 {
-  trajectories = traj;
+  std::vector<std::vector<float>> mytraj;
+  
+  // attribute and filter trajecory;
+  for (int i = 0; i < traj.size(); i ++) {
+    float max_value = std::numeric_limits<float>::min();
+    for (int j = 0; j < traj[i].size()/4; j ++) {
+      max_value = std::max(max_value, traj[i][j*4+3]);
+    }
+
+    if (max_value > 30.f) {
+      fprintf(stderr, "traj %d: max_val=%f\n", i, max_value);
+      mytraj.push_back(traj[i]);
+    }
+  }
+
+  // assigning color for rendering
+  trajectories = mytraj;
   colors.clear();
 
   for (int i = 0; i < traj.size(); i ++)
