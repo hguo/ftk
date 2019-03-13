@@ -230,6 +230,16 @@ void print_trajectories()
   }
 }
 
+void read_traj_file(const std::string& f)
+{
+
+}
+
+void write_traj_file(const std::string& f)
+{
+
+}
+
 void read_dump_file(const std::string& f)
 {
   FILE *fp = fopen(f.c_str(), "rb");
@@ -307,6 +317,7 @@ int main(int argc, char **argv)
 {
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
+  std::string filename_traj_r, filename_traj_w;
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
@@ -315,6 +326,8 @@ int main(int argc, char **argv)
     ("f,format", "input file format", cxxopts::value<std::string>(format)->default_value("float32"))
     ("read-dump", "read dump file", cxxopts::value<std::string>(filename_dump_r))
     ("write-dump", "write dump file", cxxopts::value<std::string>(filename_dump_w))
+    ("read-traj", "read traj file", cxxopts::value<std::string>(filename_traj_r))
+    ("write-traj", "write traj file", cxxopts::value<std::string>(filename_traj_w))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
@@ -335,18 +348,25 @@ int main(int argc, char **argv)
  
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // set the lower and upper bounds of the mesh
 
-  if (!filename_dump_r.empty()) {
-    read_dump_file(filename_dump_r);
+  if (!filename_traj_r.empty()) {
+    read_traj_file(filename_traj_r);
   } else {
-    grad = derive_gradients2(scalar);
-    hess = derive_hessians2(grad);
-    scan_intersections();
+    if (!filename_dump_r.empty()) {
+      read_dump_file(filename_dump_r);
+    } else {
+      grad = derive_gradients2(scalar);
+      hess = derive_hessians2(grad);
+      scan_intersections();
+    }
+
+    if (!filename_dump_w.empty())
+      write_dump_file(filename_dump_w);
+
+    trace_intersections();
+
+    if (!filename_traj_w.empty())
+      write_traj_file(filename_traj_w);
   }
-
-  if (!filename_dump_w.empty())
-    write_dump_file(filename_dump_w);
-
-  trace_intersections();
 
   if (show_qt) {
 #if HAVE_QT
