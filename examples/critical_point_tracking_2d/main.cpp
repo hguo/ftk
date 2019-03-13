@@ -49,7 +49,7 @@ struct intersection_t {
 std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
 
 // the output trajectories
-std::vector<std::vector<std::vector<float>>> trajectories;
+std::vector<std::vector<float>> trajectories;
 
 
 template <typename T> // the synthetic function
@@ -203,9 +203,8 @@ void trace_intersections()
         mycurve.push_back(p.x[2]); //  / (DT-1));
         mycurve.push_back(p.val);
       }
-      mycurves.emplace_back(mycurve);
+      trajectories.emplace_back(mycurve);
     }
-    trajectories.emplace_back(mycurves);
   }
 }
 
@@ -218,14 +217,10 @@ void print_trajectories()
 {
   printf("We found %lu trajectories:\n", trajectories.size());
   for (int i = 0; i < trajectories.size(); i ++) {
-    const auto &curves = trajectories[i];
-    printf("-Trajectory %d has %lu components:\n", i, curves.size());
-    for (int j = 0; j < curves.size(); j ++) {
-      const auto &curve = curves[j];
-      printf("--Curve %d:\n", j);
-      for (int k = 0; k < curve.size()/4; k ++) {
-        printf("---x=(%f, %f), t=%f, val=%f\n", curve[k*4], curve[k*4+1], curve[k*4+2], curve[k*4+3]);
-      }
+    printf("--Curve %d:\n", i);
+    const auto &curve = trajectories[i];
+    for (int k = 0; k < curve.size()/4; k ++) {
+      printf("---x=(%f, %f), t=%f, val=%f\n", curve[k*4], curve[k*4+1], curve[k*4+2], curve[k*4+3]);
     }
   }
 }
@@ -276,12 +271,12 @@ void write_dump_file(const std::string& f)
 #if HAVE_VTK
 void start_vtk_window()
 {
-  auto vtkcurves = ftk::curves2vtk(trajectories);
-  // vtkcurves->Print(std::cerr);
+  auto vtkcurves = ftk::curves2vtk(trajectories, 4);
+  vtkcurves->Print(std::cerr);
 
   vtkSmartPointer<vtkTubeFilter> tubeFilter = vtkSmartPointer<vtkTubeFilter>::New();
   tubeFilter->SetInputData(vtkcurves);
-  tubeFilter->SetRadius(.01);
+  tubeFilter->SetRadius(1);
   tubeFilter->SetNumberOfSides(50);
   tubeFilter->Update();
   

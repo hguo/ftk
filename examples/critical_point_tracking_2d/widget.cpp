@@ -56,7 +56,7 @@ CGLWidget::~CGLWidget()
 {
 }
 
-void CGLWidget::set_trajectories(const std::vector<std::vector<std::vector<float>>>& traj)
+void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj)
 {
   trajectories = traj;
   colors.clear();
@@ -231,13 +231,11 @@ void CGLWidget::paintGL()
   glLineWidth(4.0);
   for (int i = 0; i < trajectories.size(); i ++) {
     glColor3f(colors[i].redF(), colors[i].greenF(), colors[i].blueF());
-    for (int j = 0; j < trajectories[i].size(); j ++) {
-      const auto &c = trajectories[i][j];
-      glBegin(GL_LINE_STRIP);
-      for (int k = 0; k < c.size()/4; k ++)
-        glVertex3f(c[k*4], c[k*4+1], c[k*4+2]);
-      glEnd();
-    }
+    const auto &c = trajectories[i];
+    glBegin(GL_LINE_STRIP);
+    for (int k = 0; k < c.size()/4; k ++)
+      glVertex3f(c[k*4], c[k*4+1], c[k*4+2]);
+    glEnd();
   }
   glPopMatrix();
 

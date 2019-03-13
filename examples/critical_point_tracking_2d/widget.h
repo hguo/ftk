@@ -31,7 +31,7 @@ public:
   CGLWidget(const hypermesh::ndarray<float> &scalar, const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
   ~CGLWidget(); 
 
-  void set_trajectories(const std::vector<std::vector<std::vector<float>>>& traj);
+  void set_trajectories(const std::vector<std::vector<float>>& traj);
   
 protected:
   void initializeGL(); 
@@ -61,7 +61,7 @@ private:
   const hypermesh::ndarray<float>& scalar;
   float scalar_min, scalar_max;
 
-  std::vector<std::vector<std::vector<float>>> trajectories;
+  std::vector<std::vector<float>> trajectories;
   std::vector<QColor> colors;
 }; 
 
