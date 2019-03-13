@@ -223,10 +223,12 @@ void CGLWidget::paintGL()
 
   glColor3f(0, 0, 0);
   // glScalef(0.5f, 0.5f, 1.f);
-  glTranslatef(-0.5, -0.5, -0.5);
+  // glTranslatef(-0.5, -0.5, -0.5);
   glPointSize(4.0);
   
   glPushMatrix();
+  glScalef((float)(DW-1) / (DH-1), 1.0, 1.0);
+  glTranslatef(-0.5, -0.5, -0.5);
   glScalef(1.f/(DW-1), 1.f/(DH-1), 1.f/(DT-1));
   glLineWidth(4.0);
   for (int i = 0; i < trajectories.size(); i ++) {
