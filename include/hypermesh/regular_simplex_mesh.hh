@@ -40,6 +40,8 @@ struct regular_simplex_mesh_element {
   template <typename uint = uint64_t> uint to_integer() const;
   template <typename uint = uint64_t> void from_integer(uint i);
 
+  template <typename Archive> void serialize(Archive &ar) {ar(dim, type, corner);}
+
   std::vector<regular_simplex_mesh_element> sides() const;
   std::vector<regular_simplex_mesh_element> side_of() const;
 

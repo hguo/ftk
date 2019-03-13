@@ -32,6 +32,13 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #endif
 
+// for serialization
+#include <cereal/cereal.hpp>
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/map.hpp>
+#include <cereal/types/vector.hpp>
+
+
 int DW, DH; // the dimensionality of the data is DW*DH
 int DT; // number of timesteps
 
@@ -44,6 +51,10 @@ struct intersection_t {
   size_t eid;
   float x[3]; // the spacetime coordinates of the trajectory
   float val; // scalar value at the intersection
+
+  template <class Archive> void serialize(Archive & ar) {
+    ar(eid, x[0], x[1], x[2], val);
+  }
 };
  
 std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
@@ -227,29 +238,28 @@ void print_trajectories()
 
 void read_traj_file(const std::string& f)
 {
-
+  std::ifstream ifs(f);
+  cereal::BinaryInputArchive ar(ifs);
+  ar(trajectories);
+  ifs.close();
 }
 
 void write_traj_file(const std::string& f)
 {
-
+  std::ofstream ofs(f);
+  cereal::BinaryOutputArchive ar(ofs);
+  ar(trajectories);
+  ofs.close();
 }
 
 void read_dump_file(const std::string& f)
 {
-  FILE *fp = fopen(f.c_str(), "rb");
-  if (!fp) return;
-
-  fseek(fp, 0L, SEEK_END);
-  const auto sz = ftell(fp);
-  const auto n = sz / sizeof(intersection_t);
-  fseek(fp, 0L, SEEK_SET);
-  
   std::vector<intersection_t> vector;
-  vector.resize(n);
 
-  fread((void*)(&vector[0]), sizeof(intersection_t), vector.size(), fp);
-  fclose(fp);
+  std::ifstream ifs(f);
+  cereal::BinaryInputArchive ar(ifs);
+  ar(vector);
+  ifs.close();
 
   for (const auto &i : vector) {
     hypermesh::regular_simplex_mesh_element e(m, 2, i.eid);
@@ -262,10 +272,11 @@ void write_dump_file(const std::string& f)
   std::vector<intersection_t> vector;
   for (const auto &i : intersections)
     vector.push_back(i.second);
-
-  FILE *fp = fopen(f.c_str(), "wb");
-  fwrite((void*)(&vector[0]), sizeof(std::pair<size_t, intersection_t>), vector.size(), fp);
-  fclose(fp);
+  
+  std::ofstream ofs(f);
+  cereal::BinaryOutputArchive ar(ofs);
+  ar(vector);
+  ofs.close();
 }
 
 #if HAVE_VTK
