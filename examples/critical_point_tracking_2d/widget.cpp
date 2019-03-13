@@ -58,6 +58,7 @@ CGLWidget::~CGLWidget()
 
 void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj)
 {
+#if 0
   std::vector<std::vector<float>> mytraj;
   
   // attribute and filter trajecory;
@@ -73,8 +74,12 @@ void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj)
     }
   }
 
-  // assigning color for rendering
   trajectories = mytraj;
+#else
+  trajectories = traj;
+#endif
+
+  // assigning color for rendering
   colors.clear();
 
   for (int i = 0; i < traj.size(); i ++)
