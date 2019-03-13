@@ -206,6 +206,7 @@ void CGLWidget::paintGL()
 
   glPushMatrix();
   // glScalef(0.5f, 0.5f, 1.f);
+  glScalef((float)(DW-1) / (DH-1), 1.0, 1.0);
   glRotatef(-90, 0, 0, 1);
   glTranslatef(-0.5, -0.5, -0.5);
   glTranslatef(0, 0, (float)current_t/(DT-1));
@@ -226,28 +227,15 @@ void CGLWidget::paintGL()
   glPointSize(4.0);
   
   glPushMatrix();
-#if 0
-  glScalef(1.f/DW, 1.f/DH, 1.f/DT);
-  glBegin(GL_POINTS);
-  for (const auto &p_ : intersections) {
-    const auto &p = p_.second;
-    // fprintf(stderr, "%f, %f, %f\n", p.x[0], p.x[1], p.x[2]);
-    const auto &c = cc_colors[p.label];
-    glColor3f(c.redF(), c.greenF(), c.blueF());
-    glVertex3f(p.x[0], p.x[1], p.x[2]);
-  }
-  glEnd();
-#endif
-
-  // glScalef(1.f/DW, 1.f/DH, 1.f/DT);
+  glScalef(1.f/(DW-1), 1.f/(DH-1), 1.f/(DT-1));
   glLineWidth(4.0);
   for (int i = 0; i < trajectories.size(); i ++) {
     glColor3f(colors[i].redF(), colors[i].greenF(), colors[i].blueF());
     for (int j = 0; j < trajectories[i].size(); j ++) {
       const auto &c = trajectories[i][j];
       glBegin(GL_LINE_STRIP);
-      for (int k = 0; k < c.size()/3; k ++)
-        glVertex3f(c[k*3], c[k*3+1], c[k*3+2]);
+      for (int k = 0; k < c.size()/4; k ++)
+        glVertex3f(c[k*4], c[k*4+1], c[k*4+2]);
       glEnd();
     }
   }

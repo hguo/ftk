@@ -1,5 +1,6 @@
 #include <cxxopts.hpp>
 #include <mutex>
+#include <cassert>
 
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
@@ -40,7 +41,9 @@ hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
 std::mutex mutex;
 
 struct intersection_t {
+  size_t eid;
   float x[3]; // the spacetime coordinates of the trajectory
+  float val; // scalar value at the intersection
 };
  
 std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
@@ -152,12 +155,14 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
       for (int j = 0; j < 3; j ++)
         X[i][j] = vertices[i][j];
 
-    intersection_t intersection;
-    ftk::linear_interpolation_2simplex_vector3(X, mu, intersection.x);
+    intersection_t I;
+    ftk::linear_interpolation_2simplex_vector3(X, mu, I.x);
+    I.val = ftk::linear_interpolation_2simplex(value, mu);
 
     {
       std::lock_guard<std::mutex> guard(mutex);
-      intersections[f] = intersection;
+      intersections[f] = I;
+      // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
     }
   }
 }
@@ -186,16 +191,16 @@ void trace_intersections()
   // fprintf(stderr, "#cc=%lu\n", cc.size());
 
   for (int i = 0; i < cc.size(); i ++) {
-
     std::vector<std::vector<float>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
       std::vector<float> mycurve, mycolors;
       for (int k = 0; k < linear_graphs[j].size(); k ++) {
         auto p = intersections[linear_graphs[j][k]];
-        mycurve.push_back(p.x[0] / (DW-1));
-        mycurve.push_back(p.x[1] / (DH-1));
-        mycurve.push_back(p.x[2] / (DT-1));
+        mycurve.push_back(p.x[0]); //  / (DW-1));
+        mycurve.push_back(p.x[1]); //  / (DH-1));
+        mycurve.push_back(p.x[2]); //  / (DT-1));
+        mycurve.push_back(p.val);
       }
       mycurves.emplace_back(mycurve);
     }
@@ -217,8 +222,8 @@ void print_trajectories()
     for (int j = 0; j < curves.size(); j ++) {
       const auto &curve = curves[j];
       printf("--Curve %d:\n", j);
-      for (int k = 0; k < curve.size()/3; k ++) {
-        printf("---x=(%f, %f), t=%f\n", curve[k*3], curve[k*3+1], curve[k*3+2]);
+      for (int k = 0; k < curve.size()/4; k ++) {
+        printf("---x=(%f, %f), t=%f, val=%f\n", curve[k*4], curve[k*4+1], curve[k*4+2], curve[k*4+3]);
       }
     }
   }
@@ -324,6 +329,7 @@ int main(int argc, char **argv)
   } else {
     scalar.reshape(DW, DH, 0);
     scalar.from_binary_file_sequence(pattern);
+    DT = scalar.dim(2);
   }
  
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // set the lower and upper bounds of the mesh
