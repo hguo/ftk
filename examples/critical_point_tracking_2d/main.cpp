@@ -325,6 +325,7 @@ int main(int argc, char **argv)
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w;
+  float threshold;
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
@@ -338,6 +339,7 @@ int main(int argc, char **argv)
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
+    ("threshold", "threshold", cxxopts::value<float>(threshold)->default_value("0"))
     ("vtk", "visualization with vtk", cxxopts::value<bool>(show_vtk))
     ("qt", "visualization with qt", cxxopts::value<bool>(show_qt))
     ("d,debug", "enable debugging");
@@ -382,7 +384,7 @@ int main(int argc, char **argv)
     QGLFormat::setDefaultFormat(fmt);
 
     CGLWidget *widget = new CGLWidget(scalar);
-    widget->set_trajectories(trajectories);
+    widget->set_trajectories(trajectories, threshold);
     widget->show();
     return app.exec();
 #else

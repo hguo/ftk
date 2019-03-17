@@ -31,7 +31,7 @@ public:
   CGLWidget(const hypermesh::ndarray<float> &scalar, const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
   ~CGLWidget(); 
 
-  void set_trajectories(const std::vector<std::vector<float>>& traj);
+  void set_trajectories(const std::vector<std::vector<float>>& traj, float threshold);
   
 protected:
   void initializeGL(); 
