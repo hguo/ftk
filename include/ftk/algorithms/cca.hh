@@ -1,7 +1,7 @@
-#ifndef _CCA_H
-#define _CCA_H
+#ifndef _FTK_CCA_H
+#define _FTK_CCA_H
 
-#include "ftk/algorithms/bfs.h"
+#include "ftk/algorithms/bfs.hh"
 
 namespace ftk {
 
