@@ -35,8 +35,8 @@ inline bool verify_parallel_vector3_simplex1(
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[3], w[3];
-  ftk::linear_interpolation_1simplex_vector3(V, mu, v);
-  ftk::linear_interpolation_1simplex_vector3(W, mu, w);
+  ftk::lerp_s1v3(V, mu, v);
+  ftk::lerp_s1v3(W, mu, w);
 
   return verify_parallel_vector3(v, w, epsilon);
 }
@@ -46,8 +46,8 @@ inline bool verify_parallel_vector3_simplex2(const T V[3][3], const T W[3][3], c
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[3], w[3];
-  ftk::linear_interpolation_2simplex_vector3(V, mu, v);
-  ftk::linear_interpolation_2simplex_vector3(W, mu, w);
+  ftk::lerp_s2v3(V, mu, v);
+  ftk::lerp_s2v3(W, mu, w);
 
   return verify_parallel_vector3(v, w, epsilon);
 }
@@ -57,8 +57,8 @@ inline bool verify_parallel_vector3_simplex3(const T V[4][3], const T W[4][3], c
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[3], w[3];
-  ftk::linear_interpolation_3simplex_vector3(V, mu, v);
-  ftk::linear_interpolation_3simplex_vector3(W, mu, w);
+  ftk::lerp_s3v3(V, mu, v);
+  ftk::lerp_s3v3(W, mu, w);
 
   return verify_parallel_vector3(v, w, epsilon);
 }
@@ -132,8 +132,8 @@ inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3],
 #if 1
       // check interpolation results
       double v[3], w[3], c[3]; 
-      ftk::linear_interpolation_2simplex_vector3(VV, nu, v);
-      ftk::linear_interpolation_2simplex_vector3(WW, nu, w);
+      ftk::lerp_s2v3(VV, nu, v);
+      ftk::lerp_s2v3(WW, nu, w);
       ftk::cross_product(v, w, c);
       const double norm = ftk::vector_2norm_3(c);
       if (norm > 1e-2) {

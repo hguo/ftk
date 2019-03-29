@@ -32,8 +32,8 @@ inline bool verify_parallel_vector2_simplex1(const T V[2][2], const T W[2][2], c
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[2], w[2];
-  ftk::linear_interpolation_1simplex_vector2(V, mu, v);
-  ftk::linear_interpolation_1simplex_vector2(W, mu, w);
+  ftk::lerp_s1v2(V, mu, v);
+  ftk::lerp_s1v2(W, mu, w);
   return verify_parallel_vector2(v, w, epsilon);
 }
 
@@ -42,8 +42,8 @@ inline bool verify_parallel_vector2_simplex2(const T V[3][2], const T W[3][2], c
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[2], w[2];
-  ftk::linear_interpolation_2simplex_vector2(V, mu, v);
-  ftk::linear_interpolation_2simplex_vector2(W, mu, w);
+  ftk::lerp_s2v2(V, mu, v);
+  ftk::lerp_s2v2(W, mu, w);
   return verify_parallel_vector2(v, w, epsilon);
 }
 
@@ -52,7 +52,7 @@ inline bool verify_parallel_vector2_simplex2(const T V[3][2], const T w[2], cons
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[2];
-  ftk::linear_interpolation_2simplex_vector2(V, mu, v);
+  ftk::lerp_s2v2(V, mu, v);
   return verify_parallel_vector2(v, w, epsilon);
 }
 
@@ -91,8 +91,8 @@ inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2],
         nu[1] >= -epsilon && nu[1] <= 1+epsilon) 
     {
       double v[2], w[2];
-      ftk::linear_interpolation_1simplex_vector2(VV, nu, v);
-      ftk::linear_interpolation_1simplex_vector2(WW, nu, w);
+      ftk::lerp_s1v2(VV, nu, v);
+      ftk::lerp_s1v2(WW, nu, w);
       const double c = ftk::cross_product2(v, w);
       if (c > 1e-2) {
         fprintf(stderr, "rejecting: nu={%f, %f}, v={%f, %f}, w={%f, %f}, c=%f\n", 
