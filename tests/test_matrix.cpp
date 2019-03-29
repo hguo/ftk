@@ -10,7 +10,7 @@
 class matrix_test : public testing::Test {
 public:
   const int nruns = 100000;
-  const double epsilon = 1e-9;
+  const double epsilon = 1e-6;
 };
 
 TEST_F(matrix_test, matrix_inverse2) {
@@ -106,6 +106,25 @@ TEST_F(matrix_test, solve_eigenvalues2x2) {
       };
 
       const double det = ftk::det2(B);
+      EXPECT_NEAR(0.0, det, epsilon);
+    }
+  }
+}
+
+TEST_F(matrix_test, solve_generalized_eigenvalues2x2) {
+  double A[2][2], B[2][2], eig[2];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand2x2(A); 
+    ftk::rand2x2(B);
+    const int n = ftk::solve_generalized_eigenvalues2x2(A, B, eig);
+
+    for (int i = 0; i < n; i ++) {
+      double M[2][2];
+      for (int j = 0; j < 2; j ++) 
+        for (int k = 0; k < 2; k ++) 
+          M[j][k] = A[j][k] - eig[i] * B[j][k];
+
+      const double det = ftk::det2(M);
       EXPECT_NEAR(0.0, det, epsilon);
     }
   }
