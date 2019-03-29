@@ -119,7 +119,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
 
   // check intersection
   float mu[4], x[4];
-  bool succ = ftk::inverse_linear_interpolation_3simplex_vector3(g, mu);
+  bool succ = ftk::inverse_lerp_s3v3(g, mu);
   if (!succ) return;
 
   // check hessian

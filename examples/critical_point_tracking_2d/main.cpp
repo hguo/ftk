@@ -144,7 +144,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   }
  
   float mu[3];
-  bool succ = ftk::inverse_linear_interpolation_2simplex_vector2(g, mu);
+  bool succ = ftk::inverse_lerp_s2v2(g, mu);
   float val = ftk::lerp_s2(value, mu);
   
   if (!succ) return;
