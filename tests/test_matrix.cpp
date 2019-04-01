@@ -188,3 +188,22 @@ TEST_F(matrix_test, solve_eigenvectors3x3)
   }
 }
 
+TEST_F(matrix_test, solve_generalized_eigenvalues3x3) {
+  double A[3][3], B[3][3], eig[3];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand3x3(A);
+    ftk::rand3x3(B);
+    const int n = ftk::solve_generalized_eigenvalues3x3(A, B, eig);
+
+    for (int i = 0; i < n; i ++) {
+      double M[3][3];
+      for (int j = 0; j < 3; j ++) 
+        for (int k = 0; k < 3; k ++) 
+          M[j][k] = A[j][k] - eig[i] * B[j][k];
+
+      const double det = ftk::det3(M);
+      EXPECT_NEAR(0.0, det, epsilon);
+    }
+  }
+}
+
