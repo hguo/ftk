@@ -56,9 +56,9 @@ CGLWidget::~CGLWidget()
 {
 }
 
-void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj)
+void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj, float threshold)
 {
-#if 0
+#if 1
   std::vector<std::vector<float>> mytraj;
   
   // attribute and filter trajecory;
@@ -68,8 +68,8 @@ void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj)
       max_value = std::max(max_value, traj[i][j*4+3]);
     }
 
-    if (max_value > 30.f) {
-      fprintf(stderr, "traj %d: max_val=%f\n", i, max_value);
+    if (max_value > threshold) {
+      // fprintf(stderr, "traj %d: max_val=%f\n", i, max_value);
       mytraj.push_back(traj[i]);
     }
   }

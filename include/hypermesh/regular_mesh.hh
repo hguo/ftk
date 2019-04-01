@@ -9,16 +9,16 @@
 namespace hypermesh {
 
 template <int N>
-struct regular_element {
+struct regular_mesh_element {
  public:
-  regular_element() {subspace.set();}
-  explicit regular_element(const std::array<int, N>& c) :
+  regular_mesh_element() {subspace.set();}
+  explicit regular_mesh_element(const std::array<int, N>& c) :
       coords(c) {subspace.set();}
-  explicit regular_element(const std::bitset<N>& s) :
+  explicit regular_mesh_element(const std::bitset<N>& s) :
       subspace(s) {}
-  regular_element(const std::array<int, N>& c, const std::bitset<N>& s) :
+  regular_mesh_element(const std::array<int, N>& c, const std::bitset<N>& s) :
       coords(c), subspace(s) {}
-  regular_element(const regular_element& element) {
+  regular_mesh_element(const regular_mesh_element& element) {
     coords = element.coords;
     subspace = element.subspace;
   }
@@ -27,15 +27,15 @@ struct regular_element {
   int n_sides() const {return 2 * dim();}
   // int n_nodes() const {return std::pow(2, dim());}
 
-  std::vector<regular_element<N> > sides() const {
-    std::vector<regular_element<N> > results;
+  std::vector<regular_mesh_element<N> > sides() const {
+    std::vector<regular_mesh_element<N> > results;
     for (int i = 0; i < N; ++ i) {
       if (subspace[i]) {
-        regular_element h0(*this);
+        regular_mesh_element h0(*this);
         h0.subspace[i] = 0;
         results.push_back(h0);
 
-        regular_element h1(*this);
+        regular_mesh_element h1(*this);
         h1.subspace[i] = 0;
         h1.coords[i] ++;
         results.push_back(h1);
@@ -44,15 +44,15 @@ struct regular_element {
     return results;
   }
 
-  std::vector<regular_element<N> > side_of() const {
-    std::vector<regular_element<N> > results;
+  std::vector<regular_mesh_element<N> > side_of() const {
+    std::vector<regular_mesh_element<N> > results;
     for (int i = 0; i < N; ++ i) {
       if (!subspace[i]) {
-        regular_element h0(*this);
+        regular_mesh_element h0(*this);
         h0.subspace[i] = 1;
         results.push_back(h0);
 
-        regular_element h1(*this);
+        regular_mesh_element h1(*this);
         h1.subspace[i] = 1;
         h1.coords[i] --;
         results.push_back(h1);
@@ -122,7 +122,7 @@ struct regular {
     }
 
     regular<N>& regular;
-    regular_element<N> element;
+    regular_mesh_element<N> element;
   };
 
   iterator begin(int dim) {
@@ -146,11 +146,11 @@ struct regular {
     return result;
   }
 
-  std::vector<regular_element<N> > sides(const iterator& it) const {
+  std::vector<regular_mesh_element<N> > sides(const iterator& it) const {
     return it.element.sides();
   }
 
-  std::vector<regular_element<N> > side_of(const iterator& it) const {
+  std::vector<regular_mesh_element<N> > side_of(const iterator& it) const {
     return it.element.side_of();
   }
 
