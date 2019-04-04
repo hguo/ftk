@@ -91,7 +91,7 @@ $ make
 
 ### Run FTK examples
 
-The followings are the guid to run the 2D critical point tracking example.  We aim to track local maximum over time for the following scalar field: 
+The followings are the guide to run the 2D critical point tracking example.  We aim to track local maximum over time for the following scalar field: 
 
 $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\sin t + y\cos t),$
 
