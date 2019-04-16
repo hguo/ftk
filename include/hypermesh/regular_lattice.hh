@@ -18,7 +18,7 @@ struct regular_lattice {
   size_t start(size_t i) {return starts_[i];}
   size_t size(size_t i) {return sizes_[i];}
 
-  void reshape(const std::vector<size_t> &starts);
+  void reshape(const std::vector<size_t> &sizes);
   void reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes);
 
   size_t global_index(const std::vector<size_t> &coords) const;
@@ -38,6 +38,7 @@ public: // partitioning
 private:
   bool unlimited_ = false;
   std::vector<size_t> starts_, sizes_; // the last dimension can be unlimited
+  std::vector<size_t> local_prod_, global_prod_;
 };
 
 /////
@@ -64,13 +65,29 @@ void regular_lattice::reshape(const std::vector<size_t> &starts, const std::vect
 {
   starts_ = starts;
   sizes_ = sizes;
+
+  local_prod_.resize(sizes.size());
+  global_prod_.resize(sizes.size());
+
+  for (int i = 0; i < nd(); i ++) {
+    if (i == 0) {
+      local_prod_[i] = 1;
+      global_prod_[i] = 1;
+    } else {
+      local_prod_[i] = local_prod_[i-1] * sizes[i];
+      global_prod_[i] = global_prod_[i-1] * (starts[i] + sizes[i]);
+    }
+  }
 }
 
 void regular_lattice::reshape(const std::vector<size_t> &sizes)
 {
-  sizes_ = sizes;
-  starts_.resize(sizes.size(), 0);
+  starts_.resize(sizes.size());
+  reshape(starts_, sizes);
 }
+
+size_t regular_lattice::global_index(const std::vector<size_t> &coords)
+{
 
 }
 
