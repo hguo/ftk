@@ -88,13 +88,28 @@ void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj, fl
 
 void CGLWidget::mousePressEvent(QMouseEvent* e)
 {
-  trackball.mouse_rotate(e->x(), e->y()); 
+  if (e->buttons() == Qt::LeftButton) {
+    if (e->modifiers() == Qt::ShiftModifier) {
+      trackball.mouse_translate(e->x(), e->y());
+      updateGL();
+    } else {
+      trackball.mouse_rotate(e->x(), e->y()); 
+      updateGL();
+    }
+  }
 }
 
 void CGLWidget::mouseMoveEvent(QMouseEvent* e)
 {
-  trackball.motion_rotate(e->x(), e->y()); 
-  updateGL(); 
+  if (e->buttons() == Qt::LeftButton) {
+    if (e->modifiers() == Qt::ShiftModifier) {
+      trackball.motion_translate(e->x(), e->y()); 
+      updateGL();
+    } else {
+      trackball.motion_rotate(e->x(), e->y());
+      updateGL();
+    }
+  }
 }
 
 void CGLWidget::keyPressEvent(QKeyEvent* e)
@@ -211,6 +226,7 @@ void CGLWidget::paintGL()
   mvmatrix.lookAt(eye, center, up);
   mvmatrix.rotate(trackball.getRotation());
   mvmatrix.scale(trackball.getScale());
+  mvmatrix.translate(trackball.getTranslation());
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
