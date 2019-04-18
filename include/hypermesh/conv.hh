@@ -56,7 +56,7 @@ void MakeGaussianKernel2D(double sigma, int ksizex, int ksizey, T* kernel) {
       double x = static_cast<double>(i) - centerx,
              y = static_cast<double>(j) - centery;
       r = x * x + y * y;
-      kernel[j * ksizex + i] = (std::exp(-r / s)) / (M_PI * s);
+      kernel[j * ksizex + i] = std::exp(-r / s);
       sum += kernel[j * ksizex + i];
     }
   }
@@ -147,7 +147,7 @@ void MakeGaussianKernel3D(
                y = static_cast<double>(j) - centery,
                z = static_cast<double>(k) - centerz;
         r = std::sqrt(x * x + y * y + z * z);
-        kernel[k * ksizex * ksizey + j * ksizex + i] = (std::exp(-(r * r) / s)) / (M_PI * s);
+        kernel[k * ksizex * ksizey + j * ksizex + i] = std::exp(-(r * r) / s);
         sum += kernel[k * ksizex * ksizey + j * ksizex + i];
       }
     }
@@ -155,7 +155,7 @@ void MakeGaussianKernel3D(
 
   // normalize the kernel
   double tmp = 1. / sum;
-  for (int i = 0; i < ksizex * ksizey; ++i)
+  for (int i = 0; i < ksizex * ksizey* ksizez; ++i)
     kernel[i] *= tmp;
 }
 
