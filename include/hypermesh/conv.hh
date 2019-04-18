@@ -146,8 +146,8 @@ void MakeGaussianKernel3D(
         double x = static_cast<double>(i) - centerx,
                y = static_cast<double>(j) - centery,
                z = static_cast<double>(k) - centerz;
-        r = std::sqrt(x * x + y * y + z * z);
-        kernel[k * ksizex * ksizey + j * ksizex + i] = std::exp(-(r * r) / s);
+        r = x * x + y * y + z * z;
+        kernel[k * ksizex * ksizey + j * ksizex + i] = std::exp(-r/ s);
         sum += kernel[k * ksizex * ksizey + j * ksizex + i];
       }
     }
