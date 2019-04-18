@@ -128,6 +128,51 @@ T* Conv3D(T* data, int dimx, int dimy, int dimz,
   return res;
 }
 
+template <typename T>
+void MakeGaussianKernel3D(double sigma, int ksizex, int ksizey, int ksizez, T* kernel) {
+  // fill the kernel
+  double centerx = static_cast<double>(ksizex - 1) * .5,
+         centery = static_cast<double>(ksizey - 1) * .5,
+         centerz = static_cast<double>(ksizez - 1) * .5;
+  double r, s = 2. * sigma * sigma;
+  double sum = 0.;
+
+  for (int j = 0; j < ksizey; ++j) {
+    for (int i = 0; i < ksizex; ++i) {
+      for (int k = 0; k < ksizez; ++k) {
+        double x = static_cast<double>(i) - centerx,
+              y = static_cast<double>(j) - centery,
+              z = static_cast<double>(k) - centerz,
+        r = std::sqrt(x * x + y * y + z * z);
+        kernel[k * ksizex * ksizey + j * ksizex + i] = (std::exp(-(r * r) / s)) / (M_PI * s);
+        sum += kernel[k * ksizex * ksizey + j * ksizex + i];
+      }
+    }
+  }
+
+  // normalize the kernel
+  double tmp = 1. / sum;
+  for (int i = 0; i < ksizex * ksizey; ++i)
+    kernel[i] *= tmp;
+}
+
+template <typename T>
+T* Conv3DGaussian(T* data, int dimx, int dimy, int dimz,
+                  double sigma, int ksizex, int ksizey, int ksizez,
+                  int padding=0) {
+  // make kernel
+  T* kernel = new T[ksizex * ksizey * ksizez];
+  MakeGaussianKernel3D(sigma, ksizex, ksizey, ksizez, kernel);
+
+  // convolution
+  T* res = Conv3D(data, dimx, dimy, dimz, kernel, ksizex, ksizey, ksizez, padding);
+
+  // delete kernel
+  delete[] kernel;
+
+  return res;
+}
+
 }  // namespace hypermesh
 
 #endif  // _HYPERMESH_CONV_HH
