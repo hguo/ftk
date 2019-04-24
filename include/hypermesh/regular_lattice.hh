@@ -1,10 +1,13 @@
 #ifndef _FTK_REGULAR_LATTICE_HH
 #define _FTK_REGULAR_LATTICE_HH
 
+#include <cmath>
+
 #include <vector>
+#include <queue>
 #include <ostream>
 
-namespace ftk {
+namespace hypermesh {
 
 struct regular_lattice {
   regular_lattice() {}
@@ -18,21 +21,27 @@ struct regular_lattice {
   size_t start(size_t i) {return starts_[i];}
   size_t size(size_t i) {return sizes_[i];}
 
+  std::vector<size_t>& starts() {return starts_;}
+  std::vector<size_t>& sizes() {return sizes_;}
+
+  const std::vector<size_t>& starts() const {return starts_;}
+  const std::vector<size_t>& sizes() const {return sizes_;}
+
   void reshape(const std::vector<size_t> &sizes);
   void reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes);
 
   size_t global_index(const std::vector<size_t> &coords) const;
   size_t local_index(int p, const std::vector<size_t> &coords) const;
-  
+
 public: // the last dimension, aka time.  these functions are mainly for I/O and streaming purposes
   bool unlimited_time() const {return unlimited_;}
   void set_unlimited_time(bool u) {unlimited_ = u;}
-  
+
   void advance_time(int nt = 1) {starts_[nd()-1] += nt;}
   void recess_time(int nt = 1) {starts_[nd()-1] -= nt;}
 
 public: // partitioning
-  void partition(int np);
+  std::vector<regular_lattice> partition(int np);
   size_t partition_id(const std::vector<size_t> &coords) const;
 
 private:
@@ -52,11 +61,11 @@ regular_lattice::regular_lattice(int n)
 void regular_lattice::print(std::ostream& os)
 {
   os << "starts: {";
-  for (int i = 0; i < nd(); i ++) 
+  for (int i = 0; i < nd(); i ++)
     if (i < nd()-1) os << starts_[i] << ",";
     else os << starts_[i] << "}, sizes: {";
 
-  for (int i = 0; i < nd(); i ++) 
+  for (int i = 0; i < nd(); i ++)
     if (i < nd()-1) os << sizes_[i] << ",";
     else os << sizes_[i] << "}" << std::endl;
 }
@@ -86,8 +95,50 @@ void regular_lattice::reshape(const std::vector<size_t> &sizes)
   reshape(starts_, sizes);
 }
 
-size_t regular_lattice::global_index(const std::vector<size_t> &coords)
-{
+// size_t regular_lattice::global_index(const std::vector<size_t> &coords)
+// {
+
+// }
+
+std::vector<regular_lattice> regular_lattice::partition(int np) {
+  std::vector<regular_lattice> partitions;
+
+  int ncut = std::log2(np);
+  int cuttable = unlimited_ ? nd() - 1 : nd();
+
+  std::queue<regular_lattice> tmp;
+  tmp.push(*this);
+  int curr = 0;
+
+  for (int i = 0; i < ncut; ++i) {
+    int n = tmp.size();
+    for (int j = 0; j < n; ++j) {
+      auto p = tmp.front();
+      size_t ns = p.size(curr) >> 1;
+
+      std::vector<size_t> starts(p.starts()), sizes(p.sizes());
+      sizes[curr] = ns;
+
+      tmp.push(regular_lattice(starts, sizes));
+
+      starts[curr] += ns;
+      sizes[curr] = p.size(curr) - ns;
+
+      tmp.push(regular_lattice(starts, sizes));
+
+      tmp.pop();
+    }
+
+    curr = curr + 1 == cuttable ? 0 : curr + 1;
+  }
+
+  while (!tmp.empty()) {
+    partitions.push_back(tmp.front());
+    tmp.pop();
+  }
+
+  return partitions;
+}
 
 }
 
