@@ -10,15 +10,15 @@ namespace ftk {
 
 template <typename T>
 vtkSmartPointer<vtkPolyData> 
-curves2vtk(const std::vector<std::vector<T>>& curves)
+curves2vtk(const std::vector<std::vector<T>>& curves, int skip = 3)
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
 
   for (const auto &curve : curves) {
-    for (int i = 0; i < curve.size() / 3; i ++) {
-      T p[3] = {curve[i*3], curve[i*3+1], curve[i*3+2]};
+    for (int i = 0; i < curve.size() / skip; i ++) {
+      T p[3] = {curve[i*skip], curve[i*skip+1], curve[i*skip+2]};
       points->InsertNextPoint(p);
     }
   }
@@ -26,12 +26,12 @@ curves2vtk(const std::vector<std::vector<T>>& curves)
   size_t nv = 0;
   for (const auto &curve :curves) {
     vtkSmartPointer<vtkPolyLine> polyLine = vtkPolyLine::New();
-    polyLine->GetPointIds()->SetNumberOfIds(curve.size() / 3);
-    for (int i = 0; i < curve.size() / 3; i ++)
+    polyLine->GetPointIds()->SetNumberOfIds(curve.size() / skip);
+    for (int i = 0; i < curve.size() / skip; i ++)
       polyLine->GetPointIds()->SetId(i, i+nv);
 
     cells->InsertNextCell(polyLine);
-    nv += curve.size() / 3;
+    nv += curve.size() / skip;
   }
 
   polyData->SetPoints(points);
@@ -42,20 +42,20 @@ curves2vtk(const std::vector<std::vector<T>>& curves)
 
 template <typename T>
 vtkSmartPointer<vtkPolyData>
-curves2vtk(const std::vector<std::vector<std::vector<T>>>& curve_groups)
+curves2vtk(const std::vector<std::vector<std::vector<T>>>& curve_groups, int skip = 3)
 {
   std::vector<std::vector<T>> curves;
   for (const auto &g : curve_groups)
     for (const auto &c : g)
       curves.push_back(c);
 
-  return curves2vtk(curves);
+  return curves2vtk(curves, skip);
 }
 
 template <typename T>
-void write_curves_vtk(const std::vector<std::vector<std::vector<T>>>& curve_groups, const std::string& filename)
+void write_curves_vtk(const std::vector<std::vector<std::vector<T>>>& curve_groups, const std::string& filename, int skip = 3)
 {
-  auto poly = curves2vtk(curve_groups);
+  auto poly = curves2vtk(curve_groups, skip);
   vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
   writer->SetFileName(filename.c_str());
   writer->SetInputData(poly);
@@ -63,9 +63,9 @@ void write_curves_vtk(const std::vector<std::vector<std::vector<T>>>& curve_grou
 }
 
 template <typename T>
-void write_curves_vtk(const std::vector<std::vector<T>>& curves, const std::string& filename)
+void write_curves_vtk(const std::vector<std::vector<T>>& curves, const std::string& filename, int skip = 3)
 {
-  auto poly = curves2vtk(curves);
+  auto poly = curves2vtk(curves, skip);
   vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
   writer->SetFileName(filename.c_str());
   writer->SetInputData(poly);

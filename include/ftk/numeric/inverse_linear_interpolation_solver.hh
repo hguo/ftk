@@ -7,7 +7,7 @@
 namespace ftk {
 
 template <typename T>
-bool inverse_linear_interpolation_2simplex_vector2(const T V[3][2], T mu[3], const T epsilon = std::numeric_limits<T>::epsilon())
+bool inverse_lerp_s2v2(const T V[3][2], T mu[3], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   const T A[2][2] = {
     {V[0][0] - V[2][0], V[1][0] - V[2][0]},
@@ -24,7 +24,7 @@ bool inverse_linear_interpolation_2simplex_vector2(const T V[3][2], T mu[3], con
 }
 
 template <typename T>
-bool inverse_linear_interpolation_3simplex_vector3(const T V[4][3], T lambda[4])
+bool inverse_lerp_s3v3(const T V[4][3], T lambda[4])
 {
   const T A[3][3] = { // linear transformation
     {V[0][0] - V[3][0], V[1][0] - V[3][0], V[2][0] - V[3][0]}, 

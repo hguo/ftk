@@ -119,7 +119,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
 
   // check intersection
   float mu[4], x[4];
-  bool succ = ftk::inverse_linear_interpolation_3simplex_vector3(g, mu);
+  bool succ = ftk::inverse_lerp_s3v3(g, mu);
   if (!succ) return;
 
   // check hessian
@@ -128,7 +128,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
     for (int j = 0; j < 3; j ++)
       for (int k = 0; k < 3; k ++)
         H[i][j][k] = hess(j, k, vertices[i][0], vertices[i][1], vertices[i][2], vertices[i][3]);
-  ftk::linear_interpolation_3simplex_matrix3x3(H, mu, h);
+  ftk::lerp_s3m3x3(H, mu, h);
 
   float eig[3];
   ftk::solve_eigenvalues_symmetric3x3(h, eig);
@@ -136,8 +136,8 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
 
   if (eig[0] < 0 && eig[1] < 0 && eig[2] < 0) { // local maxima
     // dump results
-    float val = ftk::linear_interpolation_3simplex(value, mu);
-    ftk::linear_interpolation_3simplex_vector4(X, mu, x);
+    float val = ftk::lerp_s3(value, mu);
+    ftk::lerp_s3v4(X, mu, x);
    
     intersection_t p;
     p.x[0] = x[0]; p.x[1] = x[1]; p.x[2] = x[2]; p.x[3] = x[3];

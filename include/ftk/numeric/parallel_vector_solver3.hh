@@ -20,7 +20,7 @@
 namespace ftk {
 
 template <typename T>
-inline bool verify_parallel_vector3(const T v[3], const T w[3], const T epsilon = std::numeric_limits<T>::epsilon())
+inline bool verify_pv_s0v3(const T v[3], const T w[3], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double c[3];
   ftk::cross_product(v, w, c);
@@ -30,41 +30,41 @@ inline bool verify_parallel_vector3(const T v[3], const T w[3], const T epsilon 
 }
 
 template <typename T>
-inline bool verify_parallel_vector3_simplex1(
+inline bool verify_pv_s1v3(
     const T V[2][3], const T W[2][3], const T mu[2], 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[3], w[3];
-  ftk::linear_interpolation_1simplex_vector3(V, mu, v);
-  ftk::linear_interpolation_1simplex_vector3(W, mu, w);
+  ftk::lerp_s1v3(V, mu, v);
+  ftk::lerp_s1v3(W, mu, w);
 
-  return verify_parallel_vector3(v, w, epsilon);
+  return verify_pv_s0v3(v, w, epsilon);
 }
 
 template <typename T>
-inline bool verify_parallel_vector3_simplex2(const T V[3][3], const T W[3][3], const T mu[3], 
+inline bool verify_pv_s2v3(const T V[3][3], const T W[3][3], const T mu[3], 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[3], w[3];
-  ftk::linear_interpolation_2simplex_vector3(V, mu, v);
-  ftk::linear_interpolation_2simplex_vector3(W, mu, w);
+  ftk::lerp_s2v3(V, mu, v);
+  ftk::lerp_s2v3(W, mu, w);
 
-  return verify_parallel_vector3(v, w, epsilon);
+  return verify_pv_s0v3(v, w, epsilon);
 }
 
 template <typename T>
-inline bool verify_parallel_vector3_simplex3(const T V[4][3], const T W[4][3], const T mu[4],
+inline bool verify_pv_s3v3(const T V[4][3], const T W[4][3], const T mu[4],
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[3], w[3];
-  ftk::linear_interpolation_3simplex_vector3(V, mu, v);
-  ftk::linear_interpolation_3simplex_vector3(W, mu, w);
+  ftk::lerp_s3v3(V, mu, v);
+  ftk::lerp_s3v3(W, mu, w);
 
-  return verify_parallel_vector3(v, w, epsilon);
+  return verify_pv_s0v3(v, w, epsilon);
 }
 
 template <typename T>
-inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3], 
+inline int solve_pv_s2v3(const T VV[3][3], const T WW[3][3], 
     T lambda[3], T mu[3][3], const T epsilon = std::numeric_limits<T>::epsilon()) // was 1e-6
 {
   T V[3][3], W[3][3]; // transposed V and W
@@ -132,8 +132,8 @@ inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3],
 #if 1
       // check interpolation results
       double v[3], w[3], c[3]; 
-      ftk::linear_interpolation_2simplex_vector3(VV, nu, v);
-      ftk::linear_interpolation_2simplex_vector3(WW, nu, w);
+      ftk::lerp_s2v3(VV, nu, v);
+      ftk::lerp_s2v3(WW, nu, w);
       ftk::cross_product(v, w, c);
       const double norm = ftk::vector_2norm_3(c);
       if (norm > 1e-2) {
@@ -163,7 +163,7 @@ inline int solve_parallel_vector3_simplex2(const T VV[3][3], const T WW[3][3],
 }
 
 template <typename T>
-inline int solve_parallel_vector3_simplex1(
+inline int solve_pv_s1v3(
     const T V[2][3], const T W[2][3], 
     T lambda[2], T mu[2][2], 
     const T epsilon = std::numeric_limits<T>::epsilon()) // 1e-9)
@@ -241,7 +241,7 @@ inline int solve_parallel_vector3_simplex1(
 }
 
 template <typename T>
-inline void characteristic_polynomials_parallel_vector3_simplex3(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
+inline void characteristic_polynomials_pv_s3v3(const T V[4][3], const T W[4][3], T Q[4], T P[4][4])
 {
   const T A[3][3] = { // linear transformation
     {V[0][0] - V[3][0], V[1][0] - V[3][0], V[2][0] - V[3][0]}, 
@@ -297,12 +297,12 @@ inline void characteristic_polynomials_parallel_vector3_simplex3(const T V[4][3]
 
 template <typename T>
 std::tuple<disjoint_intervals<long long>, std::map<long long, T> >
-solve_parallel_vector3_simplex3_inequalities_quantized(
+solve_pv_inequalities_quantized_s3v3(
     const T V[4][3], const T W[4][3], const long long factor = 1000000000L, 
     const T epsilon=std::numeric_limits<T>::epsilon())
 {
   T Q[4] = {0}, P[4][4] = {0}, QP[4][4] = {0};
-  characteristic_polynomials_parallel_vector3_simplex3(V, W, Q, P);
+  characteristic_polynomials_pv_s3v3(V, W, Q, P);
 
   std::map<long long, T> quantized_roots;
   disjoint_intervals<long long> I;
@@ -336,10 +336,10 @@ solve_parallel_vector3_simplex3_inequalities_quantized(
 }
 
 template <typename T>
-disjoint_intervals<T> solve_parallel_vector3_simplex3_inequalities(
+disjoint_intervals<T> solve_pv_inequalities_s3v3(
     const T V[4][3], const T W[4][3], const long long factor = 1000000000L, const T epsilon=std::numeric_limits<T>::epsilon())
 {
-  const auto [I, R] = solve_parallel_vector3_simplex3_inequalities_quantized(V, W, factor, epsilon);
+  const auto [I, R] = solve_pv_inequalities_quantized_s3v3(V, W, factor, epsilon);
   return disjoint_intervals<T>(I, factor);
 }
 

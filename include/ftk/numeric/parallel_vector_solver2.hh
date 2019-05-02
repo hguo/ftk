@@ -21,43 +21,43 @@
 namespace ftk {
 
 template <typename T>
-inline bool verify_parallel_vector2(const T v[2], const T w[2], const T epsilon = std::numeric_limits<T>::epsilon())
+inline bool verify_pv_s0v2(const T v[2], const T w[2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   const double c = ftk::cross_product2(v, w); // cross product
   return std::abs(c) <= epsilon;
 }
 
 template <typename T>
-inline bool verify_parallel_vector2_simplex1(const T V[2][2], const T W[2][2], const T mu[2], 
+inline bool verify_pv_s1v2(const T V[2][2], const T W[2][2], const T mu[2], 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[2], w[2];
-  ftk::linear_interpolation_1simplex_vector2(V, mu, v);
-  ftk::linear_interpolation_1simplex_vector2(W, mu, w);
-  return verify_parallel_vector2(v, w, epsilon);
+  ftk::lerp_s1v2(V, mu, v);
+  ftk::lerp_s1v2(W, mu, w);
+  return verify_pv_s0v2(v, w, epsilon);
 }
 
 template <typename T>
-inline bool verify_parallel_vector2_simplex2(const T V[3][2], const T W[3][2], const T mu[3],
+inline bool verify_pv_s2v2(const T V[3][2], const T W[3][2], const T mu[3],
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[2], w[2];
-  ftk::linear_interpolation_2simplex_vector2(V, mu, v);
-  ftk::linear_interpolation_2simplex_vector2(W, mu, w);
-  return verify_parallel_vector2(v, w, epsilon);
+  ftk::lerp_s2v2(V, mu, v);
+  ftk::lerp_s2v2(W, mu, w);
+  return verify_pv_s0v2(v, w, epsilon);
 }
 
 template <typename T>
-inline bool verify_parallel_vector2_simplex2(const T V[3][2], const T w[2], const T mu[3], 
+inline bool verify_pv_s2v2(const T V[3][2], const T w[2], const T mu[3], 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   double v[2];
-  ftk::linear_interpolation_2simplex_vector2(V, mu, v);
-  return verify_parallel_vector2(v, w, epsilon);
+  ftk::lerp_s2v2(V, mu, v);
+  return verify_pv_s0v2(v, w, epsilon);
 }
 
 template <typename T>
-inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2], 
+inline int solve_pv_s1v2(const T VV[2][2], const T WW[2][2], 
     T lambda[2], T mu[2][2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   T V[2][2], W[2][2];
@@ -91,8 +91,8 @@ inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2],
         nu[1] >= -epsilon && nu[1] <= 1+epsilon) 
     {
       double v[2], w[2];
-      ftk::linear_interpolation_1simplex_vector2(VV, nu, v);
-      ftk::linear_interpolation_1simplex_vector2(WW, nu, w);
+      ftk::lerp_s1v2(VV, nu, v);
+      ftk::lerp_s1v2(WW, nu, w);
       const double c = ftk::cross_product2(v, w);
       if (c > 1e-2) {
         fprintf(stderr, "rejecting: nu={%f, %f}, v={%f, %f}, w={%f, %f}, c=%f\n", 
@@ -113,7 +113,7 @@ inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2],
 }
 
 template <typename T>
-inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2], const T w[2], T P[3][2]) // the vector field w is constant
+inline void characteristic_polynomials_pv_s2v2(const T V[3][2], const T w[2], T P[3][2]) // the vector field w is constant
 {
   const T A[2][2] = { // linear transformation
     {V[0][0] - V[2][0], V[1][0] - V[2][0]}, 
@@ -131,7 +131,7 @@ inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2]
 }
 
 template <typename T>
-inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2], const T W[3][2], T Q[3], T P[3][3])
+inline void characteristic_polynomials_pv_s2v2(const T V[3][2], const T W[3][2], T Q[3], T P[3][3])
 {
   const T A[2][2] = { // linear transformation
     {V[0][0] - V[2][0], V[1][0] - V[2][0]}, 
@@ -173,8 +173,7 @@ inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2]
 }
 
 template <typename T>
-// disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(const T V[3][2], const T w[2])
-disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(const T P[3][2], const T w[2])
+disjoint_intervals<T> solve_pv_inequalities_s2v2(const T P[3][2], const T w[2])
 {
   disjoint_intervals<T> I;
   I.set_to_complete();
@@ -196,7 +195,7 @@ disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(const T P[3][
 
 template <typename T>
 std::tuple<disjoint_intervals<long long>, std::map<long long, T>>
-solve_parallel_vector2_simplex2_inequalities_quantized(
+solve_pv_inequalities_quantized_s2v2(
     const T Q[3], const T P[3][3], 
     // const T V[3][2], const T W[3][2], 
     const long long factor = 1000000000L, 
@@ -234,13 +233,13 @@ solve_parallel_vector2_simplex2_inequalities_quantized(
 }
 
 template <typename T>
-disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(
+disjoint_intervals<T> solve_pv_inequalities_s2v2(
     const T Q[3], const T P[3][3], 
     // const T V[3][2], const T W[3][2], 
     const long long factor = 1000000000L, 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
-  const auto [I, R] = solve_parallel_vector2_simplex2_inequalities_quantized(Q, P, factor, epsilon);
+  const auto [I, R] = solve_pv_inequalities_quantized_s2v2(Q, P, factor, epsilon);
   return disjoint_intervals<T>(I, factor);
 }
 
