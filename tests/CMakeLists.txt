@@ -18,9 +18,13 @@ target_link_libraries (test_parallel_vectors ${GTEST_BOTH_LIBRARIES})
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
 target_link_libraries (test_quadratic_interpolation ${GTEST_BOTH_LIBRARIES})
 
+add_executable (test_union_find test_union_find.cpp)
+target_link_libraries (test_union_find ${GTEST_BOTH_LIBRARIES})
+
 gtest_discover_tests (test_matrix)
 gtest_discover_tests (test_polynomial)
 gtest_discover_tests (test_inequality_solvers)
 gtest_discover_tests (test_inverse_interpolation)
 gtest_discover_tests (test_parallel_vectors)
 gtest_discover_tests (test_quadratic_interpolation)
+gtest_discover_tests (test_union_find)

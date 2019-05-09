@@ -1,8 +1,9 @@
-#ifndef _UF_H
-#define _UF_H
+#ifndef _FTK_SPARSE_UNION_FIND_H
+#define _FTK_SPARSE_UNION_FIND_H
 
 #include <vector>
 #include <iostream>
+#include <map>
 
 // Implementation of weighted quick-union with path compression
 // https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf
@@ -10,15 +11,15 @@
 namespace ftk {
 
 template <class IdType=size_t>
-struct quick_union
+struct sparse_quick_union
 {
-  quick_union(IdType size) {
-    id.resize(size);
+  sparse_quick_union(size_t _size) {
+    size = _size; 
     reset();
   }
 
   void reset() {
-    for (IdType i=0; i<id.size(); i++)
+    for (IdType i = 0; i < size; ++i)
       id[i] = i;
   }
   
@@ -27,6 +28,7 @@ struct quick_union
       id[i] = id[id[i]];
       i = id[i];
     }
+
     return i;
   }
   
@@ -41,25 +43,27 @@ struct quick_union
   }
 
 protected:
-  std::vector<IdType> id;
+  // Use HashMap to support sparse union-find
+  std::map<IdType, IdType> id;
+  size_t size;
 };
 
 template <class IdType=size_t>
-struct weighted_quick_union : public quick_union<IdType>
+struct sparse_weighted_quick_union : public sparse_quick_union<IdType>
 {
-  weighted_quick_union(IdType size) : quick_union<IdType>(size) {
+  sparse_weighted_quick_union(IdType size) : sparse_quick_union<IdType>(size) {
     sz.resize(size, 1);
   }
   
   void unite(IdType p, IdType q) {
-    IdType i = quick_union<IdType>::root(p);
-    IdType j = quick_union<IdType>::root(q);
+    IdType i = sparse_quick_union<IdType>::root(p);
+    IdType j = sparse_quick_union<IdType>::root(q);
 
     if (sz[i] < sz[j]) {
-      quick_union<IdType>::id[i] = j; 
+      sparse_quick_union<IdType>::id[i] = j; 
       sz[j] += sz[i];
     } else {
-      quick_union<IdType>::id[j] = i;
+      sparse_quick_union<IdType>::id[j] = i;
       sz[i] += sz[j];
     }
   }
