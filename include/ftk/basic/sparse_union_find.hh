@@ -13,17 +13,17 @@ namespace ftk {
 template <class IdType=size_t>
 struct sparse_quick_union
 {
-  sparse_quick_union(size_t _size) {
-    size = _size; 
-    reset();
-  }
+  sparse_quick_union() {
 
-  void reset() {
-    for (IdType i = 0; i < size; ++i)
-      id[i] = i;
   }
   
   IdType root(IdType i) {
+    if(id.find(i) == id.end()) {
+      id[i] = i; 
+
+      return i;
+    }
+
     while (i != id[i]) {
       id[i] = id[id[i]];
       i = id[i];
@@ -45,31 +45,48 @@ struct sparse_quick_union
 protected:
   // Use HashMap to support sparse union-find
   std::map<IdType, IdType> id;
-  size_t size;
 };
 
 template <class IdType=size_t>
-struct sparse_weighted_quick_union : public sparse_quick_union<IdType>
+struct sparse_weighted_quick_union
 {
-  sparse_weighted_quick_union(IdType size) : sparse_quick_union<IdType>(size) {
-    sz.resize(size, 1);
+  sparse_weighted_quick_union() {
+    
+  }
+
+  IdType root(IdType i) {
+    if(id.find(i) == id.end()) {
+      id[i] = i; 
+      sz[i] = 1; 
+
+      return i; 
+    }
+
+    while (i != id[i]) {
+      id[i] = id[id[i]];
+      i = id[i];
+    }
+
+    return i; 
   }
   
   void unite(IdType p, IdType q) {
-    IdType i = sparse_quick_union<IdType>::root(p);
-    IdType j = sparse_quick_union<IdType>::root(q);
+    IdType i = root(p);
+    IdType j = root(q);
 
     if (sz[i] < sz[j]) {
-      sparse_quick_union<IdType>::id[i] = j; 
+      id[i] = j; 
       sz[j] += sz[i];
     } else {
-      sparse_quick_union<IdType>::id[j] = i;
+      id[j] = i;
       sz[i] += sz[j];
     }
   }
 
 private:
-  std::vector<size_t> sz;
+  // Use HashMap to support sparse union-find
+  std::map<IdType, IdType> id;
+  std::map<IdType, size_t> sz;
 };
 
 }
