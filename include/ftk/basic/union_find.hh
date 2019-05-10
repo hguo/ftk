@@ -52,8 +52,8 @@ struct weighted_quick_union : public quick_union<IdType>
   }
   
   void unite(IdType p, IdType q) {
-    IdType i = root(p);
-    IdType j = root(q);
+    IdType i = quick_union<IdType>::root(p);
+    IdType j = quick_union<IdType>::root(q);
 
     if (sz[i] < sz[j]) {
       quick_union<IdType>::id[i] = j; 

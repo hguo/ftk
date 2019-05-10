@@ -6,7 +6,7 @@
 
 class polynomial_test : public testing::Test {
 public:
-  const int nruns = 100000;
+  const int nruns = 1; // 00000;
   const double epsilon = 1e-10;
   
   std::random_device rd{};
@@ -29,7 +29,6 @@ TEST_F(polynomial_test, solve_quadratic_real)
   }
 }
 
-#if 1
 TEST_F(polynomial_test, solve_cubic_real)
 {
   double P[4], x[3];
@@ -44,4 +43,3 @@ TEST_F(polynomial_test, solve_cubic_real)
     }
   }
 }
-#endif

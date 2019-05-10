@@ -10,7 +10,7 @@
 class matrix_test : public testing::Test {
 public:
   const int nruns = 100000;
-  const double epsilon = 1e-6;
+  const double epsilon = 1e-4;
 };
 
 TEST_F(matrix_test, matrix_inverse2) {
