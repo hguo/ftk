@@ -8,56 +8,20 @@
 // Implementation of weighted quick-union with path compression
 // https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf
 
-namespace ftk {
+// Add the sparse representation by using Hash map/table 
 
-template <class IdType=size_t>
+namespace ftk {
+template <class IdType=std::string>
 struct sparse_quick_union
 {
   sparse_quick_union() {
-
-  }
-  
-  IdType root(IdType i) {
-    if(id.find(i) == id.end()) {
-      id[i] = i; 
-
-      return i;
-    }
-
-    while (i != id[i]) {
-      id[i] = id[id[i]];
-      i = id[i];
-    }
-
-    return i;
-  }
-  
-  bool find(IdType p, IdType q) {
-    return root(p) == root(q);
-  }
-
-  void unite(IdType p, IdType q) {
-    IdType i = root(p);
-    IdType j = root(q);
-    id[i] = j;
-  }
-
-protected:
-  // Use HashMap to support sparse union-find
-  std::map<IdType, IdType> id;
-};
-
-template <class IdType=size_t>
-struct sparse_weighted_quick_union
-{
-  sparse_weighted_quick_union() {
     
   }
 
   IdType root(IdType i) {
     if(id.find(i) == id.end()) {
-      id[i] = i; 
-      sz[i] = 1; 
+      id[i] = i;
+      sz[i] = 1;
 
       return i; 
     }
@@ -68,6 +32,10 @@ struct sparse_weighted_quick_union
     }
 
     return i; 
+  }
+
+  bool find(IdType p, IdType q) {
+    return root(p) == root(q);
   }
   
   void unite(IdType p, IdType q) {
