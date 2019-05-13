@@ -75,7 +75,7 @@ FTK currently provides three examples, including 2D critical point tracking, 3D 
 
 ### Dependencies
 
-FTK examples depend on the following packages
+FTK examples optionally depend on the following packages
 
 * VTK >= 8.2, optional, or required if you would like to visualize trajectories with VTK
 * Qt5 >= 5.11.2, optional, or required if you would like to visualize trajectories with Qt/OpenGL windows
@@ -83,9 +83,19 @@ FTK examples depend on the following packages
 
 ### Build FTK examples
 
+To build FTK examples without any dependences, please follow the following configuration:
+
 ```bash
 $ cd $FTK_SOURCE_DIR/build
 $ cmake .. -DFTK_BUILD_EXAMPLES=1
+$ make
+```
+
+To build with Qt5, VTK, and NetCDF, you need additional arguments for cmake:
+
+```bash
+$ cd $FTK_SOURCE_DIR/build
+$ cmake .. -DFTK_BUILD_EXAMPLES=1 -DCMAKE_PREFIX_PATH="/path/to/qt5/lib/cmake;/path/to/vtk/lib/cmake" -DNETCDF_DIR="/path/to/netcdf"
 $ make
 ```
 
