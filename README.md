@@ -95,7 +95,7 @@ To build with Qt5, VTK, and NetCDF, you need additional arguments for cmake:
 
 ```bash
 $ cd $FTK_SOURCE_DIR/build
-$ cmake .. -DFTK_BUILD_EXAMPLES=1 -DCMAKE_PREFIX_PATH="/path/to/qt5/lib/cmake;/path/to/vtk/lib/cmake" -DNETCDF_DIR="/path/to/netcdf"
+$ cmake .. -DFTK_BUILD_EXAMPLES=1 -DCMAKE_PREFIX_PATH="$path_to_qt5/lib/cmake;$path_to_vtk/lib/cmake" -DNETCDF_DIR="$path_to_netcdf"
 $ make
 ```
 
