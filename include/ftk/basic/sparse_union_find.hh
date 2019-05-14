@@ -18,7 +18,7 @@ struct sparse_quick_union
     
   }
 
-  IdType root(IdType i) {
+  IdType find(IdType i) {
     if(id.find(i) == id.end()) {
       id[i] = i;
       sz[i] = 1;
@@ -34,13 +34,13 @@ struct sparse_quick_union
     return i; 
   }
 
-  bool find(IdType p, IdType q) {
-    return root(p) == root(q);
+  bool same_set(IdType p, IdType q) {
+    return find(p) == find(q);
   }
   
   void unite(IdType p, IdType q) {
-    IdType i = root(p);
-    IdType j = root(q);
+    IdType i = find(p);
+    IdType j = find(q);
 
     if (sz[i] < sz[j]) {
       id[i] = j; 
