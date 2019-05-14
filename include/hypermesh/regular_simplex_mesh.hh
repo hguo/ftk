@@ -33,6 +33,7 @@ struct regular_simplex_mesh_element {
 
   void increase_corner(int d=0);
   bool valid() const;
+  bool is_fixed_time() const;
 
   template <int nd> std::tuple<std::array<int, nd>, int> to_index() const;
   template <int nd> void from_index(const std::tuple<std::array<int, nd>, int>&);
@@ -48,6 +49,12 @@ struct regular_simplex_mesh_element {
   const regular_simplex_mesh &m;
   std::vector<int> corner;
   int dim, type;
+};
+
+enum {
+  ELEMENT_ITERATION_ALL = 0,
+  ELEMENT_ITERATION_FIXED_TIME = 1, 
+  ELEMENT_ITERATION_FIXED_INTERVAL = 2
 };
 
 struct regular_simplex_mesh {
@@ -75,7 +82,7 @@ struct regular_simplex_mesh {
   std::vector<std::vector<int>> unit_simplex(int d, int t) const {return unit_simplices[d][t];}
 
   // Check if the unit simplex type is fixed-time
-  bool is_fixed_time(int d, int t) const; // TODO
+  bool is_fixed_time(int d, int type) const {return is_unit_simpleces_fixed_time[d][type];}
 
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub);
   int lb(int d) const {return lb_[d];}
@@ -86,21 +93,23 @@ struct regular_simplex_mesh {
   iterator element_begin(int d);
   iterator element_end(int d);
 
-  // Iterate all d-simplices with the given f() function using the given number of threads
+  // Iterate all d-simplices with the given f() function using the given number of threads.
+  // There are three different modes: all, fixed time, and fixed interval.  Please
+  // see the comments in the next two functions for more details.
   void element_for(int d, std::function<void(regular_simplex_mesh_element)> f, 
-      int nthreads=std::thread::hardware_concurrency());
+      int nthreads=std::thread::hardware_concurrency(), int mode = ELEMENT_ITERATION_ALL);
 
   // Iterate all d-simplices in the fixed time t, assuming that the mesh is extruded 
   // from the (n-1)-dimensional mesh and the last dimension is time.  Each element is
   // iterated with the f() function using the given number of threads
   void element_for_fixed_time(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency());
+      int nthreads=std::thread::hardware_concurrency())  {element_for(d, f, nthreads, ELEMENT_ITERATION_FIXED_TIME);}
 
   // Iterate all d-simplices in the fixed time interval [t, t+1], assuming that the 
   // mesh is extruded from the (n-1)-dimensional mesh and the last dimension is time.
   // Each element is iterated with the f() function using the given number of threads
   void element_for_fixed_interval(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency());
+      int nthreads=std::thread::hardware_concurrency())  {element_for(d, f, nthreads, ELEMENT_ITERATION_FIXED_INTERVAL);}
 
 private: // initialization functions
   void initialize_subdivision();
@@ -233,6 +242,11 @@ inline bool regular_simplex_mesh_element::valid() const {
         return false;
 #endif
   }
+}
+
+inline bool regular_simplex_mesh_element::is_fixed_time() const 
+{
+  return m.is_fixed_time(dim, type);
 }
 
 inline std::vector<std::vector<int> > regular_simplex_mesh_element::vertices() const
@@ -610,7 +624,7 @@ inline void regular_simplex_mesh::initialize_subdivision()
   }
   // enumerate_unit_simplex_side_of(0, 0);
 
-  enumerate_fixed_time_simplices();
+  is_unit_simpleces_fixed_time = enumerate_fixed_time_simplices();
 }
 
 inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std::vector<int>& u)
@@ -651,33 +665,18 @@ inline size_t regular_simplex_mesh::n(int d) const
   return (size_t)ntypes(d) * dimprod_[nd()];
 }
 
-inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
+inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads, int mode)
 {
   const size_t ntasks = n(d);
   std::vector<std::thread> workers;
 
   for (size_t i = 0; i < nthreads; i ++) {
-    workers.push_back(std::thread([this, i, ntasks, nthreads, d, f]() {
+    workers.push_back(std::thread([this, i, ntasks, nthreads, d, f, mode]() {
       for (size_t j = i; j < ntasks; j += nthreads) {
         regular_simplex_mesh_element e(*this, d, j);
-        f(e);
-      }
-    }));
-  }
-
-  std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
-}
-
-inline void regular_simplex_mesh::element_for_fixed_time(int d, int t, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
-{
-  const size_t ntasks = n(d);
-  std::vector<std::thread> workers;
-
-  for (size_t i = 0; i < nthreads; i ++) {
-    workers.push_back(std::thread([this, i, ntasks, nthreads, d, f]() {
-      for (size_t j = i; j < ntasks; j += nthreads) {
-        regular_simplex_mesh_element e(*this, d, j);
-        f(e);
+        if (mode == ELEMENT_ITERATION_ALL) f(e);
+        else if (mode == ELEMENT_ITERATION_FIXED_TIME) {if (e.is_fixed_time()) f(e);}
+        else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {if (!e.is_fixed_time()) f(e);}
       }
     }));
   }
