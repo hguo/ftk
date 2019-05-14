@@ -61,11 +61,21 @@ struct regular_simplex_mesh {
     }
     initialize_subdivision();
   }
+  
+  // Dimensionality of the mesh
   int nd() const {return nd_;}
-  int ntypes(int d) const {return ntypes_.at(d);}
-  size_t n(int d) const; // number of elements
 
+  // Number of unique types of d-simplices
+  int ntypes(int d) const {return ntypes_.at(d);}
+
+  // Number of d-dimensional elements
+  size_t n(int d) const;
+
+  // Returns d+1 vertices that build up the d-dimensional simplex of the given type
   std::vector<std::vector<int>> unit_simplex(int d, int t) const {return unit_simplices[d][t];}
+
+  // Check if the unit simplex type is fixed-time
+  bool is_fixed_time(int d, int t) const; // TODO
 
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub);
   int lb(int d) const {return lb_[d];}
@@ -76,7 +86,20 @@ struct regular_simplex_mesh {
   iterator element_begin(int d);
   iterator element_end(int d);
 
+  // Iterate all d-simplices with the given f() function using the given number of threads
   void element_for(int d, std::function<void(regular_simplex_mesh_element)> f, 
+      int nthreads=std::thread::hardware_concurrency());
+
+  // Iterate all d-simplices in the fixed time t, assuming that the mesh is extruded 
+  // from the (n-1)-dimensional mesh and the last dimension is time.  Each element is
+  // iterated with the f() function using the given number of threads
+  void element_for_fixed_time(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
+      int nthreads=std::thread::hardware_concurrency());
+
+  // Iterate all d-simplices in the fixed time interval [t, t+1], assuming that the 
+  // mesh is extruded from the (n-1)-dimensional mesh and the last dimension is time.
+  // Each element is iterated with the f() function using the given number of threads
+  void element_for_fixed_interval(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency());
 
 private: // initialization functions
@@ -108,6 +131,8 @@ private: // initialization functions
   // Enumerate all element that contains the specific type of k-simplex
   std::vector<std::tuple<int, std::vector<int>>> enumerate_unit_simplex_side_of(int k, int type);
 
+  std::vector<std::vector<bool>> enumerate_fixed_time_simplices();
+
   // bool is_simplex_identical(const std::vector<std::string>&, const std::vector<std::string>&) const;
 
 private:
@@ -117,7 +142,10 @@ private:
   std::vector<int> dimprod_;
 
   // list of k-simplices types; each simplex contains k vertices
+  // unit_simplices[d][type] retunrs d+1 vertices that build up the simplex
   std::vector<std::vector<std::vector<std::vector<int>>>> unit_simplices;
+  
+  std::vector<std::vector<bool>> is_unit_simpleces_fixed_time;
 
   // (dim,type) --> vector of (type,offset)
   std::vector<std::vector<std::vector<std::tuple<int, std::vector<int>>>>> unit_simplex_sides;
@@ -521,6 +549,34 @@ inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enum
   return sides;
 }
 
+inline std::vector<std::vector<bool>> 
+regular_simplex_mesh::enumerate_fixed_time_simplices()
+{
+  std::vector<std::vector<bool>> vec;
+
+  for (int d = 0; d < nd(); d ++) {
+    std::vector<bool> is_fixed_time(ntypes(d), false);
+    
+    if (d == 0) {
+      is_fixed_time[0] = true;
+    } else {
+      for (int t = 0; t < ntypes(d); t ++) {
+        const auto vertices = unit_simplices[d][t];
+        int time = 0;
+        for (int i = 0; i < vertices.size(); i ++) {
+          time = time | vertices[i][d-1];
+        }
+        if (time == 0) 
+          is_fixed_time[t] = true;
+        // fprintf(stderr, "d=%d, type=%d, time=%d\n", d, t, time);
+      }
+    }
+    vec.push_back(is_fixed_time);
+  }
+
+  return vec;
+}
+
 inline void regular_simplex_mesh::initialize_subdivision()
 {
   ntypes_.resize(nd() + 1);
@@ -553,6 +609,8 @@ inline void regular_simplex_mesh::initialize_subdivision()
       unit_simplex_side_of[dim][type] = enumerate_unit_simplex_side_of(dim, type);
   }
   // enumerate_unit_simplex_side_of(0, 0);
+
+  enumerate_fixed_time_simplices();
 }
 
 inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std::vector<int>& u)
@@ -594,6 +652,23 @@ inline size_t regular_simplex_mesh::n(int d) const
 }
 
 inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
+{
+  const size_t ntasks = n(d);
+  std::vector<std::thread> workers;
+
+  for (size_t i = 0; i < nthreads; i ++) {
+    workers.push_back(std::thread([this, i, ntasks, nthreads, d, f]() {
+      for (size_t j = i; j < ntasks; j += nthreads) {
+        regular_simplex_mesh_element e(*this, d, j);
+        f(e);
+      }
+    }));
+  }
+
+  std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
+}
+
+inline void regular_simplex_mesh::element_for_fixed_time(int d, int t, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
 {
   const size_t ntasks = n(d);
   std::vector<std::thread> workers;
