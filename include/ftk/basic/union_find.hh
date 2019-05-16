@@ -22,7 +22,7 @@ struct quick_union
       id[i] = i;
   }
   
-  IdType root(IdType i) {
+  IdType find(IdType i) {
     while (i != id[i]) {
       id[i] = id[id[i]];
       i = id[i];
@@ -30,13 +30,13 @@ struct quick_union
     return i;
   }
   
-  bool find(IdType p, IdType q) {
-    return root(p) == root(q);
+  bool same_set(IdType p, IdType q) {
+    return find(p) == find(q);
   }
 
   void unite(IdType p, IdType q) {
-    IdType i = root(p);
-    IdType j = root(q);
+    IdType i = find(p);
+    IdType j = find(q);
     id[i] = j;
   }
 
@@ -52,8 +52,8 @@ struct weighted_quick_union : public quick_union<IdType>
   }
   
   void unite(IdType p, IdType q) {
-    IdType i = quick_union<IdType>::root(p);
-    IdType j = quick_union<IdType>::root(q);
+    IdType i = quick_union<IdType>::find(p);
+    IdType j = quick_union<IdType>::find(q);
 
     if (sz[i] < sz[j]) {
       quick_union<IdType>::id[i] = j; 
