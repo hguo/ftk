@@ -181,14 +181,8 @@ void ndarray<T>::from_netcdf(const std::string& filename, const std::string& var
   NC_SAFE_CALL( nc_close(ncid) );
 }
 #else
-template <>
-void ndarray<float>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
-{
-  fprintf(stderr, "[FTK] fatal error: your code is not compiled with netcdf.\n");
-}
-
-template <>
-void ndarray<double>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
+template <typename T>
+void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
   fprintf(stderr, "[FTK] fatal error: your code is not compiled with netcdf.\n");
 }
