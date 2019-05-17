@@ -11,7 +11,7 @@ public:
 
 // test sparse union-find
 TEST_F(union_find_test, sparse_union_find) {
-  ftk::sparse_quick_union UF = ftk::sparse_quick_union(); 
+  ftk::sparse_union_find UF = ftk::sparse_union_find(); 
   UF.unite("11", "22");
   UF.unite("22", "33"); 
 
@@ -25,7 +25,7 @@ TEST_F(union_find_test, sparse_union_find) {
 
 // test normal union-find
 TEST_F(union_find_test, union_find) {
-  ftk::weighted_quick_union UF = ftk::weighted_quick_union(10); 
+  ftk::weighted_union_find UF = ftk::weighted_union_find(10); 
   UF.unite(1, 2);
   UF.unite(2, 3); 
 
