@@ -10,9 +10,9 @@
 namespace ftk {
 
 template <class IdType=size_t>
-struct quick_union
+struct union_find
 {
-  quick_union(IdType size) {
+  union_find(IdType size) {
     id.resize(size);
     reset();
   }
@@ -45,21 +45,21 @@ protected:
 };
 
 template <class IdType=size_t>
-struct weighted_quick_union : public quick_union<IdType>
+struct weighted_union_find : public union_find<IdType>
 {
-  weighted_quick_union(IdType size) : quick_union<IdType>(size) {
+  weighted_union_find(IdType size) : union_find<IdType>(size) {
     sz.resize(size, 1);
   }
   
   void unite(IdType p, IdType q) {
-    IdType i = quick_union<IdType>::find(p);
-    IdType j = quick_union<IdType>::find(q);
+    IdType i = union_find<IdType>::find(p);
+    IdType j = union_find<IdType>::find(q);
 
     if (sz[i] < sz[j]) {
-      quick_union<IdType>::id[i] = j; 
+      union_find<IdType>::id[i] = j; 
       sz[j] += sz[i];
     } else {
-      quick_union<IdType>::id[j] = i;
+      union_find<IdType>::id[j] = i;
       sz[i] += sz[j];
     }
   }
