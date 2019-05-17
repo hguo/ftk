@@ -13,10 +13,9 @@ set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include_directories (${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-include(CMakeDependentOption)
-
-cmake_dependent_option (FTK_BUILD_THREADS "Build FTK with threading" ON "NOT WIN32" OFF)
-option (FTK_BUILD_MPI "Build FTK with mpi" ON)
+# include(CMakeDependentOption)
+# cmake_dependent_option (FTK_BUILD_THREADS "Build FTK with threading" ON "NOT WIN32" OFF)
+# option (FTK_BUILD_MPI "Build FTK with MPI" OFF)
 option (FTK_BUILD_TESTS "Build the test programs." OFF)
 option (FTK_BUILD_EXAMPLES "Build the example programs." OFF)
 
@@ -64,6 +63,12 @@ endif                       (FTK_BUILD_MPI)
 if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
   find_package (Threads REQUIRED)
   set (CMAKE_THREAD_PREFER_PTHREAD)
+
+  find_package (MPI QUIET)
+  if (MPI_FOUND)
+  else ()
+    add_definitions (-DDIY_NO_MPI)
+  endif ()
 
   find_package (VTK QUIET)
   if (VTK_FOUND)
