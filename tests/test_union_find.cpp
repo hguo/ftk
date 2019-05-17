@@ -12,6 +12,12 @@ public:
 // test sparse union-find
 TEST_F(union_find_test, sparse_union_find) {
   ftk::sparse_union_find UF = ftk::sparse_union_find(); 
+  UF.add("00"); 
+  UF.add("11"); 
+  UF.add("22"); 
+  UF.add("33"); 
+  UF.add("111"); 
+
   UF.unite("11", "22");
   UF.unite("22", "33"); 
 
