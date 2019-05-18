@@ -146,19 +146,13 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
       for(std::vector<std::string>::iterator it_vec = b->related_elements[ele].begin(); it_vec != b->related_elements[ele].end(); ++it_vec) {
         std::string related_ele = *it_vec; 
         // if(related_ele > ele) {
-        std::cout<<related_ele<<" "<<ele<<std::endl; 
-        std::cout<<related_ele.empty()<<std::endl; 
 
         if(std::stoi(related_ele) > std::stoi(ele)) {
-          b->related_elements[ele].erase(it_vec); 
-
-          if(related_ele.empty()) {
-            std::cout<<"111111111111"<<std::endl; 
-          }
-
           b->set_parent(ele, related_ele); 
           b->nchanges += 1;
-          std::cout<<ele<<" -> "<<related_ele<<std::endl; 
+          std::cout<<ele<<" -1> "<<related_ele<<std::endl; 
+
+          b->related_elements[ele].erase(it_vec); 
 
           break ; 
         }
@@ -176,24 +170,17 @@ void query_grandparent(Block* b, const diy::Master::ProxyWithLink& cp) {
 
   for(std::vector<std::string>::iterator it = b->eles.begin(); it != b->eles.end(); ++it) {
     std::string ele = *it; 
+    std::string parent = b->parent(ele); 
+
     if(!b->is_root(ele)) {
-      std::string parent = b->parent(ele); 
-
-      if(parent.empty()) {
-        std::cout<<"Error!"<<std::endl; 
-      }
-
       if(b->has(parent)) {
-        std::string grandparent = b->parent(parent); 
+        if(!b->is_root(parent)) {
+          std::string grandparent = b->parent(parent); 
 
-        if(grandparent.empty()) {
-          std::cout<<"22222222222222 "<<parent<<std::endl; 
+          b->set_parent(ele, grandparent); 
+          b->nchanges += 1;
+          std::cout<<ele<<" -2> "<<grandparent<<std::endl; 
         }
-
-        b->set_parent(ele, grandparent); 
-        b->nchanges += 1;
-        std::cout<<ele<<" -> "<<grandparent<<std::endl; 
-
       } else {
         int gid = b->ele2gid[parent]; 
         std::pair<std::string, std::string> send_pair(ele, parent); 
@@ -228,10 +215,6 @@ void answer_grandparent(Block* b, const diy::Master::ProxyWithLink& cp) {
         if(b->has(*parent_ptr) && !b->is_root(*parent_ptr)) {
           std::string grandparent = b->parent(*parent_ptr); 
 
-          if(grandparent.empty()) {
-            std::cout<<"Error"<<std::endl; 
-          }
-
           std::tuple<std::string, std::string, int> send_tuple(*ele_ptr, grandparent, b->ele2gid[grandparent]); 
           cp.enqueue(l->target(l->find(in[i])), send_tuple);
 
@@ -265,13 +248,9 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
 
         // std::cout<<*ele_ptr << " - " << b->parent(*ele_ptr) <<" - "<< *grandpar_ptr<<" - "<<*grandpar_gid_ptr<<std::endl; 
 
-        if(grandpar_ptr->empty()) {
-          std::cout<<"3333333333"<<std::endl; 
-        }
-
         b->set_parent(*ele_ptr, *grandpar_ptr); 
         b->nchanges += 1;
-        std::cout<<*ele_ptr<<" -> "<<*grandpar_ptr<<std::endl; 
+        std::cout<<*ele_ptr<<" -3> "<<*grandpar_ptr<<std::endl; 
 
         b->ele2gid[*grandpar_ptr] = *grandpar_gid_ptr; 
       }
@@ -293,10 +272,6 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
     if(src->size() > 0) {
       std::string par = b->parent(ele); 
-      if(par.empty()) {
-        std::cout<<"Error! "<<std::endl; 
-      }
-
 
       if(b->has(par)) {
           // Update directly, if the realted element is in the block
@@ -304,8 +279,8 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
           auto dest = &b->related_elements[par]; 
           dest->insert(
             dest->end(),
-            std::make_move_iterator(src->begin()),
-            std::make_move_iterator(src->end())
+            src->begin(),
+            src->end()
           );
       } else {
         // Otherwise, communicate with other processes
@@ -317,6 +292,8 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
           cp.enqueue(l->target(l->find(gid)), send_tuple); 
         }
       }
+
+      src->clear(); 
     }
   }
 }
@@ -325,11 +302,6 @@ void update_unions2block(Block* b, std::string* ele_ptr, std::string* par_ptr, s
   for(auto ite = b->related_elements[*related_ele_ptr].begin(); ite != b->related_elements[*related_ele_ptr].end(); ++ite) {
 
     if(*ite == *ele_ptr) {
-
-      if(par_ptr->empty()) {
-        std::cout<<"Error! "<<std::endl; 
-      }
-
       *ite = *par_ptr; 
 
       break ; 
@@ -341,8 +313,8 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
-  std::cout<<"Save Unions: "<<std::endl; 
-  std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
+  // std::cout<<"Save Unions: "<<std::endl; 
+  // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
 
   while(!cp.empty_incoming_queues()) {
     std::vector<int> in; // gids of incoming neighbors in the link
@@ -361,11 +333,7 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
         std::string* related_ele_ptr = &std::get<2>(rec_tuple); 
         int* gid_ptr = &std::get<3>(rec_tuple); 
 
-        std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr <<" - "<< *gid_ptr<<std::endl; 
-
-        if(related_ele_ptr->empty()) {
-          std::cout<<"Error! "<<std::endl; 
-        }
+        // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr <<" - "<< *gid_ptr<<std::endl; 
 
         b->related_elements[*par_ptr].push_back(*related_ele_ptr); 
         b->ele2gid[*related_ele_ptr] = *gid_ptr; 
@@ -382,13 +350,13 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
     }
   }
 
-  std::cout<<std::endl; 
+  // std::cout<<std::endl; 
 }
 
 // update unions of related elements
 void update_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
-  std::cout<<"Update Unions: "<<std::endl; 
-  std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
+  // std::cout<<"Update Unions: "<<std::endl; 
+  // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
 
   while(!cp.empty_incoming_queues()) {
     std::vector<int> in; // gids of incoming neighbors in the link
@@ -413,7 +381,7 @@ void update_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
     }
   }
 
-  std::cout<<std::endl; 
+  // std::cout<<std::endl; 
 }
 
 void total_changes(Block* b, const diy::Master::ProxyWithLink& cp) {
