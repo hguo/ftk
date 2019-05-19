@@ -28,6 +28,8 @@ struct Block : public ftk::sparse_union_find<std::string> {
 public: 
   // map element id to ids of its related elements
   int nchanges;
+
+  // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
   r_ele_map related_elements; 
   ele2gid_map ele2gid; 
 };
@@ -143,11 +145,11 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
   for(auto it = b->eles.begin(); it != b->eles.end(); ++it) {
     std::string ele = *it; 
     if(b->is_root(ele)) {
+
       for(std::vector<std::string>::iterator it_vec = b->related_elements[ele].begin(); it_vec != b->related_elements[ele].end(); ++it_vec) {
         std::string related_ele = *it_vec; 
-        // if(related_ele > ele) {
-
-        if(std::stoi(related_ele) > std::stoi(ele)) {
+        if(related_ele > ele) {
+        // if(std::stoi(related_ele) > std::stoi(ele)) {
           b->set_parent(ele, related_ele); 
           b->nchanges += 1;
           std::cout<<ele<<" -1> "<<related_ele<<std::endl; 
@@ -265,35 +267,27 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
   diy::Link* l = cp.link();
 
   for(auto ite_ele = b->eles.begin(); ite_ele != b->eles.end(); ++ite_ele) {
-    std::string ele = *ite_ele; 
-    auto src = &b->related_elements[ele]; 
+    std::string ele = *ite_ele;
 
-    // Can be optimized by only its parent is a root, then do unions' passing
+    if(!b->is_root(ele)) {
+      auto src = &b->related_elements[ele]; 
 
-    if(src->size() > 0) {
-      std::string par = b->parent(ele); 
+      if(src->size() > 0) {
+        std::string par = b->parent(ele); 
 
-      if(b->has(par)) {
-          // Update directly, if the realted element is in the block
+        if(!b->has(par)) {
+          // Communicate with other processes
+          int gid = b->ele2gid[par]; 
 
-          auto dest = &b->related_elements[par]; 
-          dest->insert(
-            dest->end(),
-            src->begin(),
-            src->end()
-          );
-      } else {
-        // Otherwise, communicate with other processes
-        int gid = b->ele2gid[par]; 
+          for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
+            std::tuple<std::string, std::string, std::string, int> send_tuple(ele, par, *ite_related_ele, b->ele2gid[*ite_related_ele]); 
 
-        for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
-          std::tuple<std::string, std::string, std::string, int> send_tuple(ele, par, *ite_related_ele, b->ele2gid[*ite_related_ele]); 
+            cp.enqueue(l->target(l->find(gid)), send_tuple); 
+          }
 
-          cp.enqueue(l->target(l->find(gid)), send_tuple); 
+          src->clear(); 
         }
       }
-
-      src->clear(); 
     }
   }
 }
@@ -303,8 +297,8 @@ void update_unions2block(Block* b, std::string* ele_ptr, std::string* par_ptr, s
 
     if(*ite == *ele_ptr) {
       *ite = *par_ptr; 
-
-      break ; 
+      
+      break ;
     }
   }
 }
@@ -316,6 +310,57 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
   // std::cout<<"Save Unions: "<<std::endl; 
   // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
 
+  // Pass unions of elements in this block to their parents, save these unions
+  for(auto ite_ele = b->eles.begin(); ite_ele != b->eles.end(); ++ite_ele) {
+    std::string ele = *ite_ele; 
+
+    if(!b->is_root(ele)) {
+      auto src = &b->related_elements[ele]; 
+      if(src->size() > 0) {
+        std::string par = b->parent(ele); 
+
+        if(b->has(par)) {
+          // Update directly, if the realted element is in the block
+
+          auto dest = &b->related_elements[par]; 
+          dest->insert(
+            dest->end(),
+            src->begin(),
+            src->end()
+          );
+
+          // tell related elements, the end point has changed to its parent
+
+          for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
+            std::string related_ele = *ite_related_ele; 
+            int r_gid = b->ele2gid[related_ele]; 
+
+            if(r_gid == gid) {
+              update_unions2block(b, &ele, &par, &related_ele); 
+            } else {
+              std::tuple<std::string, std::string, std::string> send_tuple(ele, par, *ite_related_ele); 
+
+              cp.enqueue(l->target(l->find(r_gid)), send_tuple); 
+            }
+          }
+
+          
+          // if(ele == "0") {
+          //   std::string par = b->parent(ele); 
+          //   for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
+          //     std::cout<<"??"<<*ite_related_ele<<": "<<ele<<" - "<<par<<std::endl; 
+          //   }
+          //   std::cout<<b->has(par)<<std::endl; 
+          //   std::cout<<src->size()<<std::endl; 
+          // }
+
+          src->clear(); 
+        }
+      }
+    }
+  }
+
+  // Save unions from other blocks
   while(!cp.empty_incoming_queues()) {
     std::vector<int> in; // gids of incoming neighbors in the link
     cp.incoming(in);
@@ -339,13 +384,14 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
         b->ele2gid[*related_ele_ptr] = *gid_ptr; 
 
         // tell related elements, the end point has changed to its parent
-        std::tuple<std::string, std::string, std::string> send_tuple(*ele_ptr, *par_ptr, *related_ele_ptr); 
-
+      
         if(*gid_ptr == gid) {
           update_unions2block(b, ele_ptr, par_ptr, related_ele_ptr); 
         } else {
+          std::tuple<std::string, std::string, std::string> send_tuple(*ele_ptr, *par_ptr, *related_ele_ptr); 
           cp.enqueue(l->target(l->find(*gid_ptr)), send_tuple); 
         }
+
       }
     }
   }
@@ -388,7 +434,7 @@ void total_changes(Block* b, const diy::Master::ProxyWithLink& cp) {
   // for(auto ite = b->related_elements.begin(); ite != b->related_elements.end(); ++ite) {
   //   std::string ele = ite->first; 
   //   for(auto ite_related_ele = ite->second.begin(); ite_related_ele != ite->second.end(); ++ite_related_ele) {
-  //     if(*ite_related_ele == ele) {
+  //     while(*ite_related_ele == ele) {
   //       ite->second.erase(ite_related_ele); 
   //     }
   //   }
