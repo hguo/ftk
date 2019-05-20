@@ -163,13 +163,82 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
   }
 }
 
-// Also locally update parent to grandparent by path compression
 void query_grandparent(Block* b, const diy::Master::ProxyWithLink& cp) {
   diy::Link* l = cp.link();
 
   // std::cout<<"Query Grandparent: "<<std::endl; 
   // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
 
+  for(std::vector<std::string>::iterator it = b->eles.begin(); it != b->eles.end(); ++it) {
+    std::string ele = *it; 
+    std::string parent = b->parent(ele); 
+
+    if(!b->is_root(ele)) {
+      if(!b->has(parent)) {
+        int gid = b->ele2gid[parent]; 
+        std::tuple<int, std::string, std::string> send_tuple(-1, parent, ele); 
+        cp.enqueue(l->target(l->find(gid)), send_tuple);
+
+        // std::cout<<ele<<" - "<<parent<<" - "<<gid<<std::endl; 
+      }
+    }
+  }
+
+  // std::cout<<std::endl; 
+}
+
+bool compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
+  // Answer grandparent and compress path
+
+  // std::cout<<"Compress Path: "<<std::endl; 
+  // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
+
+  diy::Link* l = cp.link();
+  // Across processors
+
+  std::vector<int> in; // gids of incoming neighbors in the link
+  cp.incoming(in);
+
+  // for all neighbor blocks
+  // dequeue data received from this neighbor block in the last exchange
+  for (unsigned i = 0; i < in.size(); ++i) {
+    if(cp.incoming(in[i])) {
+
+      std::tuple<int, std::string, std::string> rec_tuple; 
+      cp.dequeue(in[i], rec_tuple);
+
+      int* label = &std::get<0>(rec_tuple); 
+      if(*label == -1) { // for answer of grandparent
+        std::string* parent_ptr = &std::get<1>(rec_tuple); 
+        std::string* ele_ptr = &std::get<2>(rec_tuple); 
+
+        if(b->has(*parent_ptr) && !b->is_root(*parent_ptr)) {
+          std::string grandparent = b->parent(*parent_ptr); 
+
+          std::tuple<int, std::string, std::string> send_tuple(b->ele2gid[grandparent], grandparent, *ele_ptr); 
+          cp.enqueue(l->target(l->find(in[i])), send_tuple);
+
+          // std::cout<<*ele_ptr<<" - "<<*parent_ptr<<" - "<<grandparent<<" - "<<b->ele2gid[grandparent]<<std::endl; 
+        }
+      } else { // for path compression
+        int* grandpar_gid_ptr = label; 
+        std::string* grandpar_ptr = &std::get<1>(rec_tuple); 
+        std::string* ele_ptr = &std::get<2>(rec_tuple); 
+        
+        // std::cout<<*ele_ptr << " - " << b->parent(*ele_ptr) <<" - "<< *grandpar_ptr<<" - "<<*grandpar_gid_ptr<<std::endl; 
+
+        b->set_parent(*ele_ptr, *grandpar_ptr); 
+        b->nchanges += 1;
+        std::cout<<*ele_ptr<<" -2> "<<*grandpar_ptr<<std::endl; 
+
+        b->ele2gid[*grandpar_ptr] = *grandpar_gid_ptr; 
+      }
+
+    }
+  }
+
+  // Local computation
+  // Locally compress path
   for(std::vector<std::string>::iterator it = b->eles.begin(); it != b->eles.end(); ++it) {
     std::string ele = *it; 
     std::string parent = b->parent(ele); 
@@ -183,83 +252,15 @@ void query_grandparent(Block* b, const diy::Master::ProxyWithLink& cp) {
           b->nchanges += 1;
           std::cout<<ele<<" -2> "<<grandparent<<std::endl; 
         }
-      } else {
-        int gid = b->ele2gid[parent]; 
-        std::pair<std::string, std::string> send_pair(ele, parent); 
-        cp.enqueue(l->target(l->find(gid)), send_pair);
-
-        // std::cout<<ele<<" - "<<parent<<" - "<<gid<<std::endl; 
       }
     }
   }
 
-  // std::cout<<std::endl; 
-}
-
-void answer_grandparent(Block* b, const diy::Master::ProxyWithLink& cp) {
-  diy::Link* l = cp.link();
-  // std::cout<<"Answer Grandparent: "<<std::endl; 
-  // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
-
-  while(!cp.empty_incoming_queues()) {
-    std::vector<int> in; // gids of incoming neighbors in the link
-    cp.incoming(in);
-
-    // for all neighbor blocks
-    // dequeue data received from this neighbor block in the last exchange
-    for (unsigned i = 0; i < in.size(); ++i) {
-      if(cp.incoming(in[i])) {
-        std::pair<std::string, std::string> rec_pair; 
-        cp.dequeue(in[i], rec_pair);
-        std::string* ele_ptr = &rec_pair.first; 
-        std::string* parent_ptr = &rec_pair.second; 
-
-        if(b->has(*parent_ptr) && !b->is_root(*parent_ptr)) {
-          std::string grandparent = b->parent(*parent_ptr); 
-
-          std::tuple<std::string, std::string, int> send_tuple(*ele_ptr, grandparent, b->ele2gid[grandparent]); 
-          cp.enqueue(l->target(l->find(in[i])), send_tuple);
-
-          // std::cout<<*ele_ptr<<" - "<<*parent_ptr<<" - "<<grandparent<<" - "<<b->ele2gid[grandparent]<<std::endl; 
-        }
-      }
-    }
+  if(cp.empty_queues()) {
+    return true ; 
+  } else {
+    return false ;
   }
-
-  // std::cout<<std::endl; 
-}
-
-void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
-  // std::cout<<"Compress Path: "<<std::endl; 
-  // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
-
-  while(!cp.empty_incoming_queues()) {
-    std::vector<int> in; // gids of incoming neighbors in the link
-    cp.incoming(in);
-
-    // for all neighbor blocks
-    // dequeue data received from this neighbor block in the last exchange
-
-    for (unsigned i = 0; i < in.size(); ++i) {
-      if(cp.incoming(in[i])) {
-        std::tuple<std::string, std::string, int> rec_tuple; 
-        cp.dequeue(in[i], rec_tuple); 
-        std::string* ele_ptr = &std::get<0>(rec_tuple); 
-        std::string* grandpar_ptr = &std::get<1>(rec_tuple); 
-        int* grandpar_gid_ptr = &std::get<2>(rec_tuple); 
-
-        // std::cout<<*ele_ptr << " - " << b->parent(*ele_ptr) <<" - "<< *grandpar_ptr<<" - "<<*grandpar_gid_ptr<<std::endl; 
-
-        b->set_parent(*ele_ptr, *grandpar_ptr); 
-        b->nchanges += 1;
-        std::cout<<*ele_ptr<<" -3> "<<*grandpar_ptr<<std::endl; 
-
-        b->ele2gid[*grandpar_ptr] = *grandpar_gid_ptr; 
-      }
-    }
-  }
-
-  // std::cout<<std::endl; 
 }
 
 
@@ -292,6 +293,7 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
   }
 }
 
+// Tell related elements that the endpoints have been changed
 void update_unions2block(Block* b, std::string* ele_ptr, std::string* par_ptr, std::string* related_ele_ptr) {
   for(auto ite = b->related_elements[*related_ele_ptr].begin(); ite != b->related_elements[*related_ele_ptr].end(); ++ite) {
 
@@ -303,13 +305,60 @@ void update_unions2block(Block* b, std::string* ele_ptr, std::string* par_ptr, s
   }
 }
 
-void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
+// update unions of related elements
+  // Tell related elements that the endpoints have been changed
+bool update_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
   // std::cout<<"Save Unions: "<<std::endl; 
   // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
 
+  // Save unions from other blocks
+  std::vector<int> in; // gids of incoming neighbors in the link
+  cp.incoming(in);
+
+  // for all neighbor blocks
+  // dequeue data received from this neighbor block in the last exchange
+
+  for (unsigned i = 0; i < in.size(); ++i) {
+    if(cp.incoming(in[i])) {
+      std::tuple<std::string, std::string, std::string, int> rec_tuple; 
+      cp.dequeue(in[i], rec_tuple); 
+
+      std::string* ele_ptr = &std::get<0>(rec_tuple); 
+      std::string* par_ptr = &std::get<1>(rec_tuple); 
+      std::string* related_ele_ptr = &std::get<2>(rec_tuple); 
+      int* label = &std::get<3>(rec_tuple); 
+
+      // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr <<" - "<< *gid_ptr<<std::endl; 
+
+      if(*label != -1) {
+        int* gid_ptr = label; 
+        b->related_elements[*par_ptr].push_back(*related_ele_ptr); 
+        b->ele2gid[*related_ele_ptr] = *gid_ptr; 
+
+        // tell related elements, the end point has changed to its parent
+      
+        if(*gid_ptr == gid) {
+          // Tell related elements that the endpoints have been changed
+          update_unions2block(b, ele_ptr, par_ptr, related_ele_ptr); 
+        } else {
+          std::tuple<std::string, std::string, std::string, int> send_tuple(*ele_ptr, *par_ptr, *related_ele_ptr, -1); 
+          cp.enqueue(l->target(l->find(*gid_ptr)), send_tuple); 
+        }
+      } else {
+        std::tuple<std::string, std::string, std::string> rec_tuple; 
+        // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr<<std::endl; 
+
+        // Tell related elements that the endpoints have been changed
+        update_unions2block(b, ele_ptr, par_ptr, related_ele_ptr); 
+      }
+
+    }
+  }
+
+  // Local computation
   // Pass unions of elements in this block to their parents, save these unions
   for(auto ite_ele = b->eles.begin(); ite_ele != b->eles.end(); ++ite_ele) {
     std::string ele = *ite_ele; 
@@ -338,21 +387,11 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
             if(r_gid == gid) {
               update_unions2block(b, &ele, &par, &related_ele); 
             } else {
-              std::tuple<std::string, std::string, std::string> send_tuple(ele, par, *ite_related_ele); 
+              std::tuple<std::string, std::string, std::string, int> send_tuple(ele, par, *ite_related_ele, -1); 
 
               cp.enqueue(l->target(l->find(r_gid)), send_tuple); 
             }
           }
-
-          
-          // if(ele == "0") {
-          //   std::string par = b->parent(ele); 
-          //   for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
-          //     std::cout<<"??"<<*ite_related_ele<<": "<<ele<<" - "<<par<<std::endl; 
-          //   }
-          //   std::cout<<b->has(par)<<std::endl; 
-          //   std::cout<<src->size()<<std::endl; 
-          // }
 
           src->clear(); 
         }
@@ -360,75 +399,14 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
     }
   }
 
-  // Save unions from other blocks
-  while(!cp.empty_incoming_queues()) {
-    std::vector<int> in; // gids of incoming neighbors in the link
-    cp.incoming(in);
-
-    // for all neighbor blocks
-    // dequeue data received from this neighbor block in the last exchange
-
-    for (unsigned i = 0; i < in.size(); ++i) {
-      if(cp.incoming(in[i])) {
-        std::tuple<std::string, std::string, std::string, int> rec_tuple; 
-        cp.dequeue(in[i], rec_tuple); 
-
-        std::string* ele_ptr = &std::get<0>(rec_tuple); 
-        std::string* par_ptr = &std::get<1>(rec_tuple); 
-        std::string* related_ele_ptr = &std::get<2>(rec_tuple); 
-        int* gid_ptr = &std::get<3>(rec_tuple); 
-
-        // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr <<" - "<< *gid_ptr<<std::endl; 
-
-        b->related_elements[*par_ptr].push_back(*related_ele_ptr); 
-        b->ele2gid[*related_ele_ptr] = *gid_ptr; 
-
-        // tell related elements, the end point has changed to its parent
-      
-        if(*gid_ptr == gid) {
-          update_unions2block(b, ele_ptr, par_ptr, related_ele_ptr); 
-        } else {
-          std::tuple<std::string, std::string, std::string> send_tuple(*ele_ptr, *par_ptr, *related_ele_ptr); 
-          cp.enqueue(l->target(l->find(*gid_ptr)), send_tuple); 
-        }
-
-      }
-    }
-  }
-
   // std::cout<<std::endl; 
+  if(cp.empty_queues()) {
+    return true ; 
+  } else {
+    return false ;
+  }
 }
 
-// update unions of related elements
-void update_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
-  // std::cout<<"Update Unions: "<<std::endl; 
-  // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
-
-  while(!cp.empty_incoming_queues()) {
-    std::vector<int> in; // gids of incoming neighbors in the link
-    cp.incoming(in);
-
-    // for all neighbor blocks
-    // dequeue data received from this neighbor block in the last exchange
-
-    for (unsigned i = 0; i < in.size(); ++i) {
-      if(cp.incoming(in[i])) {
-        std::tuple<std::string, std::string, std::string> rec_tuple; 
-        cp.dequeue(in[i], rec_tuple); 
-
-        std::string* ele_ptr = &std::get<0>(rec_tuple); 
-        std::string* par_ptr = &std::get<1>(rec_tuple); 
-        std::string* related_ele_ptr = &std::get<2>(rec_tuple); 
-
-        // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr<<std::endl; 
-
-        update_unions2block(b, ele_ptr, par_ptr, related_ele_ptr); 
-      }
-    }
-  }
-
-  // std::cout<<std::endl; 
-}
 
 void total_changes(Block* b, const diy::Master::ProxyWithLink& cp) {
   // for(auto ite = b->related_elements.begin(); ite != b->related_elements.end(); ++ite) {
@@ -594,15 +572,17 @@ int main(int argc, char* argv[]) {
   bool all_done = false;
   while (!all_done) {
     master.foreach(&unite_once);
+
     master.foreach(&query_grandparent);
-    master.exchange();                 
-    master.foreach(&answer_grandparent);
-    master.exchange();
-    master.foreach(&compress_path);
+    master.execute();
+    master.iexchange(&compress_path); 
+
     master.foreach(&pass_unions);
-    master.exchange();
-    master.foreach(&save_unions);
-    master.exchange();
+    master.execute();
+
+
+    master.iexchange(&update_unions);
+
     master.foreach(&update_unions);
 
     master.foreach(&total_changes); // can use a reduce all to check whether every thing is done. 
@@ -613,6 +593,10 @@ int main(int argc, char* argv[]) {
 
     std::cout<<total_changes<<"==========================="<<std::endl; 
   }
+  
+  // master.iexchange(&);
+  // master.iexchange(&bounce, 16, 1000);
+
 
   // if (world.rank() == 0)
   //   std::cout << "Total iterations: " << master.block<Block>(master.loaded_block())->count << std::endl;
