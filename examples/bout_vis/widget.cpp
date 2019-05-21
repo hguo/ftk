@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <queue>
-// #include <netcdf.h>
+#include <netcdf.h>
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
@@ -46,6 +46,15 @@ CGLWidget::CGLWidget(const QGLFormat& fmt, QWidget *parent, QGLWidget *sharedWid
 
 CGLWidget::~CGLWidget()
 {
+}
+
+void CGLWidget::load_ni_trz(const std::string &filename)
+{
+  rxy.from_netcdf(filename, "RXY");
+  zxy.from_netcdf(filename, "ZXY");
+
+  fprintf(stderr, "%d, %d\n", rxy.shape(0), rxy.shape(1));
+  exit(1);
 }
 
 void CGLWidget::mousePressEvent(QMouseEvent* e)

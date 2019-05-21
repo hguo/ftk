@@ -30,7 +30,9 @@ class CGLWidget : public QGLWidget
 public:
   CGLWidget(const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
   ~CGLWidget(); 
-  
+ 
+  void load_ni_trz(const std::string &filename);
+
 protected:
   void initializeGL(); 
   void resizeGL(int w, int h); 
@@ -50,6 +52,9 @@ private: // camera
 
   const float fovy, znear, zfar; 
   const QVector3D eye, center, up;
+
+private:
+  hypermesh::ndarray<float> rxy, zxy;
 
 private:
   GLuint tex;
