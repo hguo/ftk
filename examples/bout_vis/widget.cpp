@@ -54,7 +54,6 @@ void CGLWidget::load_ni_trz(const std::string &filename)
   zxy.from_netcdf(filename, "ZXY");
 
   fprintf(stderr, "%d, %d\n", rxy.shape(0), rxy.shape(1));
-  exit(1);
 }
 
 void CGLWidget::mousePressEvent(QMouseEvent* e)
@@ -209,22 +208,16 @@ void CGLWidget::paintGL()
   glColor3f(0, 0, 0);
   // glutWireTeapot(1.0);
 
-  glPushMatrix();
-  // glScalef(0.5f, 0.5f, 1.f);
-  glScalef((float)(DW-1) / (DH-1), 1.0, 1.0);
-  glRotatef(-90, 0, 0, 1);
-  glTranslatef(-0.5, -0.5, -0.5);
-  glTranslatef(0, 0, (float)current_t/(DT-1));
-  glBindTexture(GL_TEXTURE_2D, tex);
-  glEnable(GL_TEXTURE_2D);
-  glBegin(GL_QUADS);
-  glVertex2f(0, 0); glTexCoord2f(0, 0);
-  glVertex2f(1, 0); glTexCoord2f(1, 0);
-  glVertex2f(1, 1); glTexCoord2f(1, 1);
-  glVertex2f(0, 1); glTexCoord2f(0, 1);
+  glScalef(0.5, 0.5, 0.5);
+  glTranslatef(-6, 0, 0);
+  glBegin(GL_POINTS);
+  for (int i = 0; i < rxy.shape(0); i ++)
+    for (int j = 0; j < rxy.shape(1); j ++) {
+      const float s = (float)j / rxy.shape(1);
+      glColor3f(s, 1-s, 0);
+      glVertex2f(rxy(i, j), zxy(i, j));
+    }
   glEnd();
-  glDisable(GL_TEXTURE_2D);
-  glPopMatrix();
 
   CHECK_GLERROR();
 }
