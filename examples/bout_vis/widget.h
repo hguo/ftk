@@ -42,9 +42,6 @@ protected:
   void mouseMoveEvent(QMouseEvent*);
   void keyPressEvent(QKeyEvent*); 
   void wheelEvent(QWheelEvent*); 
-  
-private:
-  void update_texture();
 
 private: // camera
   CGLTrackball trackball;
@@ -54,12 +51,12 @@ private: // camera
   const QVector3D eye, center, up;
 
 private:
-  hypermesh::ndarray<float> rxy, zxy;
+  hypermesh::ndarray<float> rxy, zxy, nitrz;
 
 private:
   GLuint tex;
-  int current_t = 0;
-  int DW, DH, DT;
+  int current_t = 100;
+  int DT = 704;
 }; 
 
 #endif

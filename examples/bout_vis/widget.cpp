@@ -53,7 +53,8 @@ void CGLWidget::load_ni_trz(const std::string &filename)
   rxy.from_netcdf(filename, "RXY");
   zxy.from_netcdf(filename, "ZXY");
 
-  fprintf(stderr, "%d, %d\n", rxy.shape(0), rxy.shape(1));
+  nitrz.from_netcdf(filename, "NI_TRZ");
+  // fprintf(stderr, "%d, %d\n", rxy.shape(0), rxy.shape(1));
 }
 
 void CGLWidget::mousePressEvent(QMouseEvent* e)
@@ -87,13 +88,11 @@ void CGLWidget::keyPressEvent(QKeyEvent* e)
   switch (e->key()) {
   case Qt::Key_Right:
     current_t = (current_t + 1) % DT;
-    update_texture();
     updateGL();
     break;
   
   case Qt::Key_Left:
     current_t = (current_t - 1 + DT) % DT;
-    update_texture();
     updateGL();
     break;
 
@@ -208,23 +207,24 @@ void CGLWidget::paintGL()
   glColor3f(0, 0, 0);
   // glutWireTeapot(1.0);
 
-  glScalef(0.5, 0.5, 0.5);
+  glScalef(0.2, 0.2, 0.2);
   glTranslatef(-6, 0, 0);
-  glBegin(GL_POINTS);
-  for (int i = 0; i < rxy.shape(0); i ++)
-    for (int j = 0; j < rxy.shape(1); j ++) {
-      const float s = (float)j / rxy.shape(1);
-      glColor3f(s, 1-s, 0);
-      glVertex2f(rxy(i, j), zxy(i, j));
+  // glBegin(GL_POINTS);
+  for (int j = 0; j < rxy.shape(1)-1; j ++) {
+    const float s = (float)j / rxy.shape(1);
+    glBegin(GL_QUAD_STRIP);
+    for (int i = 0; i < rxy.shape(0); i ++) {
+      for (int k = 0; k < 2; k ++) {
+        const float s = (std::clamp(nitrz(i, j+k, current_t)*5.f, -1.f, 1.f) + 1) * 0.5;
+        // fprintf(stderr, "i=%d, j=%d, %f, %f\n", i, j, nitrz(i, j+k), s);
+        glColor3f(s, 1-s, 0);
+        glVertex2f(rxy(i, j+k), zxy(i, j+k));
+      }
     }
-  glEnd();
+    glEnd();
+  }
+  // glEnd();
 
   CHECK_GLERROR();
-}
-
-void CGLWidget::update_texture()
-{
-  // glBindTexture(GL_TEXTURE_2D, tex);
-  // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, DW, DH, 0, GL_RGB, GL_UNSIGNED_BYTE, colors.data());
 }
 
