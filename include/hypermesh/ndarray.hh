@@ -161,7 +161,10 @@ void ndarray<float>::from_netcdf(int ncid, int varid, const size_t starts[], con
 {
   int ndims;
   NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
-  reshape(ndims, sizes);
+
+  std::vector<size_t> mysizes(sizes, sizes+ndims);
+  std::reverse(mysizes.begin(), mysizes.end());
+  reshape(mysizes);
 
   NC_SAFE_CALL( nc_get_vara_float(ncid, varid, starts, sizes, &p[0]) );
 }
@@ -171,7 +174,10 @@ void ndarray<double>::from_netcdf(int ncid, int varid, const size_t starts[], co
 {
   int ndims;
   NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
-  reshape(ndims, sizes);
+  
+  std::vector<size_t> mysizes(sizes, sizes+ndims);
+  std::reverse(mysizes.begin(), mysizes.end());
+  reshape(mysizes);
   
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
 }
