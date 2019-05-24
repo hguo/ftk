@@ -1,5 +1,5 @@
-#ifndef _FTK_SPARSE_UNION_FIND_H
-#define _FTK_SPARSE_UNION_FIND_H
+#ifndef _FTK_DISTRIBUTED_SPARSE_UNION_FIND_H
+#define _FTK_DISTRIBUTED_SPARSE_UNION_FIND_H
 
 #include <vector>
 #include <iostream>
@@ -12,9 +12,9 @@
 
 namespace ftk {
 template <class IdType=std::string>
-struct sparse_union_find
+struct distributed_sparse_union_find
 {
-  sparse_union_find() {
+  distributed_sparse_union_find() {
     
   }
 
@@ -29,44 +29,12 @@ struct sparse_union_find
     id[i] = par; 
   }
 
-  // Return the root of an element. 
-  // Return empty string, if the element is not in the data structure 
-  IdType find(IdType i) {
-    if(id.find(i) == id.end()) {
-      return ""; 
-    }
-
-    while (i != id[i]) {
-      id[i] = id[id[i]];
-      i = id[i];
-    }
-
-    return i; 
-  }
-
   IdType parent(IdType i) {
     if(id.find(i) == id.end()) {
       return ""; 
     }
 
     return id[i]; 
-  }
-  
-  void unite(IdType i, IdType j) {
-    i = find(i);
-    j = find(j);
-
-    if (sz[i] < sz[j]) {
-      id[i] = j; 
-      sz[j] += sz[i];
-    } else {
-      id[j] = i;
-      sz[i] += sz[j];
-    }
-  }
-
-  bool same_set(IdType i, IdType j) {
-    return find(i) == find(j);
   }
 
   bool is_root(IdType i) {

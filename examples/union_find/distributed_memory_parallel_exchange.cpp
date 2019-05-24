@@ -15,15 +15,15 @@
 #include <ftk/external/diy/assigner.hpp>
 #include <ftk/external/diy/serialization.hpp>
 
-#include <ftk/basic/sparse_union_find.hh>
+#include <ftk/basic/distributed_sparse_union_find.hh>
 
 typedef std::pair<std::string, int> ele_gid;  // stores element and its global block id
 typedef std::map<std::string, std::vector<std::string>> r_ele_map; 
 
 typedef std::map<std::string, int> ele2gid_map; 
 
-struct Block : public ftk::sparse_union_find<std::string> {
-  Block(): nchanges(0), sparse_union_find() { 
+struct Block : public ftk::distributed_sparse_union_find<std::string> {
+  Block(): nchanges(0), distributed_sparse_union_find() { 
     
   }
 
@@ -217,7 +217,7 @@ void query_grandparent(Block* b, const diy::Master::ProxyWithLink& cp) {
   // std::cout<<"Query Grandparent: "<<std::endl; 
   // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
 
-  for(std::vector<std::string>::iterator it = b->eles.begin(); it != b->eles.end(); ++it) {
+  for(auto it = b->eles.begin(); it != b->eles.end(); ++it) {
     std::string ele = *it; 
     std::string parent = b->parent(ele); 
 
@@ -274,7 +274,7 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
 
 
   // Also locally update parent to grandparent by path compression
-  for(std::vector<std::string>::iterator it = b->eles.begin(); it != b->eles.end(); ++it) {
+  for(auto it = b->eles.begin(); it != b->eles.end(); ++it) {
     std::string ele = *it; 
     std::string parent = b->parent(ele); 
 
@@ -357,9 +357,11 @@ void update_unions2block(Block* b, std::string* ele_ptr, std::string* par_ptr, s
     if(*ite == *ele_ptr) {
       *ite = *par_ptr; 
       
-      break ;
+      return ;
     }
   }
+
+  std::cout<<"Error!"<<std::endl; 
 }
 
 void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
@@ -380,6 +382,7 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
         if(b->has(par)) {
           // Update directly, if the realted element is in the block
+          int p_gid = gid; 
 
           auto dest = &b->related_elements[par]; 
           dest->insert(
@@ -397,7 +400,7 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
             if(r_gid == gid) {
               update_unions2block(b, &ele, &par, &related_ele); 
             } else {
-              std::tuple<std::string, std::string, std::string> send_tuple(ele, par, *ite_related_ele); 
+              std::tuple<std::string, std::string, std::string, int> send_tuple(ele, par, *ite_related_ele, p_gid); 
 
               cp.enqueue(l->target(l->find(r_gid)), send_tuple); 
             }
@@ -437,7 +440,7 @@ void save_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
         if(*gid_ptr == gid) {
           update_unions2block(b, ele_ptr, par_ptr, related_ele_ptr); 
         } else {
-          std::tuple<std::string, std::string, std::string> send_tuple(*ele_ptr, *par_ptr, *related_ele_ptr); 
+          std::tuple<std::string, std::string, std::string, int> send_tuple(*ele_ptr, *par_ptr, *related_ele_ptr, gid); 
           cp.enqueue(l->target(l->find(*gid_ptr)), send_tuple); 
         }
 
@@ -462,15 +465,17 @@ void update_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
     for (unsigned i = 0; i < in.size(); ++i) {
       if(cp.incoming(in[i])) {
-        std::tuple<std::string, std::string, std::string> rec_tuple; 
+        std::tuple<std::string, std::string, std::string, int> rec_tuple; 
         cp.dequeue(in[i], rec_tuple); 
 
         std::string* ele_ptr = &std::get<0>(rec_tuple); 
         std::string* par_ptr = &std::get<1>(rec_tuple); 
         std::string* related_ele_ptr = &std::get<2>(rec_tuple); 
+        int* pgid_ptr = &std::get<3>(rec_tuple); 
 
         // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr<<std::endl; 
 
+        b->ele2gid[*par_ptr] = *pgid_ptr; 
         update_unions2block(b, ele_ptr, par_ptr, related_ele_ptr); 
       }
     }
@@ -572,6 +577,7 @@ int main(int argc, char* argv[]) {
       b->related_elements["0"].push_back("1"); 
       b->related_elements["0"].push_back("7"); 
       b->related_elements["2"].push_back("6"); 
+      b->related_elements["3"].push_back("1");
       b->related_elements["3"].push_back("4"); 
 
       b->ele2gid["1"] = -1; 
