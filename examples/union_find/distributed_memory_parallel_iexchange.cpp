@@ -4,6 +4,8 @@
 
 // Probibly, can be optimized by "An O(logn) parallel connectivity algorithm"
 
+#define IEXCHANGE 1
+
 
 #include <vector>
 #include <iostream>
@@ -26,9 +28,9 @@ struct Block : public ftk::distributed_sparse_union_find<std::string> {
   }
 
 public: 
-  // map element id to ids of its related elements
-  int nchanges;
+  int nchanges; // # of processed unions per round = valid unions (united unions) + passing unions
 
+  // map element id to ids of its related elements
   // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
   r_ele_map related_elements; 
   ele2gid_map ele2gid; 
@@ -396,9 +398,9 @@ void distributed_answer_gparent(Block* b, const diy::Master::ProxyWithLink& cp, 
     cp.enqueue(l->target(l->find(from_gid)), send_msg); 
 
 
-    if(*ele_ptr == "4") {
-      std::cout<<*ele_ptr<<" ~ "<<*parent_ptr<<" ~ "<<grandparent<<std::endl; 
-    }
+    // if(*ele_ptr == "4") {
+    //   std::cout<<*ele_ptr<<" ~ "<<*parent_ptr<<" ~ "<<grandparent<<std::endl; 
+    // }
   }
 }
 
@@ -459,7 +461,7 @@ void distributed_pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 }
 
 
-void local_compress_path(Block* b) {
+void local_compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
   // std::cout<<"Compress Path: "<<std::endl; 
   // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
 
@@ -497,6 +499,7 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
 
     if(*ite == *ele_ptr) {
       *ite = *par_ptr; 
+      b->nchanges += 1;
       
       return ;
     }
@@ -525,6 +528,8 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
       // std::cout<<"!!!"<<*ele_ptr<<" - "<<*par_ptr<<" - "<<parent_related_ele<<" - "<<*pgid_ptr<<std::endl; 
 
       cp.enqueue(l->target(l->find(r_p_gid)), send_msg); 
+      // This message should get completed, so we set a change to avoid the algorithm ends. 
+      b->nchanges += 1;
     }
   }
 }
@@ -554,6 +559,7 @@ void local_pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
             src->begin(),
             src->end()
           );
+          b->nchanges += src->size();
 
           // tell related elements, the end point has changed to its parent
             // Since has changed locally, the message will one send once. 
@@ -600,6 +606,7 @@ void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Mess
 
   b->related_elements[*par_ptr].push_back(*related_ele_ptr); 
   b->ele2gid[*related_ele_ptr] = rgid; 
+  b->nchanges += 1;
 
   // tell related elements, the end point has changed to its parent
 
@@ -638,12 +645,13 @@ void distributed_computation(Block* b, const diy::Master::ProxyWithLink& cp) {
     distributed_query_gparent(b, cp); // Start of distributed pass compression
   }
 
+  // distributed_query_gparent(b, cp);
   distributed_pass_unions(b, cp); 
 }
 
 void local_computation(Block* b, const diy::Master::ProxyWithLink& cp) {
   unite_once(b, cp); 
-  local_compress_path(b); 
+  local_compress_path(b, cp); 
   local_pass_unions(b, cp); 
 }
 
@@ -655,6 +663,7 @@ void received_msg(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, i
   // } else if (msg.tag == "gid_response") {
   //   save_gid(b, cp, msg); 
   // } 
+
   if(msg.tag == "gparent_query") {
     distributed_answer_gparent(b, cp, msg, from_gid); 
   } else if(msg.tag == "gparent_response") {
@@ -666,25 +675,6 @@ void received_msg(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, i
   } else {
     std::cout<<"Error! "<<std::endl; 
   }
-
-  // switch(msg.tag) {
-  //   case "gparent_query": 
-  //       distributed_answer_gparent(b, cp, msg); 
-  //       break;
-  //   case "gparent_response": 
-  //       distributed_save_gparent(Block* b, const diy::Master::ProxyWithLink& cp, msg); 
-  //       break;
-  //   case "union": 
-  //       distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, msg); 
-  //       break; 
-  //   case "endpoint": 
-  //       distributed_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, msg); 
-  //       break; 
-
-  //   default: 
-  //       std::<<cout<<"Error! "<<std::endl; 
-  //        break;
-  // }
 }
 
 void receive_msg(Block* b, const diy::Master::ProxyWithLink& cp) {
@@ -709,6 +699,13 @@ void receive_msg(Block* b, const diy::Master::ProxyWithLink& cp) {
   }
 }
 
+void total_changes(Block* b, const diy::Master::ProxyWithLink& cp) {
+  cp.collectives()->clear();
+
+  cp.all_reduce(b->nchanges, std::plus<int>()); 
+  b->nchanges = 0;
+}
+
 bool union_find_iexchange(Block* b, const diy::Master::ProxyWithLink& cp) {
   local_computation(b, cp); 
   receive_msg(b, cp); 
@@ -719,6 +716,106 @@ bool union_find_iexchange(Block* b, const diy::Master::ProxyWithLink& cp) {
 
   return true; 
 }
+
+void iexchange_process(diy::Master& master) {
+  master.iexchange(&union_find_iexchange); 
+}
+
+void union_find_exchange(Block* b, const diy::Master::ProxyWithLink& cp) {
+  local_compress_path(b, cp); 
+  local_pass_unions(b, cp); 
+  receive_msg(b, cp); 
+
+  distributed_pass_unions(b, cp); 
+
+  total_changes(b, cp); 
+}
+
+
+// Method 0
+// void exchange_process(diy::Master& master) {
+//   master.foreach(&unite_once);
+
+//   master.foreach(&local_compress_path);
+
+//   master.foreach(&distributed_query_gparent);
+  
+//   master.exchange();                 
+//   // master.foreach(&distributed_answer_gparent_exchange);
+//   // std::cout<<"!!!!!distributed_answer_gparent!!!!!"<<std::endl; 
+//   master.foreach(&receive_msg); // distributed_answer_gparent
+  
+//   master.exchange();
+//   // master.foreach(&distributed_save_gparent_exchange);
+//   // std::cout<<"!!!!!distributed_save_gparent!!!!!"<<std::endl; 
+//   master.foreach(&receive_msg); // distributed_save_gparent
+  
+//   master.foreach(&distributed_pass_unions);
+  
+//   master.exchange();
+//   // master.foreach(&distributed_save_union_exchange);
+//   // std::cout<<"!!!!!distributed_save_union!!!!!"<<std::endl; 
+//   master.foreach(&receive_msg); // distributed_save_union
+
+//   master.foreach(&local_pass_unions);
+
+//   master.exchange();
+//   // master.foreach(&distributed_update_endpoint_exchange);
+//   // std::cout<<"!!!!!distributed_update_endpoint!!!!!"<<std::endl; 
+//   master.foreach(&receive_msg); // distributed_update_endpoint
+//   // master.exchange();
+//   // std::cout<<"!!!!!!!!!!"<<std::endl; 
+//   // master.foreach(&receive_msg);
+//   // master.exchange();
+//   // std::cout<<"!!!!!!!!!!"<<std::endl; 
+//   // master.foreach(&receive_msg);
+//   // master.exchange();
+
+//   master.foreach(&total_changes); // can use a reduce all to check whether every thing is done. 
+  
+//   master.exchange();
+//   // It is possible that some endpoints are still tranferring
+//     // While two consecutive exchange() without receiving will clear the buffer
+//     // Which means, in-between each pair of exchange should contain at least one receive
+//     // Hence, an additional receive is needed
+//   master.foreach(&receive_msg);
+
+//   std::cout<<"================================="<<std::endl; 
+// }
+
+// Method 1
+// gparent query and gparent answer should be synchronized. 
+  // otherwise it is possible that one query message is transferring, but the program ends. 
+  // Other parts are not required to synchronize. 
+void exchange_process(diy::Master& master) {
+  master.foreach(&unite_once);
+  master.foreach(&local_compress_path);
+  master.foreach(&distributed_query_gparent);
+  
+  master.exchange();                 
+  master.foreach(&receive_msg); // distributed_answer_gparent + additional responses
+
+  master.exchange();
+  master.foreach(&receive_msg); // distributed_save_gparent + additional responses
+
+  // master.foreach(&union_find_exchange);
+  // master.exchange();
+
+  master.foreach(&local_compress_path);
+  master.foreach(&local_pass_unions);
+  master.foreach(&distributed_pass_unions);
+  master.foreach(&total_changes);
+  master.exchange();
+
+  // While two consecutive exchange() without receiving will clear the buffer
+    // Which means, in-between each pair of exchange should contain at least one receive
+    // Hence, an additional receive is needed
+  master.foreach(&receive_msg);
+
+  std::cout<<"================================="<<std::endl; 
+}
+
+
 
 int main(int argc, char* argv[]) {
   diy::mpi::environment     env(argc, argv);
@@ -902,7 +999,26 @@ int main(int argc, char* argv[]) {
   master.exchange();
   master.foreach(&save_gid);
 
-  master.iexchange(&union_find_iexchange); 
+  if(IEXCHANGE) { // for iexchange
+    
+    iexchange_process(master); 
+  } else { // for exchange
+    bool all_done = false;
+    while(!all_done) {
+      exchange_process(master); 
+
+      // int total_changes;
+      // for (int i = 0; i < master.size(); i++)
+      //     total_changes = master.proxy(i).get<size_t>();
+
+      int total_changes = master.proxy(master.loaded_block()).read<int>();
+      // int total_changes = master.proxy(master.loaded_block()).get<int>();
+
+      std::cout<<total_changes<<std::endl; 
+
+      all_done = total_changes == 0;
+    }
+  }
 
   // master.iexchange(&union_find_iexchange, 16, 1000);
 }
