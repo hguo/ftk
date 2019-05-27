@@ -2,8 +2,9 @@
 #define _FTK_DISTRIBUTED_SPARSE_UNION_FIND_H
 
 #include <vector>
-#include <iostream>
 #include <map>
+#include <set>
+#include <iostream>
 
 // Implementation of weighted quick-union with path compression
 // https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf
@@ -41,7 +42,7 @@ struct distributed_sparse_union_find
 
   IdType parent(IdType i) {
     if(!has(i)) {
-      return ""; 
+      return i; 
     }
 
     return id2parent[i]; 
@@ -56,7 +57,7 @@ struct distributed_sparse_union_find
   }
 
 public:
-  std::set<std::string> eles; 
+  std::set<IdType> eles; 
 
 private:
   // Use HashMap to support sparse union-find

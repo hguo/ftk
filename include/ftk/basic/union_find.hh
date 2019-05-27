@@ -25,10 +25,12 @@ struct union_find
   
   // Operations
 
-  void unite(IdType p, IdType q) {
+  bool unite(IdType p, IdType q) {
     IdType i = find(p);
     IdType j = find(q);
     id2parent[i] = j;
+
+    return true; 
   }
 
   // Queries
@@ -58,7 +60,7 @@ struct weighted_union_find : public union_find<IdType>
   
   // Operations
 
-  void unite(IdType p, IdType q) {
+  bool unite(IdType p, IdType q) {
     IdType i = union_find<IdType>::find(p);
     IdType j = union_find<IdType>::find(q);
 
@@ -69,6 +71,8 @@ struct weighted_union_find : public union_find<IdType>
       union_find<IdType>::id2parent[j] = i;
       sz[i] += sz[j];
     }
+
+    return true; 
   }
 
 private:
