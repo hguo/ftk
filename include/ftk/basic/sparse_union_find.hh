@@ -18,55 +18,56 @@ struct sparse_union_find
     
   }
 
+  // Initialization
   // Add and initialize elements
   void add(IdType i) {
     eles.insert(i); 
-    id[i] = i;
+    id2parent[i] = i;
     sz[i] = 1;
   }
 
-  void set_parent(IdType i, IdType par) {
-    id[i] = par; 
-  }
-
-  // Return the root of an element. 
-  // Return empty string, if the element is not in the data structure 
-  IdType find(IdType i) {
-    if(id.find(i) == id.end()) {
-      return ""; 
-    }
-
-    while (i != id[i]) {
-      id[i] = id[id[i]];
-      i = id[i];
-    }
-
-    return i; 
-  }
-
-  IdType parent(IdType i) {
-    if(id.find(i) == id.end()) {
-      return ""; 
-    }
-
-    return id[i]; 
-  }
+  // Operations
   
   void unite(IdType i, IdType j) {
     i = find(i);
     j = find(j);
 
     if (sz[i] < sz[j]) {
-      id[i] = j; 
+      id2parent[i] = j; 
       sz[j] += sz[i];
     } else {
-      id[j] = i;
+      id2parent[j] = i;
       sz[i] += sz[j];
     }
   }
 
-  bool same_set(IdType i, IdType j) {
-    return find(i) == find(j);
+  // Queries
+
+  bool has(IdType i) {
+    return eles.find(i) != eles.end(); 
+  }
+
+  IdType parent(IdType i) {
+    if(!has(i)) {
+      return ""; 
+    }
+
+    return id2parent[i]; 
+  }
+
+  // Return the root of an element. 
+  // Return empty string, if the element is not in the data structure 
+  IdType find(IdType i) {
+    if(!has(i)) {
+      return ""; 
+    }
+
+    while (i != id2parent[i]) {
+      id2parent[i] = id2parent[id2parent[i]];
+      i = id2parent[i];
+    }
+
+    return i; 
   }
 
   bool is_root(IdType i) {
@@ -74,12 +75,11 @@ struct sparse_union_find
       return false; 
     }
 
-    return i == id[i]; 
+    return i == id2parent[i]; 
   }
 
-  bool has(IdType i) {
-    return eles.find(i) != eles.end(); 
-    // return id.find(i) != id.end(); 
+  bool same_set(IdType i, IdType j) {
+    return find(i) == find(j);
   }
 
 public:
@@ -87,7 +87,7 @@ public:
 
 private:
   // Use HashMap to support sparse union-find
-  std::map<IdType, IdType> id;
+  std::map<IdType, IdType> id2parent;
   std::map<IdType, size_t> sz;
 };
 

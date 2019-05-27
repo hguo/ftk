@@ -18,23 +18,33 @@ struct distributed_sparse_union_find
     
   }
 
+  // Initialization
   // Add and initialize elements
   void add(IdType i) {
     eles.insert(i); 
-    id[i] = i;
+    id2parent[i] = i;
     sz[i] = 1;
   }
 
+  // Operations
+
   void set_parent(IdType i, IdType par) {
-    id[i] = par; 
+    id2parent[i] = par; 
+  }
+
+
+  // Queries
+
+  bool has(IdType i) {
+    return eles.find(i) != eles.end(); 
   }
 
   IdType parent(IdType i) {
-    if(id.find(i) == id.end()) {
+    if(!has(i)) {
       return ""; 
     }
 
-    return id[i]; 
+    return id2parent[i]; 
   }
 
   bool is_root(IdType i) {
@@ -42,12 +52,7 @@ struct distributed_sparse_union_find
       return false; 
     }
 
-    return i == id[i]; 
-  }
-
-  bool has(IdType i) {
-    return eles.find(i) != eles.end(); 
-    // return id.find(i) != id.end(); 
+    return i == id2parent[i]; 
   }
 
 public:
@@ -55,7 +60,7 @@ public:
 
 private:
   // Use HashMap to support sparse union-find
-  std::map<IdType, IdType> id;
+  std::map<IdType, IdType> id2parent;
   std::map<IdType, size_t> sz;
 };
 

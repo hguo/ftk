@@ -13,19 +13,30 @@ template <class IdType=size_t>
 struct union_find
 {
   union_find(IdType size) {
-    id.resize(size);
+    id2parent.resize(size);
     reset();
   }
 
+  // Initialization
   void reset() {
-    for (IdType i=0; i<id.size(); i++)
-      id[i] = i;
+    for (IdType i=0; i<id2parent.size(); i++)
+      id2parent[i] = i;
   }
   
+  // Operations
+
+  void unite(IdType p, IdType q) {
+    IdType i = find(p);
+    IdType j = find(q);
+    id2parent[i] = j;
+  }
+
+  // Queries
+
   IdType find(IdType i) {
-    while (i != id[i]) {
-      id[i] = id[id[i]];
-      i = id[i];
+    while (i != id2parent[i]) {
+      id2parent[i] = id2parent[id2parent[i]];
+      i = id2parent[i];
     }
     return i;
   }
@@ -34,14 +45,8 @@ struct union_find
     return find(p) == find(q);
   }
 
-  void unite(IdType p, IdType q) {
-    IdType i = find(p);
-    IdType j = find(q);
-    id[i] = j;
-  }
-
 protected:
-  std::vector<IdType> id;
+  std::vector<IdType> id2parent;
 };
 
 template <class IdType=size_t>
@@ -51,15 +56,17 @@ struct weighted_union_find : public union_find<IdType>
     sz.resize(size, 1);
   }
   
+  // Operations
+
   void unite(IdType p, IdType q) {
     IdType i = union_find<IdType>::find(p);
     IdType j = union_find<IdType>::find(q);
 
     if (sz[i] < sz[j]) {
-      union_find<IdType>::id[i] = j; 
+      union_find<IdType>::id2parent[i] = j; 
       sz[j] += sz[i];
     } else {
-      union_find<IdType>::id[j] = i;
+      union_find<IdType>::id2parent[j] = i;
       sz[i] += sz[j];
     }
   }
