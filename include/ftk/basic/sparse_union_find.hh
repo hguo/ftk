@@ -29,6 +29,10 @@ struct sparse_union_find
   // Operations
   
   void unite(IdType i, IdType j) {
+    if(!has(i) || !has(j)) {
+      return ;
+    }
+
     i = find(i);
     j = find(j);
 
