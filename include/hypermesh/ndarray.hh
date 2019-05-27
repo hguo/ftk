@@ -16,6 +16,7 @@ struct ndarray {
 
   size_t nd() const {return dims.size();}
   size_t dim(size_t i) const {return dims[i];}
+  size_t shape(size_t i) const {return dim(i);}
   size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
   std::vector<size_t> shape() const {return dims;}
 
@@ -24,6 +25,7 @@ struct ndarray {
 
   void reshape(const std::vector<size_t> &dims_);
   void reshape(const std::vector<size_t> &dims, T val);
+  void reshape(size_t ndims, const size_t sizes[]);
 
   void reshape(size_t n0) {reshape({n0});}
   void reshape(size_t n0, size_t n1) {reshape({n0, n1});}
@@ -82,6 +84,9 @@ struct ndarray {
   void from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]);
+  void from_netcdf(const std::string& filename, const std::string& varname);
+  void from_netcdf(int ncid, const std::string& varname);
+  void from_netcdf(int ncid, int varid);
   void to_netcdf(const std::string& filename, const std::string& varname);
   void to_netcdf(int ncid, const std::string& varname);
   void to_netcdf(int ncid, int varid);
@@ -154,13 +159,61 @@ void ndarray<T>::from_binary_file_sequence(const std::string& pattern)
 template <>
 void ndarray<float>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
+  int ndims;
+  NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
+
+  std::vector<size_t> mysizes(sizes, sizes+ndims);
+  std::reverse(mysizes.begin(), mysizes.end());
+  reshape(mysizes);
+
   NC_SAFE_CALL( nc_get_vara_float(ncid, varid, starts, sizes, &p[0]) );
 }
 
 template <>
 void ndarray<double>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
+  int ndims;
+  NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
+  
+  std::vector<size_t> mysizes(sizes, sizes+ndims);
+  std::reverse(mysizes.begin(), mysizes.end());
+  reshape(mysizes);
+  
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
+}
+
+template <typename T>
+void ndarray<T>::from_netcdf(int ncid, int varid)
+{
+  int ndims;
+  int dimids[4];
+  size_t starts[4] = {0}, sizes[4] = {0};
+
+  NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
+  NC_SAFE_CALL( nc_inq_vardimid(ncid, varid, dimids) );
+
+  for (int i = 0; i < ndims; i ++)
+    NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &sizes[i]) );
+  
+  from_netcdf(ncid, varid, starts, sizes);
+}
+
+template <typename T>
+void ndarray<T>::from_netcdf(int ncid, const std::string& varname)
+{
+  int varid;
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  from_netcdf(ncid, varid);
+}
+
+template <typename T>
+void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname)
+{
+  int ncid, varid;
+  NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  from_netcdf(ncid, varid);
+  NC_SAFE_CALL( nc_close(ncid) );
 }
 
 template <typename T>
@@ -194,12 +247,25 @@ void ndarray<T>::from_netcdf(int ncid, const std::string& varname, const size_t 
 }
 
 template <typename T>
+void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname)
+{
+  fprintf(stderr, "[FTK] fatal error: your code is not compiled with netcdf.\n");
+}
+
+template <typename T>
 void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
   fprintf(stderr, "[FTK] fatal error: your code is not compiled with netcdf.\n");
 }
 #endif
-  
+
+template <typename T>
+void ndarray<T>::reshape(size_t ndims, const size_t dims[])
+{
+  std::vector<size_t> mydims(dims, dims+ndims);
+  reshape(mydims);
+}
+
 template <typename T>
 void ndarray<T>::reshape(const std::vector<size_t> &dims_)
 {
