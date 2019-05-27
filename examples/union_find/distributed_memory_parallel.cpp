@@ -509,7 +509,7 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
     // (1) The union has been processed. Then, we don't need to do anything. 
     // (2) The union has been passed to the parent of this related element, also we have two situations: 
       // (1) The union has been successfully passed to its parent, we can notify its parent that this endpoint has changed. 
-      // (2) If the union is also a message and has not been received by its parent, 
+      // (2) If the union is also a message and has not been received by its parent, we store the edge. 
 
   // if(*ele_ptr == "9") {
   //   std::cout<<*related_ele_ptr<<" - "<<b->has(*related_ele_ptr) <<" - "<< b->parent(*related_ele_ptr) <<std::endl; 
@@ -531,6 +531,8 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
       // This message should get completed, so we set a change to avoid the algorithm ends. 
       b->nchanges += 1;
     }
+  } else { // To remove possibe side-effects, we store the edge. 
+    b->related_elements[*related_ele_ptr].push_back(*par_ptr); 
   }
 }
 
