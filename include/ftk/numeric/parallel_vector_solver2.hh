@@ -21,7 +21,43 @@
 namespace ftk {
 
 template <typename T>
-inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2], 
+inline bool verify_pv_s0v2(const T v[2], const T w[2], const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  const double c = ftk::cross_product2(v, w); // cross product
+  return std::abs(c) <= epsilon;
+}
+
+template <typename T>
+inline bool verify_pv_s1v2(const T V[2][2], const T W[2][2], const T mu[2], 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double v[2], w[2];
+  ftk::lerp_s1v2(V, mu, v);
+  ftk::lerp_s1v2(W, mu, w);
+  return verify_pv_s0v2(v, w, epsilon);
+}
+
+template <typename T>
+inline bool verify_pv_s2v2(const T V[3][2], const T W[3][2], const T mu[3],
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double v[2], w[2];
+  ftk::lerp_s2v2(V, mu, v);
+  ftk::lerp_s2v2(W, mu, w);
+  return verify_pv_s0v2(v, w, epsilon);
+}
+
+template <typename T>
+inline bool verify_pv_s2v2(const T V[3][2], const T w[2], const T mu[3], 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  double v[2];
+  ftk::lerp_s2v2(V, mu, v);
+  return verify_pv_s0v2(v, w, epsilon);
+}
+
+template <typename T>
+inline int solve_pv_s1v2(const T VV[2][2], const T WW[2][2], 
     T lambda[2], T mu[2][2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   T V[2][2], W[2][2];
@@ -55,8 +91,8 @@ inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2],
         nu[1] >= -epsilon && nu[1] <= 1+epsilon) 
     {
       double v[2], w[2];
-      ftk::linear_interpolation_1simplex_vector2(VV, nu, v);
-      ftk::linear_interpolation_1simplex_vector2(WW, nu, w);
+      ftk::lerp_s1v2(VV, nu, v);
+      ftk::lerp_s1v2(WW, nu, w);
       const double c = ftk::cross_product2(v, w);
       if (c > 1e-2) {
         fprintf(stderr, "rejecting: nu={%f, %f}, v={%f, %f}, w={%f, %f}, c=%f\n", 
@@ -77,23 +113,25 @@ inline int solve_parallel_vector2_simplex1(const T VV[2][2], const T WW[2][2],
 }
 
 template <typename T>
-inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2], const T w[2], T P[2][2]) // the vector field w is constant
+inline void characteristic_polynomials_pv_s2v2(const T V[3][2], const T w[2], T P[3][2]) // the vector field w is constant
 {
   const T A[2][2] = { // linear transformation
     {V[0][0] - V[2][0], V[1][0] - V[2][0]}, 
     {V[0][1] - V[2][1], V[1][1] - V[2][1]}
   };
   T invA[2][2];
-  ftk::matrix_inverse2x2(A, invA);
+  T det = ftk::matrix_inverse2x2(A, invA);
 
-  P[0][0] =  invA[0][0] * w[0] + invA[0][1] * w[1];
-  P[0][1] =-(invA[0][0] * V[2][0] + invA[0][1] * V[2][1]);
-  P[1][0] =  invA[1][0] * w[0] + invA[1][1] * w[1];
-  P[1][1] =-(invA[1][0] * V[2][0] + invA[1][1] * V[2][1]);
+  P[0][0] =-(invA[0][0] * V[2][0] + invA[0][1] * V[2][1]);
+  P[0][1] =  invA[0][0] * w[0] + invA[0][1] * w[1];
+  P[1][0] =-(invA[1][0] * V[2][0] + invA[1][1] * V[2][1]);
+  P[1][1] =  invA[1][0] * w[0] + invA[1][1] * w[1];
+  P[2][0] = T(1) - P[0][0] - P[1][0];
+  P[2][1] =-(P[0][1] + P[1][1]);
 }
 
 template <typename T>
-inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2], const T W[3][2], T Q[3], T P[3][3])
+inline void characteristic_polynomials_pv_s2v2(const T V[3][2], const T W[3][2], T Q[3], T P[3][3])
 {
   const T A[2][2] = { // linear transformation
     {V[0][0] - V[2][0], V[1][0] - V[2][0]}, 
@@ -135,29 +173,37 @@ inline void characteristic_polynomials_parallel_vector2_simplex2(const T V[3][2]
 }
 
 template <typename T>
-disjoint_intervals<T> solve_parallel_vector2_simplex2_inequalities(const T V[3][2], const T w[2])
+disjoint_intervals<T> solve_pv_inequalities_s2v2(const T P[3][2], const T w[2])
 {
   disjoint_intervals<T> I;
   I.set_to_complete();
 
-  T P[2][2];
-  characteristic_polynomials_parallel_vector2_simplex2(V, w, P);
+  // T P[3][2] = {0};
+  // characteristic_polynomials_parallel_vector2_simplex2(V, w, P);
+ 
   I.intersect( solve_linear_inequality(P[0][1], P[0][0]) );
-  I.intersect( solve_linear_inequality(-P[0][1], T(1) - P[0][0]) );
+  I.intersect( solve_linear_inequality(-P[0][1], 1 - P[0][0]) );
   I.intersect( solve_linear_inequality(P[1][1], P[1][0]) );
-  I.intersect( solve_linear_inequality(-P[1][1], T(1) - P[1][0]) );
+  I.intersect( solve_linear_inequality(-P[1][1], 1 - P[1][0]) );
+  I.intersect( solve_linear_inequality(P[2][1], P[2][0]) );
+  I.intersect( solve_linear_inequality(-P[2][1], T(1) - P[2][0]) );
+
+  // std::cerr << I << std::endl;
 
   return I;
 }
 
 template <typename T>
 std::tuple<disjoint_intervals<long long>, std::map<long long, T>>
-solve_parallel_vector2_simplex2_inequalities_quantized(
-    const T V[3][2], const T W[3][2], const long long factor = 1000000000L, 
+solve_pv_inequalities_quantized_s2v2(
+    const T Q[3], const T P[3][3], 
+    // const T V[3][2], const T W[3][2], 
+    const long long factor = 1000000000L, 
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
-  T Q[3] = {0}, P[3][3] = {0}, QP[3][3] = {0};
-  characteristic_polynomials_parallel_vector2_simplex2(V, W, Q, P);
+  // T Q[3] = {0}, P[3][3] = {0}, QP[3][3] = {0};
+  // characteristic_polynomials_parallel_vector2_simplex2(V, W, Q, P);
+  T QP[3][3] = {0};
 
   std::map<long long, T> quantized_roots;
   disjoint_intervals<long long> I;
@@ -184,6 +230,17 @@ solve_parallel_vector2_simplex2_inequalities_quantized(
   }
 
   return std::make_tuple(I, quantized_roots);
+}
+
+template <typename T>
+disjoint_intervals<T> solve_pv_inequalities_s2v2(
+    const T Q[3], const T P[3][3], 
+    // const T V[3][2], const T W[3][2], 
+    const long long factor = 1000000000L, 
+    const T epsilon = std::numeric_limits<T>::epsilon())
+{
+  const auto [I, R] = solve_pv_inequalities_quantized_s2v2(Q, P, factor, epsilon);
+  return disjoint_intervals<T>(I, factor);
 }
 
 }

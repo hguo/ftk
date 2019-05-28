@@ -10,7 +10,7 @@
 class matrix_test : public testing::Test {
 public:
   const int nruns = 100000;
-  const double epsilon = 1e-9;
+  const double epsilon = 1e-4;
 };
 
 TEST_F(matrix_test, matrix_inverse2) {
@@ -111,6 +111,25 @@ TEST_F(matrix_test, solve_eigenvalues2x2) {
   }
 }
 
+TEST_F(matrix_test, solve_generalized_eigenvalues2x2) {
+  double A[2][2], B[2][2], eig[2];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand2x2(A); 
+    ftk::rand2x2(B);
+    const int n = ftk::solve_generalized_eigenvalues2x2(A, B, eig);
+
+    for (int i = 0; i < n; i ++) {
+      double M[2][2];
+      for (int j = 0; j < 2; j ++) 
+        for (int k = 0; k < 2; k ++) 
+          M[j][k] = A[j][k] - eig[i] * B[j][k];
+
+      const double det = ftk::det2(M);
+      EXPECT_NEAR(0.0, det, epsilon);
+    }
+  }
+}
+
 TEST_F(matrix_test, solve_eigenvectors2x2)
 {
   double A[2][2], eig[2], eigvecs[2][2], x[2];
@@ -165,6 +184,25 @@ TEST_F(matrix_test, solve_eigenvectors3x3)
       EXPECT_NEAR(eig[i] * eigvecs[i][0], x[0], epsilon);
       EXPECT_NEAR(eig[i] * eigvecs[i][1], x[1], epsilon);
       EXPECT_NEAR(eig[i] * eigvecs[i][2], x[2], epsilon);
+    }
+  }
+}
+
+TEST_F(matrix_test, solve_generalized_eigenvalues3x3) {
+  double A[3][3], B[3][3], eig[3];
+  for (int run = 0; run < nruns; run ++) {
+    ftk::rand3x3(A);
+    ftk::rand3x3(B);
+    const int n = ftk::solve_generalized_eigenvalues3x3(A, B, eig);
+
+    for (int i = 0; i < n; i ++) {
+      double M[3][3];
+      for (int j = 0; j < 3; j ++) 
+        for (int k = 0; k < 3; k ++) 
+          M[j][k] = A[j][k] - eig[i] * B[j][k];
+
+      const double det = ftk::det3(M);
+      EXPECT_NEAR(0.0, det, epsilon);
     }
   }
 }

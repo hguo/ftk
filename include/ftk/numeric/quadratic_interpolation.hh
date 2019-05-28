@@ -3,6 +3,48 @@
 
 namespace ftk {
 
+template <typename T>
+void quadratic_interpolation_coefficient_simplex2(const T f[6], T Q[3][3])
+{
+  Q[0][0] = f[0];
+  Q[0][1] = 2 * f[3] - (f[0] + f[1]) / 2;
+  Q[0][2] = 2 * f[5] - (f[0] + f[2]) / 2;
+  Q[1][0] = Q[0][1];
+  Q[1][1] = f[1];
+  Q[1][2] = 2 * f[4] - (f[1] + f[2]) / 2;
+  Q[2][0] = Q[0][2];
+  Q[2][1] = Q[1][2];
+  Q[2][2] = f[2];
+}
+
+template <typename T>
+void quadratic_interpolation_gradient_simplex2(const T Q[3][3], const T mu[3], T grad[3])
+{
+  grad[0] = 2 * (Q[0][0]*mu[0] + Q[0][1]*mu[1] + Q[0][2]*mu[2]);
+  grad[1] = 2 * (Q[1][1]*mu[1] + Q[0][1]*mu[0] + Q[1][2]*mu[2]);
+  grad[2] = 2 * (Q[2][2]*mu[2] + Q[0][2]*mu[0] + Q[1][2]*mu[1]);
+}
+
+template <typename T>
+void quadratic_interpolation_gradient_simplex2_vertices(const T Q[3][3], T grad[3][3])
+{
+  // gradient at 100
+  grad[0][0] = 2 * Q[0][0];
+  grad[0][1] = 2 * Q[0][1];
+  grad[0][2] = 2 * Q[0][2];
+
+  // gradient at 010
+  grad[1][0] = 2 * Q[1][0];
+  grad[1][1] = 2 * Q[1][1];
+  grad[1][2] = 2 * Q[1][2];
+  
+  // gradient at 001
+  grad[2][0] = 2 * Q[2][0];
+  grad[2][1] = 2 * Q[2][1];
+  grad[2][2] = 2 * Q[2][2];
+}
+
+
 // coefficient of quadratic interpolation
 // f: scalar fields
 // x, y: coordinates of x1 x2 x3

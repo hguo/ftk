@@ -1,5 +1,5 @@
-#ifndef _FTK_CUBIC_INEQUALITY_SOLVER_HH
-#define _FTK_CUBIC_INEQUALITY_SOLVER_HH
+#ifndef _FTK_LINEAR_INEQUALITY_SOLVER_HH
+#define _FTK_LINEAR_INEQUALITY_SOLVER_HH
 
 #include <ftk/numeric/disjoint_intervals.hh>
 

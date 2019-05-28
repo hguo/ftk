@@ -62,7 +62,7 @@ inline void solve_eigenvectors2x2(const T M[2][2], int n, const T eig[2], T eigv
 }
 
 template <typename T>
-inline int solve_generalized_eigenvalues2x2(const T A[2][2], const T B[2][2], std::complex<T> eig[2])
+inline int solve_generalized_eigenvalues2x2(const T A[2][2], const T B[2][2], T eig[2])
 {
   T P[3];
   characteristic_polynomial_2x2(A, B, P);

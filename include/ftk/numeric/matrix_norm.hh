@@ -58,30 +58,6 @@ inline T matrix_frobenius_norm_real3x2(const T m[3][2])
     + m[2][0]*m[2][0] + m[2][1]*m[2][1];
 }
 
-template <typename T>
-inline T matrix_1norm_real3x3(const T m[3][3])
-{
-  // TODO
-}
-
-template <typename T>
-inline T matrix_2norm_real3x3(const T m[3][3])
-{
-  // TODO
-}
-
-template <typename T>
-inline T matrix_inf_norm_real3x3(const T m[3][3])
-{
-  // TODO
-}
-
-template <typename T>
-inline T matrix_frobenius_norm_real3x3(const T m[3][3])
-{
-  // TODO
-}
-
 }
 
 #endif
