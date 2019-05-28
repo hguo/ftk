@@ -1,12 +1,12 @@
-#ifndef _FTK_CCA_UNION_FIND_H
-#define _FTK_CCA_UNION_FIND_H
+#ifndef _FTK_CCA_BFS_H
+#define _FTK_CCA_BFS_H
 
-#include "ftk/basic/sparse_union_find.hh"
+#include "ftk/algorithms/bfs.hh"
 
 namespace ftk {
 
 template <class IdType>
-std::set<std::pair<IdType, IdType> > track_connected_components_uf(
+std::set<std::pair<IdType, IdType> > track_connected_components_bfs(
     const std::vector<std::set<IdType> > &components0,
     const std::vector<std::set<IdType> > &components1) 
 {
@@ -30,34 +30,63 @@ std::set<std::pair<IdType, IdType> > track_connected_components_uf(
 }
 
 template <class IdType, class ContainerType>
-std::vector<std::set<IdType> > extract_connected_components_uf(
+std::vector<std::set<IdType> > extract_connected_components_bfs(
     const std::function<ContainerType(IdType) >& neighbors,
     const std::set<IdType> &qualified_)
 {
-  std::set<IdType> qualified(qualified_);
+#if 0
+  // extract connected components
+  // std::set<IdType> qualified(qualified_);
+  std::vector<std::set<IdType> > components;
+  std::set<IdType> visited;
 
-  sparse_union_find<IdType> UF; 
-  for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
-    UF.add(*ite); 
+  while (!qualified.empty()) {
+    IdType seed = *qualified.begin();
+    std::set<IdType> component;
+
+    bfs<IdType>(seed, neighbors, 
+        [&component, &visited](IdType i) {component.insert(i); visited.insert(i);}, 
+        [&qualified, &visited](IdType i) {return qualified.find(i) != qualified.end() && visited.find(i) == visited.end();});
+    
+    components.emplace_back(component);
   }
 
-  for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
-    IdType current = *ite; 
+  return components;
+#endif
 
-    for (auto neighbor : neighbors(current)) {
-      if (UF.has(neighbor)) {
-        UF.unite(current, neighbor); 
+  std::set<IdType> qualified(qualified_);
+  std::vector<std::set<IdType> > components;
+  std::set<IdType> Q;
+
+  while (!qualified.empty()) {
+    Q.insert(*qualified.begin());
+
+    std::set<IdType> visited;
+    while (!Q.empty()) {
+      IdType current = *Q.begin();
+      Q.erase(current);
+      visited.insert(current);
+
+      for (auto neighbor : neighbors(current)) {
+        if (qualified.find(neighbor) != qualified.end()
+            && visited.find(neighbor) == visited.end()
+            && Q.find(neighbor) == Q.end()) {
+          Q.insert(neighbor);
+        }
       }
     }
-  }  
 
-  std::vector<std::set<IdType> > components = UF.get_sets();
+    for (auto v : visited)
+      qualified.erase(v);
+
+    components.push_back(visited);
+  }
 
   return components;
 }
 
 template <class IdType, class ContainerType>
-std::vector<std::set<IdType> > extract_connected_components_uf(
+std::vector<std::set<IdType> > extract_connected_components_bfs(
     IdType nNodes,
     const std::function<ContainerType(IdType) >& neighbors,
     const std::function<bool(IdType)>& criterion)
@@ -75,7 +104,7 @@ std::vector<std::set<IdType> > extract_connected_components_uf(
 }
 
 template <class IdType, class ContainerType>
-std::vector<std::set<IdType> > extract_connected_components_uf(
+std::vector<std::set<IdType> > extract_connected_components_bfs(
     const ContainerType& nodes,
     const std::function<ContainerType(IdType) >& neighbors,
     const std::function<bool(IdType)>& criterion)

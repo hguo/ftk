@@ -11,7 +11,7 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
-#include <ftk/algorithms/cca_union_find.hh>
+#include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
@@ -200,7 +200,7 @@ void trace_intersections()
   };
 
   // connected components
-  auto cc = ftk::extract_connected_components_uf<element_t, std::set<element_t>>(neighbors, qualified_elements);
+  auto cc = ftk::extract_connected_components<element_t, std::set<element_t>>(neighbors, qualified_elements);
   // fprintf(stderr, "#cc=%lu\n", cc.size());
 
   for (int i = 0; i < cc.size(); i ++) {
