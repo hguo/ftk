@@ -75,6 +75,8 @@ struct ndarray {
   T& operator[](size_t i) {return p[i];}
   const T& operator[](size_t i) const {return p[i];}
 
+  void from_vector(const std::vector<T> &array);
+
   void from_binary_file(const std::string& filename);
   void from_binary_file(FILE *fp);
   void from_binary_file_sequence(const std::string& pattern);
@@ -103,6 +105,13 @@ private:
 };
 
 //////////////////////
+
+template <typename T>
+void ndarray<T>::from_vector(const std::vector<T> &array)
+{
+  p = array;
+  reshape({p.size()});
+}
 
 template <typename T>
 void ndarray<T>::from_binary_file(const std::string& filename)
