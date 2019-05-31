@@ -1,7 +1,7 @@
 #ifndef _FTK_CCA_H
 #define _FTK_CCA_H
 
-#include "ftk/basic/sparse_union_find.hh"
+#include "ftk/basic/union_find.hh"
 
 namespace ftk {
 
@@ -36,7 +36,7 @@ std::vector<std::set<IdType> > extract_connected_components(
 {
   std::set<IdType> qualified(qualified_);
 
-  sparse_union_find<IdType> UF; 
+  union_find<IdType> UF; 
   for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
     UF.add(*ite); 
   }

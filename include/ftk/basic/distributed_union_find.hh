@@ -1,21 +1,21 @@
-#ifndef _FTK_DISTRIBUTED_SPARSE_UNION_FIND_H
-#define _FTK_DISTRIBUTED_SPARSE_UNION_FIND_H
+#ifndef _FTK_DISTRIBUTED_UNION_FIND_H
+#define _FTK_DISTRIBUTED_UNION_FIND_H
 
 #include <vector>
 #include <map>
 #include <set>
 #include <iostream>
 
-// Implementation of weighted quick-union with path compression
-// https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf
+// Reference 
+  // Paper: "Evaluation of connected-component labeling algorithms for distributed-memory systems"
 
 // Add the sparse representation by using Hash map/table 
 
 namespace ftk {
 template <class IdType=std::string>
-struct distributed_sparse_union_find
+struct distributed_union_find
 {
-  distributed_sparse_union_find() {
+  distributed_union_find() {
     
   }
 

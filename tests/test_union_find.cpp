@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <ftk/basic/union_find.hh>
-#include <ftk/basic/sparse_union_find.hh>
+#include <ftk/basic/simple_union_find.hh>
 
 
 class union_find_test : public testing::Test {
@@ -9,9 +9,9 @@ public:
   const double epsilon = 1e-9;
 };
 
-// test sparse union-find
-TEST_F(union_find_test, sparse_union_find) {
-  ftk::sparse_union_find UF = ftk::sparse_union_find(); 
+// test (sparse) union-find
+TEST_F(union_find_test, union_find) {
+  ftk::union_find UF = ftk::union_find(); 
   UF.add("00"); 
   UF.add("11"); 
   UF.add("22"); 
@@ -29,9 +29,9 @@ TEST_F(union_find_test, sparse_union_find) {
   EXPECT_TRUE(!UF.same_set("11", "111"));
 }
 
-// test normal union-find
-TEST_F(union_find_test, union_find) {
-  ftk::weighted_union_find UF = ftk::weighted_union_find(10); 
+// test simple union-find
+TEST_F(union_find_test, simple_union_find) {
+  ftk::simple_union_find UF = ftk::simple_union_find(10); 
   UF.unite(1, 2);
   UF.unite(2, 3); 
 

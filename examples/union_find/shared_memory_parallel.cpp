@@ -7,7 +7,7 @@
 #include <ftk/external/diy/assigner.hpp>
 #include <ftk/external/diy/serialization.hpp>
 
-#include <ftk/basic/sparse_union_find.hh>
+#include <ftk/basic/union_find.hh>
 
 
 // CPP program to demonstrate multithreading 

@@ -15,15 +15,15 @@
 #include <ftk/external/diy/assigner.hpp>
 #include <ftk/external/diy/serialization.hpp>
 
-#include <ftk/basic/distributed_sparse_union_find.hh>
+#include <ftk/basic/distributed_union_find.hh>
 
 typedef std::pair<std::string, int> ele_gid;  // stores element and its global block id
 typedef std::map<std::string, std::vector<std::string>> r_ele_map; 
 
 typedef std::map<std::string, int> ele2gid_map; 
 
-struct Block : public ftk::distributed_sparse_union_find<std::string> {
-  Block(): nchanges(0), distributed_sparse_union_find() { 
+struct Block : public ftk::distributed_union_find<std::string> {
+  Block(): nchanges(0), distributed_union_find() { 
     
   }
 
