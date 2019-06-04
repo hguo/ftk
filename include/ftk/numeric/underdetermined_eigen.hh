@@ -1,34 +1,11 @@
 #ifndef _FTK_UNDERDETERMINED_EIGEN_HH
 #define _FTK_UNDERDETERMINED_EIGEN_HH
 
+#include "ftk/ftk_config.hh"
 #include "polynomial.hh"
 #include <algorithm>
-#include <mps/mps.h>
-#include <gmp.h>
 
 namespace ftk {
-
-template <typename T>
-bool solve_polynomials(const T * x, int n, double * root_real, double * root_im){
-	mps_context * s = mps_context_new();
-	mps_context_select_algorithm(s, MPS_ALGORITHM_SECULAR_GA);
-	mps_monomial_poly * poly = mps_monomial_poly_new(s, n);
-	for(int i=0; i<=n; i++){
-		mps_monomial_poly_set_coefficient_d(s, poly, i, x[i], 0);
-	}
-	mps_context_set_input_poly(s, MPS_POLYNOMIAL(poly));
-	mps_mpsolve (s);
-	cplx_t *results = cplx_valloc(n);
-	mps_context_get_roots_d(s, &results, NULL);
-	for (int i=0; i<n; i++){
-		root_real[i] = cplx_Re(results[i]);
-		root_im[i] = cplx_Im(results[i]);
-	}
-	cplx_vfree(results);
-	if(poly) mps_monomial_poly_free(s, MPS_POLYNOMIAL(poly));
-	mps_context_free(s);
-	return true;
-}
 
 // solve Ax + a = lambda * (Bx + b)
 // return x[i] = P[i][lambda] / Q[lambda]
@@ -156,14 +133,16 @@ int solve_underdetermined_eigen_3x3_with_constrain(const T A[3][3], const T a[3]
 	T tmp[7];
 	polynomial_multiplication(P[2], 3, Q, 3, tmp);
 	polynomial_subtraction_in_place(poly, 6, tmp, 6);
-	double root_real[6] = {0}, root_im[6] = {0};
+
+  double root_real[6] = {0}, root_im[6] = {0};
 	bool no_unknown = true;
 	for(int i=1; i<7; i++){
 		if(poly[i] != 0) no_unknown = false;
 	}
 	if(no_unknown) return 0;
 	solve_polynomials(poly, 6, root_real, root_im);
-	// validate real root
+	
+  // validate real root
 	int count = 0;
 	for(int i=0; i<6; i++){
 		// std::cout << root_real[i] << " " << root_im[i] << std::endl;
