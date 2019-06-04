@@ -8,18 +8,26 @@
 
 namespace ftk {
 
-void solve_polynomials(double * x, int n){
+template <typename T>
+bool solve_polynomials(const T * x, int n, double * root_real, double * root_im){
 	mps_context * s = mps_context_new();
 	mps_context_select_algorithm(s, MPS_ALGORITHM_SECULAR_GA);
 	mps_monomial_poly * poly = mps_monomial_poly_new(s, n);
 	for(int i=0; i<=n; i++){
 		mps_monomial_poly_set_coefficient_d(s, poly, i, x[i], 0);
 	}
-	mps_context_set_input_poly (s, MPS_POLYNOMIAL (poly));
+	mps_context_set_input_poly(s, MPS_POLYNOMIAL(poly));
 	mps_mpsolve (s);
-	mps_output(s);
-	if(poly) mps_polynomial_free(s, poly);
+	cplx_t *results = cplx_valloc(n);
+	mps_context_get_roots_d(s, &results, NULL);
+	for (int i=0; i<n; i++){
+		root_real[i] = cplx_Re(results[i]);
+		root_im[i] = cplx_Im(results[i]);
+	}
+	cplx_vfree(results);
+	if(poly) mps_monomial_poly_free(s, MPS_POLYNOMIAL(poly));
 	mps_context_free(s);
+	return true;
 }
 
 // solve Ax + a = lambda * (Bx + b)
@@ -125,48 +133,52 @@ bool underdetermined_eigen_3x3(const T A[3][3], const T a[3], const T B[3][3], c
 	return true;
 }
 
+template <typename T>
+bool inrange(T * result, int num, T lb, T ub){
+	for(int i=0; i<num; i++){
+		if((result[i] < lb) || (result[i] > ub)){
+			return false;
+		}
+	}
+	return true;
+}
 // solve underdetermined_eigen_3x3 with constrain x[0]*x[1] = x[2]
-// return result[i] = x[0], x[1], x[2], and lambda[i]
+// return result[i] = x[0], x[1], x[2] = lambda[i]
 template <typename T>
 int solve_underdetermined_eigen_3x3_with_constrain(const T A[3][3], const T a[3], const T B[3][3], const T b[3], T lambda[6], T result[6][3],
 	const T epsilon = std::numeric_limits<T>::epsilon()){
 	T P[3][4] = {0};
 	T Q[4] = {0};
 	underdetermined_eigen_3x3(A, a, B, b, P, Q);
-	std::cout << std::endl;
-	std::cout << std::endl;
-	for(int i=0; i<3; i++){
-		for(int j=0; j<=3; j++){
-			std::cout << P[i][j] << " ";
-		}
-		std::cout << std::endl;	
-	}
-
-	std::cout << std::endl;
-	for(int j=0; j<=3; j++){
-		std::cout << Q[j] << " ";
-	}
-	std::cout << std::endl;	
 
 	T poly[7];
 	polynomial_multiplication(P[0], 3, P[1], 3, poly);
 	T tmp[7];
 	polynomial_multiplication(P[2], 3, Q, 3, tmp);
 	polynomial_subtraction_in_place(poly, 6, tmp, 6);
-	double root_real[6], root_im[6];
+	double root_real[6] = {0}, root_im[6] = {0};
+	bool no_unknown = true;
+	for(int i=1; i<7; i++){
+		if(poly[i] != 0) no_unknown = false;
+	}
+	if(no_unknown) return 0;
 	solve_polynomials(poly, 6, root_real, root_im);
 	// validate real root
 	int count = 0;
 	for(int i=0; i<6; i++){
-		std::cout << root_real[i] << " " << root_im[i] << std::endl;
+		// std::cout << root_real[i] << " " << root_im[i] << std::endl;
 		if(fabs(root_im[i]) < epsilon){
 			// real root
 			T Qx = polynomial_evaluate(Q, 3, root_real[i]);
 			lambda[count] = root_real[i];
 			result[count][0] = polynomial_evaluate(P[0], 3, root_real[i]) / Qx;
 			result[count][1] = polynomial_evaluate(P[1], 3, root_real[i]) / Qx;
-			result[count][2] = polynomial_evaluate(P[2], 3, root_real[i]) / Qx;
-			count ++;
+			// result[count][2] = polynomial_evaluate(P[2], 3, root_real[i]) / Qx;
+			result[count][2] = lambda[count];
+			// check range
+			if(inrange(result[count], 3, 0.0, 1.0)){
+				count ++;		
+			}
 		}
 	}
 	return count;

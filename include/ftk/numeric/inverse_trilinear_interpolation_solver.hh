@@ -2,7 +2,6 @@
 #define _FTK_INVERSE_TRILINEAR_INTERPOLATION_SOLVER_HH
 
 #include "underdetermined_eigen.hh"
-#include "mpsolve_interface.hh"
 
 namespace ftk {
 
@@ -37,8 +36,6 @@ int inverse_trilinear_interpolation8_3(const T V[8][3], T result[6][3]){
 	for(int i=0; i<3; i++) bp[i] = - G[i];
 	T lambda[6];
 	int root_count = solve_underdetermined_eigen_3x3_with_constrain(Ap, ap, Bp, bp, lambda, result);
-	// overwrite to return index x, y, z
-	for(int i=0; i<root_count; i++) result[i][2] = lambda[i];
 	return root_count;
 }
 
