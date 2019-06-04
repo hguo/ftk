@@ -1,7 +1,7 @@
 #ifndef _FTK_INVERSE_TRILINEAR_INTERPOLATION_SOLVER_HH
 #define _FTK_INVERSE_TRILINEAR_INTERPOLATION_SOLVER_HH
 
-#include "underdetermined_eigen.hh"
+#include <ftk/numeric/underdetermined_eigen_solver.hh>
 
 namespace ftk {
 

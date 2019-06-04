@@ -1,8 +1,9 @@
-#ifndef _FTK_UNDERDETERMINED_EIGEN_HH
-#define _FTK_UNDERDETERMINED_EIGEN_HH
+#ifndef _FTK_UNDERDETERMINED_EIGEN_SOLVER_HH
+#define _FTK_UNDERDETERMINED_EIGEN_SOLVER_HH
 
-#include "ftk/ftk_config.hh"
-#include "polynomial.hh"
+#include <ftk/ftk_config.hh>
+#include <ftk/numeric/polynomial.hh>
+#include <ftk/numeric/polynomial_solver.hh>
 #include <algorithm>
 
 namespace ftk {
@@ -10,7 +11,7 @@ namespace ftk {
 // solve Ax + a = lambda * (Bx + b)
 // return x[i] = P[i][lambda] / Q[lambda]
 template <typename T>
-bool underdetermined_eigen_3x3(const T A[3][3], const T a[3], const T B[3][3], const T b[3], T P[3][4], T Q[4]){
+bool characteristic_polynomials_underdetermined_3x3(const T A[3][3], const T a[3], const T B[3][3], const T b[3], T P[3][4], T Q[4]){
 	// polynomials p[], p[i] is the coeff for x^i
 	// (A - lambda*B)x = - (a - lambda*b) 
 	// A_lambda * x = a_lambda
@@ -126,7 +127,7 @@ int solve_underdetermined_eigen_3x3_with_constrain(const T A[3][3], const T a[3]
 	const T epsilon = std::numeric_limits<T>::epsilon()){
 	T P[3][4] = {0};
 	T Q[4] = {0};
-	underdetermined_eigen_3x3(A, a, B, b, P, Q);
+	characteristic_polynomials_underdetermined_3x3(A, a, B, b, P, Q);
 
 	T poly[7];
 	polynomial_multiplication(P[0], 3, P[1], 3, poly);
