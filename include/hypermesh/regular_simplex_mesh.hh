@@ -3,9 +3,11 @@
 
 #include <ftk/ftk_config.hh>
 #include <iostream>
+#include <sstream> 
 #include <vector>
 #include <tuple>
 #include <set>
+#include <string>
 #include <algorithm>
 #include <numeric>
 #include <thread>
@@ -47,6 +49,9 @@ struct regular_simplex_mesh_element {
 
   template <typename uint = uint64_t> uint to_integer() const;
   template <typename uint = uint64_t> void from_integer(uint i);
+
+  std::string to_string() const;
+  void from_string(const std::string& index);
 
   template <typename Archive> void serialize(Archive &ar) {ar(dim, type, corner);}
 
@@ -347,6 +352,33 @@ void regular_simplex_mesh_element::from_integer(uint index)
   // fprintf(stderr, "dimprod=%d, %d, %d, %d\n", m.dimprod_[0], m.dimprod_[1], m.dimprod_[2], m.dimprod_[3]);
   // fprintf(stderr, "lb=%d, %d, %d\n", m.lb(0), m.lb(1), m.lb(2));
   // std::cerr << "idx=" << index << "," << *this << std::endl;
+}
+
+inline std::string regular_simplex_mesh_element::to_string() const
+{
+  std::stringstream res;
+
+  std::copy(corner.begin(), corner.end(), std::ostream_iterator<int>(res, ","));
+  res<<type; 
+
+  return res.str(); 
+}
+
+inline void regular_simplex_mesh_element::from_string(const std::string& index)
+{
+  std::stringstream index_stream(index);
+  std::vector<int> arr; 
+  while( index_stream.good() )
+  {
+      std::string substr;
+      getline( index_stream, substr, ',' );
+      arr.push_back( std::stoi(substr) );
+  }
+
+  std::copy(arr.begin(), arr.end() - 1, corner.begin()); 
+  // corner = std::vector<int>(arr.begin(), arr.end() - 1);
+  
+  type = *(arr.end()-1); 
 }
 
 template <int nd> 
