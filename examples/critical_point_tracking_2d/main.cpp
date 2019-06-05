@@ -280,7 +280,7 @@ void write_dump_file(const std::string& f)
   ofs.close();
 }
 
-#if HAVE_VTK
+#if FTK_HAVE_VTK
 void start_vtk_window()
 {
   auto vtkcurves = ftk::curves2vtk(trajectories, 4);
