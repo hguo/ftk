@@ -4,7 +4,7 @@ add_executable (test_matrix test_matrix.cpp)
 target_link_libraries (test_matrix ftk ${GTEST_BOTH_LIBRARIES})
 
 add_executable (test_conv test_conv.cpp)
-target_link_libraries (test_conv ${GTEST_BOTH_LIBRARIES})
+target_link_libraries (test_conv ftk ${GTEST_BOTH_LIBRARIES})
 
 add_executable (test_inequality_solvers test_inequality_solvers.cpp)
 target_link_libraries (test_inequality_solvers ftk ${GTEST_BOTH_LIBRARIES})

@@ -1,9 +1,4 @@
 #include <mutex>
-
-#if HAVE_NETCDF
-#include <netcdf.h>
-#endif
-
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
