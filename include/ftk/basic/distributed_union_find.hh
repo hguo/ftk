@@ -6,6 +6,9 @@
 #include <set>
 #include <iostream>
 
+// Union-find algorithm with distributed-memory parallelism
+  // All elements need to be added by invoking the add function at the initialization stage. 
+
 // Reference 
   // Paper: "Evaluation of connected-component labeling algorithms for distributed-memory systems"
 
@@ -30,6 +33,10 @@ struct distributed_union_find
   // Operations
 
   void set_parent(IdType i, IdType par) {
+    if(!has(i)) {
+      throw "No such element. ";
+    }
+
     id2parent[i] = par; 
   }
 
@@ -42,7 +49,7 @@ struct distributed_union_find
 
   IdType parent(IdType i) {
     if(!has(i)) {
-      return i; 
+      throw "No such element. ";
     }
 
     return id2parent[i]; 
@@ -50,7 +57,7 @@ struct distributed_union_find
 
   bool is_root(IdType i) {
     if(!has(i)) {
-      return false; 
+      throw "No such element. ";
     }
 
     return i == id2parent[i]; 

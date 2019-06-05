@@ -6,6 +6,12 @@
 #include <set>
 #include <iostream>
 
+
+// Sequential union-find
+  // All elements need to be added by invoking the add function at the initialization stage. 
+  // This prograpm cannot be used for parallel purpose. 
+  // This program assumes all elements are stored on the same memory. 
+
 // Reference 
   // Paper: "Worst-case Analysis of Set Union Algorithms"
   // Online slides: https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf
@@ -32,10 +38,12 @@ struct union_find
   // Operations
   
   // Union by size
-  bool unite(IdType i, IdType j) {
-    if(!has(i) || !has(j)) {
-      return false ;
-    }
+  void unite(IdType i, IdType j) {
+    // if(!has(i) || !has(j)) {
+    //   throw "No such element. ";
+
+    //   return  ;
+    // }
 
     i = find(i);
     j = find(j);
@@ -49,8 +57,6 @@ struct union_find
       id2parent.find(j)->second = i; 
       sz[i] += sz[j];
     }
-
-    return true; 
   }
 
   // Queries
@@ -60,9 +66,9 @@ struct union_find
   }
 
   IdType parent(IdType i) {
-    if(!has(i)) {
-      return i; 
-    }
+    // if(!has(i)) {
+    //   throw "No such element. ";
+    // }
 
     // return id2parent[i]; 
     return id2parent.find(i)->second; 
@@ -72,9 +78,9 @@ struct union_find
     // If the element is not in the data structure, return the element itself. 
     // Path compression by path halving method
   IdType find(IdType i) {
-    if(!has(i)) {
-      return i; 
-    }
+    // if(!has(i)) {
+    //   throw "No such element. "; 
+    // }
 
     IdType& parent_i = id2parent.find(i)->second; 
     while (i != parent_i) {
@@ -89,14 +95,18 @@ struct union_find
   }
 
   bool is_root(IdType i) {
-    if(!has(i)) {
-      return false; 
-    }
+    // if(!has(i)) {
+    //   throw "No such element. ";
+    // }
 
     return i == id2parent[i]; 
   }
 
   bool same_set(IdType i, IdType j) {
+    // if(!has(i) || !has(j)) {
+    //   throw "No such element. ";
+    // }
+
     return find(i) == find(j);
   }
 

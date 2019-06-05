@@ -6,7 +6,16 @@
 #include <set>
 #include <iostream>
 
+
+// TBD
+  // Complete thread-safe add function
+  // Add unit test. 
+
 // Union-find algorithm with shared-memory parallelism
+  // All elements need to be added by invoking the add function at the initialization stage. 
+  // This prograpm cannot be used for distributed-memory parallelism. 
+  // This program assumes all elements are stored on the same memory. 
+
 // Reference 
   // Paper: "A Randomized Concurrent Algorithm for Disjoint Set Union"
 
@@ -18,112 +27,149 @@ struct shared_union_find
     
   }
 
-// TBD
+  // // Initialization
+  // // Add and initialize elements
+  // void add(IdType i) {
+  //   eles.insert(i); 
+  //   // id2parent[i] = i; 
+  //   id2parent.insert(std::make_pair (i, i)); 
+  //   sz[i] = 1;
+  // }
 
-//   // Initialization
-//   // Add and initialize elements
-//   void add(IdType i) {
-//     eles.insert(i); 
-//     // id2parent[i] = i; 
-//     id2parent.insert(std::make_pair (i, i)); 
-//     sz[i] = 1;
-//   }
-
-//   // Operations
+  // Operations
   
-//   // Union by size
-//   bool unite(IdType i, IdType j) {
-//     if(!has(i) || !has(j)) {
-//       return false ;
-//     }
+  // Compare-and-swap
+  	// Reference: https://en.wikipedia.org/wiki/Compare-and-swap
+  bool CAS(std::pair<const IdType, IdType> ele_parent, IdType old_parent, IdType new_parent) {
+    if(ele_parent->second != old_parent) {
+      return false; 
+    }
 
-//     i = find(i);
-//     j = find(j);
+    ele_parent->second = new_parent; 
 
-//     if (sz[i] < sz[j]) {
-//       // id2parent[i] = j; 
-//       id2parent.find(i)->second = j; 
-//       sz[j] += sz[i];
-//     } else {
-//       // id2parent[j] = i;
-//       id2parent.find(j)->second = i; 
-//       sz[i] += sz[j];
-//     }
+    return true; 
+  }
 
-//     return true; 
-//   }
 
-//   // Queries
+  // Union by size
+    // Return wehther i and j are in the same set. 
+  bool unite(IdType i, IdType j) {
+    // if(!has(i) || !has(j)) {
+    //   throw "No such element. ";
 
-//   bool has(IdType i) {
-//     return eles.find(i) != eles.end(); 
-//   }
+    //   return false ;
+    // }
 
-//   IdType parent(IdType i) {
-//     if(!has(i)) {
-//       return i; 
-//     }
+    IdType u = i; 
+    IdType v = j;
 
-//     // return id2parent[i]; 
-//     return id2parent.find(i)->second; 
-//   }
+    while(true) {
+      u = find(u); 
+      v = find(v); 
+      if(u < v) {
+        if(CAS(id2parent.find(u), u, v)) {
+          return false; 
+        }
+      } else if (u == v) {
+        return true; 
+      } else {
+        if(CAS(id2parent.find(v), v, u)) {
+          return false; 
+        }
+      }
+    }
 
-//   // Find the root of an element. 
-//     // If the element is not in the data structure, return the element itself. 
-//     // Path compression by path halving method
-//   IdType find(IdType i) {
-//     if(!has(i)) {
-//       return i; 
-//     }
+  }
 
-//     IdType& parent_i = id2parent.find(i)->second; 
-//     while (i != parent_i) {
-//       // Set parent of i to its grandparent
-//       id2parent.find(i)->second = id2parent.find(parent_i)->second; 
+  // // Queries
 
-//       i = id2parent.find(i)->second;
-//       parent_i = id2parent.find(i)->second; 
-//     }
+  bool has(IdType i) {
+    return eles.find(i) != eles.end(); 
+  }
 
-//     return i; 
-//   }
+  // IdType parent(IdType i) {
+  //   if(!has(i)) {
+  //     throw "No such element. ";
+  //   }
 
-//   bool is_root(IdType i) {
-//     if(!has(i)) {
-//       return false; 
-//     }
+  //   // return id2parent[i]; 
+  //   return id2parent.find(i)->second; 
+  // }
 
-//     return i == id2parent[i]; 
-//   }
+  // Find the root of an element. 
+    // If the element is not in the data structure, return the element itself. 
+    // Path compression by path halving method
+  IdType find(IdType i) {
+    // if(!has(i)) {
+    //   throw "No such element. ";
+    // }
 
-//   bool same_set(IdType i, IdType j) {
-//     return find(i) == find(j);
-//   }
+    IdType u = i; 
+    while(true) {
+      IdType v = id2parent.find(u)->second; 
+      IdType w = id2parent.find(v)->second; 
+      if(v == w) {
+      	return v; 
+      } else {
+      	CAS(id2parent.find(u), v, w); 
+      	u = id2parent.find(u)->second;
+      }
+    }
+  }
 
-//   std::vector<std::set<IdType>> get_sets() {
-//     std::map<IdType, std::set<IdType>> root2set; 
-//     for(auto ite = eles.begin(); ite != eles.end(); ++ite) {
-//       IdType root = find(*ite); 
+  // bool is_root(IdType i) {
+  //   if(!has(i)) {
+  //     throw "No such element. ";
+  //   }
 
-//       root2set[root].insert(*ite);
-//     }
+  //   return i == id2parent[i]; 
+  // }
 
-//     std::vector<std::set<IdType>> results; 
-//     for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
-//       // if(is_root(*ite))
-//       results.push_back(ite->second); 
-//     }
+  bool same_set(IdType i, IdType j) {
+  	if(!has(i) || !has(j)) {
+      throw "No such element. ";
+    }
 
-//     return results; 
-//   }
+  	IdType u = i; 
+  	IdType v = j; 
+  	while(true) {
+  		u = find(u);
+  		v = find(v); 
 
-// public:
-//   std::set<IdType> eles; 
+  		if(u == v) {
+  			return true;
+  		}
 
-// private:
-//   // Use HashMap to support sparse union-find
-//   std::map<IdType, IdType> id2parent;
-//   std::map<IdType, size_t> sz;
+  		if(u == id2parent.find(u)->second) {
+  			return false; 
+  		}
+  	}
+  }
+
+  // std::vector<std::set<IdType>> get_sets() {
+  //   std::map<IdType, std::set<IdType>> root2set; 
+  //   for(auto ite = eles.begin(); ite != eles.end(); ++ite) {
+  //     IdType root = find(*ite); 
+
+  //     root2set[root].insert(*ite);
+  //   }
+
+  //   std::vector<std::set<IdType>> results; 
+  //   for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
+  //     // if(is_root(*ite))
+  //     results.push_back(ite->second); 
+  //   }
+
+  //   return results; 
+  // }
+
+public:
+  std::set<IdType> eles; 
+
+private:
+  // Use HashMap to support sparse union-find
+  std::map<IdType, IdType> id2parent;
+  std::map<IdType, size_t> sz;
 
 };
 
