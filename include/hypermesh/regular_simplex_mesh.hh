@@ -1,6 +1,7 @@
 #ifndef _HYPERMESH_REGULAR_SIMPLEX_MESH_HH
 #define _HYPERMESH_REGULAR_SIMPLEX_MESH_HH
 
+#include <ftk/ftk_config.hh>
 #include <iostream>
 #include <vector>
 #include <tuple>
@@ -9,6 +10,12 @@
 #include <numeric>
 #include <thread>
 #include <cassert>
+
+#if FTK_HAVE_TBB
+#include <tbb/mutex.h>
+#include <tbb/task.h>
+#include <tbb/task_group.h>
+#endif
 
 namespace hypermesh {
 
@@ -667,6 +674,16 @@ inline size_t regular_simplex_mesh::n(int d) const
 
 inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads, int mode)
 {
+#if FTK_HAVE_TBB
+  using namespace tbb;
+  tbb::task_group g;
+  for (size_t i = 0; i < n(d); i ++)
+    g.run([&]{regular_simplex_mesh_element e(*this, d, j); 
+        if (mode == ELEMENT_ITERATION_ALL) f(e);
+        else if (mode == ELEMENT_ITERATION_FIXED_TIME) {if (e.is_fixed_time()) f(e);}
+        else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {if (!e.is_fixed_time()) f(e);});
+  g.wait();
+#else
   const size_t ntasks = n(d);
   std::vector<std::thread> workers;
 
@@ -682,6 +699,7 @@ inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_
   }
 
   std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
+#endif
 }
 
 }
