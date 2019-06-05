@@ -75,7 +75,8 @@ struct ndarray {
   T& operator[](size_t i) {return p[i];}
   const T& operator[](size_t i) const {return p[i];}
 
-  void from_vector(const std::vector<T> &in_vector);
+  void from_vector(const std::vector<T> &array);
+
   void from_binary_file(const std::string& filename);
   void from_binary_file(FILE *fp);
   void from_binary_file_sequence(const std::string& pattern);
@@ -85,6 +86,7 @@ struct ndarray {
 
   void from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
+  void from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]);
   void from_netcdf(const std::string& filename, const std::string& varname);
   void from_netcdf(int ncid, const std::string& varname);
@@ -115,6 +117,13 @@ void ndarray<T>::from_vector(const std::vector<T> &in_vector){
 template <typename T>
 void ndarray<T>::to_vector(std::vector<T> &out_vector){
   out_vector = p;
+}
+
+template <typename T>
+void ndarray<T>::from_vector(const std::vector<T> &array)
+{
+  p = array;
+  reshape({p.size()});
 }
 
 template <typename T>
@@ -171,11 +180,8 @@ void ndarray<T>::from_binary_file_sequence(const std::string& pattern)
   }\
 }
 template <>
-void ndarray<float>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
+void ndarray<float>::from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
 {
-  int ndims;
-  NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
-
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
@@ -184,16 +190,26 @@ void ndarray<float>::from_netcdf(int ncid, int varid, const size_t starts[], con
 }
 
 template <>
-void ndarray<double>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
+void ndarray<double>::from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
 {
-  int ndims;
-  NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
-  
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
-  
+
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
+}
+
+template <typename T>
+void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
+{
+  int ndims;
+  NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
+
+  std::vector<size_t> mysizes(sizes, sizes+ndims);
+  std::reverse(mysizes.begin(), mysizes.end());
+  reshape(mysizes);
+
+  from_netcdf(ncid, varid, ndims, starts, sizes);
 }
 
 template <typename T>
