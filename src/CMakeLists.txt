@@ -11,3 +11,7 @@ endif ()
 if (FTK_HAVE_NETCDF)
   target_link_libraries (ftk ${NETCDF_LIBRARIES})
 endif ()
+
+if (FTK_HAVE_MPSOLVE)
+  target_link_libraries (ftk ${MPSolve_LIBRARY} ${GMP_LIBRARIES})
+endif ()
