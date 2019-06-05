@@ -105,15 +105,6 @@ private:
   std::vector<T> p;
 };
 
-//////////////////////
-template <typename T>
-void ndarray<T>::from_vector(const std::vector<T> &in_vector){
-  for (int i=0;i<nelem();++i)
-    if (i<in_vector.size())
-      p[i] = in_vector[i];
-    else break;
-}
-
 template <typename T>
 void ndarray<T>::to_vector(std::vector<T> &out_vector){
   out_vector = p;
