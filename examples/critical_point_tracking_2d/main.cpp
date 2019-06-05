@@ -17,12 +17,12 @@
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
 
-#if HAVE_QT
+#if FTK_HAVE_QT5
 #include "widget.h"
 #include <QApplication>
 #endif
 
-#if HAVE_VTK
+#if FTK_HAVE_VTK
 #include <ftk/geometry/curve2vtk.hh>
 #include <vtkPolyDataMapper.h>
 #include <vtkTubeFilter.h>
@@ -376,7 +376,7 @@ int main(int argc, char **argv)
   }
 
   if (show_qt) {
-#if HAVE_QT
+#if FTK_HAVE_QT5
     QApplication app(argc, argv);
     QGLFormat fmt = QGLFormat::defaultFormat();
     fmt.setSampleBuffers(true);
@@ -391,7 +391,7 @@ int main(int argc, char **argv)
     fprintf(stderr, "Error: the executable is not compiled with Qt\n");
 #endif
   } else if (show_vtk) {
-#if HAVE_VTK
+#if FTK_HAVE_VTK
     start_vtk_window();
     // ftk::write_curves_vtk(trajectories, "trajectories.vtp");
 #else
