@@ -3,27 +3,102 @@ project (ftk)
 
 set (FTK_MAJOR_VERSION 0)
 set (FTK_MINOR_VERSION 0)
-set (FTK_PATCH_VERSION 0)
+set (FTK_PATCH_VERSION 1)
 set (FTK_VERSION ${FTK_MAJOR_VERSION}.${FTK_MINOR_VERSION}.${FTK_PATCH_VERSION})
 
-set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-include_directories (${CMAKE_CURRENT_SOURCE_DIR}/include)
+# dependencies
+function (ftk_option name description default)
+  set (FTK_USE_${name} ${default} CACHE STRING "${description}")
+  set_property (CACHE FTK_USE_${name} PROPERTY STRINGS "TRUE;AUTO;FALSE")
+endfunction ()
 
-# include(CMakeDependentOption)
-# cmake_dependent_option (FTK_BUILD_THREADS "Build FTK with threading" ON "NOT WIN32" OFF)
-# option (FTK_BUILD_MPI "Build FTK with MPI" OFF)
+ftk_option (VTK "Use VTK" AUTO)
+ftk_option (Qt5 "Use Qt5" AUTO)
+ftk_option (MPI "Use MPI" AUTO)
+ftk_option (NETCDF "Use NetCDF" AUTO)
+ftk_option (MPSolve "Use MPSolve" AUTO)
+
+if (FTK_USE_VTK STREQUAL AUTO)
+  find_package (VTK QUIET)
+elseif (FTK_USE_VTK)
+  find_package (VTK REQUIRED)
+endif ()
+if (VTK_FOUND)
+  set (FTK_HAVE_VTK TRUE)
+  include (${VTK_USE_FILE})
+endif ()
+
+find_package (Threads REQUIRED)
+
+if (FTK_USE_Qt5 STREQUAL AUTO)
+  find_package (OpenGL QUIET)
+  find_package (Qt5Widgets QUIET)
+  find_package (Qt5OpenGL QUIET)
+elseif (FTK_USE_Qt5)
+  find_package (OpenGL REQUIRED)
+  find_package (Qt5Widgets REQUIRED)
+  find_package (Qt5OpenGL REQUIRED)
+endif ()
+if (Qt5OpenGL_FOUND)
+  set (FTK_HAVE_QT5 TRUE)
+endif ()
+
+if (FTK_USE_MPI STREQUAL AUTO)
+  find_package (MPI QUIET)
+elseif (FTK_USE_MPI)
+  find_package (MPI REQUIRED)
+endif ()
+if (MPI_FOUND)
+  set (FTK_HAVE_MPI TRUE)
+else ()
+  add_definitions (-DDIY_NO_MPI)
+endif ()
+
+if (FTK_USE_NETCDF STREQUAL AUTO)
+  find_package (NetCDF QUIET)
+elseif (FTK_USE_NETCDF)
+  find_package (NetCDF REQUIRED)
+endif ()
+if (NETCDF_FOUND)
+  set (FTK_HAVE_NETCDF TRUE)
+  include_directories (${NETCDF_INCLUDE_DIR})
+endif ()
+
+if (FTK_USE_MPSolve STREQUAL AUTO)
+  find_package (MPSolve QUIET)
+  find_package (GMP QUIET)
+elseif (FTK_USE_MPSolve)
+  find_package (MPSolve REQUIRED)
+  find_package (GMP REQUIRED)
+endif ()
+if (MPSolve_FOUND AND GMP_FOUND)
+  set (FTK_HAVE_MPSOLVE TRUE)
+  include_directories (${MPSolve_INCLUDE_DIR} ${GMP_INCLUDE_DIRS})
+endif ()
+
+### 
+
+set (FTK_INCLUDE_DIR 
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+include_directories (${FTK_INCLUDE_DIR})
+
 option (FTK_BUILD_TESTS "Build the test programs." OFF)
 option (FTK_BUILD_EXAMPLES "Build the example programs." OFF)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
+
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ftk DESTINATION include)
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/hypermesh DESTINATION include)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh DESTINATION include)
 
-set (FTK_INCLUDE_DIR 
-  ${CMAKE_CURRENT_SOURCE_DIR}/include)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake)
 
@@ -39,52 +114,6 @@ configure_package_config_file(
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION lib/cmake)
 
-# Threads
-if                          (NOT FTK_BUILD_THREADS)
-    add_definitions         (-DDIY_NO_THREADS)
-else                        (NOT FTK_BUILD_THREADS)
-    find_package            (Threads)
-    set                     (libraries ${libraries}     ${CMAKE_THREAD_LIBS_INIT})
-endif                       (NOT FTK_BUILD_THREADS)
-
-# MPI
-if                          (NOT FTK_BUILD_MPI)
-    add_definitions         (-DDIY_NO_MPI)
-else                        (NOT FTK_BUILD_MPI)
-    find_package            (MPI REQUIRED)
-    set                     (mpi_libraries              ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
-    set                     (libraries ${libraries}     ${mpi_libraries})
-endif                       (NOT FTK_BUILD_MPI)
-
-if                          (FTK_BUILD_MPI)
-    include_directories     (SYSTEM ${MPI_INCLUDE_PATH})
-endif                       (FTK_BUILD_MPI)
-
-if (FTK_BUILD_TESTS OR FTK_BUILD_EXAMPLES)
-  find_package (Threads REQUIRED)
-  set (CMAKE_THREAD_PREFER_PTHREAD)
-
-  find_package (MPI QUIET)
-  if (MPI_FOUND)
-  else ()
-    add_definitions (-DDIY_NO_MPI)
-  endif ()
-
-  find_package (VTK QUIET)
-  if (VTK_FOUND)
-    include (${VTK_USE_FILE})
-  endif ()
-
-  find_package (OpenGL QUIET)
-  find_package (Qt5Widgets QUIET)
-  find_package (Qt5OpenGL QUIET)
-
-  find_package (NetCDF QUIET)
-  if (NETCDF_FOUND)
-    include_directories (${NETCDF_INCLUDE_DIR})
-  endif ()
-endif ()
-
 # If FTK_BUILD_TESTS is on, enable testing.
 if (FTK_BUILD_TESTS)
   find_package (GTest REQUIRED)
@@ -96,3 +125,5 @@ endif ()
 if (FTK_BUILD_EXAMPLES)
   add_subdirectory (examples)
 endif ()
+
+add_subdirectory (src)
