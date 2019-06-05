@@ -19,3 +19,7 @@ endif ()
 if (FTK_HAVE_GSL)
   target_link_libraries (ftk ${GSL_LIBRARIES})
 endif ()
+
+if (FTK_HAVE_TBB)
+  target_link_libraries (ftk ${TBB_LIBRARIES})
+endif ()
