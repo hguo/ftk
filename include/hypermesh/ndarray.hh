@@ -27,7 +27,7 @@ struct ndarray {
   void reshape(const std::vector<size_t> &dims, T val);
   void reshape(size_t ndims, const size_t sizes[]);
 
-  void reshape(size_t n0) {reshape({n0});}
+  void reshape(size_t n0) {reshape(std::vector<size_t>({n0}));}
   void reshape(size_t n0, size_t n1) {reshape({n0, n1});}
   void reshape(size_t n0, size_t n1, size_t n2) {reshape({n0, n1, n2});}
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3) {reshape({n0, n1, n2, n3});}
@@ -112,11 +112,21 @@ void ndarray<T>::to_vector(std::vector<T> &out_vector){
 }
 
 template <typename T>
+void ndarray<T>::from_vector(const std::vector<T> &in_vector){
+  for (int i=0;i<nelem();++i)
+    if (i<in_vector.size())
+      p[i] = in_vector[i];
+    else break;
+}
+
+#if 0
+template <typename T>
 void ndarray<T>::from_vector(const std::vector<T> &array)
 {
   p = array;
   reshape({p.size()});
 }
+#endif
 
 template <typename T>
 void ndarray<T>::from_binary_file(const std::string& filename)
