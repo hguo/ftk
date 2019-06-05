@@ -9,7 +9,7 @@ if (FTK_HAVE_VTK)
 endif ()
 
 if (FTK_HAVE_NETCDF)
-  target_link_libraries (ftk ${NETCDF_LIBRARIES})
+  target_link_libraries (ftk ${NETCDF_LIBRARY})
 endif ()
 
 if (FTK_HAVE_MPSOLVE)
