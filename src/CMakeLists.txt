@@ -23,3 +23,7 @@ endif ()
 if (FTK_HAVE_TBB)
   target_link_libraries (ftk ${TBB_LIBRARIES})
 endif ()
+
+if (FTK_HAVE_MPI)
+  target_link_libraries (ftk ${MPI_C_LIBRARIES})
+endif ()
