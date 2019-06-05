@@ -31,6 +31,7 @@ struct union_find
 
   // Operations
   
+  // Union by size
   bool unite(IdType i, IdType j) {
     if(!has(i) || !has(j)) {
       return false ;
