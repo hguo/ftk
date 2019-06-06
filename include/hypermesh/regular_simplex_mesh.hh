@@ -24,6 +24,7 @@ struct regular_simplex_mesh;
 struct regular_simplex_mesh_element {
   friend class regular_simplex_mesh;
 
+  regular_simplex_mesh_element(const regular_simplex_mesh_element& e) : m(e.m), corner(e.corner), dim(e.dim), type(e.type) {}
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d); 
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, 
       const std::vector<int>& corner, int type); 
@@ -675,13 +676,15 @@ inline size_t regular_simplex_mesh::n(int d) const
 inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads, int mode)
 {
 #if FTK_HAVE_TBB
+  fprintf(stderr, "using tbb..\n");
   using namespace tbb;
   tbb::task_group g;
-  for (size_t i = 0; i < n(d); i ++)
-    g.run([&]{regular_simplex_mesh_element e(*this, d, j); 
-        if (mode == ELEMENT_ITERATION_ALL) f(e);
-        else if (mode == ELEMENT_ITERATION_FIXED_TIME) {if (e.is_fixed_time()) f(e);}
-        else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {if (!e.is_fixed_time()) f(e);});
+  for (auto e = element_begin(d); e != element_end(d); ++ e) {
+    // g.run([e, f]{f(e);});
+    if (mode == ELEMENT_ITERATION_ALL) g.run([e, f]{f(e);});
+    else if (mode == ELEMENT_ITERATION_FIXED_TIME) {if (e.is_fixed_time()) g.run([e, f]{f(e);});}
+    else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {if (!e.is_fixed_time()) g.run([e, f]{f(e);});}
+  }
   g.wait();
 #else
   const size_t ntasks = n(d);
