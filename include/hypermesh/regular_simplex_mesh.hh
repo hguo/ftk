@@ -13,6 +13,7 @@
 
 #if FTK_HAVE_TBB
 #include <tbb/mutex.h>
+#include <tbb/task_scheduler_init.h>
 #include <tbb/task.h>
 #include <tbb/task_group.h>
 #endif
@@ -676,8 +677,9 @@ inline size_t regular_simplex_mesh::n(int d) const
 inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads, int mode)
 {
 #if FTK_HAVE_TBB
-  fprintf(stderr, "using tbb..\n");
+  // fprintf(stderr, "using tbb..\n");
   using namespace tbb;
+  tbb::task_scheduler_init init(nthreads);
   tbb::task_group g;
 
   if (mode == ELEMENT_ITERATION_ALL) {
