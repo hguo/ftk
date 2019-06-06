@@ -679,12 +679,20 @@ inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_
   fprintf(stderr, "using tbb..\n");
   using namespace tbb;
   tbb::task_group g;
-  for (auto e = element_begin(d); e != element_end(d); ++ e) {
-    // g.run([e, f]{f(e);});
-    if (mode == ELEMENT_ITERATION_ALL) g.run([e, f]{f(e);});
-    else if (mode == ELEMENT_ITERATION_FIXED_TIME) {if (e.is_fixed_time()) g.run([e, f]{f(e);});}
-    else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {if (!e.is_fixed_time()) g.run([e, f]{f(e);});}
+
+  if (mode == ELEMENT_ITERATION_ALL) {
+    for (auto e = element_begin(d); e != element_end(d); ++ e) 
+      g.run([e, f]{f(e);});
+  } else if (mode == ELEMENT_ITERATION_FIXED_TIME) {
+    for (auto e = element_begin(d); e != element_end(d); ++ e) 
+      if (e.is_fixed_time()) 
+        g.run([e, f]{f(e);});
+  } else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {
+    for (auto e = element_begin(d); e != element_end(d); ++ e) 
+      if (!e.is_fixed_time()) 
+        g.run([e, f]{f(e);});
   }
+  
   g.wait();
 #else
   const size_t ntasks = n(d);
