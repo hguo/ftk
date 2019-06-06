@@ -1,0 +1,2 @@
+add_executable (ex_critical_point_extraction_3d ex_critical_point_extraction_3d.cpp)
+target_link_libraries (ex_critical_point_extraction_3d ftk)

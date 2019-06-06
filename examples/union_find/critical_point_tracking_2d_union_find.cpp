@@ -1,3 +1,5 @@
+#include <ftk/ftk_config.hh>
+
 #include <fstream>
 #include <mutex>
 #include <cassert>
@@ -17,7 +19,7 @@
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
 
-#if FTK_HAVE_QT5
+#if FTK_HAVE_QT
 #include "widget.h"
 #include <QApplication>
 #endif
@@ -376,7 +378,7 @@ int main(int argc, char **argv)
   }
 
   if (show_qt) {
-#if FTK_HAVE_QT5
+#if FTK_HAVE_QT
     QApplication app(argc, argv);
     QGLFormat fmt = QGLFormat::defaultFormat();
     fmt.setSampleBuffers(true);

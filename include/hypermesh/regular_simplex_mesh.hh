@@ -1,6 +1,7 @@
 #ifndef _HYPERMESH_REGULAR_SIMPLEX_MESH_HH
 #define _HYPERMESH_REGULAR_SIMPLEX_MESH_HH
 
+#include <ftk/ftk_config.hh>
 #include <iostream>
 #include <vector>
 #include <tuple>
@@ -10,6 +11,12 @@
 #include <thread>
 #include <cassert>
 
+#if FTK_HAVE_TBB
+#include <tbb/mutex.h>
+#include <tbb/task.h>
+#include <tbb/task_group.h>
+#endif
+
 namespace hypermesh {
 
 struct regular_simplex_mesh;
@@ -17,6 +24,7 @@ struct regular_simplex_mesh;
 struct regular_simplex_mesh_element {
   friend class regular_simplex_mesh;
 
+  regular_simplex_mesh_element(const regular_simplex_mesh_element& e) : m(e.m), corner(e.corner), dim(e.dim), type(e.type) {}
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d); 
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, 
       const std::vector<int>& corner, int type); 
@@ -667,6 +675,26 @@ inline size_t regular_simplex_mesh::n(int d) const
 
 inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads, int mode)
 {
+#if FTK_HAVE_TBB
+  fprintf(stderr, "using tbb..\n");
+  using namespace tbb;
+  tbb::task_group g;
+
+  if (mode == ELEMENT_ITERATION_ALL) {
+    for (auto e = element_begin(d); e != element_end(d); ++ e) 
+      g.run([e, f]{f(e);});
+  } else if (mode == ELEMENT_ITERATION_FIXED_TIME) {
+    for (auto e = element_begin(d); e != element_end(d); ++ e) 
+      if (e.is_fixed_time()) 
+        g.run([e, f]{f(e);});
+  } else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {
+    for (auto e = element_begin(d); e != element_end(d); ++ e) 
+      if (!e.is_fixed_time()) 
+        g.run([e, f]{f(e);});
+  }
+  
+  g.wait();
+#else
   const size_t ntasks = n(d);
   std::vector<std::thread> workers;
 
@@ -682,6 +710,7 @@ inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_
   }
 
   std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
+#endif
 }
 
 }
