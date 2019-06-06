@@ -8,6 +8,7 @@
 #cmakedefine FTK_HAVE_PNETCDF 1
 #cmakedefine FTK_HAVE_HDF5 1
 #cmakedefine FTK_HAVE_QT5 1
+#cmakedefine FTK_HAVE_QT 1
 #cmakedefine FTK_HAVE_VTK 1
 #cmakedefine FKT_HAVE_LEVELDB 1
 #cmakedefine FTK_HAVE_ROCKSDB 1
