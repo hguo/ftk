@@ -12,6 +12,10 @@ if (FTK_HAVE_NETCDF)
   target_link_libraries (ftk ${NETCDF_LIBRARY})
 endif ()
 
+if (FTK_HAVE_HDF5)
+  target_link_libraries (ftk ${HDF5_LIBRARIES})
+endif ()
+
 if (FTK_HAVE_MPSOLVE)
   target_link_libraries (ftk ${MPSolve_LIBRARY} ${GMP_LIBRARIES})
 endif ()
