@@ -31,3 +31,11 @@ endif ()
 if (FTK_HAVE_MPI)
   target_link_libraries (ftk ${MPI_C_LIBRARIES})
 endif ()
+
+if (FTK_HAVE_PNG)
+  target_link_libraries (ftk ${PNG_LIBRARIES})
+endif ()
+
+if (FTK_HAVE_ROCKSDB)
+  target_link_libraries (ftk ${RocksDB_LIBRARY})
+endif ()

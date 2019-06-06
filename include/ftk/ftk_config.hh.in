@@ -7,6 +7,7 @@
 #cmakedefine FTK_HAVE_NETCDF 1
 #cmakedefine FTK_HAVE_PNETCDF 1
 #cmakedefine FTK_HAVE_HDF5 1
+#cmakedefine FTK_HAVE_PNG 1
 #cmakedefine FTK_HAVE_QT5 1
 #cmakedefine FTK_HAVE_QT 1
 #cmakedefine FTK_HAVE_VTK 1
