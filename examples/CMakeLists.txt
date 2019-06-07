@@ -1,4 +1,6 @@
 include_directories (common)
+include_directories (common/websocketpp)
+include (CMakeRC.cmake)
 
 add_subdirectory (tracking_graph)
 add_subdirectory (critical_point_tracking_2d)

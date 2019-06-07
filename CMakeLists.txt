@@ -164,6 +164,7 @@ elseif (FTK_USE_Boost)
 endif ()
 if (Boost_SYSTEM_FOUND)
   set (FTK_HAVE_BOOST TRUE)
+  # add_definitions (-DBOOST_NO_AUTO_PTR) # c++17 deprecated auto_ptr
   include_directories (${Boost_INCLUDE_DIRS})
 endif ()
 

@@ -17,6 +17,7 @@
 #include <random>
 #include <numeric>
 #include <cxxopts.hpp>
+#include <cmrc/cmrc.hpp>
 #include "io/GLHeader.h"
 #include "io/GLGPU_IO_Helper.h"
 
@@ -36,6 +37,13 @@
 #include <vtkXMLPolyDataWriter.h>
 #endif
 
+#if FTK_HAVE_BOOST
+#include <websocketpp/config/asio_no_tls.hpp>
+#include <websocketpp/server.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/archives/json.hpp>
+#endif
+
 GLHeader hdr;
 hypermesh::ndarray<float> Re, Im, Rho, Phi;
 hypermesh::regular_simplex_mesh m(3);
@@ -46,6 +54,97 @@ std::map<size_t, punctured_face_t> punctures;
 ftk::union_find<size_t> uf;
 std::map<size_t, std::set<size_t>> links;
 std::vector<std::vector<punctured_face_t>> vortices;
+
+#if FTK_HAVE_BOOST
+// web contents
+CMRC_DECLARE(tdgl_public);
+auto webfs = cmrc::tdgl_public::get_filesystem();
+
+std::string vortices_string; // serialized vortices
+
+// web server
+typedef websocketpp::server<websocketpp::config::asio> server;
+typedef server::message_ptr message_ptr;
+static server wss;
+
+void on_http(server *s, websocketpp::connection_hdl hdl)
+{
+  server::connection_ptr con = s->get_con_from_hdl(hdl);
+  con->append_header("Access-Control-Allow-Origin", "*");
+  con->append_header("Access-Control-Allow-Headers", "*");
+  
+  bool succ = false;
+  
+  std::string query = con->get_resource();
+  if (query == "/") query = "/index.html"; // defaulat entrance
+
+  if (query == "/vortices") {
+    con->set_body(vortices_string);
+    succ = true;
+  } else {
+    const std::string filename = "/public" + query;
+    try {
+      auto file = webfs.open(filename);
+      std::string str(file.begin(), file.end());
+      con->set_body(str);
+      succ = true;
+    } catch (...) {
+      succ = false;
+    }
+  }
+ 
+  if (succ) {
+    con->set_status(websocketpp::http::status_code::ok);
+  } else {
+    std::string response = "<html><body>404 not found</body></html>";
+    con->set_body(response);
+    con->set_status(websocketpp::http::status_code::not_found);
+  }
+}
+
+void start_server(int port)
+{
+  using websocketpp::lib::placeholders::_1;
+  using websocketpp::lib::placeholders::_2;
+  using websocketpp::lib::bind;
+ 
+  fprintf(stderr, "starting web server at port %d...\n", port);
+
+  try {
+    // Set logging settings
+    wss.set_access_channels(websocketpp::log::alevel::all);
+    // wss.clear_access_channels(websocketpp::log::alevel::frame_payload);
+    wss.clear_access_channels(websocketpp::log::alevel::all);
+    wss.set_open_handshake_timeout(0); // disable timer
+
+    // Initialize Asio
+    wss.init_asio();
+
+    // Register our message handler
+    wss.set_http_handler(bind(&on_http, &wss, _1)); // only http server is needed in this demo
+    // wss.set_open_handler(bind(&on_open, &wss, _1));
+    // wss.set_close_handler(bind(&on_close, &wss, _1));
+    // wss.set_message_handler(bind(&on_message, &wss, _1, _2));
+
+    // Listen on port
+    wss.listen(port);
+
+    // Start the server accept loop
+    wss.start_accept();
+    
+    // Start the ASIO io_service run loop
+    wss.run();
+  } catch (websocketpp::exception const & e) {
+    std::cerr << e.what() << std::endl;
+    // exit(EXIT_FAILURE);
+  } catch (...) {
+    std::cerr << "[wss] other exception" << std::endl;
+    // exit(EXIT_FAILURE);
+  }
+
+}
+#endif
+
 
 bool load_data(const std::string& filename)
 {
@@ -260,7 +359,8 @@ void write_vtk(const std::string& filename)
 int main(int argc, char **argv)
 {
   std::string input_filename, output_vtk_filename;
-  bool vis_qt = false;
+  bool vis_qt = false, vis_web = false;
+  int vis_web_port = 8000;
   float gaussian_noise_sigma = 0.f;
 
   cxxopts::Options options(argv[0]);
@@ -268,6 +368,8 @@ int main(int argc, char **argv)
     ("i,input", "input file", cxxopts::value<std::string>(input_filename))
     ("gaussian-noise", "standard deviation of gaussian noise to inject into the data", cxxopts::value<float>(gaussian_noise_sigma))
     ("output-vtk", "output vtk file", cxxopts::value<std::string>(output_vtk_filename))
+    ("web", "visualization with web", cxxopts::value<bool>(vis_web))
+    ("port", "listening port of the web visualization server", cxxopts::value<int>(vis_web_port))
     ("qt", "visualization with qt", cxxopts::value<bool>(vis_qt));
   options.parse_positional("input");
   auto results = options.parse(argc, argv);
@@ -278,12 +380,22 @@ int main(int argc, char **argv)
       inject_gaussian_noise(gaussian_noise_sigma);
 
     extract_vortices();
-    print_vortices();
 
     if (output_vtk_filename.size() > 0)
       write_vtk(output_vtk_filename);
 
-    if (vis_qt) {
+    if (vis_web) {
+#if FTK_HAVE_BOOST
+      std::stringstream ss;
+      cereal::JSONOutputArchive archive(ss);
+      archive(CEREAL_NVP(vortices));
+      vortices_string = ss.str();
+
+      start_server(vis_web_port);
+#else
+      fprintf(stderr, "FATAL: FTK not compiled with boost, thus the web server cannot be started.\n");
+#endif
+    } else if (vis_qt) {
 #if FTK_HAVE_QT5
       QApplication app(argc, argv);
       QGLFormat fmt = QGLFormat::defaultFormat();
@@ -297,7 +409,8 @@ int main(int argc, char **argv)
 #else
       fprintf(stderr, "FATAL: FTK not compiled with Qt5.\n");
 #endif
-    }
+    } else 
+      print_vortices();
   } else {
     fprintf(stderr, "failed to open file %s\n", input_filename.c_str());
   }
