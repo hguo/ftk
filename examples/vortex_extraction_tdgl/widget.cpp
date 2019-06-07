@@ -37,7 +37,8 @@
   }\
 }
   
-extern std::map<hypermesh::regular_simplex_mesh_element, punctured_face_t> punctures;
+extern std::map<size_t, punctured_face_t> punctures;
+extern std::vector<std::vector<float>> vortices;
 
 CGLWidget::CGLWidget(const QGLFormat& fmt, QWidget *parent, QGLWidget *sharedWidget)
   : QGLWidget(fmt, parent, sharedWidget), 
@@ -190,11 +191,24 @@ void CGLWidget::paintGL()
   glColor3f(0, 0, 0);
   // glutWireTeapot(1.0);
 
+  glPushMatrix();
+  glScalef(0.01, 0.01, 0.01);
+#if 0
   glPointSize(3.0);
   glBegin(GL_POINTS);
   for (const auto &p : punctures) 
     glVertex3f(p.second.x[0], p.second.x[1], p.second.x[2]);
   glEnd();
+#else
+  glLineWidth(3.0);
+  for (const auto &line : vortices) {
+    glBegin(GL_LINE_STRIP);
+    for (int i = 0; i < line.size() / 3; i ++) 
+      glVertex3f(line[i*3], line[i*3+1], line[i*3+2]);
+    glEnd();
+  }
+#endif
+  glPopMatrix();
 
   CHECK_GLERROR();
 }

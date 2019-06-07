@@ -1,4 +1,5 @@
 #include <ftk/ftk_config.hh>
+#include <ftk/basic/union_find.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
@@ -28,7 +29,11 @@ hypermesh::regular_simplex_mesh m(3);
 
 std::mutex mutex;
 
-std::map<hypermesh::regular_simplex_mesh_element, punctured_face_t> punctures;
+// std::map<hypermesh::regular_simplex_mesh_element, punctured_face_t> punctures;
+std::map<size_t, punctured_face_t> punctures;
+ftk::union_find<size_t> uf;
+std::map<size_t, std::set<size_t>> links;
+std::vector<std::vector<float>> vortices;
 
 template <typename T>
 inline static T fmod1(T x, T y)
@@ -76,7 +81,7 @@ bool load_data(const std::string& filename)
   return true;
 }
 
-void evalA(const GLHeader &h, const float X[3], float A[3]) 
+void magnetic_potential(const GLHeader &h, const float X[3], float A[3]) 
 {
   if (h.B[1] > 0) {
     A[0] = -h.Kex;
@@ -113,7 +118,7 @@ void extract_vortices()
         im[i] = Im[index];
         for (int j = 0; j < 3; j ++) 
           X[i][j] = vertices[i][j] * hdr.cell_lengths[j] + hdr.origins[j];
-        evalA(hdr, X[i], A[i]);
+        magnetic_potential(hdr, X[i], A[i]);
       }
 
       float delta[3], phase_shift = 0;
@@ -147,9 +152,51 @@ void extract_vortices()
 
       {
         std::lock_guard<std::mutex> guard(mutex);
-        punctures[f] = puncture;
+        punctures[f.to_integer()] = puncture;
       }
   });
+
+  m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element &c) {
+      const auto &sides = c.sides();
+      std::vector<size_t> vector;
+      for (const auto& f : sides)
+        if (punctures.find(f.to_integer()) != punctures.end())
+          vector.push_back(f.to_integer());
+      if (vector.size() == 2) {
+        std::lock_guard<std::mutex> guard(mutex);
+        uf.add(vector[0]);
+        uf.add(vector[1]);
+        uf.unite(vector[0], vector[1]);
+
+        links[vector[0]].insert(vector[1]);
+        links[vector[1]].insert(vector[0]);
+      }
+  });
+
+  const auto cc = uf.get_sets();
+  fprintf(stderr, "#cc=%zu\n", cc.size());
+
+  auto neighbors = [&](size_t i) {
+    std::set<size_t> neighbors;
+    auto iterator = links.find(i);
+    if (iterator == links.end()) return neighbors;
+    else return iterator->second;
+  };
+
+  for (int i = 0; i < cc.size(); i ++) {
+    std::vector<std::vector<float>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<size_t>(cc[i], neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      std::vector<float> mycurve; // , mycolors;
+      for (int k = 0; k < linear_graphs[j].size(); k ++) {
+        auto p = punctures[linear_graphs[j][k]];
+        mycurve.push_back(p.x[0]);
+        mycurve.push_back(p.x[1]);
+        mycurve.push_back(p.x[2]);
+      }
+      vortices.emplace_back(mycurve);
+    }
+  }
 }
 
 int main(int argc, char **argv)
