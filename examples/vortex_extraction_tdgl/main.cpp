@@ -15,15 +15,18 @@
 #include "io/GLHeader.h"
 #include "io/GLGPU_IO_Helper.h"
 
+#include "puncture.h"
+
+#if FTK_HAVE_QT5
+#include "widget.h"
+#include <QApplication>
+#endif
+
 GLHeader hdr;
 hypermesh::ndarray<float> Re, Im, Rho, Phi;
 hypermesh::regular_simplex_mesh m(3);
 
 std::mutex mutex;
-
-struct punctured_face_t {
-  float x[3];
-};
 
 std::map<hypermesh::regular_simplex_mesh_element, punctured_face_t> punctures;
 
@@ -96,7 +99,7 @@ float line_integral(const float X0[], const float X1[], const float A0[], const 
 
 void extract_vortices()
 {
-  m.set_lb_ub({0, 0, 0}, {hdr.dims[0]-1, hdr.dims[1]-1, hdr.dims[2]-1});
+  m.set_lb_ub({0, 0, 0}, {hdr.dims[0]-2, hdr.dims[1]-2, hdr.dims[2]-2});
   m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element &f) {
       const auto &vertices = f.vertices();
       float X[3][3], A[3][3];
@@ -136,6 +139,16 @@ void extract_vortices()
       ftk::inverse_lerp_s2v2(re_im, mu);
       ftk::lerp_s2v3(X, mu, pos);
       fprintf(stderr, "mu={%f, %f, %f}, pos={%f, %f, %f}\n", mu[0], mu[1], mu[2], pos[0], pos[1], pos[2]);
+
+      punctured_face_t puncture;
+      puncture.x[0] = pos[0];
+      puncture.x[1] = pos[1];
+      puncture.x[2] = pos[2];
+
+      {
+        std::lock_guard<std::mutex> guard(mutex);
+        punctures[f] = puncture;
+      }
   });
 }
 
@@ -144,6 +157,18 @@ int main(int argc, char **argv)
   bool succ = load_data(argv[1]);
   if (succ)
     extract_vortices();
+
+#if FTK_HAVE_QT5
+    QApplication app(argc, argv);
+    QGLFormat fmt = QGLFormat::defaultFormat();
+    fmt.setSampleBuffers(true);
+    fmt.setSamples(16);
+    QGLFormat::setDefaultFormat(fmt);
+
+    CGLWidget *widget = new CGLWidget;
+    widget->show();
+    return app.exec();
+#endif
 
   return 0;
 }

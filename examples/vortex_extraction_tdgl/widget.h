@@ -13,6 +13,7 @@
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
 #include "trackball.h"
+#include "puncture.h"
 
 class QMouseEvent;
 class QKeyEvent; 
@@ -28,10 +29,8 @@ class CGLWidget : public QGLWidget
   Q_OBJECT
 
 public:
-  CGLWidget(const hypermesh::ndarray<float> &scalar, const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
+  CGLWidget(const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
   ~CGLWidget(); 
-
-  void set_trajectories(const std::vector<std::vector<float>>& traj, float threshold);
   
 protected:
   void initializeGL(); 
@@ -53,15 +52,7 @@ private: // camera
   const float fovy, znear, zfar; 
   const QVector3D eye, center, up;
 
-private:
-  GLuint tex;
-  int current_t = 0;
-  int DW, DH, DT;
-
-  const hypermesh::ndarray<float>& scalar;
-  float scalar_min, scalar_max;
-
-  std::vector<std::vector<float>> trajectories;
+public:
   std::vector<QColor> colors;
 }; 
 

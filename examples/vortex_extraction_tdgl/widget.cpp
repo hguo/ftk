@@ -36,54 +36,18 @@
             __FILE__, __LINE__, errString);\
   }\
 }
+  
+extern std::map<hypermesh::regular_simplex_mesh_element, punctured_face_t> punctures;
 
-CGLWidget::CGLWidget(const hypermesh::ndarray<float> &s, const QGLFormat& fmt, QWidget *parent, QGLWidget *sharedWidget)
+CGLWidget::CGLWidget(const QGLFormat& fmt, QWidget *parent, QGLWidget *sharedWidget)
   : QGLWidget(fmt, parent, sharedWidget), 
-    scalar(s),
     fovy(30.f), znear(0.1f), zfar(10.f), 
     eye(0, 0, 2.5), center(0, 0, 0), up(0, 1, 0)
 {
-  DW = s.dim(0);
-  DH = s.dim(1);
-  DT = s.dim(2);
-
-  auto [min, max] = scalar.min_max();
-  scalar_min = min; 
-  scalar_max = max;
 }
 
 CGLWidget::~CGLWidget()
 {
-}
-
-void CGLWidget::set_trajectories(const std::vector<std::vector<float>>& traj, float threshold)
-{
-#if 1
-  std::vector<std::vector<float>> mytraj;
-  
-  // attribute and filter trajecory;
-  for (int i = 0; i < traj.size(); i ++) {
-    float max_value = std::numeric_limits<float>::min();
-    for (int j = 0; j < traj[i].size()/4; j ++) {
-      max_value = std::max(max_value, traj[i][j*4+3]);
-    }
-
-    if (max_value > threshold) {
-      // fprintf(stderr, "traj %d: max_val=%f\n", i, max_value);
-      mytraj.push_back(traj[i]);
-    }
-  }
-
-  trajectories = mytraj;
-#else
-  trajectories = traj;
-#endif
-
-  // assigning color for rendering
-  colors.clear();
-
-  for (int i = 0; i < traj.size(); i ++)
-    colors.push_back(QColor::fromHslF((float)rand()/RAND_MAX, 0.5, 0.5));
 }
 
 void CGLWidget::mousePressEvent(QMouseEvent* e)
@@ -116,14 +80,10 @@ void CGLWidget::keyPressEvent(QKeyEvent* e)
 {
   switch (e->key()) {
   case Qt::Key_Right:
-    current_t = (current_t + 1) % DT;
-    update_texture();
     updateGL();
     break;
   
   case Qt::Key_Left:
-    current_t = (current_t - 1 + DT) % DT;
-    update_texture();
     updateGL();
     break;
 
@@ -195,16 +155,6 @@ void CGLWidget::initializeGL()
     glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular); 
     glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shiness); 
   }
-  
-  glGenTextures(1, &tex);
-  glBindTexture(GL_TEXTURE_2D, tex);
-  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-  update_texture();
 }
 
 void CGLWidget::resizeGL(int w, int h)
@@ -240,62 +190,11 @@ void CGLWidget::paintGL()
   glColor3f(0, 0, 0);
   // glutWireTeapot(1.0);
 
-
-  glPushMatrix();
-  // glScalef(0.5f, 0.5f, 1.f);
-  glScalef((float)(DW-1) / (DH-1), 1.0, 1.0);
-  glRotatef(-90, 0, 0, 1);
-  glTranslatef(-0.5, -0.5, -0.5);
-  glTranslatef(0, 0, (float)current_t/(DT-1));
-  glBindTexture(GL_TEXTURE_2D, tex);
-  glEnable(GL_TEXTURE_2D);
-  glBegin(GL_QUADS);
-  glVertex2f(0, 0); glTexCoord2f(0, 0);
-  glVertex2f(1, 0); glTexCoord2f(1, 0);
-  glVertex2f(1, 1); glTexCoord2f(1, 1);
-  glVertex2f(0, 1); glTexCoord2f(0, 1);
+  glPointSize(3.0);
+  glBegin(GL_POINTS);
+  for (const auto &p : punctures) 
+    glVertex3f(p.second.x[0], p.second.x[1], p.second.x[2]);
   glEnd();
-  glDisable(GL_TEXTURE_2D);
-  glPopMatrix();
-
-  glColor3f(0, 0, 0);
-  // glScalef(0.5f, 0.5f, 1.f);
-  // glTranslatef(-0.5, -0.5, -0.5);
-  glPointSize(4.0);
-  
-  glPushMatrix();
-  glScalef((float)(DW-1) / (DH-1), 1.0, 1.0);
-  glTranslatef(-0.5, -0.5, -0.5);
-  glScalef(1.f/(DW-1), 1.f/(DH-1), 1.f/(DT-1));
-  glLineWidth(4.0);
-  for (int i = 0; i < trajectories.size(); i ++) {
-    glColor3f(colors[i].redF(), colors[i].greenF(), colors[i].blueF());
-    const auto &c = trajectories[i];
-    glBegin(GL_LINE_STRIP);
-    for (int k = 0; k < c.size()/4; k ++)
-      glVertex3f(c[k*4], c[k*4+1], c[k*4+2]);
-    glEnd();
-  }
-  glPopMatrix();
 
   CHECK_GLERROR();
 }
-
-void CGLWidget::update_texture()
-{
-  hypermesh::ndarray<unsigned char> colors({3, (size_t)DW, (size_t)DH});
-  // fprintf(stderr, "current_t=%d\n", current_t);
-
-  for (int j = 0; j < DH; j ++) {
-    for (int i = 0; i < DW; i ++) {
-      const auto s = (scalar(i, j, current_t) - scalar_min) / (scalar_max - scalar_min) * 255;
-      colors(0, i, j) = s; 
-      colors(1, i, j) = 255 - s;
-      colors(2, i, j) = 0;
-    }
-  }
-
-  glBindTexture(GL_TEXTURE_2D, tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, DW, DH, 0, GL_RGB, GL_UNSIGNED_BYTE, colors.data());
-}
-
