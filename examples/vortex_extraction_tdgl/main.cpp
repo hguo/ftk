@@ -14,6 +14,8 @@
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
+#include <random>
+#include <numeric>
 #include <cxxopts.hpp>
 #include "io/GLHeader.h"
 #include "io/GLGPU_IO_Helper.h"
@@ -67,6 +69,20 @@ bool load_data(const std::string& filename)
   Phi.reshape(shape);
   
   return true;
+}
+
+void inject_gaussian_noise(float sigma)
+{
+  std::random_device rd{};
+  std::mt19937 gen{rd()};
+  std::normal_distribution<> d{0, sigma};
+
+  for (size_t i = 0; i < Re.nelem(); i ++) {
+    Re[i] += d(gen);
+    Im[i] += d(gen);
+    Rho[i] = sqrt(Re[i]*Re[i] + Im[i]*Im[i]);
+    Phi[i] = atan2(Im[i], Re[i]);
+  }
 }
 
 void magnetic_potential(const GLHeader &h, const float X[3], float A[3]) 
@@ -245,10 +261,12 @@ int main(int argc, char **argv)
 {
   std::string input_filename, output_vtk_filename;
   bool vis_qt = false;
+  float gaussian_noise_sigma = 0.f;
 
   cxxopts::Options options(argv[0]);
   options.add_options()
     ("i,input", "input file", cxxopts::value<std::string>(input_filename))
+    ("gaussian-noise", "standard deviation of gaussian noise to inject into the data", cxxopts::value<float>(gaussian_noise_sigma))
     ("output-vtk", "output vtk file", cxxopts::value<std::string>(output_vtk_filename))
     ("qt", "visualization with qt", cxxopts::value<bool>(vis_qt));
   options.parse_positional("input");
@@ -256,6 +274,9 @@ int main(int argc, char **argv)
 
   bool succ = load_data(input_filename);
   if (succ) {
+    if (gaussian_noise_sigma > 0.f)
+      inject_gaussian_noise(gaussian_noise_sigma);
+
     extract_vortices();
     print_vortices();
 
