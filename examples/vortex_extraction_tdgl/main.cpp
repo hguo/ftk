@@ -13,6 +13,7 @@
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
+#include <cxxopts.hpp>
 #include "io/GLHeader.h"
 #include "io/GLGPU_IO_Helper.h"
 
@@ -177,7 +178,7 @@ void extract_vortices()
   });
 
   const auto cc = uf.get_sets();
-  fprintf(stderr, "#cc=%zu\n", cc.size());
+  fprintf(stderr, "number of connected components: %zu\n", cc.size());
 
   auto neighbors = [&](size_t i) {
     std::set<size_t> neighbors;
@@ -202,23 +203,53 @@ void extract_vortices()
   }
 }
 
+void print_vortices()
+{
+  printf("We found %lu vortices:\n", vortices.size());
+  for (int i = 0; i < vortices.size(); i ++) {
+    printf("--Curve %d:\n", i);
+    const auto &curve = vortices[i];
+    for (int k = 0; k < curve.size()/4; k ++) {
+      printf("---x=(%f, %f, %f)\n", curve[k*3], curve[k*3+1], curve[k*3+2]);
+    }
+  }
+}
+
 int main(int argc, char **argv)
 {
-  bool succ = load_data(argv[1]);
-  if (succ)
+  std::string input_filename;
+  bool vis_qt = false;
+
+  cxxopts::Options options(argv[0]);
+  options.add_options()
+    ("i,input", "input file", cxxopts::value<std::string>(input_filename))
+    ("qt", "visualization with qt", cxxopts::value<bool>(vis_qt));
+  options.parse_positional("input");
+  auto results = options.parse(argc, argv);
+
+  bool succ = load_data(input_filename);
+  if (succ) {
     extract_vortices();
+    print_vortices();
 
+    if (vis_qt) {
 #if FTK_HAVE_QT5
-    QApplication app(argc, argv);
-    QGLFormat fmt = QGLFormat::defaultFormat();
-    fmt.setSampleBuffers(true);
-    fmt.setSamples(16);
-    QGLFormat::setDefaultFormat(fmt);
+      QApplication app(argc, argv);
+      QGLFormat fmt = QGLFormat::defaultFormat();
+      fmt.setSampleBuffers(true);
+      fmt.setSamples(16);
+      QGLFormat::setDefaultFormat(fmt);
 
-    CGLWidget *widget = new CGLWidget;
-    widget->show();
-    return app.exec();
+      CGLWidget *widget = new CGLWidget;
+      widget->show();
+      return app.exec();
+#else
+      fprintf(stderr, "FATAL: FTK not compiled with Qt5.\n");
 #endif
+    }
+  } else {
+    fprintf(stderr, "failed to open file %s\n", input_filename.c_str());
+  }
 
   return 0;
 }
