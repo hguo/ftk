@@ -4,6 +4,10 @@ add_library (ftk SHARED ${ftk_sources})
 
 target_link_libraries (ftk ${CMAKE_THREAD_LIBS_INIT})
 
+if (FTK_HAVE_BOOST)
+  target_link_libraries (ftk ${Boost_LIBRARIES})
+endif ()
+
 if (FTK_HAVE_VTK)
   target_link_libraries (ftk ${VTK_LIBRARIES})
 endif ()
