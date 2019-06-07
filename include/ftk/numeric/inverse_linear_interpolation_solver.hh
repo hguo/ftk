@@ -2,6 +2,7 @@
 #define _FTK_INVERSE_LINEAR_INTERPOLATION_SOLVER_HH
 
 #include <ftk/numeric/linear_solver.hh>
+#include <ftk/numeric/cond.hh>
 #include <ftk/numeric/print.hh>
 
 namespace ftk {
@@ -21,6 +22,16 @@ bool inverse_lerp_s2v2(const T V[3][2], T mu[3], const T epsilon = std::numeric_
   return mu[0] >= -epsilon && mu[0] <= T(1) + epsilon &&
     mu[1] >= -epsilon && mu[1] <= T(1) + epsilon &&
     mu[2] >= -epsilon && mu[2] <= T(1) + epsilon;
+}
+
+template <typename T>
+T cond_inverse_lerp_s2v2(const T V[3][2])
+{
+  const T A[2][2] = {
+    {V[0][0] - V[2][0], V[1][0] - V[2][0]},
+    {V[0][1] - V[2][1], V[1][1] - V[2][1]}
+  };
+  return cond_real2x2(A);
 }
 
 template <typename T>
