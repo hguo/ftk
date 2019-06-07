@@ -105,6 +105,8 @@ float line_integral(const float X0[], const float X1[], const float A0[], const 
 void extract_vortices()
 {
   m.set_lb_ub({0, 0, 0}, {hdr.dims[0]-2, hdr.dims[1]-2, hdr.dims[2]-2});
+
+  fprintf(stderr, "sweeping 2-simplices...\n");
   m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element &f) {
       const auto &vertices = f.vertices();
       float X[3][3], A[3][3];
@@ -143,7 +145,7 @@ void extract_vortices()
       float re_im[3][2] = {{re[0], im[0]}, {re[1], im[1]}, {re[2], im[2]}};
       ftk::inverse_lerp_s2v2(re_im, mu);
       ftk::lerp_s2v3(X, mu, pos);
-      fprintf(stderr, "mu={%f, %f, %f}, pos={%f, %f, %f}\n", mu[0], mu[1], mu[2], pos[0], pos[1], pos[2]);
+      // fprintf(stderr, "mu={%f, %f, %f}, pos={%f, %f, %f}\n", mu[0], mu[1], mu[2], pos[0], pos[1], pos[2]);
 
       punctured_face_t puncture;
       puncture.x[0] = pos[0];
@@ -156,6 +158,7 @@ void extract_vortices()
       }
   });
 
+  fprintf(stderr, "sweeping 3-simplices...\n");
   m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element &c) {
       const auto &sides = c.sides();
       std::vector<size_t> vector;
