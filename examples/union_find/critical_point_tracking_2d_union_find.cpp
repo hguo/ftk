@@ -202,7 +202,8 @@ void trace_intersections()
   };
 
   // connected components
-  auto cc = ftk::extract_connected_components<element_t, std::set<element_t>>(neighbors, qualified_elements);
+  auto cc = ftk::extract_connected_components_element<std::set<element_t>>(neighbors, qualified_elements);
+  // auto cc = ftk::extract_connected_components<element_t, std::set<element_t>>(neighbors, qualified_elements);
   // fprintf(stderr, "#cc=%lu\n", cc.size());
 
   for (int i = 0; i < cc.size(); i ++) {
