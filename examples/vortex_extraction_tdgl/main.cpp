@@ -25,6 +25,15 @@
 #include <QApplication>
 #endif
 
+#if FTK_HAVE_VTK
+#include <vtkPolyData.h>
+#include <vtkPointData.h>
+#include <vtkPolyLine.h>
+#include <vtkCellArray.h>
+#include <vtkDoubleArray.h>
+#include <vtkXMLPolyDataWriter.h>
+#endif
+
 GLHeader hdr;
 hypermesh::ndarray<float> Re, Im, Rho, Phi;
 hypermesh::regular_simplex_mesh m(3);
@@ -192,14 +201,55 @@ void print_vortices()
   }
 }
 
+void write_vtk(const std::string& filename)
+{
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkDoubleArray> cond = vtkDoubleArray::New();
+  vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
+
+  for (const auto &curve : vortices) {
+    for (int i = 0; i < curve.size(); i ++) {
+      float p[3] = {curve[i].x[0], curve[i].x[1], curve[i].x[2]};
+      points->InsertNextPoint(p);
+      cond->InsertNextValue(std::log(curve[i].cond));
+    }
+  }
+
+  size_t nv = 0;
+  for (const auto &curve : vortices) {
+    vtkSmartPointer<vtkPolyLine> polyLine = vtkPolyLine::New();
+    polyLine->GetPointIds()->SetNumberOfIds(curve.size());
+    for (int i = 0; i < curve.size(); i ++)
+      polyLine->GetPointIds()->SetId(i, i+nv);
+
+    cells->InsertNextCell(polyLine);
+    nv += curve.size();
+  }
+
+  polyData->SetPoints(points);
+  polyData->GetPointData()->SetScalars(cond);
+  polyData->SetLines(cells);
+
+  vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData(polyData);
+  writer->Write();
+#else
+  fprintf(stderr, "FATAL: ftk not compiled with vtk.\n");
+#endif
+}
+
 int main(int argc, char **argv)
 {
-  std::string input_filename;
+  std::string input_filename, output_vtk_filename;
   bool vis_qt = false;
 
   cxxopts::Options options(argv[0]);
   options.add_options()
     ("i,input", "input file", cxxopts::value<std::string>(input_filename))
+    ("output-vtk", "output vtk file", cxxopts::value<std::string>(output_vtk_filename))
     ("qt", "visualization with qt", cxxopts::value<bool>(vis_qt));
   options.parse_positional("input");
   auto results = options.parse(argc, argv);
@@ -208,6 +258,9 @@ int main(int argc, char **argv)
   if (succ) {
     extract_vortices();
     print_vortices();
+
+    if (output_vtk_filename.size() > 0)
+      write_vtk(output_vtk_filename);
 
     if (vis_qt) {
 #if FTK_HAVE_QT5
