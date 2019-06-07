@@ -233,8 +233,8 @@ void trace_intersections()
 {
   typedef hypermesh::regular_simplex_mesh_element element_t; 
 
-  std::vector<std::set<element_t>> cc; 
-  extract_connected_components(cc); // connected components 
+  std::vector<std::set<element_t>> cc; // connected components 
+  extract_connected_components(cc);
 
   // Convert connected components to geometries
 
