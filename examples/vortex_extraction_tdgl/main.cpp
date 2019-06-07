@@ -1,6 +1,7 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/basic/union_find.hh>
 #include <ftk/numeric/print.hh>
+#include <ftk/numeric/fmod.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -35,28 +36,6 @@ std::map<size_t, punctured_face_t> punctures;
 ftk::union_find<size_t> uf;
 std::map<size_t, std::set<size_t>> links;
 std::vector<std::vector<float>> vortices;
-
-template <typename T>
-inline static T fmod1(T x, T y)
-{
-  T z = fmod(x, y);
-  if (z<0) z += y;
-  return z;
-}
-
-template <typename T>
-inline static T mod2pi(T x)
-{
-  T y = fmod(x, 2*M_PI); 
-  if (y<0) y+= 2*M_PI;
-  return y; 
-}
-
-template <typename T>
-inline static T mod2pi1(T x)
-{
-  return mod2pi(x + M_PI) - M_PI;
-}
 
 bool load_data(const std::string& filename)
 {
@@ -129,7 +108,7 @@ void extract_vortices()
         const int j = (i+1) % 3;
         delta[i] = phi[j] - phi[i];
         float li = line_integral(X[i], X[j], A[i], A[j]);
-        delta[i] = mod2pi1(delta[i] - li);
+        delta[i] = ftk::mod2pi1(delta[i] - li);
         phase_shift -= delta[i];
       }
 
