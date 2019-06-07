@@ -49,9 +49,13 @@ struct ndarray {
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshape({n0, n1, n2, n3, n4, n5, n6});}
 
   size_t index(const std::vector<size_t>& idx) const;
+  size_t index(const std::vector<int>& idx) const;
 
   T& at(const std::vector<size_t>& idx) {return p[index(idx)];}
   const T& at(const std::vector<size_t>& idx) const {return p[index(idx)];}
+  
+  T& at(const std::vector<int>& idx) {return p[index(idx)];}
+  const T& at(const std::vector<int>& idx) const {return p[index(idx)];}
 
   T& at(size_t i0) {return p[i0];}
   T& at(size_t i0, size_t i1) {return p[i0+i1*s[1]];}
@@ -68,7 +72,9 @@ struct ndarray {
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
-  
+ 
+  T& operator()(const std::vector<size_t>& idx) {return at(idx);}
+  T& operator()(const std::vector<int>& idx) {return at(idx);}
   T& operator()(size_t i0) {return p[i0];}
   T& operator()(size_t i0, size_t i1) {return p[i0+i1*s[1]];}
   T& operator()(size_t i0, size_t i1, size_t i2) {return p[i0+i1*s[1]+i2*s[2]];}
@@ -77,6 +83,8 @@ struct ndarray {
   T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
   
+  T& operator()(const std::vector<size_t>& idx) const {return at(idx);}
+  T& operator()(const std::vector<int>& idx) const {return at(idx);}
   const T& operator()(size_t i0) const {return p[i0];}
   const T& operator()(size_t i0, size_t i1) const {return p[i0+i1*s[1]];}
   const T& operator()(size_t i0, size_t i1, size_t i2) const {return p[i0+i1*s[1]+i2*s[2]];}
@@ -89,6 +97,10 @@ struct ndarray {
   const T& operator[](size_t i) const {return p[i];}
 
   void from_vector(const std::vector<T> &array);
+  void copy_vector(const std::vector<T> &array);
+
+  template <typename Iterator>
+  void copy(Iterator first, Iterator last);
 
   void from_binary_file(const std::string& filename);
   void from_binary_file(FILE *fp);
@@ -132,14 +144,21 @@ void ndarray<T>::from_vector(const std::vector<T> &in_vector){
     else break;
 }
 
-#if 0
 template <typename T>
-void ndarray<T>::from_vector(const std::vector<T> &array)
+void ndarray<T>::copy_vector(const std::vector<T> &array)
 {
   p = array;
   reshape({p.size()});
 }
-#endif
+
+template <typename T>
+template <typename Iterator>
+void ndarray<T>::copy(Iterator first, Iterator last)
+{
+  p.clear();
+  std::copy(first, last, std::back_inserter(p));
+  reshape({p.size()});
+}
 
 template <typename T>
 void ndarray<T>::from_binary_file(const std::string& filename)
@@ -330,6 +349,12 @@ size_t ndarray<T>::index(const std::vector<size_t>& idx) const {
   for (size_t j = 1; j < nd(); j ++)
     i += idx[j] * s[j];
   return i;
+}
+
+template <typename T>
+size_t ndarray<T>::index(const std::vector<int>& idx) const {
+  std::vector<size_t> myidx(idx.begin(), idx.end());
+  return index(myidx);
 }
 
 template <typename T>
