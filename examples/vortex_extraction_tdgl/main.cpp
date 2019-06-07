@@ -76,6 +76,7 @@ void on_http(server *s, websocketpp::connection_hdl hdl)
   bool succ = false;
   
   std::string query = con->get_resource();
+  // fprintf(stderr, "query=%s\n", query.c_str());
   if (query == "/") query = "/index.html"; // defaulat entrance
 
   if (query == "/vortices") {
@@ -387,8 +388,10 @@ int main(int argc, char **argv)
     if (vis_web) {
 #if FTK_HAVE_BOOST
       std::stringstream ss;
-      cereal::JSONOutputArchive archive(ss);
-      archive(CEREAL_NVP(vortices));
+      {
+        cereal::JSONOutputArchive archive(ss);
+        archive(CEREAL_NVP(vortices));
+      }
       vortices_string = ss.str();
 
       start_server(vis_web_port);
