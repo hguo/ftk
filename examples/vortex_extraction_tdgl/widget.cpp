@@ -38,7 +38,7 @@
 }
   
 extern std::map<size_t, punctured_face_t> punctures;
-extern std::vector<std::vector<float>> vortices;
+extern std::vector<std::vector<punctured_face_t>> vortices;
 
 CGLWidget::CGLWidget(const QGLFormat& fmt, QWidget *parent, QGLWidget *sharedWidget)
   : QGLWidget(fmt, parent, sharedWidget), 
@@ -203,8 +203,8 @@ void CGLWidget::paintGL()
   glLineWidth(3.0);
   for (const auto &line : vortices) {
     glBegin(GL_LINE_STRIP);
-    for (int i = 0; i < line.size() / 3; i ++) 
-      glVertex3f(line[i*3], line[i*3+1], line[i*3+2]);
+    for (int i = 0; i < line.size(); i ++) 
+      glVertex3f(line[i].x[0], line[i].x[1], line[i].x[2]);
     glEnd();
   }
 #endif

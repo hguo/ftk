@@ -31,11 +31,10 @@ hypermesh::regular_simplex_mesh m(3);
 
 std::mutex mutex;
 
-// std::map<hypermesh::regular_simplex_mesh_element, punctured_face_t> punctures;
 std::map<size_t, punctured_face_t> punctures;
 ftk::union_find<size_t> uf;
 std::map<size_t, std::set<size_t>> links;
-std::vector<std::vector<float>> vortices;
+std::vector<std::vector<punctured_face_t>> vortices;
 
 bool load_data(const std::string& filename)
 {
@@ -131,6 +130,7 @@ void extract_vortices()
       puncture.x[0] = pos[0];
       puncture.x[1] = pos[1];
       puncture.x[2] = pos[2];
+      puncture.cond = ftk::cond_inverse_lerp_s2v2(re_im);
 
       {
         std::lock_guard<std::mutex> guard(mutex);
@@ -170,12 +170,10 @@ void extract_vortices()
     std::vector<std::vector<float>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<size_t>(cc[i], neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<float> mycurve; // , mycolors;
+      std::vector<punctured_face_t> mycurve;
       for (int k = 0; k < linear_graphs[j].size(); k ++) {
         auto p = punctures[linear_graphs[j][k]];
-        mycurve.push_back(p.x[0]);
-        mycurve.push_back(p.x[1]);
-        mycurve.push_back(p.x[2]);
+        mycurve.push_back(p);
       }
       vortices.emplace_back(mycurve);
     }
@@ -186,10 +184,10 @@ void print_vortices()
 {
   printf("We found %lu vortices:\n", vortices.size());
   for (int i = 0; i < vortices.size(); i ++) {
-    printf("--Curve %d:\n", i);
+    printf("--Vortex %d:\n", i);
     const auto &curve = vortices[i];
     for (int k = 0; k < curve.size()/4; k ++) {
-      printf("---x=(%f, %f, %f)\n", curve[k*3], curve[k*3+1], curve[k*3+2]);
+      printf("---x=(%f, %f, %f), cond=%f\n", curve[k].x[0], curve[k].x[1], curve[k].x[2], curve[k].cond);
     }
   }
 }
