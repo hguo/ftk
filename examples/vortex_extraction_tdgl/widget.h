@@ -12,7 +12,7 @@
 #include <set>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
-#include "trackball.h"
+#include "trackball/trackball.h"
 #include "puncture.h"
 
 class QMouseEvent;

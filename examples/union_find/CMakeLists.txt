@@ -12,7 +12,7 @@ set (sources critical_point_tracking_2d_union_find.cpp)
 
 if (FTK_HAVE_QT5)
   set (CMAKE_AUTOMOC ON)
-  list (APPEND sources ../common/trackball.cpp widget.cpp)
+  list (APPEND sources widget.cpp)
 endif ()
 
 add_executable              (critical_point_tracking_2d_union_find     ${sources})
@@ -21,5 +21,5 @@ target_link_libraries       (critical_point_tracking_2d_union_find     ftk)
   
 if (FTK_HAVE_QT5)
   qt5_use_modules (critical_point_tracking_2d_union_find Widgets OpenGL)
-  target_link_libraries (critical_point_tracking_2d_union_find ${OPENGL_LIBRARIES})
+  target_link_libraries (critical_point_tracking_2d_union_find trackball ${OPENGL_LIBRARIES})
 endif ()

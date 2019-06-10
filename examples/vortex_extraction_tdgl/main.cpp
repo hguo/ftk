@@ -18,8 +18,8 @@
 #include <numeric>
 #include <cxxopts.hpp>
 #include <cmrc/cmrc.hpp>
-#include "io/GLHeader.h"
-#include "io/GLGPU_IO_Helper.h"
+#include "tdgl_io/GLHeader.h"
+#include "tdgl_io/GLGPU_IO_Helper.h"
 
 #include "puncture.h"
 
