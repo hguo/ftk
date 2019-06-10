@@ -105,7 +105,7 @@ struct ndarray {
   void from_binary_file(const std::string& filename);
   void from_binary_file(FILE *fp);
   void from_binary_file_sequence(const std::string& pattern);
-  void to_vector(std::vector<T> &out_vector);
+  void to_vector(std::vector<T> &out_vector) const;
   void to_binary_file(const std::string& filename);
   void to_binary_file(FILE *fp);
 
@@ -130,10 +130,9 @@ private:
   std::vector<T> p;
 };
 
-//////////////////////
 template <typename T>
-void ndarray<T>::to_vector(std::vector<T> &out_vector){
-  out_vector = p;
+void ndarray<T>::to_vector(std::vector<T> &out_vector) const{
+  out_vector = p; 
 }
 
 template <typename T>

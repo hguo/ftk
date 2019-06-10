@@ -42,6 +42,7 @@ public: // the last dimension, aka time.  these functions are mainly for I/O and
 
 public: // partitioning
   std::vector<regular_lattice> partition(int np);
+  std::vector<regular_lattice> partition_all();
   size_t partition_id(const std::vector<size_t> &coords) const;
 
 private:
@@ -100,41 +101,112 @@ void regular_lattice::reshape(const std::vector<size_t> &sizes)
 
 // }
 
-std::vector<regular_lattice> regular_lattice::partition(int np) {
-  std::vector<regular_lattice> partitions;
 
-  int ncut = std::log2(np);
-  int cuttable = unlimited_ ? nd() - 1 : nd();
+// factors of a given number n in decreasing order
+void prime_factorization(int n, std::vector<int>& factors) {  
+  while (n % 2 == 0) {  
+    factors.push_back(2); 
+    n = n/2; 
+  }  
 
-  std::queue<regular_lattice> tmp;
-  tmp.push(*this);
-  int curr = 0;
-
-  for (int i = 0; i < ncut; ++i) {
-    int n = tmp.size();
-    for (int j = 0; j < n; ++j) {
-      auto p = tmp.front();
-      size_t ns = p.size(curr) >> 1;
-
-      std::vector<size_t> starts(p.starts()), sizes(p.sizes());
-      sizes[curr] = ns;
-
-      tmp.push(regular_lattice(starts, sizes));
-
-      starts[curr] += ns;
-      sizes[curr] = p.size(curr) - ns;
-
-      tmp.push(regular_lattice(starts, sizes));
-
-      tmp.pop();
+  for (int i = 3; i <= sqrt(n); i += 2) {
+    while (n % i == 0) {
+      factors.push_back(i); 
+      n = n / i; 
     }
-
-    curr = curr + 1 == cuttable ? 0 : curr + 1;
   }
 
-  while (!tmp.empty()) {
-    partitions.push_back(tmp.front());
-    tmp.pop();
+  std::reverse(factors.begin(), factors.end()); 
+}  
+
+std::vector<regular_lattice> regular_lattice::partition_all() {
+  int ngridpoints = std::accumulate(sizes_.begin(), sizes_.end(), 1, std::multiplies<int>()); 
+
+  int ndim = unlimited_ ? nd() - 1 : nd(); // # of cuttable dimensions
+  
+  std::vector<size_t> bounds(starts_);
+  for(int i = 0; i < ndim; ++i) {
+    bounds[i] += sizes_[i]; 
+  }
+
+  // Each time, the first dim plus one
+
+  std::vector<size_t> sizes(sizes_);
+  for(int i = 1; i < ndim; ++i) {
+    sizes[i] = 0; 
+  }
+  sizes[0] = 1;
+
+  std::vector<regular_lattice> partitions;
+  std::vector<size_t> starts(starts_); 
+  for(int i = 0; i < ngridpoints; ++i) {
+  
+    for(int j = 0; j < ndim; ++j) {
+      if(starts[j] < bounds[j]) {
+        starts[j] += 1;
+
+        break ;
+      } else {
+        starts[j] = 0; 
+      }
+    }
+  
+    partitions.push_back(regular_lattice(starts, sizes)); 
+  }
+
+  return partitions; 
+}
+
+
+std::vector<regular_lattice> regular_lattice::partition(int np) {
+  // Compute number of grid points by product
+  int ngridpoints = std::accumulate(sizes_.begin(), sizes_.end(), 1, std::multiplies<int>());  
+  if(ngridpoints <= np) {
+    return partition_all(); 
+  }
+
+  std::vector<int> prime_factors;
+  prime_factorization(np, prime_factors); 
+
+  // int ncut = std::log2(np);
+  // int ncut = prime_factors.size(); 
+  int ndim = unlimited_ ? nd() - 1 : nd(); // # of cuttable dimensions
+
+  std::queue<regular_lattice> lattice_queue; 
+  lattice_queue.push(*this);
+  int curr = 0; // current dim for cutting
+
+  // for (int i = 0; i < ncut; ++i) {
+
+  for(int& nslice : prime_factors): 
+    int n = lattice_queue.size();
+
+    for (int j = 0; j < n; ++j) {
+      auto p = lattice_queue.front();
+
+      size_t ns = p.size(curr) / nslice; 
+
+      std::vector<size_t> starts(p.starts()); 
+      std::vector<size_t> sizes(p.sizes()); 
+      sizes[curr] = ns;
+      for(int k = 0; k < nslice - 1; ++k) {
+        lattice_queue.push(regular_lattice(starts, sizes));
+        starts[curr] += ns;
+      }
+
+      sizes[curr] = p.size(curr) - ns * nslice;
+      lattice_queue.push(regular_lattice(starts, sizes));
+
+      lattice_queue.pop();
+    }
+
+    curr = (curr + 1) % ndim; 
+  }
+
+  std::vector<regular_lattice> partitions;
+  while (!lattice_queue.empty()) {
+    partitions.emplace_back(std::move(lattice_queue.front()));
+    lattice_queue.pop();
   }
 
   return partitions;
