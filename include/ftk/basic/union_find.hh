@@ -9,7 +9,7 @@
 
 // Sequential union-find
   // All elements need to be added by invoking the add function at the initialization stage. 
-  // This prograpm cannot be used for parallel purpose. 
+  // This program cannot be used for parallel purpose since it is not thread-safe. 
   // This program assumes all elements are stored on the same memory. 
 
 // Reference 
@@ -27,8 +27,12 @@ struct union_find
   }
 
   // Initialization
-  // Add and initialize elements
+  // Add and initialize an element
   void add(IdType i) {
+    if(has(i)) { // If the element has been added, then skip it. 
+      return ;
+    }
+
     eles.insert(i); 
     // id2parent[i] = i; 
     id2parent.insert(std::make_pair (i, i)); 
@@ -110,6 +114,7 @@ struct union_find
     return find(i) == find(j);
   }
 
+  // Get sets of elements
   std::vector<std::set<IdType>> get_sets() {
     std::map<IdType, std::set<IdType>> root2set; 
     for(auto ite = eles.begin(); ite != eles.end(); ++ite) {
