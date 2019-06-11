@@ -7,6 +7,11 @@
 #include <iostream>
 #include <ftk/basic/union_find.hh>
 
+// Graph data structure based on union-find
+  // Initialization
+    // All vertices need to be added by using add_vertex
+    // The vertices of an edge need to be added before adding the edge
+
 namespace ftk {
 template <class IdType=std::string>
 struct graph
