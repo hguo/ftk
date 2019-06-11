@@ -1,0 +1,16 @@
+find_path (MPSolve_INCLUDE_DIR NAMES mps/mps.h)
+find_library (MPSolve_LIBRARY NAMES mps)
+
+if(MPSolve_INCLUDE_DIR AND MPSolve_LIBRARY)
+  set(MPSolve_FOUND TRUE)
+endif(MPSolve_INCLUDE_DIR AND MPSolve_LIBRARY)
+
+if(MPSolve_FOUND)
+  if(NOT MPSolve_FIND_QUIETLY)
+    message(STATUS "Found MPSolve: ${MPSolve_LIBRARY}")
+  endif(NOT MPSolve_FIND_QUIETLY)
+else(MPSolve_FOUND)
+  if(MPSolve_FIND_REQUIRED)
+    message(FATAL_ERROR "Could not find MPSolve library.")
+  endif(MPSolve_FIND_REQUIRED)
+endif(MPSolve_FOUND)

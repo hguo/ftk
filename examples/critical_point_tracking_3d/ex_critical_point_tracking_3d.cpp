@@ -1,10 +1,8 @@
+#include <ftk/ftk_config.hh>
+
 #include <mutex>
 
-#if HAVE_NETCDF
-#include <netcdf.h>
-#endif
-
-#if HAVE_VTK
+#if FTK_HAVE_VTK
 #include <ftk/geometry/curve2vtk.hh>
 #include <vtkPolyDataMapper.h>
 #include <vtkImageData.h>
@@ -230,7 +228,7 @@ void print_trajectories()
   }
 }
 
-#if HAVE_VTK
+#if FTK_HAVE_VTK
 void start_vtk_window()
 {
   // initialize volume data
@@ -310,7 +308,7 @@ int main(int argc, char **argv)
   track_critical_points();
 #endif
 
-#if HAVE_VTK
+#if FTK_HAVE_VTK
   start_vtk_window();
 #else
   print_trajectories();

@@ -1,7 +1,7 @@
-#ifndef _CCA_H
-#define _CCA_H
+#ifndef _FTK_CCA_H
+#define _FTK_CCA_H
 
-#include "ftk/algorithms/bfs.h"
+#include "ftk/basic/union_find.hh"
 
 namespace ftk {
 
@@ -34,53 +34,24 @@ std::vector<std::set<IdType> > extract_connected_components(
     const std::function<ContainerType(IdType) >& neighbors,
     const std::set<IdType> &qualified_)
 {
-#if 0
-  // extract connected components
-  // std::set<IdType> qualified(qualified_);
-  std::vector<std::set<IdType> > components;
-  std::set<IdType> visited;
+  std::set<IdType> qualified(qualified_);
 
-  while (!qualified.empty()) {
-    IdType seed = *qualified.begin();
-    std::set<IdType> component;
-
-    bfs<IdType>(seed, neighbors, 
-        [&component, &visited](IdType i) {component.insert(i); visited.insert(i);}, 
-        [&qualified, &visited](IdType i) {return qualified.find(i) != qualified.end() && visited.find(i) == visited.end();});
-    
-    components.emplace_back(component);
+  union_find<IdType> UF; 
+  for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
+    UF.add(*ite); 
   }
 
-  return components;
-#endif
+  for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
+    IdType current = *ite; 
 
-  std::set<IdType> qualified(qualified_);
-  std::vector<std::set<IdType> > components;
-  std::set<IdType> Q;
-
-  while (!qualified.empty()) {
-    Q.insert(*qualified.begin());
-
-    std::set<IdType> visited;
-    while (!Q.empty()) {
-      IdType current = *Q.begin();
-      Q.erase(current);
-      visited.insert(current);
-
-      for (auto neighbor : neighbors(current)) {
-        if (qualified.find(neighbor) != qualified.end()
-            && visited.find(neighbor) == visited.end()
-            && Q.find(neighbor) == Q.end()) {
-          Q.insert(neighbor);
-        }
+    for (auto neighbor : neighbors(current)) {
+      if (UF.has(neighbor)) {
+        UF.unite(current, neighbor); 
       }
     }
+  }  
 
-    for (auto v : visited)
-      qualified.erase(v);
-
-    components.push_back(visited);
-  }
+  std::vector<std::set<IdType> > components = UF.get_sets();
 
   return components;
 }

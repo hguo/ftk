@@ -1,0 +1,18 @@
+#ifndef _FTK_CONFIG_HH
+#define _FTK_CONFIG_HH
+
+#cmakedefine FTK_HAVE_MPI 1
+#cmakedefine FTK_HAVE_TBB 1
+#cmakedefine FTK_HAVE_MPSOLVE 1
+#cmakedefine FTK_HAVE_NETCDF 1
+#cmakedefine FTK_HAVE_PNETCDF 1
+#cmakedefine FTK_HAVE_HDF5 1
+#cmakedefine FTK_HAVE_PNG 1
+#cmakedefine FTK_HAVE_QT5 1
+#cmakedefine FTK_HAVE_QT 1
+#cmakedefine FTK_HAVE_VTK 1
+#cmakedefine FTK_HAVE_LEVELDB 1
+#cmakedefine FTK_HAVE_ROCKSDB 1
+#cmakedefine FTK_HAVE_BOOST 1
+
+#endif
