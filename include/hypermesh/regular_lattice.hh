@@ -30,9 +30,11 @@ struct regular_lattice {
   const std::vector<size_t>& sizes() const {return sizes_;}
 
   void reshape(const std::vector<size_t> &sizes);
+  void reshape(const std::vector<int> &sizes);
   void reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes);
+  void reshape(const std::vector<int> &starts, const std::vector<int> &sizes);
 
-  size_t global_index(const std::vector<size_t> &coords) const;
+  // size_t global_index(const std::vector<size_t> &coords) const;
   size_t local_index(int p, const std::vector<size_t> &coords) const;
 
 public: // the last dimension, aka time.  these functions are mainly for I/O and streaming purposes
@@ -63,13 +65,13 @@ private:
 
 /////
 
-regular_lattice::regular_lattice(int n)
+inline regular_lattice::regular_lattice(int n)
 {
   starts_.resize(n);
   sizes_.resize(n);
 }
 
-void regular_lattice::print(std::ostream& os)
+inline void regular_lattice::print(std::ostream& os)
 {
   os << "starts: {";
   for (int i = 0; i < nd(); i ++)
@@ -81,7 +83,7 @@ void regular_lattice::print(std::ostream& os)
     else os << sizes_[i] << "}" << std::endl;
 }
 
-void regular_lattice::reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes)
+inline void regular_lattice::reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes)
 {
   starts_ = starts;
   sizes_ = sizes;
@@ -100,19 +102,48 @@ void regular_lattice::reshape(const std::vector<size_t> &starts, const std::vect
   }
 }
 
-void regular_lattice::reshape(const std::vector<size_t> &sizes)
+inline void regular_lattice::reshape(const std::vector<int> &starts, const std::vector<int> &sizes) 
+{
+  // Convert int to size_t
+
+  std::vector<size_t> _starts(starts.size()); 
+  for(int i = 0; i < starts.size(); ++i) {
+    _starts[i] = starts[i]; 
+  } 
+
+  std::vector<size_t> _sizes(sizes.size()); 
+  for(int i = 0; i < sizes.size(); ++i) {
+    _sizes[i] = sizes[i]; 
+  } 
+
+  reshape(_starts, _sizes); 
+}
+
+inline void regular_lattice::reshape(const std::vector<size_t> &sizes)
 {
   starts_.resize(sizes.size());
   reshape(starts_, sizes);
 }
 
-// size_t regular_lattice::global_index(const std::vector<size_t> &coords)
+inline void regular_lattice::reshape(const std::vector<int> &sizes)
+{
+  // Convert int to size_t
+  std::vector<size_t> _sizes(sizes.size()); 
+  for(int i = 0; i < sizes.size(); ++i) {
+    _sizes[i] = sizes[i]; 
+  } 
+
+  reshape(_sizes); 
+}
+
+
+// inline size_t regular_lattice::global_index(const std::vector<size_t> &coords)
 // {
 
 // }
 
 // // Each grid point is a regular lattice
-// std::vector<regular_lattice> regular_lattice::partition_all() {
+// inline std::vector<regular_lattice> regular_lattice::partition_all() {
 //   int ngridpoints = std::accumulate(sizes_.begin(), sizes_.end(), 1, std::multiplies<int>()); 
 
 //   int ndim = unlimited_ ? nd() - 1 : nd(); // # of cuttable dimensions
@@ -151,7 +182,7 @@ void regular_lattice::reshape(const std::vector<size_t> &sizes)
 // }
 
 // factors of a given number n in decreasing order
-void prime_factorization(int n, std::vector<size_t>& factors) {  
+inline void prime_factorization(int n, std::vector<size_t>& factors) {  
   while (n % 2 == 0) {  
     factors.push_back(2); 
     n = n/2; 
@@ -167,7 +198,7 @@ void prime_factorization(int n, std::vector<size_t>& factors) {
   std::reverse(factors.begin(), factors.end()); 
 }
 
-bool is_vector_zero(const std::vector<size_t> vec) {
+inline bool is_vector_zero(const std::vector<size_t> vec) {
   if(vec.size() == 0 || (vec.size() == 1 && vec[0] == 0)) {
     return true; 
   }
@@ -175,23 +206,23 @@ bool is_vector_zero(const std::vector<size_t> vec) {
   return false; 
 }
 
-std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(int np) {  
+inline std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(int np) {  
   std::vector<size_t> vector_zero = {0}; 
 
   return partition(np, vector_zero, vector_zero, vector_zero); 
 }
 
-std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(int np, const std::vector<size_t> &given) {
+inline std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(int np, const std::vector<size_t> &given) {
   std::vector<size_t> vector_zero = {0}; 
 
   return partition(np, given, vector_zero, vector_zero); 
 }
 
-std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(int np, const std::vector<size_t> &given, std::vector<size_t> &ghost) {
+inline std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(int np, const std::vector<size_t> &given, std::vector<size_t> &ghost) {
   return partition(np, given, ghost, ghost); 
 }
 
-std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(int np, const std::vector<size_t> &given, std::vector<size_t> &ghost_low, std::vector<size_t> &ghost_high) 
+inline std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(int np, const std::vector<size_t> &given, std::vector<size_t> &ghost_low, std::vector<size_t> &ghost_high) 
 {
   std::vector<std::tuple<regular_lattice, regular_lattice>> empty; // empty lattice
   int ndim = this->nd_cuttable(); // # of cuttable dimensions
@@ -302,7 +333,7 @@ std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::parti
 
 
 // Partition dimensions by given prime factors of each dimension
-std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(std::vector<std::vector<size_t>> prime_factors_dims) {
+inline std::vector<std::tuple<regular_lattice, regular_lattice>> regular_lattice::partition(std::vector<std::vector<size_t>> prime_factors_dims) {
   std::vector<std::tuple<regular_lattice, regular_lattice>> empty; 
 
   int ndim = this->nd_cuttable(); // # of cuttable dimensions

@@ -12,6 +12,7 @@
 #include <numeric>
 #include <thread>
 #include <cassert>
+#include <hypermesh/regular_lattice.hh>
 
 #if FTK_HAVE_TBB
 #include <tbb/mutex.h>
@@ -65,21 +66,26 @@ struct regular_simplex_mesh_element {
   int dim, type;
 };
 
+
 enum {
   ELEMENT_ITERATION_ALL = 0,
   ELEMENT_ITERATION_FIXED_TIME = 1, 
   ELEMENT_ITERATION_FIXED_INTERVAL = 2
 };
 
+
 struct regular_simplex_mesh {
   friend class regular_simplex_mesh_element;
   typedef regular_simplex_mesh_element iterator;
 
-  regular_simplex_mesh(int n) : nd_(n) {
+  regular_simplex_mesh(int n) : nd_(n), lattice(n) {
     for (int i = 0; i < n; i ++) {
       lb_.push_back(0);
       ub_.push_back(0);
     }
+
+    lattice.reshape(lb_, sizes()); 
+
     initialize_subdivision();
   }
   
@@ -103,6 +109,7 @@ struct regular_simplex_mesh {
   int ub(int d) const {return ub_[d];}
   const std::vector<int>& lb() const {return lb_;}
   const std::vector<int>& ub() const {return ub_;}
+  std::vector<int> sizes();  
 
   iterator element_begin(int d);
   iterator element_end(int d);
@@ -163,6 +170,8 @@ private:
   std::vector<int> lb_, ub_; // lower and upper bounds of each dimension
   std::vector<int> ntypes_; // number of types for k-simplex
   std::vector<int> dimprod_;
+
+  regular_lattice lattice; 
 
   // list of k-simplices types; each simplex contains k vertices
   // unit_simplices[d][type] retunrs d+1 vertices that build up the simplex
@@ -679,10 +688,21 @@ inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std
     ub_[i] = u[i];
   }
 
+  lattice.reshape(lb_, sizes()); 
+
   for (int i = 0; i < nd()+1; i ++) {
     if (i == 0) dimprod_[i] = 1;
     else dimprod_[i] = (u[i-1] - l[i-1] + 1) * dimprod_[i-1];
   }
+}
+
+inline std::vector<int> regular_simplex_mesh::sizes() {
+  std::vector<int> sizes; 
+  for(int i = 0; i < nd(); ++i) {
+    sizes.push_back(ub_[i] - lb_[i] + 1); 
+  }
+
+  return sizes; 
 }
 
 inline regular_simplex_mesh::iterator regular_simplex_mesh::element_begin(int d)
