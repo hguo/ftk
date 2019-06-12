@@ -17,7 +17,7 @@ template <class IdType=std::string>
 struct graph
 {
   graph() {
-    uf = union_find<IdType>(); 
+    
   }
 
   // Initialization
