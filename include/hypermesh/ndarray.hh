@@ -36,6 +36,8 @@ struct ndarray {
   const T* data() const {return p.data();}
   T* data() {return p.data();}
 
+  void swap(ndarray& x);
+
   void reshape(const std::vector<size_t> &dims_);
   void reshape(const std::vector<size_t> &dims, T val);
   void reshape(size_t ndims, const size_t sizes[]);
@@ -158,6 +160,14 @@ void ndarray<T>::copy(Iterator first, Iterator last)
   p.clear();
   std::copy(first, last, std::back_inserter(p));
   reshape({p.size()});
+}
+
+template <typename T>
+void ndarray<T>::swap(ndarray& x)
+{
+  dims.swap(x.dims);
+  s.swap(x.s);
+  p.swap(x.p);
 }
 
 template <typename T>
