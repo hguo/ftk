@@ -1,5 +1,3 @@
-#include <ftk/ftk_config.hh>
-
 #include <fstream>
 #include <mutex>
 #include <cassert>
@@ -13,13 +11,13 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
-#include <ftk/algorithms/cca.hh>
+// #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
 
-#if FTK_HAVE_QT
+#if FTK_HAVE_QT5
 #include "widget.h"
 #include <QApplication>
 #endif
@@ -182,13 +180,63 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   }
 }
 
-void trace_intersections()
+
+void extract_connected_components(std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t;
 
-  std::set<element_t> qualified_elements;
-  for (const auto &f : intersections)
-    qualified_elements.insert(f.first);
+  // Initialization
+  ftk::union_find<std::string> uf; 
+  std::map<std::string, element_t> id2ele; 
+  for (const auto &f : intersections) {
+    std::string eid = f.first.to_string(); 
+    uf.add(eid); 
+    id2ele.insert(std::make_pair(eid, f.first));
+  }
+
+  // Connected Component Labeling by using union-find. 
+  m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+    const auto elements = f.sides();
+    std::set<std::string> features; 
+
+    for (const auto& ele : elements) {
+      std::string eid = ele.to_string(); 
+
+      if(uf.has(eid)) {
+        features.insert(eid); 
+      }
+    }
+
+    if(features.size()  > 1) {
+      for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
+        uf.unite(*(features.begin()), *ite_i); 
+      }
+    }
+  }, 1); // Use one thread, since currently the union-find is not thread-save. 
+
+
+  // Get disjoint sets of element IDs
+  std::vector<std::set<std::string>> components_str = uf.get_sets();
+
+  // Convert element IDs to elements
+  for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
+    std::set<element_t> comp; 
+    for(auto ele_id = comp_str->begin(); ele_id != comp_str->end(); ++ele_id) {
+      comp.insert(id2ele.find(*ele_id)->second); 
+    }
+
+    components.push_back(comp); 
+  }
+}
+
+void trace_intersections()
+{
+  typedef hypermesh::regular_simplex_mesh_element element_t; 
+
+  std::vector<std::set<element_t>> cc; // connected components 
+  extract_connected_components(cc);
+
+  // Convert connected components to geometries
 
   auto neighbors = [](element_t f) {
     std::set<element_t> neighbors;
@@ -200,11 +248,6 @@ void trace_intersections()
     }
     return neighbors;
   };
-
-  // connected components
-  auto cc = ftk::extract_connected_components_element<std::set<element_t>>(neighbors, qualified_elements);
-  // auto cc = ftk::extract_connected_components<element_t, std::set<element_t>>(neighbors, qualified_elements);
-  // fprintf(stderr, "#cc=%lu\n", cc.size());
 
   for (int i = 0; i < cc.size(); i ++) {
     std::vector<std::vector<float>> mycurves;
@@ -357,6 +400,7 @@ int main(int argc, char **argv)
   }
  
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
+  
 
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);
@@ -379,7 +423,7 @@ int main(int argc, char **argv)
   }
 
   if (show_qt) {
-#if FTK_HAVE_QT
+#if FTK_HAVE_QT5
     QApplication app(argc, argv);
     QGLFormat fmt = QGLFormat::defaultFormat();
     fmt.setSampleBuffers(true);
