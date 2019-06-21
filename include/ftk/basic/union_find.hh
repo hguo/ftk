@@ -115,7 +115,8 @@ struct union_find
   }
 
   // Get sets of elements
-  std::vector<std::set<IdType>> get_sets() {
+
+  void get_sets(std::vector<std::set<IdType>>& results) {
     std::map<IdType, std::set<IdType>> root2set; 
     for(auto ite = eles.begin(); ite != eles.end(); ++ite) {
       IdType root = find(*ite); 
@@ -123,11 +124,15 @@ struct union_find
       root2set[root].insert(*ite);
     }
 
-    std::vector<std::set<IdType>> results; 
     for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
       // if(is_root(*ite))
       results.push_back(ite->second); 
     }
+  }
+
+  std::vector<std::set<IdType>> get_sets() {
+    std::vector<std::set<IdType>> results; 
+    this->get_sets(results); 
 
     return results; 
   }

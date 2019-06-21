@@ -216,7 +216,8 @@ void extract_connected_components(std::vector<std::set<hypermesh::regular_simple
 
 
   // Get disjoint sets of element IDs
-  std::vector<std::set<std::string>> components_str = uf.get_sets();
+  std::vector<std::set<std::string>> components_str;
+  uf.get_sets(components_str);
 
   // Convert element IDs to elements
   for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
