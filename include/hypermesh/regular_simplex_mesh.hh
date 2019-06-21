@@ -78,17 +78,31 @@ struct regular_simplex_mesh {
   friend class regular_simplex_mesh_element;
   typedef regular_simplex_mesh_element iterator;
 
-  regular_simplex_mesh(int n) : nd_(n), lattice(n) {
+  regular_simplex_mesh(int n) : nd_(n), lattice_(n) {
     for (int i = 0; i < n; i ++) {
       lb_.push_back(0);
       ub_.push_back(0);
     }
 
-    lattice.reshape(lb_, sizes()); 
-
     initialize_subdivision();
+
+    lattice_.reshape(lb_, sizes()); 
   }
-  
+
+  regular_simplex_mesh(int n, regular_lattice& _lattice) : regular_simplex_mesh(n) {
+    std::vector<int> _lb, _ub;
+
+    for (int i = 0; i < n; i ++) {
+      int _start = _lattice.start(i); 
+      int _size = _lattice.size(i); 
+
+      _lb.push_back(_start);
+      _ub.push_back(_start + _size - 1);
+    }
+
+    set_lb_ub(_lb, _ub); 
+  }
+
   // Dimensionality of the mesh
   int nd() const {return nd_;}
 
@@ -132,6 +146,11 @@ struct regular_simplex_mesh {
   void element_for_fixed_interval(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency())  {element_for(d, f, nthreads, ELEMENT_ITERATION_FIXED_INTERVAL);}
 
+
+// partitioning
+public: 
+  void partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
+
 private: // initialization functions
   void initialize_subdivision();
 
@@ -171,7 +190,9 @@ private:
   std::vector<int> ntypes_; // number of types for k-simplex
   std::vector<int> dimprod_;
 
-  regular_lattice lattice; 
+public:
+  regular_lattice lattice_; 
+private:
 
   // list of k-simplices types; each simplex contains k vertices
   // unit_simplices[d][type] retunrs d+1 vertices that build up the simplex
@@ -641,6 +662,22 @@ regular_simplex_mesh::enumerate_fixed_time_simplices()
   return vec;
 }
 
+inline void regular_simplex_mesh::partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+  std::vector<std::tuple<regular_lattice, regular_lattice>> lattice_partitions;
+  this->lattice_.partition(np, lattice_partitions); 
+
+  for(auto& lattice_pair : lattice_partitions) {
+
+    regular_lattice& lattice_p = std::get<0>(lattice_pair); 
+    regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
+
+    regular_simplex_mesh p(this->nd(), lattice_p); 
+    regular_simplex_mesh ghost_p(this->nd(), lattice_ghost_p); 
+
+    partitions.push_back(std::make_tuple(p, ghost_p)); 
+  }
+}
+
 inline void regular_simplex_mesh::initialize_subdivision()
 {
   ntypes_.resize(nd() + 1);
@@ -688,7 +725,7 @@ inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std
     ub_[i] = u[i];
   }
 
-  lattice.reshape(lb_, sizes()); 
+  lattice_.reshape(lb_, sizes()); 
 
   for (int i = 0; i < nd()+1; i ++) {
     if (i == 0) dimprod_[i] = 1;

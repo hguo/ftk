@@ -45,6 +45,7 @@ int DT; // number of timesteps
 
 hypermesh::ndarray<float> scalar, grad, hess;
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
+std::vector<std::tuple<hypermesh::regular_simplex_mesh, hypermesh::regular_simplex_mesh>> ms; 
 
 std::mutex mutex;
 
@@ -216,7 +217,8 @@ void extract_connected_components(std::vector<std::set<hypermesh::regular_simple
 
 
   // Get disjoint sets of element IDs
-  std::vector<std::set<std::string>> components_str = uf.get_sets();
+  std::vector<std::set<std::string>> components_str;
+  uf.get_sets(components_str);
 
   // Convert element IDs to elements
   for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
@@ -268,7 +270,12 @@ void trace_intersections()
 
 void scan_intersections() 
 {
-  m.element_for(2, check_simplex); // iterate over all 2-simplices
+  for(auto& _m_pair : ms) {
+    hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
+    // regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+
+    _m.element_for(2, check_simplex); // iterate over all 2-simplices
+  }
 }
 
 void print_trajectories()
@@ -401,6 +408,22 @@ int main(int argc, char **argv)
  
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
   
+  std::cout<<m.ub(0)<<std::endl; 
+  std::cout<<m.ub(1)<<std::endl; 
+  std::cout<<m.ub(2)<<std::endl; 
+
+  std::cout<<" "<<std::endl; 
+
+  m.partition(1, ms); 
+  auto& _m = std::get<0>(ms[0]); 
+
+  std::cout<<_m.lb(0)<<std::endl; 
+  std::cout<<_m.lb(1)<<std::endl; 
+  std::cout<<_m.lb(2)<<std::endl; 
+
+  std::cout<<_m.ub(0)<<std::endl; 
+  std::cout<<_m.ub(1)<<std::endl; 
+  std::cout<<_m.ub(2)<<std::endl; 
 
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);
