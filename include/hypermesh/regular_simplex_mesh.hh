@@ -150,6 +150,9 @@ struct regular_simplex_mesh {
 // partitioning
 public: 
   void partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
+  void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
+  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
+  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
 
 private: // initialization functions
   void initialize_subdivision();
@@ -190,9 +193,7 @@ private:
   std::vector<int> ntypes_; // number of types for k-simplex
   std::vector<int> dimprod_;
 
-public:
   regular_lattice lattice_; 
-private:
 
   // list of k-simplices types; each simplex contains k vertices
   // unit_simplices[d][type] retunrs d+1 vertices that build up the simplex
@@ -663,11 +664,25 @@ regular_simplex_mesh::enumerate_fixed_time_simplices()
 }
 
 inline void regular_simplex_mesh::partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+  std::vector<size_t> vector_zero = {0}; 
+  partition(np, vector_zero, vector_zero, vector_zero, partitions); 
+}
+
+inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+  std::vector<size_t> vector_zero = {0}; 
+  partition(np, given, vector_zero, vector_zero, partitions); 
+}
+
+inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+  partition(np, given, ghost, ghost, partitions); 
+}
+
+inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
   std::vector<std::tuple<regular_lattice, regular_lattice>> lattice_partitions;
-  this->lattice_.partition(np, lattice_partitions); 
+  this->lattice_.partition(np, given, ghost_low, ghost_high, lattice_partitions); 
 
+  // Lattice partitions 2 regular simplex mesh partitions
   for(auto& lattice_pair : lattice_partitions) {
-
     regular_lattice& lattice_p = std::get<0>(lattice_pair); 
     regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
 

@@ -271,10 +271,10 @@ void trace_intersections()
 void scan_intersections() 
 {
   for(auto& _m_pair : ms) {
-    hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
-    // regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+    // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+    hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
-    _m.element_for(2, check_simplex); // iterate over all 2-simplices
+    _m_ghost.element_for(2, check_simplex); // iterate over all 2-simplices
   }
 }
 
@@ -407,23 +407,20 @@ int main(int argc, char **argv)
   }
  
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
-  
-  std::cout<<m.ub(0)<<std::endl; 
-  std::cout<<m.ub(1)<<std::endl; 
-  std::cout<<m.ub(2)<<std::endl; 
 
-  std::cout<<" "<<std::endl; 
+  std::vector<size_t> given = {0}; 
+  std::vector<size_t> ghost = {1, 1, 1}; 
 
-  m.partition(1, ms); 
-  auto& _m = std::get<0>(ms[0]); 
+  m.partition(6, given, ghost, ms); 
 
-  std::cout<<_m.lb(0)<<std::endl; 
-  std::cout<<_m.lb(1)<<std::endl; 
-  std::cout<<_m.lb(2)<<std::endl; 
 
-  std::cout<<_m.ub(0)<<std::endl; 
-  std::cout<<_m.ub(1)<<std::endl; 
-  std::cout<<_m.ub(2)<<std::endl; 
+  // 1. Organize distributed_memory_parallel into a library
+  //   1. Input is a graph data, or input is a set of partitions of lattice
+  //   2. Output is the union-find results
+
+  // Step 1: Then, separate the partitions into blocks, each block stores a partition, and perform distributed union-find? 
+  // Step 2: Integrate union-find results into a root processor
+  // Step 3: Perform tracing? 
 
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);

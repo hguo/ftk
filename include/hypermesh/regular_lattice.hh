@@ -52,8 +52,8 @@ public: // the last dimension, aka time.  these functions are mainly for I/O and
 public: 
   void partition(int np, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions);
   void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions);
-  void partition(int np, const std::vector<size_t> &given, std::vector<size_t> &ghost, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions);
-  void partition(int np, const std::vector<size_t> &given, std::vector<size_t> &ghost_low, std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions);
+  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions);
+  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions);
 private:
   void partition(std::vector<std::vector<size_t>> prime_factors_dims, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions); 
 
@@ -61,7 +61,7 @@ private:
   size_t partition_id(const std::vector<size_t> &coords) const;
 
 private:
-  bool unlimited_ = false;
+  bool unlimited_ = false; 
   std::vector<size_t> starts_, sizes_; // the last dimension can be unlimited
   std::vector<size_t> local_prod_, global_prod_;
 };
@@ -200,6 +200,10 @@ inline void prime_factorization(int n, std::vector<size_t>& factors) {
     }
   }
 
+  if(n > 1) {
+    factors.push_back(n); 
+  }
+
   std::reverse(factors.begin(), factors.end()); 
 }
 
@@ -213,21 +217,19 @@ inline bool is_vector_zero(const std::vector<size_t> vec) {
 
 inline void regular_lattice::partition(int np, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) {  
   std::vector<size_t> vector_zero = {0}; 
-
   partition(np, vector_zero, vector_zero, vector_zero, partitions); 
 }
 
 inline void regular_lattice::partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) {
   std::vector<size_t> vector_zero = {0}; 
-
   partition(np, given, vector_zero, vector_zero, partitions); 
 }
 
-inline void regular_lattice::partition(int np, const std::vector<size_t> &given, std::vector<size_t> &ghost, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) {
+inline void regular_lattice::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) {
   partition(np, given, ghost, ghost, partitions); 
 }
 
-inline void regular_lattice::partition(int np, const std::vector<size_t> &given, std::vector<size_t> &ghost_low, std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) 
+inline void regular_lattice::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) 
 {
   if(np <= 0) {
     return ;
@@ -300,19 +302,16 @@ inline void regular_lattice::partition(int np, const std::vector<size_t> &given,
       for(int d = 0; d < ndim; ++d) {
         regular_lattice& ghost_p = std::get<1>(p); 
 
-        std::vector<size_t> starts(ghost_p.starts()); 
+        std::vector<size_t> starts(ghost_p.starts());  
         std::vector<size_t> sizes(ghost_p.sizes()); 
 
-        size_t& start = starts[d]; 
-        size_t& size = sizes[d]; 
-
-        start -= ghost_low[d]; 
-        size += ghost_low[d];  
-
-        if(start < this->start(d)) {
-          size -= this->start(d) - start;  
-          start = this->start(d); 
+        size_t offset = starts[d] - this->start(d); 
+        if(ghost_low[d] < offset) {
+          offset = ghost_low[d]; 
         }
+
+        starts[d] -= offset; 
+        sizes[d] += offset; 
 
         ghost_p.reshape(starts, sizes); 
       }
@@ -327,13 +326,12 @@ inline void regular_lattice::partition(int np, const std::vector<size_t> &given,
 
         std::vector<size_t> sizes(ghost_p.sizes()); 
 
-        size_t& start = ghost_p.starts()[d]; 
-        size_t& size = sizes[d]; 
-
-        size += ghost_high[d];      
-        if(start + size > this->start(d) + this->size(d)) {
-          size -= (start + size) - (this->start(d) + this->size(d)); 
+        size_t offset = (this->start(d) + this->size(d)) - (ghost_p.start(d) + sizes[d]); 
+        if(ghost_high[d] < offset) {
+          offset = ghost_high[d]; 
         }
+
+        sizes[d] += offset;      
 
         ghost_p.reshape(ghost_p.starts(), sizes); 
       }
@@ -370,7 +368,7 @@ inline void regular_lattice::partition(std::vector<std::vector<size_t>> prime_fa
           starts[curr] += ns;
         }
 
-        sizes[curr] = p.size(curr) - ns * nslice;
+        sizes[curr] = p.size(curr) - ns * (nslice - 1);
         lattice_queue.push(regular_lattice(starts, sizes));
 
         lattice_queue.pop();
