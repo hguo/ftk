@@ -36,7 +36,6 @@ struct graph
     linked_verts_map[j].push_back(i); 
   }
 
-
   // Queries
 
   bool has_vertex(IdType i) {
