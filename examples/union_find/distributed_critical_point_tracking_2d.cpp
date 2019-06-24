@@ -225,26 +225,39 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
 
     if(features.size()  > 1) {
-      std::string first; 
+      std::set<std::string> features_in_block; 
       for(auto& feature : features) {
         if(b->has(feature)) {
-          first = feature; 
-
-          break ;
+          features_in_block.insert(feature); 
         }
       }
 
-      if(!b->has(first)) {
+      if(features_in_block.size() > 1) {
+        // When features are local, we just need to relate to the first feature element
+
+        for(std::set<std::string>::iterator ite_i = std::next(features_in_block.begin(), 1); ite_i != features_in_block.end(); ++ite_i) {
+          b->add_related_element(*(features_in_block.begin()), *ite_i); 
+          b->add_related_element(*ite_i, *(features_in_block.begin())); 
+        }
+
+        // for(std::set<std::string>::iterator ite_i = features_in_block.begin(); ite_i != features_in_block.end(); ++ite_i) {
+        //   for(std::set<std::string>::iterator ite_j = std::next(ite_i, 1); ite_j != features_in_block.end(); ++ite_j) {
+        //     b->add_related_element(*ite_j, *ite_i); 
+        //     b->add_related_element(*ite_i, *ite_j); 
+        //   }
+        // }
+      }
+
+      if(features_in_block.size() == 0 || features.size() == features_in_block.size()) {
         return ;
       }
     
+      // When features are across processors, we need to relate all local feature elements to all remote feature elements
       for(auto& feature: features) {
-        if(first != feature) {
+        if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
           std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-          b->add_related_element(first, feature); 
-
-          if(b->has(feature)) {
-            b->add_related_element(feature, first); 
+          for(auto& feature_in_block : features_in_block) {
+            b->add_related_element(feature_in_block, feature); 
           }
         }
       }
