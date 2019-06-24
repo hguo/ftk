@@ -393,7 +393,7 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
         // if(related_ele > ele) {
         // if(std::stoi(related_ele) > std::stoi(ele)) {
 
-        if(rgid > gid || (rgid == gid && related_ele > ele)) {
+        if(rgid < gid || (rgid == gid && related_ele < ele)) {
         // if(rgid > gid || (rgid == gid && std::stoi(related_ele) > std::stoi(ele))) {
           b->set_parent(ele, related_ele); 
           b->nchanges += 1;
@@ -984,8 +984,6 @@ void run_union_find(diy::mpi::communicator& world, diy::Master& master, diy::Con
   // master.iexchange(&union_find_iexchange, 16, 1000);
 }
 
-
-
 // Gather all element-parent information to the root block
 bool gather_2_root(Block* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
@@ -1004,14 +1002,17 @@ bool gather_2_root(Block* b, const diy::Master::ProxyWithLink& cp) {
           Message msg; 
           cp.dequeue(in[i], msg);
 
+          if(msg.tag != "ele_parent_pairs") {
+            std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
+          }
+
           std::vector<std::pair<std::string, std::string>> pairs; 
           msg.receive_ele_parent_pairs(pairs); 
 
-          for(auto& pair : pairs) {
-            if(!b->has(pair.first)) {
-              b->add(pair.first); 
-            }
+          // std::cout<<"Received Pairs: "<<pairs.size()<<std::endl; 
 
+          for(auto& pair : pairs) {
+            b->add(pair.first); 
             b->set_parent(pair.first, pair.second); 
           }
         }
@@ -1029,6 +1030,8 @@ bool gather_2_root(Block* b, const diy::Master::ProxyWithLink& cp) {
     Message send_msg; 
     send_msg.send_ele_parent_pairs(local_pairs); 
 
+    // std::cout<<"Sent Pairs: "<<local_pairs.size()<<std::endl; 
+
     cp.enqueue(l->target(l->find(0)), send_msg); 
   }
 
@@ -1043,7 +1046,6 @@ void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::Contiguou
   assigner.local_gids(world.rank(), gids);
 
   if(world.rank() == 0) {
-
     Block* b = static_cast<Block*> (master.block(0)); 
 
     std::map<std::string, std::set<std::string>> root2set; 

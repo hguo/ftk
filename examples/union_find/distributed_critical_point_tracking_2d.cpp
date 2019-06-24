@@ -198,13 +198,19 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   Block* b = new Block(); 
   local_blocks.push_back(b); 
 
-  for (const auto &f : intersections) {
-    std::string eid = f.first.to_string(); 
-    b->add(eid);     
-  }
-
   auto& _m_pair = ms[world.rank()]; 
+  hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+
+  _m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+    if (!f.valid()) return ; // check if the 2-simplex is valid
+
+    if(intersections.find(f) != intersections.end()) {
+      std::string eid = f.to_string(); 
+      std::lock_guard<std::mutex> guard(mutex);
+      b->add(eid); 
+    }
+  });
 
   // Connected Component Labeling by using union-find. 
   _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
@@ -212,18 +218,32 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     std::set<std::string> features; 
 
     for (const auto& ele : elements) {
-      std::string eid = ele.to_string(); 
-
-      if(b->has(eid)) {
+      if(intersections.find(ele) != intersections.end()) {
+        std::string eid = ele.to_string(); 
         features.insert(eid); 
       }
     }
 
     if(features.size()  > 1) {
-      for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
-        std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-        b->add_related_element(*(features.begin()), *ite_i); 
-        b->add_related_element(*ite_i, *(features.begin())); 
+      std::string first; 
+      for(auto& feature : features) {
+        if(b->has(feature)) {
+          first = feature; 
+
+          break ;
+        }
+      }
+
+      if(!b->has(first)) {
+        return ;
+      }
+    
+      for(auto& feature: features) {
+        if(first != feature) {
+          std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+          b->add_related_element(first, feature); 
+          b->add_related_element(feature, first); 
+        }
       }
     }
   });
@@ -277,6 +297,8 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       return neighbors;
     };
 
+
+
     for (int i = 0; i < cc.size(); i ++) {
       std::vector<std::vector<float>> mycurves;
       auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
@@ -298,11 +320,15 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
 void scan_intersections(int rank) 
 {
-  auto& _m_pair = ms[rank]; 
-  // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
-  hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+  if(rank == 0) { // for root, we need all intersections information, probably can use "gather" for optimization
+    m.element_for(2, check_simplex);
+  } else {
+    auto& _m_pair = ms[rank]; 
+    // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+    hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
-  _m_ghost.element_for(2, check_simplex); // iterate over all 2-simplices
+    _m_ghost.element_for(2, check_simplex); // iterate over all 2-simplices
+  }
 }
 
 void print_trajectories()
