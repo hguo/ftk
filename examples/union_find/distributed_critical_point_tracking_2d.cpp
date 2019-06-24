@@ -221,10 +221,11 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
     if(features.size()  > 1) {
       for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
+        std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
         b->add_related_element(*(features.begin()), *ite_i); 
       }
     }
-  }, 1); // Use one thread, since currently the union-find is not thread-save. 
+  });
 
   // get_connected_components
   run_union_find(world, master, assigner, local_blocks); 
@@ -233,17 +234,20 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   std::vector<std::set<std::string>> components_str;
   get_sets(world, master, assigner, components_str); 
 
-  if(world.rank() == 0) {
+  if(world.rank() == 0) { 
     std::map<std::string, element_t> id2ele; 
     m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+      // if (!f.valid()) return ; // check if the 2-simplex is valid
+
+      std::lock_guard<std::mutex> guard(mutex);
       id2ele.insert(std::make_pair(f.to_string(), f));
     });
 
     // Convert element IDs to elements
-    for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
+    for(auto& comp_str : components_str) {
       std::set<element_t> comp; 
-      for(auto ele_id = comp_str->begin(); ele_id != comp_str->end(); ++ele_id) {
-        comp.insert(id2ele.find(*ele_id)->second); 
+      for(auto& ele_id : comp_str) {
+        comp.insert(id2ele.find(ele_id)->second); 
       }
 
       components.push_back(comp); 
@@ -257,7 +261,6 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   std::vector<std::set<element_t>> cc; // connected components 
   extract_connected_components(world, master, assigner, cc);
-
 
   if(world.rank() == 0) {
     // Convert connected components to geometries
@@ -434,7 +437,6 @@ int main(int argc, char **argv)
   std::vector<size_t> given = {0}; 
   std::vector<size_t> ghost = {1, 1, 1}; 
 
-
   int nthreads = 1;
   diy::mpi::environment     env(NULL, NULL);
   diy::mpi::communicator    world;
@@ -442,6 +444,8 @@ int main(int argc, char **argv)
   int nblocks = world.size(); 
   diy::Master               master(world, nthreads);
   diy::ContiguousAssigner   assigner(world.size(), nblocks);
+
+  std::cout<<"# of blocks: "<<nblocks<<std::endl; 
 
   m.partition(nblocks, given, ghost, ms); 
 
@@ -467,7 +471,12 @@ int main(int argc, char **argv)
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
 
+
+    std::cout<<"Start tracing"<<world.rank()<<std::endl; 
+
     trace_intersections(world, master, assigner);
+
+    std::cout<<"Finish tracing"<<world.rank()<<std::endl; 
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);

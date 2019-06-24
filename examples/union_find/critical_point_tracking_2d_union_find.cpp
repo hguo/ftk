@@ -196,35 +196,40 @@ void extract_connected_components(std::vector<std::set<hypermesh::regular_simple
   }
 
   // Connected Component Labeling by using union-find. 
-  m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
-    const auto elements = f.sides();
-    std::set<std::string> features; 
+  for(auto& _m_pair : ms) {
+    // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+    hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
-    for (const auto& ele : elements) {
-      std::string eid = ele.to_string(); 
+    _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+      const auto elements = f.sides();
+      std::set<std::string> features; 
 
-      if(uf.has(eid)) {
-        features.insert(eid); 
+      for (const auto& ele : elements) {
+        std::string eid = ele.to_string(); 
+
+        if(uf.has(eid)) {
+          features.insert(eid); 
+        }
       }
-    }
 
-    if(features.size()  > 1) {
-      for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
-        uf.unite(*(features.begin()), *ite_i); 
+      if(features.size()  > 1) {
+        for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
+          std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+          uf.unite(*(features.begin()), *ite_i); 
+        }
       }
-    }
-  }, 1); // Use one thread, since currently the union-find is not thread-save. 
-
+    }); 
+  }
 
   // Get disjoint sets of element IDs
   std::vector<std::set<std::string>> components_str;
   uf.get_sets(components_str);
 
   // Convert element IDs to elements
-  for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
+  for(auto& comp_str : components_str) {
     std::set<element_t> comp; 
-    for(auto ele_id = comp_str->begin(); ele_id != comp_str->end(); ++ele_id) {
-      comp.insert(id2ele.find(*ele_id)->second); 
+    for(auto& ele_id : comp_str) {
+      comp.insert(id2ele.find(ele_id)->second); 
     }
 
     components.push_back(comp); 
