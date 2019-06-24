@@ -7,8 +7,10 @@
 #include <utility>
 #include <iostream>
 
+#include <ftk/external/diy/mpi.hpp>
+#include <ftk/external/diy/master.hpp>
+#include <ftk/external/diy/assigner.hpp>
 #include <ftk/external/diy/serialization.hpp>
-#include <ftk/basic/graph.hh>
 
 // Union-find algorithm with distributed-memory parallelism
   // All elements need to be added by invoking the add function at the initialization stage. 
@@ -19,6 +21,7 @@
 // Add the sparse representation by using Hash map/table 
 
 #define IEXCHANGE 1
+#define ISDEBUG   0
 
 namespace ftk {
 template <class IdType=std::string>
@@ -394,7 +397,9 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
         // if(rgid > gid || (rgid == gid && std::stoi(related_ele) > std::stoi(ele))) {
           b->set_parent(ele, related_ele); 
           b->nchanges += 1;
-          std::cout<<ele<<" -1> "<<related_ele<<std::endl; 
+          if(ISDEBUG) {
+            std::cout<<ele<<" -1> "<<related_ele<<std::endl; 
+          }
 
           b->related_elements[ele].erase(it_vec); 
 
@@ -502,7 +507,10 @@ void distributed_save_gparent(Block* b, const diy::Master::ProxyWithLink& cp, Me
 
   b->set_parent(*ele_ptr, *grandpar_ptr); 
   b->nchanges += 1;
-  std::cout<<*ele_ptr<<" -2> "<<*grandpar_ptr<<std::endl; 
+
+  if(ISDEBUG) {
+    std::cout<<*ele_ptr<<" -2> "<<*grandpar_ptr<<std::endl; 
+  }
 
   b->ele2gid[*grandpar_ptr] = gparent_gid; 
 }
@@ -552,16 +560,19 @@ void local_compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
 
     if(!b->is_root(ele)) {
       if(b->has(parent)) {
-        if(ele == "4") {
-          std::cout<<ele<<" ~ "<<parent<<" ~ "<<b->has(parent)<<std::endl; 
-        }
+        // if(ele == "4") {
+        //   std::cout<<ele<<" ~ "<<parent<<" ~ "<<b->has(parent)<<std::endl; 
+        // }
 
         if(!b->is_root(parent)) {
           std::string grandparent = b->parent(parent); 
 
           b->set_parent(ele, grandparent); 
           b->nchanges += 1;
-          std::cout<<ele<<" -2> "<<grandparent<<std::endl; 
+
+          if(ISDEBUG) {
+            std::cout<<ele<<" -2> "<<grandparent<<std::endl; 
+          }
         }
       }
     }
@@ -793,7 +804,9 @@ bool union_find_iexchange(Block* b, const diy::Master::ProxyWithLink& cp) {
 
   distributed_computation(b, cp); 
 
-  std::cout<<"================================="<<std::endl; 
+  if(ISDEBUG) {
+    std::cout<<"================================="<<std::endl; 
+  }
 
   return true; 
 }
@@ -893,7 +906,9 @@ void exchange_process(diy::Master& master) {
     // Hence, an additional receive is needed
   master.foreach(&receive_msg);
 
-  std::cout<<"================================="<<std::endl; 
+  if(ISDEBUG) {
+    std::cout<<"================================="<<std::endl; 
+  }
 }
 
 void import_data(std::vector<Block*>& blocks, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<int>& gids) {
@@ -913,7 +928,7 @@ void import_data(std::vector<Block*>& blocks, diy::Master& master, diy::Contiguo
       }
     }
 
-    Block* b = blocks[gid]; 
+    Block* b = blocks[i]; 
     master.add(gid, b, link); 
   }
 }
@@ -958,7 +973,9 @@ void run_union_find(diy::mpi::communicator& world, diy::Master& master, diy::Con
       int total_changes = master.proxy(master.loaded_block()).read<int>();
       // int total_changes = master.proxy(master.loaded_block()).get<int>();
 
-      std::cout<<total_changes<<std::endl; 
+      if(ISDEBUG) {
+        std::cout<<total_changes<<std::endl; 
+      }
 
       all_done = total_changes == 0;
     }
@@ -1039,13 +1056,15 @@ void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::Contiguou
         results.push_back(ite->second); 
     }
 
-    for(int i = 0; i < results.size(); ++i) {
-      std::cout<<"Set "<<i<<":"<<std::endl; 
-      std::set<std::string>& ele_set = results[i]; 
-      for(auto& ele : ele_set) {
-        std::cout<<ele<<" "; 
+    if(ISDEBUG) {
+      for(int i = 0; i < results.size(); ++i) {
+        std::cout<<"Set "<<i<<":"<<std::endl; 
+        std::set<std::string>& ele_set = results[i]; 
+        for(auto& ele : ele_set) {
+          std::cout<<ele<<" "; 
+        }
+        std::cout<<std::endl; 
       }
-      std::cout<<std::endl; 
     }
   }
 }

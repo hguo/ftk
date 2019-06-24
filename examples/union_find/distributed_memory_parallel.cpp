@@ -13,7 +13,6 @@
 // #include <ftk/external/diy/serialization.hpp>
 
 #include <ftk/basic/distributed_union_find.hh>
-#include <ftk/basic/graph.hh>
 
 // typedef std::pair<std::string, int> ele_gid;  // stores element and its global block id
 // typedef std::map<std::string, std::vector<std::string>> r_ele_map; 
@@ -154,13 +153,6 @@ void get_synthetic_data(std::vector<Block*>& blocks) {
 
 int main(int argc, char* argv[]) {
 
-  // std::vector<Block> blocks; 
-  // if(world.rank() == 0) {
-
-  // } else {
-
-  // }
-
   int                       nthreads = 1; 
   int                       memblocks = -1; //2; // number of blocks to store in memory
 
@@ -193,18 +185,10 @@ int main(int argc, char* argv[]) {
   diy::ContiguousAssigner   assigner(world.size(), nblocks);
   // diy::RoundRobinAssigner     assigner(world.size(), nblocks);
 
-
-  std::vector<int> gids;                     // global ids of local blocks
-  assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
-  
-  std::cout<<"Start"<<std::endl;
-
-
-  printf("Hello world from rank %d out of %d processors\n",
-     world.rank(), world.size());
-
   // get_connected_components
-  run_union_find(world, master, assigner, blocks); 
+  std::vector<Block*> local_blocks; 
+  local_blocks.push_back(blocks[world.rank()]); 
+  run_union_find(world, master, assigner, local_blocks); 
 
   std::vector<std::set<std::string>> ele_sets;
   get_sets(world, master, assigner, ele_sets); 

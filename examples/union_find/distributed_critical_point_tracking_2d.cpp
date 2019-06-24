@@ -17,6 +17,12 @@
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
 
+
+#include <ftk/external/diy/mpi.hpp>
+#include <ftk/external/diy/master.hpp>
+#include <ftk/external/diy/assigner.hpp>
+#include <ftk/basic/distributed_union_find.hh>
+
 #if FTK_HAVE_QT5
 #include "widget.h"
 #include <QApplication>
@@ -182,100 +188,117 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 }
 
 
-void extract_connected_components(std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components)
+void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t;
 
   // Initialization
-  ftk::union_find<std::string> uf; 
-  std::map<std::string, element_t> id2ele; 
+    // Init union-find blocks
+  std::vector<Block*> local_blocks;
+  Block* b = new Block(); 
+  local_blocks.push_back(b); 
+
   for (const auto &f : intersections) {
     std::string eid = f.first.to_string(); 
-    uf.add(eid); 
-    id2ele.insert(std::make_pair(eid, f.first));
+    b->add(eid);     
   }
 
+  auto& _m_pair = ms[world.rank()]; 
+  hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+
   // Connected Component Labeling by using union-find. 
-  m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
     const auto elements = f.sides();
     std::set<std::string> features; 
 
     for (const auto& ele : elements) {
       std::string eid = ele.to_string(); 
 
-      if(uf.has(eid)) {
+      if(b->has(eid)) {
         features.insert(eid); 
       }
     }
 
     if(features.size()  > 1) {
       for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
-        uf.unite(*(features.begin()), *ite_i); 
+        b->add_related_element(*(features.begin()), *ite_i); 
       }
     }
   }, 1); // Use one thread, since currently the union-find is not thread-save. 
 
+  // get_connected_components
+  run_union_find(world, master, assigner, local_blocks); 
 
   // Get disjoint sets of element IDs
   std::vector<std::set<std::string>> components_str;
-  uf.get_sets(components_str);
+  get_sets(world, master, assigner, components_str); 
 
-  // Convert element IDs to elements
-  for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
-    std::set<element_t> comp; 
-    for(auto ele_id = comp_str->begin(); ele_id != comp_str->end(); ++ele_id) {
-      comp.insert(id2ele.find(*ele_id)->second); 
+  if(world.rank() == 0) {
+    std::map<std::string, element_t> id2ele; 
+    m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+      id2ele.insert(std::make_pair(f.to_string(), f));
+    });
+
+    // Convert element IDs to elements
+    for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
+      std::set<element_t> comp; 
+      for(auto ele_id = comp_str->begin(); ele_id != comp_str->end(); ++ele_id) {
+        comp.insert(id2ele.find(*ele_id)->second); 
+      }
+
+      components.push_back(comp); 
     }
-
-    components.push_back(comp); 
-  }
+  } 
 }
 
-void trace_intersections()
+void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t; 
 
   std::vector<std::set<element_t>> cc; // connected components 
-  extract_connected_components(cc);
+  extract_connected_components(world, master, assigner, cc);
 
-  // Convert connected components to geometries
 
-  auto neighbors = [](element_t f) {
-    std::set<element_t> neighbors;
-    const auto cells = f.side_of();
-    for (const auto c : cells) {
-      const auto elements = c.sides();
-      for (const auto f1 : elements)
-        neighbors.insert(f1);
-    }
-    return neighbors;
-  };
+  if(world.rank() == 0) {
+    // Convert connected components to geometries
 
-  for (int i = 0; i < cc.size(); i ++) {
-    std::vector<std::vector<float>> mycurves;
-    auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
-    for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<float> mycurve, mycolors;
-      for (int k = 0; k < linear_graphs[j].size(); k ++) {
-        auto p = intersections[linear_graphs[j][k]];
-        mycurve.push_back(p.x[0]); //  / (DW-1));
-        mycurve.push_back(p.x[1]); //  / (DH-1));
-        mycurve.push_back(p.x[2]); //  / (DT-1));
-        mycurve.push_back(p.val);
+    auto neighbors = [](element_t f) {
+      std::set<element_t> neighbors;
+      const auto cells = f.side_of();
+      for (const auto c : cells) {
+        const auto elements = c.sides();
+        for (const auto f1 : elements)
+          neighbors.insert(f1);
       }
-      trajectories.emplace_back(mycurve);
+      return neighbors;
+    };
+
+    for (int i = 0; i < cc.size(); i ++) {
+      std::vector<std::vector<float>> mycurves;
+      auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
+      for (int j = 0; j < linear_graphs.size(); j ++) {
+        std::vector<float> mycurve, mycolors;
+        for (int k = 0; k < linear_graphs[j].size(); k ++) {
+          auto p = intersections[linear_graphs[j][k]];
+          mycurve.push_back(p.x[0]); //  / (DW-1));
+          mycurve.push_back(p.x[1]); //  / (DH-1));
+          mycurve.push_back(p.x[2]); //  / (DT-1));
+          mycurve.push_back(p.val);
+        }
+        trajectories.emplace_back(mycurve);
+      }
     }
+
   }
 }
 
-void scan_intersections() 
+void scan_intersections(int rank) 
 {
-  for(auto& _m_pair : ms) {
-    // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
-    hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+  auto& _m_pair = ms[rank]; 
+  // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+  hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
-    _m_ghost.element_for(2, check_simplex); // iterate over all 2-simplices
-  }
+  _m_ghost.element_for(2, check_simplex); // iterate over all 2-simplices
 }
 
 void print_trajectories()
@@ -411,7 +434,15 @@ int main(int argc, char **argv)
   std::vector<size_t> given = {0}; 
   std::vector<size_t> ghost = {1, 1, 1}; 
 
-  int nblocks = 6; 
+
+  int nthreads = 1;
+  diy::mpi::environment     env(NULL, NULL);
+  diy::mpi::communicator    world;
+  
+  int nblocks = world.size(); 
+  diy::Master               master(world, nthreads);
+  diy::ContiguousAssigner   assigner(world.size(), nblocks);
+
   m.partition(nblocks, given, ghost, ms); 
 
   // 1. Organize distributed_memory_parallel into a library
@@ -430,42 +461,44 @@ int main(int argc, char **argv)
     } else { // derive gradients and do the sweep
       grad = derive_gradients2(scalar);
       hess = derive_hessians2(grad);
-      scan_intersections();
+      scan_intersections(world.rank());
     }
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
 
-    trace_intersections();
+    trace_intersections(world, master, assigner);
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
   }
 
-  if (show_qt) {
-#if FTK_HAVE_QT5
-    QApplication app(argc, argv);
-    QGLFormat fmt = QGLFormat::defaultFormat();
-    fmt.setSampleBuffers(true);
-    fmt.setSamples(16);
-    QGLFormat::setDefaultFormat(fmt);
+  if(world.rank() == 0) {
+    if (show_qt) {
+  #if FTK_HAVE_QT5
+      QApplication app(argc, argv);
+      QGLFormat fmt = QGLFormat::defaultFormat();
+      fmt.setSampleBuffers(true);
+      fmt.setSamples(16);
+      QGLFormat::setDefaultFormat(fmt);
 
-    CGLWidget *widget = new CGLWidget(scalar);
-    widget->set_trajectories(trajectories, threshold);
-    widget->show();
-    return app.exec();
-#else
-    fprintf(stderr, "Error: the executable is not compiled with Qt\n");
-#endif
-  } else if (show_vtk) {
-#if FTK_HAVE_VTK
-    start_vtk_window();
-    // ftk::write_curves_vtk(trajectories, "trajectories.vtp");
-#else
-    fprintf(stderr, "Error: the executable is not compiled with VTK\n");
-#endif
-  } else {
-    print_trajectories();
+      CGLWidget *widget = new CGLWidget(scalar);
+      widget->set_trajectories(trajectories, threshold);
+      widget->show();
+      return app.exec();
+  #else
+      fprintf(stderr, "Error: the executable is not compiled with Qt\n");
+  #endif
+    } else if (show_vtk) {
+  #if FTK_HAVE_VTK
+      start_vtk_window();
+      // ftk::write_curves_vtk(trajectories, "trajectories.vtp");
+  #else
+      fprintf(stderr, "Error: the executable is not compiled with VTK\n");
+  #endif
+    } else {
+      print_trajectories();
+    }
   }
 
   return 0;
