@@ -1049,6 +1049,10 @@ void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::Contiguou
     std::map<std::string, std::set<std::string>> root2set; 
 
     for(auto& ele : b->eles) {
+      if(!b->is_root(b->parent(ele))) {
+        std::cout<<"Wrong! The parent is not root! "<< std::endl; 
+      }
+
       root2set[b->parent(ele)].insert(ele);  
     }
 

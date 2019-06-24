@@ -223,6 +223,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
         std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
         b->add_related_element(*(features.begin()), *ite_i); 
+        b->add_related_element(*ite_i, *(features.begin())); 
       }
     }
   });
@@ -237,7 +238,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   if(world.rank() == 0) { 
     std::map<std::string, element_t> id2ele; 
     m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-      // if (!f.valid()) return ; // check if the 2-simplex is valid
+      if (!f.valid()) return ; // check if the 2-simplex is valid
 
       std::lock_guard<std::mutex> guard(mutex);
       id2ele.insert(std::make_pair(f.to_string(), f));
@@ -437,7 +438,7 @@ int main(int argc, char **argv)
   std::vector<size_t> given = {0}; 
   std::vector<size_t> ghost = {1, 1, 1}; 
 
-  int nthreads = 1;
+  int nthreads = 4;
   diy::mpi::environment     env(NULL, NULL);
   diy::mpi::communicator    world;
   
