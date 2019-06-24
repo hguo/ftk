@@ -242,7 +242,10 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
         if(first != feature) {
           std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
           b->add_related_element(first, feature); 
-          b->add_related_element(feature, first); 
+
+          if(b->has(feature)) {
+            b->add_related_element(feature, first); 
+          }
         }
       }
     }
@@ -296,9 +299,7 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       }
       return neighbors;
     };
-
-
-
+    
     for (int i = 0; i < cc.size(); i ++) {
       std::vector<std::vector<float>> mycurves;
       auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
