@@ -438,15 +438,13 @@ int main(int argc, char **argv)
   std::vector<size_t> given = {0}; 
   std::vector<size_t> ghost = {1, 1, 1}; 
 
-  int nthreads = 4;
+  int nthreads = 1;
   diy::mpi::environment     env(NULL, NULL);
   diy::mpi::communicator    world;
   
   int nblocks = world.size(); 
   diy::Master               master(world, nthreads);
   diy::ContiguousAssigner   assigner(world.size(), nblocks);
-
-  std::cout<<"# of blocks: "<<nblocks<<std::endl; 
 
   m.partition(nblocks, given, ghost, ms); 
 
