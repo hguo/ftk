@@ -383,9 +383,9 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
 
         int rgid = b->ele2gid[related_ele]; 
         // std::cout<<gid<<" "<<rgid<<std::endl; 
-        // if(rgid == -1) {
-        //   continue; 
-        // }
+        if(rgid == -1) {
+          continue; 
+        }
 
         // Unite with an element with larger id or smaller id is better? 
           // Here is a larger id
@@ -606,20 +606,22 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
   // }
 
   if(!b->is_root(*related_ele_ptr)) {
-    std::string parent_related_ele = b->parent(*related_ele_ptr); 
+    std::string parent_related_ele = b->parent(*related_ele_ptr); // the parent of the related element
     int r_p_gid = b->ele2gid[parent_related_ele]; 
 
     if(r_p_gid == gid) {
       local_update_endpoint(b, cp, ele_ptr, par_ptr, pgid_ptr, &parent_related_ele); 
     } else {
-      Message send_msg; 
-      send_msg.send_endpoint(ele_ptr, par_ptr, &parent_related_ele, pgid_ptr); 
+      if(r_p_gid != -1) {
+        Message send_msg; 
+        send_msg.send_endpoint(ele_ptr, par_ptr, &parent_related_ele, pgid_ptr); 
 
-      // std::cout<<"!!!"<<*ele_ptr<<" - "<<*par_ptr<<" - "<<parent_related_ele<<" - "<<*pgid_ptr<<std::endl; 
+        // std::cout<<"!!!"<<*ele_ptr<<" - "<<*par_ptr<<" - "<<parent_related_ele<<" - "<<*pgid_ptr<<std::endl; 
 
-      cp.enqueue(l->target(l->find(r_p_gid)), send_msg); 
-      // This message should get completed, so we set a change to avoid the algorithm ends. 
-      b->nchanges += 1;
+        cp.enqueue(l->target(l->find(r_p_gid)), send_msg); 
+        // This message should get completed, so we set a change to avoid the algorithm ends. 
+        b->nchanges += 1;
+      }
     }
   } else { // To remove possibe side-effects, we store the edge. 
     b->related_elements[*related_ele_ptr].push_back(*par_ptr); 
@@ -663,10 +665,12 @@ void local_pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
             if(r_gid == gid) {
               local_update_endpoint(b, cp, &ele, &par, &p_gid, &related_ele); 
             } else {
-              Message send_msg; 
-              send_msg.send_endpoint(&ele, &par, &related_ele, &p_gid); 
+              if(r_gid != -1) {
+                Message send_msg; 
+                send_msg.send_endpoint(&ele, &par, &related_ele, &p_gid); 
 
-              cp.enqueue(l->target(l->find(r_gid)), send_msg); 
+                cp.enqueue(l->target(l->find(r_gid)), send_msg); 
+              }
             }
           }
 
@@ -706,10 +710,12 @@ void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Mess
     // Tell related elements that the endpoints have been changed
     local_update_endpoint(b, cp, ele_ptr, par_ptr, &gid, related_ele_ptr); 
   } else {
-    Message send_msg; 
-    send_msg.send_endpoint(ele_ptr, par_ptr, related_ele_ptr, &gid); 
+    if(rgid != -1) {
+      Message send_msg; 
+      send_msg.send_endpoint(ele_ptr, par_ptr, related_ele_ptr, &gid); 
 
-    cp.enqueue(l->target(l->find(rgid)), send_msg); 
+      cp.enqueue(l->target(l->find(rgid)), send_msg);   
+    }
   }
 
   // std::cout<<std::endl; 
@@ -947,6 +953,15 @@ void run_union_find(diy::mpi::communicator& world, diy::Master& master, diy::Con
   master.exchange();
   master.foreach(&save_gid);
 
+  for(int i = 0; i < gids.size(); ++i) {
+    Block* b = static_cast<Block*> (master.get(i));
+    for(auto& ele : b->ele2gid) {
+      if(ele.second < 0) {
+        std::cout<<world.rank()<<": gid is negative: "<<ele.first<<" "<<ele.second<<" - Since some elements are missing / not added into blocks. The invalid elements also need to be added. "<<std::endl; 
+      }
+    }
+  }
+  
   if(IEXCHANGE) { // for iexchange
     bool all_done = false;
     while(!all_done) {
@@ -1046,7 +1061,7 @@ void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::Contiguou
   assigner.local_gids(world.rank(), gids);
 
   if(world.rank() == 0) {
-    Block* b = static_cast<Block*> (master.block(0)); 
+    Block* b = static_cast<Block*> (master.get(0)); 
 
     std::map<std::string, std::set<std::string>> root2set; 
 

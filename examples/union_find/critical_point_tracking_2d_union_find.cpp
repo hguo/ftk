@@ -197,7 +197,7 @@ void extract_connected_components(std::vector<std::set<hypermesh::regular_simple
 
   // Connected Component Labeling by using union-find. 
   for(auto& _m_pair : ms) {
-    // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+    // hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
     hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
     _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
@@ -414,10 +414,26 @@ int main(int argc, char **argv)
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   std::vector<size_t> given = {0}; 
-  std::vector<size_t> ghost = {1, 1, 1}; 
+  std::vector<size_t> ghost = {3, 3, 3}; 
 
-  int nblocks = 6; 
+  int nblocks = 4; 
   m.partition(nblocks, given, ghost, ms); 
+
+  // for(auto& _m_pair : ms) {
+  //   auto& _m = std::get<1>(_m_pair); 
+  //   std::cout<<_m.lb(0)<<std::endl; 
+  //   std::cout<<_m.lb(1)<<std::endl; 
+  //   std::cout<<_m.lb(2)<<std::endl; 
+
+  //   std::cout<<_m.ub(0)<<std::endl; 
+  //   std::cout<<_m.ub(1)<<std::endl; 
+  //   std::cout<<_m.ub(2)<<std::endl; 
+
+  //   std::cout<<std::endl; 
+  // }
+
+  // exit(0); 
+
 
   // 1. Organize distributed_memory_parallel into a library
   //   1. Input is a graph data, or input is a set of partitions of lattice

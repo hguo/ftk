@@ -138,56 +138,6 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
   return hess;
 }
 
-void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
-{
-  if (!f.valid()) return; // check if the 2-simplex is valid
-  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
-  float g[3][2], value[3];
-
-  for (int i = 0; i < 3; i ++) {
-    g[i][0] = grad(0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    g[i][1] = grad(1, vertices[i][0], vertices[i][1], vertices[i][2]);
-    value[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
-  }
- 
-  float mu[3];
-  bool succ = ftk::inverse_lerp_s2v2(g, mu);
-  float val = ftk::lerp_s2(value, mu);
-  
-  if (!succ) return;
-
-  float hessxx[3], hessxy[3], hessyy[3];
-  for (int i = 0; i < vertices.size(); i ++) {
-    hessxx[i] = hess(0, 0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    hessxy[i] = hess(0, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
-    hessyy[i] = hess(1, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
-  }
-  float hxx = ftk::lerp_s2(hessxx, mu),
-        hxy = ftk::lerp_s2(hessxy, mu), 
-        hyy = ftk::lerp_s2(hessyy, mu);
-  float eig[2];
-  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
-
-  if (eig[0] < 0 && eig[1] < 0) { 
-    float X[3][3];
-    for (int i = 0; i < vertices.size(); i ++)
-      for (int j = 0; j < 3; j ++)
-        X[i][j] = vertices[i][j];
-
-    intersection_t I;
-    I.eid = f.to_integer();
-    ftk::lerp_s2v3(X, mu, I.x);
-    I.val = ftk::lerp_s2(value, mu);
-
-    {
-      std::lock_guard<std::mutex> guard(mutex);
-      intersections[f] = I;
-      // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
-    }
-  }
-}
-
-
 void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t;
@@ -199,14 +149,13 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   local_blocks.push_back(b); 
 
   auto& _m_pair = ms[world.rank()]; 
-  hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+  hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
   _m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-    if (!f.valid()) return ; // check if the 2-simplex is valid
-
     if(intersections.find(f) != intersections.end()) {
       std::string eid = f.to_string(); 
+
       std::lock_guard<std::mutex> guard(mutex);
       b->add(eid); 
     }
@@ -273,18 +222,17 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   if(world.rank() == 0) { 
     std::map<std::string, element_t> id2ele; 
-    m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-      if (!f.valid()) return ; // check if the 2-simplex is valid
-
-      std::lock_guard<std::mutex> guard(mutex);
-      id2ele.insert(std::make_pair(f.to_string(), f));
-    });
+    for(auto& intersection : intersections) {
+      id2ele.insert(std::make_pair(intersection.first.to_string(), intersection.first));
+    }
 
     // Convert element IDs to elements
     for(auto& comp_str : components_str) {
       std::set<element_t> comp; 
       for(auto& ele_id : comp_str) {
-        comp.insert(id2ele.find(ele_id)->second); 
+        if(id2ele.find(ele_id) != id2ele.end()) {
+          comp.insert(id2ele.find(ele_id)->second); 
+        }
       }
 
       components.push_back(comp); 
@@ -329,6 +277,55 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       }
     }
 
+  }
+}
+
+void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
+{
+  if (!f.valid()) return; // check if the 2-simplex is valid
+  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+  float g[3][2], value[3];
+
+  for (int i = 0; i < 3; i ++) {
+    g[i][0] = grad(0, vertices[i][0], vertices[i][1], vertices[i][2]);
+    g[i][1] = grad(1, vertices[i][0], vertices[i][1], vertices[i][2]);
+    value[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
+  }
+ 
+  float mu[3];
+  bool succ = ftk::inverse_lerp_s2v2(g, mu);
+  float val = ftk::lerp_s2(value, mu);
+  
+  if (!succ) return;
+
+  float hessxx[3], hessxy[3], hessyy[3];
+  for (int i = 0; i < vertices.size(); i ++) {
+    hessxx[i] = hess(0, 0, vertices[i][0], vertices[i][1], vertices[i][2]);
+    hessxy[i] = hess(0, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
+    hessyy[i] = hess(1, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
+  }
+  float hxx = ftk::lerp_s2(hessxx, mu),
+        hxy = ftk::lerp_s2(hessxy, mu), 
+        hyy = ftk::lerp_s2(hessyy, mu);
+  float eig[2];
+  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
+
+  if (eig[0] < 0 && eig[1] < 0) { 
+    float X[3][3];
+    for (int i = 0; i < vertices.size(); i ++)
+      for (int j = 0; j < 3; j ++)
+        X[i][j] = vertices[i][j];
+
+    intersection_t I;
+    I.eid = f.to_integer();
+    ftk::lerp_s2v3(X, mu, I.x);
+    I.val = ftk::lerp_s2(value, mu);
+
+    {
+      std::lock_guard<std::mutex> guard(mutex);
+      intersections[f] = I;
+      // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
+    }
   }
 }
 
@@ -476,7 +473,7 @@ int main(int argc, char **argv)
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   std::vector<size_t> given = {0}; 
-  std::vector<size_t> ghost = {1, 1, 1}; 
+  std::vector<size_t> ghost = {2, 2, 2}; // at least {2, 2, 2}
 
   int nthreads = 1;
   diy::mpi::environment     env(NULL, NULL);
@@ -511,11 +508,11 @@ int main(int argc, char **argv)
       write_dump_file(filename_dump_w);
 
 
-    std::cout<<"Start tracing"<<world.rank()<<std::endl; 
+    std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
 
     trace_intersections(world, master, assigner);
 
-    std::cout<<"Finish tracing"<<world.rank()<<std::endl; 
+    std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
