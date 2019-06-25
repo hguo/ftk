@@ -439,6 +439,14 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
+  int nthreads = 1;
+  diy::mpi::environment     env(NULL, NULL);
+  diy::mpi::communicator    world;
+  
+  int nblocks = world.size(); 
+  diy::Master               master(world, nthreads);
+  diy::ContiguousAssigner   assigner(world.size(), nblocks);
+
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w;
@@ -462,6 +470,10 @@ int main(int argc, char **argv)
     ("d,debug", "enable debugging");
   auto results = options.parse(argc, argv);
 
+
+
+
+
   if (pattern.empty()) { // if the input data is not given, generate a synthetic data for the demo
     scalar = generate_synthetic_data<float>(DW, DH, DT);
   } else { // load the binary data
@@ -470,28 +482,22 @@ int main(int argc, char **argv)
     DT = scalar.dim(2);
   }
 
+  
+
+
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   std::vector<size_t> given = {0}; 
   std::vector<size_t> ghost = {2, 2, 2}; // at least {2, 2, 2}
 
-  int nthreads = 1;
-  diy::mpi::environment     env(NULL, NULL);
-  diy::mpi::communicator    world;
-  
-  int nblocks = world.size(); 
-  diy::Master               master(world, nthreads);
-  diy::ContiguousAssigner   assigner(world.size(), nblocks);
-
   m.partition(nblocks, given, ghost, ms); 
 
-  // 1. Organize distributed_memory_parallel into a library
-  //   1. Input is a graph data, or input is a set of partitions of lattice
-  //   2. Output is the union-find results
-
   // Step 1: Then, separate the partitions into blocks, each block stores a partition, and perform distributed union-find? 
-  // Step 2: Integrate union-find results into a root processor
-  // Step 3: Perform tracing? 
+  
+
+
+
+
 
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);

@@ -434,15 +434,6 @@ int main(int argc, char **argv)
 
   // exit(0); 
 
-
-  // 1. Organize distributed_memory_parallel into a library
-  //   1. Input is a graph data, or input is a set of partitions of lattice
-  //   2. Output is the union-find results
-
-  // Step 1: Then, separate the partitions into blocks, each block stores a partition, and perform distributed union-find? 
-  // Step 2: Integrate union-find results into a root processor
-  // Step 3: Perform tracing? 
-
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);
   } else { // otherwise do the analysis
