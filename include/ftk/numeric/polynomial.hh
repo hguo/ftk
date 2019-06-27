@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <cmath>
+#include <limits>
 
 namespace ftk {
 
