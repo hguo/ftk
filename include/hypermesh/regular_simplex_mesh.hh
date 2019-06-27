@@ -13,6 +13,7 @@
 #include <thread>
 #include <cassert>
 #include <iterator>
+#include <functional>
 #include <hypermesh/regular_lattice.hh>
 
 #if FTK_HAVE_TBB
