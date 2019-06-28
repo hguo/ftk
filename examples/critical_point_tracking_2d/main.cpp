@@ -328,6 +328,21 @@ void write_dump_file(const std::string& f)
   ofs.close();
 }
 
+void write_cpt_file(const std::string& f)
+{
+  std::vector<float> vector; 
+  for (const auto &i : intersections) {
+    vector.push_back(i.second.x[0]);
+    vector.push_back(i.second.x[1]);
+    vector.push_back(i.second.x[2]);
+    vector.push_back(i.second.val);
+  }
+
+  ofstream ofs(f, ios::out | ios::binary); 
+  ofs.write(reinterpret_cast<char*>(&vector[0]), vector.size()*sizeof(float)); 
+  ofs.close();
+}
+
 #if FTK_HAVE_VTK
 void start_vtk_window()
 {
@@ -373,6 +388,7 @@ int main(int argc, char **argv)
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w;
+  std::string filename_cpt_w;
   float threshold;
   bool show_qt = false, show_vtk = false;
 
@@ -384,6 +400,7 @@ int main(int argc, char **argv)
     ("write-dump", "write dump file", cxxopts::value<std::string>(filename_dump_w))
     ("read-traj", "read traj file", cxxopts::value<std::string>(filename_traj_r))
     ("write-traj", "write traj file", cxxopts::value<std::string>(filename_traj_w))
+    ("write-cpt", "write critical point file", cxxopts::value<std::string>(filename_cpt_w))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
@@ -413,6 +430,9 @@ int main(int argc, char **argv)
       hess = derive_hessians2(grad);
       scan_intersections();
     }
+
+    if(!filename_cpt_w.empty())
+      write_cpt_file(filename_cpt_w);
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
