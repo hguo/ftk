@@ -187,7 +187,13 @@ int main(int argc, char* argv[]) {
 
   // get_connected_components
   std::vector<Block*> local_blocks; 
-  local_blocks.push_back(blocks[world.rank()]); 
+  std::vector<int> gids;                     // global ids of local blocks
+  assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
+  for (unsigned i = 0; i < gids.size(); ++i) {
+    int gid = gids[i];
+    local_blocks.push_back(blocks[gid]); 
+  }
+
   run_union_find(world, master, assigner, local_blocks); 
 
   std::vector<std::set<std::string>> ele_sets;
