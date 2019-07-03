@@ -152,7 +152,19 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
-  _m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+    if (!f.valid()) return; // check if the 2-simplex is valid
+
+    // If the corner of the face is contained by the core mesh _m, we consider the element belongs to _m
+    bool flag = true;  
+    for (int i = 0; i < f.corner.size(); ++i){
+      if (f.corner[i] < _m.lb(i) || f.corner[i] > _m.ub(i)) {
+        flag = false; 
+        break ;
+      }
+    }
+    if(!flag) return ;
+
     if(intersections.find(f) != intersections.end()) {
       std::string eid = f.to_string(); 
 
@@ -163,6 +175,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   // Connected Component Labeling by using union-find. 
   _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+    if (!f.valid()) return; // check if the 3-simplex is valid
+
     const auto elements = f.sides();
     std::set<std::string> features; 
 
@@ -213,8 +227,12 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
   });
 
+  // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
+
   // get_connected_components
-  run_union_find(world, master, assigner, local_blocks); 
+  exec_distributed_union_find(world, master, assigner, local_blocks); 
+
+  // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // Get disjoint sets of element IDs
   std::vector<std::set<std::string>> components_str;
@@ -244,8 +262,13 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 {
   typedef hypermesh::regular_simplex_mesh_element element_t; 
 
+
+  // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
+
   std::vector<std::set<element_t>> cc; // connected components 
   extract_connected_components(world, master, assigner, cc);
+
+  // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
 
   if(world.rank() == 0) {
     // Convert connected components to geometries
@@ -440,7 +463,7 @@ void start_vtk_window()
 int main(int argc, char **argv)
 {
   int nthreads = 1;
-  diy::mpi::environment     env(NULL, NULL);
+  diy::mpi::environment     env(0, 0); // env(NULL, NULL)
   diy::mpi::communicator    world;
   
   int nblocks = world.size(); 
@@ -471,9 +494,6 @@ int main(int argc, char **argv)
   auto results = options.parse(argc, argv);
 
 
-
-
-
   if (pattern.empty()) { // if the input data is not given, generate a synthetic data for the demo
     scalar = generate_synthetic_data<float>(DW, DH, DT);
   } else { // load the binary data
@@ -482,23 +502,17 @@ int main(int argc, char **argv)
     DT = scalar.dim(2);
   }
 
-  
-
-
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
-  std::vector<size_t> given = {0}; 
-  std::vector<size_t> ghost = {2, 2, 2}; // at least {2, 2, 2}
+  std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
+  // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space //{0} 
+  
+  std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
 
   m.partition(nblocks, given, ghost, ms); 
 
   // Step 1: Then, separate the partitions into blocks, each block stores a partition, and perform distributed union-find? 
   
-
-
-
-
-
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);
   } else { // otherwise do the analysis
@@ -507,18 +521,23 @@ int main(int argc, char **argv)
     } else { // derive gradients and do the sweep
       grad = derive_gradients2(scalar);
       hess = derive_hessians2(grad);
+
+      // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
+
       scan_intersections(world.rank());
+
+      // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
 
 
-    std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
+    // std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
 
     trace_intersections(world, master, assigner);
 
-    std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
+    // std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
@@ -548,7 +567,7 @@ int main(int argc, char **argv)
       fprintf(stderr, "Error: the executable is not compiled with VTK\n");
   #endif
     } else {
-      print_trajectories();
+      // print_trajectories();
     }
   }
 

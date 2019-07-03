@@ -424,6 +424,7 @@ void save_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
   // std::cout<<_pair.first<<" - "<<_pair.second<<std::endl; 
 
   b->ele2gid[ele] = gid_ele; 
+  b->nchanges += 1;
 
   // std::cout<<"i-"<<i<<'-'<<in[i]<<std::endl;
   // int t; 
@@ -534,6 +535,7 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
           }
         }
 
+        b->nchanges += 1; 
         children.clear(); 
       }
     }
@@ -613,18 +615,14 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
     if(r_p_gid == gid) {
       local_update_endpoint(b, cp, ele, par, pgid, parent_related_ele); 
     } else {
-      if(r_p_gid != -1) {
-        Message send_msg; 
-        send_msg.send_endpoint(ele, par, parent_related_ele, pgid); 
+      Message send_msg; 
+      send_msg.send_endpoint(ele, par, parent_related_ele, pgid); 
 
-        // std::cout<<"!!!"<<*ele_ptr<<" - "<<*par_ptr<<" - "<<parent_related_ele<<" - "<<*pgid_ptr<<std::endl; 
+      // std::cout<<"!!!"<<*ele_ptr<<" - "<<*par_ptr<<" - "<<parent_related_ele<<" - "<<*pgid_ptr<<std::endl; 
 
-        cp.enqueue(l->target(l->find(r_p_gid)), send_msg); 
-        // This message should get completed, so we set a change to avoid the algorithm ends. 
-        b->nchanges += 1;
-      }
+      cp.enqueue(l->target(l->find(r_p_gid)), send_msg); 
     }
-  } else { // To remove possibe side-effects, we store the edge. 
+  } else { // To remove possible side-effects, we store the edge. 
     b->related_elements[related_ele].push_back(par); 
   }
 }
@@ -639,6 +637,7 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
   for(std::string ele : b->eles) {
     if(!b->is_root(ele)) {
       auto src = &b->related_elements[ele]; 
+      std::vector<std::string> cache; 
 
       if(src->size() > 0) {
         std::string par = b->parent(ele); 
@@ -649,29 +648,33 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
           int p_gid = gid; 
 
           auto dest = &b->related_elements[par]; 
-          dest->insert(
-            dest->end(),
-            src->begin(),
-            src->end()
-          );
-          b->nchanges += src->size();
+          // dest->insert(
+          //   dest->end(),
+          //   src->begin(),
+          //   src->end()
+          // );
 
           // tell related elements, the end point has changed to its parent
-            // Since has changed locally, the message will one send once. 
+            // Since has changed locally, the message will only send once. 
 
           for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
             std::string related_ele = *ite_related_ele; 
             int r_gid = b->ele2gid[related_ele]; 
 
+            if(r_gid == -1) {
+              cache.push_back(related_ele); 
+              continue ;
+            }
+
+            dest->push_back(related_ele); 
+
             if(r_gid == gid) {
               local_update_endpoint(b, cp, ele, par, p_gid, related_ele); 
             } else {
-              if(r_gid != -1) {
-                Message send_msg; 
-                send_msg.send_endpoint(ele, par, related_ele, p_gid); 
+              Message send_msg; 
+              send_msg.send_endpoint(ele, par, related_ele, p_gid); 
 
-                cp.enqueue(l->target(l->find(r_gid)), send_msg); 
-              }
+              cp.enqueue(l->target(l->find(r_gid)), send_msg); 
             }
           }
 
@@ -681,6 +684,11 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
           int gid = b->ele2gid[par]; 
 
           for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
+            if(b->ele2gid[*ite_related_ele] == -1) {
+              cache.push_back(*ite_related_ele); 
+              continue ;
+            }
+
             Message send_msg; 
             std::string related_ele = *ite_related_ele; 
             send_msg.send_union(ele, par, related_ele, b->ele2gid[related_ele]); 
@@ -690,7 +698,13 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
         }
 
+        b->nchanges += 1; //src->size();
         src->clear(); 
+        src->insert(
+          src->end(),
+          cache.begin(),
+          cache.end()
+        );
 
       }
     }
@@ -726,12 +740,10 @@ void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Mess
     // Tell related elements that the endpoints have been changed
     local_update_endpoint(b, cp, ele, par, gid, related_ele); 
   } else {
-    if(rgid != -1) {
-      Message send_msg; 
-      send_msg.send_endpoint(ele, par, related_ele, gid); 
+    Message send_msg; 
+    send_msg.send_endpoint(ele, par, related_ele, gid); 
 
-      cp.enqueue(l->target(l->find(rgid)), send_msg);   
-    }
+    cp.enqueue(l->target(l->find(rgid)), send_msg);   
   }
 
   // std::cout<<std::endl; 
@@ -754,26 +766,32 @@ void distributed_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp,
 
 
 void local_computation(Block* b, const diy::Master::ProxyWithLink& cp) {
+
+
   if(ISDEBUG) {
-    std::cout<<"Start Local Computation. "<<std::endl; 
+    int gid = cp.gid();
+    std::cout<<"Start Local Computation. "<<"gid: "<<gid<<std::endl; 
   }
 
   unite_once(b, cp); 
 
   if(ISDEBUG) {
-    std::cout<<"Finish unite once. "<<std::endl; 
+    int gid = cp.gid();
+    std::cout<<"Finish unite once. "<<"gid: "<<gid<<std::endl; 
   }
 
   compress_path(b, cp); 
 
   if(ISDEBUG) {
-    std::cout<<"Finish compress_path. "<<std::endl; 
+    int gid = cp.gid();
+    std::cout<<"Finish compress_path. "<<"gid: "<<gid<<std::endl; 
   }
 
   pass_unions(b, cp); 
 
   if(ISDEBUG) {
-    std::cout<<"Finish pass_unions. "<<std::endl; 
+    int gid = cp.gid();
+    std::cout<<"Finish pass_unions. "<<"gid: "<<gid<<std::endl; 
   }
 }
 
@@ -840,8 +858,17 @@ void total_changes(Block* b, const diy::Master::ProxyWithLink& cp) {
 bool union_find_iexchange(Block* b, const diy::Master::ProxyWithLink& cp) {
   b->nchanges = 0; 
 
+  int gid = cp.gid();
+
+  // std::cout<<"gid: "<<gid<<"=====Phase 1============================"<<std::endl; 
+
   receive_msg(b, cp); 
+
+  // std::cout<<"gid: "<<gid<<"=====Phase 2============================"<<std::endl; 
+
   local_computation(b, cp); 
+
+  // std::cout<<"gid: "<<gid<<"=====Phase 3============================"<<std::endl; 
   
   if(ISDEBUG) {
     int gid = cp.gid(); 
@@ -971,13 +998,13 @@ void import_data(std::vector<Block*>& blocks, diy::Master& master, diy::Contiguo
   }
 }
 
-void run_union_find(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<Block*>& blocks) {
+void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<Block*>& blocks) {
 
   std::vector<int> gids;                     // global ids of local blocks
   assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
 
   import_data(blocks, master, assigner, gids); 
-  
+
   // master.foreach(&query_gid);
   // // master.execute(); 
   // master.exchange();
@@ -985,9 +1012,9 @@ void run_union_find(diy::mpi::communicator& world, diy::Master& master, diy::Con
   // master.exchange();
   // master.foreach(&save_gid);
 
-  if(ISDEBUG) {
-    std::cout<<"Finish Gid Query"<<std::endl; 
-  }
+  // if(ISDEBUG) {
+  //   std::cout<<"Finish Gid Query"<<std::endl; 
+  // }
 
   // for(int i = 0; i < gids.size(); ++i) {
   //   Block* b = static_cast<Block*> (master.get(i));
@@ -999,8 +1026,17 @@ void run_union_find(diy::mpi::communicator& world, diy::Master& master, diy::Con
   // }
   
   if(IEXCHANGE) { // for iexchange
+      MPI_Barrier(world); 
+      double start = MPI_Wtime();
+
       master.foreach(&query_gid);
+
+      // std::cout<<"Finish Query Gid: "<<world.rank()<<std::endl;
+
       iexchange_process(master);  
+
+      double end = MPI_Wtime();
+      std::cout << "The process took " << end - start << " seconds to run." << std::endl;
   } else { // for exchange
     bool all_done = false;
     while(!all_done) {

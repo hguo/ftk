@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
     local_blocks.push_back(blocks[gid]); 
   }
 
-  run_union_find(world, master, assigner, local_blocks); 
+  exec_distributed_union_find(world, master, assigner, local_blocks); 
 
   std::vector<std::set<std::string>> ele_sets;
   get_sets(world, master, assigner, ele_sets); 
