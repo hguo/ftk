@@ -42,7 +42,7 @@ struct distributed_union_find
 
   void set_parent(IdType i, IdType par) {
     if(!has(i)) {
-      std::cout<< "No element. " <<std::endl;
+      std::cout<< "No element set_parent(). " <<std::endl;
       exit(0); 
     }
 
@@ -51,7 +51,7 @@ struct distributed_union_find
 
   void add_child(IdType par, IdType ele) {
     if(!has(par)) {
-      std::cout<< "No element parent. " <<std::endl;
+      std::cout<< "No element parent add_child(). " <<std::endl;
       exit(0); 
     }
 
@@ -66,7 +66,7 @@ struct distributed_union_find
 
   IdType parent(IdType i) {
     if(!has(i)) {
-      std::cout<< "No element parent. " <<std::endl;
+      std::cout<< "No element parent parent(). " <<std::endl;
       exit(0); 
     }
 
@@ -75,7 +75,7 @@ struct distributed_union_find
 
   std::vector<IdType>& children(IdType i) {
     if(!has(i)) {
-      std::cout<< "No element child. " <<std::endl;
+      std::cout<< "No element child children(). " <<std::endl;
       exit(0); 
     }
 
@@ -84,7 +84,7 @@ struct distributed_union_find
 
   bool is_root(IdType i) {
     if(!has(i)) {
-      std::cout<< "No element. " <<std::endl;
+      std::cout<< "No element is_root(). " <<std::endl;
       exit(0); 
     }
 
@@ -612,6 +612,13 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
     std::string parent_related_ele = b->parent(related_ele); // the parent of the related element
     int r_p_gid = b->ele2gid[parent_related_ele]; 
 
+    if(r_p_gid == -1) {
+      b->related_elements[related_ele].push_back(par); 
+      b->nchanges += 1;
+
+      return ;
+    }
+
     if(r_p_gid == gid) {
       local_update_endpoint(b, cp, ele, par, pgid, parent_related_ele); 
     } else {
@@ -624,6 +631,7 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
     }
   } else { // To remove possible side-effects, we store the edge. 
     b->related_elements[related_ele].push_back(par); 
+    b->nchanges += 1;
   }
 }
 
