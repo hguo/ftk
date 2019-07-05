@@ -47,7 +47,7 @@
 #include <cereal/types/vector.hpp>
 
 
-int nthreads = 1;
+int nthreads;
 
 int DW, DH; // the dimensionality of the data is DW*DH
 int DT; // number of timesteps
@@ -488,9 +488,11 @@ int main(int argc, char **argv)
   diy::mpi::communicator    world;
 
   int nblocks = world.size(); 
-  if(world.size() == 1) {
-    nthreads = std::thread::hardware_concurrency(); 
-  }
+
+  nthreads = 1; 
+  // if(world.size() == 1) {
+  //   nthreads = std::thread::hardware_concurrency(); 
+  // }
 
   diy::Master               master(world, nthreads);
   diy::ContiguousAssigner   assigner(world.size(), nblocks);
