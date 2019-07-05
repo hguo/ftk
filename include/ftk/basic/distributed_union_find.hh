@@ -1080,10 +1080,10 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
   
   if(IEXCHANGE) { // for iexchange
     // #ifndef DIY_NO_MPI
-    #ifdef FTK_HAVE_MPI
-      MPI_Barrier(world); 
-      double start = MPI_Wtime();
-    #endif
+    // #ifdef FTK_HAVE_MPI
+    //   // MPI_Barrier(world); 
+    //   double start = MPI_Wtime();
+    // #endif
 
     master.foreach(&query_gid);
 
@@ -1091,10 +1091,12 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
     iexchange_process(master);  
 
-    #ifdef FTK_HAVE_MPI
-      double end = MPI_Wtime();
-      std::cout << "The process took " << end - start << " seconds to run." << std::endl;
-    #endif
+    // #ifdef FTK_HAVE_MPI
+    //   double end = MPI_Wtime();
+    //   if(world.rank() == 0) {
+    //     std::cout << "Union-Find: " << end - start << " seconds. " << std::endl;
+    //   }
+    // #endif
 
   } else { // for exchange
     bool all_done = false;

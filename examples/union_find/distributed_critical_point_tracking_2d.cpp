@@ -52,6 +52,8 @@ int nthreads;
 int DW, DH; // the dimensionality of the data is DW*DH
 int DT; // number of timesteps
 
+double start, end; 
+
 hypermesh::ndarray<float> scalar, grad, hess;
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
 std::vector<std::tuple<hypermesh::regular_simplex_mesh, hypermesh::regular_simplex_mesh>> ms; 
@@ -231,12 +233,29 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
   }, nthreads);
 
+  #ifdef FTK_HAVE_MPI
+    end = MPI_Wtime();
+    if(world.rank() == 0) {
+      std::cout << "CCL: Init Blocks: " << end - start << " seconds. " << std::endl;
+    }
+    start = end; 
+  #endif
+
   // std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
 
   // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // get_connected_components
   exec_distributed_union_find(world, master, assigner, local_blocks); 
+
+
+  #ifdef FTK_HAVE_MPI
+    end = MPI_Wtime();
+    if(world.rank() == 0) {
+      std::cout << "CCL: Distributed Union-Find: " << end - start << " seconds. " << std::endl;
+    }
+    start = end; 
+  #endif
 
   // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 
@@ -267,18 +286,33 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
       components.push_back(comp); 
     }
-  } 
+  }
+
+  #ifdef FTK_HAVE_MPI
+    end = MPI_Wtime();
+    if(world.rank() == 0) {
+      std::cout << "CCL: Gather Connected Components: " << end - start << " seconds. " << std::endl;
+    }
+    start = end; 
+  #endif 
 }
 
 void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t; 
 
-
   // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
 
   std::vector<std::set<element_t>> cc; // connected components 
   extract_connected_components(world, master, assigner, cc);
+
+  // #ifdef FTK_HAVE_MPI
+  //   end = MPI_Wtime();
+  //   if(world.rank() == 0) {
+  //     std::cout << "Extract connected components: " << end - start << " seconds. " << std::endl;
+  //   }
+  //   start = end; 
+  // #endif
 
   // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
 
@@ -313,6 +347,14 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
     }
 
   }
+
+  #ifdef FTK_HAVE_MPI
+    end = MPI_Wtime();
+    if(world.rank() == 0) {
+      std::cout << "Generate trajectories: " << end - start << " seconds. " << std::endl;
+    }
+    start = end; 
+  #endif
 }
 
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
@@ -512,6 +554,9 @@ int main(int argc, char **argv)
     ("d,debug", "enable debugging");
   auto results = options.parse(argc, argv);
 
+  #ifdef FTK_HAVE_MPI
+    start = MPI_Wtime();
+  #endif
 
   if (pattern.empty()) { // if the input data is not given, generate a synthetic data for the demo
     scalar = generate_synthetic_data<float>(DW, DH, DT);
@@ -531,10 +576,19 @@ int main(int argc, char **argv)
   m.partition(nblocks, given, ghost, ms); 
 
   intersections = &b->intersections; 
+
+  #ifdef FTK_HAVE_MPI
+    end = MPI_Wtime();
+    if(world.rank() == 0) {
+      std::cout << "Init Data: " << end - start << " seconds. " << std::endl;
+    }
+    start = end; 
+  #endif
   
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);
   } else { // otherwise do the analysis
+
     if (!filename_dump_r.empty()) { // if the dump file is given, skill the sweep step; otherwise do sweep-and-trace
       read_dump_file(filename_dump_r);
     } else { // derive gradients and do the sweep
@@ -544,6 +598,14 @@ int main(int argc, char **argv)
       // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
 
       scan_intersections(world.rank());
+
+      #ifdef FTK_HAVE_MPI
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+          std::cout << "Scan Critical Points: " << end - start << " seconds. " << std::endl;
+        }
+        start = end; 
+      #endif
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
