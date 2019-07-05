@@ -155,6 +155,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
+  std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
+
   _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
     if (!f.valid()) return; // check if the 2-simplex is valid
 
@@ -175,7 +177,15 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
   }, nthreads);
 
+  std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
+
+  
+
   // Connected Component Labeling by using union-find. 
+
+
+  std::cout<<"Start Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
+
   _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
     if (!f.valid()) return; // check if the 3-simplex is valid
 
@@ -228,6 +238,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       }
     }
   }, nthreads);
+
+  std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
 
   std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
