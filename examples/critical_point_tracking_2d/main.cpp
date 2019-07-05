@@ -338,7 +338,7 @@ void write_cpt_file(const std::string& f)
     vector.push_back(i.second.val);
   }
 
-  ofstream ofs(f, ios::out | ios::binary); 
+  std::ofstream ofs(f, ios::out | ios::binary); 
   ofs.write(reinterpret_cast<char*>(&vector[0]), vector.size()*sizeof(float)); 
   ofs.close();
 }
