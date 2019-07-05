@@ -210,6 +210,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       if(features_in_block.size() > 1) {
         // When features are local, we just need to relate to the first feature element
 
+        std::lock_guard<std::mutex> guard(mutex);
         for(std::set<std::string>::iterator ite_i = std::next(features_in_block.begin(), 1); ite_i != features_in_block.end(); ++ite_i) {
           b->add_related_element(*(features_in_block.begin()), *ite_i); 
           b->add_related_element(*ite_i, *(features_in_block.begin())); 
@@ -230,6 +231,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       // When features are across processors, we need to relate all local feature elements to all remote feature elements
       for(auto& feature: features) {
         if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
+          
           std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
           for(auto& feature_in_block : features_in_block) {
             b->add_related_element(feature_in_block, feature); 
