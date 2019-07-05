@@ -155,7 +155,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
-  std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
+  // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
   _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
     if (!f.valid()) return; // check if the 2-simplex is valid
@@ -177,14 +177,14 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
   }, nthreads);
 
-  std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
+  // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
   
 
   // Connected Component Labeling by using union-find. 
 
 
-  std::cout<<"Start Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
+  // std::cout<<"Start Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
 
   _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
     if (!f.valid()) return; // check if the 3-simplex is valid
@@ -241,14 +241,14 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
   }, nthreads);
 
-  std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
+  // std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
 
-  std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
+  // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // get_connected_components
   exec_distributed_union_find(world, master, assigner, local_blocks); 
 
-  std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
+  // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // Get disjoint sets of element IDs
   std::vector<std::set<std::string>> components_str;
@@ -285,12 +285,12 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   typedef hypermesh::regular_simplex_mesh_element element_t; 
 
 
-  std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
+  // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
 
   std::vector<std::set<element_t>> cc; // connected components 
   extract_connected_components(world, master, assigner, cc);
 
-  std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
+  // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
 
   if(world.rank() == 0) {
     // Convert connected components to geometries
@@ -547,22 +547,22 @@ int main(int argc, char **argv)
       grad = derive_gradients2(scalar);
       hess = derive_hessians2(grad);
 
-      std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
+      // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
 
       scan_intersections(world.rank());
 
-      std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
+      // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
 
 
-    std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
+    // std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
 
     trace_intersections(world, master, assigner);
 
-    std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
+    // std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
