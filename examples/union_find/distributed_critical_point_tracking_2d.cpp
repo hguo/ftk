@@ -1,5 +1,6 @@
 #include <fstream>
 #include <mutex>
+#include <thread>
 #include <cassert>
 #include <cxxopts.hpp>
 
@@ -46,6 +47,8 @@
 #include <cereal/types/vector.hpp>
 
 
+int nthreads = 1;
+
 int DW, DH; // the dimensionality of the data is DW*DH
 int DT; // number of timesteps
 
@@ -65,7 +68,7 @@ struct intersection_t {
   }
 };
  
-std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
+std::map<std::string, intersection_t> intersections;
 
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
@@ -165,13 +168,12 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
     if(!flag) return ;
 
-    if(intersections.find(f) != intersections.end()) {
-      std::string eid = f.to_string(); 
-
+    std::string eid = f.to_string(); 
+    if(intersections.find(eid) != intersections.end()) {
       std::lock_guard<std::mutex> guard(mutex);
       b->add(eid); 
     }
-  });
+  }, nthreads);
 
   // Connected Component Labeling by using union-find. 
   _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
@@ -181,8 +183,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     std::set<std::string> features; 
 
     for (const auto& ele : elements) {
-      if(intersections.find(ele) != intersections.end()) {
-        std::string eid = ele.to_string(); 
+      std::string eid = ele.to_string(); 
+      if(intersections.find(eid) != intersections.end()) {
         features.insert(eid); 
       }
     }
@@ -225,7 +227,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
         }
       }
     }
-  });
+  }, nthreads);
 
   // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
@@ -240,9 +242,15 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   if(world.rank() == 0) { 
     std::map<std::string, element_t> id2ele; 
-    for(auto& intersection : intersections) {
-      id2ele.insert(std::make_pair(intersection.first.to_string(), intersection.first));
-    }
+    m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+      if (!f.valid()) return; // check if the 2-simplex is valid
+
+      std::string eid = f.to_string(); 
+      if(intersections.find(eid) != intersections.end()) {
+        std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+        id2ele.insert(std::make_pair(f.to_string(), f));  
+      }
+    }, nthreads);
 
     // Convert element IDs to elements
     for(auto& comp_str : components_str) {
@@ -290,7 +298,7 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       for (int j = 0; j < linear_graphs.size(); j ++) {
         std::vector<float> mycurve, mycolors;
         for (int k = 0; k < linear_graphs[j].size(); k ++) {
-          auto p = intersections[linear_graphs[j][k]];
+          auto p = intersections[linear_graphs[j][k].to_string()];
           mycurve.push_back(p.x[0]); //  / (DW-1));
           mycurve.push_back(p.x[1]); //  / (DH-1));
           mycurve.push_back(p.x[2]); //  / (DT-1));
@@ -346,7 +354,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
     {
       std::lock_guard<std::mutex> guard(mutex);
-      intersections[f] = I;
+      intersections[f.to_string()] = I;
       // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
     }
   }
@@ -355,13 +363,13 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 void scan_intersections(int rank) 
 {
   if(rank == 0) { // for root, we need all intersections information, probably can use "gather" for optimization
-    m.element_for(2, check_simplex);
+    m.element_for(2, check_simplex, nthreads);
   } else {
     auto& _m_pair = ms[rank]; 
     // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
     hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
-    _m_ghost.element_for(2, check_simplex); // iterate over all 2-simplices
+    _m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
   }
 }
 
@@ -404,7 +412,7 @@ void read_dump_file(const std::string& f)
 
   for (const auto &i : vector) {
     hypermesh::regular_simplex_mesh_element e(m, 2, i.eid);
-    intersections[e] = i;
+    intersections[e.to_string()] = i;
   }
 }
 
@@ -462,11 +470,14 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
-  int nthreads = 1;
   diy::mpi::environment     env(0, 0); // env(NULL, NULL)
   diy::mpi::communicator    world;
-  
+
   int nblocks = world.size(); 
+  if(world.size() == 1) {
+    nthreads = std::thread::hardware_concurrency(); 
+  }
+
   diy::Master               master(world, nthreads);
   diy::ContiguousAssigner   assigner(world.size(), nblocks);
 

@@ -464,11 +464,11 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
         // Unite with an element with larger id or smaller id is better? 
           // Here is a larger id
 
-        // if(related_ele > ele) {
-        // if(std::stoi(related_ele) > std::stoi(ele)) {
+        if(related_ele < ele) {
+        // if(std::stoi(related_ele) < std::stoi(ele)) {
 
-        if(rgid < gid || (rgid == gid && related_ele < ele)) {
-        // if(rgid > gid || (rgid == gid && std::stoi(related_ele) > std::stoi(ele))) {
+        // if(rgid < gid || (rgid == gid && related_ele < ele)) {
+        // if(rgid < gid || (rgid == gid && std::stoi(related_ele) < std::stoi(ele))) {
           b->set_parent(ele, related_ele); 
 
           if(rgid == gid) {
