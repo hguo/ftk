@@ -229,12 +229,12 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
   }, nthreads);
 
-  // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
+  std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // get_connected_components
   exec_distributed_union_find(world, master, assigner, local_blocks); 
 
-  // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
+  std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // Get disjoint sets of element IDs
   std::vector<std::set<std::string>> components_str;
@@ -271,12 +271,12 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   typedef hypermesh::regular_simplex_mesh_element element_t; 
 
 
-  // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
+  std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
 
   std::vector<std::set<element_t>> cc; // connected components 
   extract_connected_components(world, master, assigner, cc);
 
-  // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
+  std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
 
   if(world.rank() == 0) {
     // Convert connected components to geometries
@@ -533,22 +533,22 @@ int main(int argc, char **argv)
       grad = derive_gradients2(scalar);
       hess = derive_hessians2(grad);
 
-      // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
+      std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
 
       scan_intersections(world.rank());
 
-      // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
+      std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
 
 
-    // std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
+    std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
 
     trace_intersections(world, master, assigner);
 
-    // std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
+    std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
