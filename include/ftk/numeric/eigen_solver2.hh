@@ -46,6 +46,14 @@ inline int solve_eigenvalues2x2(const T M[2][2], T eig[2])
 }
 
 template <typename T>
+inline T solve_eigenvalues2x2(const T M[2][2], std::complex<T> eig[2])
+{
+  T P[3];
+  characteristic_polynomial_2x2(M, P);
+  return solve_quadratic(P, eig); // returns delta
+}
+
+template <typename T>
 inline void solve_eigenvectors2x2(const T M[2][2], int n, const T eig[2], T eigvecs[2][2])
 {
   for (int i = 0; i < n; i ++) {
