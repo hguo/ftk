@@ -57,18 +57,9 @@ hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
 std::vector<std::tuple<hypermesh::regular_simplex_mesh, hypermesh::regular_simplex_mesh>> ms; 
 
 std::mutex mutex;
-
-struct intersection_t {
-  size_t eid;
-  float x[3]; // the spacetime coordinates of the trajectory
-  float val; // scalar value at the intersection
-
-  template <class Archive> void serialize(Archive & ar) {
-    ar(eid, x[0], x[1], x[2], val);
-  }
-};
  
-std::map<std::string, intersection_t> intersections;
+Block* b = new Block(); 
+std::map<std::string, intersection_t>* intersections;
 
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
@@ -148,7 +139,6 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   // Initialization
     // Init union-find blocks
   std::vector<Block*> local_blocks;
-  Block* b = new Block(); 
   local_blocks.push_back(b); 
 
   auto& _m_pair = ms[world.rank()]; 
@@ -171,7 +161,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     if(!flag) return ;
 
     std::string eid = f.to_string(); 
-    if(intersections.find(eid) != intersections.end()) {
+    if(intersections->find(eid) != intersections->end()) {
       std::lock_guard<std::mutex> guard(mutex);
       b->add(eid); 
     }
@@ -194,7 +184,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
     for (const auto& ele : elements) {
       std::string eid = ele.to_string(); 
-      if(intersections.find(eid) != intersections.end()) {
+      if(intersections->find(eid) != intersections->end()) {
         features.insert(eid); 
       }
     }
@@ -260,7 +250,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       if (!f.valid()) return; // check if the 2-simplex is valid
 
       std::string eid = f.to_string(); 
-      if(intersections.find(eid) != intersections.end()) {
+      if(intersections->find(eid) != intersections->end()) {
         std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
         id2ele.insert(std::make_pair(f.to_string(), f));  
       }
@@ -312,7 +302,7 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       for (int j = 0; j < linear_graphs.size(); j ++) {
         std::vector<float> mycurve, mycolors;
         for (int k = 0; k < linear_graphs[j].size(); k ++) {
-          auto p = intersections[linear_graphs[j][k].to_string()];
+          auto p = intersections->at(linear_graphs[j][k].to_string());
           mycurve.push_back(p.x[0]); //  / (DW-1));
           mycurve.push_back(p.x[1]); //  / (DH-1));
           mycurve.push_back(p.x[2]); //  / (DT-1));
@@ -368,7 +358,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
     {
       std::lock_guard<std::mutex> guard(mutex);
-      intersections[f.to_string()] = I;
+      intersections->insert(std::make_pair(f.to_string(), I)); 
       // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
     }
   }
@@ -376,15 +366,17 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
 void scan_intersections(int rank) 
 {
-  if(rank == 0) { // for root, we need all intersections information, probably can use "gather" for optimization
-    m.element_for(2, check_simplex, nthreads);
-  } else {
-    auto& _m_pair = ms[rank]; 
-    // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
-    hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+  // if(rank == 0) { // for root, we need all intersections information, probably can use "gather" for optimization
+  //   m.element_for(2, check_simplex, nthreads);
+  // } else {
+  
+  auto& _m_pair = ms[rank]; 
+  // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+  hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
-    _m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
-  }
+  _m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
+  
+  // }
 }
 
 void print_trajectories()
@@ -426,14 +418,14 @@ void read_dump_file(const std::string& f)
 
   for (const auto &i : vector) {
     hypermesh::regular_simplex_mesh_element e(m, 2, i.eid);
-    intersections[e.to_string()] = i;
+    intersections->at(e.to_string()) = i;
   }
 }
 
 void write_dump_file(const std::string& f)
 {
   std::vector<intersection_t> vector;
-  for (const auto &i : intersections)
+  for (const auto &i : *intersections)
     vector.push_back(i.second);
   
   std::ofstream ofs(f);
@@ -538,7 +530,7 @@ int main(int argc, char **argv)
 
   m.partition(nblocks, given, ghost, ms); 
 
-  // Step 1: Then, separate the partitions into blocks, each block stores a partition, and perform distributed union-find? 
+  intersections = &b->intersections; 
   
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);

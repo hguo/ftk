@@ -104,6 +104,18 @@ private:
 
 // ==========================================================
 
+struct intersection_t {
+  size_t eid;
+  float x[3]; // the spacetime coordinates of the trajectory
+  float val; // scalar value at the intersection
+
+  template <class Archive> void serialize(Archive & ar) {
+    ar(eid, x[0], x[1], x[2], val);
+  }
+};
+
+// ==========================================================
+
 struct Block : public ftk::distributed_union_find<std::string> {
   Block(): nchanges(0), distributed_union_find() { 
     
@@ -125,6 +137,7 @@ public:
   // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
   std::map<std::string, std::vector<std::string>> related_elements; 
   std::map<std::string, int> ele2gid; 
+  std::map<std::string, intersection_t> intersections; 
 
   int nchanges; // # of processed unions per round = valid unions (united unions) + passing unions
 };
@@ -180,6 +193,13 @@ struct Message {
     strs.push_back(std::to_string(gid_parent)); 
   }
 
+  void send_ele_parent_pair(std::pair<std::string, std::string>& pair) {
+    tag = "ele_parent_pair"; 
+
+    strs.push_back(pair.first); 
+    strs.push_back(pair.second); 
+  }
+
   void send_ele_parent_pairs(std::vector<std::pair<std::string, std::string>>& pairs) {
     tag = "ele_parent_pairs"; 
 
@@ -187,6 +207,19 @@ struct Message {
       strs.push_back(pair.first); 
       strs.push_back(pair.second); 
     }
+  }
+
+  void send_intersection(const std::pair<std::string, intersection_t>& pair) {
+    tag = "intersection"; 
+
+    strs.push_back(pair.first); 
+
+    auto& I = pair.second; 
+    strs.push_back(std::to_string(I.eid)); 
+    strs.push_back(std::to_string(I.x[0])); 
+    strs.push_back(std::to_string(I.x[1])); 
+    strs.push_back(std::to_string(I.x[2])); 
+    strs.push_back(std::to_string(I.val)); 
   }
 
 
@@ -236,6 +269,9 @@ struct Message {
     parent_gid = std::stoi(strs[3]); 
   }
 
+  void receive_ele_parent_pair(std::pair<std::string, std::string>& pair) {
+    pair = std::make_pair(strs[0], strs[1]); 
+  }
 
   void receive_ele_parent_pairs(std::vector<std::pair<std::string, std::string>>& pairs) {
     for(int i = 0; i < strs.size(); i += 2) {
@@ -243,6 +279,16 @@ struct Message {
     }
   }
 
+  void receive_intersection(std::pair<std::string, intersection_t>& pair) {
+    pair.first = strs[0]; 
+
+    intersection_t& I = pair.second; 
+    I.eid = std::stoi(strs[1]);
+    I.x[0] = std::stof(strs[2]); 
+    I.x[1] = std::stof(strs[3]); 
+    I.x[2] = std::stof(strs[4]); 
+    I.val = std::stof(strs[5]); 
+  }
 
 public:
   // 0 - string
@@ -250,7 +296,6 @@ public:
   std::string tag; 
 
   std::vector<std::string> strs; 
-
 }; 
 
 // ==========================================================
@@ -1050,7 +1095,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
       double end = MPI_Wtime();
       std::cout << "The process took " << end - start << " seconds to run." << std::endl;
     #endif
-      
+
   } else { // for exchange
     bool all_done = false;
     while(!all_done) {
@@ -1092,37 +1137,65 @@ bool gather_2_root(Block* b, const diy::Master::ProxyWithLink& cp) {
           Message msg; 
           cp.dequeue(in[i], msg);
 
-          if(msg.tag != "ele_parent_pairs") {
+          if(msg.tag == "ele_parent_pair") {
+            std::pair<std::string, std::string> pair; 
+            msg.receive_ele_parent_pair(pair); 
+
+            b->add(pair.first); 
+            b->set_parent(pair.first, pair.second); 
+          } else if(msg.tag == "intersection") {
+            std::pair<std::string, intersection_t> pair; 
+            msg.receive_intersection(pair);
+
+            b->intersections.insert(pair); 
+          } else {
             std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
           }
 
-          std::vector<std::pair<std::string, std::string>> pairs; 
-          msg.receive_ele_parent_pairs(pairs); 
+          // std::vector<std::pair<std::string, std::string>> pairs; 
+          // msg.receive_ele_parent_pairs(pairs); 
 
           // std::cout<<"Received Pairs: "<<pairs.size()<<std::endl; 
 
-          for(auto& pair : pairs) {
-            b->add(pair.first); 
-            b->set_parent(pair.first, pair.second); 
-          }
+          // for(auto& pair : pairs) {
+          //   b->add(pair.first); 
+          //   b->set_parent(pair.first, pair.second); 
+          // }
+
         }
       }
     }
   } else {
-    std::vector<std::pair<std::string, std::string>> local_pairs; 
+    // std::vector<std::pair<std::string, std::string>> local_pairs; 
 
+    auto& target = l->target(l->find(0));
     for(auto& ele : b->eles) {
       std::string parent = b->parent(ele); 
 
-      local_pairs.push_back(std::make_pair(ele, parent)); 
+      // local_pairs.push_back(std::make_pair(ele, parent)); 
+
+      std::pair<std::string, std::string> local_pair(ele, parent); 
+
+      Message send_msg; 
+      send_msg.send_ele_parent_pair(local_pair); 
+
+      cp.enqueue(target, send_msg); 
     }
 
-    Message send_msg; 
-    send_msg.send_ele_parent_pairs(local_pairs); 
+    // Message send_msg; 
+    // send_msg.send_ele_parent_pairs(local_pairs); 
 
     // std::cout<<"Sent Pairs: "<<local_pairs.size()<<std::endl; 
 
-    cp.enqueue(l->target(l->find(0)), send_msg); 
+    // cp.enqueue(target, send_msg); 
+
+
+    for(auto& pair : b->intersections) {
+      Message send_msg; 
+      send_msg.send_intersection(pair); 
+
+      cp.enqueue(target, send_msg); 
+    }
   }
 
   return true;
