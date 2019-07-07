@@ -124,12 +124,18 @@ struct Block : public ftk::distributed_union_find<std::string> {
   // add an element
   void add(std::string ele) {
     distributed_union_find::add(ele); 
-    this->ele2gid[ele] = -1;
+
+    if(this->ele2gid.find(ele) == this->ele2gid.end()) {
+      this->ele2gid[ele] = -1;  
+    }
   }
 
   void add_related_element(std::string ele, std::string related_ele) {
       this->related_elements[ele].push_back(related_ele); 
-      this->ele2gid[related_ele] = -1; 
+
+      if(this->ele2gid.find(related_ele) == this->ele2gid.end()) {
+        this->ele2gid[related_ele] = -1; 
+      }
   }
 
 public: 
@@ -332,105 +338,28 @@ void query_gid(Block* b, const diy::Master::ProxyWithLink& cp) {
   
   // Can be optimized more, link by a queue. 
   for(auto it = b->ele2gid.begin(); it != b->ele2gid.end(); ++it) {
-    std::string ele = it->first; 
+    if(it->second == -1) { // If the gid of this element is unknown
 
-    if(b->has(ele)) {
-      it->second = gid; 
-    } else {
-      for (int i = 0; i < l->size(); ++i) {
-        Message msg = Message(); 
-        msg.send_gid_query(ele); 
+      // std::cout<<"A gid is missing: " << it->first<<std::endl; 
 
-        cp.enqueue(l->target(i), msg);
+      std::string ele = it->first; 
+      if(b->has(ele)) {
+        it->second = gid; 
+      } else {
+        for (int i = 0; i < l->size(); ++i) {
+          Message msg = Message(); 
+          msg.send_gid_query(ele); 
+
+          cp.enqueue(l->target(i), msg);
+        }
       }
+
     }
   }
 
   // std::cout<<std::endl; 
 }
 
-// void answer_gid(Block* b, const diy::Master::ProxyWithLink& cp) {
-//   int gid = cp.gid(); 
-//   diy::Link* l = cp.link();
-//   // diy::Master* master = cp.master(); 
-
-//   // std::cout<<"Answer: "<<std::endl; 
-//   // std::cout<<"Block ID: "<<gid<<std::endl; 
-
-//   while(!cp.empty_incoming_queues()) {
-//     // Save unions from other blocks
-//     std::vector<int> in; // gids of incoming neighbors in the link
-//     cp.incoming(in);
-
-//     // for all neighbor blocks
-//     // dequeue data received from this neighbor block in the last exchange
-//     for (unsigned i = 0; i < in.size(); ++i) {
-//       int from_gid = in[i]; 
-
-//       if(cp.incoming(from_gid)) {
-
-//         Message msg; 
-//         cp.dequeue(from_gid, msg);
-
-//         std::string ele; 
-//         msg.rec_gid_query(ele); 
-
-//         if(b->has(ele)) {
-//           Message send_msg; 
-//           send_msg.send_gid_response(ele, gid); 
-
-//           // std::cout<<ele<<"-";
-//           // std::cout<<gid;
-//           // std::cout<<std::endl; 
-
-//           cp.enqueue(l->target(l->find(from_gid)), send_msg);
-//           // cp.enqueue(l->target(l->find(in[i])), 1);
-//         }
-//       }
-//     }
-//   }
-
-//   // std::cout<<std::endl; 
-// }
-
-// void save_gid(Block* b, const diy::Master::ProxyWithLink& cp) {
-//   int gid = cp.gid(); 
-
-//   // std::cout<<"Save: "<<std::endl; 
-//   // std::cout<<"Block ID: "<<gid<<std::endl; 
-
-//   while(!cp.empty_incoming_queues()) {
-//     // Save unions from other blocks
-//     std::vector<int> in; // gids of incoming neighbors in the link
-//     cp.incoming(in);
-
-//     // for all neighbor blocks
-//     // dequeue data received from this neighbor block in the last exchange
-//     for (unsigned i = 0; i < in.size(); ++i) {
-//       int from_gid = in[i]; 
-
-//       if(cp.incoming(from_gid)) {
-//         Message msg; 
-//         cp.dequeue(from_gid, msg);
-
-//         std::string ele; 
-//         int gid; 
-//         msg.rec_gid_response(ele, gid); 
-
-//         // std::cout<<_pair.first<<" - "<<_pair.second<<std::endl; 
-
-//         b->ele2gid[ele] = gid; 
-
-//         // std::cout<<"i-"<<i<<'-'<<in[i]<<std::endl;
-//         // int t; 
-//         // cp.dequeue(in[i], t); 
-//         // std::cout<<t<<std::endl; 
-//       }
-//     }
-//   }
-
-//   // std::cout<<std::endl; 
-// }
 
 void answer_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, int from_gid) {
   int gid = cp.gid(); 

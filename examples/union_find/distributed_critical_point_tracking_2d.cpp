@@ -61,6 +61,7 @@ std::vector<std::tuple<hypermesh::regular_simplex_mesh, hypermesh::regular_simpl
 std::mutex mutex;
  
 Block* b = new Block(); 
+int gid; // global id of this block / this process
 std::map<std::string, intersection_t>* intersections;
 
 // the output trajectories
@@ -134,6 +135,18 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
   return hess;
 }
 
+bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_simplex_mesh& _m) { 
+  // If the corner of the face is contained by the core mesh _m, we consider the element belongs to _m
+
+  for (int i = 0; i < f.corner.size(); ++i){
+    if (f.corner[i] < _m.lb(i) || f.corner[i] > _m.ub(i)) {
+      return false; 
+    }
+  }
+
+  return true;
+}
+
 void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t;
@@ -143,7 +156,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   std::vector<Block*> local_blocks;
   local_blocks.push_back(b); 
 
-  auto& _m_pair = ms[world.rank()]; 
+  auto& _m_pair = ms[gid]; 
   hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
@@ -151,30 +164,20 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
     if (!f.valid()) return; // check if the 2-simplex is valid
-
-    // If the corner of the face is contained by the core mesh _m, we consider the element belongs to _m
-    bool flag = true;  
-    for (int i = 0; i < f.corner.size(); ++i){
-      if (f.corner[i] < _m.lb(i) || f.corner[i] > _m.ub(i)) {
-        flag = false; 
-        break ;
-      }
-    }
-    if(!flag) return ;
+    if(!is_in_mesh(f, _m)) return ;
 
     std::string eid = f.to_string(); 
     if(intersections->find(eid) != intersections->end()) {
       std::lock_guard<std::mutex> guard(mutex);
       b->add(eid); 
+      b->ele2gid[eid] = gid; 
     }
   }, nthreads);
 
   // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
-  
 
   // Connected Component Labeling by using union-find. 
-
 
   // std::cout<<"Start Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
 
@@ -183,11 +186,13 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
     const auto elements = f.sides();
     std::set<std::string> features; 
+    std::map<std::string, element_t> id2element; 
 
     for (const auto& ele : elements) {
       std::string eid = ele.to_string(); 
       if(intersections->find(eid) != intersections->end()) {
         features.insert(eid); 
+        id2element.insert(std::make_pair(eid, ele)); 
       }
     }
 
@@ -224,6 +229,17 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       for(auto& feature: features) {
         if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
           
+          element_t& ele = id2element.find(feature)->second; 
+          for(int mi = 0; mi < ms.size(); ++mi) {
+            if(mi != gid){ // We know the feature is not in this partition
+              hypermesh::regular_simplex_mesh& __m = std::get<0>(ms[mi]); 
+              if(is_in_mesh(ele, __m)) { // the feature is in mith partition
+                std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+                b->ele2gid[feature] = mi; // Set gid of this feature to mi  
+              }
+            }
+          }
+
           std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
           for(auto& feature_in_block : features_in_block) {
             b->add_related_element(feature_in_block, feature); 
@@ -247,7 +263,6 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   // get_connected_components
   exec_distributed_union_find(world, master, assigner, local_blocks); 
-
 
   #ifdef FTK_HAVE_MPI
     end = MPI_Wtime();
@@ -406,13 +421,13 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   }
 }
 
-void scan_intersections(int rank) 
+void scan_intersections() 
 {
   // if(rank == 0) { // for root, we need all intersections information, probably can use "gather" for optimization
   //   m.element_for(2, check_simplex, nthreads);
   // } else {
   
-  auto& _m_pair = ms[rank]; 
+  auto& _m_pair = ms[gid]; 
   // hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
@@ -531,6 +546,10 @@ int main(int argc, char **argv)
   diy::Master               master(world, nthreads);
   diy::ContiguousAssigner   assigner(world.size(), nblocks);
 
+  std::vector<int> gids; // global ids of local blocks
+  assigner.local_gids(world.rank(), gids);
+  gid = gids[0]; // We just assign one block for each process
+
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w;
@@ -572,9 +591,10 @@ int main(int argc, char **argv)
   // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
   std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
   
-  std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
+  std::vector<size_t> ghost_low = {1, 1, 1}; // at least 1, larger is ok
+  std::vector<size_t> ghost_high = {2, 2, 2}; // at least 2, larger is ok
 
-  m.partition(nblocks, given, ghost, ms); 
+  m.partition(nblocks, given, ghost_low, ghost_high, ms); 
 
   intersections = &b->intersections; 
 
@@ -598,7 +618,7 @@ int main(int argc, char **argv)
 
       // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
 
-      scan_intersections(world.rank());
+      scan_intersections();
 
       #ifdef FTK_HAVE_MPI
         end = MPI_Wtime();
