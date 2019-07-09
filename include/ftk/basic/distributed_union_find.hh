@@ -105,9 +105,10 @@ private:
 // ==========================================================
 
 struct intersection_t {
-  size_t eid;
   float x[3]; // the spacetime coordinates of the trajectory
   float val; // scalar value at the intersection
+  
+  std::string eid; // the "size_t" type is not scalable for element id, for example, when number of elements is large
 
   template <class Archive> void serialize(Archive & ar) {
     ar(eid, x[0], x[1], x[2], val);
@@ -221,11 +222,11 @@ struct Message {
     strs.push_back(pair.first); 
 
     auto& I = pair.second; 
-    strs.push_back(std::to_string(I.eid)); 
     strs.push_back(std::to_string(I.x[0])); 
     strs.push_back(std::to_string(I.x[1])); 
     strs.push_back(std::to_string(I.x[2])); 
     strs.push_back(std::to_string(I.val)); 
+    strs.push_back(I.eid); 
   }
 
 
@@ -289,16 +290,14 @@ struct Message {
     pair.first = strs[0]; 
 
     intersection_t& I = pair.second; 
-    I.eid = std::stoi(strs[1]);
-    I.x[0] = std::stof(strs[2]); 
-    I.x[1] = std::stof(strs[3]); 
-    I.x[2] = std::stof(strs[4]); 
-    I.val = std::stof(strs[5]); 
+    I.x[0] = std::stof(strs[1]); 
+    I.x[1] = std::stof(strs[2]); 
+    I.x[2] = std::stof(strs[3]); 
+    I.val = std::stof(strs[4]); 
+    I.eid = strs[5];
   }
 
 public:
-  // 0 - string
-  // 1 - vectors of string
   std::string tag; 
 
   std::vector<std::string> strs; 
@@ -435,8 +434,8 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
           continue; 
         }
 
-        // Unite with an element with larger id or smaller id is better? 
-          // Here is a larger id
+        // Unite a root element with larger id or smaller id is better? 
+          // Here is a smaller id
 
         if(related_ele < ele) {
         // if(std::stoi(related_ele) < std::stoi(ele)) {
@@ -479,13 +478,29 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
 
       if(children.size() > 0) {
         std::string grandparent = b->parent(parent); 
+        bool is_local_grandparent = true; 
+        int gid_grandparent = b->ele2gid[grandparent]; 
+        
+        if(!b->has(grandparent)) { // if the grandparent is not in this block
+          is_local_grandparent = false ;
+          if(gid_grandparent == -1) { // if currently the gid of grandparent is not available
+            continue ;
+          }
+        }
+
+        std::vector<std::string> cache; 
         for(auto child : children) {
           
           // Set child's parent to grandparent
           if(b->has(child)) {
             b->set_parent(child, grandparent); 
-          } else {
+          } else { // if the child is not in this block
             int gid_child = b->ele2gid[child]; 
+
+            if(gid_child == -1) { // if currently the gid of child is not available
+              cache.push_back(child); 
+              continue ;
+            }
 
             Message send_msg; 
             send_msg.send_gparent(child, grandparent, b->ele2gid[grandparent]); 
@@ -496,10 +511,9 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
           }
 
           // Add child to grandparent's child list
-          if(b->has(grandparent)) {
+          if(is_local_grandparent) {
             b->add_child(grandparent, child); 
           } else {
-            int gid_grandparent = b->ele2gid[grandparent]; 
             int gid_child = b->ele2gid[child]; 
 
             Message send_msg; 
@@ -511,6 +525,14 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
 
         b->nchanges += 1; 
         children.clear(); 
+
+        if(cache.size() > 0) {
+          children.insert(
+            children.end(),
+            cache.begin(),
+            cache.end()
+          );
+        }
       }
     }
   }
@@ -682,11 +704,13 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
         b->nchanges += 1; //src->size();
         src->clear(); 
-        src->insert(
-          src->end(),
-          cache.begin(),
-          cache.end()
-        );
+        if(cache.size() > 0) {
+          src->insert(
+            src->end(),
+            cache.begin(),
+            cache.end()
+          );
+        }
 
       }
     }
@@ -791,11 +815,7 @@ void received_msg(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, i
     std::cout<<"Start Receiving Msg: "<<msg.tag<<std::endl; 
   }
 
-  if(msg.tag == "gid_query") {
-    answer_gid(b, cp, msg, from_gid); 
-  } else if(msg.tag == "gid_response") {
-    save_gid(b, cp, msg); 
-  } else if(msg.tag == "gparent") {
+  if(msg.tag == "gparent") {
     distributed_save_gparent(b, cp, msg); 
   } else if(msg.tag == "child") {
     distributed_save_child(b, cp, msg); 
@@ -803,6 +823,10 @@ void received_msg(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, i
     distributed_save_union(b, cp, msg); 
   } else if(msg.tag == "endpoint") {
     distributed_update_endpoint(b, cp, msg); 
+  } else if(msg.tag == "gid_query") {
+    answer_gid(b, cp, msg, from_gid); 
+  } else if(msg.tag == "gid_response") {
+    save_gid(b, cp, msg); 
   } else {
     std::cout<<"Error! "<<std::endl; 
   }

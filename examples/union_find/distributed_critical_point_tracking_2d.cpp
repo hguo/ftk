@@ -43,9 +43,12 @@
 // for serialization
 #include <cereal/cereal.hpp>
 #include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
 #include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
 
+#define TIME_OF_STEPS true
+#define MULTITHREAD false
 
 int nthreads;
 
@@ -66,7 +69,6 @@ std::map<std::string, intersection_t>* intersections;
 
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
-
 
 template <typename T> // the synthetic function
 T f(T x, T y, T t) 
@@ -168,7 +170,11 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
     std::string eid = f.to_string(); 
     if(intersections->find(eid) != intersections->end()) {
-      std::lock_guard<std::mutex> guard(mutex);
+      
+      #if MULTITHREAD
+        std::lock_guard<std::mutex> guard(mutex);
+      #endif
+
       b->add(eid); 
       b->ele2gid[eid] = gid; 
     }
@@ -207,7 +213,10 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       if(features_in_block.size() > 1) {
         // When features are local, we just need to relate to the first feature element
 
-        std::lock_guard<std::mutex> guard(mutex);
+        #if MULTITHREAD
+          std::lock_guard<std::mutex> guard(mutex);
+        #endif
+
         for(std::set<std::string>::iterator ite_i = std::next(features_in_block.begin(), 1); ite_i != features_in_block.end(); ++ite_i) {
           b->add_related_element(*(features_in_block.begin()), *ite_i); 
           b->add_related_element(*ite_i, *(features_in_block.begin())); 
@@ -229,18 +238,26 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       for(auto& feature: features) {
         if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
           
-          element_t& ele = id2element.find(feature)->second; 
-          for(int mi = 0; mi < ms.size(); ++mi) {
-            if(mi != gid){ // We know the feature is not in this partition
-              hypermesh::regular_simplex_mesh& __m = std::get<0>(ms[mi]); 
-              if(is_in_mesh(ele, __m)) { // the feature is in mith partition
-                std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-                b->ele2gid[feature] = mi; // Set gid of this feature to mi  
+          if(b->ele2gid.find(feature) == b->ele2gid.end()) { // If the block id of this feature is unknown, search the block id of this feature
+            element_t& ele = id2element.find(feature)->second; 
+            for(int mi = 0; mi < ms.size(); ++mi) {
+              if(mi != gid){ // We know the feature is not in this partition
+                hypermesh::regular_simplex_mesh& __m = std::get<0>(ms[mi]); 
+                if(is_in_mesh(ele, __m)) { // the feature is in mith partition
+                  #if MULTITHREAD
+                    std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+                  #endif
+
+                  b->ele2gid[feature] = mi; // Set gid of this feature to mi  
+                }
               }
             }
           }
 
-          std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+          #if MULTITHREAD 
+            std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+          #endif
+
           for(auto& feature_in_block : features_in_block) {
             b->add_related_element(feature_in_block, feature); 
           }
@@ -250,11 +267,14 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   }, nthreads);
 
   #ifdef FTK_HAVE_MPI
-    end = MPI_Wtime();
-    if(world.rank() == 0) {
-      std::cout << "CCL: Init Blocks: " << end - start << " seconds. " << std::endl;
-    }
-    start = end; 
+    #if TIME_OF_STEPS
+      end = MPI_Wtime();
+      MPI_Barrier(world);
+      if(world.rank() == 0) {
+        std::cout << "CCL: Init Blocks: " << end - start << " seconds. " << std::endl;
+      }
+      start = end; 
+    #endif
   #endif
 
   // std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
@@ -265,11 +285,14 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   exec_distributed_union_find(world, master, assigner, local_blocks); 
 
   #ifdef FTK_HAVE_MPI
-    end = MPI_Wtime();
-    if(world.rank() == 0) {
-      std::cout << "CCL: Distributed Union-Find: " << end - start << " seconds. " << std::endl;
-    }
-    start = end; 
+    #if TIME_OF_STEPS
+      end = MPI_Wtime();
+      MPI_Barrier(world);
+      if(world.rank() == 0) {
+        std::cout << "CCL: Distributed Union-Find: " << end - start << " seconds. " << std::endl;
+      }
+      start = end; 
+    #endif
   #endif
 
   // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
@@ -285,7 +308,10 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
       std::string eid = f.to_string(); 
       if(intersections->find(eid) != intersections->end()) {
-        std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+        #if MULTITHREAD 
+          std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+        #endif
+
         id2ele.insert(std::make_pair(f.to_string(), f));  
       }
     }, nthreads);
@@ -304,11 +330,14 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   }
 
   #ifdef FTK_HAVE_MPI
-    end = MPI_Wtime();
-    if(world.rank() == 0) {
-      std::cout << "CCL: Gather Connected Components: " << end - start << " seconds. " << std::endl;
-    }
-    start = end; 
+    #if TIME_OF_STEPS
+      end = MPI_Wtime();
+      MPI_Barrier(world);
+      if(world.rank() == 0) {
+        std::cout << "CCL: Gather Connected Components: " << end - start << " seconds. " << std::endl;
+      }
+      start = end; 
+    #endif
   #endif 
 }
 
@@ -323,6 +352,7 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   // #ifdef FTK_HAVE_MPI
   //   end = MPI_Wtime();
+  //   MPI_Barrier(world);
   //   if(world.rank() == 0) {
   //     std::cout << "Extract connected components: " << end - start << " seconds. " << std::endl;
   //   }
@@ -364,11 +394,14 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   }
 
   #ifdef FTK_HAVE_MPI
-    end = MPI_Wtime();
-    if(world.rank() == 0) {
-      std::cout << "Generate trajectories: " << end - start << " seconds. " << std::endl;
-    }
-    start = end; 
+    #if TIME_OF_STEPS
+      end = MPI_Wtime();
+      MPI_Barrier(world);
+      if(world.rank() == 0) {
+        std::cout << "Generate trajectories: " << end - start << " seconds. " << std::endl;
+      }
+      start = end; 
+    #endif
   #endif
 }
 
@@ -409,12 +442,15 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
         X[i][j] = vertices[i][j];
 
     intersection_t I;
-    I.eid = f.to_integer();
+    I.eid = f.to_string();
     ftk::lerp_s2v3(X, mu, I.x);
     I.val = ftk::lerp_s2(value, mu);
 
     {
-      std::lock_guard<std::mutex> guard(mutex);
+      #if MULTITHREAD 
+        std::lock_guard<std::mutex> guard(mutex);
+      #endif
+
       intersections->insert(std::make_pair(f.to_string(), I)); 
       // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
     }
@@ -469,7 +505,7 @@ void read_dump_file(const std::string& f)
   std::vector<intersection_t> vector;
 
   std::ifstream ifs(f);
-  cereal::BinaryInputArchive ar(ifs);
+  cereal::JSONInputArchive ar(ifs);
   ar(vector);
   ifs.close();
 
@@ -486,7 +522,7 @@ void write_dump_file(const std::string& f)
     vector.push_back(i.second);
   
   std::ofstream ofs(f);
-  cereal::BinaryOutputArchive ar(ofs);
+  cereal::JSONOutputArchive ar(ofs);
   ar(vector);
   ofs.close();
 }
@@ -539,9 +575,12 @@ int main(int argc, char **argv)
   int nblocks = world.size(); 
 
   nthreads = 1; 
-  // if(world.size() == 1) {
-  //   nthreads = std::thread::hardware_concurrency(); 
-  // }
+  
+  #if MULTITHREAD
+    if(world.size() == 1) {
+      nthreads = std::thread::hardware_concurrency(); 
+    }
+  #endif
 
   diy::Master               master(world, nthreads);
   diy::ContiguousAssigner   assigner(world.size(), nblocks);
@@ -599,11 +638,14 @@ int main(int argc, char **argv)
   intersections = &b->intersections; 
 
   #ifdef FTK_HAVE_MPI
-    end = MPI_Wtime();
-    if(world.rank() == 0) {
-      std::cout << "Init Data and Partition Mesh: " << end - start << " seconds. " << std::endl;
-    }
-    start = end; 
+    #if TIME_OF_STEPS
+      end = MPI_Wtime();
+      MPI_Barrier(world);
+      if(world.rank() == 0) {
+        std::cout << "Init Data and Partition Mesh: " << end - start << " seconds. " << std::endl;
+      }
+      start = end;  
+    #endif
   #endif
   
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
@@ -621,11 +663,14 @@ int main(int argc, char **argv)
       scan_intersections();
 
       #ifdef FTK_HAVE_MPI
-        end = MPI_Wtime();
-        if(world.rank() == 0) {
-          std::cout << "Scan Critical Points: " << end - start << " seconds. " << std::endl;
-        }
-        start = end; 
+        #if TIME_OF_STEPS
+          end = MPI_Wtime();
+          MPI_Barrier(world);
+          if(world.rank() == 0) {
+            std::cout << "Scan Critical Points: " << end - start << " seconds. " << std::endl;
+          }
+          start = end; 
+        #endif
       #endif
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 

@@ -35,6 +35,7 @@ struct regular_simplex_mesh_element {
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, 
       const std::vector<int>& corner, int type); 
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t i);
+  regular_simplex_mesh_element(const regular_simplex_mesh &_m, int _d, std::string i);
 
   regular_simplex_mesh_element& operator=(const regular_simplex_mesh_element& e);
   bool operator!=(const regular_simplex_mesh_element& e) const {return !(*this == e);}
@@ -232,6 +233,14 @@ inline regular_simplex_mesh_element::regular_simplex_mesh_element(
   dim = d_;
   corner.resize(m.nd());
   from_integer(i);
+}
+
+inline regular_simplex_mesh_element::regular_simplex_mesh_element(
+  const regular_simplex_mesh &_m, int _d, std::string i) : m(_m)
+{
+  dim = _d;
+  corner.resize(m.nd());
+  from_string(i);
 }
 
 inline regular_simplex_mesh_element& regular_simplex_mesh_element::operator=(const regular_simplex_mesh_element& e)
