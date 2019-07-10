@@ -217,17 +217,17 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
           std::lock_guard<std::mutex> guard(mutex);
         #endif
 
+        std::string first_feature = *(features_in_block.begin()); 
         for(std::set<std::string>::iterator ite_i = std::next(features_in_block.begin(), 1); ite_i != features_in_block.end(); ++ite_i) {
-          b->add_related_element(*(features_in_block.begin()), *ite_i); 
-          b->add_related_element(*ite_i, *(features_in_block.begin())); 
-        }
+          std::string curr_feature = *ite_i; 
 
-        // for(std::set<std::string>::iterator ite_i = features_in_block.begin(); ite_i != features_in_block.end(); ++ite_i) {
-        //   for(std::set<std::string>::iterator ite_j = std::next(ite_i, 1); ite_j != features_in_block.end(); ++ite_j) {
-        //     b->add_related_element(*ite_j, *ite_i); 
-        //     b->add_related_element(*ite_i, *ite_j); 
-        //   }
-        // }
+          if(first_feature < curr_feature) { // Since only when the id of related_ele < ele, then the related_ele can be the parent of ele
+            b->add_related_element(curr_feature, first_feature); 
+          } else {
+            b->add_related_element(first_feature, curr_feature);
+          }
+          
+        }
       }
 
       if(features_in_block.size() == 0 || features.size() == features_in_block.size()) {
@@ -259,7 +259,11 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
           #endif
 
           for(auto& feature_in_block : features_in_block) {
-            b->add_related_element(feature_in_block, feature); 
+
+            if(feature < feature_in_block) { // When across processes, also, since only when the id of related_ele < ele, then the related_ele can be the parent of ele
+              b->add_related_element(feature_in_block, feature); 
+            }
+
           }
         }
       }

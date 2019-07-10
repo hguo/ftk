@@ -75,13 +75,22 @@ struct distributed_union_find
     return id2parent[i]; 
   }
 
-  std::vector<IdType>& children(IdType i) {
+  const std::vector<IdType>& children(IdType i) {
     if(!has(i)) {
       std::cout<< "No element child children(). " <<std::endl;
       exit(0); 
     }
 
     return parent2children[i]; 
+  }
+
+  void clear_children(std::string i) {
+    if(!has(i)) {
+      std::cout<< "No element child children(). " <<std::endl;
+      exit(0); 
+    }
+
+    parent2children[i].clear(); 
   }
 
   bool is_root(IdType i) {
@@ -126,6 +135,8 @@ struct Block : public ftk::distributed_union_find<std::string> {
 
   // add an element
   void add(std::string ele) {
+    this->nchanges += 1;
+
     distributed_union_find::add(ele); 
 
     if(this->related_elements.find(ele) == this->related_elements.end()) {
@@ -147,6 +158,8 @@ struct Block : public ftk::distributed_union_find<std::string> {
   }
 
   void add_related_element(std::string ele, std::string related_ele) {
+    this->nchanges += 1;
+
     if(this->has(ele)) {
       if(ele != related_ele) {
         this->related_elements[ele].insert(related_ele);   
@@ -157,7 +170,7 @@ struct Block : public ftk::distributed_union_find<std::string> {
     }
   }
 
-  std::set<std::string>& get_related_elements(std::string ele) {
+  const std::set<std::string>& get_related_elements(std::string ele) {
     if(this->has(ele)) {
       return this->related_elements[ele]; 
     } else {
@@ -166,7 +179,20 @@ struct Block : public ftk::distributed_union_find<std::string> {
     }
   }
 
+  void clear_related_elements(std::string ele) {
+    this->nchanges += 1;
+
+    if(this->has(ele)) {
+      this->related_elements[ele].clear(); 
+    } else {
+      std::cout<<"Don't have this element "<<ele<<std::endl; 
+      exit(0); 
+    }
+  }
+
   void erase_related_element(std::string ele, std::string related_element) {
+    this->nchanges += 1;
+
     if(this->has(ele)) {
       this->related_elements[ele].erase(related_element); 
     } else {
@@ -184,7 +210,11 @@ struct Block : public ftk::distributed_union_find<std::string> {
   }
 
   void set_gid(std::string ele, int gid) {
-    this->ele2gid[ele] = gid; 
+    this->nchanges += 1;
+
+    if(gid >= 0) {
+      this->ele2gid[ele] = gid; 
+    }
   }
 
   int get_gid(std::string ele) {
@@ -196,6 +226,24 @@ struct Block : public ftk::distributed_union_find<std::string> {
 
       return -1; 
     }
+  }
+
+  void set_parent(std::string i, std::string par) {
+    this->nchanges += 1;
+
+    distributed_union_find::set_parent(i, par); 
+  }
+
+  void add_child(std::string par, std::string ele) {
+    this->nchanges += 1;
+
+    distributed_union_find::add_child(par, ele); 
+  }
+
+  void clear_children(std::string par) {
+    this->nchanges += 1;
+
+    distributed_union_find::clear_children(par); 
   }
 
 public: 
@@ -248,22 +296,13 @@ struct Message {
     strs.push_back(std::to_string(gid_child)); 
   }
 
-  void send_union(const std::string& ele, const std::string& parent, const std::string& related_ele, const int& gid_related_ele) {
+  // Send the union (ele, related_ele) to ele
+  void send_union(const std::string& ele, const std::string& related_ele, const int& gid_related_ele) {
     tag = "union"; 
 
     strs.push_back(ele); 
-    strs.push_back(parent); 
     strs.push_back(related_ele); 
     strs.push_back(std::to_string(gid_related_ele)); 
-  }
-
-  void send_endpoint(const std::string& ele, const std::string& parent, const std::string& related_ele, const int& gid_parent) {
-    tag = "endpoint"; 
-
-    strs.push_back(ele); 
-    strs.push_back(parent); 
-    strs.push_back(related_ele); 
-    strs.push_back(std::to_string(gid_parent)); 
   }
 
   void send_ele_parent_pair(std::pair<std::string, std::string>& pair) {
@@ -326,20 +365,11 @@ struct Message {
     gid_child = std::stoi(strs[2]); 
   }
 
-  void rec_union(std::string& ele, std::string&parent, std::string& related_ele, int& rgid) {
+  void rec_union(std::string& ele, std::string& related_ele, int& rgid) {
     ele = strs[0]; 
-    parent = strs[1];
-    related_ele = strs[2]; 
+    related_ele = strs[1]; 
 
-    rgid = std::stoi(strs[3]); 
-  }
-
-  void rec_endpoint(std::string& ele, std::string& parent, std::string& related_ele, int& parent_gid) {
-    ele = strs[0]; 
-    parent = strs[1];
-    related_ele = strs[2]; 
-    
-    parent_gid = std::stoi(strs[3]); 
+    rgid = std::stoi(strs[2]); 
   }
 
   void receive_ele_parent_pair(std::pair<std::string, std::string>& pair) {
@@ -463,7 +493,6 @@ void save_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
   // std::cout<<_pair.first<<" - "<<_pair.second<<std::endl; 
 
   b->set_gid(ele, gid_ele); 
-  b->nchanges += 1;
 
   // std::cout<<"i-"<<i<<'-'<<in[i]<<std::endl;
   // int t; 
@@ -491,7 +520,10 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
     // }
 
     if(b->is_root(ele)) {
-      for(auto& related_ele : b->get_related_elements(ele)) {
+      auto related_elements = b->get_related_elements(ele); // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
+
+      for(auto& related_ele : related_elements) {
+        
         if(!b->has_gid(related_ele)) {
           continue ; 
         }
@@ -503,13 +535,9 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
           // Here is a smaller id
 
         if(related_ele < ele) {
-        // if(std::stoi(related_ele) < std::stoi(ele)) {
-
-        // if(rgid < gid || (rgid == gid && related_ele < ele)) {
-        // if(rgid < gid || (rgid == gid && std::stoi(related_ele) < std::stoi(ele))) {
           b->set_parent(ele, related_ele); 
 
-          if(rgid == gid) {
+          if(b->has(related_ele)) {
             b->add_child(related_ele, ele); 
           } else {
             Message send_msg; 
@@ -518,7 +546,6 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
             cp.enqueue(l->target(l->find(rgid)), send_msg);
           }
 
-          b->nchanges += 1;
           if(ISDEBUG) {
             std::cout<<ele<<" -1> "<<related_ele<<std::endl; 
           }
@@ -526,10 +553,24 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
           b->erase_related_element(ele, related_ele); 
 
           break ; 
+        } else {
+
+          if(b->has(related_ele)) {
+            b->add_related_element(related_ele, ele); 
+          } else {
+            Message send_msg; 
+            send_msg.send_union(related_ele, ele, gid); 
+
+            cp.enqueue(l->target(l->find(rgid)), send_msg);
+          }
+
+          b->erase_related_element(ele, related_ele); 
         }
+
       }
     }
   }
+
 }
 
 
@@ -539,7 +580,7 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
 
   for(auto& parent : b->eles) {
     if(!b->is_root(parent)) {
-      std::vector<std::string>& children = b->children(parent); 
+      auto& children = b->children(parent); 
 
       if(children.size() > 0) {
         std::string grandparent = b->parent(parent); 
@@ -588,15 +629,12 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
           }
         }
 
-        b->nchanges += 1; 
-        children.clear(); 
+        b->clear_children(parent); 
 
         if(cache.size() > 0) {
-          children.insert(
-            children.end(),
-            cache.begin(),
-            cache.end()
-          );
+          for(auto& cache_ele : cache) {
+            b->add_child(parent, cache_ele); 
+          }
         }
       }
     }
@@ -621,8 +659,6 @@ void distributed_save_gparent(Block* b, const diy::Master::ProxyWithLink& cp, Me
 
   b->set_parent(ele, grandpar); 
   b->set_gid(grandpar, gid_grandparent); 
-  
-  b->nchanges += 1;
 
   if(ISDEBUG) {
     std::cout<<ele<<" -2> "<<grandpar<<std::endl; 
@@ -639,65 +675,6 @@ void distributed_save_child(Block* b, const diy::Master::ProxyWithLink& cp, Mess
 
   b->add_child(par, child); 
   b->set_gid(child, gid_child); 
-
-  b->nchanges += 1;
-}
-
-
-
-// Tell related elements that the endpoints have been changed
-void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::string ele, std::string par, int pgid, std::string related_ele) {
-  if(ele == related_ele) {
-    return ;
-  }
-
-  int gid = cp.gid(); 
-  diy::Link* l = cp.link();
-
-  if(b->has_related_element(related_ele, ele)) {
-    b->erase_related_element(related_ele, ele); 
-    b->add_related_element(related_ele, par); 
-    b->nchanges += 1;
-
-    return ;
-  }
-
-  // If we cannot find the union of the related element, there are two possibilities
-    // (1) The union has been processed. Then, we don't need to do anything. 
-    // (2) The union has been passed to the parent of this related element, also we have two situations: 
-      // (1) The union has been successfully passed to its parent, we can notify its parent that this endpoint has changed. 
-      // (2) If the union is also a message and has not been received by its parent, we store the edge. 
-
-  // if(*ele_ptr == "9") {
-  //   std::cout<<*related_ele_ptr<<" - "<<b->has(*related_ele_ptr) <<" - "<< b->parent(*related_ele_ptr) <<std::endl; 
-  // }
-
-  if(!b->is_root(related_ele)) {
-    std::string parent_related_ele = b->parent(related_ele); // the parent of the related element
-    int r_p_gid = b->get_gid(parent_related_ele); 
-
-    if(r_p_gid == -1) {
-      b->add_related_element(related_ele, par); 
-      b->nchanges += 1;
-
-      return ;
-    }
-
-    if(b->has(parent_related_ele)) {
-      local_update_endpoint(b, cp, ele, par, pgid, parent_related_ele); 
-    } else {
-      Message send_msg; 
-      send_msg.send_endpoint(ele, par, parent_related_ele, pgid); 
-
-      // std::cout<<"!!!"<<*ele_ptr<<" - "<<*par_ptr<<" - "<<parent_related_ele<<" - "<<*pgid_ptr<<std::endl; 
-
-      cp.enqueue(l->target(l->find(r_p_gid)), send_msg); 
-    }
-  } else { // To remove possible side-effects, we store the edge. 
-    b->add_related_element(related_ele, par); 
-    b->nchanges += 1;
-  }
-
 }
 
 
@@ -720,29 +697,8 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
         if(b->has(par)) {
           // Update directly, if the realted element is in the block
 
-          int p_gid = gid; 
-
-          // tell related elements, the end point has changed to its parent
-            // Since has changed locally, the message will only send once. 
-
           for(auto& related_ele : src) {
-            if(!b->has_gid(related_ele)) {
-              cache.push_back(related_ele); 
-              continue ;
-            }
-
-            int r_gid = b->get_gid(related_ele); 
-
             b->add_related_element(par, related_ele); 
-
-            if(b->has(related_ele)) {
-              local_update_endpoint(b, cp, ele, par, p_gid, related_ele); 
-            } else {
-              Message send_msg; 
-              send_msg.send_endpoint(ele, par, related_ele, p_gid); 
-
-              cp.enqueue(l->target(l->find(r_gid)), send_msg); 
-            }
           } 
         } else {
           // Communicate with other processes
@@ -756,20 +712,18 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
             int r_gid = b->get_gid(related_ele); 
 
             Message send_msg; 
-            send_msg.send_union(ele, par, related_ele, r_gid); 
+            send_msg.send_union(par, related_ele, r_gid); 
 
             cp.enqueue(l->target(l->find(pgid)), send_msg); 
           } 
         }
 
-        b->nchanges += 1; //src->size();
-        src.clear(); 
-        if(cache.size() > 0) {
-          src.insert( cache.begin(), cache.end() );
+        b->clear_related_elements(ele); 
 
-          // for(auto& cache_ele : cache) {
-          //   b->add_related_element(ele, cache_ele); 
-          // }
+        if(cache.size() > 0) {
+          for(auto& cache_ele : cache) {
+            b->add_related_element(ele, cache_ele); 
+          }
         }
       }
 
@@ -780,7 +734,6 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
 
 // Update unions of related elements
-  // Tell related elements that the endpoints have been changed
 void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
@@ -789,51 +742,20 @@ void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Mess
   // std::cout<<"Block ID: "<<cp.gid()<<std::endl; 
 
   std::string ele; 
-  std::string par; 
   std::string related_ele; 
   int rgid; 
   
-  msg.rec_union(ele, par, related_ele, rgid); 
+  msg.rec_union(ele, related_ele, rgid); 
 
   // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr <<" - "<< *gid_ptr<<std::endl; 
 
-  b->add_related_element(par, related_ele); 
+  b->add_related_element(ele, related_ele); 
   b->set_gid(related_ele, rgid); 
-  b->nchanges += 1;
-
-  // tell related elements, the end point has changed to its parent
-
-  if(b->has(related_ele)) {
-    // Tell related elements that the endpoints have been changed
-    local_update_endpoint(b, cp, ele, par, gid, related_ele); 
-  } else {
-    Message send_msg; 
-    send_msg.send_endpoint(ele, par, related_ele, gid); 
-
-    cp.enqueue(l->target(l->find(rgid)), send_msg);   
-  }
 
   // std::cout<<std::endl; 
 }
 
-void distributed_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
-  std::string ele; 
-  std::string par; 
-  std::string related_ele; 
-  int pgid; 
-
-  msg.rec_endpoint(ele, par, related_ele, pgid); 
-
-    // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr<<std::endl; 
-
-  // Tell related elements that the endpoints have been changed
-  b->set_gid(par, pgid); 
-  local_update_endpoint(b, cp, ele, par, pgid, related_ele); 
-}
-
-
 void local_computation(Block* b, const diy::Master::ProxyWithLink& cp) {
-
 
   if(ISDEBUG) {
     int gid = cp.gid();
@@ -882,8 +804,6 @@ void received_msg(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, i
     distributed_save_child(b, cp, msg); 
   } else if(msg.tag == "union") {
     distributed_save_union(b, cp, msg); 
-  } else if(msg.tag == "endpoint") {
-    distributed_update_endpoint(b, cp, msg); 
   } else if(msg.tag == "gid_query") {
     answer_gid(b, cp, msg, from_gid); 
   } else if(msg.tag == "gid_response") {
