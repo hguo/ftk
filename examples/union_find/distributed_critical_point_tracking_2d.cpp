@@ -176,7 +176,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       #endif
 
       b->add(eid); 
-      b->ele2gid[eid] = gid; 
+      b->set_gid(eid, gid);
     }
   }, nthreads);
 
@@ -238,7 +238,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       for(auto& feature: features) {
         if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
           
-          if(b->ele2gid.find(feature) == b->ele2gid.end()) { // If the block id of this feature is unknown, search the block id of this feature
+          if(!b->has_gid(feature)) { // If the block id of this feature is unknown, search the block id of this feature
             element_t& ele = id2element.find(feature)->second; 
             for(int mi = 0; mi < ms.size(); ++mi) {
               if(mi != gid){ // We know the feature is not in this partition
@@ -248,7 +248,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
                     std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
                   #endif
 
-                  b->ele2gid[feature] = mi; // Set gid of this feature to mi  
+                  b->set_gid(feature, mi); // Set gid of this feature to mi  
                 }
               }
             }

@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <vector>
 #include <utility>
 #include <iostream>
 
@@ -27,15 +28,16 @@ namespace ftk {
 template <class IdType=std::string>
 struct distributed_union_find
 {
-  distributed_union_find() {
-    
+  distributed_union_find() : eles(), id2parent(), parent2children() {
+
   }
 
   // Initialization
   // Add and initialize elements
   void add(IdType i) {
     eles.insert(i); 
-    id2parent[i] = i;
+    id2parent.insert(std::make_pair(i, i)); 
+    parent2children.insert(std::make_pair(i, std::vector<IdType>())); 
   }
 
   // Operations
@@ -84,7 +86,7 @@ struct distributed_union_find
 
   bool is_root(IdType i) {
     if(!has(i)) {
-      std::cout<< "No element is_root(). " <<std::endl;
+      std::cout<< "No element is_root(). " <<i<<std::endl;
       exit(0); 
     }
 
@@ -118,7 +120,7 @@ struct intersection_t {
 // ==========================================================
 
 struct Block : public ftk::distributed_union_find<std::string> {
-  Block(): nchanges(0), distributed_union_find() { 
+  Block(): nchanges(0), related_elements(), ele2gid(), intersections(), distributed_union_find() { 
     
   }
 
@@ -126,32 +128,96 @@ struct Block : public ftk::distributed_union_find<std::string> {
   void add(std::string ele) {
     distributed_union_find::add(ele); 
 
-    if(this->ele2gid.find(ele) == this->ele2gid.end()) {
-      this->ele2gid[ele] = -1;  
+    if(this->related_elements.find(ele) == this->related_elements.end()) {
+      this->related_elements.insert(std::make_pair(ele, std::set<std::string>())); 
+    }
+  }
+
+  bool has_related_element(std::string ele, std::string related_ele) {
+    if(this->has(ele)) {
+      if(this->related_elements[ele].find(related_ele) == this->related_elements[ele].end()) {
+        return false; 
+      }
+
+      return true; 
+    } else {
+      std::cout<<"Don't have this element "<<ele<<std::endl; 
+      exit(0); 
     }
   }
 
   void add_related_element(std::string ele, std::string related_ele) {
-      this->related_elements[ele].push_back(related_ele); 
-
-      if(this->ele2gid.find(related_ele) == this->ele2gid.end()) {
-        this->ele2gid[related_ele] = -1; 
+    if(this->has(ele)) {
+      if(ele != related_ele) {
+        this->related_elements[ele].insert(related_ele);   
       }
+    } else {
+      std::cout<<"Don't have this element "<<ele<<std::endl; 
+      exit(0); 
+    }
+  }
+
+  std::set<std::string>& get_related_elements(std::string ele) {
+    if(this->has(ele)) {
+      return this->related_elements[ele]; 
+    } else {
+      std::cout<<"Don't have this element "<<ele<<std::endl; 
+      exit(0); 
+    }
+  }
+
+  void erase_related_element(std::string ele, std::string related_element) {
+    if(this->has(ele)) {
+      this->related_elements[ele].erase(related_element); 
+    } else {
+      std::cout<<"Don't have this element "<<ele<<std::endl; 
+      exit(0); 
+    }
+  }
+
+  bool has_gid(std::string ele) {
+    if(this->ele2gid.find(ele) == this->ele2gid.end()) {
+      return false; 
+    }
+
+    return true; 
+  }
+
+  void set_gid(std::string ele, int gid) {
+    this->ele2gid[ele] = gid; 
+  }
+
+  int get_gid(std::string ele) {
+    if(this->has_gid(ele)) {
+      return this->ele2gid[ele]; 
+    } else {
+      std::cout<<"Don't have gid of "<<ele<<std::endl; 
+      exit(0); 
+
+      return -1; 
+    }
   }
 
 public: 
-  // map element id to ids of its related elements
-  // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
-  std::map<std::string, std::vector<std::string>> related_elements; 
-  std::map<std::string, int> ele2gid; 
+
   std::map<std::string, intersection_t> intersections; 
+  std::map<std::string, int> ele2gid; 
 
   int nchanges; // # of processed unions per round = valid unions (united unions) + passing unions
+  
+private:
+  // map element id to ids of its related elements
+  // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
+  std::map<std::string, std::set<std::string>> related_elements; 
 };
 
 // ==========================================================
 
 struct Message {
+
+  Message() : tag(), strs() {
+
+  }
 
 // Send message for query
   void send_gid_query(std::string& ele) {
@@ -174,7 +240,7 @@ struct Message {
     strs.push_back(std::to_string(gid_gparent)); 
   }
 
-  void send_child(std::string& parent, std::string& child, int& gid_child) {
+  void send_child(const std::string& parent, const std::string& child, const int& gid_child) {
     tag = "child";
 
     strs.push_back(parent); 
@@ -182,7 +248,7 @@ struct Message {
     strs.push_back(std::to_string(gid_child)); 
   }
 
-  void send_union(std::string& ele, std::string& parent, std::string& related_ele, int& gid_related_ele) {
+  void send_union(const std::string& ele, const std::string& parent, const std::string& related_ele, const int& gid_related_ele) {
     tag = "union"; 
 
     strs.push_back(ele); 
@@ -191,7 +257,7 @@ struct Message {
     strs.push_back(std::to_string(gid_related_ele)); 
   }
 
-  void send_endpoint(std::string& ele, std::string& parent, std::string& related_ele, int& gid_parent) {
+  void send_endpoint(const std::string& ele, const std::string& parent, const std::string& related_ele, const int& gid_parent) {
     tag = "endpoint"; 
 
     strs.push_back(ele); 
@@ -396,7 +462,7 @@ void save_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
 
   // std::cout<<_pair.first<<" - "<<_pair.second<<std::endl; 
 
-  b->ele2gid[ele] = gid_ele; 
+  b->set_gid(ele, gid_ele); 
   b->nchanges += 1;
 
   // std::cout<<"i-"<<i<<'-'<<in[i]<<std::endl;
@@ -413,7 +479,7 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
-  for(std::string ele : b->eles) {
+  for(auto& ele : b->eles) {
 
     // if(ele == "7") {
     //   std::cout<<ele<<": "<<b->related_elements[ele].size()<<std::endl; 
@@ -425,14 +491,13 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
     // }
 
     if(b->is_root(ele)) {
-      for(std::vector<std::string>::iterator it_vec = b->related_elements[ele].begin(); it_vec != b->related_elements[ele].end(); ++it_vec) {
-        std::string related_ele = *it_vec; 
-
-        int rgid = b->ele2gid[related_ele]; 
-        // std::cout<<gid<<" "<<rgid<<std::endl; 
-        if(rgid == -1) {
-          continue; 
+      for(auto& related_ele : b->get_related_elements(ele)) {
+        if(!b->has_gid(related_ele)) {
+          continue ; 
         }
+
+        int rgid = b->get_gid(related_ele); 
+        // std::cout<<gid<<" "<<rgid<<std::endl; 
 
         // Unite a root element with larger id or smaller id is better? 
           // Here is a smaller id
@@ -458,7 +523,7 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
             std::cout<<ele<<" -1> "<<related_ele<<std::endl; 
           }
 
-          b->related_elements[ele].erase(it_vec); 
+          b->erase_related_element(ele, related_ele); 
 
           break ; 
         }
@@ -479,7 +544,7 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
       if(children.size() > 0) {
         std::string grandparent = b->parent(parent); 
         bool is_local_grandparent = true; 
-        int gid_grandparent = b->ele2gid[grandparent]; 
+        int gid_grandparent = b->get_gid(grandparent); 
         
         if(!b->has(grandparent)) { // if the grandparent is not in this block
           is_local_grandparent = false ;
@@ -495,15 +560,15 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
           if(b->has(child)) {
             b->set_parent(child, grandparent); 
           } else { // if the child is not in this block
-            int gid_child = b->ele2gid[child]; 
-
-            if(gid_child == -1) { // if currently the gid of child is not available
+            if(!b->has_gid(child)) { // if currently the gid of child is not available
               cache.push_back(child); 
               continue ;
             }
 
+            int gid_child = b->get_gid(child); 
+
             Message send_msg; 
-            send_msg.send_gparent(child, grandparent, b->ele2gid[grandparent]); 
+            send_msg.send_gparent(child, grandparent, gid_grandparent); 
 
             // std::cout<<*ele_ptr<<" - "<<*parent_ptr<<" - "<<grandparent<<" - "<<b->ele2gid[grandparent]<<std::endl; 
 
@@ -514,7 +579,7 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
           if(is_local_grandparent) {
             b->add_child(grandparent, child); 
           } else {
-            int gid_child = b->ele2gid[child]; 
+            int gid_child = b->get_gid(child); 
 
             Message send_msg; 
             send_msg.send_child(grandparent, child, gid_child); 
@@ -555,7 +620,7 @@ void distributed_save_gparent(Block* b, const diy::Master::ProxyWithLink& cp, Me
 
 
   b->set_parent(ele, grandpar); 
-  b->ele2gid[grandpar] = gid_grandparent; 
+  b->set_gid(grandpar, gid_grandparent); 
   
   b->nchanges += 1;
 
@@ -573,7 +638,7 @@ void distributed_save_child(Block* b, const diy::Master::ProxyWithLink& cp, Mess
   msg.rec_child(par, child, gid_child); 
 
   b->add_child(par, child); 
-  b->ele2gid[child] = gid_child; 
+  b->set_gid(child, gid_child); 
 
   b->nchanges += 1;
 }
@@ -582,16 +647,19 @@ void distributed_save_child(Block* b, const diy::Master::ProxyWithLink& cp, Mess
 
 // Tell related elements that the endpoints have been changed
 void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::string ele, std::string par, int pgid, std::string related_ele) {
+  if(ele == related_ele) {
+    return ;
+  }
+
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
-  for(auto ite = b->related_elements[related_ele].begin(); ite != b->related_elements[related_ele].end(); ++ite) {
-    if(*ite == ele) {
-      *ite = par; 
-      b->nchanges += 1;
-      
-      return ;
-    }
+  if(b->has_related_element(related_ele, ele)) {
+    b->erase_related_element(related_ele, ele); 
+    b->add_related_element(related_ele, par); 
+    b->nchanges += 1;
+
+    return ;
   }
 
   // If we cannot find the union of the related element, there are two possibilities
@@ -606,16 +674,16 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
 
   if(!b->is_root(related_ele)) {
     std::string parent_related_ele = b->parent(related_ele); // the parent of the related element
-    int r_p_gid = b->ele2gid[parent_related_ele]; 
+    int r_p_gid = b->get_gid(parent_related_ele); 
 
     if(r_p_gid == -1) {
-      b->related_elements[related_ele].push_back(par); 
+      b->add_related_element(related_ele, par); 
       b->nchanges += 1;
 
       return ;
     }
 
-    if(r_p_gid == gid) {
+    if(b->has(parent_related_ele)) {
       local_update_endpoint(b, cp, ele, par, pgid, parent_related_ele); 
     } else {
       Message send_msg; 
@@ -626,9 +694,10 @@ void local_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp, std::
       cp.enqueue(l->target(l->find(r_p_gid)), send_msg); 
     }
   } else { // To remove possible side-effects, we store the edge. 
-    b->related_elements[related_ele].push_back(par); 
+    b->add_related_element(related_ele, par); 
     b->nchanges += 1;
   }
+
 }
 
 
@@ -638,12 +707,14 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
   // Local computation
   // Pass unions of elements in this block to their parents, save these unions
-  for(std::string ele : b->eles) {
-    if(!b->is_root(ele)) {
-      auto src = &b->related_elements[ele]; 
-      std::vector<std::string> cache; 
+  for(auto& ele : b->eles) {
 
-      if(src->size() > 0) {
+    if(!b->is_root(ele)) {
+
+      auto& src = b->get_related_elements(ele);
+      std::vector<std::string> cache;
+
+      if(src.size() > 0) {
         std::string par = b->parent(ele); 
 
         if(b->has(par)) {
@@ -651,28 +722,20 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
           int p_gid = gid; 
 
-          auto dest = &b->related_elements[par]; 
-          // dest->insert(
-          //   dest->end(),
-          //   src->begin(),
-          //   src->end()
-          // );
-
           // tell related elements, the end point has changed to its parent
             // Since has changed locally, the message will only send once. 
 
-          for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
-            std::string related_ele = *ite_related_ele; 
-            int r_gid = b->ele2gid[related_ele]; 
-
-            if(r_gid == -1) {
+          for(auto& related_ele : src) {
+            if(!b->has_gid(related_ele)) {
               cache.push_back(related_ele); 
               continue ;
             }
 
-            dest->push_back(related_ele); 
+            int r_gid = b->get_gid(related_ele); 
 
-            if(r_gid == gid) {
+            b->add_related_element(par, related_ele); 
+
+            if(b->has(related_ele)) {
               local_update_endpoint(b, cp, ele, par, p_gid, related_ele); 
             } else {
               Message send_msg; 
@@ -680,45 +743,43 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
               cp.enqueue(l->target(l->find(r_gid)), send_msg); 
             }
-          }
-
+          } 
         } else {
-
           // Communicate with other processes
-          int gid = b->ele2gid[par]; 
+          int pgid = b->get_gid(par); 
 
-          for(auto ite_related_ele = src->begin(); ite_related_ele != src->end(); ++ite_related_ele) {
-            if(b->ele2gid[*ite_related_ele] == -1) {
-              cache.push_back(*ite_related_ele); 
+          for(auto& related_ele : src) {
+            if(!b->has_gid(related_ele)) {
+              cache.push_back(related_ele); 
               continue ;
             }
+            int r_gid = b->get_gid(related_ele); 
 
             Message send_msg; 
-            std::string related_ele = *ite_related_ele; 
-            send_msg.send_union(ele, par, related_ele, b->ele2gid[related_ele]); 
+            send_msg.send_union(ele, par, related_ele, r_gid); 
 
-            cp.enqueue(l->target(l->find(gid)), send_msg); 
-          }
-
+            cp.enqueue(l->target(l->find(pgid)), send_msg); 
+          } 
         }
 
         b->nchanges += 1; //src->size();
-        src->clear(); 
+        src.clear(); 
         if(cache.size() > 0) {
-          src->insert(
-            src->end(),
-            cache.begin(),
-            cache.end()
-          );
-        }
+          src.insert( cache.begin(), cache.end() );
 
+          // for(auto& cache_ele : cache) {
+          //   b->add_related_element(ele, cache_ele); 
+          // }
+        }
       }
+
     }
+
   }
 }
 
 
-// update unions of related elements
+// Update unions of related elements
   // Tell related elements that the endpoints have been changed
 void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
   int gid = cp.gid(); 
@@ -736,13 +797,13 @@ void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Mess
 
   // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr <<" - "<< *gid_ptr<<std::endl; 
 
-  b->related_elements[par].push_back(related_ele); 
-  b->ele2gid[related_ele] = rgid; 
+  b->add_related_element(par, related_ele); 
+  b->set_gid(related_ele, rgid); 
   b->nchanges += 1;
 
   // tell related elements, the end point has changed to its parent
 
-  if(rgid == gid) {
+  if(b->has(related_ele)) {
     // Tell related elements that the endpoints have been changed
     local_update_endpoint(b, cp, ele, par, gid, related_ele); 
   } else {
@@ -766,7 +827,7 @@ void distributed_update_endpoint(Block* b, const diy::Master::ProxyWithLink& cp,
     // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr<<std::endl; 
 
   // Tell related elements that the endpoints have been changed
-  b->ele2gid[par] = pgid; 
+  b->set_gid(par, pgid); 
   local_update_endpoint(b, cp, ele, par, pgid, related_ele); 
 }
 

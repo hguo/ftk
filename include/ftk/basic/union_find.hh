@@ -22,7 +22,7 @@ namespace ftk {
 template <class IdType=std::string>
 struct union_find
 {
-  union_find() {
+  union_find() : eles(), id2parent(), sz() {
     
   }
 
