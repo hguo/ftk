@@ -45,6 +45,7 @@ int DT; // number of timesteps
 
 hypermesh::ndarray<float> scalar, grad, hess;
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
+float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
 
 std::mutex mutex;
 
@@ -256,14 +257,18 @@ void trace_intersections()
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
       std::vector<float> mycurve, mycolors;
+      float max_value = std::numeric_limits<float>::min();
       for (int k = 0; k < linear_graphs[j].size(); k ++) {
         auto p = intersections[linear_graphs[j][k]];
         mycurve.push_back(p.x[0]); //  / (DW-1));
         mycurve.push_back(p.x[1]); //  / (DH-1));
         mycurve.push_back(p.x[2]); //  / (DT-1));
         mycurve.push_back(p.val);
+        max_value = std::max(max_value, p.val);
       }
-      trajectories.emplace_back(mycurve);
+      if (max_value > threshold) {
+        trajectories.emplace_back(mycurve);
+      }
     }
   }
 }
@@ -299,6 +304,10 @@ void write_traj_file(const std::string& f)
   cereal::BinaryOutputArchive ar(ofs);
   ar(trajectories);
   ofs.close();
+}
+
+void write_traj_vtk_file(const std::string& f) {
+  ftk::write_curves_vtk(trajectories, f, 4); 
 }
 
 void read_dump_file(const std::string& f)
@@ -387,9 +396,8 @@ int main(int argc, char **argv)
 {
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
-  std::string filename_traj_r, filename_traj_w;
+  std::string filename_traj_r, filename_traj_w, filename_traj_vtk_w;
   std::string filename_cpt_w;
-  float threshold;
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
@@ -400,6 +408,7 @@ int main(int argc, char **argv)
     ("write-dump", "write dump file", cxxopts::value<std::string>(filename_dump_w))
     ("read-traj", "read traj file", cxxopts::value<std::string>(filename_traj_r))
     ("write-traj", "write traj file", cxxopts::value<std::string>(filename_traj_w))
+    ("write-traj-vtk", "write traj file with vtk format", cxxopts::value<std::string>(filename_traj_vtk_w))
     ("write-cpt", "write critical point file", cxxopts::value<std::string>(filename_cpt_w))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
@@ -441,6 +450,9 @@ int main(int argc, char **argv)
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
+
+    if (!filename_traj_vtk_w.empty())
+      write_traj_vtk_file(filename_traj_vtk_w);
   }
 
   if (show_qt) {

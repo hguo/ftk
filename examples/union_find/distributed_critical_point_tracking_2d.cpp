@@ -60,6 +60,7 @@ double start, end;
 hypermesh::ndarray<float> scalar, grad, hess;
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
 std::vector<std::tuple<hypermesh::regular_simplex_mesh, hypermesh::regular_simplex_mesh>> ms; 
+float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
 
 std::mutex mutex;
  
@@ -384,14 +385,18 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
       for (int j = 0; j < linear_graphs.size(); j ++) {
         std::vector<float> mycurve, mycolors;
+        float max_value = std::numeric_limits<float>::min();
         for (int k = 0; k < linear_graphs[j].size(); k ++) {
           auto p = intersections->at(linear_graphs[j][k].to_string());
           mycurve.push_back(p.x[0]); //  / (DW-1));
           mycurve.push_back(p.x[1]); //  / (DH-1));
           mycurve.push_back(p.x[2]); //  / (DT-1));
           mycurve.push_back(p.val);
+          max_value = std::max(max_value, p.val);
         }
-        trajectories.emplace_back(mycurve);
+        if (max_value > threshold) {
+          trajectories.emplace_back(mycurve);
+        }
       }
     }
 
@@ -596,7 +601,6 @@ int main(int argc, char **argv)
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w;
-  float threshold;
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
