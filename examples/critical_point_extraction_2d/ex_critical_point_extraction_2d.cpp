@@ -64,6 +64,21 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
     ftk::print2x2("J", J);
     fprintf(stderr, "delta=%f, eig0={%f, %f}, eig1={%f, %f}\n", 
         delta, eig[0].real(), eig[0].imag(), eig[1].real(), eig[1].imag());
+
+    if (delta >= 0) { // two real roots
+      if (eig[0].real() * eig[1].real() < 0) {
+        fprintf(stderr, "SADDLE\n");
+      } else if (eig[0].real() * eig[1].real() > 0) {
+        fprintf(stderr, "ATTRACTING/REPELLING\n");
+      }
+    } else { // two conjugate roots
+      if (eig[0].real() < 0) {
+        fprintf(stderr, "ATTRACTING FOCUS\n");
+      } else if (eig[0].real() > 0) {
+        fprintf(stderr, "REPELLING FOCUS\n");
+      } else 
+        fprintf(stderr, "CENTER\n");
+    }
   }
 }
 
