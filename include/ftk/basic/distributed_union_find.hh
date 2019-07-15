@@ -1433,7 +1433,7 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
 
   #ifdef FTK_HAVE_MPI
     MPI_Barrier(world); 
-    double end = MPI_Wtime();
+    end = MPI_Wtime();
     if(world.rank() == 0) {
       std::cout << "CCL: Gather Connected Components - Computation: " << end - start << " seconds. " << std::endl;
     }
