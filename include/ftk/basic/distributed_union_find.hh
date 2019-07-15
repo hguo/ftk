@@ -137,11 +137,18 @@ struct Block : public ftk::distributed_union_find<std::string> {
   void add(std::string ele) {
     this->nchanges += 1;
 
-    distributed_union_find::add(ele); 
-
-    if(this->related_elements.find(ele) == this->related_elements.end()) {
+    if(this->has(ele)) {
+      std::cout<<"This ele has been added. "<<ele<<std::endl; 
+    } else {
+      distributed_union_find::add(ele); 
       this->related_elements.insert(std::make_pair(ele, std::set<std::string>())); 
     }
+  }
+
+  void erase_element(std::string ele) {
+    this->nchanges += 1;
+
+    this->eles.erase(ele);
   }
 
   bool has_related_element(std::string ele, std::string related_ele) {
@@ -1055,8 +1062,13 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
   // master.iexchange(&union_find_iexchange, 16, 1000);
 }
 
-// Gather all element-parent information to the root block
-bool gather_2_root(Block* b, const diy::Master::ProxyWithLink& cp) {
+
+
+// Generate sets of elements
+
+// Method 1:
+  // Gather all element-parent information to the first block
+bool gather_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
@@ -1137,12 +1149,10 @@ bool gather_2_root(Block* b, const diy::Master::ProxyWithLink& cp) {
   return true;
 }
 
-// Get sets of elements
-void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  master.iexchange(&gather_2_root); 
 
-  std::vector<int> gids;                     // global ids of local blocks
-  assigner.local_gids(world.rank(), gids);
+// Get sets of elements
+void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+  master.iexchange(&gather_2_p0); 
 
   if(world.rank() == 0) {
     Block* b = static_cast<Block*> (master.get(0)); 
@@ -1174,5 +1184,246 @@ void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::Contiguou
     }
   }
 }
+
+
+// Method 2:
+// Gather all element-root information to the process of the root
+  // Since the roots have all children, can directly use the information to reconstruct the sets; the only lacking part is the intersection. 
+  // Step one: send to root
+  // Step two: gather on root
+void send_2_roots(Block* b, const diy::Master::ProxyWithLink& cp) {
+  int gid = cp.gid(); 
+  diy::Link* l = cp.link();
+
+  for(auto& ele : b->eles) {
+    std::string root = b->parent(ele); 
+    if(b->has(root)) continue ; 
+
+    int gid_root = b->get_gid(root); 
+    auto& target = l->target(l->find(gid_root)); 
+
+    Message send_msg_intersection; 
+    send_msg_intersection.send_intersection(*(b->intersections.find(ele))); 
+
+    cp.enqueue(target, send_msg_intersection); 
+  }
+}
+
+bool gather_on_roots(Block* b, const diy::Master::ProxyWithLink& cp) {
+
+  int gid = cp.gid(); 
+  diy::Link* l = cp.link();
+
+  while(!cp.empty_incoming_queues()) {
+    // Save unions from other blocks
+    std::vector<int> in; // gids of incoming neighbors in the link
+    cp.incoming(in);
+
+    // for all neighbor blocks
+    // dequeue data received from this neighbor block in the last exchange
+    for (unsigned i = 0; i < in.size(); ++i) {
+      if(cp.incoming(in[i])) {
+        Message msg; 
+        cp.dequeue(in[i], msg);
+
+        if(msg.tag == "intersection") {
+          std::pair<std::string, intersection_t> pair; 
+          msg.receive_intersection(pair);
+
+          b->intersections.insert(pair); 
+        } else {
+          std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
+        }
+
+      }
+    }
+  }
+
+  return true;
+}
+
+// Get sets of elements on processes of roots
+void get_sets_on_roots(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+  master.foreach(&send_2_roots); 
+  master.iexchange(&gather_on_roots); 
+
+  // std::vector<int> gids;                     // global ids of local blocks
+  // assigner.local_gids(world.rank(), gids);
+
+  Block* b = static_cast<Block*> (master.get(0)); // load block with local id 0
+
+  std::map<std::string, std::set<std::string>> root2set; 
+
+  for(auto& ele : b->eles) {
+    if(b->is_root(ele)) {
+      root2set[ele].insert(ele);  
+      auto& children = b->children(ele); 
+      for(auto& child : children) {
+        root2set[ele].insert(child); 
+      }
+    }
+  }
+
+  for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
+      results.push_back(ite->second); 
+  }
+
+  if(ISDEBUG) {
+    for(int i = 0; i < results.size(); ++i) {
+      std::cout<<"Set "<<i<<":"<<std::endl; 
+      std::set<std::string>& ele_set = results[i]; 
+      for(auto& ele : ele_set) {
+        std::cout<<ele<<" "; 
+      }
+      std::cout<<std::endl; 
+    }
+  }
+}
+
+
+
+// Method 3:
+// Gather all element-root information to the process of the root
+  // Since the roots have all children, can directly use the information to reconstruct the sets; the only lacking part is the intersection. 
+  // Step one: send to root
+  // Step two: gather on root
+
+int hash_string(std::string& ele, size_t nprocess) {
+  // Algorithms come from: https://cp-algorithms.com/string/string-hashing.html
+  
+  const int p = 11; // since the characters are 0~9 plus ',' for separation
+  
+  int val = 0; 
+  int p_pow = 1;
+  for(char c : ele) {
+    int c_val = c - '0'; // ASCII of comma ',' is 44, of '0' is 48
+    if(c == ',') {
+      c_val = 10; 
+    }
+
+    val = (val + c_val * p_pow) % nprocess; 
+    p_pow = (p_pow * p) % nprocess; 
+  }
+
+  return val; 
+}
+
+
+void send_2_redistributed_processes(Block* b, const diy::Master::ProxyWithLink& cp) {
+  int gid = cp.gid(); 
+  diy::Link* l = cp.link();
+  auto master = cp.master(); 
+  auto& world = master->communicator(); 
+
+  int nblocks = world.size();
+
+  auto eles = b->eles; 
+  for(auto& ele : eles) {
+    std::string root = b->parent(ele); 
+  
+    int gid_root = hash_string(root, nblocks); 
+
+    if(gid_root != gid) {
+      std::pair<std::string, std::string> local_pair(ele, root); 
+
+      auto& target = l->target(l->find(gid_root)); 
+
+      Message send_msg; 
+      send_msg.send_ele_parent_pair(local_pair); 
+
+      cp.enqueue(target, send_msg); 
+
+      // ==============
+
+      Message send_msg_intersection; 
+      send_msg_intersection.send_intersection(*(b->intersections.find(ele))); 
+
+      cp.enqueue(target, send_msg_intersection); 
+
+      b->erase_element(ele);  
+    }    
+  }
+}
+
+bool gather_on_redistributed_processes(Block* b, const diy::Master::ProxyWithLink& cp) {
+
+  int gid = cp.gid(); 
+  diy::Link* l = cp.link();
+
+  while(!cp.empty_incoming_queues()) {
+    // Save unions from other blocks
+    std::vector<int> in; // gids of incoming neighbors in the link
+    cp.incoming(in);
+
+    // for all neighbor blocks
+    // dequeue data received from this neighbor block in the last exchange
+    for (unsigned i = 0; i < in.size(); ++i) {
+      if(cp.incoming(in[i])) {
+        Message msg; 
+        cp.dequeue(in[i], msg);
+
+        if(msg.tag == "ele_parent_pair") {
+            std::pair<std::string, std::string> pair; 
+            msg.receive_ele_parent_pair(pair); 
+
+            b->add(pair.first); 
+            b->set_parent(pair.first, pair.second); 
+        } else if(msg.tag == "intersection") {
+          std::pair<std::string, intersection_t> pair; 
+          msg.receive_intersection(pair);
+
+          b->intersections.insert(pair); 
+        } else {
+          std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
+        }
+
+      }
+    }
+  }
+
+  return true;
+}
+
+// Get sets of elements by redistributing data
+void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+  master.foreach(&send_2_redistributed_processes); 
+  master.iexchange(&gather_on_redistributed_processes); 
+
+  Block* b = static_cast<Block*> (master.get(0)); // load block with local id 0
+
+  std::map<std::string, std::set<std::string>> root2set; 
+
+  for(auto& ele : b->eles) {
+    if(!b->is_root(b->parent(ele))) {
+      std::cout<<"Wrong! The parent is not root! "<< std::endl; 
+      std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
+    }
+
+    root2set[b->parent(ele)].insert(ele);  
+  }
+
+  for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
+      results.push_back(ite->second); 
+  }
+
+  if(ISDEBUG) {
+    for(int i = 0; i < results.size(); ++i) {
+      std::cout<<"Set "<<i<<":"<<std::endl; 
+      std::set<std::string>& ele_set = results[i]; 
+      for(auto& ele : ele_set) {
+        std::cout<<ele<<" "; 
+      }
+      std::cout<<std::endl; 
+    }
+  }
+}
+
+// Get sets of elements
+void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+  // get_sets_on_p0(world, master, assigner, results); 
+  // get_sets_on_roots(world, master, assigner, results); 
+  get_sets_redistributed(world, master, assigner, results); 
+}
+
 
 #endif
