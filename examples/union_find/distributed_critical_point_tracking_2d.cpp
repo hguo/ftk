@@ -273,8 +273,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
-      end = MPI_Wtime();
       MPI_Barrier(world);
+      end = MPI_Wtime();
       if(world.rank() == 0) {
         std::cout << "CCL: Init Blocks: " << end - start << " seconds. " << std::endl;
       }
@@ -291,8 +291,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
-      end = MPI_Wtime();
       MPI_Barrier(world);
+      end = MPI_Wtime();
       if(world.rank() == 0) {
         std::cout << "CCL: Distributed Union-Find: " << end - start << " seconds. " << std::endl;
       }
@@ -336,8 +336,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
-      end = MPI_Wtime();
       MPI_Barrier(world);
+      end = MPI_Wtime();
       if(world.rank() == 0) {
         std::cout << "CCL: Gather Connected Components: " << end - start << " seconds. " << std::endl;
       }
@@ -356,8 +356,8 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   extract_connected_components(world, master, assigner, cc);
 
   // #ifdef FTK_HAVE_MPI
-  //   end = MPI_Wtime();
   //   MPI_Barrier(world);
+  //   end = MPI_Wtime();
   //   if(world.rank() == 0) {
   //     std::cout << "Extract connected components: " << end - start << " seconds. " << std::endl;
   //   }
@@ -404,8 +404,8 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
-      end = MPI_Wtime();
       MPI_Barrier(world);
+      end = MPI_Wtime();
       if(world.rank() == 0) {
         std::cout << "Generate trajectories: " << end - start << " seconds. " << std::endl;
       }
@@ -647,8 +647,8 @@ int main(int argc, char **argv)
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
-      end = MPI_Wtime();
       MPI_Barrier(world);
+      end = MPI_Wtime();
       if(world.rank() == 0) {
         std::cout << "Init Data and Partition Mesh: " << end - start << " seconds. " << std::endl;
       }
@@ -672,8 +672,8 @@ int main(int argc, char **argv)
 
       #ifdef FTK_HAVE_MPI
         #if TIME_OF_STEPS
-          end = MPI_Wtime();
           MPI_Barrier(world);
+          end = MPI_Wtime();
           if(world.rank() == 0) {
             std::cout << "Scan Critical Points: " << end - start << " seconds. " << std::endl;
           }

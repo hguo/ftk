@@ -1386,8 +1386,22 @@ bool gather_on_redistributed_processes(Block* b, const diy::Master::ProxyWithLin
 
 // Get sets of elements by redistributing data
 void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+
+  #ifdef FTK_HAVE_MPI
+    double start = MPI_Wtime();
+  #endif
+
   master.foreach(&send_2_redistributed_processes); 
   master.iexchange(&gather_on_redistributed_processes); 
+
+  #ifdef FTK_HAVE_MPI
+    MPI_Barrier(world); 
+    double end = MPI_Wtime();
+    if(world.rank() == 0) {
+      std::cout << "CCL: Gather Connected Components - Communication: " << end - start << " seconds. " << std::endl;
+    }
+    start = end; 
+  #endif
 
   Block* b = static_cast<Block*> (master.get(0)); // load block with local id 0
 
@@ -1416,6 +1430,15 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
       std::cout<<std::endl; 
     }
   }
+
+  #ifdef FTK_HAVE_MPI
+    MPI_Barrier(world); 
+    double end = MPI_Wtime();
+    if(world.rank() == 0) {
+      std::cout << "CCL: Gather Connected Components - Computation: " << end - start << " seconds. " << std::endl;
+    }
+    start = end; 
+  #endif
 }
 
 // Get sets of elements
