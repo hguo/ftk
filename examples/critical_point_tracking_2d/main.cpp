@@ -13,7 +13,6 @@
 #include <ftk/numeric/gradient.hh>
 // #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
-#include <ftk/geometry/curve2vtk.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
@@ -307,9 +306,11 @@ void write_traj_file(const std::string& f)
   ofs.close();
 }
 
+#if FTK_HAVE_VTK
 void write_traj_vtk_file(const std::string& f) {
   ftk::write_curves_vtk(trajectories, f, 4); 
 }
+#endif
 
 void read_dump_file(const std::string& f)
 {
@@ -452,8 +453,10 @@ int main(int argc, char **argv)
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
 
+#if FTK_HAVE_VTK
     if (!filename_traj_vtk_w.empty())
       write_traj_vtk_file(filename_traj_vtk_w);
+#endif
   }
 
   if (show_qt) {
