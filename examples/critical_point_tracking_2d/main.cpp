@@ -13,6 +13,7 @@
 #include <ftk/numeric/gradient.hh>
 // #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
+#include <ftk/geometry/curve2vtk.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
