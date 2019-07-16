@@ -1106,7 +1106,7 @@ void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::Con
     }
 
     for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
-        results.push_back(ite->second); 
+      results.push_back(ite->second);   
     }
 
     if(ISDEBUG) {
@@ -1202,7 +1202,7 @@ void get_sets_on_roots(diy::mpi::communicator& world, diy::Master& master, diy::
   }
 
   for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
-      results.push_back(ite->second); 
+    results.push_back(ite->second);   
   }
 
   if(ISDEBUG) {
@@ -1357,13 +1357,13 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
   }
 
   for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
-      results.push_back(ite->second); 
+    results.push_back(ite->second);   
   }
 
   if(ISDEBUG) {
     for(int i = 0; i < results.size(); ++i) {
       std::cout<<"Set "<<i<<":"<<std::endl; 
-      std::set<std::string>& ele_set = results[i]; 
+      auto& ele_set = results[i]; 
       for(auto& ele : ele_set) {
         std::cout<<ele<<" "; 
       }

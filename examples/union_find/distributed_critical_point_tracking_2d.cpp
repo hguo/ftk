@@ -150,7 +150,7 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
   return true;
 }
 
-void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components)
+void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t;
 
@@ -303,43 +303,14 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // Get disjoint sets of element IDs
-  std::vector<std::set<std::string>> components_str;
   get_sets(world, master, assigner, components_str); 
-
-  if(world.rank() == 0) { 
-    std::map<std::string, element_t> id2ele; 
-    m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-      if (!f.valid()) return; // check if the 2-simplex is valid
-
-      std::string eid = f.to_string(); 
-      if(intersections->find(eid) != intersections->end()) {
-        #if MULTITHREAD 
-          std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-        #endif
-
-        id2ele.insert(std::make_pair(f.to_string(), f));  
-      }
-    }, nthreads);
-
-    // Convert element IDs to elements
-    for(auto& comp_str : components_str) {
-      std::set<element_t> comp; 
-      for(auto& ele_id : comp_str) {
-        if(id2ele.find(ele_id) != id2ele.end()) {
-          comp.insert(id2ele.find(ele_id)->second); 
-        }
-      }
-
-      components.push_back(comp); 
-    }
-  }
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
       MPI_Barrier(world);
       end = MPI_Wtime();
       if(world.rank() == 0) {
-        std::cout << "CCL: Gather Connected Components: " << end - start << " seconds. " << std::endl;
+        std::cout << "CCL: Gather Connected Components - Total: " << end - start << " seconds. " << std::endl;
       }
       start = end; 
     #endif
@@ -352,8 +323,8 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
 
-  std::vector<std::set<element_t>> cc; // connected components 
-  extract_connected_components(world, master, assigner, cc);
+  std::vector<std::set<std::string>> cc_str; // connected components 
+  extract_connected_components(world, master, assigner, cc_str);
 
   // #ifdef FTK_HAVE_MPI
   //   MPI_Barrier(world);
@@ -368,6 +339,16 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   if(world.rank() == 0) {
     // Convert connected components to geometries
+
+    std::vector<std::set<element_t>> cc; // connected components 
+    // Convert element IDs to elements
+    for(auto& comp_str : cc_str) {
+      cc.push_back(std::set<element_t>()); 
+      std::set<element_t>& comp = cc[cc.size() - 1]; 
+      for(auto& ele_id : comp_str) {
+        comp.insert(hypermesh::regular_simplex_mesh_element(m, 2, ele_id)); 
+      }
+    }
 
     auto neighbors = [](element_t f) {
       std::set<element_t> neighbors;
