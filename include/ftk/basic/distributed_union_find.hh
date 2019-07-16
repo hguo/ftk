@@ -52,6 +52,8 @@ struct distributed_union_find
       // Otherwise, may occur override and erase the updated parent
     if(par < id2parent[i]) {
       id2parent[i] = par; 
+    } else {
+      std::cout<< "Parent is override! " <<std::endl;
     }
   }
 
