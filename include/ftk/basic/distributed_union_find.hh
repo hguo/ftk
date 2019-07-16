@@ -1046,18 +1046,20 @@ void send_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
     int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
+  for(auto& ele : b->eles) {
+    if(b->get_related_elements(ele).size() > 0) {
+      std::cout<<"Related element is not zero! on " << gid <<" : "<< b->get_related_elements(ele).size()<<std::endl; 
+    }
+    if(!b->is_root(ele) && b->children(ele).size() > 0) {
+      std::cout<<"Non-root element has children! on " << gid <<" : "<< b->children(ele).size()<<std::endl; 
+    }
+  }
+
   if(gid != 0) {
     // std::vector<std::pair<std::string, std::string>> local_pairs; 
 
     auto& target = l->target(l->find(0));
     for(auto& ele : b->eles) {
-      if(b->get_related_elements(ele).size() > 0) {
-        std::cout<<"Related element is not zero! on " << gid <<" : "<< b->get_related_elements(ele).size()<<std::endl; 
-      }
-      if(!b->is_root(ele) && b->children(ele).size() > 0) {
-        std::cout<<"Non-root element has children! on " << gid <<" : "<< b->children(ele).size()<<std::endl; 
-      }
-
       std::string parent = b->parent(ele); 
 
       // local_pairs.push_back(std::make_pair(ele, parent)); 
