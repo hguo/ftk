@@ -886,58 +886,6 @@ void union_find_exchange(Block* b, const diy::Master::ProxyWithLink& cp) {
   total_changes(b, cp); 
 }
 
-
-// Method 0
-// void exchange_process(diy::Master& master) {
-//   master.foreach(&unite_once);
-
-//   master.foreach(&local_compress_path);
-
-//   master.foreach(&distributed_query_gparent);
-  
-//   master.exchange();                 
-//   // master.foreach(&distributed_answer_gparent_exchange);
-//   // std::cout<<"!!!!!distributed_answer_gparent!!!!!"<<std::endl; 
-//   master.foreach(&receive_msg); // distributed_answer_gparent
-  
-//   master.exchange();
-//   // master.foreach(&distributed_save_gparent_exchange);
-//   // std::cout<<"!!!!!distributed_save_gparent!!!!!"<<std::endl; 
-//   master.foreach(&receive_msg); // distributed_save_gparent
-  
-//   master.foreach(&distributed_pass_unions);
-  
-//   master.exchange();
-//   // master.foreach(&distributed_save_union_exchange);
-//   // std::cout<<"!!!!!distributed_save_union!!!!!"<<std::endl; 
-//   master.foreach(&receive_msg); // distributed_save_union
-
-//   master.foreach(&local_pass_unions);
-
-//   master.exchange();
-//   // master.foreach(&distributed_update_endpoint_exchange);
-//   // std::cout<<"!!!!!distributed_update_endpoint!!!!!"<<std::endl; 
-//   master.foreach(&receive_msg); // distributed_update_endpoint
-//   // master.exchange();
-//   // std::cout<<"!!!!!!!!!!"<<std::endl; 
-//   // master.foreach(&receive_msg);
-//   // master.exchange();
-//   // std::cout<<"!!!!!!!!!!"<<std::endl; 
-//   // master.foreach(&receive_msg);
-//   // master.exchange();
-
-//   master.foreach(&total_changes); // can use a reduce all to check whether every thing is done. 
-  
-//   master.exchange();
-//   // It is possible that some endpoints are still tranferring
-//     // While two consecutive exchange() without receiving will clear the buffer
-//     // Which means, in-between each pair of exchange should contain at least one receive
-//     // Hence, an additional receive is needed
-//   master.foreach(&receive_msg);
-
-//   std::cout<<"================================="<<std::endl; 
-// }
-
 // Method 1
 // gparent query and gparent answer should be synchronized. 
   // otherwise it is possible that one query message is transferring, but the program ends. 
@@ -1043,7 +991,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 // Method 1:
   // Send to p0
 void send_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
-    int gid = cp.gid(); 
+  int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
   for(auto& ele : b->eles) {
@@ -1137,6 +1085,7 @@ void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::Con
     #ifdef FTK_HAVE_MPI
       std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
     #endif
+      
     for(auto& ele : b->eles) {
       if(!b->is_root(b->parent(ele))) {
         std::cout<<"Wrong! The parent is not root! "<< std::endl; 
