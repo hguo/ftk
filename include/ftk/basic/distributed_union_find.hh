@@ -52,9 +52,10 @@ struct distributed_union_find
       // Otherwise, may occur override and erase the updated parent
     if(par < id2parent[i]) {
       id2parent[i] = par; 
-    } else {
-      std::cout<< "Parent is override! " <<std::endl;
     }
+    // else {
+    //   std::cout<< "Parent is override! " <<std::endl;
+    // }
   }
 
   void add_child(IdType par, IdType ele) {
@@ -1108,8 +1109,6 @@ void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::Con
         results.push_back(ite->second); 
     }
 
-    exit(0);
-
     if(ISDEBUG) {
       for(int i = 0; i < results.size(); ++i) {
         std::cout<<"Set "<<i<<":"<<std::endl; 
@@ -1384,9 +1383,9 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
 
 // Get sets of elements
 void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  get_sets_on_p0(world, master, assigner, results); 
+  // get_sets_on_p0(world, master, assigner, results); 
   // get_sets_on_roots(world, master, assigner, results); 
-  // get_sets_redistributed(world, master, assigner, results); 
+  get_sets_redistributed(world, master, assigner, results); 
 }
 
 
