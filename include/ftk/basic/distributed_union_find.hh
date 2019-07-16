@@ -48,7 +48,11 @@ struct distributed_union_find
       exit(0); 
     }
 
-    id2parent[i] = par; 
+    // Ensure the id of new parent is smaller than the id of old parent
+      // Otherwise, may occur override and erase the updated parent
+    if(par < id2parent[i]) {
+      id2parent[i] = par; 
+    }
   }
 
   void add_child(IdType par, IdType ele) {
@@ -876,7 +880,8 @@ bool union_find_iexchange(Block* b, const diy::Master::ProxyWithLink& cp) {
 void iexchange_process(diy::Master& master) {
   master.iexchange(&union_find_iexchange); 
 
-  master.iexchange(&union_find_iexchange); 
+  // Test whether the iexchange ends but the union find does not end
+  // master.iexchange(&union_find_iexchange); 
 }
 
 void union_find_exchange(Block* b, const diy::Master::ProxyWithLink& cp) {
