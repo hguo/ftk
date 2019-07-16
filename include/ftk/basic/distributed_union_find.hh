@@ -1407,9 +1407,12 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
 
   std::map<std::string, std::set<std::string>> root2set; 
 
+  #ifdef FTK_HAVE_MPI
+    std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
+  #endif
   for(auto& ele : b->eles) {
     if(!b->is_root(b->parent(ele))) {
-      std::cout<<"Wrong! The parent is not root! "<< std::endl; 
+      std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
       std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
     }
 
