@@ -1172,6 +1172,8 @@ void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::Con
         results.push_back(ite->second); 
     }
 
+    exit(0);
+
     if(ISDEBUG) {
       for(int i = 0; i < results.size(); ++i) {
         std::cout<<"Set "<<i<<":"<<std::endl; 
@@ -1408,7 +1410,7 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
   std::map<std::string, std::set<std::string>> root2set; 
 
   #ifdef FTK_HAVE_MPI
-    std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
+    // std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
   #endif
   for(auto& ele : b->eles) {
     if(!b->is_root(b->parent(ele))) {
@@ -1446,9 +1448,9 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
 
 // Get sets of elements
 void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  // get_sets_on_p0(world, master, assigner, results); 
+  get_sets_on_p0(world, master, assigner, results); 
   // get_sets_on_roots(world, master, assigner, results); 
-  get_sets_redistributed(world, master, assigner, results); 
+  // get_sets_redistributed(world, master, assigner, results); 
 }
 
 
