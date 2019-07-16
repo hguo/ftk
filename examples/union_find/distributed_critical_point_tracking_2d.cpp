@@ -638,7 +638,7 @@ int main(int argc, char **argv)
   // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
   std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
   
-  std::vector<size_t> ghost_low = {2, 2, 2}; //{1, 1, 1}; // at least 1, larger is ok
+  std::vector<size_t> ghost_low = {1, 1, 1}; // at least 1, larger is ok // {2, 2, 2}; 
   std::vector<size_t> ghost_high = {2, 2, 2}; // at least 2, larger is ok
 
   m.partition(nblocks, given, ghost_low, ghost_high, ms); 

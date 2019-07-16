@@ -998,26 +998,6 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
   assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
 
   import_data(blocks, master, assigner, gids); 
-
-  // master.foreach(&query_gid);
-  // // master.execute(); 
-  // master.exchange();
-  // master.foreach(&answer_gid);  
-  // master.exchange();
-  // master.foreach(&save_gid);
-
-  // if(ISDEBUG) {
-  //   std::cout<<"Finish Gid Query"<<std::endl; 
-  // }
-
-  // for(int i = 0; i < gids.size(); ++i) {
-  //   Block* b = static_cast<Block*> (master.get(i));
-  //   for(auto& ele : b->ele2gid) {
-  //     if(ele.second < 0) {
-  //       std::cout<<world.rank()<<": gid is negative: "<<ele.first<<" "<<ele.second<<" - Since some elements are missing / not added into blocks. The invalid elements also need to be added. "<<std::endl; 
-  //     }
-  //   }
-  // }
   
   if(IEXCHANGE) { // for iexchange
     // #ifndef DIY_NO_MPI
@@ -1027,9 +1007,6 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
     // #endif
 
     master.foreach(&query_gid);
-
-      // std::cout<<"Finish Query Gid: "<<world.rank()<<std::endl;
-
     iexchange_process(master);  
 
     // #ifdef FTK_HAVE_MPI
@@ -1043,10 +1020,6 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
     bool all_done = false;
     while(!all_done) {
       exchange_process(master); 
-
-      // int total_changes;
-      // for (int i = 0; i < master.size(); i++)
-      //     total_changes = master.proxy(i).get<size_t>();
 
       int total_changes = master.proxy(master.loaded_block()).read<int>();
       // int total_changes = master.proxy(master.loaded_block()).get<int>();
@@ -1064,6 +1037,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
 
 
+
 // Generate sets of elements
 
 // Method 1:
@@ -1077,6 +1051,13 @@ void send_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
 
     auto& target = l->target(l->find(0));
     for(auto& ele : b->eles) {
+      if(b->get_related_elements(ele).size() > 0) {
+        std::cout<<"Related element is not zero! " << world.rank() <<" : "<< b->get_related_elements(ele).size()<<std::endl; 
+      }
+      if(!b->is_root(ele) && b->children(ele).size() > 0) {
+        std::cout<<"Non-root element has children! " << world.rank() <<" : "<< b->children(ele).size()<<std::endl; 
+      }
+
       std::string parent = b->parent(ele); 
 
       // local_pairs.push_back(std::make_pair(ele, parent)); 
