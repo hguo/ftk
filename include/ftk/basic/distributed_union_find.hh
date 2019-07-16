@@ -875,6 +875,8 @@ bool union_find_iexchange(Block* b, const diy::Master::ProxyWithLink& cp) {
 
 void iexchange_process(diy::Master& master) {
   master.iexchange(&union_find_iexchange); 
+
+  master.iexchange(&union_find_iexchange); 
 }
 
 void union_find_exchange(Block* b, const diy::Master::ProxyWithLink& cp) {
@@ -1085,7 +1087,7 @@ void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::Con
     #ifdef FTK_HAVE_MPI
       std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
     #endif
-      
+
     for(auto& ele : b->eles) {
       if(!b->is_root(b->parent(ele))) {
         std::cout<<"Wrong! The parent is not root! "<< std::endl; 
