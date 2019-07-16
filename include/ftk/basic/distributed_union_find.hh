@@ -1004,15 +1004,6 @@ void send_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
-  for(auto& ele : b->eles) {
-    if(b->get_related_elements(ele).size() > 0) {
-      std::cout<<"Related element is not zero! on " << gid <<" : "<< b->get_related_elements(ele).size()<<std::endl; 
-    }
-    if(!b->is_root(ele) && b->children(ele).size() > 0) {
-      std::cout<<"Non-root element has children! on " << gid <<" : "<< b->children(ele).size()<<std::endl; 
-    }
-  }
-
   if(gid != 0) {
     // std::vector<std::pair<std::string, std::string>> local_pairs; 
 
@@ -1344,9 +1335,9 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
 
   std::map<std::string, std::set<std::string>> root2set; 
 
-  #ifdef FTK_HAVE_MPI
+  // #ifdef FTK_HAVE_MPI
     // std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
-  #endif
+  // #endif
   for(auto& ele : b->eles) {
     if(!b->is_root(b->parent(ele))) {
       std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
