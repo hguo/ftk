@@ -1052,10 +1052,10 @@ void send_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
     auto& target = l->target(l->find(0));
     for(auto& ele : b->eles) {
       if(b->get_related_elements(ele).size() > 0) {
-        std::cout<<"Related element is not zero! " << world.rank() <<" : "<< b->get_related_elements(ele).size()<<std::endl; 
+        std::cout<<"Related element is not zero! on " << gid <<" : "<< b->get_related_elements(ele).size()<<std::endl; 
       }
       if(!b->is_root(ele) && b->children(ele).size() > 0) {
-        std::cout<<"Non-root element has children! " << world.rank() <<" : "<< b->children(ele).size()<<std::endl; 
+        std::cout<<"Non-root element has children! on " << gid <<" : "<< b->children(ele).size()<<std::endl; 
       }
 
       std::string parent = b->parent(ele); 
