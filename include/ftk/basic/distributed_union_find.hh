@@ -1067,7 +1067,39 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 // Generate sets of elements
 
 // Method 1:
-  // Gather all element-parent information to the first block
+  // Send to p0
+void send_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
+    int gid = cp.gid(); 
+  diy::Link* l = cp.link();
+
+  if(gid != 0) {
+    // std::vector<std::pair<std::string, std::string>> local_pairs; 
+
+    auto& target = l->target(l->find(0));
+    for(auto& ele : b->eles) {
+      std::string parent = b->parent(ele); 
+
+      // local_pairs.push_back(std::make_pair(ele, parent)); 
+
+      std::pair<std::string, std::string> local_pair(ele, parent); 
+
+      Message send_msg; 
+      send_msg.send_ele_parent_pair(local_pair); 
+
+      cp.enqueue(target, send_msg); 
+    }
+
+    for(auto& pair : b->intersections) {
+      Message send_msg; 
+      send_msg.send_intersection(pair); 
+
+      cp.enqueue(target, send_msg); 
+    }
+  }
+}
+
+
+// Gather all element-parent information to the first block
 bool gather_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
@@ -1100,49 +1132,8 @@ bool gather_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
             std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
           }
 
-          // std::vector<std::pair<std::string, std::string>> pairs; 
-          // msg.receive_ele_parent_pairs(pairs); 
-
-          // std::cout<<"Received Pairs: "<<pairs.size()<<std::endl; 
-
-          // for(auto& pair : pairs) {
-          //   b->add(pair.first); 
-          //   b->set_parent(pair.first, pair.second); 
-          // }
-
         }
       }
-    }
-  } else {
-    // std::vector<std::pair<std::string, std::string>> local_pairs; 
-
-    auto& target = l->target(l->find(0));
-    for(auto& ele : b->eles) {
-      std::string parent = b->parent(ele); 
-
-      // local_pairs.push_back(std::make_pair(ele, parent)); 
-
-      std::pair<std::string, std::string> local_pair(ele, parent); 
-
-      Message send_msg; 
-      send_msg.send_ele_parent_pair(local_pair); 
-
-      cp.enqueue(target, send_msg); 
-    }
-
-    // Message send_msg; 
-    // send_msg.send_ele_parent_pairs(local_pairs); 
-
-    // std::cout<<"Sent Pairs: "<<local_pairs.size()<<std::endl; 
-
-    // cp.enqueue(target, send_msg); 
-
-
-    for(auto& pair : b->intersections) {
-      Message send_msg; 
-      send_msg.send_intersection(pair); 
-
-      cp.enqueue(target, send_msg); 
     }
   }
 
@@ -1152,6 +1143,7 @@ bool gather_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
 
 // Get sets of elements
 void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+  master.foreach(&send_2_p0); 
   master.iexchange(&gather_2_p0); 
 
   if(world.rank() == 0) {
