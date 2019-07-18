@@ -439,8 +439,7 @@ void scan_intersections()
   //   m.element_for(2, check_simplex, nthreads);
   // } else {
   
-  // auto& _m_pair = ms[gid]; 
-  auto& _m_pair = ms[31 - gid]; 
+  auto& _m_pair = ms[gid]; 
   // hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
@@ -686,6 +685,7 @@ int main(int argc, char **argv)
       #endif
     #endif
   }
+  MPI_Barrier(world);
   exit(0); 
 
   if(world.rank() == 0) {
