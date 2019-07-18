@@ -439,7 +439,8 @@ void scan_intersections()
   //   m.element_for(2, check_simplex, nthreads);
   // } else {
   
-  auto& _m_pair = ms[gid]; 
+  // auto& _m_pair = ms[gid]; 
+  auto& _m_pair = ms[31 - gid]; 
   // hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
@@ -609,6 +610,7 @@ int main(int argc, char **argv)
   std::vector<size_t> ghost_high = {2, 2, 2}; // at least 2, larger is ok
 
   m.partition(nblocks, given, ghost_low, ghost_high, ms); 
+  // m.partition(32, given, ghost_low, ghost_high, ms); 
 
   intersections = &b->intersections; 
 
@@ -623,6 +625,11 @@ int main(int argc, char **argv)
     #endif
   #endif
 
+
+
+
+
+
   // if(world.rank() == 0) {
   //   // scalar = generate_synthetic_data<float>(124, 124, 7);
   //   // scalar = generate_synthetic_data<float>(19, 34, 128);
@@ -635,11 +642,8 @@ int main(int argc, char **argv)
   //   grad = derive_gradients2(scalar);
   //   hess = derive_hessians2(grad);
 
-  //   ms.clear(); 
-  //   m.partition(32, given, ghost_low, ghost_high, ms); 
-
   //   auto& _m_pair = ms[31]; 
-  //   hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+  //   hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   //   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
   //   #ifdef FTK_HAVE_MPI
@@ -694,6 +698,9 @@ int main(int argc, char **argv)
   //   }
   // }
   // exit(0); 
+
+
+
   
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);
@@ -730,6 +737,8 @@ int main(int argc, char **argv)
           start = end; 
         #endif
       #endif
+
+      exit(0); 
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
