@@ -632,9 +632,12 @@ int main(int argc, char **argv)
   //   // _m_ghost.set_lb_ub({0+111, 0+111, 0+111}, {19+111, 34+111, 128+111});
 
 
+  //   grad = derive_gradients2(scalar);
+  //   hess = derive_hessians2(grad);
+
   //   m.partition(32, given, ghost_low, ghost_high, ms); 
 
-  //   auto& _m_pair = ms[15]; 
+  //   auto& _m_pair = ms[31]; 
   //   hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
   //   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
@@ -649,6 +652,8 @@ int main(int argc, char **argv)
   //     #endif
   //   #endif
 
+  //   _m_ghost.element_for(2, check_simplex, nthreads);
+
   //   int count = 0;
   //   // _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
   //   //   if (!f.valid()) return; // check if the 2-simplex is valid
@@ -657,12 +662,12 @@ int main(int argc, char **argv)
   //   //   count++;
   //   // }, nthreads); 
 
-  //   _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
-  //     if (!f.valid()) return; // check if the 2-simplex is valid
-  //     const auto elements = f.sides(); // obtain the vertices of the simplex
+  //   // _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  //   //   if (!f.valid()) return; // check if the 2-simplex is valid
+  //   //   const auto elements = f.sides(); // obtain the vertices of the simplex
 
-  //     count++;
-  //   }, nthreads); 
+  //   //   count++;
+  //   // }, nthreads); 
 
   //   #ifdef FTK_HAVE_MPI
   //     #if TIME_OF_STEPS
@@ -719,7 +724,7 @@ int main(int argc, char **argv)
           // MPI_Barrier(world);
           end = MPI_Wtime();
           // if(world.rank() == 0) {
-            std::cout << "Scan Critical Points: " << end - start << " seconds. " << std::endl;
+            std::cout << "Scan Critical Points: " << end - start << " seconds. " << world.rank()<<std::endl;
           // }
           start = end; 
         #endif
