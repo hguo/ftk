@@ -738,6 +738,7 @@ int main(int argc, char **argv)
         #endif
       #endif
 
+      MPI_Barrier(world);
       exit(0); 
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
