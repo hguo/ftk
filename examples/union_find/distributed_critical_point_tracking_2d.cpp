@@ -165,21 +165,31 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
-  _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-    if (!f.valid()) return; // check if the 2-simplex is valid
-    if(!is_in_mesh(f, _m)) return ;
+  // _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  //   if (!f.valid()) return; // check if the 2-simplex is valid
+  //   if(!is_in_mesh(f, _m)) return ;
 
-    std::string eid = f.to_string(); 
-    if(intersections->find(eid) != intersections->end()) {
+  //   std::string eid = f.to_string(); 
+  //   if(intersections->find(eid) != intersections->end()) {
       
-      #if MULTITHREAD
-        std::lock_guard<std::mutex> guard(mutex);
-      #endif
+  //     #if MULTITHREAD
+  //       std::lock_guard<std::mutex> guard(mutex);
+  //     #endif
 
+  //     b->add(eid); 
+  //     b->set_gid(eid, gid);
+  //   }
+  // }, nthreads);
+
+  for(auto& pair : b->intersections) {
+    auto& eid = pair.first;
+    hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
+
+    if(is_in_mesh(f, _m)) {
       b->add(eid); 
       b->set_gid(eid, gid);
     }
-  }, nthreads);
+  }
 
   // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
@@ -338,8 +348,8 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
     for(auto& comp_str : cc_str) {
       cc.push_back(std::set<element_t>()); 
       std::set<element_t>& comp = cc[cc.size() - 1]; 
-      for(auto& ele_id : comp_str) {
-        comp.insert(hypermesh::regular_simplex_mesh_element(m, 2, ele_id)); 
+      for(auto& eid : comp_str) {
+        comp.insert(hypermesh::regular_simplex_mesh_element(m, 2, eid)); 
       }
     }
 
