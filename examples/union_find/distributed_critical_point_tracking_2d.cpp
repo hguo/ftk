@@ -718,9 +718,9 @@ int main(int argc, char **argv)
         #if TIME_OF_STEPS
           // MPI_Barrier(world);
           end = MPI_Wtime();
-          if(world.rank() == 0) {
+          // if(world.rank() == 0) {
             std::cout << "Scan Critical Points: " << end - start << " seconds. " << std::endl;
-          }
+          // }
           start = end; 
         #endif
       #endif
