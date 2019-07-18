@@ -165,23 +165,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
-  // _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-  //   if (!f.valid()) return; // check if the 2-simplex is valid
-  //   if(!is_in_mesh(f, _m)) return ;
-
-  //   std::string eid = f.to_string(); 
-  //   if(intersections->find(eid) != intersections->end()) {
-      
-  //     #if MULTITHREAD
-  //       std::lock_guard<std::mutex> guard(mutex);
-  //     #endif
-
-  //     b->add(eid); 
-  //     b->set_gid(eid, gid);
-  //   }
-  // }, nthreads);
-
-  for(auto& pair : b->intersections) {
+  for(auto& pair : *intersections) {
     auto& eid = pair.first;
     hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
 
@@ -192,7 +176,6 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   }
 
   // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
-
 
   // Connected Component Labeling by using union-find. 
 
