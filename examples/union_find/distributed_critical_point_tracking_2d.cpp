@@ -636,6 +636,17 @@ int main(int argc, char **argv)
       grad = derive_gradients2(scalar);
       hess = derive_hessians2(grad);
 
+      #ifdef FTK_HAVE_MPI
+        #if TIME_OF_STEPS
+          MPI_Barrier(world);
+          end = MPI_Wtime();
+          if(world.rank() == 0) {
+            std::cout << "Derive gradients: " << end - start << " seconds. " << std::endl;
+          }
+          start = end; 
+        #endif
+      #endif
+
       // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
 
       scan_intersections();
