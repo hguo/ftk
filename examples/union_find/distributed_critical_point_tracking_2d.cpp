@@ -435,17 +435,11 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
 void scan_intersections() 
 {
-  // if(rank == 0) { // for root, we need all intersections information, probably can use "gather" for optimization
-  //   m.element_for(2, check_simplex, nthreads);
-  // } else {
-  
   auto& _m_pair = ms[gid]; 
   // hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
   _m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
-  
-  // }
 }
 
 void print_trajectories()
@@ -647,7 +641,6 @@ int main(int argc, char **argv)
 
     #ifdef FTK_HAVE_MPI
       #if TIME_OF_STEPS
-        MPI_Barrier(world);
         end = MPI_Wtime();
         if(world.rank() == 0) {
           std::cout << "Generate time: " << end - start << " seconds. " << std::endl;
@@ -675,7 +668,6 @@ int main(int argc, char **argv)
 
     #ifdef FTK_HAVE_MPI
       #if TIME_OF_STEPS
-        MPI_Barrier(world);
         end = MPI_Wtime();
         if(world.rank() == 0) {
           std::cout << "Count: " << count << std::endl;
