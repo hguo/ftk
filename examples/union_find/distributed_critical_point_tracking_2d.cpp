@@ -310,7 +310,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       MPI_Barrier(world);
       end = MPI_Wtime();
       if(world.rank() == 0) {
-        std::cout << "CCL: Gather Connected Components - Total: " << end - start << " seconds. " << std::endl;
+        std::cout << "CCL: Gather Connected Components: " << end - start << " seconds. " << std::endl;
       }
       start = end; 
     #endif
@@ -326,20 +326,13 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   std::vector<std::set<std::string>> cc_str; // connected components 
   extract_connected_components(world, master, assigner, cc_str);
 
-  // #ifdef FTK_HAVE_MPI
-  //   MPI_Barrier(world);
-  //   end = MPI_Wtime();
-  //   if(world.rank() == 0) {
-  //     std::cout << "Extract connected components: " << end - start << " seconds. " << std::endl;
-  //   }
-  //   start = end; 
-  // #endif
-
   // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
 
-  if(world.rank() == 0) {
-    // Convert connected components to geometries
+  // Convert connected components to geometries
 
+  // if(world.rank() == 0) {
+  if(cc_str.size() > 0) {
+    
     std::vector<std::set<element_t>> cc; // connected components 
     // Convert element IDs to elements
     for(auto& comp_str : cc_str) {
