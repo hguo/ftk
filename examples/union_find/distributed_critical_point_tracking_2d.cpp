@@ -602,16 +602,13 @@ int main(int argc, char **argv)
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   // std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
-  std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
-  // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
+  // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
+  std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
   
   std::vector<size_t> ghost_low = {1, 1, 1}; // at least 1, larger is ok // {2, 2, 2}; 
   std::vector<size_t> ghost_high = {2, 2, 2}; // at least 2, larger is ok
 
-  m.partition(nblocks, given, ghost_low, ghost_high, ms); 
-
-  // std::vector<size_t> ghost = {3, 3, 3}; // at least 1, larger is ok // {2, 2, 2}; 
-  // m.partition(nblocks, given, ghost, ms); 
+  m.partition(nblocks, given, ghost_low, ghost_high, ms); // **********
 
   intersections = &b->intersections; 
 
@@ -625,6 +622,72 @@ int main(int argc, char **argv)
       start = end;  
     #endif
   #endif
+
+  // if(world.rank() == 0) {
+  //   // scalar = generate_synthetic_data<float>(124, 124, 7);
+  //   // scalar = generate_synthetic_data<float>(19, 34, 128);
+
+  //   // hypermesh::regular_simplex_mesh _m_ghost(3); // the 3D space-time mesh
+  //   // _m_ghost.set_lb_ub({0+111, 0+111, 0+111}, {124+111, 124+111, 7+111});
+  //   // _m_ghost.set_lb_ub({0+111, 0+111, 0+111}, {19+111, 34+111, 128+111});
+
+
+  //   m.partition(32, given, ghost_low, ghost_high, ms); 
+
+  //   auto& _m_pair = ms[15]; 
+  //   hypermesh::regular_simplex_mesh& _m = std::get<1>(_m_pair); 
+  //   hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+
+  //   #ifdef FTK_HAVE_MPI
+  //     #if TIME_OF_STEPS
+  //       MPI_Barrier(world);
+  //       end = MPI_Wtime();
+  //       if(world.rank() == 0) {
+  //         std::cout << "Generate time: " << end - start << " seconds. " << std::endl;
+  //       }
+  //       start = end;  
+  //     #endif
+  //   #endif
+
+  //   int count = 0;
+  //   // _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  //   //   if (!f.valid()) return; // check if the 2-simplex is valid
+  //   //   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+
+  //   //   count++;
+  //   // }, nthreads); 
+
+  //   _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  //     if (!f.valid()) return; // check if the 2-simplex is valid
+  //     const auto elements = f.sides(); // obtain the vertices of the simplex
+
+  //     count++;
+  //   }, nthreads); 
+
+  //   #ifdef FTK_HAVE_MPI
+  //     #if TIME_OF_STEPS
+  //       MPI_Barrier(world);
+  //       end = MPI_Wtime();
+  //       if(world.rank() == 0) {
+  //         std::cout << "Count: " << count << std::endl;
+  //         std::cout << "Iteration time: " << end - start << " seconds. " << std::endl;
+  //       }
+  //       start = end;  
+  //     #endif
+  //   #endif
+  // }
+  // exit(0); 
+
+  // if(world.rank() == 0) {
+  //   for (auto& _m_pair : ms) {
+  //     hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
+  //     hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+
+  //     auto sizes = _m_ghost.sizes(); 
+  //     std::cout << sizes[0] << " " << sizes[1] << " " << sizes[2] << std::endl; 
+  //   }
+  // }
+  // exit(0); 
   
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     read_traj_file(filename_traj_r);
@@ -653,7 +716,7 @@ int main(int argc, char **argv)
 
       #ifdef FTK_HAVE_MPI
         #if TIME_OF_STEPS
-          MPI_Barrier(world);
+          // MPI_Barrier(world);
           end = MPI_Wtime();
           if(world.rank() == 0) {
             std::cout << "Scan Critical Points: " << end - start << " seconds. " << std::endl;
