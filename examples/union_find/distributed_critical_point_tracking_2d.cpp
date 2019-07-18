@@ -602,8 +602,8 @@ int main(int argc, char **argv)
   std::vector<size_t> ghost_low = {1, 1, 1}; // at least 1, larger is ok // {2, 2, 2}; 
   std::vector<size_t> ghost_high = {2, 2, 2}; // at least 2, larger is ok
 
-  // m.partition(nblocks, given, ghost_low, ghost_high, ms); 
-  m.partition(32, given, ghost_low, ghost_high, ms); 
+  // m.partition(nblocks, given, ghost_low, ghost_high, ms); // *************
+  m.partition(32, given, ghost_low, ghost_high, ms); // *************
 
   intersections = &b->intersections; 
 
@@ -620,7 +620,7 @@ int main(int argc, char **argv)
 
 
 
-
+// ========================================
 
 
   if(world.rank() == 0) {
@@ -635,7 +635,7 @@ int main(int argc, char **argv)
     grad = derive_gradients2(scalar);
     hess = derive_hessians2(grad);
 
-    auto& _m_pair = ms[31]; 
+    auto& _m_pair = ms[0]; 
     hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
     hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
@@ -692,6 +692,7 @@ int main(int argc, char **argv)
   exit(0); 
 
 
+// ========================================
 
   
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
