@@ -549,6 +549,7 @@ int main(int argc, char **argv)
   #if MULTITHREAD
     if(world.size() == 1) {
       nthreads = std::thread::hardware_concurrency(); 
+      std::cout<<"Use MULTITHREAD! "<<std::endl; 
     }
   #endif
 
@@ -602,8 +603,11 @@ int main(int argc, char **argv)
   std::vector<size_t> ghost_low = {1, 1, 1}; // at least 1, larger is ok // {2, 2, 2}; 
   std::vector<size_t> ghost_high = {2, 2, 2}; // at least 2, larger is ok
 
+
+  // *************
   // m.partition(nblocks, given, ghost_low, ghost_high, ms); // *************
   m.partition(32, given, ghost_low, ghost_high, ms); // *************
+  // *************
 
   intersections = &b->intersections; 
 
@@ -649,9 +653,11 @@ int main(int argc, char **argv)
       #endif
     #endif
 
+    
+    int count = 0;
+
     _m_ghost.element_for(2, check_simplex, nthreads);
 
-    int count = 0;
     // _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
     //   if (!f.valid()) return; // check if the 2-simplex is valid
     //   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
