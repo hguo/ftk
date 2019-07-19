@@ -597,8 +597,8 @@ int main(int argc, char **argv)
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   // std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
-  std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
-  // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
+  // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
+  std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
   
   std::vector<size_t> ghost_low = {1, 1, 1}; // at least 1, larger is ok // {2, 2, 2}; 
   std::vector<size_t> ghost_high = {2, 2, 2}; // at least 2, larger is ok
@@ -726,13 +726,22 @@ int main(int argc, char **argv)
 
       scan_intersections();
 
+      // #ifdef FTK_HAVE_MPI
+      //   #if TIME_OF_STEPS
+      //     end = MPI_Wtime();
+      //     std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
+      //     start = end; 
+      //   #endif
+      // #endif
+
+
       #ifdef FTK_HAVE_MPI
         #if TIME_OF_STEPS
-          // MPI_Barrier(world);
+          MPI_Barrier(world);
           end = MPI_Wtime();
-          // if(world.rank() == 0) {
+          if(world.rank() == 0) {
             std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
-          // }
+          }
           start = end; 
         #endif
       #endif
