@@ -740,7 +740,7 @@ int main(int argc, char **argv)
           MPI_Barrier(world);
           end = MPI_Wtime();
           if(world.rank() == 0) {
-            std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
+            std::cout << "Scan Critical Points: " << end - start << " seconds. " <<std::endl;
           }
           start = end; 
         #endif
