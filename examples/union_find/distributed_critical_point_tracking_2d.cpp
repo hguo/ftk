@@ -710,14 +710,14 @@ int main(int argc, char **argv)
     
     int count = 0;
 
-    _m_ghost.element_for(2, check_simplex_test, nthreads);
+    // _m_ghost.element_for(2, check_simplex_test, nthreads);
 
-    // _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-    //   if (!f.valid()) return; // check if the 2-simplex is valid
-    //   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+    _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+      if (!f.valid()) return; // check if the 2-simplex is valid
+      const auto &vertices = f.vertices(); // obtain the vertices of the simplex
 
-    //   count++;
-    // }, nthreads); 
+      count++;
+    }, nthreads); 
 
     // _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
     //   if (!f.valid()) return; // check if the 2-simplex is valid
