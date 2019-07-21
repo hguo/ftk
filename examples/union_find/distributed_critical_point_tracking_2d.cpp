@@ -665,12 +665,14 @@ int main(int argc, char **argv)
     auto ub = _m_ghost.ub();
     std::cout << "Ub: "<< ub[0] << " " << ub[1] << " " << ub[2] << std::endl; 
 
-    _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-      // if (!f.valid()) return; // check if the 2-simplex is valid
-      const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+    _m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
 
-      // count++;
-    }, nthreads); 
+    // _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
+    //   if (!f.valid()) return; // check if the 2-simplex is valid
+    //   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+
+    //   count++;
+    // }, nthreads); 
 
     // _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
     //   if (!f.valid()) return; // check if the 2-simplex is valid
