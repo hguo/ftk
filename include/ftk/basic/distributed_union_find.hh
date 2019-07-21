@@ -706,30 +706,63 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
       std::vector<std::string> cache;
 
       if(src.size() > 0) {
+
         std::string par = b->parent(ele); 
+        bool is_local_parent = true; 
+        int p_gid = gid; 
+        if(!b->has(par)) {
+          if(!b->has_gid(par)) {
+            continue ;
+          }
 
-        if(b->has(par)) {
-          // Update directly, if the realted element is in the block
+          is_local_parent = false;
+          p_gid = b->get_gid(par); 
+        }
 
-          for(auto& related_ele : src) {
-            b->add_related_element(par, related_ele); 
-          } 
-        } else {
-          // Communicate with other processes
-          int pgid = b->get_gid(par); 
+        for(auto& related_ele : src) {
 
-          for(auto& related_ele : src) {
-            if(!b->has_gid(related_ele)) {
-              cache.push_back(related_ele); 
-              continue ;
+          if(related_ele < par) {
+
+            if(is_local_parent) {
+              b->add_related_element(par, related_ele); 
+            } else {
+              // Communicate with other processes
+
+              if(!b->has_gid(related_ele)) {
+                cache.push_back(related_ele); 
+                continue ;
+              }
+
+              int r_gid = b->get_gid(related_ele); 
+
+              Message send_msg; 
+              send_msg.send_union(par, related_ele, r_gid); 
+
+              cp.enqueue(l->target(l->find(p_gid)), send_msg); 
+
             }
-            int r_gid = b->get_gid(related_ele); 
 
-            Message send_msg; 
-            send_msg.send_union(par, related_ele, r_gid); 
-
-            cp.enqueue(l->target(l->find(pgid)), send_msg); 
           } 
+          else {
+
+            if(b->has(related_ele)) {
+              b->add_related_element(related_ele, par); 
+            } else {
+              if(!b->has_gid(related_ele)) {
+                cache.push_back(related_ele); 
+                continue ;
+              }
+
+              int r_gid = b->get_gid(related_ele); 
+
+              Message send_msg; 
+              send_msg.send_union(related_ele, par, p_gid); 
+
+              cp.enqueue(l->target(l->find(r_gid)), send_msg); 
+            }
+
+          }
+
         }
 
         b->clear_related_elements(ele); 
@@ -739,6 +772,7 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
             b->add_related_element(ele, cache_ele); 
           }
         }
+
       }
 
     }
