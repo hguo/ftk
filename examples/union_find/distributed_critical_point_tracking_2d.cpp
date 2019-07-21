@@ -537,60 +537,6 @@ void start_vtk_window()
 }
 #endif
 
-void check_simplex_test(const hypermesh::regular_simplex_mesh_element& f)
-{
-  if (!f.valid()) return; // check if the 2-simplex is valid
-  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
-  float g[3][2], value[3];
-
-  for (int i = 0; i < 3; i ++) {
-    g[i][0] = grad(0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    g[i][1] = grad(1, vertices[i][0], vertices[i][1], vertices[i][2]);
-    value[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
-  }
- 
-  float mu[3];
-  bool succ = ftk::inverse_lerp_s2v2(g, mu);
-  float val = ftk::lerp_s2(value, mu);
-  
-  if (!succ) return;
-
-  // float hessxx[3], hessxy[3], hessyy[3];
-  // for (int i = 0; i < vertices.size(); i ++) {
-  //   hessxx[i] = hess(0, 0, vertices[i][0], vertices[i][1], vertices[i][2]);
-  //   hessxy[i] = hess(0, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
-  //   hessyy[i] = hess(1, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
-  // }
-  // float hxx = ftk::lerp_s2(hessxx, mu),
-  //       hxy = ftk::lerp_s2(hessxy, mu), 
-  //       hyy = ftk::lerp_s2(hessyy, mu);
-  // float eig[2];
-  // ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
-
-  // if (eig[0] < 0 && eig[1] < 0) { 
-  //   float X[3][3];
-  //   for (int i = 0; i < vertices.size(); i ++)
-  //     for (int j = 0; j < 3; j ++)
-  //       X[i][j] = vertices[i][j];
-
-  //   intersection_t I;
-  //   I.eid = f.to_string();
-  //   ftk::lerp_s2v3(X, mu, I.x);
-  //   I.val = ftk::lerp_s2(value, mu);
-
-  //   {
-  //     #if MULTITHREAD 
-  //       std::lock_guard<std::mutex> guard(mutex);
-  //     #endif
-
-  //     intersections->insert(std::make_pair(f.to_string(), I)); 
-  //     // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
-  //   }
-  // }
-}
-
-
-
 int main(int argc, char **argv)
 {
   diy::mpi::environment     env(0, 0); // env(NULL, NULL)
@@ -693,7 +639,7 @@ int main(int argc, char **argv)
     grad = derive_gradients2(scalar);
     hess = derive_hessians2(grad);
 
-    auto& _m_pair = ms[0]; 
+    auto& _m_pair = ms[31]; 
     hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
     hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
@@ -710,13 +656,11 @@ int main(int argc, char **argv)
     
     int count = 0;
 
-    // _m_ghost.element_for(2, check_simplex_test, nthreads);
-
     _m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f) {
-      if (!f.valid()) return; // check if the 2-simplex is valid
-      const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+      // if (!f.valid()) return; // check if the 2-simplex is valid
+      // const auto &vertices = f.vertices(); // obtain the vertices of the simplex
 
-      count++;
+      // count++;
     }, nthreads); 
 
     // _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
