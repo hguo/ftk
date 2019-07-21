@@ -661,7 +661,8 @@ int main(int argc, char **argv)
       #ifdef FTK_HAVE_MPI
         #if TIME_OF_STEPS
           end = MPI_Wtime();
-          std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
+          std::cout << end - start <<std::endl;
+          // std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
           start = end; 
         #endif
       #endif
