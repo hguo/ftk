@@ -658,25 +658,25 @@ int main(int argc, char **argv)
 
       scan_intersections();
 
-      // #ifdef FTK_HAVE_MPI
-      //   #if TIME_OF_STEPS
-      //     end = MPI_Wtime();
-      //     std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
-      //     start = end; 
-      //   #endif
-      // #endif
-
-
       #ifdef FTK_HAVE_MPI
         #if TIME_OF_STEPS
-          MPI_Barrier(world);
           end = MPI_Wtime();
-          if(world.rank() == 0) {
-            std::cout << "Scan Critical Points: " << end - start << " seconds. " <<std::endl;
-          }
+          std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
           start = end; 
         #endif
       #endif
+
+
+      // #ifdef FTK_HAVE_MPI
+      //   #if TIME_OF_STEPS
+      //     MPI_Barrier(world);
+      //     end = MPI_Wtime();
+      //     if(world.rank() == 0) {
+      //       std::cout << "Scan Critical Points: " << end - start << " seconds. " <<std::endl;
+      //     }
+      //     start = end; 
+      //   #endif
+      // #endif
 
       // MPI_Barrier(world);
       // exit(0); 
