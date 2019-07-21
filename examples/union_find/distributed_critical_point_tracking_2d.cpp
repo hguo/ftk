@@ -693,7 +693,7 @@ int main(int argc, char **argv)
     grad = derive_gradients2(scalar);
     hess = derive_hessians2(grad);
 
-    auto& _m_pair = ms[31]; 
+    auto& _m_pair = ms[0]; 
     hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
     hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
