@@ -659,8 +659,8 @@ int main(int argc, char **argv)
 
 
   // *************
-  m.partition(nblocks, given, ghost_low, ghost_high, ms); // *************
-  // m.partition(32, given, ghost_low, ghost_high, ms); // *************
+  // m.partition(nblocks, given, ghost_low, ghost_high, ms); // *************
+  m.partition(32, given, ghost_low, ghost_high, ms); // *************
   // *************
 
   intersections = &b->intersections; 
