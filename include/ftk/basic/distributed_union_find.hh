@@ -567,19 +567,7 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
           b->erase_related_element(ele, related_ele); 
 
           break ; 
-        } else {
-
-          if(b->has(related_ele)) {
-            b->add_related_element(related_ele, ele); 
-          } else {
-            Message send_msg; 
-            send_msg.send_union(related_ele, ele, gid); 
-
-            cp.enqueue(l->target(l->find(rgid)), send_msg);
-          }
-
-          b->erase_related_element(ele, related_ele); 
-        }
+        } 
 
       }
     }
