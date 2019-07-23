@@ -287,10 +287,6 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     }
   }
 
-  // _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
-  //   add_unions(f);
-  // }, nthreads);
-
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
       MPI_Barrier(world);
