@@ -151,10 +151,93 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
   return true;
 }
 
+
+// Add union edges to the block
+void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
+  if (!f.valid()) return; // check if the 3-simplex is valid
+
+  const auto elements = f.sides();
+  std::set<std::string> features; 
+  std::map<std::string, hypermesh::regular_simplex_mesh_element> id2element; 
+
+  for (const auto& ele : elements) {
+    std::string eid = ele.to_string(); 
+    if(intersections->find(eid) != intersections->end()) {
+      features.insert(eid); 
+      id2element.insert(std::make_pair(eid, ele)); 
+    }
+  }
+
+  if(features.size()  > 1) {
+    std::set<std::string> features_in_block; 
+    for(auto& feature : features) {
+      if(b->has(feature)) {
+        features_in_block.insert(feature); 
+      }
+    }
+
+    if(features_in_block.size() > 1) {
+      // When features are local, we just need to relate to the first feature element
+
+      #if MULTITHREAD
+        std::lock_guard<std::mutex> guard(mutex);
+      #endif
+
+      std::string first_feature = *(features_in_block.begin()); 
+      for(std::set<std::string>::iterator ite_i = std::next(features_in_block.begin(), 1); ite_i != features_in_block.end(); ++ite_i) {
+        std::string curr_feature = *ite_i; 
+
+        if(first_feature < curr_feature) { // Since only when the id of related_ele < ele, then the related_ele can be the parent of ele
+          b->add_related_element(curr_feature, first_feature); 
+        } else {
+          b->add_related_element(first_feature, curr_feature);
+        }
+        
+      }
+    }
+
+    if(features_in_block.size() == 0 || features.size() == features_in_block.size()) {
+      return ;
+    }
+  
+    // When features are across processors, we need to relate all local feature elements to all remote feature elements
+    for(auto& feature: features) {
+      if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
+        
+        if(!b->has_gid(feature)) { // If the block id of this feature is unknown, search the block id of this feature
+          hypermesh::regular_simplex_mesh_element& ele = id2element.find(feature)->second; 
+          for(int mi = 0; mi < ms.size(); ++mi) {
+            if(mi != gid){ // We know the feature is not in this partition
+              hypermesh::regular_simplex_mesh& __m = std::get<0>(ms[mi]); 
+              if(is_in_mesh(ele, __m)) { // the feature is in mith partition
+                #if MULTITHREAD
+                  std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+                #endif
+
+                b->set_gid(feature, mi); // Set gid of this feature to mi  
+              }
+            }
+          }
+        }
+
+        #if MULTITHREAD 
+          std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+        #endif
+
+        for(auto& feature_in_block : features_in_block) {
+
+          if(feature < feature_in_block) { // When across processes, also, since only when the id of related_ele < ele, then the related_ele can be the parent of ele
+            b->add_related_element(feature_in_block, feature); 
+          }
+
+        }
+      }
+    }
+  }
+}
+
 void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
 {
-  typedef hypermesh::regular_simplex_mesh_element element_t;
-
   // Initialization
     // Init union-find blocks
   std::vector<Block_Union_Find*> local_blocks;
@@ -166,9 +249,11 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
+  std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
   for(auto& pair : *intersections) {
     auto& eid = pair.first;
-    hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
+    // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
+    auto&f = eles_with_intersections.emplace_back(m, 2, eid); 
 
     if(is_in_mesh(f, _m)) {
       b->add(eid); 
@@ -182,88 +267,29 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   // std::cout<<"Start Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
 
-  _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
-    if (!f.valid()) return; // check if the 3-simplex is valid
+  // // Method one:
+  //   // For dense critical points
+  //   // Enumerate each 3-d element to connect 2-d faces that contain critical points  
+  // _m_ghost.element_for(3, add_unions, nthreads); 
 
-    const auto elements = f.sides();
-    std::set<std::string> features; 
-    std::map<std::string, element_t> id2element; 
-
-    for (const auto& ele : elements) {
-      std::string eid = ele.to_string(); 
-      if(intersections->find(eid) != intersections->end()) {
-        features.insert(eid); 
-        id2element.insert(std::make_pair(eid, ele)); 
+  // Method two:
+    // For sparse critical points
+    // Enumerate all critical points, find their higher-order geometry; to connect critical points in this higher-order geometry
+  std::set<std::string> visited_hypercells;
+  for(auto& e : eles_with_intersections) { 
+    const auto hypercells = e.side_of();
+    for(auto& hypercell : hypercells) {
+      std::string id_hypercell = hypercell.to_string(); 
+      if(visited_hypercells.find(id_hypercell) == visited_hypercells.end()) {
+        visited_hypercells.insert(id_hypercell); 
+        add_unions(hypercell); 
       }
     }
+  }
 
-    if(features.size()  > 1) {
-      std::set<std::string> features_in_block; 
-      for(auto& feature : features) {
-        if(b->has(feature)) {
-          features_in_block.insert(feature); 
-        }
-      }
-
-      if(features_in_block.size() > 1) {
-        // When features are local, we just need to relate to the first feature element
-
-        #if MULTITHREAD
-          std::lock_guard<std::mutex> guard(mutex);
-        #endif
-
-        std::string first_feature = *(features_in_block.begin()); 
-        for(std::set<std::string>::iterator ite_i = std::next(features_in_block.begin(), 1); ite_i != features_in_block.end(); ++ite_i) {
-          std::string curr_feature = *ite_i; 
-
-          if(first_feature < curr_feature) { // Since only when the id of related_ele < ele, then the related_ele can be the parent of ele
-            b->add_related_element(curr_feature, first_feature); 
-          } else {
-            b->add_related_element(first_feature, curr_feature);
-          }
-          
-        }
-      }
-
-      if(features_in_block.size() == 0 || features.size() == features_in_block.size()) {
-        return ;
-      }
-    
-      // When features are across processors, we need to relate all local feature elements to all remote feature elements
-      for(auto& feature: features) {
-        if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
-          
-          if(!b->has_gid(feature)) { // If the block id of this feature is unknown, search the block id of this feature
-            element_t& ele = id2element.find(feature)->second; 
-            for(int mi = 0; mi < ms.size(); ++mi) {
-              if(mi != gid){ // We know the feature is not in this partition
-                hypermesh::regular_simplex_mesh& __m = std::get<0>(ms[mi]); 
-                if(is_in_mesh(ele, __m)) { // the feature is in mith partition
-                  #if MULTITHREAD
-                    std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-                  #endif
-
-                  b->set_gid(feature, mi); // Set gid of this feature to mi  
-                }
-              }
-            }
-          }
-
-          #if MULTITHREAD 
-            std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-          #endif
-
-          for(auto& feature_in_block : features_in_block) {
-
-            if(feature < feature_in_block) { // When across processes, also, since only when the id of related_ele < ele, then the related_ele can be the parent of ele
-              b->add_related_element(feature_in_block, feature); 
-            }
-
-          }
-        }
-      }
-    }
-  }, nthreads);
+  // _m_ghost.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  //   add_unions(f);
+  // }, nthreads);
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
