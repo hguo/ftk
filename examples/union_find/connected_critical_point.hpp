@@ -4,7 +4,7 @@ struct intersection_t {
   float x[3]; // the spacetime coordinates of the trajectory
   float val; // scalar value at the intersection
   
-  std::string eid; // the "size_t" type is not scalable for element id, for example, when number of elements is large
+  std::string eid; // element id
 
   template <class Archive> void serialize(Archive & ar) {
     ar(eid, x[0], x[1], x[2], val);
@@ -21,7 +21,7 @@ struct Block_Critical_Point : public Block_Union_Find {
   void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results);
 
 public:
-  std::map<std::string, intersection_t> intersections; // Critical points, for critical point tracking
+  std::map<std::string, intersection_t> intersections; // Points on trajectories of critical points
 
 };
 
@@ -160,12 +160,11 @@ bool gather_2_p0(Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) 
 
 
 // Get sets of elements
-void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+void get_sets_on_p0(Block_Critical_Point* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
   master.foreach(&send_2_p0); 
   master.iexchange(&gather_2_p0); 
 
   if(world.rank() == 0) {
-    Block_Critical_Point* b = static_cast<Block_Critical_Point*> (master.get(0)); 
 
     std::map<std::string, std::set<std::string>> root2set; 
 
@@ -257,14 +256,12 @@ bool gather_on_roots(Block_Critical_Point* b, const diy::Master::ProxyWithLink& 
 }
 
 // Get sets of elements on processes of roots
-void get_sets_on_roots(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
   master.foreach(&send_2_roots); 
   master.iexchange(&gather_on_roots); 
 
   // std::vector<int> gids;                     // global ids of local blocks
   // assigner.local_gids(world.rank(), gids);
-
-  Block_Critical_Point* b = static_cast<Block_Critical_Point*> (master.get(0)); // load block with local id 0
 
   std::map<std::string, std::set<std::string>> root2set; 
 
@@ -377,7 +374,7 @@ bool gather_on_redistributed_processes(Block_Critical_Point* b, const diy::Maste
 }
 
 // Get sets of elements by redistributing data
-void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
 
   #ifdef FTK_HAVE_MPI
     double start = MPI_Wtime();
@@ -394,8 +391,6 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
   //   }
   //   start = end; 
   // #endif
-
-  Block_Critical_Point* b = static_cast<Block_Critical_Point*> (master.get(0)); // load block with local id 0
 
   std::map<std::string, std::set<std::string>> root2set; 
 
@@ -438,7 +433,7 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
 
 // Get sets of elements
 inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  // get_sets_on_p0(world, master, assigner, results); 
-  // get_sets_on_roots(world, master, assigner, results); 
-  get_sets_redistributed(world, master, assigner, results); 
+  // get_sets_on_p0(this, world, master, assigner, results); 
+  // get_sets_on_roots(this, world, master, assigner, results); 
+  get_sets_redistributed(this, world, master, assigner, results); 
 }

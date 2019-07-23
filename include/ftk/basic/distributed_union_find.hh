@@ -1077,7 +1077,7 @@ inline void Block_Union_Find::get_sets(diy::mpi::communicator& world, diy::Maste
   master.foreach(&send_2_target_processes); 
   master.iexchange(&gather_on_target_processes); 
 
-  Block_Union_Find* b = static_cast<Block_Union_Find*> (master.get(0)); // load block with local id 0
+  Block_Union_Find* b = this;
 
   std::map<std::string, std::set<std::string>> root2set; 
 

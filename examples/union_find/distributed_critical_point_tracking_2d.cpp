@@ -297,6 +297,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // Get disjoint sets of element IDs
+  // b = static_cast<Block_Critical_Point*> (master.get(0)); // load block with local id 0
   b->get_sets(world, master, assigner, components_str); 
 
   #ifdef FTK_HAVE_MPI
