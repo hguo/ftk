@@ -23,6 +23,7 @@
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy/assigner.hpp>
 #include <ftk/basic/distributed_union_find.hh>
+#include "connected_critical_point.hpp"
 
 #if FTK_HAVE_QT5
 #include "widget.h"
@@ -64,7 +65,7 @@ float threshold; // threshold for trajectories. The max scalar on each trajector
 
 std::mutex mutex;
  
-Block* b = new Block(); 
+Block_Critical_Point* b = new Block_Critical_Point(); 
 int gid; // global id of this block / this process
 std::map<std::string, intersection_t>* intersections;
 
@@ -156,7 +157,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   // Initialization
     // Init union-find blocks
-  std::vector<Block*> local_blocks;
+  std::vector<Block_Union_Find*> local_blocks;
   local_blocks.push_back(b); 
 
   auto& _m_pair = ms[gid]; 
@@ -296,7 +297,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // Get disjoint sets of element IDs
-  get_sets(world, master, assigner, components_str); 
+  b->get_sets(world, master, assigner, components_str); 
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
@@ -599,11 +600,6 @@ int main(int argc, char **argv)
   std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
   // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
   // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
-  
-  // std::vector<size_t> ghost_low = {1, 1, 1}; // at least 1, larger is ok // {2, 2, 2}; 
-  // std::vector<size_t> ghost_high = {2, 2, 2}; // at least 2, larger is ok
-
-  // m.partition(nblocks, given, ghost_low, ghost_high, ms); 
 
   std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
   m.partition(nblocks, given, ghost, ms); 
@@ -623,6 +619,8 @@ int main(int argc, char **argv)
 
 // ========================================
 
+  //// For debug
+  
   // if(world.rank() == 0) {
   //   for (auto& _m_pair : ms) {
   //     hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
@@ -670,7 +668,6 @@ int main(int argc, char **argv)
       //   #endif
       // #endif
 
-
       #ifdef FTK_HAVE_MPI
         #if TIME_OF_STEPS
           MPI_Barrier(world);
@@ -681,9 +678,6 @@ int main(int argc, char **argv)
           start = end; 
         #endif
       #endif
-
-      // MPI_Barrier(world);
-      // exit(0); 
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }

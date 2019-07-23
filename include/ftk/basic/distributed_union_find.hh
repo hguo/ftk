@@ -120,23 +120,9 @@ private:
 
 }
 
-// ==========================================================
-
-struct intersection_t {
-  float x[3]; // the spacetime coordinates of the trajectory
-  float val; // scalar value at the intersection
-  
-  std::string eid; // the "size_t" type is not scalable for element id, for example, when number of elements is large
-
-  template <class Archive> void serialize(Archive & ar) {
-    ar(eid, x[0], x[1], x[2], val);
-  }
-};
-
-// ==========================================================
-
-struct Block : public ftk::distributed_union_find<std::string> {
-  Block(): nchanges(0), related_elements(), ele2gid(), intersections(), distributed_union_find() { 
+// DIY Block for distributed union-find
+struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
+  Block_Union_Find(): nchanges(0), related_elements(), ele2gid(), distributed_union_find() { 
     
   }
 
@@ -260,9 +246,10 @@ struct Block : public ftk::distributed_union_find<std::string> {
     distributed_union_find::clear_children(par); 
   }
 
+  void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results);
+
 public: 
 
-  std::map<std::string, intersection_t> intersections; 
   std::map<std::string, int> ele2gid; 
 
   int nchanges; // # of processed unions per round = valid unions (united unions) + passing unions
@@ -275,9 +262,9 @@ private:
 
 // ==========================================================
 
-struct Message {
+struct Message_Union_Find {
 
-  Message() : tag(), strs() {
+  Message_Union_Find() : tag(), strs() {
 
   }
 
@@ -335,20 +322,6 @@ struct Message {
     }
   }
 
-  void send_intersection(const std::pair<std::string, intersection_t>& pair) {
-    tag = "intersection"; 
-
-    strs.push_back(pair.first); 
-
-    auto& I = pair.second; 
-    strs.push_back(std::to_string(I.x[0])); 
-    strs.push_back(std::to_string(I.x[1])); 
-    strs.push_back(std::to_string(I.x[2])); 
-    strs.push_back(std::to_string(I.val)); 
-    strs.push_back(I.eid); 
-  }
-
-
 // Receive message
 
   void rec_gid_query(std::string& ele) {
@@ -396,17 +369,6 @@ struct Message {
     }
   }
 
-  void receive_intersection(std::pair<std::string, intersection_t>& pair) {
-    pair.first = strs[0]; 
-
-    intersection_t& I = pair.second; 
-    I.x[0] = std::stof(strs[1]); 
-    I.x[1] = std::stof(strs[2]); 
-    I.x[2] = std::stof(strs[3]); 
-    I.val = std::stof(strs[4]); 
-    I.eid = strs[5];
-  }
-
 public:
   std::string tag; 
 
@@ -418,16 +380,16 @@ public:
 namespace diy
 {
     template<>
-        struct Serialization<Message>
+        struct Serialization<Message_Union_Find>
     {
-        static void save(BinaryBuffer& bb, const Message& msg)
+        static void save(BinaryBuffer& bb, const Message_Union_Find& msg)
         {
             diy::save(bb, msg.tag);
             // diy::save(bb, msg.str);
             diy::save(bb, msg.strs);
         }
 
-        static void load(BinaryBuffer& bb, Message& msg)
+        static void load(BinaryBuffer& bb, Message_Union_Find& msg)
         {
             diy::load(bb, msg.tag);
             // diy::load(bb, msg.str);
@@ -438,7 +400,7 @@ namespace diy
 
 // ==========================================================
 
-void query_gid(Block* b, const diy::Master::ProxyWithLink& cp) {
+void query_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
@@ -456,7 +418,7 @@ void query_gid(Block* b, const diy::Master::ProxyWithLink& cp) {
         it->second = gid; 
       } else {
         for (int i = 0; i < l->size(); ++i) {
-          Message msg = Message(); 
+          Message_Union_Find msg = Message_Union_Find(); 
           msg.send_gid_query(ele); 
 
           cp.enqueue(l->target(i), msg);
@@ -470,7 +432,7 @@ void query_gid(Block* b, const diy::Master::ProxyWithLink& cp) {
 }
 
 
-void answer_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, int from_gid) {
+void answer_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg, int from_gid) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
   // diy::Master* master = cp.master(); 
@@ -482,7 +444,7 @@ void answer_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, int
   msg.rec_gid_query(ele); 
 
   if(b->has(ele)) {
-    Message send_msg; 
+    Message_Union_Find send_msg; 
     send_msg.send_gid_response(ele, gid); 
 
     // std::cout<<ele<<"-";
@@ -496,7 +458,7 @@ void answer_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, int
   // std::cout<<std::endl; 
 }
 
-void save_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
+void save_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
   // std::cout<<"Save: "<<std::endl; 
   // std::cout<<"Block ID: "<<gid<<std::endl; 
 
@@ -518,7 +480,7 @@ void save_gid(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
 }
 
 
-void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
+void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
@@ -554,7 +516,7 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
           if(b->has(related_ele)) {
             b->add_child(related_ele, ele); 
           } else {
-            Message send_msg; 
+            Message_Union_Find send_msg; 
             send_msg.send_child(related_ele, ele, gid); 
 
             cp.enqueue(l->target(l->find(rgid)), send_msg);
@@ -577,7 +539,7 @@ void unite_once(Block* b, const diy::Master::ProxyWithLink& cp) {
 
 
 // Compress path - Step One
-void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
+void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   diy::Link* l = cp.link();
 
   for(auto& parent : b->eles) {
@@ -610,7 +572,7 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
 
             int gid_child = b->get_gid(child); 
 
-            Message send_msg; 
+            Message_Union_Find send_msg; 
             send_msg.send_gparent(child, grandparent, gid_grandparent); 
 
             // std::cout<<*ele_ptr<<" - "<<*parent_ptr<<" - "<<grandparent<<" - "<<b->ele2gid[grandparent]<<std::endl; 
@@ -624,7 +586,7 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
           } else {
             int gid_child = b->get_gid(child); 
 
-            Message send_msg; 
+            Message_Union_Find send_msg; 
             send_msg.send_child(grandparent, child, gid_child); 
 
             cp.enqueue(l->target(l->find(gid_grandparent)), send_msg); 
@@ -645,7 +607,7 @@ void compress_path(Block* b, const diy::Master::ProxyWithLink& cp) {
 
 
 // Distributed path compression - Step Two
-void distributed_save_gparent(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
+void distributed_save_gparent(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
   std::string ele; 
   std::string grandpar; 
   int gid_grandparent; 
@@ -668,7 +630,7 @@ void distributed_save_gparent(Block* b, const diy::Master::ProxyWithLink& cp, Me
 }
 
 // Distributed path compression - Step Three
-void distributed_save_child(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
+void distributed_save_child(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
   std::string par; 
   std::string child; 
   int gid_child; 
@@ -680,7 +642,7 @@ void distributed_save_child(Block* b, const diy::Master::ProxyWithLink& cp, Mess
 }
 
 
-void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
+void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
@@ -723,7 +685,7 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
               int r_gid = b->get_gid(related_ele); 
 
-              Message send_msg; 
+              Message_Union_Find send_msg; 
               send_msg.send_union(par, related_ele, r_gid); 
 
               cp.enqueue(l->target(l->find(p_gid)), send_msg); 
@@ -743,7 +705,7 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
               int r_gid = b->get_gid(related_ele); 
 
-              Message send_msg; 
+              Message_Union_Find send_msg; 
               send_msg.send_union(related_ele, par, p_gid); 
 
               cp.enqueue(l->target(l->find(r_gid)), send_msg); 
@@ -770,7 +732,7 @@ void pass_unions(Block* b, const diy::Master::ProxyWithLink& cp) {
 
 
 // Update unions of related elements
-void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Message msg) {
+void distributed_save_union(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
@@ -791,7 +753,7 @@ void distributed_save_union(Block* b, const diy::Master::ProxyWithLink& cp, Mess
   // std::cout<<std::endl; 
 }
 
-void local_computation(Block* b, const diy::Master::ProxyWithLink& cp) {
+void local_computation(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
   if(ISDEBUG) {
     int gid = cp.gid();
@@ -821,7 +783,7 @@ void local_computation(Block* b, const diy::Master::ProxyWithLink& cp) {
 }
 
 
-void received_msg(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, int from_gid) {
+void received_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg, int from_gid) {
   // std::cout<<msg.tag<<std::endl; 
 
   // if(msg.tag == "gid_query") {
@@ -849,7 +811,7 @@ void received_msg(Block* b, const diy::Master::ProxyWithLink& cp, Message msg, i
   }
 }
 
-void receive_msg(Block* b, const diy::Master::ProxyWithLink& cp) {
+void receive_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
   
@@ -862,7 +824,7 @@ void receive_msg(Block* b, const diy::Master::ProxyWithLink& cp) {
     // dequeue data received from this neighbor block in the last exchange
     for (unsigned i = 0; i < in.size(); ++i) {
       if(cp.incoming(in[i])) {
-        Message msg; 
+        Message_Union_Find msg; 
         cp.dequeue(in[i], msg);
 
         received_msg(b, cp, msg, in[i]); 
@@ -871,14 +833,14 @@ void receive_msg(Block* b, const diy::Master::ProxyWithLink& cp) {
   }
 }
 
-void total_changes(Block* b, const diy::Master::ProxyWithLink& cp) {
+void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   cp.collectives()->clear();
 
   cp.all_reduce(b->nchanges, std::plus<int>()); 
   b->nchanges = 0;
 }
 
-bool union_find_iexchange(Block* b, const diy::Master::ProxyWithLink& cp) {
+bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   b->nchanges = 0; 
 
   int gid = cp.gid();
@@ -909,7 +871,7 @@ void iexchange_process(diy::Master& master) {
   // master.iexchange(&union_find_iexchange); 
 }
 
-void union_find_exchange(Block* b, const diy::Master::ProxyWithLink& cp) {
+void union_find_exchange(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   compress_path(b, cp); 
   pass_unions(b, cp); 
   
@@ -950,7 +912,7 @@ void exchange_process(diy::Master& master) {
   }
 }
 
-void import_data(std::vector<Block*>& blocks, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<int>& gids) {
+void import_data(std::vector<Block_Union_Find*>& blocks, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<int>& gids) {
   // for the local blocks in this processor
   for (unsigned i = 0; i < gids.size(); ++i) {
     int gid = gids[i];
@@ -967,12 +929,12 @@ void import_data(std::vector<Block*>& blocks, diy::Master& master, diy::Contiguo
       }
     }
 
-    Block* b = blocks[i]; 
+    Block_Union_Find* b = blocks[i]; 
     master.add(gid, b, link); 
   }
 }
 
-void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<Block*>& blocks) {
+void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<Block_Union_Find*>& blocks) {
 
   std::vector<int> gids;                     // global ids of local blocks
   assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
@@ -1016,227 +978,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 }
 
 
-
-
-// Generate sets of elements
-
-// Method 1:
-  // Send to p0
-void send_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
-  int gid = cp.gid(); 
-  diy::Link* l = cp.link();
-
-  if(gid != 0) {
-    // std::vector<std::pair<std::string, std::string>> local_pairs; 
-
-    auto& target = l->target(l->find(0));
-    for(auto& ele : b->eles) {
-      std::string parent = b->parent(ele); 
-
-      // local_pairs.push_back(std::make_pair(ele, parent)); 
-
-      std::pair<std::string, std::string> local_pair(ele, parent); 
-
-      Message send_msg; 
-      send_msg.send_ele_parent_pair(local_pair); 
-
-      cp.enqueue(target, send_msg); 
-    }
-
-    for(auto& pair : b->intersections) {
-      Message send_msg; 
-      send_msg.send_intersection(pair); 
-
-      cp.enqueue(target, send_msg); 
-    }
-  }
-}
-
-
-// Gather all element-parent information to the first block
-bool gather_2_p0(Block* b, const diy::Master::ProxyWithLink& cp) {
-  int gid = cp.gid(); 
-  diy::Link* l = cp.link();
-
-  if(gid == 0) {
-    while(!cp.empty_incoming_queues()) {
-      // Save unions from other blocks
-      std::vector<int> in; // gids of incoming neighbors in the link
-      cp.incoming(in);
-
-      // for all neighbor blocks
-      // dequeue data received from this neighbor block in the last exchange
-      for (unsigned i = 0; i < in.size(); ++i) {
-        if(cp.incoming(in[i])) {
-          Message msg; 
-          cp.dequeue(in[i], msg);
-
-          if(msg.tag == "ele_parent_pair") {
-            std::pair<std::string, std::string> pair; 
-            msg.receive_ele_parent_pair(pair); 
-
-            b->add(pair.first); 
-            b->set_parent(pair.first, pair.second); 
-          } else if(msg.tag == "intersection") {
-            std::pair<std::string, intersection_t> pair; 
-            msg.receive_intersection(pair);
-
-            b->intersections.insert(pair); 
-          } else {
-            std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
-          }
-
-        }
-      }
-    }
-  }
-
-  return true;
-}
-
-
-// Get sets of elements
-void get_sets_on_p0(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  master.foreach(&send_2_p0); 
-  master.iexchange(&gather_2_p0); 
-
-  if(world.rank() == 0) {
-    Block* b = static_cast<Block*> (master.get(0)); 
-
-    std::map<std::string, std::set<std::string>> root2set; 
-
-    #ifdef FTK_HAVE_MPI
-      std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
-    #endif
-
-    for(auto& ele : b->eles) {
-      if(!b->is_root(b->parent(ele))) {
-        std::cout<<"Wrong! The parent is not root! "<< std::endl; 
-        std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
-      }
-
-      root2set[b->parent(ele)].insert(ele);  
-    }
-
-    for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
-      results.push_back(ite->second);   
-    }
-
-    if(ISDEBUG) {
-      for(int i = 0; i < results.size(); ++i) {
-        std::cout<<"Set "<<i<<":"<<std::endl; 
-        std::set<std::string>& ele_set = results[i]; 
-        for(auto& ele : ele_set) {
-          std::cout<<ele<<" "; 
-        }
-        std::cout<<std::endl; 
-      }
-    }
-  }
-}
-
-
-// Method 2:
-// Gather all element-root information to the process of the root
-  // Since the roots have all children, can directly use the information to reconstruct the sets; the only lacking part is the intersection. 
-  // Step one: send to root
-  // Step two: gather on root
-void send_2_roots(Block* b, const diy::Master::ProxyWithLink& cp) {
-  int gid = cp.gid(); 
-  diy::Link* l = cp.link();
-
-  for(auto& ele : b->eles) {
-    std::string root = b->parent(ele); 
-    if(b->has(root)) continue ; 
-
-    int gid_root = b->get_gid(root); 
-    auto& target = l->target(l->find(gid_root)); 
-
-    Message send_msg_intersection; 
-    send_msg_intersection.send_intersection(*(b->intersections.find(ele))); 
-
-    cp.enqueue(target, send_msg_intersection); 
-  }
-}
-
-bool gather_on_roots(Block* b, const diy::Master::ProxyWithLink& cp) {
-
-  int gid = cp.gid(); 
-  diy::Link* l = cp.link();
-
-  while(!cp.empty_incoming_queues()) {
-    // Save unions from other blocks
-    std::vector<int> in; // gids of incoming neighbors in the link
-    cp.incoming(in);
-
-    // for all neighbor blocks
-    // dequeue data received from this neighbor block in the last exchange
-    for (unsigned i = 0; i < in.size(); ++i) {
-      if(cp.incoming(in[i])) {
-        Message msg; 
-        cp.dequeue(in[i], msg);
-
-        if(msg.tag == "intersection") {
-          std::pair<std::string, intersection_t> pair; 
-          msg.receive_intersection(pair);
-
-          b->intersections.insert(pair); 
-        } else {
-          std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
-        }
-
-      }
-    }
-  }
-
-  return true;
-}
-
-// Get sets of elements on processes of roots
-void get_sets_on_roots(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  master.foreach(&send_2_roots); 
-  master.iexchange(&gather_on_roots); 
-
-  // std::vector<int> gids;                     // global ids of local blocks
-  // assigner.local_gids(world.rank(), gids);
-
-  Block* b = static_cast<Block*> (master.get(0)); // load block with local id 0
-
-  std::map<std::string, std::set<std::string>> root2set; 
-
-  for(auto& ele : b->eles) {
-    if(b->is_root(ele)) {
-      root2set[ele].insert(ele);  
-      auto& children = b->children(ele); 
-      for(auto& child : children) {
-        root2set[ele].insert(child); 
-      }
-    }
-  }
-
-  for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
-    results.push_back(ite->second);   
-  }
-
-  if(ISDEBUG) {
-    for(int i = 0; i < results.size(); ++i) {
-      std::cout<<"Set "<<i<<":"<<std::endl; 
-      std::set<std::string>& ele_set = results[i]; 
-      for(auto& ele : ele_set) {
-        std::cout<<ele<<" "; 
-      }
-      std::cout<<std::endl; 
-    }
-  }
-}
-
-
-
-// Method 3:
-// Gather all element-root information to the process of the root
-  // Since the roots have all children, can directly use the information to reconstruct the sets; the only lacking part is the intersection. 
-  // Step one: send to root
-  // Step two: gather on root
+// =================================================
 
 int hash_string(std::string& ele, size_t nprocess) {
   // Algorithms come from: https://cp-algorithms.com/string/string-hashing.html
@@ -1259,7 +1001,11 @@ int hash_string(std::string& ele, size_t nprocess) {
 }
 
 
-void send_2_redistributed_processes(Block* b, const diy::Master::ProxyWithLink& cp) {
+// Gather all element-root information to the process of the root
+  // Step one: send to target processes
+  // Step two: gather on target processes
+
+void send_2_target_processes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
   auto master = cp.master(); 
@@ -1278,24 +1024,17 @@ void send_2_redistributed_processes(Block* b, const diy::Master::ProxyWithLink& 
 
       auto& target = l->target(l->find(gid_root)); 
 
-      Message send_msg; 
+      Message_Union_Find send_msg; 
       send_msg.send_ele_parent_pair(local_pair); 
 
       cp.enqueue(target, send_msg); 
-
-      // ==============
-
-      Message send_msg_intersection; 
-      send_msg_intersection.send_intersection(*(b->intersections.find(ele))); 
-
-      cp.enqueue(target, send_msg_intersection); 
 
       b->erase_element(ele);  
     }    
   }
 }
 
-bool gather_on_redistributed_processes(Block* b, const diy::Master::ProxyWithLink& cp) {
+bool gather_on_target_processes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
@@ -1309,7 +1048,7 @@ bool gather_on_redistributed_processes(Block* b, const diy::Master::ProxyWithLin
     // dequeue data received from this neighbor block in the last exchange
     for (unsigned i = 0; i < in.size(); ++i) {
       if(cp.incoming(in[i])) {
-        Message msg; 
+        Message_Union_Find msg; 
         cp.dequeue(in[i], msg);
 
         if(msg.tag == "ele_parent_pair") {
@@ -1318,11 +1057,6 @@ bool gather_on_redistributed_processes(Block* b, const diy::Master::ProxyWithLin
 
             b->add(pair.first); 
             b->set_parent(pair.first, pair.second); 
-        } else if(msg.tag == "intersection") {
-          std::pair<std::string, intersection_t> pair; 
-          msg.receive_intersection(pair);
-
-          b->intersections.insert(pair); 
         } else {
           std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
         }
@@ -1335,31 +1069,18 @@ bool gather_on_redistributed_processes(Block* b, const diy::Master::ProxyWithLin
 }
 
 // Get sets of elements by redistributing data
-void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-
+inline void Block_Union_Find::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
   #ifdef FTK_HAVE_MPI
     double start = MPI_Wtime();
   #endif
 
-  master.foreach(&send_2_redistributed_processes); 
-  master.iexchange(&gather_on_redistributed_processes); 
+  master.foreach(&send_2_target_processes); 
+  master.iexchange(&gather_on_target_processes); 
 
-  // #ifdef FTK_HAVE_MPI
-  //   MPI_Barrier(world); 
-  //   double end = MPI_Wtime();
-  //   if(world.rank() == 0) {
-  //     std::cout << "CCL: Gather Connected Components - Communication: " << end - start << " seconds. " << std::endl;
-  //   }
-  //   start = end; 
-  // #endif
-
-  Block* b = static_cast<Block*> (master.get(0)); // load block with local id 0
+  Block_Union_Find* b = static_cast<Block_Union_Find*> (master.get(0)); // load block with local id 0
 
   std::map<std::string, std::set<std::string>> root2set; 
 
-  // #ifdef FTK_HAVE_MPI
-    // std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
-  // #endif
   for(auto& ele : b->eles) {
     if(!b->is_root(b->parent(ele))) {
       std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
@@ -1383,23 +1104,6 @@ void get_sets_redistributed(diy::mpi::communicator& world, diy::Master& master, 
       std::cout<<std::endl; 
     }
   }
-
-  // #ifdef FTK_HAVE_MPI
-  //   MPI_Barrier(world); 
-  //   end = MPI_Wtime();
-  //   if(world.rank() == 0) {
-  //     std::cout << "CCL: Gather Connected Components - Computation: " << end - start << " seconds. " << std::endl;
-  //   }
-  //   start = end; 
-  // #endif
 }
-
-// Get sets of elements
-void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  // get_sets_on_p0(world, master, assigner, results); 
-  // get_sets_on_roots(world, master, assigner, results); 
-  get_sets_redistributed(world, master, assigner, results); 
-}
-
 
 #endif

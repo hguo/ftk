@@ -14,6 +14,8 @@
 
 #include <ftk/basic/distributed_union_find.hh>
 
+#include "connected_critical_point.hpp"
+
 // typedef std::pair<std::string, int> ele_gid;  // stores element and its global block id
 // typedef std::map<std::string, std::vector<std::string>> r_ele_map; 
 // typedef std::map<std::string, int> ele2gid_map; 
@@ -30,13 +32,13 @@
 //   return std::to_string(gid) + '_' + std::to_string(j); 
 // }
 
-void get_synthetic_data(std::vector<Block*>& blocks) {
+void get_synthetic_data(std::vector<Block_Union_Find*>& blocks) {
   int ngrid = 4; 
 
   // for the local blocks in this processor
   for (unsigned i = 0; i < ngrid; ++i) {
 
-    Block* b = new Block;                // create a new block
+    Block_Union_Find* b = new Block_Union_Find;                // create a new block
     // init the block, related to the gid
 
     // for (unsigned j = 0; j < 3; ++j) {
@@ -161,7 +163,7 @@ int main(int argc, char* argv[]) {
   diy::mpi::communicator    world;
 
 
-  std::vector<Block*> blocks;
+  std::vector<Block_Union_Find*> blocks;
   get_synthetic_data(blocks); 
 
   int                       nblocks = blocks.size();
@@ -186,7 +188,7 @@ int main(int argc, char* argv[]) {
   // diy::RoundRobinAssigner     assigner(world.size(), nblocks);
 
   // get_connected_components
-  std::vector<Block*> local_blocks; 
+  std::vector<Block_Union_Find*> local_blocks; 
   std::vector<int> gids;                     // global ids of local blocks
   assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
   for (unsigned i = 0; i < gids.size(); ++i) {
@@ -197,6 +199,6 @@ int main(int argc, char* argv[]) {
   exec_distributed_union_find(world, master, assigner, local_blocks); 
 
   std::vector<std::set<std::string>> ele_sets;
-  get_sets(world, master, assigner, ele_sets); 
+  local_blocks[0]->get_sets(world, master, assigner, ele_sets); 
 }
 
