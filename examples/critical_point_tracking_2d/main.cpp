@@ -61,6 +61,9 @@ struct intersection_t {
  
 std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
 
+// the output sets of connected elements
+std::vector<std::set<std::string>> connected_components_str;
+
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
 
@@ -218,17 +221,14 @@ void extract_connected_components(std::vector<std::set<hypermesh::regular_simple
 
 
   // Get disjoint sets of element IDs
-  std::vector<std::set<std::string>> components_str;
-  uf.get_sets(components_str);
+  uf.get_sets(connected_components_str);
 
   // Convert element IDs to elements
-  for(auto& comp_str : components_str) {
-    std::set<element_t> comp; 
+  for(auto& comp_str : connected_components_str) {
+    std::set<element_t>& comp = components.emplace_back(); 
     for(auto& ele_id : comp_str) {
       comp.insert(id2ele.find(ele_id)->second); 
     }
-
-    components.push_back(comp); 
   }
 }
 
@@ -354,6 +354,21 @@ void write_cpt_file(const std::string& f)
   ofs.close();
 }
 
+void write_element_sets_file(const std::string& f)
+{
+  std::ofstream ofs(f, std::ios::out); 
+
+  std::vector<std::set<std::string>> connected_components_str;
+  for(auto& comp_str : connected_components_str) {
+    for(auto& ele_id : comp_str) {
+      ofs<<ele_id; 
+    }
+    ofs<<std::endl; 
+  }
+
+  ofs.close();
+}
+
 #if FTK_HAVE_VTK
 void start_vtk_window()
 {
@@ -399,7 +414,8 @@ int main(int argc, char **argv)
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w, filename_traj_vtk_w;
-  std::string filename_cpt_w;
+  std::string filename_cpt_w; 
+  std::string filename_sets_w;
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
@@ -412,6 +428,7 @@ int main(int argc, char **argv)
     ("write-traj", "write traj file", cxxopts::value<std::string>(filename_traj_w))
     ("write-traj-vtk", "write traj file with vtk format", cxxopts::value<std::string>(filename_traj_vtk_w))
     ("write-cpt", "write critical point file", cxxopts::value<std::string>(filename_cpt_w))
+    ("write-sets", "write sets of connected elements", cxxopts::value<std::string>(filename_sets_w))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
@@ -449,6 +466,9 @@ int main(int argc, char **argv)
       write_dump_file(filename_dump_w);
 
     trace_intersections();
+
+    if (!filename_sets_w.empty())
+      write_element_sets_file(filename_traj_w);
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
