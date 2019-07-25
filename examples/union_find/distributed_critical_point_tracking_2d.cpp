@@ -525,7 +525,7 @@ void write_dump_file(const std::string& f)
 
 void write_element_sets_file(diy::mpi::communicator& world, const std::string& f)
 {
-  diy::mpi::io::file out(world, f, diy::mpi::io::file::wronly | diy::mpi::io::file::create | diy::mpi::io::file::sequential | diy::mpi::io::file::append);
+  // diy::mpi::io::file out(world, f, diy::mpi::io::file::wronly | diy::mpi::io::file::create | diy::mpi::io::file::sequential | diy::mpi::io::file::append);
 
   std::stringstream ss;
   for(auto& comp_str : connected_components_str) {
@@ -536,9 +536,17 @@ void write_element_sets_file(diy::mpi::communicator& world, const std::string& f
   }
 
   const std::string buf = ss.str();
-  out.write_at_all(0, buf.c_str(), buf.size()); 
+  // out.write_at_all(0, buf.c_str(), buf.size()); 
 
-  out.close();
+  MPI_Status status;
+  MPI_File fh;
+  MPI_File_open(MPI_COMM_SELF, f.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY,MPI_INFO_NULL,&fh);
+  MPI_File_write(fh, buf.c_str(), buf.length(), MPI_CHAR, &status);
+  MPI_File_close(&fh);
+
+
+
+  // out.close();
 }
 
 #if FTK_HAVE_VTK
