@@ -539,6 +539,7 @@ void write_element_sets_file(diy::mpi::communicator& world, const std::string& f
   // out.write_at_all(0, buf.c_str(), buf.size()); 
 
   std::string _f = f + "_" + std::to_string(world.rank());; 
+  std::cout<<_f<<std::endl; 
 
     MPI_Status status;
     MPI_File fh;
