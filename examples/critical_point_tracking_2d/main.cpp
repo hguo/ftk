@@ -358,7 +358,6 @@ void write_element_sets_file(const std::string& f)
 {
   std::ofstream ofs(f, std::ios::out); 
 
-  std::vector<std::set<std::string>> connected_components_str;
   for(auto& comp_str : connected_components_str) {
     for(auto& ele_id : comp_str) {
       ofs<<ele_id; 
