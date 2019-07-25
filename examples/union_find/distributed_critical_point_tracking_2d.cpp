@@ -538,13 +538,12 @@ void write_element_sets_file(diy::mpi::communicator& world, const std::string& f
   const std::string buf = ss.str();
   // out.write_at_all(0, buf.c_str(), buf.size()); 
 
-  if(world.rank() == 1) {
+  
     MPI_Status status;
     MPI_File fh;
     MPI_File_open(MPI_COMM_SELF, f.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY,MPI_INFO_NULL,&fh);
     MPI_File_write(fh, buf.c_str(), buf.length(), MPI_CHAR, &status);
     MPI_File_close(&fh);
-  }
 
   // out.close();
 }
@@ -746,8 +745,10 @@ int main(int argc, char **argv)
     // std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
 
     #ifdef FTK_HAVE_MPI
-      if (!filename_sets_w.empty())
-        write_element_sets_file(world, filename_sets_w);
+      if(world.rank() == 0) {
+        if (!filename_sets_w.empty())
+          write_element_sets_file(world, filename_sets_w);
+      }
     #endif
 
     if (!filename_traj_w.empty())

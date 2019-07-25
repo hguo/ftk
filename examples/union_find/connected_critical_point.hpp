@@ -433,7 +433,7 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
 
 // Get sets of elements
 inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  // get_sets_on_p0(this, world, master, assigner, results); 
+  get_sets_on_p0(this, world, master, assigner, results); 
   // get_sets_on_roots(this, world, master, assigner, results); 
-  get_sets_redistributed(this, world, master, assigner, results); 
+  // get_sets_redistributed(this, world, master, assigner, results); 
 }
