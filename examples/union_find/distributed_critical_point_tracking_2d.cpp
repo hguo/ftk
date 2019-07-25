@@ -540,7 +540,8 @@ void write_element_sets_file(diy::mpi::communicator& world, const std::string& f
 
     MPI_Status status;
     MPI_File fh;
-    MPI_File_open(MPI_COMM_SELF, f.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY,MPI_INFO_NULL,&fh);
+    MPI_File_open(MPI_COMM_SELF, f.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY,MPI_INFO_NULL, &fh);
+    MPI_File_seek(fh, 0, MPI_SEEK_END); 
     MPI_File_write_ordered(fh, buf.c_str(), buf.length(), MPI_CHAR, &status);
     MPI_File_close(&fh);
 
