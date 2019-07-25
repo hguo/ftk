@@ -69,6 +69,9 @@ Block_Critical_Point* b = new Block_Critical_Point();
 int gid; // global id of this block / this process
 std::map<std::string, intersection_t>* intersections;
 
+// the output sets of connected elements
+std::vector<std::set<std::string>> connected_components_str; // connected components 
+
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
 
@@ -340,19 +343,18 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
 
-  std::vector<std::set<std::string>> cc_str; // connected components 
-  extract_connected_components(world, master, assigner, cc_str);
+  extract_connected_components(world, master, assigner, connected_components_str);
 
   // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
 
   // Convert connected components to geometries
 
   // if(world.rank() == 0) {
-  if(cc_str.size() > 0) {
+  if(connected_components_str.size() > 0) {
     
     std::vector<std::set<element_t>> cc; // connected components 
     // Convert element IDs to elements
-    for(auto& comp_str : cc_str) {
+    for(auto& comp_str : connected_components_str) {
       cc.push_back(std::set<element_t>()); 
       std::set<element_t>& comp = cc[cc.size() - 1]; 
       for(auto& eid : comp_str) {
@@ -521,6 +523,24 @@ void write_dump_file(const std::string& f)
   ofs.close();
 }
 
+void write_element_sets_file(diy::mpi::communicator& world, const std::string& f)
+{
+  diy::mpi::io::file out(world, f, diy::mpi::io::file::wronly | diy::mpi::io::file::create | diy::mpi::io::file::append);
+
+  std::stringstream ss;
+  for(auto& comp_str : connected_components_str) {
+    for(auto& ele_id : comp_str) {
+      ss<<ele_id<<" "; 
+    }
+    ss<<std::endl; 
+  }
+
+  const std::string buf = ss.str();
+  out.write_at_all(0, buf.c_str(), buf.size()); 
+
+  out.close();
+}
+
 #if FTK_HAVE_VTK
 void start_vtk_window()
 {
@@ -587,6 +607,7 @@ int main(int argc, char **argv)
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w;
+  std::string filename_sets_w; 
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
@@ -597,6 +618,7 @@ int main(int argc, char **argv)
     ("write-dump", "write dump file", cxxopts::value<std::string>(filename_dump_w))
     ("read-traj", "read traj file", cxxopts::value<std::string>(filename_traj_r))
     ("write-traj", "write traj file", cxxopts::value<std::string>(filename_traj_w))
+    ("write-sets", "write sets of connected elements", cxxopts::value<std::string>(filename_sets_w))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
@@ -714,6 +736,9 @@ int main(int argc, char **argv)
     trace_intersections(world, master, assigner);
 
     // std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
+
+    if (!filename_sets_w.empty())
+      write_element_sets_file(world, filename_sets_w);
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
