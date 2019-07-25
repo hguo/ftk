@@ -468,7 +468,7 @@ int main(int argc, char **argv)
     trace_intersections();
 
     if (!filename_sets_w.empty())
-      write_element_sets_file(filename_traj_w);
+      write_element_sets_file(filename_sets_w);
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
