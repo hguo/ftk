@@ -62,11 +62,10 @@ struct intersection_t {
 std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
 
 // the output sets of connected elements
-std::vector<std::set<std::string>> connected_components_str;
+std::vector<std::set<std::string>> connected_components_str; // connected components 
 
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
-
 
 template <typename T> // the synthetic function
 T f(T x, T y, T t) 
@@ -360,7 +359,7 @@ void write_element_sets_file(const std::string& f)
 
   for(auto& comp_str : connected_components_str) {
     for(auto& ele_id : comp_str) {
-      ofs<<ele_id; 
+      ofs<<ele_id<<" "; 
     }
     ofs<<std::endl; 
   }
