@@ -525,7 +525,7 @@ void write_dump_file(const std::string& f)
 
 void write_element_sets_file(diy::mpi::communicator& world, const std::string& f)
 {
-  diy::mpi::io::file out(world, f, diy::mpi::io::file::wronly | diy::mpi::io::file::create | diy::mpi::io::file::append);
+  diy::mpi::io::file out(world, f, diy::mpi::io::file::wronly | diy::mpi::io::file::create | diy::mpi::io::file::sequential | diy::mpi::io::file::append);
 
   std::stringstream ss;
   for(auto& comp_str : connected_components_str) {
