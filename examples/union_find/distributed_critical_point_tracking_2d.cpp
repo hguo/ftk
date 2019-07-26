@@ -529,7 +529,10 @@ void write_element_sets_file(diy::mpi::communicator& world, const std::string& f
 
   std::stringstream ss;
   for(auto& comp_str : connected_components_str) {
-    for(auto& ele_id : comp_str) {
+    std::vector comp_str_vec(comp_str.begin(), comp_str.end()); 
+    std::sort(comp_str_vec.begin(), comp_str_vec.end()); 
+
+    for(auto& ele_id : comp_str_vec) {
       ss<<ele_id<<" "; 
     }
     ss<<std::endl; 
