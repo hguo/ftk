@@ -60,7 +60,11 @@ double start, end;
 
 hypermesh::ndarray<float> scalar, grad, hess;
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
-std::vector<std::tuple<hypermesh::regular_simplex_mesh, hypermesh::regular_simplex_mesh>> ms; 
+
+hypermesh::regular_simplex_mesh block_m(3); // the 3D space-time mesh of this block
+hypermesh::regular_simplex_mesh block_m_ghost(3); // the 3D space-time mesh of this block with ghost cells
+
+std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>> lattice_partitions;
 float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
 
 std::mutex mutex;
@@ -142,11 +146,11 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
   return hess;
 }
 
-bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_simplex_mesh& _m) { 
-  // If the corner of the face is contained by the core mesh _m, we consider the element belongs to _m
+bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
+  // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
 
   for (int i = 0; i < f.corner.size(); ++i){
-    if (f.corner[i] < _m.lb(i) || f.corner[i] > _m.ub(i)) {
+    if (f.corner[i] < _lattice.start(i) || f.corner[i] > _lattice.upper_bound(i)) {
       return false; 
     }
   }
@@ -209,15 +213,15 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
         
         if(!b->has_gid(feature)) { // If the block id of this feature is unknown, search the block id of this feature
           hypermesh::regular_simplex_mesh_element& ele = id2element.find(feature)->second; 
-          for(int mi = 0; mi < ms.size(); ++mi) {
-            if(mi != gid){ // We know the feature is not in this partition
-              hypermesh::regular_simplex_mesh& __m = std::get<0>(ms[mi]); 
-              if(is_in_mesh(ele, __m)) { // the feature is in mith partition
+          for(int i = 0; i < lattice_partitions.size(); ++i) {
+            if(i != gid){ // We know the feature is not in this partition
+              auto& _lattice = std::get<0>(lattice_partitions[i]); 
+              if(is_in_mesh(ele, _lattice)) { // the feature is in mith partition
                 #if MULTITHREAD
                   std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
                 #endif
 
-                b->set_gid(feature, mi); // Set gid of this feature to mi  
+                b->set_gid(feature, i); // Set gid of this feature to mi  
               }
             }
           }
@@ -246,10 +250,6 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   std::vector<Block_Union_Find*> local_blocks;
   local_blocks.push_back(b); 
 
-  auto& _m_pair = ms[gid]; 
-  hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
-  hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
-
   // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
   std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
@@ -258,7 +258,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
     // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
     auto&f = eles_with_intersections.emplace_back(m, 2, eid); 
 
-    if(is_in_mesh(f, _m)) {
+    if(is_in_mesh(f, block_m.lattice())) {
       b->add(eid); 
       b->set_gid(eid, gid);
     }
@@ -461,11 +461,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
 void scan_intersections() 
 {
-  auto& _m_pair = ms[gid]; 
-  // hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
-  hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
-
-  _m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
+  block_m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
 }
 
 void print_trajectories()
@@ -660,8 +656,20 @@ int main(int argc, char **argv)
   // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
 
   std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
-  m.partition(nblocks, given, ghost, ms); 
 
+  const hypermesh::regular_lattice& lattice = m.lattice(); 
+  lattice.partition(nblocks, given, ghost, lattice_partitions); 
+
+  auto& lattice_pair = lattice_partitions[gid]; 
+  hypermesh::regular_lattice& lattice_p = std::get<0>(lattice_pair); 
+  hypermesh::regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
+  
+  // block_m = hypermesh::regular_simplex_mesh(m.nd(), lattice_p); 
+  block_m.set_lb_ub(lattice_p);
+
+  // block_m_ghost = hypermesh::regular_simplex_mesh(m.nd(), lattice_ghost_p); 
+  block_m_ghost.set_lb_ub(lattice_ghost_p);
+  
   intersections = &b->intersections; 
 
   #ifdef FTK_HAVE_MPI

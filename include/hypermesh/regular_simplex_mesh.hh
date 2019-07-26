@@ -124,11 +124,14 @@ struct regular_simplex_mesh {
   bool is_fixed_time(int d, int type) const {return is_unit_simpleces_fixed_time[d][type];}
 
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub);
+  void set_lb_ub(const regular_lattice& lattice); 
   int lb(int d) const {return lb_[d];}
   int ub(int d) const {return ub_[d];}
   const std::vector<int>& lb() const {return lb_;}
   const std::vector<int>& ub() const {return ub_;}
   std::vector<int> sizes();  
+
+  const regular_lattice& lattice() const {return lattice_; }
 
   iterator element_begin(int d);
   iterator element_end(int d);
@@ -759,6 +762,16 @@ inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std
     if (i == 0) dimprod_[i] = 1;
     else dimprod_[i] = (u[i-1] - l[i-1] + 1) * dimprod_[i-1];
   }
+}
+
+inline void regular_simplex_mesh::set_lb_ub(const regular_lattice& _lattice) {
+  std::vector<size_t> _lattice_lb = _lattice.lower_bounds(); 
+  std::vector<int> _lb(_lattice_lb.begin(), _lattice_lb.end());
+
+  std::vector<size_t> _lattice_ub = _lattice.upper_bounds(); 
+  std::vector<int> _ub(_lattice_ub.begin(), _lattice_ub.end()); 
+
+  this->set_lb_ub(_lb, _ub);
 }
 
 inline std::vector<int> regular_simplex_mesh::sizes() {
