@@ -91,7 +91,7 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
   hypermesh::ndarray<T> scalar;
   scalar.reshape(DW, DH, DT);
 
-  const T scaling_factor = 150; // default value: 15, the factor that controls the shape of the synthesize data
+  const T scaling_factor = 15; // default value: 15, the factor that controls the shape of the synthesize data
   for (int k = 0; k < DT; k ++) {
     for (int j = 0; j < DH; j ++) {
       for (int i = 0; i < DW; i ++) {
@@ -781,7 +781,7 @@ int main(int argc, char **argv)
           MPI_Barrier(world);
           end = MPI_Wtime();
           if(world.rank() == 0) {
-            std::cout << "Scan Critical Points: " << end - start << " seconds. " <<std::endl;
+            std::cout << "Scan for Critical Points: " << end - start << " seconds. " <<std::endl;
           }
           start = end; 
         #endif
