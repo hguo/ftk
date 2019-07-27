@@ -487,7 +487,7 @@ void print_trajectories()
 
 void read_traj_file(const std::string& f)
 {
-  std::ifstream ifs(f, ios::in | ios::binary);
+  std::ifstream ifs(f, std::ios::in | std::ios::binary);
 
   while(!ifs.eof()){
     float ncoord;
