@@ -252,7 +252,7 @@ public:
 
   std::map<std::string, int> ele2gid; 
 
-  int nchanges; // # of processed unions per round = valid unions (united unions) + passing unions
+  int nchanges = 0; // # of processed unions per round = valid unions (united unions) + passing unions
   
 private:
   // map element id to ids of its related elements
@@ -833,13 +833,6 @@ void receive_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   }
 }
 
-void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
-  cp.collectives()->clear();
-
-  cp.all_reduce(b->nchanges, std::plus<int>()); 
-  b->nchanges = 0;
-}
-
 bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   b->nchanges = 0; 
 
@@ -864,6 +857,7 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
   return b->nchanges == 0; 
 }
 
+
 void iexchange_process(diy::Master& master) {
   master.iexchange(&union_find_iexchange); 
 
@@ -871,41 +865,23 @@ void iexchange_process(diy::Master& master) {
   // master.iexchange(&union_find_iexchange); 
 }
 
-void union_find_exchange(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
-  compress_path(b, cp); 
-  pass_unions(b, cp); 
-  
-  receive_msg(b, cp); 
+void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
+  cp.collectives()->clear();
 
-  total_changes(b, cp); 
+  cp.all_reduce(b->nchanges, std::plus<int>()); 
+  b->nchanges = 0;
 }
 
-// Method 1
-// gparent query and gparent answer should be synchronized. 
-  // otherwise it is possible that one query message is transferring, but the program ends. 
-  // Other parts are not required to synchronize. 
 void exchange_process(diy::Master& master) {
-  master.foreach(&unite_once);
-  master.foreach(&compress_path);
-  master.exchange();                 
-  master.foreach(&receive_msg); // distributed_answer_gparent + additional responses
-
-  master.exchange();
-  master.foreach(&receive_msg); // distributed_save_gparent + additional responses
-
-  // master.foreach(&union_find_exchange);
-  // master.exchange();
-
-  master.foreach(&compress_path);
-  master.foreach(&pass_unions);
-  master.foreach(&pass_unions);
+  master.foreach(&receive_msg);
+  master.foreach(&local_computation);
   master.foreach(&total_changes);
   master.exchange();
 
-  // While two consecutive exchange() without receiving will clear the buffer
-    // Which means, in-between each pair of exchange should contain at least one receive
-    // Hence, an additional receive is needed
-  master.foreach(&receive_msg);
+  // // While two consecutive exchange() without receiving will clear the buffer
+  //   // Which means, in-between each pair of exchange should contain at least one receive
+  //   // Hence, an additional receive is needed
+  // master.foreach(&receive_msg);
 
   if(ISDEBUG) {
     std::cout<<"================================="<<std::endl; 
