@@ -168,9 +168,9 @@ void get_sets_on_p0(Block_Critical_Point* b, diy::mpi::communicator& world, diy:
 
     std::map<std::string, std::set<std::string>> root2set; 
 
-    #ifdef FTK_HAVE_MPI
-      std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
-    #endif
+    // #ifdef FTK_HAVE_MPI
+    //   std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
+    // #endif
 
     for(auto& ele : b->eles) {
       if(!b->is_root(b->parent(ele))) {

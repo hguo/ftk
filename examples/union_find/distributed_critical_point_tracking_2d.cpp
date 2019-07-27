@@ -112,9 +112,13 @@ hypermesh::ndarray<T> derive_gradients2(const hypermesh::ndarray<T>& scalar)
   hypermesh::ndarray<T> grad;
   grad.reshape(2, scalar.dim(0), scalar.dim(1), scalar.dim(2));
   
-  for (int k = 0; k < DT; k ++) {
-    for (int j = 1; j < DH-1; j ++) {
-      for (int i = 1; i < DW-1; i ++) {
+  // for (int k = 0; k < DT; k ++) {
+  //   for (int j = 1; j < DH-1; j ++) {
+  //     for (int i = 1; i < DW-1; i ++) {
+
+  for (int k = std::max(0, block_m_ghost.lb(2)-2); k < std::min(block_m_ghost.ub(2)+2, DT); k ++) {
+    for (int j = std::max(1, block_m_ghost.lb(1)-2); j < std::min(block_m_ghost.ub(1)+2, DH-1); j ++) {
+      for (int i = std::max(1, block_m_ghost.lb(0)-2); i < std::min(block_m_ghost.ub(0)+2, DW-1); i ++) {
         grad(0, i, j, k) = 0.5 * (scalar(i+1, j, k) - scalar(i-1, j, k)) * (DW-1);
         grad(1, i, j, k) = 0.5 * (scalar(i, j+1, k) - scalar(i, j-1, k)) * (DH-1);
       }
@@ -129,17 +133,22 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
   hypermesh::ndarray<T> hess;
   hess.reshape(2, grad.dim(0), grad.dim(1), grad.dim(2), grad.dim(3));
 
-  for (int k = 0; k < DT; k ++) {
-    for (int j = 2; j < DH-2; j ++) {
-      for (int i = 2; i < DW-2; i ++) {
+
+  // for (int k = 0; k < DT; k ++) {
+  //   for (int j = 2; j < DH-2; j ++) {
+  //     for (int i = 2; i < DW-2; i ++) {
+
+  for (int k = std::max(0, block_m_ghost.lb(2)-1); k < std::min(block_m_ghost.ub(2)+1, DT); k ++) {
+    for (int j = std::max(2, block_m_ghost.lb(1)-1); j < std::min(block_m_ghost.ub(1)+1, DH-2); j ++) {
+      for (int i = std::max(2, block_m_ghost.lb(0)-1); i < std::min(block_m_ghost.ub(0)+1, DW-2); i ++) {
         const T H00 = hess(0, 0, i, j, k) = // ddf/dx2
-          0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1) / 15;
+          0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1);
         const T H01 = hess(0, 1, i, j, k) = // ddf/dxdy
-          0.5 * (grad(0, i, j+1, k) - grad(0, i, j-1, k)) * (DH-1) / 15;
+          0.5 * (grad(0, i, j+1, k) - grad(0, i, j-1, k)) * (DH-1);
         const T H10 = hess(1, 0, i, j, k) = // ddf/dydx
-          0.5 * (grad(1, i+1, j, k) - grad(1, i-1, j, k)) * (DW-1) / 15;
+          0.5 * (grad(1, i+1, j, k) - grad(1, i-1, j, k)) * (DW-1);
         const T H11 = hess(1, 1, i, j, k) = // ddf/dy2
-          0.5 * (grad(1, i, j+1, k) - grad(1, i, j-1, k)) * (DH-1) / 15;
+          0.5 * (grad(1, i, j+1, k) - grad(1, i, j-1, k)) * (DH-1);
       }
     }
   }
@@ -478,18 +487,49 @@ void print_trajectories()
 
 void read_traj_file(const std::string& f)
 {
-  std::ifstream ifs(f);
-  cereal::BinaryInputArchive ar(ifs);
-  ar(trajectories);
+  std::ifstream ifs(f, ios::in | ios::binary);
+
+  while(!ifs.eof()){
+    float ncoord;
+    ifs.read(reinterpret_cast<char*>(&ncoord), sizeof(float)); 
+
+    // std::cout<<ncoord<<std::endl;
+
+    auto& traj = trajectories.emplace_back(); 
+    for(int j = 0; j < (int) ncoord; ++j) {
+      float coord;
+      ifs.read(reinterpret_cast<char*>(&coord), sizeof(float)); 
+
+      traj.push_back(coord); 
+    }
+  }
+
   ifs.close();
 }
 
-void write_traj_file(const std::string& f)
+void write_traj_file(diy::mpi::communicator& world, const std::string& f)
 {
-  std::ofstream ofs(f);
-  cereal::BinaryOutputArchive ar(ofs);
-  ar(trajectories);
-  ofs.close();
+  std::vector<float> buf; 
+
+  for(auto& traj : trajectories) {
+    buf.push_back(traj.size()); 
+
+    // std::cout<<traj.size()<<std::endl;
+
+    for(auto& coord : traj) {
+      buf.push_back(coord);  
+    }
+  }
+
+  MPI_Status status;
+  MPI_File fh;
+
+  MPI_File_open(world, f.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+
+  // MPI_File_write_shared(fh, &buf[0], buf.size(), MPI_FLOAT, &status);
+  MPI_File_write_ordered(fh, &buf[0], buf.size(), MPI_FLOAT, &status); // Collective version of write_shared // refer to: https://www.mpi-forum.org/docs/mpi-2.2/mpi22-report/node283.htm
+
+  MPI_File_close(&fh);
 }
 
 void read_dump_file(const std::string& f)
@@ -701,7 +741,9 @@ int main(int argc, char **argv)
 // ========================================
   
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
-    read_traj_file(filename_traj_r);
+    if(world.rank() == 0) {
+      read_traj_file(filename_traj_r);
+    }
   } else { // otherwise do the analysis
 
     if (!filename_dump_r.empty()) { // if the dump file is given, skill the sweep step; otherwise do sweep-and-trace
@@ -710,16 +752,16 @@ int main(int argc, char **argv)
       grad = derive_gradients2(scalar);
       hess = derive_hessians2(grad);
 
-      #ifdef FTK_HAVE_MPI
-        #if TIME_OF_STEPS
-          MPI_Barrier(world);
-          end = MPI_Wtime();
-          if(world.rank() == 0) {
-            std::cout << "Derive gradients: " << end - start << " seconds. " << std::endl;
-          }
-          start = end; 
-        #endif
-      #endif
+      // #ifdef FTK_HAVE_MPI
+      //   #if TIME_OF_STEPS
+      //     MPI_Barrier(world);
+      //     end = MPI_Wtime();
+      //     if(world.rank() == 0) {
+      //       std::cout << "Derive gradients: " << end - start << " seconds. " << std::endl;
+      //     }
+      //     start = end; 
+      //   #endif
+      // #endif
 
       // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
 
@@ -759,14 +801,28 @@ int main(int argc, char **argv)
     // std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
 
     #ifdef FTK_HAVE_MPI
+      if (!filename_traj_w.empty()) {
+        write_traj_file(world, filename_traj_w);
+
+        #ifdef FTK_HAVE_MPI
+          #if TIME_OF_STEPS
+            MPI_Barrier(world);
+            end = MPI_Wtime();
+            if(world.rank() == 0) {
+              std::cout << "Output trajectories: " << end - start << " seconds. " << std::endl;
+            }
+            start = end; 
+          #endif
+        #endif
+      }
+    #endif
+
+    #ifdef FTK_HAVE_MPI
       // if(world.rank() == 0) {
         if (!filename_sets_w.empty())
           write_element_sets_file(world, filename_sets_w);
       // }
     #endif
-
-    if (!filename_traj_w.empty())
-      write_traj_file(filename_traj_w);
   }
 
   if(world.rank() == 0) {

@@ -121,13 +121,13 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
     for (int j = 2; j < DH-2; j ++) {
       for (int i = 2; i < DW-2; i ++) {
         const T H00 = hess(0, 0, i, j, k) = // ddf/dx2
-          0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1) / 15;
+          0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1); // "(DW-1) / 15" ?   "(DW-1) / scaling_factor" ?
         const T H01 = hess(0, 1, i, j, k) = // ddf/dxdy
-          0.5 * (grad(0, i, j+1, k) - grad(0, i, j-1, k)) * (DH-1) / 15;
+          0.5 * (grad(0, i, j+1, k) - grad(0, i, j-1, k)) * (DH-1);
         const T H10 = hess(1, 0, i, j, k) = // ddf/dydx
-          0.5 * (grad(1, i+1, j, k) - grad(1, i-1, j, k)) * (DW-1) / 15;
+          0.5 * (grad(1, i+1, j, k) - grad(1, i-1, j, k)) * (DW-1);
         const T H11 = hess(1, 1, i, j, k) = // ddf/dy2
-          0.5 * (grad(1, i, j+1, k) - grad(1, i, j-1, k)) * (DH-1) / 15;
+          0.5 * (grad(1, i, j+1, k) - grad(1, i, j-1, k)) * (DH-1);
       }
     }
   }
