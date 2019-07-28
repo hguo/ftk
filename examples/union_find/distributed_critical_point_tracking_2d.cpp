@@ -79,6 +79,8 @@ std::vector<std::set<std::string>> connected_components_str; // connected compon
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
 
+int scaling_factor = 15; // default value: 15, the factor that controls the shape of the synthesize data
+
 template <typename T> // the synthetic function
 T f(T x, T y, T t) 
 {
@@ -91,7 +93,6 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
   hypermesh::ndarray<T> scalar;
   scalar.reshape(DW, DH, DT);
 
-  const T scaling_factor = 150; // default value: 15, the factor that controls the shape of the synthesize data
   for (int k = 0; k < DT; k ++) {
     for (int j = 0; j < DH; j ++) {
       for (int i = 0; i < DW; i ++) {
@@ -672,6 +673,7 @@ int main(int argc, char **argv)
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
+    ("scaling-factor", "scaling factor for synthetic data", cxxopts::value<int>(scaling_factor)->default_value("15"))
     ("threshold", "threshold", cxxopts::value<float>(threshold)->default_value("0"))
     ("vtk", "visualization with vtk", cxxopts::value<bool>(show_vtk))
     ("qt", "visualization with qt", cxxopts::value<bool>(show_qt))
