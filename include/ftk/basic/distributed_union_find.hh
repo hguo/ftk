@@ -21,7 +21,7 @@
 
 // Add the sparse representation by using Hash map/table 
 
-#define IEXCHANGE 1
+#define IEXCHANGE 0
 #define ISDEBUG   0
 
 namespace ftk {
