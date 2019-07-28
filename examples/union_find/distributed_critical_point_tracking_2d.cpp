@@ -634,6 +634,14 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
+  #ifdef FTK_HAVE_MPI
+    #if TIME_OF_STEPS
+      if(world.rank() == 0) {
+        std::cout << "Start! " std::endl;
+      }
+    #endif
+  #endif
+
   diy::mpi::environment     env(0, 0); // env(NULL, NULL)
   diy::mpi::communicator    world;
 
