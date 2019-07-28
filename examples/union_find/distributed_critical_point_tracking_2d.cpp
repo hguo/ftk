@@ -634,6 +634,9 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
+  diy::mpi::environment     env(0, 0); // env(NULL, NULL)
+  diy::mpi::communicator    world;
+
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
       if(world.rank() == 0) {
@@ -641,9 +644,6 @@ int main(int argc, char **argv)
       }
     #endif
   #endif
-
-  diy::mpi::environment     env(0, 0); // env(NULL, NULL)
-  diy::mpi::communicator    world;
 
   int nblocks = world.size(); 
 
