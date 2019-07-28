@@ -315,7 +315,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // get_connected_components
-  exec_distributed_union_find(world, master, assigner, local_blocks); 
+  bool is_iexchange = false; // true false
+  exec_distributed_union_find(world, master, assigner, local_blocks, is_iexchange); 
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS

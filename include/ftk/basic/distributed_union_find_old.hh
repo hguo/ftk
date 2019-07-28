@@ -16,7 +16,7 @@
   // All elements need to be added by invoking the add function at the initialization stage. 
 
 // Reference 
-  // Paper: "Evaluation of connected-component labeling algorithms for distributed-memory systems"
+  // Distribute Union-Find in Paper: "Evaluation of connected-component labeling algorithms for distributed-memory systems"
 
 // Add the sparse representation by using Hash map/table 
 

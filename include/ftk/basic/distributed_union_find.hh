@@ -21,7 +21,6 @@
 
 // Add the sparse representation by using Hash map/table 
 
-#define IEXCHANGE 0
 #define ISDEBUG   0
 
 namespace ftk {
@@ -910,14 +909,14 @@ void import_data(std::vector<Block_Union_Find*>& blocks, diy::Master& master, di
   }
 }
 
-void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<Block_Union_Find*>& blocks) {
+void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<Block_Union_Find*>& blocks, bool is_iexchange = true) {
 
   std::vector<int> gids;                     // global ids of local blocks
   assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
 
   import_data(blocks, master, assigner, gids); 
   
-  if(IEXCHANGE) { // for iexchange
+  if(is_iexchange) { // for iexchange
     // #ifndef DIY_NO_MPI
     // #ifdef FTK_HAVE_MPI
     //   // MPI_Barrier(world); 
