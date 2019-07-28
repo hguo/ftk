@@ -637,7 +637,7 @@ int main(int argc, char **argv)
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
       if(world.rank() == 0) {
-        std::cout << "Start! " std::endl;
+        std::cout << "Start! " << std::endl;
       }
     #endif
   #endif
