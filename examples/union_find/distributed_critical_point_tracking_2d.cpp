@@ -22,6 +22,7 @@
 #include <ftk/external/diy/mpi.hpp>
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy/assigner.hpp>
+#include <ftk/external/diy/io/bov.hpp>
 #include <ftk/basic/distributed_union_find.hh>
 #include "connected_critical_point.hpp"
 
@@ -79,7 +80,7 @@ std::vector<std::set<std::string>> connected_components_str; // connected compon
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
 
-int scaling_factor = 15; // default value: 15, the factor that controls the shape of the synthesize data
+int scaling_factor; // the factor that controls the shape of the synthesize data, default value: 15
 
 template <typename T> // the synthetic function
 T f(T x, T y, T t) 
@@ -93,9 +94,13 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
   hypermesh::ndarray<T> scalar;
   scalar.reshape(DW, DH, DT);
 
-  for (int k = 0; k < DT; k ++) {
-    for (int j = 0; j < DH; j ++) {
-      for (int i = 0; i < DW; i ++) {
+  // for (int k = 0; k < DT; k ++) {
+  //   for (int j = 0; j < DH; j ++) {
+  //     for (int i = 0; i < DW; i ++) {
+
+  for (int k = std::max(0, block_m_ghost.lb(2)-2); k < std::min(block_m_ghost.ub(2)+3, DT); k ++) {
+    for (int j = std::max(0, block_m_ghost.lb(1)-2); j < std::min(block_m_ghost.ub(1)+3, DH); j ++) {
+      for (int i = std::max(0, block_m_ghost.lb(0)-2); i < std::min(block_m_ghost.ub(0)+3, DW); i ++) {
         const T x = ((T(i) / (DW-1)) - 0.5) * scaling_factor,
                 y = ((T(j) / (DH-1)) - 0.5) * scaling_factor, 
                 t = (T(k) / (DT-1)) + 1e-4;
@@ -117,9 +122,9 @@ hypermesh::ndarray<T> derive_gradients2(const hypermesh::ndarray<T>& scalar)
   //   for (int j = 1; j < DH-1; j ++) {
   //     for (int i = 1; i < DW-1; i ++) {
 
-  for (int k = std::max(0, block_m_ghost.lb(2)-2); k < std::min(block_m_ghost.ub(2)+2, DT); k ++) {
-    for (int j = std::max(1, block_m_ghost.lb(1)-2); j < std::min(block_m_ghost.ub(1)+2, DH-1); j ++) {
-      for (int i = std::max(1, block_m_ghost.lb(0)-2); i < std::min(block_m_ghost.ub(0)+2, DW-1); i ++) {
+  for (int k = std::max(0, block_m_ghost.lb(2)-1); k < std::min(block_m_ghost.ub(2)+2, DT); k ++) {
+    for (int j = std::max(1, block_m_ghost.lb(1)-1); j < std::min(block_m_ghost.ub(1)+2, DH-1); j ++) {
+      for (int i = std::max(1, block_m_ghost.lb(0)-1); i < std::min(block_m_ghost.ub(0)+2, DW-1); i ++) {
         grad(0, i, j, k) = 0.5 * (scalar(i+1, j, k) - scalar(i-1, j, k)) * (DW-1);
         grad(1, i, j, k) = 0.5 * (scalar(i, j+1, k) - scalar(i, j-1, k)) * (DH-1);
       }
@@ -139,9 +144,9 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
   //   for (int j = 2; j < DH-2; j ++) {
   //     for (int i = 2; i < DW-2; i ++) {
 
-  for (int k = std::max(0, block_m_ghost.lb(2)-1); k < std::min(block_m_ghost.ub(2)+1, DT); k ++) {
-    for (int j = std::max(2, block_m_ghost.lb(1)-1); j < std::min(block_m_ghost.ub(1)+1, DH-2); j ++) {
-      for (int i = std::max(2, block_m_ghost.lb(0)-1); i < std::min(block_m_ghost.ub(0)+1, DW-2); i ++) {
+  for (int k = std::max(0, block_m_ghost.lb(2)); k < std::min(block_m_ghost.ub(2)+1, DT); k ++) {
+    for (int j = std::max(2, block_m_ghost.lb(1)); j < std::min(block_m_ghost.ub(1)+1, DH-2); j ++) {
+      for (int i = std::max(2, block_m_ghost.lb(0)); i < std::min(block_m_ghost.ub(0)+1, DW-2); i ++) {
         const T H00 = hess(0, 0, i, j, k) = // ddf/dx2
           0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1);
         const T H01 = hess(0, 1, i, j, k) = // ddf/dxdy
@@ -155,6 +160,67 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
   }
   return hess;
 }
+
+void decompose_mesh(int nblocks) {
+  std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
+  // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
+  // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
+
+  std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
+
+  const hypermesh::regular_lattice& lattice = m.lattice(); 
+  lattice.partition(nblocks, given, ghost, lattice_partitions); 
+
+  auto& lattice_pair = lattice_partitions[gid]; 
+  hypermesh::regular_lattice& lattice_p = std::get<0>(lattice_pair); 
+  hypermesh::regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
+  
+  block_m.set_lb_ub(lattice_p);
+  block_m_ghost.set_lb_ub(lattice_ghost_p);
+}
+
+// // decompose mesh by using DIY
+// void decompose_mesh_DIY(diy::mpi::communicator& world, int nblocks) {
+
+//   // share_face is a vector of bools indicating whether faces are shared in each dimension
+//   // uninitialized values default to false
+//   diy::RegularDecomposer<Bounds>::BoolVector          share_face;
+//   // wrap is a vector of bools indicating whether boundary conditions are periodic in each dimension
+//   // uninitialized values default to false
+//   diy::RegularDecomposer<Bounds>::BoolVector          wrap;
+//   // ghosts is a vector of ints indicating number of ghost cells per side in each dimension
+//   // uninitialized values default to 0
+//   diy::RegularDecomposer<Bounds>::CoordinateVector    ghosts = {1, 1, 1};
+//   // ghosts.push_back(2); ghosts.push_back(2); ghosts.push_back(2);
+
+//   // create a RegularDecomposer
+//   // allows access to all the methods in RegularDecomposer
+//   diy::RegularDecomposer<Bounds> decomposer(m.nd(),
+//                                             domain,
+//                                             nblocks,
+//                                             share_face,       // optional
+//                                             wrap,             // optional
+//                                             ghosts);          // optional
+
+//   // call the decomposer's decompose function given a lambda
+//   decomposer.decompose(world.rank(),
+//    assigner,
+//    [&](int gid,                   // block global id
+//        const Bounds& core,        // block bounds without any ghost added
+//        const Bounds& bounds,      // block bounds including any ghost region added
+//        const Bounds& domain,      // global data bounds
+//        const RCLink& link)        // neighborhood
+//    {
+//        // Block*          b   = new Block;             // possibly use custom initialization
+//        // RGLink*         l   = new RGLink(link);
+//        // int             lid = master.add(gid, b, l); // add block to the master (mandatory)
+//        // process any additional args here, load the data, etc.
+
+//       std::cout<<core[0]<<" "<<core[1]<<" "<<core[2]<<std::endl; 
+//       std::cout<<bounds[0]<<" "<<bounds[1]<<" "<<bounds[2]<<std::endl; 
+//       // std::cout<<domain[0]<<" "<<domain[1]<<" "<<domain[2]<<std::endl; 
+//    });
+// }
 
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
   // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
@@ -692,36 +758,53 @@ int main(int argc, char **argv)
     start = MPI_Wtime();
   #endif
 
-  if (pattern.empty()) { // if the input data is not given, generate a synthetic data for the demo
-    scalar = generate_synthetic_data<float>(DW, DH, DT);
-  } else { // load the binary data
-    scalar.reshape(DW, DH, 0);
-    scalar.from_binary_file_sequence(pattern);
-    DT = scalar.dim(2);
-  }
+  // Decompose mesh
+  // ========================================
 
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
-  std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
-  // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
-  // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
-
-  std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
-
-  const hypermesh::regular_lattice& lattice = m.lattice(); 
-  lattice.partition(nblocks, given, ghost, lattice_partitions); 
-
-  auto& lattice_pair = lattice_partitions[gid]; 
-  hypermesh::regular_lattice& lattice_p = std::get<0>(lattice_pair); 
-  hypermesh::regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
-  
-  // block_m = hypermesh::regular_simplex_mesh(m.nd(), lattice_p); 
-  block_m.set_lb_ub(lattice_p);
-
-  // block_m_ghost = hypermesh::regular_simplex_mesh(m.nd(), lattice_ghost_p); 
-  block_m_ghost.set_lb_ub(lattice_ghost_p);
+  decompose_mesh(nblocks); 
+  // decompose_mesh_DIY(nblocks); 
   
   intersections = &b->intersections; 
+
+  // Load data
+  // ========================================
+
+  if (pattern.empty()) { // if the input data is not given, generate a synthetic data for the demo
+    scalar = generate_synthetic_data<float>(DW, DH, DT);
+  } else { // load the binary data
+
+    diy::mpi::io::file in(world, pattern, diy::mpi::io::file::rdonly);
+    
+    std::vector<unsigned> shape;
+    shape.push_back(DT);
+    shape.push_back(DH);
+    shape.push_back(DW);
+
+    diy::io::BOV reader(in, shape);
+
+    diy::DiscreteBounds box(3);
+    box.min[0] = std::max(0, block_m_ghost.lb(2)-2); box.max[0] = std::min(block_m_ghost.ub(2)+2, DT-1); 
+    box.min[1] = std::max(0, block_m_ghost.lb(1)-2); box.max[1] = std::min(block_m_ghost.ub(1)+2, DH-1); 
+    box.min[2] = std::max(0, block_m_ghost.lb(0)-2); box.max[2] = std::min(block_m_ghost.ub(0)+2, DW-1); 
+
+    int box_size = (box.max[0] - box.min[0] + 1) * (box.max[1] - box.min[1] + 1) * (box.max[2] - box.min[2] + 1); 
+    std::vector<float> _data(box_size);
+    reader.read(box, &_data[0], true);
+
+    scalar.reshape(DW, DH, DT);
+
+    int ite = 0; 
+    for (int k = box.min[0]; k < box.max[0]+1; k ++) {
+      for (int j = box.min[1]; j < box.max[1]+1; j ++) {
+        for (int i = box.min[2]; i < box.max[2]+1; i ++) {
+          scalar(i, j, k) = _data[ite++];
+        }
+      }
+    }
+    
+  }
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
