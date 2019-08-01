@@ -61,6 +61,9 @@ int DT; // number of timesteps
 double start, end; 
 
 hypermesh::ndarray<float> scalar, grad, hess;
+diy::DiscreteBounds data_box(3); // bounds of data box
+std::vector<int> data_offset(3);
+
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
 
 hypermesh::regular_simplex_mesh block_m(3); // the 3D space-time mesh of this block
@@ -93,18 +96,24 @@ template <typename T>
 hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
 {
   hypermesh::ndarray<T> scalar;
-  scalar.reshape(DW, DH, DT);
+  // scalar.reshape(DW, DH, DT);
+  scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
 
   // for (int k = 0; k < DT; k ++) {
   //   for (int j = 0; j < DH; j ++) {
   //     for (int i = 0; i < DW; i ++) {
 
-  for (int k = std::max(0, block_m_ghost.lb(2)-2); k < std::min(block_m_ghost.ub(2)+3, DT); k ++) {
-    for (int j = std::max(0, block_m_ghost.lb(1)-2); j < std::min(block_m_ghost.ub(1)+3, DH); j ++) {
-      for (int i = std::max(0, block_m_ghost.lb(0)-2); i < std::min(block_m_ghost.ub(0)+3, DW); i ++) {
-        const T x = ((T(i) / (DW-1)) - 0.5) * scaling_factor,
-                y = ((T(j) / (DH-1)) - 0.5) * scaling_factor, 
-                t = (T(k) / (DT-1)) + 1e-4;
+  // for (int k = std::max(0, block_m_ghost.lb(2)-2); k < std::min(block_m_ghost.ub(2)+3, DT); k ++) {
+  //   for (int j = std::max(0, block_m_ghost.lb(1)-2); j < std::min(block_m_ghost.ub(1)+3, DH); j ++) {
+  //     for (int i = std::max(0, block_m_ghost.lb(0)-2); i < std::min(block_m_ghost.ub(0)+3, DW); i ++) {
+
+  for (int k = 0; k < data_box.max[2] + 1 - data_offset[2]; k ++) {
+    for (int j = 0; j < data_box.max[1] + 1 - data_offset[1]; j ++) {
+      for (int i = 0; i < data_box.max[0] + 1 - data_offset[0]; i ++) {
+        const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
+                y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
+                t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
+
         scalar(i, j, k) = f(x, y, t);
       }
     }
@@ -123,9 +132,14 @@ hypermesh::ndarray<T> derive_gradients2(const hypermesh::ndarray<T>& scalar)
   //   for (int j = 1; j < DH-1; j ++) {
   //     for (int i = 1; i < DW-1; i ++) {
 
-  for (int k = std::max(0, block_m_ghost.lb(2)-1); k < std::min(block_m_ghost.ub(2)+2, DT); k ++) {
-    for (int j = std::max(1, block_m_ghost.lb(1)-1); j < std::min(block_m_ghost.ub(1)+2, DH-1); j ++) {
-      for (int i = std::max(1, block_m_ghost.lb(0)-1); i < std::min(block_m_ghost.ub(0)+2, DW-1); i ++) {
+  // for (int k = std::max(0, block_m_ghost.lb(2)-1); k < std::min(block_m_ghost.ub(2)+2, DT); k ++) {
+  //   for (int j = std::max(1, block_m_ghost.lb(1)-1); j < std::min(block_m_ghost.ub(1)+2, DH-1); j ++) {
+  //     for (int i = std::max(1, block_m_ghost.lb(0)-1); i < std::min(block_m_ghost.ub(0)+2, DW-1); i ++) {
+
+  for (int k = std::max(0, block_m_ghost.lb(2)-1) - data_offset[2]; k < std::min(block_m_ghost.ub(2)+2, DT) - data_offset[2]; k ++) {
+    for (int j = std::max(1, block_m_ghost.lb(1)-1) - data_offset[1]; j < std::min(block_m_ghost.ub(1)+2, DH-1) - data_offset[1]; j ++) {
+      for (int i = std::max(1, block_m_ghost.lb(0)-1) - data_offset[0]; i < std::min(block_m_ghost.ub(0)+2, DW-1) - data_offset[0]; i ++) {
+
         grad(0, i, j, k) = 0.5 * (scalar(i+1, j, k) - scalar(i-1, j, k)) * (DW-1);
         grad(1, i, j, k) = 0.5 * (scalar(i, j+1, k) - scalar(i, j-1, k)) * (DH-1);
       }
@@ -145,9 +159,14 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
   //   for (int j = 2; j < DH-2; j ++) {
   //     for (int i = 2; i < DW-2; i ++) {
 
-  for (int k = std::max(0, block_m_ghost.lb(2)); k < std::min(block_m_ghost.ub(2)+1, DT); k ++) {
-    for (int j = std::max(2, block_m_ghost.lb(1)); j < std::min(block_m_ghost.ub(1)+1, DH-2); j ++) {
-      for (int i = std::max(2, block_m_ghost.lb(0)); i < std::min(block_m_ghost.ub(0)+1, DW-2); i ++) {
+  // for (int k = std::max(0, block_m_ghost.lb(2)); k < std::min(block_m_ghost.ub(2)+1, DT); k ++) {
+  //   for (int j = std::max(2, block_m_ghost.lb(1)); j < std::min(block_m_ghost.ub(1)+1, DH-2); j ++) {
+  //     for (int i = std::max(2, block_m_ghost.lb(0)); i < std::min(block_m_ghost.ub(0)+1, DW-2); i ++) {
+
+  for (int k = std::max(0, block_m_ghost.lb(2)) - data_offset[2]; k < std::min(block_m_ghost.ub(2)+1, DT) - data_offset[2]; k ++) {
+    for (int j = std::max(2, block_m_ghost.lb(1)) - data_offset[1]; j < std::min(block_m_ghost.ub(1)+1, DH-2) - data_offset[1]; j ++) {
+      for (int i = std::max(2, block_m_ghost.lb(0)) - data_offset[0]; i < std::min(block_m_ghost.ub(0)+1, DW-2) - data_offset[0]; i ++) {
+
         const T H00 = hess(0, 0, i, j, k) = // ddf/dx2
           0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1);
         const T H01 = hess(0, 1, i, j, k) = // ddf/dxdy
@@ -178,50 +197,13 @@ void decompose_mesh(int nblocks) {
   
   block_m.set_lb_ub(lattice_p);
   block_m_ghost.set_lb_ub(lattice_ghost_p);
+
+  data_box.min[0] = std::max(0, block_m_ghost.lb(0)-2); data_box.max[0] = std::min(block_m_ghost.ub(0)+2, DW-1); 
+  data_box.min[1] = std::max(0, block_m_ghost.lb(1)-2); data_box.max[1] = std::min(block_m_ghost.ub(1)+2, DH-1); 
+  data_box.min[2] = std::max(0, block_m_ghost.lb(2)-2); data_box.max[2] = std::min(block_m_ghost.ub(2)+2, DT-1); 
+
+  data_offset = {data_box.min[0], data_box.min[1], data_box.min[2]}; 
 }
-
-// // decompose mesh by using DIY
-// void decompose_mesh_DIY(diy::mpi::communicator& world, int nblocks) {
-
-//   // share_face is a vector of bools indicating whether faces are shared in each dimension
-//   // uninitialized values default to false
-//   diy::RegularDecomposer<Bounds>::BoolVector          share_face;
-//   // wrap is a vector of bools indicating whether boundary conditions are periodic in each dimension
-//   // uninitialized values default to false
-//   diy::RegularDecomposer<Bounds>::BoolVector          wrap;
-//   // ghosts is a vector of ints indicating number of ghost cells per side in each dimension
-//   // uninitialized values default to 0
-//   diy::RegularDecomposer<Bounds>::CoordinateVector    ghosts = {1, 1, 1};
-//   // ghosts.push_back(2); ghosts.push_back(2); ghosts.push_back(2);
-
-//   // create a RegularDecomposer
-//   // allows access to all the methods in RegularDecomposer
-//   diy::RegularDecomposer<Bounds> decomposer(m.nd(),
-//                                             domain,
-//                                             nblocks,
-//                                             share_face,       // optional
-//                                             wrap,             // optional
-//                                             ghosts);          // optional
-
-//   // call the decomposer's decompose function given a lambda
-//   decomposer.decompose(world.rank(),
-//    assigner,
-//    [&](int gid,                   // block global id
-//        const Bounds& core,        // block bounds without any ghost added
-//        const Bounds& bounds,      // block bounds including any ghost region added
-//        const Bounds& domain,      // global data bounds
-//        const RCLink& link)        // neighborhood
-//    {
-//        // Block*          b   = new Block;             // possibly use custom initialization
-//        // RGLink*         l   = new RGLink(link);
-//        // int             lid = master.add(gid, b, l); // add block to the master (mandatory)
-//        // process any additional args here, load the data, etc.
-
-//       std::cout<<core[0]<<" "<<core[1]<<" "<<core[2]<<std::endl; 
-//       std::cout<<bounds[0]<<" "<<bounds[1]<<" "<<bounds[2]<<std::endl; 
-//       // std::cout<<domain[0]<<" "<<domain[1]<<" "<<domain[2]<<std::endl; 
-//    });
-// }
 
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
   // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
@@ -492,9 +474,13 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   float g[3][2], value[3];
 
   for (int i = 0; i < 3; i ++) {
-    g[i][0] = grad(0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    g[i][1] = grad(1, vertices[i][0], vertices[i][1], vertices[i][2]);
-    value[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
+    int _i = vertices[i][0] - data_offset[0];
+    int _j = vertices[i][1] - data_offset[1];
+    int _k = vertices[i][2] - data_offset[2];
+
+    g[i][0] = grad(0, _i, _j, _k);
+    g[i][1] = grad(1, _i, _j, _k);
+    value[i] = scalar(_i, _j, _k);
   }
  
   float mu[3];
@@ -505,9 +491,13 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
   float hessxx[3], hessxy[3], hessyy[3];
   for (int i = 0; i < vertices.size(); i ++) {
-    hessxx[i] = hess(0, 0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    hessxy[i] = hess(0, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
-    hessyy[i] = hess(1, 1, vertices[i][0], vertices[i][1], vertices[i][2]);
+    int _i = vertices[i][0] - data_offset[0];
+    int _j = vertices[i][1] - data_offset[1];
+    int _k = vertices[i][2] - data_offset[2];
+
+    hessxx[i] = hess(0, 0, _i, _j, _k);
+    hessxy[i] = hess(0, 1, _i, _j, _k);
+    hessyy[i] = hess(1, 1, _i, _j, _k);
   }
   float hxx = ftk::lerp_s2(hessxx, mu),
         hxy = ftk::lerp_s2(hessxy, mu), 
@@ -765,8 +755,7 @@ int main(int argc, char **argv)
   m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   decompose_mesh(nblocks); 
-  // decompose_mesh_DIY(nblocks); 
-  
+
   intersections = &b->intersections; 
 
   // Load data
@@ -778,6 +767,11 @@ int main(int argc, char **argv)
 
     diy::mpi::io::file in(world, pattern, diy::mpi::io::file::rdonly);
     
+    diy::DiscreteBounds diy_box(3);
+    diy_box.min[0] = data_box.min[2]; diy_box.max[0] = data_box.max[2]; 
+    diy_box.min[1] = data_box.min[1]; diy_box.max[1] = data_box.max[1]; 
+    diy_box.min[2] = data_box.min[0]; diy_box.max[2] = data_box.max[0]; 
+
     std::vector<unsigned> shape;
     shape.push_back(DT);
     shape.push_back(DH);
@@ -785,26 +779,21 @@ int main(int argc, char **argv)
 
     diy::io::BOV reader(in, shape);
 
-    diy::DiscreteBounds box(3);
-    box.min[0] = std::max(0, block_m_ghost.lb(2)-2); box.max[0] = std::min(block_m_ghost.ub(2)+2, DT-1); 
-    box.min[1] = std::max(0, block_m_ghost.lb(1)-2); box.max[1] = std::min(block_m_ghost.ub(1)+2, DH-1); 
-    box.min[2] = std::max(0, block_m_ghost.lb(0)-2); box.max[2] = std::min(block_m_ghost.ub(0)+2, DW-1); 
+    // int box_size = (box.max[0] - box.min[0] + 1) * (box.max[1] - box.min[1] + 1) * (box.max[2] - box.min[2] + 1); 
+    // std::vector<float> _data(box_size);
+    // reader.read(box, &_data[0], true);
 
-    int box_size = (box.max[0] - box.min[0] + 1) * (box.max[1] - box.min[1] + 1) * (box.max[2] - box.min[2] + 1); 
-    std::vector<float> _data(box_size);
-    reader.read(box, &_data[0], true);
+    // int ite = 0; 
+    // for (int k = box.min[0]; k < box.max[0]+1; k ++) {
+    //   for (int j = box.min[1]; j < box.max[1]+1; j ++) {
+    //     for (int i = box.min[2]; i < box.max[2]+1; i ++) {
+    //       scalar(i, j, k) = _data[ite++];
+    //     }
+    //   }
+    // }
 
-    scalar.reshape(DW, DH, DT);
-
-    int ite = 0; 
-    for (int k = box.min[0]; k < box.max[0]+1; k ++) {
-      for (int j = box.min[1]; j < box.max[1]+1; j ++) {
-        for (int i = box.min[2]; i < box.max[2]+1; i ++) {
-          scalar(i, j, k) = _data[ite++];
-        }
-      }
-    }
-    
+    scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
+    reader.read(diy_box, scalar.data(), true);    
   }
 
   #ifdef FTK_HAVE_MPI
@@ -944,7 +933,18 @@ int main(int argc, char **argv)
       fmt.setSamples(16);
       QGLFormat::setDefaultFormat(fmt);
 
-      CGLWidget *widget = new CGLWidget(scalar);
+      // scalar data with full domain
+      hypermesh::ndarray<float> full_scalar; full_scalar.reshape(DW, DH, DT);
+      
+      for (int k = data_box.min[2]; k < data_box.max[2]+1; k ++) {
+        for (int j = data_box.min[1]; j < data_box.max[1]+1; j ++) {
+          for (int i = data_box.min[0]; i < data_box.max[0]+1; i ++) {
+            full_scalar(i, j, k) = scalar(i - data_offset[0], j - data_offset[1], k - data_offset[2]); 
+          }
+        }
+      }
+
+      CGLWidget *widget = new CGLWidget(full_scalar);
       widget->set_trajectories(trajectories, threshold);
       widget->show();
       return app.exec();
