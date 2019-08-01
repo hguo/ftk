@@ -51,6 +51,7 @@
 
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
+#define PRINT_FEATURE_DENSITY false
 
 int nthreads;
 
@@ -878,6 +879,21 @@ int main(int argc, char **argv)
             std::cout << "Scan for Critical Points: " << end - start << " seconds. " <<std::endl;
           }
           start = end; 
+        #endif
+      #endif
+
+      #if PRINT_FEATURE_DENSITY
+        int n_2d_element; 
+        block_m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f){
+          n_2d_element++ ;
+        }, nthreads);
+        std::cout<<"Feature Density: "<< (intersections->size()) / (float)n_2d_element << std::endl; 
+        #ifdef FTK_HAVE_MPI
+          #if TIME_OF_STEPS
+            MPI_Barrier(world);
+            end = MPI_Wtime();
+            start = end; 
+          #endif
         #endif
       #endif
 
