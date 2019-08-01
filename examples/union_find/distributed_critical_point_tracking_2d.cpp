@@ -84,6 +84,8 @@ std::vector<std::set<std::string>> connected_components_str; // connected compon
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
 
+std::string filename_time_uf_w; // record time for each round of union-find
+
 int scaling_factor; // the factor that controls the shape of the synthesize data, default value: 15
 
 template <typename T> // the synthetic function
@@ -366,7 +368,7 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
 
   // get_connected_components
   bool is_iexchange = true; // true false
-  exec_distributed_union_find(world, master, assigner, local_blocks, is_iexchange); 
+  exec_distributed_union_find(world, master, assigner, local_blocks, is_iexchange, filename_time_uf_w); 
 
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
@@ -724,6 +726,7 @@ int main(int argc, char **argv)
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w;
   std::string filename_sets_w; 
+
   bool show_qt = false, show_vtk = false;
 
   cxxopts::Options options(argv[0]);
@@ -735,6 +738,7 @@ int main(int argc, char **argv)
     ("read-traj", "read traj file", cxxopts::value<std::string>(filename_traj_r))
     ("write-traj", "write traj file", cxxopts::value<std::string>(filename_traj_w))
     ("write-sets", "write sets of connected elements", cxxopts::value<std::string>(filename_sets_w))
+    ("write-time-union-find", "write time for each round of union-find", cxxopts::value<std::string>(filename_time_uf_w))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
