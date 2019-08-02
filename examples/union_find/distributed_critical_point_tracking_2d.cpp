@@ -797,7 +797,9 @@ int main(int argc, char **argv)
     // }
 
     scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
-    reader.read(diy_box, scalar.data(), true);    
+
+    // reader.read(diy_box, scalar.data(), true);
+    reader.read(diy_box, scalar.data());
   }
 
   #ifdef FTK_HAVE_MPI
