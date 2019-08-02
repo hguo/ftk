@@ -926,6 +926,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
       double start = MPI_Wtime();
 
       std::stringstream ss;
+      ss << gids[0]; 
     #endif
   #endif
 
@@ -969,7 +970,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
           double duration = blocks[0]->time - start; 
 
           // ss << "Round "<<round_cnt << ":"; 
-          ss << duration << " "; 
+          ss << " " << duration ;
 
           round_cnt ++; 
 
