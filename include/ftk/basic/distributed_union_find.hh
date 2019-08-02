@@ -922,11 +922,11 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
   #if OUTPUT_TIME_EACH_ROUND
     #ifdef FTK_HAVE_MPI
-      MPI_Barrier(world); 
-      double start = MPI_Wtime();
-
       std::stringstream ss;
       ss << gids[0]; 
+
+      MPI_Barrier(world); 
+      double start = MPI_Wtime();
     #endif
   #endif
 
