@@ -858,6 +858,10 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
     std::cout<<"gid: "<<gid<<"================================="<<std::endl; 
   #endif
 
+  #if OUTPUT_TIME_EACH_ROUND
+    b->time = MPI_Wtime();
+  #endif
+
   return b->nchanges == 0; 
 }
 
@@ -874,6 +878,7 @@ void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
   cp.all_reduce(b->nchanges, std::plus<int>()); 
   b->nchanges = 0;
+
   #if OUTPUT_TIME_EACH_ROUND
     b->time = MPI_Wtime();
   #endif
@@ -945,6 +950,29 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
     //     std::cout << "Union-Find: " << end - start << " seconds. " << std::endl;
     //   }
     // #endif
+
+    #if OUTPUT_TIME_EACH_ROUND
+      #ifdef FTK_HAVE_MPI
+        if(!filename_time_uf_w.empty()) {
+          // std::string filename = filename_time_uf_w + std::to_string(world.rank()) + ".time"; 
+
+          double duration = blocks[0]->time - start; 
+          ss << " " << duration ;
+
+          MPI_Status status;
+          MPI_File fh;
+
+          ss<<std::endl;
+          const std::string buf = ss.str();
+
+          MPI_File_open(world, filename_time_uf_w.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+          
+          MPI_File_write_ordered(fh, buf.c_str(), buf.length(), MPI_CHAR, &status);
+
+          MPI_File_close(&fh);
+        }
+      #endif
+    #endif
 
   } else { // for exchange
     bool all_done = false;
