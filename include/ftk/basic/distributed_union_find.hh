@@ -526,9 +526,9 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
             cp.enqueue(l->target(l->find(rgid)), send_msg);
           }
 
-          if(ISDEBUG) {
+          #if ISDEBUG
             std::cout<<ele<<" -1> "<<related_ele<<std::endl; 
-          }
+          #endif
 
           b->erase_related_element(ele, related_ele); 
 
@@ -628,9 +628,9 @@ void distributed_save_gparent(Block_Union_Find* b, const diy::Master::ProxyWithL
   b->set_parent(ele, grandpar); 
   b->set_gid(grandpar, gid_grandparent); 
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     std::cout<<ele<<" -2> "<<grandpar<<std::endl; 
-  }
+  #endif
 }
 
 // Distributed path compression - Step Three
@@ -759,31 +759,31 @@ void distributed_save_union(Block_Union_Find* b, const diy::Master::ProxyWithLin
 
 void local_computation(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     int gid = cp.gid();
     std::cout<<"Start Local Computation. "<<"gid: "<<gid<<std::endl; 
-  }
+  #endif
 
   unite_once(b, cp); 
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     int gid = cp.gid();
     std::cout<<"Finish unite once. "<<"gid: "<<gid<<std::endl; 
-  }
+  #endif
 
   compress_path(b, cp); 
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     int gid = cp.gid();
     std::cout<<"Finish compress_path. "<<"gid: "<<gid<<std::endl; 
-  }
+  #endif
 
   pass_unions(b, cp); 
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     int gid = cp.gid();
     std::cout<<"Finish pass_unions. "<<"gid: "<<gid<<std::endl; 
-  }
+  #endif
 }
 
 
@@ -796,9 +796,9 @@ void received_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Mes
   //   save_gid(b, cp, msg); 
   // } 
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     std::cout<<"Start Receiving Msg: "<<msg.tag<<std::endl; 
-  }
+  #endif
 
   if(msg.tag == "gparent") {
     distributed_save_gparent(b, cp, msg); 
@@ -852,11 +852,11 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
 
   // std::cout<<"gid: "<<gid<<"=====Phase 3============================"<<std::endl; 
   
-  if(ISDEBUG) {
+  #if ISDEBUG
     int gid = cp.gid(); 
 
     std::cout<<"gid: "<<gid<<"================================="<<std::endl; 
-  }
+  #endif
 
   return b->nchanges == 0; 
 }
@@ -885,9 +885,9 @@ void exchange_process(diy::Master& master) {
   master.foreach(&total_changes);
   master.exchange();
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     std::cout<<"================================="<<std::endl; 
-  }
+  #endif
 }
 
 void import_data(std::vector<Block_Union_Find*>& blocks, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<int>& gids) {
@@ -958,9 +958,9 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
       int total_changes = master.proxy(master.loaded_block()).read<int>();
       // int total_changes = master.proxy(master.loaded_block()).get<int>();
 
-      if(ISDEBUG) {
+      #if ISDEBUG
         std::cout<<total_changes<<std::endl; 
-      }
+      #endif
 
       all_done = total_changes == 0;
 
@@ -1121,7 +1121,7 @@ inline void Block_Union_Find::get_sets(diy::mpi::communicator& world, diy::Maste
     results.push_back(ite->second);   
   }
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     for(int i = 0; i < results.size(); ++i) {
       std::cout<<"Set "<<i<<":"<<std::endl; 
       auto& ele_set = results[i]; 
@@ -1130,7 +1130,7 @@ inline void Block_Union_Find::get_sets(diy::mpi::communicator& world, diy::Maste
       }
       std::cout<<std::endl; 
     }
-  }
+  #endif
 }
 
 #endif
