@@ -404,6 +404,28 @@ namespace diy
 
 // ==========================================================
 
+void import_data(std::vector<Block_Union_Find*>& blocks, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<int>& gids) {
+  // for the local blocks in this processor
+  for (unsigned i = 0; i < gids.size(); ++i) {
+    int gid = gids[i];
+
+    diy::Link*    link = new diy::Link; 
+    for(unsigned j = 0; j < assigner.nblocks(); ++j) {
+      // int neighbor_gid = gids[j]; 
+      int neighbor_gid = j; 
+      if(gid != neighbor_gid) {
+        diy::BlockID  neighbor;
+        neighbor.gid  = neighbor_gid;  // gid of the neighbor block
+        neighbor.proc = assigner.rank(neighbor.gid);  // process of the neighbor block
+        link->add_neighbor(neighbor); 
+      }
+    }
+
+    Block_Union_Find* b = blocks[i]; 
+    master.add(gid, b, link); 
+  }
+}
+
 void query_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
@@ -820,12 +842,9 @@ void receive_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   diy::Link* l = cp.link();
   
   while(!cp.empty_incoming_queues()) {
-    // Save unions from other blocks
-    std::vector<int> in; // gids of incoming neighbors in the link
+    std::vector<int> in;
     cp.incoming(in);
 
-    // for all neighbor blocks
-    // dequeue data received from this neighbor block in the last exchange
     for (unsigned i = 0; i < in.size(); ++i) {
       if(cp.incoming(in[i])) {
         Message_Union_Find msg; 
@@ -839,22 +858,11 @@ void receive_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
 bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   b->nchanges = 0; 
-
-  int gid = cp.gid();
-
-  // std::cout<<"gid: "<<gid<<"=====Phase 1============================"<<std::endl; 
-
   receive_msg(b, cp); 
-
-  // std::cout<<"gid: "<<gid<<"=====Phase 2============================"<<std::endl; 
-
   local_computation(b, cp); 
-
-  // std::cout<<"gid: "<<gid<<"=====Phase 3============================"<<std::endl; 
   
   #if ISDEBUG
     int gid = cp.gid(); 
-
     std::cout<<"gid: "<<gid<<"================================="<<std::endl; 
   #endif
 
@@ -868,9 +876,6 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
 
 void iexchange_process(diy::Master& master) {
   master.iexchange(&union_find_iexchange); 
-
-  // Test whether the iexchange ends but the union find does not end
-  // master.iexchange(&union_find_iexchange); 
 }
 
 void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
@@ -895,35 +900,12 @@ void exchange_process(diy::Master& master) {
   #endif
 }
 
-void import_data(std::vector<Block_Union_Find*>& blocks, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<int>& gids) {
-  // for the local blocks in this processor
-  for (unsigned i = 0; i < gids.size(); ++i) {
-    int gid = gids[i];
-
-    diy::Link*    link = new diy::Link; 
-    for(unsigned j = 0; j < assigner.nblocks(); ++j) {
-      // int neighbor_gid = gids[j]; 
-      int neighbor_gid = j; 
-      if(gid != neighbor_gid) {
-        diy::BlockID  neighbor;
-        neighbor.gid  = neighbor_gid;  // gid of the neighbor block
-        neighbor.proc = assigner.rank(neighbor.gid);  // process of the neighbor block
-        link->add_neighbor(neighbor); 
-      }
-    }
-
-    Block_Union_Find* b = blocks[i]; 
-    master.add(gid, b, link); 
-  }
-}
-
 void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<Block_Union_Find*>& blocks, bool is_iexchange = true, std::string filename_time_uf_w="") {
 
   std::vector<int> gids;                     // global ids of local blocks
   assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
 
   import_data(blocks, master, assigner, gids); 
-  
 
   #if OUTPUT_TIME_EACH_ROUND
     #ifdef FTK_HAVE_MPI
@@ -936,26 +918,15 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
   #endif
 
   if(is_iexchange) { // for iexchange
-    // #ifdef FTK_HAVE_MPI
-    //   // MPI_Barrier(world); 
-    //   double start = MPI_Wtime();
-    // #endif
-
     master.foreach(&query_gid);
     iexchange_process(master);  
 
-    // #ifdef FTK_HAVE_MPI
-    //   double end = MPI_Wtime();
-    //   if(world.rank() == 0) {
-    //     std::cout << "Union-Find: " << end - start << " seconds. " << std::endl;
-    //   }
-    // #endif
+    // =========================================
+    // Debug and Print
 
     #if OUTPUT_TIME_EACH_ROUND
       #ifdef FTK_HAVE_MPI
         if(!filename_time_uf_w.empty()) {
-          // std::string filename = filename_time_uf_w + std::to_string(world.rank()) + ".time"; 
-
           double duration = blocks[0]->time - start; 
           ss << " " << duration ;
 
@@ -977,21 +948,25 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
   } else { // for exchange
     bool all_done = false;
 
+    master.foreach(&query_gid);
+    master.exchange();
+
     #if OUTPUT_TIME_EACH_ROUND
       int round_cnt = 0; 
     #endif
 
     while(!all_done) {
       exchange_process(master); 
-
       int total_changes = master.proxy(master.loaded_block()).read<int>();
       // int total_changes = master.proxy(master.loaded_block()).get<int>();
+      all_done = total_changes == 0;
+
+      // =========================================
+      // Debug and Print
 
       #if ISDEBUG
         std::cout<<total_changes<<std::endl; 
       #endif
-
-      all_done = total_changes == 0;
 
       #if OUTPUT_TIME_EACH_ROUND
         #ifdef FTK_HAVE_MPI
