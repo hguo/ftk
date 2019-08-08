@@ -978,7 +978,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
           round_cnt ++; 
 
-          MPI_Barrier(world); // The collective is synchronizing, but it may be better to remove this extra barrier, in case this slows the exchange down further. 
+          MPI_Barrier(world); 
           start = MPI_Wtime(); 
         #endif
       #endif
