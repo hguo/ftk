@@ -857,9 +857,11 @@ void receive_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 }
 
 bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
-  b->nchanges = 0; 
-  receive_msg(b, cp); 
-  local_computation(b, cp); 
+  do {
+    b->nchanges = 0; 
+    receive_msg(b, cp); 
+    local_computation(b, cp); 
+  } while(b->nchanges != 0); 
   
   #if ISDEBUG
     int gid = cp.gid(); 
@@ -870,7 +872,8 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
     b->time = MPI_Wtime();
   #endif
 
-  return b->nchanges == 0; 
+  // return b->nchanges == 0; 
+  return true ;
 }
 
 
