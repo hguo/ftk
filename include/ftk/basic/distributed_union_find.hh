@@ -524,40 +524,44 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
     if(b->is_root(ele)) {
       auto related_elements = b->get_related_elements(ele); // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
 
+      std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
+
       for(auto& related_ele : related_elements) {
         
         if(!b->has_gid(related_ele)) {
           continue ; 
         }
 
-        int rgid = b->get_gid(related_ele); 
-        // std::cout<<gid<<" "<<rgid<<std::endl; 
-
         // Unite a root element with larger id or smaller id is better? 
           // Here is a smaller id
 
-        if(related_ele < ele) {
-          b->set_parent(ele, related_ele); 
-
-          if(b->has(related_ele)) {
-            b->add_child(related_ele, ele); 
-          } else {
-            Message_Union_Find send_msg; 
-            send_msg.send_child(related_ele, ele, gid); 
-
-            cp.enqueue(l->target(l->find(rgid)), send_msg);
-          }
-
-          #if ISDEBUG
-            std::cout<<ele<<" -1> "<<related_ele<<std::endl; 
-          #endif
-
-          b->erase_related_element(ele, related_ele); 
-
-          break ; 
-        } 
-
+        if (related_ele < found_related_ele) {
+          found_related_ele = related_ele; 
+        }
       }
+
+      if(found_related_ele != ele) {
+        int rgid = b->get_gid(found_related_ele); 
+        // std::cout<<gid<<" "<<rgid<<std::endl; 
+        
+        b->set_parent(ele, found_related_ele); 
+
+        if(b->has(found_related_ele)) {
+          b->add_child(found_related_ele, ele); 
+        } else {
+          Message_Union_Find send_msg; 
+          send_msg.send_child(found_related_ele, ele, gid); 
+
+          cp.enqueue(l->target(l->find(rgid)), send_msg);
+        }
+
+        #if ISDEBUG
+          std::cout<<ele<<" -1> "<<found_related_ele<<std::endl; 
+        #endif
+
+        b->erase_related_element(ele, found_related_ele); 
+      } 
+
     }
   }
 
