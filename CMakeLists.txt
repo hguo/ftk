@@ -25,7 +25,7 @@ ftk_option (HDF5 "Use HDF5" AUTO)
 ftk_option (PNETCDF "Use parallel-netcdf" AUTO)
 ftk_option (MPSolve "Use MPSolve" AUTO)
 ftk_option (GSL "Use GSL (GNU Scientific Library)" AUTO)
-ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" AUTO)
+ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # this feature is experimental
 ftk_option (PNG "Use PNG" AUTO)
 ftk_option (LevelDB "Use LevelDB" AUTO)
 ftk_option (RocksDB "Use RocksDB" AUTO)
