@@ -473,12 +473,12 @@ int main(int argc, char **argv)
 
     if (!filename_traj_w.empty())
       write_traj_file(filename_traj_w);
+  }
 
 #if FTK_HAVE_VTK
-    if (!filename_traj_vtk_w.empty())
-      write_traj_vtk_file(filename_traj_vtk_w);
+  if (!filename_traj_vtk_w.empty())
+    write_traj_vtk_file(filename_traj_vtk_w);
 #endif
-  }
 
   if (show_qt) {
 #if FTK_HAVE_QT5
