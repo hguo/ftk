@@ -9,7 +9,33 @@ struct intersection_t {
   template <class Archive> void serialize(Archive & ar) {
     ar(eid, x[0], x[1], x[2], val);
   }
+
+  float&  operator[](unsigned i)                          { return x[i]; }
+  float   operator[](unsigned i) const                    { return x[i]; }
 };
+
+namespace diy
+{
+  template<>
+  struct Serialization<intersection_t>
+  {
+      static void save(BinaryBuffer& bb, const intersection_t& msg)
+      {
+          diy::save(bb, msg.x);
+          diy::save(bb, msg.val);
+          diy::save(bb, msg.eid);
+      }
+
+      static void load(BinaryBuffer& bb, intersection_t& msg)
+      {
+          diy::load(bb, msg.x);
+          diy::load(bb, msg.val);
+          diy::load(bb, msg.eid);
+      }
+  };
+}
+
+// ==========================================================
 
 // DIY Block for distributed critical point tracking
 struct Block_Critical_Point : public Block_Union_Find {
@@ -22,8 +48,11 @@ struct Block_Critical_Point : public Block_Union_Find {
 
 public:
   std::map<std::string, intersection_t> intersections; // Points on trajectories of critical points
+  std::vector<intersection_t> points; 
 
 };
+
+// ==========================================================
 
 struct Message_Critical_Point : public Message_Union_Find {
   Message_Critical_Point() {
@@ -56,27 +85,25 @@ struct Message_Critical_Point : public Message_Union_Find {
 
 };
 
-// ==========================================================
-
 namespace diy
 {
-    template<>
-        struct Serialization<Message_Critical_Point>
-    {
-        static void save(BinaryBuffer& bb, const Message_Critical_Point& msg)
-        {
-            diy::save(bb, msg.tag);
-            // diy::save(bb, msg.str);
-            diy::save(bb, msg.strs);
-        }
+  template<>
+  struct Serialization<Message_Critical_Point>
+  {
+      static void save(BinaryBuffer& bb, const Message_Critical_Point& msg)
+      {
+          diy::save(bb, msg.tag);
+          // diy::save(bb, msg.str);
+          diy::save(bb, msg.strs);
+      }
 
-        static void load(BinaryBuffer& bb, Message_Critical_Point& msg)
-        {
-            diy::load(bb, msg.tag);
-            // diy::load(bb, msg.str);
-            diy::load(bb, msg.strs);
-        }
-    };
+      static void load(BinaryBuffer& bb, Message_Critical_Point& msg)
+      {
+          diy::load(bb, msg.tag);
+          // diy::load(bb, msg.str);
+          diy::load(bb, msg.strs);
+      }
+  };
 }
 
 // ==========================================================

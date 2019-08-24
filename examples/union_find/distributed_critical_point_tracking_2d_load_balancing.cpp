@@ -23,6 +23,8 @@
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy/assigner.hpp>
 #include <ftk/external/diy/io/bov.hpp>
+#include <ftk/external/diy/algorithms.hpp>
+
 #include <ftk/basic/distributed_union_find.hh>
 #include "connected_critical_point.hpp"
 
@@ -71,6 +73,7 @@ hypermesh::regular_simplex_mesh block_m_ghost(3); // the 3D space-time mesh of t
 
 std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>> lattice_partitions;
 float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
+int threshold_length; // threshold for trajectory length.  
 
 std::mutex mutex;
  
@@ -212,6 +215,18 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
 
   for (int i = 0; i < f.corner.size(); ++i){
     if (f.corner[i] < _lattice.start(i) || f.corner[i] > _lattice.upper_bound(i)) {
+      return false; 
+    }
+  }
+
+  return true;
+}
+
+bool is_in_mesh(const intersection_t& f, const hypermesh::regular_lattice& _lattice) { 
+  // If the point is contained in the lattice
+
+  for (int i = 0; i < 3; ++i){
+    if (f[i] < _lattice.start(i) || f[i] > _lattice.upper_bound(i)) {
       return false; 
     }
   }
@@ -439,18 +454,20 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       std::vector<std::vector<float>> mycurves;
       auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
       for (int j = 0; j < linear_graphs.size(); j ++) {
-        std::vector<float> mycurve, mycolors;
-        float max_value = std::numeric_limits<float>::min();
-        for (int k = 0; k < linear_graphs[j].size(); k ++) {
-          auto p = intersections->at(linear_graphs[j][k].to_string());
-          mycurve.push_back(p.x[0]); //  / (DW-1));
-          mycurve.push_back(p.x[1]); //  / (DH-1));
-          mycurve.push_back(p.x[2]); //  / (DT-1));
-          mycurve.push_back(p.val);
-          max_value = std::max(max_value, p.val);
-        }
-        if (max_value > threshold) {
-          trajectories.emplace_back(mycurve);
+        if(linear_graphs[j].size() > threshold_length) {
+          std::vector<float> mycurve, mycolors;
+          float max_value = std::numeric_limits<float>::min();
+          for (int k = 0; k < linear_graphs[j].size(); k ++) {
+            auto p = intersections->at(linear_graphs[j][k].to_string());
+            mycurve.push_back(p.x[0]); //  / (DW-1));
+            mycurve.push_back(p.x[1]); //  / (DH-1));
+            mycurve.push_back(p.x[2]); //  / (DT-1));
+            mycurve.push_back(p.val);
+            max_value = std::max(max_value, p.val);
+          }
+          if (max_value > threshold) {
+            trajectories.emplace_back(mycurve);
+          }
         }
       }
     }
@@ -751,6 +768,7 @@ int main(int argc, char **argv)
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
     ("scaling-factor", "scaling factor for synthetic data", cxxopts::value<int>(scaling_factor)->default_value("15"))
     ("threshold", "threshold", cxxopts::value<float>(threshold)->default_value("0"))
+    ("threshold-length", "threshold for trajectory length", cxxopts::value<int>(threshold_length)->default_value("-1"))
     ("vtk", "visualization with vtk", cxxopts::value<bool>(show_vtk))
     ("qt", "visualization with qt", cxxopts::value<bool>(show_qt))
     ("d,debug", "enable debugging");
@@ -840,6 +858,37 @@ int main(int argc, char **argv)
   if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     if(world.rank() == 0) {
       read_traj_file(filename_traj_r);
+
+      if(threshold_length > -1) {
+        auto ite = trajectories.begin(); 
+        while(ite != trajectories.end()) {
+          if(ite->size() / 4 <= threshold_length) {
+            ite = trajectories.erase(ite); 
+          } else {
+            ++ite ;
+          }
+        }
+      }
+
+      if(threshold > 0) {
+
+        auto ite = trajectories.begin(); 
+        while(ite != trajectories.end()) {
+          float max_value = std::numeric_limits<float>::min();
+          
+          for(int i = 3; i < ite->size(); i += 4) {
+            max_value = std::max(max_value, ite->at(i));
+          }
+
+          if(max_value <= threshold) {
+            ite = trajectories.erase(ite); 
+          } else {
+            ++ite ;
+          }
+
+        } 
+      }
+
     }
   } else { // otherwise do the analysis
 
@@ -901,6 +950,33 @@ int main(int argc, char **argv)
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
+
+
+    bool wrap = false; 
+    int hist = 512; //32;
+    int DIM = m.nd(); //3
+    diy::ContinuousBounds domain(3);
+
+    m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1});
+    domain.min[0] = 2; domain.max[0] = DW-3; 
+    domain.min[1] = 2; domain.max[1] = DH-3; 
+    domain.min[2] = 0; domain.max[2] = DT-1; 
+
+    // std::vector<intersection_t> points; 
+    for(auto intersection : *intersections) {
+      if(is_in_mesh(intersection.second, m.lattice())) {
+        b->points.push_back(intersection.second);  
+      }
+    }
+    std::cout << gid << ": " << b->points.size() << std::endl;
+
+    diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
+        // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
+        // Which block's particles are being sent? Block b? how does compiler know? 
+
+    std::cout << gid << ": " << b->points.size() << std::endl;
+
+    exit(0);
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
