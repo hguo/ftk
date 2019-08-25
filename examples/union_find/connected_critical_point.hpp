@@ -1,17 +1,20 @@
 #include <ftk/basic/distributed_union_find.hh>
 
 struct intersection_t {
-  float x[3]; // the spacetime coordinates of the trajectory
-  float val; // scalar value at the intersection
-  
-  std::string eid; // element id
-
   template <class Archive> void serialize(Archive & ar) {
     ar(eid, x[0], x[1], x[2], val);
   }
 
-  float&  operator[](unsigned i)                          { return x[i]; }
-  float   operator[](unsigned i) const                    { return x[i]; }
+  float&  operator[](unsigned i)                          { return corner[i]; }
+  float   operator[](unsigned i) const                    { return corner[i]; }
+
+  float x[3]; // the spacetime coordinates of the trajectory
+  float corner[3]; // the spacetime coordinates of the left corner of the element
+
+  float val; // scalar value at the intersection
+  
+  std::string eid; // element id
+  std::set<std::string> related_elements; 
 };
 
 namespace diy
@@ -22,15 +25,19 @@ namespace diy
       static void save(BinaryBuffer& bb, const intersection_t& msg)
       {
           diy::save(bb, msg.x);
+          diy::save(bb, msg.corner);
           diy::save(bb, msg.val);
           diy::save(bb, msg.eid);
+          diy::save(bb, msg.related_elements);
       }
 
       static void load(BinaryBuffer& bb, intersection_t& msg)
       {
           diy::load(bb, msg.x);
+          diy::load(bb, msg.corner);
           diy::load(bb, msg.val);
           diy::load(bb, msg.eid);
+          diy::load(bb, msg.related_elements);
       }
   };
 }

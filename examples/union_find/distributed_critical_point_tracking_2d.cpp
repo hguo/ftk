@@ -440,7 +440,8 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       std::vector<std::vector<float>> mycurves;
       auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
       for (int j = 0; j < linear_graphs.size(); j ++) {
-        if(linear_graphs[j].size() > threshold_length) {
+        int _size = linear_graphs[j].size();
+        if(_size > threshold_length) {
           std::vector<float> mycurve, mycolors;
           float max_value = std::numeric_limits<float>::min();
           for (int k = 0; k < linear_graphs[j].size(); k ++) {

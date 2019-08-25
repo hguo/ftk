@@ -160,6 +160,8 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   void add_related_element(std::string ele, std::string related_ele) {
     this->nchanges += 1;
 
+    // std::cout<<"Add union: "<<ele<<"-"<<related_ele<<std::endl; 
+
     if(this->has(ele)) {
       if(ele != related_ele) {
         this->related_elements[ele].insert(related_ele);   
@@ -423,6 +425,7 @@ void import_data(std::vector<Block_Union_Find*>& blocks, diy::Master& master, di
 
     Block_Union_Find* b = blocks[i]; 
     master.add(gid, b, link); 
+    // master.replace_link(0, link);
   }
 }
 
@@ -437,7 +440,7 @@ void query_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   for(auto it = b->ele2gid.begin(); it != b->ele2gid.end(); ++it) {
     if(it->second == -1) { // If the gid of this element is unknown
 
-      // std::cout<<"A gid is missing: " << it->first<<std::endl; 
+      std::cout<<"A gid is missing: " << it->first<<std::endl; 
 
       std::string ele = it->first; 
       if(b->has(ele)) {

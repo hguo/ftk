@@ -222,16 +222,11 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
   return true;
 }
 
-bool is_in_mesh(const intersection_t& f, const hypermesh::regular_lattice& _lattice) { 
-  // If the point is contained in the lattice
-
-  for (int i = 0; i < 3; ++i){
-    if (f[i] < _lattice.start(i) || f[i] > _lattice.upper_bound(i)) {
-      return false; 
-    }
-  }
-
-  return true;
+  // If the intersection is contained in the lattice
+bool is_in_mesh(const intersection_t& intersection, const hypermesh::regular_lattice& _lattice) { 
+  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, intersection.eid); 
+  
+  return is_in_mesh(f, _lattice); 
 }
 
 
@@ -240,7 +235,8 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
   if (!f.valid()) return; // check if the 3-simplex is valid
 
   const auto elements = f.sides();
-  std::set<std::string> features; 
+  std::set<std::string> features;
+  std::set<std::string> features_in_block;  
   std::map<std::string, hypermesh::regular_simplex_mesh_element> id2element; 
 
   for (const auto& ele : elements) {
@@ -248,17 +244,15 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
     if(intersections->find(eid) != intersections->end()) {
       features.insert(eid); 
       id2element.insert(std::make_pair(eid, ele)); 
+
+      if(is_in_mesh(ele, block_m.lattice())) {
+        features_in_block.insert(eid); 
+      }
+      
     }
   }
 
   if(features.size()  > 1) {
-    std::set<std::string> features_in_block; 
-    for(auto& feature : features) {
-      if(b->has(feature)) {
-        features_in_block.insert(feature); 
-      }
-    }
-
     if(features_in_block.size() > 1) {
       // When features are local, we just need to relate to the first feature element
 
@@ -271,9 +265,9 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
         std::string curr_feature = *ite_i; 
 
         if(first_feature < curr_feature) { // Since only when the id of related_ele < ele, then the related_ele can be the parent of ele
-          b->add_related_element(curr_feature, first_feature); 
+          intersections->find(curr_feature)->second.related_elements.insert(first_feature); 
         } else {
-          b->add_related_element(first_feature, curr_feature);
+          intersections->find(first_feature)->second.related_elements.insert(curr_feature); 
         }
         
       }
@@ -286,23 +280,6 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
     // When features are across processors, we need to relate all local feature elements to all remote feature elements
     for(auto& feature: features) {
       if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
-        
-        if(!b->has_gid(feature)) { // If the block id of this feature is unknown, search the block id of this feature
-          hypermesh::regular_simplex_mesh_element& ele = id2element.find(feature)->second; 
-          for(int i = 0; i < lattice_partitions.size(); ++i) {
-            if(i != gid){ // We know the feature is not in this partition
-              auto& _lattice = std::get<0>(lattice_partitions[i]); 
-              if(is_in_mesh(ele, _lattice)) { // the feature is in mith partition
-                #if MULTITHREAD
-                  std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-                #endif
-
-                b->set_gid(feature, i); // Set gid of this feature to mi  
-              }
-            }
-          }
-        }
-
         #if MULTITHREAD 
           std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
         #endif
@@ -310,7 +287,7 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
         for(auto& feature_in_block : features_in_block) {
 
           if(feature < feature_in_block) { // When across processes, also, since only when the id of related_ele < ele, then the related_ele can be the parent of ele
-            b->add_related_element(feature_in_block, feature); 
+            intersections->find(feature_in_block)->second.related_elements.insert(feature); 
           }
 
         }
@@ -319,25 +296,14 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
   }
 }
 
-void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
-{
-  // Initialization
-    // Init union-find blocks
-  std::vector<Block_Union_Find*> local_blocks;
-  local_blocks.push_back(b); 
-
-  // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
+void init_block_before_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
+    // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
   std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
   for(auto& pair : *intersections) {
     auto& eid = pair.first;
     // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
     auto&f = eles_with_intersections.emplace_back(m, 2, eid); 
-
-    if(is_in_mesh(f, block_m.lattice())) {
-      b->add(eid); 
-      b->set_gid(eid, gid);
-    }
   }
 
   // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
@@ -378,6 +344,65 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   #endif
 
   // std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
+}
+
+void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, diy::RegularContinuousLink* link) {
+
+  intersections->clear(); 
+  for(auto p : b->points) {
+    intersections->insert(std::make_pair(p.eid, p)); 
+
+    b->add(p.eid); 
+    b->set_gid(p.eid, gid);
+  }
+
+  for(auto& p : b->points) {
+    // std::cout<<p.related_elements.size()<<std::endl;
+
+    for(auto& related_ele : p.related_elements) {
+      // std::cout<<related_ele<<std::endl;
+
+      b->add_related_element(p.eid, related_ele); 
+
+      if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
+
+        for(int i = 0; i < link->size(); ++i) {
+          auto target = link->target(i);
+          int rgid = target.gid; 
+
+          hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, related_ele); 
+
+          bool flag = true;
+          for(int j = 0; j < 3; ++j) {
+            if(f.corner[j] < link->bounds(i).min[j] || f.corner[j] > link->bounds(i).max[j]) {
+              flag = false;
+              break;
+            }
+          }
+          if(flag) {
+            b->set_gid(related_ele, rgid);
+            break ;
+          }
+        }
+
+        if(!b->has_gid(related_ele)) {
+          std::cout<<"Error! Cannot find the gid of the related element! "<<std::endl;
+          exit(0);
+        }
+
+      }
+
+    }
+  }
+}
+
+
+void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
+{
+  // Initialization
+    // Init union-find blocks
+  std::vector<Block_Union_Find*> local_blocks;
+  local_blocks.push_back(b); 
 
   // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
@@ -453,8 +478,10 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
     for (int i = 0; i < cc.size(); i ++) {
       std::vector<std::vector<float>> mycurves;
       auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
+      
       for (int j = 0; j < linear_graphs.size(); j ++) {
-        if(linear_graphs[j].size() > threshold_length) {
+        int _size = linear_graphs[j].size();
+        if(_size > threshold_length) {
           std::vector<float> mycurve, mycolors;
           float max_value = std::numeric_limits<float>::min();
           for (int k = 0; k < linear_graphs[j].size(); k ++) {
@@ -468,10 +495,11 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
           if (max_value > threshold) {
             trajectories.emplace_back(mycurve);
           }
+
         }
+
       }
     }
-
   }
 
   #ifdef FTK_HAVE_MPI
@@ -534,6 +562,10 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     I.eid = f.to_string();
     ftk::lerp_s2v3(X, mu, I.x);
     I.val = ftk::lerp_s2(value, mu);
+
+    for(int i = 0; i < 3; ++i) {
+      I.corner[i] = f.corner[i]; 
+    }
 
     {
       #if MULTITHREAD 
@@ -962,25 +994,27 @@ int main(int argc, char **argv)
     domain.min[1] = 2; domain.max[1] = DH-3; 
     domain.min[2] = 0; domain.max[2] = DT-1; 
 
+    diy::RegularContinuousLink* link = new diy::RegularContinuousLink(3, domain, domain);
+    master.add(gid, b, link); 
+
+    init_block_before_load_balancing(world, master, assigner); 
+
     // std::vector<intersection_t> points; 
     for(auto intersection : *intersections) {
-      if(is_in_mesh(intersection.second, m.lattice())) {
-        b->points.push_back(intersection.second);  
+      if(is_in_mesh(intersection.second, block_m.lattice())) {
+        b->points.emplace_back(intersection.second);  
       }
     }
-    std::cout << gid << ": " << b->points.size() << std::endl;
 
     diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
         // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
-        // Which block's particles are being sent? Block b? how does compiler know? 
 
-    std::cout << gid << ": " << b->points.size() << std::endl;
+    init_block_after_load_balancing(world, master, assigner, link); 
 
-    exit(0);
+    master.clear();  // clear the added block, since we will add block into master again. 
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
-
 
     // std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
 
