@@ -1049,8 +1049,12 @@ int main(int argc, char **argv)
     #endif
 
     #if LOAD_BALANCING
-      load_balancing(world, master, assigner); 
-      master.clear();  // clear the added block, since we will add block into master again. 
+      if(world.size() > 1) {
+        load_balancing(world, master, assigner); 
+        master.clear();  // clear the added block, since we will add block into master again. 
+      } else {
+        init_block_without_load_balancing();  
+      }
     #else
       init_block_without_load_balancing();
     #endif
