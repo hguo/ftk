@@ -54,6 +54,7 @@
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
 #define PRINT_FEATURE_DENSITY false
+#define LOAD_BALANCING true
 
 int nthreads;
 
@@ -222,11 +223,15 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
   return true;
 }
 
-  // If the intersection is contained in the lattice
-bool is_in_mesh(const intersection_t& intersection, const hypermesh::regular_lattice& _lattice) { 
-  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, intersection.eid); 
+bool is_in_mesh(const std::string& eid, const hypermesh::regular_lattice& _lattice) { 
+  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
   
   return is_in_mesh(f, _lattice); 
+}
+
+  // If the intersection is contained in the lattice
+bool is_in_mesh(const intersection_t& intersection, const hypermesh::regular_lattice& _lattice) { 
+  return is_in_mesh(intersection.eid, _lattice); 
 }
 
 
@@ -296,7 +301,7 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
   }
 }
 
-void init_block_before_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
+void add_related_elements_to_intersections() {
     // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
   std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
@@ -332,18 +337,37 @@ void init_block_before_load_balancing(diy::mpi::communicator& world, diy::Master
     }
   }
 
-  #ifdef FTK_HAVE_MPI
-    #if TIME_OF_STEPS
-      MPI_Barrier(world);
-      end = MPI_Wtime();
-      if(world.rank() == 0) {
-        std::cout << "CCL: Init Blocks: " << end - start << " seconds. " << std::endl;
-      }
-      start = end; 
-    #endif
-  #endif
-
   // std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
+}
+
+void init_block_without_load_balancing() {
+
+  for(auto p : b->points) {
+    b->add(p.eid); 
+    b->set_gid(p.eid, gid);
+  }
+
+  for(auto& p : b->points) {
+    // std::cout<<p.related_elements.size()<<std::endl;
+
+    for(auto& related_ele : p.related_elements) {
+      // std::cout<<related_ele<<std::endl;
+
+      b->add_related_element(p.eid, related_ele); 
+
+      if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
+        for(int i = 0; i < lattice_partitions.size(); ++i) {
+          if(i != gid){ // We know the feature is not in this partition
+            auto& _lattice = std::get<0>(lattice_partitions[i]); 
+            if(is_in_mesh(related_ele, _lattice)) { // the feature is in mith partition
+              b->set_gid(related_ele, i); // Set gid of this feature to mi  
+            }
+          }
+        }
+      }
+
+    }
+  }
 }
 
 void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, diy::RegularContinuousLink* link) {
@@ -396,6 +420,27 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
   }
 }
 
+void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
+  bool wrap = false; 
+  int hist = 512; //32;
+
+  // DIM = 3
+
+  diy::ContinuousBounds domain(3);
+
+  m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1});
+  domain.min[0] = 2; domain.max[0] = DW-3; 
+  domain.min[1] = 2; domain.max[1] = DH-3; 
+  domain.min[2] = 0; domain.max[2] = DT-1; 
+
+  diy::RegularContinuousLink* link = new diy::RegularContinuousLink(3, domain, domain);
+  master.add(gid, b, link); 
+
+  diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
+      // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
+
+  init_block_after_load_balancing(world, master, assigner, link); 
+}
 
 void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
 {
@@ -983,21 +1028,7 @@ int main(int argc, char **argv)
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
 
-
-    bool wrap = false; 
-    int hist = 512; //32;
-    int DIM = m.nd(); //3
-    diy::ContinuousBounds domain(3);
-
-    m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1});
-    domain.min[0] = 2; domain.max[0] = DW-3; 
-    domain.min[1] = 2; domain.max[1] = DH-3; 
-    domain.min[2] = 0; domain.max[2] = DT-1; 
-
-    diy::RegularContinuousLink* link = new diy::RegularContinuousLink(3, domain, domain);
-    master.add(gid, b, link); 
-
-    init_block_before_load_balancing(world, master, assigner); 
+    add_related_elements_to_intersections(); 
 
     // std::vector<intersection_t> points; 
     for(auto intersection : *intersections) {
@@ -1006,12 +1037,38 @@ int main(int argc, char **argv)
       }
     }
 
-    diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
-        // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+          std::cout << "Get Edges: " << end - start << " seconds. " << std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
 
-    init_block_after_load_balancing(world, master, assigner, link); 
+    #if LOAD_BALANCING
+      load_balancing(world, master, assigner); 
+      master.clear();  // clear the added block, since we will add block into master again. 
+    #else
+      init_block_without_load_balancing();
+    #endif
 
-    master.clear();  // clear the added block, since we will add block into master again. 
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+          #if LOAD_BALANCING
+            std::cout << "Load balancing + Init Block: " << end - start << " seconds. " << std::endl;
+          #else
+            std::cout << "Init Block: " << end - start << " seconds. " << std::endl;
+          #endif
+        }
+        start = end; 
+      #endif
+    #endif
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);

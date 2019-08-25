@@ -440,7 +440,7 @@ void query_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   for(auto it = b->ele2gid.begin(); it != b->ele2gid.end(); ++it) {
     if(it->second == -1) { // If the gid of this element is unknown
 
-      std::cout<<"A gid is missing: " << it->first<<std::endl; 
+      // std::cout<<"A gid is missing: " << it->first<<std::endl; 
 
       std::string ele = it->first; 
       if(b->has(ele)) {
