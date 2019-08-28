@@ -211,6 +211,75 @@ void decompose_mesh(int nblocks) {
   data_offset = {data_box.min[0], data_box.min[1], data_box.min[2]}; 
 }
 
+void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
+{
+  if (!f.valid()) return; // check if the 2-simplex is valid
+  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+  float g[3][2], value[3];
+
+  for (int i = 0; i < 3; i ++) {
+    int _i = vertices[i][0] - data_offset[0];
+    int _j = vertices[i][1] - data_offset[1];
+    int _k = vertices[i][2] - data_offset[2];
+
+    g[i][0] = grad(0, _i, _j, _k);
+    g[i][1] = grad(1, _i, _j, _k);
+    value[i] = scalar(_i, _j, _k);
+  }
+ 
+  float mu[3];
+  bool succ = ftk::inverse_lerp_s2v2(g, mu);
+  float val = ftk::lerp_s2(value, mu);
+  
+  if (!succ) return;
+
+  float hessxx[3], hessxy[3], hessyy[3];
+  for (int i = 0; i < vertices.size(); i ++) {
+    int _i = vertices[i][0] - data_offset[0];
+    int _j = vertices[i][1] - data_offset[1];
+    int _k = vertices[i][2] - data_offset[2];
+
+    hessxx[i] = hess(0, 0, _i, _j, _k);
+    hessxy[i] = hess(0, 1, _i, _j, _k);
+    hessyy[i] = hess(1, 1, _i, _j, _k);
+  }
+  float hxx = ftk::lerp_s2(hessxx, mu),
+        hxy = ftk::lerp_s2(hessxy, mu), 
+        hyy = ftk::lerp_s2(hessyy, mu);
+  float eig[2];
+  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
+
+  if (eig[0] < 0 && eig[1] < 0) { 
+    float X[3][3];
+    for (int i = 0; i < vertices.size(); i ++)
+      for (int j = 0; j < 3; j ++)
+        X[i][j] = vertices[i][j];
+
+    intersection_t I;
+    I.eid = f.to_string();
+    ftk::lerp_s2v3(X, mu, I.x);
+    I.val = ftk::lerp_s2(value, mu);
+
+    for(int i = 0; i < 3; ++i) {
+      I.corner[i] = f.corner[i]; 
+    }
+
+    {
+      #if MULTITHREAD 
+        std::lock_guard<std::mutex> guard(mutex);
+      #endif
+
+      intersections->insert(std::make_pair(f.to_string(), I)); 
+      // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
+    }
+  }
+}
+
+void scan_intersections() 
+{
+  block_m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
+}
+
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
   // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
 
@@ -370,7 +439,8 @@ void init_block_without_load_balancing() {
   }
 }
 
-void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, diy::RegularContinuousLink* link) {
+void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
+  // , diy::RegularContinuousLink* link
 
   intersections->clear(); 
   for(auto p : b->points) {
@@ -390,15 +460,18 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
 
       if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
 
-        for(int i = 0; i < link->size(); ++i) {
-          auto target = link->target(i);
-          int rgid = target.gid; 
+        // for(int i = 0; i < link->size(); ++i) {
+          // auto target = link->target(i);
+          // int rgid = target.gid; 
+        for(int i = 0; i < b->block_bounds.size(); ++i) {
+          int rgid = i;
 
           hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, related_ele); 
 
           bool flag = true;
           for(int j = 0; j < 3; ++j) {
-            if(f.corner[j] < link->bounds(i).min[j] || f.corner[j] > link->bounds(i).max[j]) {
+            // if(f.corner[j] < link->bounds(i).min[j] || f.corner[j] > link->bounds(i).max[j]) {
+            if(f.corner[j] < b->block_bounds[i].min[j] || f.corner[j] > b->block_bounds[i].max[j]) {
               flag = false;
               break;
             }
@@ -420,9 +493,27 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
   }
 }
 
+// Everybody sends their bounds to everybody else
+void exchange_bounds(void* b_, const diy::ReduceProxy& srp) {
+  Block_Critical_Point* b = static_cast<Block_Critical_Point*>(b_);
+  if (srp.round() == 0)
+      for (int i = 0; i < srp.out_link().size(); ++i) {
+          diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
+          srp.enqueue(srp.out_link().target(i), link->bounds());
+      }
+  else {
+      b->block_bounds.resize(srp.in_link().size());
+      for (int i = 0; i < srp.in_link().size(); ++i) {
+        assert(i == srp.in_link().target(i).gid);
+        srp.dequeue(srp.in_link().target(i).gid, b->block_bounds[i]);
+      }
+  }
+}
+
+
 void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
   bool wrap = false; 
-  int hist = 512; //32;
+  int hist = 128; //32; 512
 
   // DIM = 3
 
@@ -439,8 +530,9 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
   diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
       // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
 
-  init_block_after_load_balancing(world, master, assigner, link); 
+  diy::all_to_all(master, assigner, &exchange_bounds);
 }
+
 
 void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
 {
@@ -557,75 +649,6 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       start = end; 
     #endif
   #endif
-}
-
-void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
-{
-  if (!f.valid()) return; // check if the 2-simplex is valid
-  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
-  float g[3][2], value[3];
-
-  for (int i = 0; i < 3; i ++) {
-    int _i = vertices[i][0] - data_offset[0];
-    int _j = vertices[i][1] - data_offset[1];
-    int _k = vertices[i][2] - data_offset[2];
-
-    g[i][0] = grad(0, _i, _j, _k);
-    g[i][1] = grad(1, _i, _j, _k);
-    value[i] = scalar(_i, _j, _k);
-  }
- 
-  float mu[3];
-  bool succ = ftk::inverse_lerp_s2v2(g, mu);
-  float val = ftk::lerp_s2(value, mu);
-  
-  if (!succ) return;
-
-  float hessxx[3], hessxy[3], hessyy[3];
-  for (int i = 0; i < vertices.size(); i ++) {
-    int _i = vertices[i][0] - data_offset[0];
-    int _j = vertices[i][1] - data_offset[1];
-    int _k = vertices[i][2] - data_offset[2];
-
-    hessxx[i] = hess(0, 0, _i, _j, _k);
-    hessxy[i] = hess(0, 1, _i, _j, _k);
-    hessyy[i] = hess(1, 1, _i, _j, _k);
-  }
-  float hxx = ftk::lerp_s2(hessxx, mu),
-        hxy = ftk::lerp_s2(hessxy, mu), 
-        hyy = ftk::lerp_s2(hessyy, mu);
-  float eig[2];
-  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
-
-  if (eig[0] < 0 && eig[1] < 0) { 
-    float X[3][3];
-    for (int i = 0; i < vertices.size(); i ++)
-      for (int j = 0; j < 3; j ++)
-        X[i][j] = vertices[i][j];
-
-    intersection_t I;
-    I.eid = f.to_string();
-    ftk::lerp_s2v3(X, mu, I.x);
-    I.val = ftk::lerp_s2(value, mu);
-
-    for(int i = 0; i < 3; ++i) {
-      I.corner[i] = f.corner[i]; 
-    }
-
-    {
-      #if MULTITHREAD 
-        std::lock_guard<std::mutex> guard(mutex);
-      #endif
-
-      intersections->insert(std::make_pair(f.to_string(), I)); 
-      // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
-    }
-  }
-}
-
-void scan_intersections() 
-{
-  block_m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
 }
 
 void print_trajectories()
@@ -1030,13 +1053,6 @@ int main(int argc, char **argv)
 
     add_related_elements_to_intersections(); 
 
-    // std::vector<intersection_t> points; 
-    for(auto intersection : *intersections) {
-      if(is_in_mesh(intersection.second, block_m.lattice())) {
-        b->points.emplace_back(intersection.second);  
-      }
-    }
-
     #ifdef FTK_HAVE_MPI
       #if TIME_OF_STEPS
         MPI_Barrier(world);
@@ -1048,9 +1064,35 @@ int main(int argc, char **argv)
       #endif
     #endif
 
+    // std::vector<intersection_t> points; 
+    for(auto intersection : *intersections) {
+      if(is_in_mesh(intersection.second, block_m.lattice())) {
+        b->points.emplace_back(intersection.second);  
+      }
+    }
+
     #if LOAD_BALANCING
+      // std::cout << gid << " : " << b->points.size() << std::endl;
       if(world.size() > 1) {
         load_balancing(world, master, assigner); 
+      }
+      // std::cout << gid << " : " << b->points.size() << std::endl;
+    #endif
+
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+            std::cout << "Load balancing: " << end - start << " seconds. " << std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
+
+    #if LOAD_BALANCING
+      if(world.size() > 1) {
+        init_block_after_load_balancing(world, master, assigner); 
         master.clear();  // clear the added block, since we will add block into master again. 
       } else {
         init_block_without_load_balancing();  
@@ -1064,11 +1106,7 @@ int main(int argc, char **argv)
         MPI_Barrier(world);
         end = MPI_Wtime();
         if(world.rank() == 0) {
-          #if LOAD_BALANCING
-            std::cout << "Load balancing + Init Block: " << end - start << " seconds. " << std::endl;
-          #else
             std::cout << "Init Block: " << end - start << " seconds. " << std::endl;
-          #endif
         }
         start = end; 
       #endif

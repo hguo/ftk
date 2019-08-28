@@ -55,7 +55,10 @@ struct Block_Critical_Point : public Block_Union_Find {
 
 public:
   std::map<std::string, intersection_t> intersections; // Points on trajectories of critical points
+  
+  // Data for load balancing
   std::vector<intersection_t> points; 
+  std::vector<diy::ContinuousBounds>   block_bounds;                       // all block bounds
 
 };
 
