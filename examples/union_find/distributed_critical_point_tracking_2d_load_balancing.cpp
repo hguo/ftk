@@ -544,10 +544,8 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
   diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
     Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
     if (srp.round() == 0) {
-    // if (srp.in_link().size() == 0) {
-      // for (int i = 0; i < srp.out_link().size(); ++i) {
+      diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
       for (int i = 0; i < world.size(); ++i) {
-        diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
         srp.enqueue(srp.out_link().target(i), link->bounds());
       }
     } else {
