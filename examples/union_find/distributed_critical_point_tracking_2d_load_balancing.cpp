@@ -58,6 +58,11 @@
 
 // #define NDEBUG 
 
+#define ALL_CRITICAL_POINT 0
+#define MAXIMUM_POINT      1
+
+
+int CRITICAL_POINT_TYPE; // By default, track maximum points
 
 int nthreads;
 
@@ -236,46 +241,57 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   
   if (!succ) return;
 
-  float hessxx[3], hessxy[3], hessyy[3];
-  for (int i = 0; i < vertices.size(); i ++) {
-    int _i = vertices[i][0] - data_offset[0];
-    int _j = vertices[i][1] - data_offset[1];
-    int _k = vertices[i][2] - data_offset[2];
+  if(CRITICAL_POINT_TYPE == MAXIMUM_POINT) {
 
-    hessxx[i] = hess(0, 0, _i, _j, _k);
-    hessxy[i] = hess(0, 1, _i, _j, _k);
-    hessyy[i] = hess(1, 1, _i, _j, _k);
-  }
-  float hxx = ftk::lerp_s2(hessxx, mu),
-        hxy = ftk::lerp_s2(hessxy, mu), 
-        hyy = ftk::lerp_s2(hessyy, mu);
-  float eig[2];
-  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
+    float hessxx[3], hessxy[3], hessyy[3];
+    for (int i = 0; i < vertices.size(); i ++) {
+      int _i = vertices[i][0] - data_offset[0];
+      int _j = vertices[i][1] - data_offset[1];
+      int _k = vertices[i][2] - data_offset[2];
 
-  if (eig[0] < 0 && eig[1] < 0) { 
-    float X[3][3];
-    for (int i = 0; i < vertices.size(); i ++)
-      for (int j = 0; j < 3; j ++)
-        X[i][j] = vertices[i][j];
-
-    intersection_t I;
-    I.eid = f.to_string();
-    ftk::lerp_s2v3(X, mu, I.x);
-    I.val = ftk::lerp_s2(value, mu);
-
-    for(int i = 0; i < 3; ++i) {
-      I.corner[i] = f.corner[i]; 
+      hessxx[i] = hess(0, 0, _i, _j, _k);
+      hessxy[i] = hess(0, 1, _i, _j, _k);
+      hessyy[i] = hess(1, 1, _i, _j, _k);
+    }
+    float hxx = ftk::lerp_s2(hessxx, mu),
+          hxy = ftk::lerp_s2(hessxy, mu), 
+          hyy = ftk::lerp_s2(hessyy, mu);
+    float eig[2];
+    ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
+  
+    if (eig[0] < 0 && eig[1] < 0) { 
+      
+    } else {
+      return ;
     }
 
-    {
-      #if MULTITHREAD 
-        std::lock_guard<std::mutex> guard(mutex);
-      #endif
-
-      intersections->insert(std::make_pair(f.to_string(), I)); 
-      // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
-    }
   }
+
+  // A critical point is detected
+
+  float X[3][3];
+  for (int i = 0; i < vertices.size(); i ++)
+    for (int j = 0; j < 3; j ++)
+      X[i][j] = vertices[i][j];
+
+  intersection_t I;
+  I.eid = f.to_string();
+  ftk::lerp_s2v3(X, mu, I.x);
+  I.val = ftk::lerp_s2(value, mu);
+
+  for(int i = 0; i < 3; ++i) {
+    I.corner[i] = f.corner[i]; 
+  }
+
+  {
+    #if MULTITHREAD 
+      std::lock_guard<std::mutex> guard(mutex);
+    #endif
+
+    intersections->insert(std::make_pair(f.to_string(), I)); 
+    // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
+  }
+
 }
 
 void scan_intersections() 
@@ -894,6 +910,7 @@ int main(int argc, char **argv)
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
+    ("critical-point-type", "Track which type of critical points", cxxopts::value<int>(CRITICAL_POINT_TYPE)->default_value(std::to_string(MAXIMUM_POINT)))
     ("scaling-factor", "scaling factor for synthetic data", cxxopts::value<int>(scaling_factor)->default_value("15"))
     ("threshold", "threshold", cxxopts::value<float>(threshold)->default_value("0"))
     ("threshold-length", "threshold for trajectory length", cxxopts::value<int>(threshold_length)->default_value("-1"))
