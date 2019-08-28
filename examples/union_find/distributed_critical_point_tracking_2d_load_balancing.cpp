@@ -485,10 +485,11 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
           }
         }
 
-        if(!b->has_gid(related_ele)) {
-          std::cout<<"Error! Cannot find the gid of the related element! "<<std::endl;
-          exit(0);
-        }
+        assert(b->has_gid(related_ele)); // If not, Error! Cannot find the gid of the related element!
+        // if(!b->has_gid(related_ele)) {
+        //   std::cout<<"Error! Cannot find the gid of the related element! "<<std::endl;
+        //   exit(0);
+        // }
 
       }
 
@@ -496,26 +497,26 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
   }
 }
 
-// Everybody sends their bounds to everybody else
-void exchange_bounds(void* b_, const diy::ReduceProxy& srp) {
-  Block_Critical_Point* b = static_cast<Block_Critical_Point*>(b_);
-  // if (srp.round() == 0)
-  if (srp.in_link().size() == 0) {
-    for (int i = 0; i < srp.out_link().size(); ++i) {
-      diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
-      srp.enqueue(srp.out_link().target(i), link->bounds());
-    }
-  } else {
-    b->block_bounds.resize(srp.in_link().size());
-    for (int i = 0; i < srp.in_link().size(); ++i) {
-      int _gid = srp.in_link().target(i).gid;
+// // Everybody sends their bounds to everybody else
+// void exchange_bounds(void* b_, const diy::ReduceProxy& srp) {
+//   Block_Critical_Point* b = static_cast<Block_Critical_Point*>(b_);
+//   // if (srp.round() == 0)
+//   if (srp.in_link().size() == 0) {
+//     for (int i = 0; i < srp.out_link().size(); ++i) {
+//       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
+//       srp.enqueue(srp.out_link().target(i), link->bounds());
+//     }
+//   } else {
+//     b->block_bounds.resize(srp.in_link().size());
+//     for (int i = 0; i < srp.in_link().size(); ++i) {
+//       int _gid = srp.in_link().target(i).gid;
 
-      assert(i == _gid);
+//       assert(i == _gid);
 
-      srp.dequeue(_gid, b->block_bounds[_gid]);
-    }
-  }
-}
+//       srp.dequeue(_gid, b->block_bounds[_gid]);
+//     }
+//   }
+// }
 
 
 void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
@@ -537,7 +538,29 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
   diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
       // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
 
-  diy::all_to_all(master, assigner, &exchange_bounds);
+  // diy::all_to_all(master, assigner, &exchange_bounds);
+
+  // Everybody sends their bounds to everybody else
+  diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
+    Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+    if (srp.round() == 0) {
+    // if (srp.in_link().size() == 0) {
+      // for (int i = 0; i < srp.out_link().size(); ++i) {
+      for (int i = 0; i < world.size(); ++i) {
+        diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
+        srp.enqueue(srp.out_link().target(i), link->bounds());
+      }
+    } else {
+      b->block_bounds.resize(srp.in_link().size());
+      for (int i = 0; i < srp.in_link().size(); ++i) {
+        int _gid = srp.in_link().target(i).gid;
+
+        assert(i == _gid);
+
+        srp.dequeue(_gid, b->block_bounds[_gid]);
+      }
+    }
+  });
 }
 
 
