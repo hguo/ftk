@@ -1,10 +1,10 @@
-#define NDEBUG // Disable assert()
-
 #include <fstream>
 #include <mutex>
 #include <thread>
 #include <cassert>
 #include <cxxopts.hpp>
+
+#define NDEBUG // Disable assert()
 
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
