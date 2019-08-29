@@ -513,27 +513,6 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
   }
 }
 
-// // Everybody sends their bounds to everybody else
-// void exchange_bounds(void* b_, const diy::ReduceProxy& srp) {
-//   Block_Critical_Point* b = static_cast<Block_Critical_Point*>(b_);
-//   // if (srp.round() == 0)
-//   if (srp.in_link().size() == 0) {
-//     for (int i = 0; i < srp.out_link().size(); ++i) {
-//       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
-//       srp.enqueue(srp.out_link().target(i), link->bounds());
-//     }
-//   } else {
-//     b->block_bounds.resize(srp.in_link().size());
-//     for (int i = 0; i < srp.in_link().size(); ++i) {
-//       int _gid = srp.in_link().target(i).gid;
-
-//       assert(i == _gid);
-
-//       srp.dequeue(_gid, b->block_bounds[_gid]);
-//     }
-//   }
-// }
-
 
 void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
   bool wrap = false; 
