@@ -1116,6 +1116,17 @@ int main(int argc, char **argv)
       }
     }
 
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+          std::cout << "Add critical points into data block: " << end - start << " seconds. " <<std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
+
     #if LOAD_BALANCING
       // std::cout << gid << " : " << b->points.size() << std::endl;
       if(world.size() > 1) {
