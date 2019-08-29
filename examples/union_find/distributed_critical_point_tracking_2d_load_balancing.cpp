@@ -1,3 +1,5 @@
+#define NDEBUG // Disable assert()
+
 #include <fstream>
 #include <mutex>
 #include <thread>
@@ -55,8 +57,6 @@
 #define MULTITHREAD false
 #define PRINT_FEATURE_DENSITY false
 #define LOAD_BALANCING true
-
-#define NDEBUG // Disable assert()
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
