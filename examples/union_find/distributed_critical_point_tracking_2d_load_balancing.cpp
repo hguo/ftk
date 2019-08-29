@@ -56,7 +56,7 @@
 #define PRINT_FEATURE_DENSITY false
 #define LOAD_BALANCING true
 
-// #define NDEBUG 
+#define NDEBUG // Disable assert()
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
