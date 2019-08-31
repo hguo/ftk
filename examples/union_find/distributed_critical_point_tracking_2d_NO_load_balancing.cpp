@@ -4,8 +4,6 @@
 #include <cassert>
 #include <cxxopts.hpp>
 
-#define NDEBUG // Disable assert()
-
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
@@ -25,8 +23,6 @@
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy/assigner.hpp>
 #include <ftk/external/diy/io/bov.hpp>
-#include <ftk/external/diy/algorithms.hpp>
-
 #include <ftk/basic/distributed_union_find.hh>
 #include "connected_critical_point.hpp"
 
@@ -56,13 +52,6 @@
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
 #define PRINT_FEATURE_DENSITY false
-#define LOAD_BALANCING true
-
-#define ALL_CRITICAL_POINT 0
-#define MAXIMUM_POINT      1
-
-
-int CRITICAL_POINT_TYPE; // By default, track maximum points
 
 int nthreads;
 
@@ -219,86 +208,6 @@ void decompose_mesh(int nblocks) {
   data_offset = {data_box.min[0], data_box.min[1], data_box.min[2]}; 
 }
 
-void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
-{
-  if (!f.valid()) return; // check if the 2-simplex is valid
-  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
-  float g[3][2], value[3];
-
-  for (int i = 0; i < 3; i ++) {
-    int _i = vertices[i][0] - data_offset[0];
-    int _j = vertices[i][1] - data_offset[1];
-    int _k = vertices[i][2] - data_offset[2];
-
-    g[i][0] = grad(0, _i, _j, _k);
-    g[i][1] = grad(1, _i, _j, _k);
-    value[i] = scalar(_i, _j, _k);
-  }
- 
-  float mu[3];
-  bool succ = ftk::inverse_lerp_s2v2(g, mu);
-  float val = ftk::lerp_s2(value, mu);
-  
-  if (!succ) return;
-
-  if(CRITICAL_POINT_TYPE == MAXIMUM_POINT) {
-
-    float hessxx[3], hessxy[3], hessyy[3];
-    for (int i = 0; i < vertices.size(); i ++) {
-      int _i = vertices[i][0] - data_offset[0];
-      int _j = vertices[i][1] - data_offset[1];
-      int _k = vertices[i][2] - data_offset[2];
-
-      hessxx[i] = hess(0, 0, _i, _j, _k);
-      hessxy[i] = hess(0, 1, _i, _j, _k);
-      hessyy[i] = hess(1, 1, _i, _j, _k);
-    }
-    float hxx = ftk::lerp_s2(hessxx, mu),
-          hxy = ftk::lerp_s2(hessxy, mu), 
-          hyy = ftk::lerp_s2(hessyy, mu);
-    float eig[2];
-    ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
-  
-    if (eig[0] < 0 && eig[1] < 0) { 
-      
-    } else {
-      return ;
-    }
-
-  }
-
-  // A critical point is detected
-
-  float X[3][3];
-  for (int i = 0; i < vertices.size(); i ++)
-    for (int j = 0; j < 3; j ++)
-      X[i][j] = vertices[i][j];
-
-  intersection_t I;
-  I.eid = f.to_string();
-  ftk::lerp_s2v3(X, mu, I.x);
-  I.val = ftk::lerp_s2(value, mu);
-
-  for(int i = 0; i < 3; ++i) {
-    I.corner[i] = f.corner[i]; 
-  }
-
-  {
-    #if MULTITHREAD 
-      std::lock_guard<std::mutex> guard(mutex);
-    #endif
-
-    intersections->insert(std::make_pair(f.to_string(), I)); 
-    // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
-  }
-
-}
-
-void scan_intersections() 
-{
-  block_m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
-}
-
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
   // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
 
@@ -311,25 +220,13 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
   return true;
 }
 
-bool is_in_mesh(const std::string& eid, const hypermesh::regular_lattice& _lattice) { 
-  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
-  
-  return is_in_mesh(f, _lattice); 
-}
-
-  // If the intersection is contained in the lattice
-bool is_in_mesh(const intersection_t& intersection, const hypermesh::regular_lattice& _lattice) { 
-  return is_in_mesh(intersection.eid, _lattice); 
-}
-
 
 // Add union edges to the block
 void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
   if (!f.valid()) return; // check if the 3-simplex is valid
 
   const auto elements = f.sides();
-  std::set<std::string> features;
-  std::set<std::string> features_in_block;  
+  std::set<std::string> features; 
   std::map<std::string, hypermesh::regular_simplex_mesh_element> id2element; 
 
   for (const auto& ele : elements) {
@@ -337,15 +234,17 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
     if(intersections->find(eid) != intersections->end()) {
       features.insert(eid); 
       id2element.insert(std::make_pair(eid, ele)); 
-
-      if(is_in_mesh(ele, block_m.lattice())) {
-        features_in_block.insert(eid); 
-      }
-      
     }
   }
 
   if(features.size()  > 1) {
+    std::set<std::string> features_in_block; 
+    for(auto& feature : features) {
+      if(b->has(feature)) {
+        features_in_block.insert(feature); 
+      }
+    }
+
     if(features_in_block.size() > 1) {
       // When features are local, we just need to relate to the first feature element
 
@@ -358,9 +257,9 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
         std::string curr_feature = *ite_i; 
 
         if(first_feature < curr_feature) { // Since only when the id of related_ele < ele, then the related_ele can be the parent of ele
-          intersections->find(curr_feature)->second.related_elements.insert(first_feature); 
+          b->add_related_element(curr_feature, first_feature); 
         } else {
-          intersections->find(first_feature)->second.related_elements.insert(curr_feature); 
+          b->add_related_element(first_feature, curr_feature);
         }
         
       }
@@ -373,6 +272,23 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
     // When features are across processors, we need to relate all local feature elements to all remote feature elements
     for(auto& feature: features) {
       if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
+        
+        if(!b->has_gid(feature)) { // If the block id of this feature is unknown, search the block id of this feature
+          hypermesh::regular_simplex_mesh_element& ele = id2element.find(feature)->second; 
+          for(int i = 0; i < lattice_partitions.size(); ++i) {
+            if(i != gid){ // We know the feature is not in this partition
+              auto& _lattice = std::get<0>(lattice_partitions[i]); 
+              if(is_in_mesh(ele, _lattice)) { // the feature is in mith partition
+                #if MULTITHREAD
+                  std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+                #endif
+
+                b->set_gid(feature, i); // Set gid of this feature to mi  
+              }
+            }
+          }
+        }
+
         #if MULTITHREAD 
           std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
         #endif
@@ -380,7 +296,7 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
         for(auto& feature_in_block : features_in_block) {
 
           if(feature < feature_in_block) { // When across processes, also, since only when the id of related_ele < ele, then the related_ele can be the parent of ele
-            intersections->find(feature_in_block)->second.related_elements.insert(feature); 
+            b->add_related_element(feature_in_block, feature); 
           }
 
         }
@@ -389,14 +305,25 @@ void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
   }
 }
 
-void add_related_elements_to_intersections() {
-    // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
+void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
+{
+  // Initialization
+    // Init union-find blocks
+  std::vector<Block_Union_Find*> local_blocks;
+  local_blocks.push_back(b); 
+
+  // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
   std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
   for(auto& pair : *intersections) {
     auto& eid = pair.first;
     // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
     auto&f = eles_with_intersections.emplace_back(m, 2, eid); 
+
+    if(is_in_mesh(f, block_m.lattice())) {
+      b->add(eid); 
+      b->set_gid(eid, gid);
+    }
   }
 
   // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
@@ -425,144 +352,18 @@ void add_related_elements_to_intersections() {
     }
   }
 
+  #ifdef FTK_HAVE_MPI
+    #if TIME_OF_STEPS
+      MPI_Barrier(world);
+      end = MPI_Wtime();
+      if(world.rank() == 0) {
+        std::cout << "CCL: Init Blocks: " << end - start << " seconds. " << std::endl;
+      }
+      start = end; 
+    #endif
+  #endif
+
   // std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
-}
-
-void init_block_without_load_balancing() {
-
-  for(auto p : b->points) {
-    b->add(p.eid); 
-    b->set_gid(p.eid, gid);
-  }
-
-  for(auto& p : b->points) {
-    // std::cout<<p.related_elements.size()<<std::endl;
-
-    for(auto& related_ele : p.related_elements) {
-      // std::cout<<related_ele<<std::endl;
-
-      b->add_related_element(p.eid, related_ele); 
-
-      if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
-        for(int i = 0; i < lattice_partitions.size(); ++i) {
-          if(i != gid){ // We know the feature is not in this partition
-            auto& _lattice = std::get<0>(lattice_partitions[i]); 
-            if(is_in_mesh(related_ele, _lattice)) { // the feature is in mith partition
-              b->set_gid(related_ele, i); // Set gid of this feature to mi  
-            }
-          }
-        }
-      }
-
-    }
-  }
-}
-
-void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
-  // , diy::RegularContinuousLink* link
-
-  intersections->clear(); 
-  for(auto p : b->points) {
-    intersections->insert(std::make_pair(p.eid, p)); 
-
-    b->add(p.eid); 
-    b->set_gid(p.eid, gid);
-  }
-
-  for(auto& p : b->points) {
-    // std::cout<<p.related_elements.size()<<std::endl;
-
-    for(auto& related_ele : p.related_elements) {
-      // std::cout<<related_ele<<std::endl;
-
-      b->add_related_element(p.eid, related_ele); 
-
-      if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
-
-        // for(int i = 0; i < link->size(); ++i) {
-          // auto target = link->target(i);
-          // int rgid = target.gid; 
-        for(int i = 0; i < b->block_bounds.size(); ++i) {
-          int rgid = i;
-
-          hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, related_ele); 
-
-          bool flag = true;
-          for(int j = 0; j < 3; ++j) {
-            // if(f.corner[j] < link->bounds(i).min[j] || f.corner[j] > link->bounds(i).max[j]) {
-            if(f.corner[j] < b->block_bounds[i].min[j] || f.corner[j] > b->block_bounds[i].max[j]) {
-              flag = false;
-              break;
-            }
-          }
-          if(flag) {
-            b->set_gid(related_ele, rgid);
-            break ;
-          }
-        }
-
-        assert(b->has_gid(related_ele)); // If not, Error! Cannot find the gid of the related element!
-        // if(!b->has_gid(related_ele)) {
-        //   std::cout<<"Error! Cannot find the gid of the related element! "<<std::endl;
-        //   exit(0);
-        // }
-
-      }
-
-    }
-  }
-}
-
-
-void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
-  bool wrap = false; 
-  int hist = 128; //32; 512
-
-  // DIM = 3
-
-  diy::ContinuousBounds domain(3);
-
-  m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1});
-  domain.min[0] = 2; domain.max[0] = DW-3; 
-  domain.min[1] = 2; domain.max[1] = DH-3; 
-  domain.min[2] = 0; domain.max[2] = DT-1; 
-
-  diy::RegularContinuousLink* link = new diy::RegularContinuousLink(3, domain, domain);
-  master.add(gid, b, link); 
-
-  diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
-      // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
-
-  // diy::all_to_all(master, assigner, &exchange_bounds);
-
-  // Everybody sends their bounds to everybody else
-  diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
-    Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
-    if (srp.round() == 0) {
-      diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
-      for (int i = 0; i < world.size(); ++i) {
-        srp.enqueue(srp.out_link().target(i), link->bounds());
-      }
-    } else {
-      b->block_bounds.resize(srp.in_link().size());
-      for (int i = 0; i < srp.in_link().size(); ++i) {
-        int _gid = srp.in_link().target(i).gid;
-
-        assert(i == _gid);
-
-        srp.dequeue(_gid, b->block_bounds[_gid]);
-      }
-    }
-  });
-}
-
-
-void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
-{
-  // Initialization
-    // Init union-find blocks
-  std::vector<Block_Union_Find*> local_blocks;
-  local_blocks.push_back(b); 
 
   // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
@@ -638,7 +439,6 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
     for (int i = 0; i < cc.size(); i ++) {
       std::vector<std::vector<float>> mycurves;
       auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
-      
       for (int j = 0; j < linear_graphs.size(); j ++) {
         int _size = linear_graphs[j].size();
         if(_size > threshold_length) {
@@ -655,11 +455,10 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
           if (max_value > threshold) {
             trajectories.emplace_back(mycurve);
           }
-
         }
-
       }
     }
+
   }
 
   #ifdef FTK_HAVE_MPI
@@ -672,6 +471,71 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       start = end; 
     #endif
   #endif
+}
+
+void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
+{
+  if (!f.valid()) return; // check if the 2-simplex is valid
+  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+  float g[3][2], value[3];
+
+  for (int i = 0; i < 3; i ++) {
+    int _i = vertices[i][0] - data_offset[0];
+    int _j = vertices[i][1] - data_offset[1];
+    int _k = vertices[i][2] - data_offset[2];
+
+    g[i][0] = grad(0, _i, _j, _k);
+    g[i][1] = grad(1, _i, _j, _k);
+    value[i] = scalar(_i, _j, _k);
+  }
+ 
+  float mu[3];
+  bool succ = ftk::inverse_lerp_s2v2(g, mu);
+  float val = ftk::lerp_s2(value, mu);
+  
+  if (!succ) return;
+
+  float hessxx[3], hessxy[3], hessyy[3];
+  for (int i = 0; i < vertices.size(); i ++) {
+    int _i = vertices[i][0] - data_offset[0];
+    int _j = vertices[i][1] - data_offset[1];
+    int _k = vertices[i][2] - data_offset[2];
+
+    hessxx[i] = hess(0, 0, _i, _j, _k);
+    hessxy[i] = hess(0, 1, _i, _j, _k);
+    hessyy[i] = hess(1, 1, _i, _j, _k);
+  }
+  float hxx = ftk::lerp_s2(hessxx, mu),
+        hxy = ftk::lerp_s2(hessxy, mu), 
+        hyy = ftk::lerp_s2(hessyy, mu);
+  float eig[2];
+  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
+
+  if (eig[0] < 0 && eig[1] < 0) { 
+    float X[3][3];
+    for (int i = 0; i < vertices.size(); i ++)
+      for (int j = 0; j < 3; j ++)
+        X[i][j] = vertices[i][j];
+
+    intersection_t I;
+    I.eid = f.to_string();
+    ftk::lerp_s2v3(X, mu, I.x);
+    I.val = ftk::lerp_s2(value, mu);
+
+    {
+      #if MULTITHREAD 
+        std::lock_guard<std::mutex> guard(mutex);
+      #endif
+
+      intersections->insert(std::make_pair(f.to_string(), I)); 
+      // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
+    }
+  }
+}
+
+void scan_intersections() 
+{
+  block_m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
 }
 
 void print_trajectories()
@@ -889,7 +753,6 @@ int main(int argc, char **argv)
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
-    ("critical-point-type", "Track which type of critical points", cxxopts::value<int>(CRITICAL_POINT_TYPE)->default_value(std::to_string(MAXIMUM_POINT)))
     ("scaling-factor", "scaling factor for synthetic data", cxxopts::value<int>(scaling_factor)->default_value("15"))
     ("threshold", "threshold", cxxopts::value<float>(threshold)->default_value("0"))
     ("threshold-length", "threshold for trajectory length", cxxopts::value<int>(threshold_length)->default_value("-1"))
@@ -1075,80 +938,9 @@ int main(int argc, char **argv)
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
 
-    add_related_elements_to_intersections(); 
-
-    #ifdef FTK_HAVE_MPI
-      #if TIME_OF_STEPS
-        MPI_Barrier(world);
-        end = MPI_Wtime();
-        if(world.rank() == 0) {
-          std::cout << "Get Edges: " << end - start << " seconds. " << std::endl;
-        }
-        start = end; 
-      #endif
-    #endif
-
-    // std::vector<intersection_t> points; 
-    for(auto intersection : *intersections) {
-      if(is_in_mesh(intersection.second, block_m.lattice())) {
-        b->points.emplace_back(intersection.second);  
-      }
-    }
-
-    #ifdef FTK_HAVE_MPI
-      #if TIME_OF_STEPS
-        MPI_Barrier(world);
-        end = MPI_Wtime();
-        if(world.rank() == 0) {
-          std::cout << "Add critical points into data block: " << end - start << " seconds. " <<std::endl;
-        }
-        start = end; 
-      #endif
-    #endif
-
-    #if LOAD_BALANCING
-      // std::cout << gid << " : " << b->points.size() << std::endl;
-      if(world.size() > 1) {
-        load_balancing(world, master, assigner); 
-      }
-      // std::cout << gid << " : " << b->points.size() << std::endl;
-    #endif
-
-    #ifdef FTK_HAVE_MPI
-      #if TIME_OF_STEPS
-        MPI_Barrier(world);
-        end = MPI_Wtime();
-        if(world.rank() == 0) {
-            std::cout << "Load balancing: " << end - start << " seconds. " << std::endl;
-        }
-        start = end; 
-      #endif
-    #endif
-
-    #if LOAD_BALANCING
-      if(world.size() > 1) {
-        init_block_after_load_balancing(world, master, assigner); 
-        master.clear();  // clear the added block, since we will add block into master again. 
-      } else {
-        init_block_without_load_balancing();  
-      }
-    #else
-      init_block_without_load_balancing();
-    #endif
-
-    #ifdef FTK_HAVE_MPI
-      #if TIME_OF_STEPS
-        MPI_Barrier(world);
-        end = MPI_Wtime();
-        if(world.rank() == 0) {
-            std::cout << "Init Block: " << end - start << " seconds. " << std::endl;
-        }
-        start = end; 
-      #endif
-    #endif
-
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
+
 
     // std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
 
