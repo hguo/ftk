@@ -522,7 +522,7 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
 
   diy::ContinuousBounds domain(3);
 
-  m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1});
+  // m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1});
   domain.min[0] = 2; domain.max[0] = DW-3; 
   domain.min[1] = 2; domain.max[1] = DH-3; 
   domain.min[2] = 0; domain.max[2] = DT-1; 
@@ -617,8 +617,7 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
     std::vector<std::set<element_t>> cc; // connected components 
     // Convert element IDs to elements
     for(auto& comp_str : connected_components_str) {
-      cc.push_back(std::set<element_t>()); 
-      std::set<element_t>& comp = cc[cc.size() - 1]; 
+      std::set<element_t>& comp = cc.emplace_back(); 
       for(auto& eid : comp_str) {
         comp.insert(hypermesh::regular_simplex_mesh_element(m, 2, eid)); 
       }

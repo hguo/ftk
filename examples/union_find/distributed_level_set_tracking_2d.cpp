@@ -145,16 +145,16 @@ void decompose_mesh(int nblocks) {
   block_m.set_lb_ub(lattice_p);
   block_m_ghost.set_lb_ub(lattice_ghost_p);
 
-  data_box.min[0] = std::max(0, block_m_ghost.lb(0)-2); data_box.max[0] = std::min(block_m_ghost.ub(0)+2, DW-1); 
-  data_box.min[1] = std::max(0, block_m_ghost.lb(1)-2); data_box.max[1] = std::min(block_m_ghost.ub(1)+2, DH-1); 
-  data_box.min[2] = std::max(0, block_m_ghost.lb(2)-2); data_box.max[2] = std::min(block_m_ghost.ub(2)+2, DT-1); 
+  data_box.min[0] = block_m_ghost.lb(0); data_box.max[0] = block_m_ghost.ub(0); 
+  data_box.min[1] = block_m_ghost.lb(1); data_box.max[1] = block_m_ghost.ub(1); 
+  data_box.min[2] = block_m_ghost.lb(2); data_box.max[2] = block_m_ghost.ub(2); 
 
   data_offset = {data_box.min[0], data_box.min[1], data_box.min[2]}; 
 }
 
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 {
-  if (!f.valid()) return; // check if the 2-simplex is valid
+  if (!f.valid()) return; // check if the 1-simplex is valid
   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
 
   float value; 
@@ -419,9 +419,9 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
 
   diy::ContinuousBounds domain(3);
 
-  m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1});
-  domain.min[0] = 2; domain.max[0] = DW-3; 
-  domain.min[1] = 2; domain.max[1] = DH-3; 
+  // m.set_lb_ub({0, 0, 0}, {DW-1, DH-1, DT-1});
+  domain.min[0] = 0; domain.max[0] = DW-1; 
+  domain.min[1] = 0; domain.max[1] = DH-1; 
   domain.min[2] = 0; domain.max[2] = DT-1; 
 
   diy::RegularContinuousLink* link = new diy::RegularContinuousLink(3, domain, domain);
@@ -496,6 +496,17 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
   #endif 
 }
 
+
+// Vertex to string
+std::string vertex_to_string(const std::vector<int>& corner) {
+  std::stringstream res;
+
+  std::copy(corner.begin(), corner.end(), std::ostream_iterator<int>(res, ","));
+
+  return res.str(); 
+}
+
+
 void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t; 
@@ -508,23 +519,32 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   // Convert connected components to geometries
 
-  // if(world.rank() == 0) {
   if(connected_components_str.size() > 0) {
-    
-    std::vector<std::set<element_t>> cc; // connected components 
+
+    // Since each vertex has 7 types of 1-simplex, we group the 7 types of 1-simplex
+    std::vector<std::set<std::string>> _connected_components_str;
+
+    // std::vector<std::set<element_t>> cc; // connected components 
+
     // Convert element IDs to elements
     for(auto& comp_str : connected_components_str) {
-      cc.push_back(std::set<element_t>()); 
-      std::set<element_t>& comp = cc[cc.size() - 1]; 
+      // std::set<element_t>& comp = cc.emplace_back(); 
+      std::set<std::string>& _comp_str = _connected_components_str.emplace_back(); 
+      std::vector<element_t> eles; 
+
       for(auto& eid : comp_str) {
-        comp.insert(hypermesh::regular_simplex_mesh_element(m, 1, eid)); 
+        // comp.insert(hypermesh::regular_simplex_mesh_element(m, 1, eid)); 
+
+        hypermesh::regular_simplex_mesh_element f(m, 1, eid);
+        std::string vid = vertex_to_string(f.corner); 
+
+        if(_comp_str.find(vid) == _comp_str.end()) {
+          _comp_str.insert(vid); 
+
+          eles.push_back(f); 
+        }
       }
-    }
 
-
-    // Transform grouped elements into an temporal-ordered list of element
-    for(auto& comp : cc) {
-      std::vector<element_t> eles(comp.begin(), comp.end()); 
       std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
         return (a.corner[2] < b.corner[2]) || (a.corner[2] == b.corner[2] && a.corner[0] < b.corner[0]) || (a.corner[2] == b.corner[2] && a.corner[0] == b.corner[0] && a.corner[1] < b.corner[1]); 
       }); 
@@ -532,11 +552,12 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       std::vector<float>& level_set = level_sets.emplace_back();
       for (int k = 0; k < eles.size(); k ++) {
         auto& p = intersections->at(eles[k].to_string());
+
         level_set.push_back(p.x[0]); //  / (DW-1));
         level_set.push_back(p.x[1]); //  / (DH-1));
         level_set.push_back(p.x[2]); //  / (DT-1));
         level_set.push_back(p.val);
-      }
+      } 
     }
 
   }
@@ -737,7 +758,7 @@ int main(int argc, char **argv)
   // Decompose mesh
   // ========================================
 
-  m.set_lb_ub({2, 2, 0}, {DW-3, DH-3, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
+  m.set_lb_ub({0, 0, 0}, {DW-1, DH-1, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   decompose_mesh(nblocks); 
 
@@ -807,7 +828,7 @@ int main(int argc, char **argv)
           MPI_Barrier(world);
           end = MPI_Wtime();
           if(world.rank() == 0) {
-            std::cout << "Scan for Critical Points: " << end - start << " seconds. " <<std::endl;
+            std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
           }
           start = end; 
         #endif
@@ -856,7 +877,7 @@ int main(int argc, char **argv)
         MPI_Barrier(world);
         end = MPI_Wtime();
         if(world.rank() == 0) {
-          std::cout << "Add critical points into data block: " << end - start << " seconds. " <<std::endl;
+          std::cout << "Add points into data block: " << end - start << " seconds. " <<std::endl;
         }
         start = end; 
       #endif
