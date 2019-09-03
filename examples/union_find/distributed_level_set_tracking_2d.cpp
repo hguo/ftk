@@ -397,7 +397,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
               // std::cout<<"Multiple gids! "<<std::endl;
 
               int _rgid = b->get_gid(related_ele); 
-              if(_rgid > rgid) {
+              if(_rgid < rgid) {
                 b->set_gid(related_ele, rgid);
               }
 
