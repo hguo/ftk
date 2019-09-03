@@ -393,8 +393,13 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
             }
           }
           if(flag) {
+            if(b->has_gid(related_ele)) {
+              std::cout<<"Multiple gids! "<<std::endl;
+              exit(0) ; 
+            }
+
             b->set_gid(related_ele, rgid);
-            break ;
+            // break ;
           }
         }
 
