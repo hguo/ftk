@@ -393,7 +393,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
             }
           }
           if(flag) {
-            if(b->has_gid(related_ele)) {
+            if(b->has_gid(related_ele)) { // if this point is within multiple processes' ranges; probably on a boundary
               // std::cout<<"Multiple gids! "<<std::endl;
 
               int _rgid = b->get_gid(related_ele); 
