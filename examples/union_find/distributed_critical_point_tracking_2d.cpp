@@ -6,8 +6,7 @@
 
 #define NDEBUG // Disable assert()
 
-// #include <caliper/cali.h>
-#include <caliper>
+#include <caliper/cali.h>
 
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
