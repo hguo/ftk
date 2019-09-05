@@ -19,6 +19,8 @@ add_executable              (critical_point_tracking_2d_union_find     ${sources
 # target_link_libraries       (critical_point_tracking_2d_union_find     ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries       (critical_point_tracking_2d_union_find     ftk)
 
+target_link_libraries (critical_point_tracking_2d_union_find caliper)
+
 if (FTK_HAVE_QT5)
   qt5_use_modules (critical_point_tracking_2d_union_find Widgets OpenGL)
   target_link_libraries (critical_point_tracking_2d_union_find trackball ${OPENGL_LIBRARIES})
