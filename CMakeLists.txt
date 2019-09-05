@@ -41,6 +41,7 @@ if (CALIPER_FOUND)
   set (FTK_HAVE_CALIPER TRUE)
   add_definitions (-DDIY_USE_CALIPER)
   include_directories (${caliper_INCLUDE_DIR})
+  set (libraries  ${libraries} caliper caliper-mpi)
 endif ()
 
 if (FTK_USE_VTK STREQUAL AUTO)
