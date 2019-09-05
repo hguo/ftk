@@ -4,7 +4,7 @@ add_library (ftk SHARED ${ftk_sources})
 
 target_link_libraries (ftk ${CMAKE_THREAD_LIBS_INIT})
 
-if (FTK_HAVE_CALIPER)
+if (FTK_HAVE_caliper)
   target_link_libraries (ftk caliper)
   target_link_libraries (ftk caliper-mpi)
 endif ()
