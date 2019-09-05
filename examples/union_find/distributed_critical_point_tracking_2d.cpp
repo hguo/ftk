@@ -6,6 +6,8 @@
 
 #define NDEBUG // Disable assert()
 
+#include <caliper/cali.h>
+
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
@@ -559,10 +561,23 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
 
 void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
 {
+  // Mark this function of extraction of connected components
+  CALI_CXX_MARK_FUNCTION;
+
+
+  // Mark the "intialization" phase
+  CALI_MARK_BEGIN("initialization");
+
   // Initialization
     // Init union-find blocks
   std::vector<Block_Union_Find*> local_blocks;
   local_blocks.push_back(b); 
+
+  CALI_MARK_END("initialization");
+
+
+  // Mark the "intialization" phase
+  CALI_MARK_BEGIN("distributed_union_find");
 
   // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
@@ -580,6 +595,8 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       start = end; 
     #endif
   #endif
+
+  CALI_MARK_END("distributed_union_find");
 
   // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 
