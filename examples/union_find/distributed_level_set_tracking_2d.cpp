@@ -56,7 +56,7 @@
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
 #define PRINT_FEATURE_DENSITY false
-#define LOAD_BALANCING true
+#define LOAD_BALANCING false
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
