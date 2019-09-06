@@ -557,7 +557,7 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
 }
 
 
-void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
+void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
 {
   // Initialization
     // Init union-find blocks
@@ -575,28 +575,13 @@ void extract_connected_components(diy::mpi::communicator& world, diy::Master& ma
       MPI_Barrier(world);
       end = MPI_Wtime();
       if(world.rank() == 0) {
-        std::cout << "CCL: Distributed Union-Find: " << end - start << " seconds. " << std::endl;
+        std::cout << "UF: Unions of Disjoint Sets: " << end - start << " seconds. " << std::endl;
       }
       start = end; 
     #endif
   #endif
 
   // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
-
-  // Get disjoint sets of element IDs
-  // b = static_cast<Block_Critical_Point*> (master.get(0)); // load block with local id 0
-  b->get_sets(world, master, assigner, components_str); 
-
-  #ifdef FTK_HAVE_MPI
-    #if TIME_OF_STEPS
-      MPI_Barrier(world);
-      end = MPI_Wtime();
-      if(world.rank() == 0) {
-        std::cout << "CCL: Gather Connected Components: " << end - start << " seconds. " << std::endl;
-      }
-      start = end; 
-    #endif
-  #endif 
 }
 
 void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
@@ -605,9 +590,26 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
 
-  extract_connected_components(world, master, assigner, connected_components_str);
+  unite_disjoint_sets(world, master, assigner, connected_components_str);
 
   // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
+
+  // Obtain geometries
+
+  // Get disjoint sets of element IDs
+  // b = static_cast<Block_Critical_Point*> (master.get(0)); // load block with local id 0
+  b->get_sets(world, master, assigner, connected_components_str); 
+
+  // #ifdef FTK_HAVE_MPI
+  //   #if TIME_OF_STEPS
+  //     MPI_Barrier(world);
+  //     end = MPI_Wtime();
+  //     if(world.rank() == 0) {
+  //       std::cout << "Gather Connected Components: " << end - start << " seconds. " << std::endl;
+  //     }
+  //     start = end; 
+  //   #endif
+  // #endif 
 
   // Convert connected components to geometries
 
@@ -661,12 +663,23 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
     }
   }
 
+  // #ifdef FTK_HAVE_MPI
+  //   #if TIME_OF_STEPS
+  //     MPI_Barrier(world);
+  //     end = MPI_Wtime();
+  //     if(world.rank() == 0) {
+  //       std::cout << "Generate trajectories: " << end - start << " seconds. " << std::endl;
+  //     }
+  //     start = end; 
+  //   #endif
+  // #endif
+
   #ifdef FTK_HAVE_MPI
     #if TIME_OF_STEPS
       MPI_Barrier(world);
       end = MPI_Wtime();
       if(world.rank() == 0) {
-        std::cout << "Generate trajectories: " << end - start << " seconds. " << std::endl;
+        std::cout << "Obtain trajectories: " << end - start << " seconds. " << std::endl;
       }
       start = end; 
     #endif
@@ -1045,16 +1058,16 @@ int main(int argc, char **argv)
       //   #endif
       // #endif
 
-      #ifdef FTK_HAVE_MPI
-        #if TIME_OF_STEPS
-          MPI_Barrier(world);
-          end = MPI_Wtime();
-          if(world.rank() == 0) {
-            std::cout << "Scan for Critical Points: " << end - start << " seconds. " <<std::endl;
-          }
-          start = end; 
-        #endif
-      #endif
+      // #ifdef FTK_HAVE_MPI
+      //   #if TIME_OF_STEPS
+      //     MPI_Barrier(world);
+      //     end = MPI_Wtime();
+      //     if(world.rank() == 0) {
+      //       std::cout << "Scan for Critical Points: " << end - start << " seconds. " <<std::endl;
+      //     }
+      //     start = end; 
+      //   #endif
+      // #endif
 
       #if PRINT_FEATURE_DENSITY
         int n_2d_element; 
@@ -1076,16 +1089,16 @@ int main(int argc, char **argv)
 
     add_related_elements_to_intersections(); 
 
-    #ifdef FTK_HAVE_MPI
-      #if TIME_OF_STEPS
-        MPI_Barrier(world);
-        end = MPI_Wtime();
-        if(world.rank() == 0) {
-          std::cout << "Get Edges: " << end - start << " seconds. " << std::endl;
-        }
-        start = end; 
-      #endif
-    #endif
+    // #ifdef FTK_HAVE_MPI
+    //   #if TIME_OF_STEPS
+    //     MPI_Barrier(world);
+    //     end = MPI_Wtime();
+    //     if(world.rank() == 0) {
+    //       std::cout << "Get Edges: " << end - start << " seconds. " << std::endl;
+    //     }
+    //     start = end; 
+    //   #endif
+    // #endif
 
     // std::vector<intersection_t> points; 
     for(auto intersection : *intersections) {
@@ -1094,12 +1107,23 @@ int main(int argc, char **argv)
       }
     }
 
+    // #ifdef FTK_HAVE_MPI
+    //   #if TIME_OF_STEPS
+    //     MPI_Barrier(world);
+    //     end = MPI_Wtime();
+    //     if(world.rank() == 0) {
+    //       std::cout << "Add critical points into data block: " << end - start << " seconds. " <<std::endl;
+    //     }
+    //     start = end; 
+    //   #endif
+    // #endif
+
     #ifdef FTK_HAVE_MPI
       #if TIME_OF_STEPS
         MPI_Barrier(world);
         end = MPI_Wtime();
         if(world.rank() == 0) {
-          std::cout << "Add critical points into data block: " << end - start << " seconds. " <<std::endl;
+          std::cout << "Detect Features and Their Relationships: " << end - start << " seconds. " <<std::endl;
         }
         start = end; 
       #endif
@@ -1118,7 +1142,7 @@ int main(int argc, char **argv)
         MPI_Barrier(world);
         end = MPI_Wtime();
         if(world.rank() == 0) {
-            std::cout << "Load balancing: " << end - start << " seconds. " << std::endl;
+            std::cout << "UF: Load balancing: " << end - start << " seconds. " << std::endl;
         }
         start = end; 
       #endif
@@ -1140,7 +1164,7 @@ int main(int argc, char **argv)
         MPI_Barrier(world);
         end = MPI_Wtime();
         if(world.rank() == 0) {
-            std::cout << "Init Block: " << end - start << " seconds. " << std::endl;
+            std::cout << "UF: Init Data Structure of Union-Find: " << end - start << " seconds. " << std::endl;
         }
         start = end; 
       #endif
