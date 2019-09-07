@@ -56,7 +56,7 @@
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
 #define PRINT_FEATURE_DENSITY false
-#define LOAD_BALANCING false
+#define LOAD_BALANCING true
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
@@ -154,7 +154,7 @@ void decompose_mesh(int nblocks) {
 
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 {
-  if (!f.valid()) return; // check if the 1-simplex is valid
+  if (!f.valid()) return; // check if the 0-simplex is valid
   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
 
   float value; 
@@ -193,7 +193,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
 void scan_intersections() 
 {
-  block_m_ghost.element_for(1, check_simplex, nthreads); // iterate over all 2-simplices
+  block_m_ghost.element_for(0, check_simplex, nthreads); // iterate over all 2-simplices
 }
 
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
@@ -209,7 +209,7 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
 }
 
 bool is_in_mesh(const std::string& eid, const hypermesh::regular_lattice& _lattice) { 
-  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 1, eid); 
+  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, eid); 
   
   return is_in_mesh(f, _lattice); 
 }
@@ -292,8 +292,8 @@ void add_related_elements_to_intersections() {
   std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
   for(auto& pair : *intersections) {
     auto& eid = pair.first;
-    // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 1, eid); 
-    auto&f = eles_with_intersections.emplace_back(m, 1, eid); 
+    // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, eid); 
+    auto&f = eles_with_intersections.emplace_back(m, 0, eid); 
   }
 
   // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
@@ -382,7 +382,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
         for(int i = 0; i < b->block_bounds.size(); ++i) {
           int rgid = i;
 
-          hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 1, related_ele); 
+          hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, related_ele); 
 
           bool flag = true;
           for(int j = 0; j < 3; ++j) {
@@ -494,13 +494,13 @@ void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy
 
 
 // Vertex to string
-std::string vertex_to_string(const std::vector<int>& corner) {
-  std::stringstream res;
+// std::string vertex_to_string(const std::vector<int>& corner) {
+//   std::stringstream res;
 
-  std::copy(corner.begin(), corner.end(), std::ostream_iterator<int>(res, ","));
+//   std::copy(corner.begin(), corner.end(), std::ostream_iterator<int>(res, ","));
 
-  return res.str(); 
-}
+//   return res.str(); 
+// }
 
 
 void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
@@ -534,28 +534,18 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   if(connected_components_str.size() > 0) {
 
-    // Since each vertex has 7 types of 1-simplex, we group the 7 types of 1-simplex
-    std::vector<std::set<std::string>> _connected_components_str;
-
     // std::vector<std::set<element_t>> cc; // connected components 
 
     // Convert element IDs to elements
     for(auto& comp_str : connected_components_str) {
       // std::set<element_t>& comp = cc.emplace_back(); 
-      std::set<std::string>& _comp_str = _connected_components_str.emplace_back(); 
       std::vector<element_t> eles; 
 
       for(auto& eid : comp_str) {
-        // comp.insert(hypermesh::regular_simplex_mesh_element(m, 1, eid)); 
+        // comp.insert(hypermesh::regular_simplex_mesh_element(m, 0, eid)); 
 
-        hypermesh::regular_simplex_mesh_element f(m, 1, eid);
-        std::string vid = vertex_to_string(f.corner); 
-
-        if(_comp_str.find(vid) == _comp_str.end()) {
-          _comp_str.insert(vid); 
-
-          eles.push_back(f); 
-        }
+        hypermesh::regular_simplex_mesh_element f(m, 0, eid);
+        eles.push_back(f); 
       }
 
       std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
@@ -667,7 +657,7 @@ void read_dump_file(const std::string& f)
   ifs.close();
 
   for (const auto &i : vector) {
-    hypermesh::regular_simplex_mesh_element e(m, 2, i.eid);
+    hypermesh::regular_simplex_mesh_element e(m, 0, i.eid);
     intersections->at(e.to_string()) = i;
   }
 }
@@ -860,7 +850,7 @@ int main(int argc, char **argv)
 
       #if PRINT_FEATURE_DENSITY
         int n_2d_element; 
-        block_m_ghost.element_for(1, [&](const hypermesh::regular_simplex_mesh_element& f){
+        block_m_ghost.element_for(0, [&](const hypermesh::regular_simplex_mesh_element& f){
           n_2d_element++ ;
         }, nthreads);
         std::cout<<"Feature Density: "<< (intersections->size()) / (float)n_2d_element << std::endl; 
