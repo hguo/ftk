@@ -53,10 +53,13 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
 
+#define LOAD_BALANCING true
+
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
+
 #define PRINT_FEATURE_DENSITY false
-#define LOAD_BALANCING true
+#define PRINT_ELE_COUNT true
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
@@ -848,21 +851,6 @@ int main(int argc, char **argv)
       //   #endif
       // #endif
 
-      #if PRINT_FEATURE_DENSITY
-        int n_2d_element; 
-        block_m_ghost.element_for(0, [&](const hypermesh::regular_simplex_mesh_element& f){
-          n_2d_element++ ;
-        }, nthreads);
-        std::cout<<"Feature Density: "<< (intersections->size()) / (float)n_2d_element << std::endl; 
-        #ifdef FTK_HAVE_MPI
-          #if TIME_OF_STEPS
-            MPI_Barrier(world);
-            end = MPI_Wtime();
-            start = end; 
-          #endif
-        #endif
-      #endif
-
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
 
@@ -907,6 +895,44 @@ int main(int argc, char **argv)
         start = end; 
       #endif
     #endif
+
+    // ===============================
+
+    #if PRINT_ELE_COUNT || PRINT_FEATURE_DENSITY
+      int feature_ele_cnt = 0;
+
+      if (world.rank() == 0) {
+        diy::mpi::reduce<int>(world, b->points.size(), feature_ele_cnt, 0, std::plus<int>());
+      } else {
+        diy::mpi::reduce<int>(world, b->points.size(), 0, std::plus<int>());
+      }
+    #endif
+
+    #if PRINT_ELE_COUNT
+      if (world.rank() == 0) {
+        std::cout<<"Feature Element Count is " << feature_ele_cnt << std::endl; 
+      }
+    #endif
+
+    #if PRINT_FEATURE_DENSITY
+      int element_cnt; 
+
+      m.element_for(0, [&](const hypermesh::regular_simplex_mesh_element& f){
+        element_cnt++ ;
+      }, nthreads);
+
+      if (world.rank() == 0) {
+        std::cout<<"Feature Density: "<< feature_ele_cnt / (float)element_cnt << std::endl; 
+      }
+    #endif
+
+    #if PRINT_ELE_COUNT || PRINT_FEATURE_DENSITY
+      MPI_Barrier(world);
+      end = MPI_Wtime();
+      start = end; 
+    #endif
+
+    // ===============================
 
     #if LOAD_BALANCING
       // std::cout << gid << " : " << b->points.size() << std::endl;
