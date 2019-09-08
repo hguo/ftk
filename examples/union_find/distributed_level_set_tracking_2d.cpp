@@ -936,7 +936,7 @@ int main(int argc, char **argv)
     #endif
 
     #if PRINT_FEATURE_DENSITY
-      int element_cnt; 
+      int element_cnt = 0; 
 
       m.element_for(0, [&](const hypermesh::regular_simplex_mesh_element& f){
         element_cnt++ ;

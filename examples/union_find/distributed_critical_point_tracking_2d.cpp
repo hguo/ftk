@@ -58,8 +58,8 @@
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
 
-#define PRINT_FEATURE_DENSITY true
-#define PRINT_ELE_COUNT true
+#define PRINT_FEATURE_DENSITY false
+#define PRINT_ELE_COUNT false
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
@@ -1137,7 +1137,7 @@ int main(int argc, char **argv)
     #endif
 
     #if PRINT_FEATURE_DENSITY
-      int element_cnt; 
+      int element_cnt = 0; 
 
       m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f){
         element_cnt++ ;
