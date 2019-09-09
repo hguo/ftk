@@ -481,26 +481,35 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
       b->add_related_element(p.eid, related_ele); 
 
       if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
+        hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, related_ele); 
 
-        // for(int i = 0; i < link->size(); ++i) {
-          // auto target = link->target(i);
-          // int rgid = target.gid; 
         for(int i = 0; i < b->block_bounds.size(); ++i) {
           int rgid = i;
-
-          hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, related_ele); 
+          if(rgid == gid) {
+            continue;
+          }
 
           bool flag = true;
           for(int j = 0; j < 3; ++j) {
-            // if(f.corner[j] < link->bounds(i).min[j] || f.corner[j] > link->bounds(i).max[j]) {
             if(f.corner[j] < b->block_bounds[i].min[j] || f.corner[j] > b->block_bounds[i].max[j]) {
               flag = false;
               break;
             }
           }
           if(flag) {
-            b->set_gid(related_ele, rgid);
-            break ;
+            if(b->has_gid(related_ele)) { // if this point is within multiple processes' ranges; probably on a boundary
+              // std::cout<<"Multiple gids! "<<std::endl;
+
+              int _rgid = b->get_gid(related_ele); 
+              if(_rgid < rgid) {
+                b->set_gid(related_ele, rgid);
+              }
+
+            } else {
+              b->set_gid(related_ele, rgid);
+            }
+
+            // break ;
           }
         }
 
