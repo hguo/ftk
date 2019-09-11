@@ -58,8 +58,8 @@
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
 
-#define PRINT_FEATURE_DENSITY true
-#define PRINT_ELE_COUNT true
+#define PRINT_FEATURE_DENSITY false
+#define PRINT_ELE_COUNT false
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
@@ -330,7 +330,10 @@ void add_related_elements_to_intersections() {
 
 void init_block_without_load_balancing() {
 
+  intersections->clear(); // *
   for(auto p : b->points) {
+    intersections->insert(std::make_pair(p.eid, p)); // *
+
     b->add(p.eid); 
     b->set_gid(p.eid, gid);
   }
@@ -343,14 +346,20 @@ void init_block_without_load_balancing() {
 
       b->add_related_element(p.eid, related_ele); 
 
+      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, related_ele);
+
       if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
         for(int i = 0; i < lattice_partitions.size(); ++i) {
-          if(i != gid){ // We know the feature is not in this partition
-            auto& _lattice = std::get<0>(lattice_partitions[i]); 
-            if(is_in_mesh(related_ele, _lattice)) { // the feature is in mith partition
-              b->set_gid(related_ele, i); // Set gid of this feature to mi  
-            }
+          int rgid = i;
+          if(rgid == gid) { // We know the feature is not in this partition
+            continue;
           }
+
+          auto& _lattice = std::get<0>(lattice_partitions[i]); 
+          if(is_in_mesh(f, _lattice)) { // the feature is in mith partition
+            b->set_gid(related_ele, rgid); // Set gid of this feature to mi  
+          }
+
         }
       }
 
@@ -377,8 +386,9 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
 
       b->add_related_element(p.eid, related_ele); 
 
+      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, related_ele);
+
       if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
-        hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, related_ele); 
 
         for(int i = 0; i < b->block_bounds.size(); ++i) {
           int rgid = i;
