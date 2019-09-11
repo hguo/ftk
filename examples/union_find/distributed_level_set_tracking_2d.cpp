@@ -453,16 +453,16 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
       // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
 
 
-  #ifdef FTK_HAVE_MPI
-    #if TIME_OF_STEPS
-      MPI_Barrier(world);
-      end = MPI_Wtime();
-      if(world.rank() == 0) {
-        std::cout << "LB: Step 1 Balancing: " << end - start << " seconds. " << std::endl;
-      }
-      start = end; 
-    #endif
-  #endif
+  // #ifdef FTK_HAVE_MPI
+  //   #if TIME_OF_STEPS
+  //     MPI_Barrier(world);
+  //     end = MPI_Wtime();
+  //     if(world.rank() == 0) {
+  //       std::cout << "LB: Step 1 Balancing: " << end - start << " seconds. " << std::endl;
+  //     }
+  //     start = end; 
+  //   #endif
+  // #endif
 
   // Everybody sends their bounds to everybody else
   diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
@@ -484,16 +484,16 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
     }
   });
 
-  #ifdef FTK_HAVE_MPI
-    #if TIME_OF_STEPS
-      MPI_Barrier(world);
-      end = MPI_Wtime();
-      if(world.rank() == 0) {
-        std::cout << "LB: Step 2 Get New Bounds of Processors: " << end - start << " seconds. " << std::endl;
-      }
-      start = end; 
-    #endif
-  #endif
+  // #ifdef FTK_HAVE_MPI
+  //   #if TIME_OF_STEPS
+  //     MPI_Barrier(world);
+  //     end = MPI_Wtime();
+  //     if(world.rank() == 0) {
+  //       std::cout << "LB: Step 2 Get New Bounds of Processors: " << end - start << " seconds. " << std::endl;
+  //     }
+  //     start = end; 
+  //   #endif
+  // #endif
 }
 
 
