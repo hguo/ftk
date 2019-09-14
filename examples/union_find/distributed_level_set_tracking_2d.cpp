@@ -53,13 +53,13 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
 
-#define LOAD_BALANCING false
+#define LOAD_BALANCING true
 
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
 
 #define PRINT_FEATURE_DENSITY false
-#define PRINT_ELE_COUNT false
+#define PRINT_ELE_COUNT true
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
