@@ -4,7 +4,7 @@
 #include <cassert>
 #include <cxxopts.hpp>
 
-#define NDEBUG // Disable assert()
+// #define NDEBUG // Disable assert()
 
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
