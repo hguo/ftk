@@ -149,8 +149,6 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     value = scalar(indices);
   }
 
-  std::cout<<"Finish finding scalar" << std::endl; 
-
   if(value < threshold) {
     return ;
   }
@@ -169,15 +167,14 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
       std::lock_guard<std::mutex> guard(mutex);
     #endif
 
-    intersections->insert(std::make_pair(f.to_string(), I)); 
+    intersections->insert(std::make_pair(I.eid, I)); 
     // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
   }
-
 }
 
 void scan_intersections() 
 {
-  block_m_ghost.element_for(0, check_simplex, nthreads); // iterate over all 2-simplices
+  block_m_ghost.element_for(0, check_simplex, nthreads); // iterate over all 0-simplices
 }
 
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
@@ -804,7 +801,6 @@ int main(int argc, char **argv)
       diy_box.min[i] = data_box.min[DIM-1-i]; diy_box.max[i] = data_box.max[DIM-1-i];  
     }
 
-
     std::vector<unsigned> shape;
     for(int i = 0; i < DIM; ++i) {
       shape.push_back(D_sizes[DIM-1-i]); 
@@ -843,42 +839,42 @@ int main(int argc, char **argv)
       read_dump_file(filename_dump_r);
     } else { // derive gradients and do the sweep
 
-      if(world.rank() == 0) {
-        std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
-      }
+      // if(world.rank() == 0) {
+      //   std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
+      // }
 
-      if(world.rank() == 0) {
+      // if(world.rank() == 1) {
 
       scan_intersections();
 
-      }
+      // }
 
-      #ifdef FTK_HAVE_MPI
-        #if TIME_OF_STEPS
-          MPI_Barrier(world);
-          end = MPI_Wtime();
-          if(world.rank() == 0) {
-            std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
-          }
-          start = end; 
-        #endif
-      #endif
+      // #ifdef FTK_HAVE_MPI
+      //   #if TIME_OF_STEPS
+      //     MPI_Barrier(world);
+      //     end = MPI_Wtime();
+      //     if(world.rank() == 0) {
+      //       std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
+      //     }
+      //     start = end; 
+      //   #endif
+      // #endif
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
 
     add_related_elements_to_intersections(); 
 
-    #ifdef FTK_HAVE_MPI
-      #if TIME_OF_STEPS
-        MPI_Barrier(world);
-        end = MPI_Wtime();
-        if(world.rank() == 0) {
-          std::cout << "Get Edges: " << end - start << " seconds. " << std::endl;
-        }
-        start = end; 
-      #endif
-    #endif
+    // #ifdef FTK_HAVE_MPI
+    //   #if TIME_OF_STEPS
+    //     MPI_Barrier(world);
+    //     end = MPI_Wtime();
+    //     if(world.rank() == 0) {
+    //       std::cout << "Get Edges: " << end - start << " seconds. " << std::endl;
+    //     }
+    //     start = end; 
+    //   #endif
+    // #endif
 
     // std::vector<intersection_t> points; 
     for(auto intersection : *intersections) {
@@ -887,16 +883,16 @@ int main(int argc, char **argv)
       }
     }
 
-    #ifdef FTK_HAVE_MPI
-      #if TIME_OF_STEPS
-        MPI_Barrier(world);
-        end = MPI_Wtime();
-        if(world.rank() == 0) {
-          std::cout << "Add points into data block: " << end - start << " seconds. " <<std::endl;
-        }
-        start = end; 
-      #endif
-    #endif
+    // #ifdef FTK_HAVE_MPI
+    //   #if TIME_OF_STEPS
+    //     MPI_Barrier(world);
+    //     end = MPI_Wtime();
+    //     if(world.rank() == 0) {
+    //       std::cout << "Add points into data block: " << end - start << " seconds. " <<std::endl;
+    //     }
+    //     start = end; 
+    //   #endif
+    // #endif
 
     #ifdef FTK_HAVE_MPI
       #if TIME_OF_STEPS

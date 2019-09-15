@@ -410,7 +410,9 @@ inline std::string regular_simplex_mesh_element::to_string() const
   std::copy(corner.begin(), corner.end(), std::ostream_iterator<int>(res, ","));
   res<<type; 
 
-  return res.str(); 
+  std::string res_str(res.str()); 
+
+  return res_str; 
 }
 
 inline void regular_simplex_mesh_element::from_string(const std::string& index)

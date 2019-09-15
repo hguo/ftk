@@ -293,7 +293,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
       std::lock_guard<std::mutex> guard(mutex);
     #endif
 
-    intersections->insert(std::make_pair(f.to_string(), I)); 
+    intersections->insert(std::make_pair(I.eid, I)); 
     // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
   }
 
