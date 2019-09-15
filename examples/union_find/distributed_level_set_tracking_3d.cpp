@@ -799,13 +799,13 @@ int main(int argc, char **argv)
     
     diy::DiscreteBounds diy_box(DIM);
     for(int i = 0; i < DIM; ++i) {
-      diy_box.min[i] = data_box.min[DIM-i]; diy_box.max[i] = data_box.max[DIM-i];  
+      diy_box.min[i] = data_box.min[DIM-1-i]; diy_box.max[i] = data_box.max[DIM-1-i];  
     }
 
 
     std::vector<unsigned> shape;
     for(int i = 0; i < DIM; ++i) {
-      shape.push_back(D_sizes[DIM - i]); 
+      shape.push_back(D_sizes[DIM-1-i]); 
     }
 
     diy::io::BOV reader(in, shape);
