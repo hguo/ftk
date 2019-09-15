@@ -240,7 +240,6 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
  
   float mu[3];
   bool succ = ftk::inverse_lerp_s2v2(g, mu);
-  float val = ftk::lerp_s2(value, mu);
   
   if (!succ) return;
 
@@ -277,13 +276,16 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     for (int j = 0; j < 3; j ++)
       X[i][j] = vertices[i][j];
 
+  float x[3];
+  ftk::lerp_s2v3(X, mu, x);
+
   intersection_t I;
   I.eid = f.to_string();
-  ftk::lerp_s2v3(X, mu, I.x);
   I.val = ftk::lerp_s2(value, mu);
 
   for(int i = 0; i < 3; ++i) {
-    I.corner[i] = f.corner[i]; 
+    I.x.push_back(x[i]); 
+    I.corner.push_back(f.corner[i]); 
   }
 
   {

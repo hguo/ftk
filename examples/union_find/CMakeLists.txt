@@ -44,20 +44,20 @@ endif ()
 
 # ============================================
 
-set (sources distributed_critical_point_tracking_2d_NO_load_balancing.cpp)
+set (sources distributed_critical_point_tracking_3d.cpp)
 
 if (FTK_HAVE_QT5)
   set (CMAKE_AUTOMOC ON)
   list (APPEND sources widget.cpp)
 endif ()
 
-add_executable              (distributed_critical_point_tracking_2d_NO_load_balancing     ${sources})
-# target_link_libraries       (distributed_critical_point_tracking_2d_NO_load_balancing     ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries       (distributed_critical_point_tracking_2d_NO_load_balancing     ftk)
+add_executable              (distributed_critical_point_tracking_3d     ${sources})
+# target_link_libraries       (distributed_critical_point_tracking_3d     ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries       (distributed_critical_point_tracking_3d     ftk)
   
 if (FTK_HAVE_QT5)
-  qt5_use_modules (distributed_critical_point_tracking_2d_NO_load_balancing Widgets OpenGL)
-  target_link_libraries (distributed_critical_point_tracking_2d_NO_load_balancing trackball ${OPENGL_LIBRARIES})
+  qt5_use_modules (distributed_critical_point_tracking_3d Widgets OpenGL)
+  target_link_libraries (distributed_critical_point_tracking_3d trackball ${OPENGL_LIBRARIES})
 endif ()
 
 # ============================================
@@ -76,4 +76,22 @@ target_link_libraries       (distributed_level_set_tracking_2d     ftk)
 if (FTK_HAVE_QT5)
   qt5_use_modules (distributed_level_set_tracking_2d Widgets OpenGL)
   target_link_libraries (distributed_level_set_tracking_2d trackball ${OPENGL_LIBRARIES})
+endif ()
+
+# ============================================
+
+set (sources distributed_level_set_tracking_3d.cpp)
+
+if (FTK_HAVE_QT5)
+  set (CMAKE_AUTOMOC ON)
+  list (APPEND sources widget.cpp)
+endif ()
+
+add_executable              (distributed_level_set_tracking_3d     ${sources})
+# target_link_libraries       (distributed_level_set_tracking_3d     ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries       (distributed_level_set_tracking_3d     ftk)
+  
+if (FTK_HAVE_QT5)
+  qt5_use_modules (distributed_level_set_tracking_3d Widgets OpenGL)
+  target_link_libraries (distributed_level_set_tracking_3d trackball ${OPENGL_LIBRARIES})
 endif ()

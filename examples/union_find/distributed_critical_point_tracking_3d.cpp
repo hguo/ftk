@@ -64,28 +64,31 @@
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
 
+#define DIM 4
+
 
 int CRITICAL_POINT_TYPE; // By default, track maximum points
 
 int nthreads;
 
-int DW, DH; // the dimensionality of the data is DW*DH
+int DW, DH, DD; // the dimensionality of the data is DW*DH
 int DT; // number of timesteps
+std::vector<int> D_sizes;
 
 double start, end; 
 
 hypermesh::ndarray<float> scalar, grad, hess;
-diy::DiscreteBounds data_box(3); // bounds of data box
-std::vector<int> data_offset(3);
+diy::DiscreteBounds data_box(DIM); // bounds of data box
+std::vector<int> data_offset(DIM);
 
-hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
+hypermesh::regular_simplex_mesh m(DIM); // the 3D space-time mesh
 
-hypermesh::regular_simplex_mesh block_m(3); // the 3D space-time mesh of this block
-hypermesh::regular_simplex_mesh block_m_ghost(3); // the 3D space-time mesh of this block with ghost cells
+hypermesh::regular_simplex_mesh block_m(DIM); // the 3D space-time mesh of this block
+hypermesh::regular_simplex_mesh block_m_ghost(DIM); // the 3D space-time mesh of this block with ghost cells
 
 std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>> lattice_partitions;
-float threshold; // threshold for super level sets. 
-// int threshold_length; // threshold for level_set length.  
+float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
+int threshold_length; // threshold for trajectory length.  
 
 std::mutex mutex;
  
@@ -96,39 +99,78 @@ std::map<std::string, intersection_t>* intersections;
 // the output sets of connected elements
 std::vector<std::set<std::string>> connected_components_str; // connected components 
 
-// the output level_sets
-std::vector<std::vector<float>> level_sets;
+// the output trajectories
+std::vector<std::vector<float>> trajectories;
 
 std::string filename_time_uf_w; // record time for each round of union-find
 
-int scaling_factor; // the factor that controls the shape of the synthesize data, default value: 15
-
-template <typename T> // the synthetic function
-T f(T x, T y, T t) 
-{
-  return cos(x*cos(t)-y*sin(t))*sin(x*sin(t)+y*cos(t));
-}
-
 template <typename T>
-hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
+hypermesh::ndarray<T> derive_gradients3(const hypermesh::ndarray<T>& scalar)
 {
-  hypermesh::ndarray<T> scalar;
-  // scalar.reshape(DW, DH, DT);
-  scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
+  hypermesh::ndarray<T> grad;
+  std::vector<size_t> reshape = {DIM-1};
+  for(int i = 0; i < DIM; ++i) {
+    reshape.push_back(scalar.dim(i)); 
+  }
+  grad.reshape(reshape);
+  
+  for (int l = std::max(0, block_m_ghost.lb(3)-1) - data_offset[3]; l < std::min(block_m_ghost.ub(3)+2, DT) - data_offset[3]; l ++) {
+    for (int k = std::max(0, block_m_ghost.lb(2)-1) - data_offset[2]; k < std::min(block_m_ghost.ub(2)+2, DD-1) - data_offset[2]; k ++) {
+      for (int j = std::max(1, block_m_ghost.lb(1)-1) - data_offset[1]; j < std::min(block_m_ghost.ub(1)+2, DH-1) - data_offset[1]; j ++) {
+        for (int i = std::max(1, block_m_ghost.lb(0)-1) - data_offset[0]; i < std::min(block_m_ghost.ub(0)+2, DW-1) - data_offset[0]; i ++) {
 
-  for (int k = 0; k < data_box.max[2] + 1 - data_offset[2]; k ++) {
-    for (int j = 0; j < data_box.max[1] + 1 - data_offset[1]; j ++) {
-      for (int i = 0; i < data_box.max[0] + 1 - data_offset[0]; i ++) {
-        const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
-                y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
-                t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
-
-        scalar(i, j, k) = f(x, y, t);
+          grad(0, i, j, k, l) = 0.5 * (scalar(i+1, j, k, l) - scalar(i-1, j, k, l)) * (DW-1);
+          grad(1, i, j, k, l) = 0.5 * (scalar(i, j+1, k, l) - scalar(i, j-1, k, l)) * (DH-1);
+          grad(2, i, j, k, l) = 0.5 * (scalar(i, j, k+1, l) - scalar(i, j, k-1, l)) * (DD-1);
+        }
       }
     }
   }
 
-  return scalar;
+  return grad;
+}
+
+template <typename T>
+hypermesh::ndarray<T> derive_hessians3(const hypermesh::ndarray<T>& grad)
+{
+  hypermesh::ndarray<T> hess;
+  std::vector<size_t> reshape = {DIM-1};
+  for(int i = 0; i < DIM+1; ++i) {
+    reshape.push_back(grad.dim(i)); 
+  }
+
+  for (int l = std::max(0, block_m_ghost.lb(3)) - data_offset[3]; l < std::min(block_m_ghost.ub(3)+1, DT) - data_offset[3]; l ++) {
+    for (int k = std::max(2, block_m_ghost.lb(2)) - data_offset[2]; k < std::min(block_m_ghost.ub(2)+1, DD-2) - data_offset[2]; k ++) {
+      for (int j = std::max(2, block_m_ghost.lb(1)) - data_offset[1]; j < std::min(block_m_ghost.ub(1)+1, DH-2) - data_offset[1]; j ++) {
+        for (int i = std::max(2, block_m_ghost.lb(0)) - data_offset[0]; i < std::min(block_m_ghost.ub(0)+1, DW-2) - data_offset[0]; i ++) {
+
+          const T H00 = hess(0, 0, i, j, k) = // ddf/dx2
+            0.5 * (grad(0, i+1, j, k) - grad(0, i-1, j, k)) * (DW-1);
+          const T H01 = hess(0, 1, i, j, k) = // ddf/dxdy
+            0.5 * (grad(0, i, j+1, k) - grad(0, i, j-1, k)) * (DH-1);
+          const T H02 = hess(0, 2, i, j, k) = // ddf/dxdz
+            0.5 * (grad(0, i, j, k+1) - grad(0, i, j, k-1)) * (DD-1);
+
+          const T H10 = hess(1, 0, i, j, k) = // ddf/dydx
+            0.5 * (grad(1, i+1, j, k) - grad(1, i-1, j, k)) * (DW-1);
+          const T H11 = hess(1, 1, i, j, k) = // ddf/dy2
+            0.5 * (grad(1, i, j+1, k) - grad(1, i, j-1, k)) * (DH-1);
+          const T H12 = hess(1, 2, i, j, k) = // ddf/dydz
+            0.5 * (grad(1, i, j, k+1) - grad(1, i, j, k-1)) * (DD-1);
+
+          const T H20 = hess(2, 0, i, j, k) = // ddf/dzdx
+            0.5 * (grad(2, i+1, j, k) - grad(2, i-1, j, k)) * (DW-1);
+          const T H21 = hess(2, 1, i, j, k) = // ddf/dzdy
+            0.5 * (grad(2, i, j+1, k) - grad(2, i, j-1, k)) * (DH-1);
+          const T H22 = hess(2, 2, i, j, k) = // ddf/dz2
+            0.5 * (grad(2, i, j, k+1) - grad(2, i, j, k-1)) * (DD-1);
+
+        }
+      }
+    }
+  }
+
+  return hess;
 }
 
 void decompose_mesh(int nblocks) {
@@ -136,7 +178,10 @@ void decompose_mesh(int nblocks) {
   // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
   // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
 
-  std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
+  std::vector<size_t> ghost; // at least 1, larger is ok
+  for(int i = 0; i < DIM; ++i) {
+    ghost.push_back(1); 
+  }
 
   const hypermesh::regular_lattice& lattice = m.lattice(); 
   lattice.partition(nblocks, given, ghost, lattice_partitions); 
@@ -148,38 +193,76 @@ void decompose_mesh(int nblocks) {
   block_m.set_lb_ub(lattice_p);
   block_m_ghost.set_lb_ub(lattice_ghost_p);
 
-  data_box.min[0] = block_m_ghost.lb(0); data_box.max[0] = block_m_ghost.ub(0); 
-  data_box.min[1] = block_m_ghost.lb(1); data_box.max[1] = block_m_ghost.ub(1); 
-  data_box.min[2] = block_m_ghost.lb(2); data_box.max[2] = block_m_ghost.ub(2); 
+  for(int i = 0; i < DIM; ++i) {
+    data_box.min[i] = std::max(0, block_m_ghost.lb(i)-2); data_box.max[i] = std::min(block_m_ghost.ub(i)+2, D_sizes[i]-1);  
+  }
 
-  data_offset = {data_box.min[0], data_box.min[1], data_box.min[2]}; 
+  for(int i = 0; i < DIM; ++i) {
+    data_offset.push_back(data_box.min[i]); 
+  }
 }
 
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 {
-  if (!f.valid()) return; // check if the 0-simplex is valid
+  if (!f.valid()) return; // check if the 3-simplex is valid
   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+  float g[4][3], value[4];
 
-  float value; 
+  for (int i = 0; i < 4; i ++) {
+    int _i = vertices[i][0] - data_offset[0];
+    int _j = vertices[i][1] - data_offset[1];
+    int _k = vertices[i][2] - data_offset[2];
+    int _l = vertices[i][3] - data_offset[3];
 
-  {
-    int _i = vertices[0][0] - data_offset[0];
-    int _j = vertices[0][1] - data_offset[1];
-    int _k = vertices[0][2] - data_offset[2];
+    g[i][0] = grad(0, _i, _j, _k, _l);
+    g[i][1] = grad(1, _i, _j, _k, _l);
+    g[i][2] = grad(2, _i, _j, _k, _l);
+    value[i] = scalar(_i, _j, _k, _l);
+  }
+ 
+  // check intersection
+  float mu[4];
+  bool succ = ftk::inverse_lerp_s3v3(g, mu);
+  
+  if (!succ) return;
 
-    value = scalar(_i, _j, _k);
+  if(CRITICAL_POINT_TYPE == MAXIMUM_POINT) {
+
+    // check hessian
+    float H[4][3][3], h[3][3];
+    for (int i = 0; i < 4; i ++)
+      for (int j = 0; j < 3; j ++)
+        for (int k = 0; k < 3; k ++)
+          H[i][j][k] = hess(j, k, vertices[i][0], vertices[i][1], vertices[i][2], vertices[i][3]);
+    ftk::lerp_s3m3x3(H, mu, h);
+
+    float eig[3];
+    ftk::solve_eigenvalues_symmetric3x3(h, eig);
+  
+    if (eig[0] < 0 && eig[1] < 0 && eig[2] < 0) { // local maxima
+      
+    } else {
+      return ;
+    }
+
   }
 
-  if(value < threshold) {
-    return ;
-  }
+  // A critical point is detected
+
+  float X[4][4];
+  for (int i = 0; i < vertices.size(); i ++)
+    for (int j = 0; j < DIM; j ++)
+      X[i][j] = vertices[i][j];
+
+  float x[4];
+  ftk::lerp_s3v4(X, mu, x);
 
   intersection_t I;
   I.eid = f.to_string();
-  I.val = value; 
+  I.val = ftk::lerp_s3(value, mu);
 
-  for(int i = 0; i < 3; ++i) {
-    I.x.push_back(f.corner[i]); 
+  for(int i = 0; i < DIM; ++i) {
+    I.x.push_back(x[i]); 
     I.corner.push_back(f.corner[i]); 
   }
 
@@ -189,14 +272,14 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     #endif
 
     intersections->insert(std::make_pair(f.to_string(), I)); 
-    // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
+    // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.x[3], I.val);
   }
 
 }
 
 void scan_intersections() 
 {
-  block_m_ghost.element_for(0, check_simplex, nthreads); // iterate over all 2-simplices
+  block_m_ghost.element_for(DIM-1, check_simplex, nthreads); // iterate over all 2-simplices
 }
 
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
@@ -212,7 +295,7 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
 }
 
 bool is_in_mesh(const std::string& eid, const hypermesh::regular_lattice& _lattice) { 
-  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, eid); 
+  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, DIM-1, eid); 
   
   return is_in_mesh(f, _lattice); 
 }
@@ -225,7 +308,7 @@ bool is_in_mesh(const intersection_t& intersection, const hypermesh::regular_lat
 
 // Add union edges to the block
 void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
-  if (!f.valid()) return; // check if the 3-simplex is valid
+  if (!f.valid()) return; // check if the 4-simplex is valid
 
   const auto elements = f.sides();
   std::set<std::string> features;
@@ -295,8 +378,8 @@ void add_related_elements_to_intersections() {
   std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
   for(auto& pair : *intersections) {
     auto& eid = pair.first;
-    // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, eid); 
-    auto&f = eles_with_intersections.emplace_back(m, 0, eid); 
+    // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
+    auto&f = eles_with_intersections.emplace_back(m, DIM-1, eid); 
   }
 
   // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
@@ -346,7 +429,7 @@ void init_block_without_load_balancing() {
 
       b->add_related_element(p.eid, related_ele); 
 
-      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, related_ele);
+      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, DIM-1, related_ele);
 
       if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
         for(int i = 0; i < lattice_partitions.size(); ++i) {
@@ -386,7 +469,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
 
       b->add_related_element(p.eid, related_ele); 
 
-      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, related_ele);
+      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, DIM-1, related_ele); 
 
       if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
 
@@ -397,7 +480,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
           }
 
           bool flag = true;
-          for(int j = 0; j < 3; ++j) {
+          for(int j = 0; j < DIM; ++j) {
             if(f.corner[j] < b->block_bounds[i].min[j] || f.corner[j] > b->block_bounds[i].max[j]) {
               flag = false;
               break;
@@ -437,32 +520,18 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
   bool wrap = false; 
   int hist = 128; //32; 512
 
-  // DIM = 3
+  diy::ContinuousBounds domain(DIM);
 
-  diy::ContinuousBounds domain(3);
+  for(int i = 0; i < DIM-1; ++i) {
+    domain.min[i] = 2; domain.max[i] = D_sizes[i]-3; 
+  }
+  domain.min[DIM-1] = 0; domain.max[DIM-1] = D_sizes[DIM-1]-1; 
 
-  // m.set_lb_ub({0, 0, 0}, {DW-1, DH-1, DT-1});
-  domain.min[0] = 0; domain.max[0] = DW-1; 
-  domain.min[1] = 0; domain.max[1] = DH-1; 
-  domain.min[2] = 0; domain.max[2] = DT-1; 
-
-  diy::RegularContinuousLink* link = new diy::RegularContinuousLink(3, domain, domain);
+  diy::RegularContinuousLink* link = new diy::RegularContinuousLink(DIM, domain, domain);
   master.add(gid, b, link); 
 
-  diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
+  diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, DIM, domain, &Block_Critical_Point::points, 2*hist, wrap);
       // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
-
-
-  // #ifdef FTK_HAVE_MPI
-  //   #if TIME_OF_STEPS
-  //     MPI_Barrier(world);
-  //     end = MPI_Wtime();
-  //     if(world.rank() == 0) {
-  //       std::cout << "LB: Step 1 Balancing: " << end - start << " seconds. " << std::endl;
-  //     }
-  //     start = end; 
-  //   #endif
-  // #endif
 
   // Everybody sends their bounds to everybody else
   diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
@@ -483,17 +552,6 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
       }
     }
   });
-
-  // #ifdef FTK_HAVE_MPI
-  //   #if TIME_OF_STEPS
-  //     MPI_Barrier(world);
-  //     end = MPI_Wtime();
-  //     if(world.rank() == 0) {
-  //       std::cout << "LB: Step 2 Get New Bounds of Processors: " << end - start << " seconds. " << std::endl;
-  //     }
-  //     start = end; 
-  //   #endif
-  // #endif
 }
 
 
@@ -524,17 +582,6 @@ void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy
   // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
 }
 
-
-// Vertex to string
-// std::string vertex_to_string(const std::vector<int>& corner) {
-//   std::stringstream res;
-
-//   std::copy(corner.begin(), corner.end(), std::ostream_iterator<int>(res, ","));
-
-//   return res.str(); 
-// }
-
-
 void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
 {
   typedef hypermesh::regular_simplex_mesh_element element_t; 
@@ -564,37 +611,56 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   // Convert connected components to geometries
 
+  // if(world.rank() == 0) {
   if(connected_components_str.size() > 0) {
-
-    // std::vector<std::set<element_t>> cc; // connected components 
-
+    
+    std::vector<std::set<element_t>> cc; // connected components 
     // Convert element IDs to elements
     for(auto& comp_str : connected_components_str) {
-      // std::set<element_t>& comp = cc.emplace_back(); 
-      std::vector<element_t> eles; 
-
+      std::set<element_t>& comp = cc.emplace_back(); 
       for(auto& eid : comp_str) {
-        // comp.insert(hypermesh::regular_simplex_mesh_element(m, 0, eid)); 
-
-        hypermesh::regular_simplex_mesh_element f(m, 0, eid);
-        eles.push_back(f); 
+        comp.insert(hypermesh::regular_simplex_mesh_element(m, DIM-1, eid)); 
       }
-
-      std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
-        return (a.corner[2] < b.corner[2]) || (a.corner[2] == b.corner[2] && a.corner[0] < b.corner[0]) || (a.corner[2] == b.corner[2] && a.corner[0] == b.corner[0] && a.corner[1] < b.corner[1]); 
-      }); 
-
-      std::vector<float>& level_set = level_sets.emplace_back();
-      for (int k = 0; k < eles.size(); k ++) {
-        auto& p = intersections->at(eles[k].to_string());
-
-        level_set.push_back(p.x[0]); //  / (DW-1));
-        level_set.push_back(p.x[1]); //  / (DH-1));
-        level_set.push_back(p.x[2]); //  / (DT-1));
-        level_set.push_back(p.val);
-      } 
     }
 
+    auto neighbors = [](element_t f) {
+      std::set<element_t> neighbors;
+      const auto cells = f.side_of();
+      for (const auto c : cells) {
+        const auto elements = c.sides();
+        for (const auto f1 : elements)
+          neighbors.insert(f1);
+      }
+      return neighbors;
+    };
+    
+    for (int i = 0; i < cc.size(); i ++) {
+      std::vector<std::vector<float>> mycurves;
+      auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
+      
+      for (int j = 0; j < linear_graphs.size(); j ++) {
+        int _size = linear_graphs[j].size();
+        if(_size > threshold_length) {
+          std::vector<float> mycurve, mycolors;
+          float max_value = std::numeric_limits<float>::min();
+          for (int k = 0; k < linear_graphs[j].size(); k ++) {
+            auto p = intersections->at(linear_graphs[j][k].to_string());
+            
+            for(int l = 0; l < DIM; ++l) {
+              mycurve.push_back(p.x[l]); 
+            }
+
+            mycurve.push_back(p.val);
+            max_value = std::max(max_value, p.val);
+          }
+          if (max_value > threshold) {
+            trajectories.emplace_back(mycurve);
+          }
+
+        }
+
+      }
+    }
   }
 
   // #ifdef FTK_HAVE_MPI
@@ -602,7 +668,7 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   //     MPI_Barrier(world);
   //     end = MPI_Wtime();
   //     if(world.rank() == 0) {
-  //       std::cout << "Generate level_sets: " << end - start << " seconds. " << std::endl;
+  //       std::cout << "Generate trajectories: " << end - start << " seconds. " << std::endl;
   //     }
   //     start = end; 
   //   #endif
@@ -620,19 +686,19 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   #endif
 }
 
-void print_level_sets()
+void print_trajectories()
 {
-  printf("We found %lu level_sets:\n", level_sets.size());
-  for (int i = 0; i < level_sets.size(); i ++) {
-    printf("--Level-set %d:\n", i);
-    const auto &level_set = level_sets[i];
-    for (int k = 0; k < level_set.size()/4; k ++) {
-      printf("---x=(%f, %f), t=%f, val=%f\n", level_set[k*4], level_set[k*4+1], level_set[k*4+2], level_set[k*4+3]);
+  printf("We found %lu trajectories:\n", trajectories.size());
+  for (int i = 0; i < trajectories.size(); i ++) {
+    printf("--Curve %d:\n", i);
+    const auto &curve = trajectories[i];
+    for (int k = 0; k < curve.size()/(DIM+1); k ++) {
+      // printf("---x=(%f, %f), t=%f, val=%f\n", curve[k*4], curve[k*4+1], curve[k*4+2], curve[k*4+3]);
     }
   }
 }
 
-void read_level_set_file(const std::string& f)
+void read_traj_file(const std::string& f)
 {
   std::ifstream ifs(f, std::ios::in | std::ios::binary);
 
@@ -642,28 +708,28 @@ void read_level_set_file(const std::string& f)
 
     // std::cout<<ncoord<<std::endl;
 
-    auto& level_set = level_sets.emplace_back(); 
+    auto& traj = trajectories.emplace_back(); 
     for(int j = 0; j < (int) ncoord; ++j) {
       float coord;
       ifs.read(reinterpret_cast<char*>(&coord), sizeof(float)); 
 
-      level_set.push_back(coord); 
+      traj.push_back(coord); 
     }
   }
 
   ifs.close();
 }
 
-void write_level_set_file(diy::mpi::communicator& world, const std::string& f)
+void write_traj_file(diy::mpi::communicator& world, const std::string& f)
 {
   std::vector<float> buf; 
 
-  for(auto& level_set : level_sets) {
-    buf.push_back(level_set.size()); 
+  for(auto& traj : trajectories) {
+    buf.push_back(traj.size()); 
 
-    // std::cout<<level_set.size()<<std::endl;
+    // std::cout<<traj.size()<<std::endl;
 
-    for(auto& coord : level_set) {
+    for(auto& coord : traj) {
       buf.push_back(coord);  
     }
   }
@@ -679,6 +745,12 @@ void write_level_set_file(diy::mpi::communicator& world, const std::string& f)
   MPI_File_close(&fh);
 }
 
+#if FTK_HAVE_VTK
+void write_traj_vtk_file(const std::string& f) {
+  ftk::write_curves_vtk(trajectories, f, DIM+1); 
+}
+#endif
+
 void read_dump_file(const std::string& f)
 {
   std::vector<intersection_t> vector;
@@ -689,7 +761,7 @@ void read_dump_file(const std::string& f)
   ifs.close();
 
   for (const auto &i : vector) {
-    hypermesh::regular_simplex_mesh_element e(m, 0, i.eid);
+    hypermesh::regular_simplex_mesh_element e(m, DIM-1, i.eid);
     intersections->at(e.to_string()) = i;
   }
 }
@@ -737,6 +809,46 @@ void write_element_sets_file(diy::mpi::communicator& world, const std::string& f
   // out.close();
 }
 
+#if FTK_HAVE_VTK
+void start_vtk_window()
+{
+  auto vtkcurves = ftk::curves2vtk(trajectories, DIM+1);
+  vtkcurves->Print(std::cerr);
+
+  vtkSmartPointer<vtkTubeFilter> tubeFilter = vtkSmartPointer<vtkTubeFilter>::New();
+  tubeFilter->SetInputData(vtkcurves);
+  tubeFilter->SetRadius(1);
+  tubeFilter->SetNumberOfSides(50);
+  tubeFilter->Update();
+  
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  // mapper->SetInputData(vtkcurves);
+  mapper->SetInputConnection(tubeFilter->GetOutputPort());
+
+  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper);
+
+  // a renderer and render window
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+  renderWindow->AddRenderer(renderer);
+
+  // add the actors to the scene
+  renderer->AddActor(actor);
+  renderer->SetBackground(1, 1, 1); // Background color white
+
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
+    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = 
+      vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+  renderWindowInteractor->SetInteractorStyle( style );
+
+  renderWindowInteractor->Start();
+}
+#endif
+
 int main(int argc, char **argv)
 {
   diy::mpi::environment     env(0, 0); // env(NULL, NULL)
@@ -770,7 +882,7 @@ int main(int argc, char **argv)
 
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
-  std::string filename_level_set_r, filename_level_set_w;
+  std::string filename_traj_r, filename_traj_w, filename_traj_vtk_w;
   std::string filename_sets_w; 
 
   bool show_qt = false, show_vtk = false;
@@ -781,20 +893,20 @@ int main(int argc, char **argv)
     ("f,format", "input file format", cxxopts::value<std::string>(format)->default_value("float32"))
     ("read-dump", "read dump file", cxxopts::value<std::string>(filename_dump_r))
     ("write-dump", "write dump file", cxxopts::value<std::string>(filename_dump_w))
-    ("read-level-set", "read level_set file", cxxopts::value<std::string>(filename_level_set_r))
-    ("write-level-set", "write level_set file", cxxopts::value<std::string>(filename_level_set_w))
+    ("read-traj", "read traj file", cxxopts::value<std::string>(filename_traj_r))
+    ("write-traj", "write traj file", cxxopts::value<std::string>(filename_traj_w))
+    ("write-traj-vtk", "write traj file with vtk format", cxxopts::value<std::string>(filename_traj_vtk_w))
     ("write-sets", "write sets of connected elements", cxxopts::value<std::string>(filename_sets_w))
     ("write-time-union-find", "write time for each round of union-find", cxxopts::value<std::string>(filename_time_uf_w))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
+    ("d,depth", "depth", cxxopts::value<int>(DD)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
     ("critical-point-type", "Track which type of critical points", cxxopts::value<int>(CRITICAL_POINT_TYPE)->default_value(std::to_string(MAXIMUM_POINT)))
-    ("scaling-factor", "scaling factor for synthetic data", cxxopts::value<int>(scaling_factor)->default_value("15"))
     ("threshold", "threshold", cxxopts::value<float>(threshold)->default_value("0"))
-    // ("threshold-length", "threshold for level_set length", cxxopts::value<int>(threshold_length)->default_value("-1"))
+    ("threshold-length", "threshold for trajectory length", cxxopts::value<int>(threshold_length)->default_value("-1"))
     ("vtk", "visualization with vtk", cxxopts::value<bool>(show_vtk))
-    ("qt", "visualization with qt", cxxopts::value<bool>(show_qt))
-    ("d,debug", "enable debugging");
+    ("qt", "visualization with qt", cxxopts::value<bool>(show_qt)); 
   auto results = options.parse(argc, argv);
 
   #ifdef FTK_HAVE_MPI
@@ -804,7 +916,9 @@ int main(int argc, char **argv)
   // Decompose mesh
   // ========================================
 
-  m.set_lb_ub({0, 0, 0}, {DW-1, DH-1, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
+  // ?????
+  D_sizes = {DW, DH, DD, DT}; 
+  m.set_lb_ub({0, 0, 0, 0}, {DW-1, DH-1, DD-1, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   decompose_mesh(nblocks); 
 
@@ -814,24 +928,29 @@ int main(int argc, char **argv)
   // ========================================
 
   if (pattern.empty()) { // if the input data is not given, generate a synthetic data for the demo
-    scalar = generate_synthetic_data<float>(DW, DH, DT);
+    std::cout<<"Error! No Data! "<<std::endl; 
+    exit(0);
   } else { // load the binary data
 
     diy::mpi::io::file in(world, pattern, diy::mpi::io::file::rdonly);
     
-    diy::DiscreteBounds diy_box(3);
-    diy_box.min[0] = data_box.min[2]; diy_box.max[0] = data_box.max[2]; 
-    diy_box.min[1] = data_box.min[1]; diy_box.max[1] = data_box.max[1]; 
-    diy_box.min[2] = data_box.min[0]; diy_box.max[2] = data_box.max[0]; 
+    diy::DiscreteBounds diy_box(DIM);
+    for(int i = 0; i < DIM; ++i) {
+      diy_box.min[i] = data_box.min[DIM-i]; diy_box.max[i] = data_box.max[DIM-i];  
+    }
 
     std::vector<unsigned> shape;
-    shape.push_back(DT);
-    shape.push_back(DH);
-    shape.push_back(DW);
+    for(int i = 0; i < DIM; ++i) {
+      shape.push_back(D_sizes[DIM - i]); 
+    }
 
     diy::io::BOV reader(in, shape);
 
-    scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
+    std::vector<size_t> reshape;
+    for(int i = 0; i < DIM; ++i) {
+      reshape.push_back(data_box.max[i] - data_box.min[i] + 1); 
+    }
+    scalar.reshape(reshape);
 
     reader.read(diy_box, scalar.data(), true);
     // reader.read(diy_box, scalar.data());
@@ -847,16 +966,79 @@ int main(int argc, char **argv)
       start = end;  
     #endif
   #endif
+
+// ========================================
+
+  //// For debug
   
-  if (!filename_level_set_r.empty()) { // if the level_set file is given, skip all the analysis and visualize/print the level_sets
+  // if(world.rank() == 0) {
+  //   for (auto& _m_pair : ms) {
+  //     hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
+  //     hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+
+  //     auto sizes = _m_ghost.sizes(); 
+  //     std::cout << sizes[0] << " " << sizes[1] << " " << sizes[2] << std::endl; 
+  //   }
+  // }
+  // exit(0); 
+
+// ========================================
+  
+  if (!filename_traj_r.empty()) { // if the trajectory file is given, skip all the analysis and visualize/print the trajectories
     if(world.rank() == 0) {
-      read_level_set_file(filename_level_set_r);
+      read_traj_file(filename_traj_r);
+
+      if(threshold_length > -1) {
+        auto ite = trajectories.begin(); 
+        while(ite != trajectories.end()) {
+          if(ite->size() / (DIM+1) <= threshold_length) {
+            ite = trajectories.erase(ite); 
+          } else {
+            ++ite ;
+          }
+        }
+      }
+
+      if(threshold > 0) {
+
+        auto ite = trajectories.begin(); 
+        while(ite != trajectories.end()) {
+          float max_value = std::numeric_limits<float>::min();
+          
+          for(int i = DIM; i < ite->size(); i += (DIM+1)) {
+            max_value = std::max(max_value, ite->at(i));
+          }
+
+          if(max_value <= threshold) {
+            ite = trajectories.erase(ite); 
+          } else {
+            ++ite ;
+          }
+
+        } 
+      }
+
     }
   } else { // otherwise do the analysis
 
     if (!filename_dump_r.empty()) { // if the dump file is given, skill the sweep step; otherwise do sweep-and-trace
       read_dump_file(filename_dump_r);
     } else { // derive gradients and do the sweep
+      grad = derive_gradients3(scalar);
+      hess = derive_hessians3(grad);
+
+      // #ifdef FTK_HAVE_MPI
+      //   #if TIME_OF_STEPS
+      //     MPI_Barrier(world);
+      //     end = MPI_Wtime();
+      //     if(world.rank() == 0) {
+      //       std::cout << "Derive gradients: " << end - start << " seconds. " << std::endl;
+      //     }
+      //     start = end; 
+      //   #endif
+      // #endif
+
+      // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
 
       scan_intersections();
 
@@ -874,11 +1056,12 @@ int main(int argc, char **argv)
       //     MPI_Barrier(world);
       //     end = MPI_Wtime();
       //     if(world.rank() == 0) {
-      //       std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
+      //       std::cout << "Scan for Critical Points: " << end - start << " seconds. " <<std::endl;
       //     }
       //     start = end; 
       //   #endif
       // #endif
+
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
@@ -908,7 +1091,7 @@ int main(int argc, char **argv)
     //     MPI_Barrier(world);
     //     end = MPI_Wtime();
     //     if(world.rank() == 0) {
-    //       std::cout << "Add points into data block: " << end - start << " seconds. " <<std::endl;
+    //       std::cout << "Add critical points into data block: " << end - start << " seconds. " <<std::endl;
     //     }
     //     start = end; 
     //   #endif
@@ -946,7 +1129,7 @@ int main(int argc, char **argv)
     #if PRINT_FEATURE_DENSITY
       int element_cnt = 0; 
 
-      m.element_for(0, [&](const hypermesh::regular_simplex_mesh_element& f){
+      m.element_for(DIM-1, [&](const hypermesh::regular_simplex_mesh_element& f){
         element_cnt++ ;
       }, nthreads);
 
@@ -962,6 +1145,7 @@ int main(int argc, char **argv)
     #endif
 
     // ===============================
+
 
     #if LOAD_BALANCING
       // std::cout << gid << " : " << b->points.size() << std::endl;
@@ -1014,15 +1198,15 @@ int main(int argc, char **argv)
     // std::cout<<"Finish tracing: "<<world.rank()<<std::endl; 
 
     #ifdef FTK_HAVE_MPI
-      if (!filename_level_set_w.empty()) {
-        write_level_set_file(world, filename_level_set_w);
+      if (!filename_traj_w.empty()) {
+        write_traj_file(world, filename_traj_w);
 
         #ifdef FTK_HAVE_MPI
           #if TIME_OF_STEPS
             MPI_Barrier(world);
             end = MPI_Wtime();
             if(world.rank() == 0) {
-              std::cout << "Output level_sets: " << end - start << " seconds. " << std::endl;
+              std::cout << "Output trajectories: " << end - start << " seconds. " << std::endl;
             }
             start = end; 
           #endif
@@ -1036,6 +1220,54 @@ int main(int argc, char **argv)
           write_element_sets_file(world, filename_sets_w);
       // }
     #endif
+  }
+
+#if FTK_HAVE_VTK
+  if(world.rank() == 0) {
+    if (!filename_traj_vtk_w.empty())
+      write_traj_vtk_file(filename_traj_vtk_w);
+  }
+#endif
+
+  if(world.rank() == 0) {
+    if (show_qt) {
+  #if FTK_HAVE_QT5
+      QApplication app(argc, argv);
+      QGLFormat fmt = QGLFormat::defaultFormat();
+      fmt.setSampleBuffers(true);
+      fmt.setSamples(16);
+      QGLFormat::setDefaultFormat(fmt);
+
+      // scalar data with full domain
+      hypermesh::ndarray<float> full_scalar; full_scalar.reshape(DW, DH, DD, DT);
+      
+      for (int l = data_box.min[3]; l < data_box.max[3]+1; l ++) {
+        for (int k = data_box.min[2]; k < data_box.max[2]+1; k ++) {
+          for (int j = data_box.min[1]; j < data_box.max[1]+1; j ++) {
+            for (int i = data_box.min[0]; i < data_box.max[0]+1; i ++) {
+              full_scalar(i, j, k, l) = scalar(i - data_offset[0], j - data_offset[1], k - data_offset[2], l - data_offset[3]); 
+            }
+          }
+        }
+      }
+
+      CGLWidget *widget = new CGLWidget(full_scalar);
+      widget->set_trajectories(trajectories, threshold);
+      widget->show();
+      return app.exec();
+  #else
+      fprintf(stderr, "Error: the executable is not compiled with Qt\n");
+  #endif
+    } else if (show_vtk) {
+  #if FTK_HAVE_VTK
+      start_vtk_window();
+      // ftk::write_curves_vtk(trajectories, "trajectories.vtp");
+  #else
+      fprintf(stderr, "Error: the executable is not compiled with VTK\n");
+  #endif
+    } else {
+      // print_trajectories();
+    }
   }
 
   return 0;

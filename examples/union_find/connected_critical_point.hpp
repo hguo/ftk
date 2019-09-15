@@ -1,5 +1,22 @@
 #include <ftk/basic/distributed_union_find.hh>
 
+// struct intersection_t {
+//   template <class Archive> void serialize(Archive & ar) {
+//     ar(eid, x[0], x[1], x[2], val);
+//   }
+
+//   float&  operator[](unsigned i)                          { return corner[i]; }
+//   float   operator[](unsigned i) const                    { return corner[i]; }
+
+//   float x[DIM]; // the spacetime coordinates of the trajectory
+//   float corner[DIM]; // the spacetime coordinates of the left corner of the element
+
+//   float val; // scalar value at the intersection
+  
+//   std::string eid; // element id
+//   std::set<std::string> related_elements; 
+// };
+
 struct intersection_t {
   template <class Archive> void serialize(Archive & ar) {
     ar(eid, x[0], x[1], x[2], val);
@@ -8,8 +25,8 @@ struct intersection_t {
   float&  operator[](unsigned i)                          { return corner[i]; }
   float   operator[](unsigned i) const                    { return corner[i]; }
 
-  float x[3]; // the spacetime coordinates of the trajectory
-  float corner[3]; // the spacetime coordinates of the left corner of the element
+  std::vector<float> x; // the spacetime coordinates of the trajectory
+  std::vector<float> corner; // the spacetime coordinates of the left corner of the element
 
   float val; // scalar value at the intersection
   
@@ -75,22 +92,34 @@ struct Message_Critical_Point : public Message_Union_Find {
     strs.push_back(pair.first); 
 
     auto& I = pair.second; 
-    strs.push_back(std::to_string(I.x[0])); 
-    strs.push_back(std::to_string(I.x[1])); 
-    strs.push_back(std::to_string(I.x[2])); 
-    strs.push_back(std::to_string(I.val)); 
+    
     strs.push_back(I.eid); 
+    strs.push_back(std::to_string(I.val)); 
+    
+    // strs.push_back(std::to_string(I.x[0])); 
+    // strs.push_back(std::to_string(I.x[1])); 
+    // strs.push_back(std::to_string(I.x[2])); 
+
+    for(int i = 0; i < I.x.size(); ++i) {
+      strs.push_back(std::to_string(I.x[i])); 
+    }
   }
 
   void receive_intersection(std::pair<std::string, intersection_t>& pair) {
     pair.first = strs[0]; 
-
+    
     intersection_t& I = pair.second; 
-    I.x[0] = std::stof(strs[1]); 
-    I.x[1] = std::stof(strs[2]); 
-    I.x[2] = std::stof(strs[3]); 
-    I.val = std::stof(strs[4]); 
-    I.eid = strs[5];
+    
+    I.eid = strs[1];
+    I.val = std::stof(strs[2]); 
+
+    // I.x[0] = std::stof(strs[3]); 
+    // I.x[1] = std::stof(strs[4]); 
+    // I.x[2] = std::stof(strs[5]); 
+
+    for(int i = 3; i < strs.size(); ++i) {
+      I.x.push_back(std::stof(strs[i])); 
+    }
   }
 
 };

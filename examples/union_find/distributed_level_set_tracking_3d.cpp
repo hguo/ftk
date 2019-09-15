@@ -64,24 +64,27 @@
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
 
+#define DIM 4
+
 
 int CRITICAL_POINT_TYPE; // By default, track maximum points
 
 int nthreads;
 
-int DW, DH; // the dimensionality of the data is DW*DH
+int DW, DH, DD; // the dimensionality of the data is DW*DH*DD
 int DT; // number of timesteps
+std::vector<int> D_sizes;
 
 double start, end; 
 
 hypermesh::ndarray<float> scalar, grad, hess;
-diy::DiscreteBounds data_box(3); // bounds of data box
-std::vector<int> data_offset(3);
+diy::DiscreteBounds data_box(DIM); // bounds of data box
+std::vector<int> data_offset(DIM);
 
-hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
+hypermesh::regular_simplex_mesh m(DIM); // the 3D space-time mesh
 
-hypermesh::regular_simplex_mesh block_m(3); // the 3D space-time mesh of this block
-hypermesh::regular_simplex_mesh block_m_ghost(3); // the 3D space-time mesh of this block with ghost cells
+hypermesh::regular_simplex_mesh block_m(DIM); // the 3D space-time mesh of this block
+hypermesh::regular_simplex_mesh block_m_ghost(DIM); // the 3D space-time mesh of this block with ghost cells
 
 std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>> lattice_partitions;
 float threshold; // threshold for super level sets. 
@@ -101,42 +104,15 @@ std::vector<std::vector<float>> level_sets;
 
 std::string filename_time_uf_w; // record time for each round of union-find
 
-int scaling_factor; // the factor that controls the shape of the synthesize data, default value: 15
-
-template <typename T> // the synthetic function
-T f(T x, T y, T t) 
-{
-  return cos(x*cos(t)-y*sin(t))*sin(x*sin(t)+y*cos(t));
-}
-
-template <typename T>
-hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
-{
-  hypermesh::ndarray<T> scalar;
-  // scalar.reshape(DW, DH, DT);
-  scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
-
-  for (int k = 0; k < data_box.max[2] + 1 - data_offset[2]; k ++) {
-    for (int j = 0; j < data_box.max[1] + 1 - data_offset[1]; j ++) {
-      for (int i = 0; i < data_box.max[0] + 1 - data_offset[0]; i ++) {
-        const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
-                y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
-                t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
-
-        scalar(i, j, k) = f(x, y, t);
-      }
-    }
-  }
-
-  return scalar;
-}
-
 void decompose_mesh(int nblocks) {
   std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
   // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
   // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
 
-  std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
+  std::vector<size_t> ghost; // at least 1, larger is ok
+  for(int i = 0; i < DIM; ++i) {
+    ghost.push_back(1); 
+  }
 
   const hypermesh::regular_lattice& lattice = m.lattice(); 
   lattice.partition(nblocks, given, ghost, lattice_partitions); 
@@ -148,11 +124,13 @@ void decompose_mesh(int nblocks) {
   block_m.set_lb_ub(lattice_p);
   block_m_ghost.set_lb_ub(lattice_ghost_p);
 
-  data_box.min[0] = block_m_ghost.lb(0); data_box.max[0] = block_m_ghost.ub(0); 
-  data_box.min[1] = block_m_ghost.lb(1); data_box.max[1] = block_m_ghost.ub(1); 
-  data_box.min[2] = block_m_ghost.lb(2); data_box.max[2] = block_m_ghost.ub(2); 
+  for(int i = 0; i < DIM; ++i) {
+    data_box.min[i] = block_m_ghost.lb(i); data_box.max[i] = block_m_ghost.ub(i);  
+  }
 
-  data_offset = {data_box.min[0], data_box.min[1], data_box.min[2]}; 
+  for(int i = 0; i < DIM; ++i) {
+    data_offset.push_back(data_box.min[i]); 
+  }
 }
 
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
@@ -163,11 +141,12 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   float value; 
 
   {
-    int _i = vertices[0][0] - data_offset[0];
-    int _j = vertices[0][1] - data_offset[1];
-    int _k = vertices[0][2] - data_offset[2];
+    std::vector<int> indices; 
+    for(int i = 0; i < DIM; ++i) {
+      indices.push_back(vertices[0][i] - data_offset[i]); 
+    }
 
-    value = scalar(_i, _j, _k);
+    value = scalar(indices);
   }
 
   if(value < threshold) {
@@ -178,7 +157,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   I.eid = f.to_string();
   I.val = value; 
 
-  for(int i = 0; i < 3; ++i) {
+  for(int i = 0; i < DIM; ++i) {
     I.x.push_back(f.corner[i]); 
     I.corner.push_back(f.corner[i]); 
   }
@@ -397,7 +376,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
           }
 
           bool flag = true;
-          for(int j = 0; j < 3; ++j) {
+          for(int j = 0; j < DIM; ++j) {
             if(f.corner[j] < b->block_bounds[i].min[j] || f.corner[j] > b->block_bounds[i].max[j]) {
               flag = false;
               break;
@@ -437,19 +416,16 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
   bool wrap = false; 
   int hist = 128; //32; 512
 
-  // DIM = 3
+  diy::ContinuousBounds domain(DIM);
 
-  diy::ContinuousBounds domain(3);
+  for(int i = 0; i < DIM; ++i) {
+    domain.min[i] = 0; domain.max[i] = D_sizes[i]-1; 
+  }
 
-  // m.set_lb_ub({0, 0, 0}, {DW-1, DH-1, DT-1});
-  domain.min[0] = 0; domain.max[0] = DW-1; 
-  domain.min[1] = 0; domain.max[1] = DH-1; 
-  domain.min[2] = 0; domain.max[2] = DT-1; 
-
-  diy::RegularContinuousLink* link = new diy::RegularContinuousLink(3, domain, domain);
+  diy::RegularContinuousLink* link = new diy::RegularContinuousLink(DIM, domain, domain);
   master.add(gid, b, link); 
 
-  diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
+  diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, DIM, domain, &Block_Critical_Point::points, 2*hist, wrap);
       // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
 
 
@@ -581,20 +557,20 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       }
 
       std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
-        return (a.corner[2] < b.corner[2]) || (a.corner[2] == b.corner[2] && a.corner[0] < b.corner[0]) || (a.corner[2] == b.corner[2] && a.corner[0] == b.corner[0] && a.corner[1] < b.corner[1]); 
+        return a.corner[DIM-1] < b.corner[DIM-1]; 
       }); 
 
       std::vector<float>& level_set = level_sets.emplace_back();
       for (int k = 0; k < eles.size(); k ++) {
         auto& p = intersections->at(eles[k].to_string());
 
-        level_set.push_back(p.x[0]); //  / (DW-1));
-        level_set.push_back(p.x[1]); //  / (DH-1));
-        level_set.push_back(p.x[2]); //  / (DT-1));
+        for(int i = 0; i < DIM; ++i) {
+          level_set.push_back(p.x[i]); 
+        }
+        
         level_set.push_back(p.val);
       } 
     }
-
   }
 
   // #ifdef FTK_HAVE_MPI
@@ -626,8 +602,8 @@ void print_level_sets()
   for (int i = 0; i < level_sets.size(); i ++) {
     printf("--Level-set %d:\n", i);
     const auto &level_set = level_sets[i];
-    for (int k = 0; k < level_set.size()/4; k ++) {
-      printf("---x=(%f, %f), t=%f, val=%f\n", level_set[k*4], level_set[k*4+1], level_set[k*4+2], level_set[k*4+3]);
+    for (int k = 0; k < level_set.size()/(DIM+1); k ++) {
+      // printf("---x=(%f, %f), t=%f, val=%f\n", level_set[k*4], level_set[k*4+1], level_set[k*4+2], level_set[k*4+3]);
     }
   }
 }
@@ -787,14 +763,13 @@ int main(int argc, char **argv)
     ("write-time-union-find", "write time for each round of union-find", cxxopts::value<std::string>(filename_time_uf_w))
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
+    ("d,depth", "depth", cxxopts::value<int>(DD)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
     ("critical-point-type", "Track which type of critical points", cxxopts::value<int>(CRITICAL_POINT_TYPE)->default_value(std::to_string(MAXIMUM_POINT)))
-    ("scaling-factor", "scaling factor for synthetic data", cxxopts::value<int>(scaling_factor)->default_value("15"))
     ("threshold", "threshold", cxxopts::value<float>(threshold)->default_value("0"))
     // ("threshold-length", "threshold for level_set length", cxxopts::value<int>(threshold_length)->default_value("-1"))
     ("vtk", "visualization with vtk", cxxopts::value<bool>(show_vtk))
-    ("qt", "visualization with qt", cxxopts::value<bool>(show_qt))
-    ("d,debug", "enable debugging");
+    ("qt", "visualization with qt", cxxopts::value<bool>(show_qt));
   auto results = options.parse(argc, argv);
 
   #ifdef FTK_HAVE_MPI
@@ -804,7 +779,9 @@ int main(int argc, char **argv)
   // Decompose mesh
   // ========================================
 
-  m.set_lb_ub({0, 0, 0}, {DW-1, DH-1, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
+  // ?????
+  D_sizes = {DW, DH, DD, DT}; 
+  m.set_lb_ub({0, 0, 0, 0}, {DW-1, DH-1, DD-1, DT-1}); // update the mesh; set the lower and upper bounds of the mesh
 
   decompose_mesh(nblocks); 
 
@@ -814,24 +791,30 @@ int main(int argc, char **argv)
   // ========================================
 
   if (pattern.empty()) { // if the input data is not given, generate a synthetic data for the demo
-    scalar = generate_synthetic_data<float>(DW, DH, DT);
+    std::cout<<"Error! No Data! "<<std::endl; 
+    exit(0);
   } else { // load the binary data
 
     diy::mpi::io::file in(world, pattern, diy::mpi::io::file::rdonly);
     
-    diy::DiscreteBounds diy_box(3);
-    diy_box.min[0] = data_box.min[2]; diy_box.max[0] = data_box.max[2]; 
-    diy_box.min[1] = data_box.min[1]; diy_box.max[1] = data_box.max[1]; 
-    diy_box.min[2] = data_box.min[0]; diy_box.max[2] = data_box.max[0]; 
+    diy::DiscreteBounds diy_box(DIM);
+    for(int i = 0; i < DIM; ++i) {
+      diy_box.min[i] = data_box.min[DIM-i]; diy_box.max[i] = data_box.max[DIM-i];  
+    }
+
 
     std::vector<unsigned> shape;
-    shape.push_back(DT);
-    shape.push_back(DH);
-    shape.push_back(DW);
+    for(int i = 0; i < DIM; ++i) {
+      shape.push_back(D_sizes[DIM - i]); 
+    }
 
     diy::io::BOV reader(in, shape);
 
-    scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
+    std::vector<size_t> reshape;
+    for(int i = 0; i < DIM; ++i) {
+      reshape.push_back(data_box.max[i] - data_box.min[i] + 1); 
+    }
+    scalar.reshape(reshape);
 
     reader.read(diy_box, scalar.data(), true);
     // reader.read(diy_box, scalar.data());
