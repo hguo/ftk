@@ -73,7 +73,7 @@ int nthreads;
 
 int DW, DH, DD; // the dimensionality of the data is DW*DH
 int DT; // number of timesteps
-std::vector<int> D_sizes;
+std::vector<int> D_sizes(DIM);
 
 double start, end; 
 
@@ -108,9 +108,10 @@ template <typename T>
 hypermesh::ndarray<T> derive_gradients3(const hypermesh::ndarray<T>& scalar)
 {
   hypermesh::ndarray<T> grad;
-  std::vector<size_t> reshape = {DIM-1};
+  std::vector<size_t> reshape(DIM+1);
+  reshape[0] = DIM-1;
   for(int i = 0; i < DIM; ++i) {
-    reshape.push_back(scalar.dim(i)); 
+    reshape[i+1] = scalar.dim(i); 
   }
   grad.reshape(reshape);
   
@@ -134,9 +135,10 @@ template <typename T>
 hypermesh::ndarray<T> derive_hessians3(const hypermesh::ndarray<T>& grad)
 {
   hypermesh::ndarray<T> hess;
-  std::vector<size_t> reshape = {DIM-1};
+  std::vector<size_t> reshape(DIM+2);
+  reshape[0] = DIM-1;
   for(int i = 0; i < DIM+1; ++i) {
-    reshape.push_back(grad.dim(i)); 
+    reshape[i+1] = grad.dim(i); 
   }
 
   for (int l = std::max(0, block_m_ghost.lb(3)) - data_offset[3]; l < std::min(block_m_ghost.ub(3)+1, DT) - data_offset[3]; l ++) {
@@ -178,9 +180,9 @@ void decompose_mesh(int nblocks) {
   // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
   // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
 
-  std::vector<size_t> ghost; // at least 1, larger is ok
+  std::vector<size_t> ghost(DIM); // at least 1, larger is ok
   for(int i = 0; i < DIM; ++i) {
-    ghost.push_back(1); 
+    ghost[i] = 1; 
   }
 
   const hypermesh::regular_lattice& lattice = m.lattice(); 
@@ -939,16 +941,16 @@ int main(int argc, char **argv)
       diy_box.min[i] = data_box.min[DIM-1-i]; diy_box.max[i] = data_box.max[DIM-1-i];  
     }
 
-    std::vector<unsigned> shape;
+    std::vector<unsigned> shape(DIM);
     for(int i = 0; i < DIM; ++i) {
-      shape.push_back(D_sizes[DIM-1-i]); 
+      shape[i] = D_sizes[DIM-1-i]; 
     }
 
     diy::io::BOV reader(in, shape);
 
-    std::vector<size_t> reshape;
+    std::vector<size_t> reshape(DIM);
     for(int i = 0; i < DIM; ++i) {
-      reshape.push_back(data_box.max[i] - data_box.min[i] + 1); 
+      reshape[i] = data_box.max[i] - data_box.min[i] + 1; 
     }
     scalar.reshape(reshape);
 
