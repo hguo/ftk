@@ -149,6 +149,8 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     value = scalar(indices);
   }
 
+  std::cout<<"Finish finding scalar" << std::endl; 
+
   if(value < threshold) {
     return ;
   }
@@ -841,7 +843,15 @@ int main(int argc, char **argv)
       read_dump_file(filename_dump_r);
     } else { // derive gradients and do the sweep
 
+      if(world.rank() == 0) {
+        std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
+      }
+
+      if(world.rank() == 0) {
+
       scan_intersections();
+
+      }
 
       #ifdef FTK_HAVE_MPI
         #if TIME_OF_STEPS
