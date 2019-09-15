@@ -126,7 +126,11 @@ void decompose_mesh(int nblocks) {
 
   for(int i = 0; i < DIM; ++i) {
     data_box.min[i] = block_m_ghost.lb(i); data_box.max[i] = block_m_ghost.ub(i);  
+
+    std::cout<< data_box.min[i] << " " << data_box.max[i] << std::endl;
   }
+
+  exit(0); 
 
   for(int i = 0; i < DIM; ++i) {
     data_offset[i] = data_box.min[i]; 
