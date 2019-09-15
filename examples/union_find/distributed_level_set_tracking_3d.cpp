@@ -126,11 +126,7 @@ void decompose_mesh(int nblocks) {
 
   for(int i = 0; i < DIM; ++i) {
     data_box.min[i] = block_m_ghost.lb(i); data_box.max[i] = block_m_ghost.ub(i);  
-
-    std::cout<< "m: " << block_m.lb(i) << " " << block_m.ub(i) << std::endl;
   }
-
-  exit(0); 
 
   for(int i = 0; i < DIM; ++i) {
     data_offset[i] = data_box.min[i]; 
@@ -920,6 +916,8 @@ int main(int argc, char **argv)
     #if PRINT_ELE_COUNT
       if (world.rank() == 0) {
         std::cout<<"Feature Element Count is " << feature_ele_cnt << std::endl; 
+        std::cout<<"Point Count is " << b->points.size() << std::endl; 
+        std::cout<<"Intersection Count is " << intersections->size() << std::endl; 
       }
     #endif
 
