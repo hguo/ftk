@@ -198,7 +198,7 @@ void decompose_mesh(int nblocks) {
   }
 
   for(int i = 0; i < DIM; ++i) {
-    data_offset.push_back(data_box.min[i]); 
+    data_offset[i] = data_box.min[i]; 
   }
 }
 

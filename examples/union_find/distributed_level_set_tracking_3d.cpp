@@ -128,13 +128,8 @@ void decompose_mesh(int nblocks) {
     data_box.min[i] = block_m_ghost.lb(i); data_box.max[i] = block_m_ghost.ub(i);  
   }
 
-  if(data_offset.size() > 0) {
-    std::cout<<data_offset.size()<<std::endl; 
-    std::cout<<data_offset[0]<<std::endl; 
-  }
-  data_offset.clear(); 
   for(int i = 0; i < DIM; ++i) {
-    data_offset.push_back(data_box.min[i]); 
+    data_offset[i] = data_box.min[i]; 
   }
 }
 
@@ -845,27 +840,19 @@ int main(int argc, char **argv)
     if (!filename_dump_r.empty()) { // if the dump file is given, skill the sweep step; otherwise do sweep-and-trace
       read_dump_file(filename_dump_r);
     } else { // derive gradients and do the sweep
-
-      if(world.rank() == 0) {
-        std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
-      }
-
-      // if(world.rank() == 1) {
-
+      
       scan_intersections();
 
-      // }
-
-      #ifdef FTK_HAVE_MPI
-        #if TIME_OF_STEPS
-          MPI_Barrier(world);
-          end = MPI_Wtime();
-          if(world.rank() == 0) {
-            std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
-          }
-          start = end; 
-        #endif
-      #endif
+      // #ifdef FTK_HAVE_MPI
+      //   #if TIME_OF_STEPS
+      //     MPI_Barrier(world);
+      //     end = MPI_Wtime();
+      //     if(world.rank() == 0) {
+      //       std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
+      //     }
+      //     start = end; 
+      //   #endif
+      // #endif
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
