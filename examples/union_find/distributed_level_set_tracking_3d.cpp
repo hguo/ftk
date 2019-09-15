@@ -153,6 +153,8 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     return ;
   }
 
+  return ;
+
   intersection_t I;
   I.eid = f.to_string();
   I.val = value; 
