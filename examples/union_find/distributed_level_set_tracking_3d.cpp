@@ -128,6 +128,10 @@ void decompose_mesh(int nblocks) {
     data_box.min[i] = block_m_ghost.lb(i); data_box.max[i] = block_m_ghost.ub(i);  
   }
 
+  if(data_offset.size() > 0) {
+    std::cout<<data_offset.size()<<std::endl; 
+    std::cout<<data_offset[0]<<std::endl; 
+  }
   data_offset.clear(); 
   for(int i = 0; i < DIM; ++i) {
     data_offset.push_back(data_box.min[i]); 
@@ -142,13 +146,6 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   float value; 
 
   {
-    // int _i = vertices[0][0] - data_offset[0];
-    // int _j = vertices[0][1] - data_offset[1];
-    // int _k = vertices[0][2] - data_offset[2];
-    // int _l = vertices[0][3] - data_offset[3];
-
-    // value = scalar(_i, _j, _k, _l);
-
     std::vector<int> indices; 
     for(int i = 0; i < DIM; ++i) {
       indices.push_back(vertices[0][i] - data_offset[i]); 
