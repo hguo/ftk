@@ -71,7 +71,7 @@ int CRITICAL_POINT_TYPE; // By default, track maximum points
 
 int nthreads;
 
-int DW, DH, DD; // the dimensionality of the data is DW*DH
+int DW, DH, DD; // the dimensionality of the data is DW*DH*DD
 int DT; // number of timesteps
 std::vector<int> D_sizes(DIM);
 
