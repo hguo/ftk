@@ -141,12 +141,19 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   float value; 
 
   {
-    std::vector<int> indices; 
-    for(int i = 0; i < DIM; ++i) {
-      indices.push_back(vertices[0][i] - data_offset[i]); 
-    }
+    int _i = vertices[0][0] - data_offset[0];
+    int _j = vertices[0][1] - data_offset[1];
+    int _k = vertices[0][2] - data_offset[2];
+    int _l = vertices[0][3] - data_offset[3];
 
-    value = scalar(indices);
+    value = scalar(_i, _j, _k, _l);
+
+    // std::vector<int> indices; 
+    // for(int i = 0; i < DIM; ++i) {
+    //   indices.push_back(vertices[0][i] - data_offset[i]); 
+    // }
+
+    // value = scalar(indices);
   }
 
   if(value < threshold) {
