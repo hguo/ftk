@@ -843,41 +843,32 @@ int main(int argc, char **argv)
 
       scan_intersections();
 
-      // #ifdef FTK_HAVE_MPI
-      //   #if TIME_OF_STEPS
-      //     end = MPI_Wtime();
-      //     std::cout << end - start <<std::endl;
-      //     // std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
-      //     start = end; 
-      //   #endif
-      // #endif
-
-      // #ifdef FTK_HAVE_MPI
-      //   #if TIME_OF_STEPS
-      //     MPI_Barrier(world);
-      //     end = MPI_Wtime();
-      //     if(world.rank() == 0) {
-      //       std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
-      //     }
-      //     start = end; 
-      //   #endif
-      // #endif
+      #ifdef FTK_HAVE_MPI
+        #if TIME_OF_STEPS
+          MPI_Barrier(world);
+          end = MPI_Wtime();
+          if(world.rank() == 0) {
+            std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
+          }
+          start = end; 
+        #endif
+      #endif
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
 
     add_related_elements_to_intersections(); 
 
-    // #ifdef FTK_HAVE_MPI
-    //   #if TIME_OF_STEPS
-    //     MPI_Barrier(world);
-    //     end = MPI_Wtime();
-    //     if(world.rank() == 0) {
-    //       std::cout << "Get Edges: " << end - start << " seconds. " << std::endl;
-    //     }
-    //     start = end; 
-    //   #endif
-    // #endif
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+          std::cout << "Get Edges: " << end - start << " seconds. " << std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
 
     // std::vector<intersection_t> points; 
     for(auto intersection : *intersections) {
@@ -886,16 +877,16 @@ int main(int argc, char **argv)
       }
     }
 
-    // #ifdef FTK_HAVE_MPI
-    //   #if TIME_OF_STEPS
-    //     MPI_Barrier(world);
-    //     end = MPI_Wtime();
-    //     if(world.rank() == 0) {
-    //       std::cout << "Add points into data block: " << end - start << " seconds. " <<std::endl;
-    //     }
-    //     start = end; 
-    //   #endif
-    // #endif
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+          std::cout << "Add points into data block: " << end - start << " seconds. " <<std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
 
     #ifdef FTK_HAVE_MPI
       #if TIME_OF_STEPS
