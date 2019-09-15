@@ -521,11 +521,9 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
 void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner) {
   bool wrap = false; 
   int hist = 128; //32; 512
-
+  
   for(int i = 0; i < DIM; ++i) {
-    if(D_sizes[i] < hist) {
-      hist = D_sizes[i] ;
-    }
+    hist = std::min(hist, D_sizes[i]); 
   }
 
   diy::ContinuousBounds domain(DIM);

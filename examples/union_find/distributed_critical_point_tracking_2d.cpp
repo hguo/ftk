@@ -542,6 +542,8 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
   bool wrap = false; 
   int hist = 128; //32; 512
 
+  hist = std::min({hist, DW, DH, DT}); 
+
   // DIM = 3
 
   diy::ContinuousBounds domain(3);
