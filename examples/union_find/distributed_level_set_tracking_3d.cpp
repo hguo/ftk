@@ -839,9 +839,9 @@ int main(int argc, char **argv)
       read_dump_file(filename_dump_r);
     } else { // derive gradients and do the sweep
 
-      // if(world.rank() == 0) {
-      //   std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
-      // }
+      if(world.rank() == 0) {
+        std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
+      }
 
       // if(world.rank() == 1) {
 
@@ -849,16 +849,16 @@ int main(int argc, char **argv)
 
       // }
 
-      // #ifdef FTK_HAVE_MPI
-      //   #if TIME_OF_STEPS
-      //     MPI_Barrier(world);
-      //     end = MPI_Wtime();
-      //     if(world.rank() == 0) {
-      //       std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
-      //     }
-      //     start = end; 
-      //   #endif
-      // #endif
+      #ifdef FTK_HAVE_MPI
+        #if TIME_OF_STEPS
+          MPI_Barrier(world);
+          end = MPI_Wtime();
+          if(world.rank() == 0) {
+            std::cout << "Scan for Satisfied Points: " << end - start << " seconds. " <<std::endl;
+          }
+          start = end; 
+        #endif
+      #endif
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
