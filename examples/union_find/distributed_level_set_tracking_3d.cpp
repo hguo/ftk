@@ -417,6 +417,12 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
   bool wrap = false; 
   int hist = 128; //32; 512
 
+  for(int i = 0; i < DIM; ++i) {
+    if(D_sizes[i] < hist) {
+      hist = D_sizes[i] ;
+    }
+  }
+
   diy::ContinuousBounds domain(DIM);
 
   for(int i = 0; i < DIM; ++i) {
