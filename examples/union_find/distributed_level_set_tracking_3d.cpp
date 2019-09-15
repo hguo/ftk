@@ -918,6 +918,7 @@ int main(int argc, char **argv)
         std::cout<<"Feature Element Count is " << feature_ele_cnt << std::endl; 
         std::cout<<"Point Count is " << b->points.size() << std::endl; 
         std::cout<<"Intersection Count is " << intersections->size() << std::endl; 
+        exit(0); 
       }
     #endif
 
