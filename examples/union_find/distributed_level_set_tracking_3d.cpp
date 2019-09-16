@@ -104,6 +104,10 @@ std::vector<std::vector<float>> level_sets;
 
 std::string filename_time_uf_w; // record time for each round of union-find
 
+int tmp_count = 0;
+int tmp_total_count = 0;
+int tmp_total_total_count = 0;
+
 void decompose_mesh(int nblocks) {
   std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
   // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
@@ -135,6 +139,8 @@ void decompose_mesh(int nblocks) {
 
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 {
+  tmp_total_total_count += 1;
+
   if (!f.valid()) return; // check if the 0-simplex is valid
   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
 
@@ -149,9 +155,13 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     value = scalar(indices);
   }
 
+  tmp_total_count += 1;
+
   if(value < threshold) {
     return ;
   }
+
+  tmp_count += 1;
 
   intersection_t I;
   I.eid = f.to_string();
@@ -845,6 +855,15 @@ int main(int argc, char **argv)
 
       scan_intersections();
 
+      if(world.rank() == 0) {
+        std::cout<<"Total Total Count " << tmp_total_total_count << std::endl; 
+        std::cout<<"Total Count " << tmp_total_count << std::endl; 
+        std::cout<<"Feature Count " << tmp_count << std::endl; 
+
+        std::cout<<"Point Count is " << b->points.size() << std::endl; 
+        std::cout<<"Intersection Count is " << intersections->size() << std::endl; 
+      }
+
       // #ifdef FTK_HAVE_MPI
       //   #if TIME_OF_STEPS
       //     MPI_Barrier(world);
@@ -916,8 +935,6 @@ int main(int argc, char **argv)
     #if PRINT_ELE_COUNT
       if (world.rank() == 0) {
         std::cout<<"Feature Element Count is " << feature_ele_cnt << std::endl; 
-        std::cout<<"Point Count is " << b->points.size() << std::endl; 
-        std::cout<<"Intersection Count is " << intersections->size() << std::endl; 
       }
     #endif
 
