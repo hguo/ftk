@@ -184,7 +184,29 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
 void scan_intersections() 
 {
-  block_m_ghost.element_for(0, check_simplex, nthreads); // iterate over all 0-simplices
+  // block_m_ghost.element_for(0, check_simplex, nthreads); // iterate over all 0-simplices
+
+  for (int l = 0; l < DT; l ++) {
+    for (int k = 0; k < DD; k ++) {
+      for (int j = 0; j < DH; j ++) {
+        for (int i = 0; i < DW; i ++) {
+          tmp_total_total_count += 1;
+          tmp_total_count += 1;
+
+          float value = scale(i, j, k, l); 
+
+          if(value < threshold) {
+            continue ;
+          }
+
+          tmp_count += 1;
+
+        }
+      }
+    }
+  }
+
+
 }
 
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
@@ -862,6 +884,8 @@ int main(int argc, char **argv)
 
         std::cout<<"Point Count is " << b->points.size() << std::endl; 
         std::cout<<"Intersection Count is " << intersections->size() << std::endl; 
+
+        exit(0);
       }
 
       // #ifdef FTK_HAVE_MPI
