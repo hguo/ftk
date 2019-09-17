@@ -1,3 +1,5 @@
+#define _FILE_OFFSET_BITS  64
+
 #include <fstream>
 #include <mutex>
 #include <thread>
@@ -846,7 +848,7 @@ int main(int argc, char **argv)
     }
     scalar.reshape(reshape);
 
-    reader.read(diy_box, scalar.data(), true, 10);
+    reader.read(diy_box, scalar.data(), true);
     // reader.read(diy_box, scalar.data());
   }
 
