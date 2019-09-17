@@ -106,7 +106,6 @@ std::string filename_time_uf_w; // record time for each round of union-find
 
 int tmp_count = 0;
 int tmp_total_count = 0;
-int tmp_total_total_count = 0;
 
 void decompose_mesh(int nblocks) {
   std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
@@ -139,8 +138,6 @@ void decompose_mesh(int nblocks) {
 
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 {
-  tmp_total_total_count += 1;
-
   if (!f.valid()) return; // check if the 0-simplex is valid
   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
 
@@ -190,7 +187,6 @@ void scan_intersections()
     for (int k = 0; k < DD; k ++) {
       for (int j = 0; j < DH; j ++) {
         for (int i = 0; i < DW; i ++) {
-          tmp_total_total_count += 1;
           tmp_total_count += 1;
 
           float value = scalar(i, j, k, l); 
@@ -850,7 +846,8 @@ int main(int argc, char **argv)
     }
     scalar.reshape(reshape);
 
-    reader.read(diy_box, scalar.data(), true);
+    // reader.read(diy_box, scalar.data(), true);
+    reader.read(diy_box, scalar.data(), false);
     // reader.read(diy_box, scalar.data());
   }
 
@@ -878,7 +875,6 @@ int main(int argc, char **argv)
       scan_intersections();
 
       if(world.rank() == 0) {
-        std::cout<<"Total Total Count " << tmp_total_total_count << std::endl; 
         std::cout<<"Total Count " << tmp_total_count << std::endl; 
         std::cout<<"Feature Count " << tmp_count << std::endl; 
 
