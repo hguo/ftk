@@ -846,8 +846,7 @@ int main(int argc, char **argv)
     }
     scalar.reshape(reshape);
 
-    // reader.read(diy_box, scalar.data(), true);
-    reader.read(diy_box, scalar.data(), false);
+    reader.read(diy_box, scalar.data(), true, 10);
     // reader.read(diy_box, scalar.data());
   }
 
