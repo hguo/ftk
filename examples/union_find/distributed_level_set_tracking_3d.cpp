@@ -104,9 +104,6 @@ std::vector<std::vector<float>> level_sets;
 
 std::string filename_time_uf_w; // record time for each round of union-find
 
-int tmp_count = 0;
-int tmp_total_count = 0;
-
 void decompose_mesh(int nblocks) {
   std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
   // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
@@ -152,13 +149,9 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     value = scalar(indices);
   }
 
-  tmp_total_count += 1;
-
   if(value < threshold) {
     return ;
   }
-
-  tmp_count += 1;
 
   intersection_t I;
   I.eid = f.to_string();
@@ -181,28 +174,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 
 void scan_intersections() 
 {
-  // block_m_ghost.element_for(0, check_simplex, nthreads); // iterate over all 0-simplices
-
-  for (int l = 0; l < DT; l ++) {
-    for (int k = 0; k < DD; k ++) {
-      for (int j = 0; j < DH; j ++) {
-        for (int i = 0; i < DW; i ++) {
-          tmp_total_count += 1;
-
-          float value = scalar(i, j, k, l); 
-
-          if(value < threshold) {
-            continue ;
-          }
-
-          tmp_count += 1;
-
-        }
-      }
-    }
-  }
-
-
+  block_m_ghost.element_for(0, check_simplex, nthreads); // iterate over all 0-simplices
 }
 
 bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
@@ -872,16 +844,6 @@ int main(int argc, char **argv)
     } else { // derive gradients and do the sweep
 
       scan_intersections();
-
-      if(world.rank() == 0) {
-        std::cout<<"Total Count " << tmp_total_count << std::endl; 
-        std::cout<<"Feature Count " << tmp_count << std::endl; 
-
-        std::cout<<"Point Count is " << b->points.size() << std::endl; 
-        std::cout<<"Intersection Count is " << intersections->size() << std::endl; 
-
-        exit(0);
-      }
 
       // #ifdef FTK_HAVE_MPI
       //   #if TIME_OF_STEPS
