@@ -193,7 +193,7 @@ void scan_intersections()
           tmp_total_total_count += 1;
           tmp_total_count += 1;
 
-          float value = scale(i, j, k, l); 
+          float value = scalar(i, j, k, l); 
 
           if(value < threshold) {
             continue ;
