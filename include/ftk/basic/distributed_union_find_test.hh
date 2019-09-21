@@ -727,7 +727,9 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
       auto& src = b->get_related_elements(ele);
       std::vector<std::string> cache;
 
-      if(src.size() > 0) {
+      std::string parent = b->parent(ele);
+
+      if(src.size() > 0 && (b->has(parent) || b->is_intermediate_root(parent))) {
 
         std::string par = b->parent(ele); 
         bool is_local_parent = true; 
@@ -858,7 +860,7 @@ void local_computation(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp
   #endif
 
 
-  // if(b->cache_send_intermediate_roots.size() > 0) {
+  if(b->cache_send_intermediate_roots.size() > 0) {
     diy::Link* l = cp.link();
     for(auto& pair : b->cache_send_intermediate_roots) {
       if(pair.second.size() > 0) {
@@ -872,8 +874,8 @@ void local_computation(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp
         pair.second.clear(); 
       } 
     }
-    // b->cache_send_intermediate_roots.clear(); 
-  // }
+    b->cache_send_intermediate_roots.clear(); 
+  }
 
 }
 
