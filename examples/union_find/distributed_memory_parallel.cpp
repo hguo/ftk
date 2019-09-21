@@ -12,7 +12,7 @@
 #include <ftk/external/diy/assigner.hpp>
 // #include <ftk/external/diy/serialization.hpp>
 
-#include <ftk/basic/distributed_union_find.hh>
+#include <ftk/basic/distributed_union_find_test.hh>
 
 #include "connected_critical_point.hpp"
 

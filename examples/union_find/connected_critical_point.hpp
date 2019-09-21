@@ -1,4 +1,4 @@
-#include <ftk/basic/distributed_union_find.hh>
+#include <ftk/basic/distributed_union_find_test.hh>
 
 // struct intersection_t {
 //   template <class Archive> void serialize(Archive & ar) {
@@ -335,20 +335,20 @@ void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, d
     if(b->is_root(ele)) {
       root2set[ele].insert(ele);  
 
-      auto& children = b->children(ele); 
-      for(auto& child : children) {
+      // auto& children = b->children(ele); 
+      // for(auto& child : children) {
+      //   root2set[ele].insert(child); 
+      // }
+
+      auto& local_children = b->local_children(ele); 
+      for(auto& child : local_children) {
         root2set[ele].insert(child); 
       }
 
-      // auto& local_children = b->local_children(ele); 
-      // for(auto& child : local_children) {
-      //   root2set[ele].insert(child); 
-      // }
-
-      // auto& nonlocal_children = b->nonlocal_children(ele); 
-      // for(auto& child : nonlocal_children) {
-      //   root2set[ele].insert(child); 
-      // }
+      auto& nonlocal_children = b->nonlocal_children(ele); 
+      for(auto& child : nonlocal_children) {
+        root2set[ele].insert(child); 
+      }
 
     }
   }
