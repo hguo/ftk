@@ -492,7 +492,7 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
     // }
 
     if(b->is_root(ele)) {
-      auto related_elements = b->get_related_elements(ele); 
+      auto& related_elements = b->get_related_elements(ele); 
 
       std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
 
