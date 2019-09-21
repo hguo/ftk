@@ -746,9 +746,9 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
       }
 
 
-      {
+      if(is_local_grandparent || b->is_intermediate_root(grandparent)) {
         auto& local_children = b->local_children(parent); 
-        if(local_children.size() > 0 && (is_local_grandparent || b->is_intermediate_root(grandparent))) {
+        if(local_children.size() > 0) {
           for(auto& child : local_children) {
 
             // Set child's parent to grandparent
