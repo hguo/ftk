@@ -1,4 +1,4 @@
-#include <ftk/basic/distributed_union_find.hh>
+#include <ftk/basic/distributed_union_find_test.hh>
 
 // struct intersection_t {
 //   template <class Archive> void serialize(Archive & ar) {
@@ -265,98 +265,109 @@ void get_sets_on_p0(Block_Critical_Point* b, diy::mpi::communicator& world, diy:
 }
 
 
-// Method 2:
-// Gather all element-root information to the process of the root
-  // Since the roots have all children, can directly use the information to reconstruct the sets; the only lacking part is the intersection. 
-  // Step one: send to root
-  // Step two: gather on root
-void send_2_roots(Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) {
-  int gid = cp.gid(); 
-  diy::Link* l = cp.link();
+// // Method 2:
+// // Gather all element-root information to the process of the root
+//   // Since the roots have all children, can directly use the information to reconstruct the sets; the only lacking part is the intersection. 
+//   // Step one: send to root
+//   // Step two: gather on root
+// void send_2_roots(Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) {
+//   int gid = cp.gid(); 
+//   diy::Link* l = cp.link();
 
-  for(auto& ele : b->eles) {
-    std::string root = b->parent(ele); 
-    if(b->has(root)) continue ; 
+//   for(auto& ele : b->eles) {
+//     std::string root = b->parent(ele); 
+//     if(b->has(root)) continue ; 
 
-    int gid_root = b->get_gid(root); 
-    auto& target = l->target(l->find(gid_root)); 
+//     int gid_root = b->get_gid(root); 
+//     auto& target = l->target(l->find(gid_root)); 
 
-    Message_Critical_Point send_msg_intersection; 
-    send_msg_intersection.send_intersection(*(b->intersections.find(ele))); 
+//     Message_Critical_Point send_msg_intersection; 
+//     send_msg_intersection.send_intersection(*(b->intersections.find(ele))); 
 
-    cp.enqueue(target, send_msg_intersection); 
-  }
-}
+//     cp.enqueue(target, send_msg_intersection); 
+//   }
+// }
 
-bool gather_on_roots(Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) {
+// bool gather_on_roots(Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) {
 
-  int gid = cp.gid(); 
-  diy::Link* l = cp.link();
+//   int gid = cp.gid(); 
+//   diy::Link* l = cp.link();
 
-  while(!cp.empty_incoming_queues()) {
-    // Save unions from other blocks
-    std::vector<int> in; // gids of incoming neighbors in the link
-    cp.incoming(in);
+//   while(!cp.empty_incoming_queues()) {
+//     // Save unions from other blocks
+//     std::vector<int> in; // gids of incoming neighbors in the link
+//     cp.incoming(in);
 
-    // for all neighbor blocks
-    // dequeue data received from this neighbor block in the last exchange
-    for (unsigned i = 0; i < in.size(); ++i) {
-      if(cp.incoming(in[i])) {
-        Message_Critical_Point msg; 
-        cp.dequeue(in[i], msg);
+//     // for all neighbor blocks
+//     // dequeue data received from this neighbor block in the last exchange
+//     for (unsigned i = 0; i < in.size(); ++i) {
+//       if(cp.incoming(in[i])) {
+//         Message_Critical_Point msg; 
+//         cp.dequeue(in[i], msg);
 
-        if(msg.tag == "intersection") {
-          std::pair<std::string, intersection_t> pair; 
-          msg.receive_intersection(pair);
+//         if(msg.tag == "intersection") {
+//           std::pair<std::string, intersection_t> pair; 
+//           msg.receive_intersection(pair);
 
-          b->intersections.insert(pair); 
-        } else {
-          std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
-        }
+//           b->intersections.insert(pair); 
+//         } else {
+//           std::cout<<"Wrong! Tag is not correct: "<<msg.tag<<std::endl; 
+//         }
 
-      }
-    }
-  }
+//       }
+//     }
+//   }
 
-  return true;
-}
+//   return true;
+// }
 
-// Get sets of elements on processes of roots
-void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  master.foreach(&send_2_roots); 
-  master.iexchange(&gather_on_roots); 
+// // Get sets of elements on processes of roots
+// void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+//   master.foreach(&send_2_roots); 
+//   master.iexchange(&gather_on_roots); 
 
-  // std::vector<int> gids;                     // global ids of local blocks
-  // assigner.local_gids(world.rank(), gids);
+//   // std::vector<int> gids;                     // global ids of local blocks
+//   // assigner.local_gids(world.rank(), gids);
 
-  std::map<std::string, std::set<std::string>> root2set; 
+//   std::map<std::string, std::set<std::string>> root2set; 
 
-  for(auto& ele : b->eles) {
-    if(b->is_root(ele)) {
-      root2set[ele].insert(ele);  
+//   for(auto& ele : b->eles) {
+//     if(b->is_root(ele)) {
+//       root2set[ele].insert(ele);  
 
-      auto& children = b->children(ele); 
-      for(auto& child : children) {
-        root2set[ele].insert(child); 
-      }
-    }
-  }
+//       // auto& children = b->children(ele); 
+//       // for(auto& child : children) {
+//       //   root2set[ele].insert(child); 
+//       // }
 
-  for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
-    results.push_back(ite->second);   
-  }
+//       auto& local_children = b->local_children(ele); 
+//       for(auto& child : local_children) {
+//         root2set[ele].insert(child); 
+//       }
 
-  #if ISDEBUG
-    for(int i = 0; i < results.size(); ++i) {
-      std::cout<<"Set "<<i<<":"<<std::endl; 
-      std::set<std::string>& ele_set = results[i]; 
-      for(auto& ele : ele_set) {
-        std::cout<<ele<<" "; 
-      }
-      std::cout<<std::endl; 
-    }
-  #endif
-}
+//       auto& nonlocal_children = b->nonlocal_children(ele); 
+//       for(auto& child : nonlocal_children) {
+//         root2set[ele].insert(child); 
+//       }
+
+//     }
+//   }
+
+//   for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
+//     results.push_back(ite->second);   
+//   }
+
+//   #if ISDEBUG
+//     for(int i = 0; i < results.size(); ++i) {
+//       std::cout<<"Set "<<i<<":"<<std::endl; 
+//       std::set<std::string>& ele_set = results[i]; 
+//       for(auto& ele : ele_set) {
+//         std::cout<<ele<<" "; 
+//       }
+//       std::cout<<std::endl; 
+//     }
+//   #endif
+// }
 
 
 
@@ -504,6 +515,6 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
 // Get sets of elements
 inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
   // get_sets_on_p0(this, world, master, assigner, results); 
-  get_sets_on_roots(this, world, master, assigner, results); 
-  // get_sets_redistributed(this, world, master, assigner, results); 
+  // get_sets_on_roots(this, world, master, assigner, results); 
+  get_sets_redistributed(this, world, master, assigner, results); 
 }

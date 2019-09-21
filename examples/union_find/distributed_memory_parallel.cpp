@@ -14,7 +14,7 @@
 
 #include <ftk/basic/distributed_union_find_test.hh>
 
-#include "connected_critical_point.hpp"
+#include "connected_critical_point_test.hpp"
 
 // typedef std::pair<std::string, int> ele_gid;  // stores element and its global block id
 // typedef std::map<std::string, std::vector<std::string>> r_ele_map; 

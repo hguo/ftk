@@ -4,7 +4,7 @@
 #include <cassert>
 #include <cxxopts.hpp>
 
-#define NDEBUG // Disable assert()
+// #define NDEBUG // Disable assert()
 
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
@@ -28,7 +28,7 @@
 #include <ftk/external/diy/algorithms.hpp>
 
 #include <ftk/basic/distributed_union_find_test.hh>
-#include "connected_critical_point.hpp"
+#include "connected_critical_point_test.hpp"
 
 #if FTK_HAVE_QT5
 #include "widget.h"
