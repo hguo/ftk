@@ -725,8 +725,7 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
             }
 
-          } 
-          else {
+          } else if(par < related_ele) {
 
             if(b->has(related_ele)) {
               b->add_related_element(related_ele, par); 

@@ -251,7 +251,7 @@ void get_sets_on_p0(Block_Critical_Point* b, diy::mpi::communicator& world, diy:
       results.push_back(ite->second);   
     }
 
-    if(ISDEBUG) {
+    #if ISDEBUG
       for(int i = 0; i < results.size(); ++i) {
         std::cout<<"Set "<<i<<":"<<std::endl; 
         std::set<std::string>& ele_set = results[i]; 
@@ -260,7 +260,7 @@ void get_sets_on_p0(Block_Critical_Point* b, diy::mpi::communicator& world, diy:
         }
         std::cout<<std::endl; 
       }
-    }
+    #endif
   }
 }
 
@@ -345,7 +345,7 @@ void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, d
     results.push_back(ite->second);   
   }
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     for(int i = 0; i < results.size(); ++i) {
       std::cout<<"Set "<<i<<":"<<std::endl; 
       std::set<std::string>& ele_set = results[i]; 
@@ -354,7 +354,7 @@ void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, d
       }
       std::cout<<std::endl; 
     }
-  }
+  #endif
 }
 
 
@@ -476,7 +476,7 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
     results.push_back(ite->second);   
   }
 
-  if(ISDEBUG) {
+  #if ISDEBUG
     for(int i = 0; i < results.size(); ++i) {
       std::cout<<"Set "<<i<<":"<<std::endl; 
       auto& ele_set = results[i]; 
@@ -485,7 +485,7 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
       }
       std::cout<<std::endl; 
     }
-  }
+  #endif
 
   // #ifdef FTK_HAVE_MPI
   //   MPI_Barrier(world); 
