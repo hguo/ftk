@@ -28,7 +28,7 @@ namespace ftk {
 template <class IdType=std::string>
 struct distributed_union_find
 {
-  distributed_union_find() : eles(), id2parent(), parent2children() {
+  distributed_union_find() : eles(), id2parent(), parent2localchildren(), parent2nonlocalchildren() {
 
   }
 
@@ -37,16 +37,14 @@ struct distributed_union_find
   void add(IdType i) {
     eles.insert(i); 
     id2parent.insert(std::make_pair(i, i)); 
-    parent2children.insert(std::make_pair(i, std::vector<IdType>())); 
+    parent2localchildren.insert(std::make_pair(i, std::vector<IdType>())); 
+    parent2nonlocalchildren.insert(std::make_pair(i, std::vector<IdType>())); 
   }
 
   // Operations
 
   void set_parent(IdType i, IdType par) {
-    if(!has(i)) {
-      std::cout<< "No element set_parent(). " <<std::endl;
-      exit(0); 
-    }
+    assert(has(i));
 
     // Ensure the id of new parent is smaller than the id of old parent
       // Otherwise, may occur override and erase the updated parent
@@ -59,12 +57,13 @@ struct distributed_union_find
   }
 
   void add_child(IdType par, IdType ele) {
-    if(!has(par)) {
-      std::cout<< "No element parent add_child(). " <<std::endl;
-      exit(0); 
-    }
+    assert(has(par));
 
-    parent2children[par].push_back(ele); 
+    if(this->has(ele)) {
+      parent2localchildren[par].push_back(ele);   
+    } else {
+      parent2nonlocalchildren[par].push_back(ele);   
+    }
   }
 
   void add_nonlocal_intermediate_root(IdType intermediate_root) {
@@ -82,34 +81,41 @@ struct distributed_union_find
   }
 
   IdType parent(IdType i) {
-    if(!has(i)) {
-      std::cout<< "No element parent parent(). " <<std::endl;
-      exit(0); 
-    }
+    assert(has(i));
 
     return id2parent[i]; 
   }
 
-  std::vector<IdType>& children(IdType i) {
-    if(!has(i)) {
-      std::cout<< "No element child children(). " <<std::endl;
-      exit(0); 
-    }
+  std::vector<IdType>& local_children(IdType i) {
+    assert(has(i));
 
-    return parent2children[i]; 
+    return parent2localchildren[i]; 
   }
 
-  typename std::vector<IdType>::iterator erase_child(IdType par, typename std::vector<IdType>::iterator ite) {
-    return parent2children[par].erase(ite); 
+  std::vector<IdType>& nonlocal_children(IdType i) {
+    assert(has(i));
+
+    return parent2nonlocalchildren[i]; 
   }
 
-  void clear_children(std::string i) {
-    if(!has(i)) {
-      std::cout<< "No element child children(). " <<std::endl;
-      exit(0); 
-    }
+  typename std::vector<IdType>::iterator erase_local_child(IdType par, typename std::vector<IdType>::iterator ite) {
+    return parent2localchildren[par].erase(ite); 
+  }
 
-    parent2children[i].clear(); 
+  typename std::vector<IdType>::iterator erase_nonlocal_child(IdType par, typename std::vector<IdType>::iterator ite) {
+    return parent2nonlocalchildren[par].erase(ite); 
+  }
+
+  void clear_local_children(std::string i) {
+    assert(has(i));
+
+    parent2localchildren[i].clear(); 
+  }
+
+  void clear_nonlocal_children(std::string i) {
+    assert(has(i));
+
+    parent2nonlocalchildren[i].clear(); 
   }
 
   bool is_nonlocal_intermediate_root(IdType i) {
@@ -121,10 +127,7 @@ struct distributed_union_find
   }
 
   bool is_root(IdType i) {
-    if(!has(i)) {
-      std::cout<< "No element is_root(). " <<i<<std::endl;
-      exit(0); 
-    }
+    assert(has(i));
 
     return i == id2parent[i]; 
   }
@@ -135,7 +138,12 @@ public:
 private:
   // Use HashMap to support sparse union-find
   std::map<IdType, IdType> id2parent;
-  std::map<IdType, std::vector<IdType>> parent2children;
+
+  // std::map<IdType, std::vector<IdType>> parent2children;
+
+  std::map<IdType, std::vector<IdType>> parent2localchildren;
+  std::map<IdType, std::vector<IdType>> parent2nonlocalchildren;
+
   std::set<IdType> nonlocal_intermediate_roots;
 };
 
@@ -166,16 +174,13 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   }
 
   bool has_related_element(std::string ele, std::string related_ele) {
-    if(this->has(ele)) {
-      if(this->related_elements[ele].find(related_ele) == this->related_elements[ele].end()) {
-        return false; 
-      }
+    assert(this->has(ele)); 
 
-      return true; 
-    } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
+    if(this->related_elements[ele].find(related_ele) == this->related_elements[ele].end()) {
+      return false; 
     }
+
+    return true; 
   }
 
   void add_related_element(std::string ele, std::string related_ele) {
@@ -183,48 +188,37 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
     // std::cout<<"Add union: "<<ele<<"-"<<related_ele<<std::endl; 
 
-    if(this->has(ele)) {
-      if(related_ele < ele) {
-        this->related_elements[ele].insert(related_ele);   
-      } else {
-        std::cout<<"Related element is larger! "<<ele<<" "<<related_ele<<std::endl; 
-        exit(0);   
-      }
+    assert(this->has(ele)); 
+
+    if(related_ele < ele) {
+      this->related_elements[ele].insert(related_ele);   
     } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
+      std::cout<<"Related element is larger! "<<ele<<" "<<related_ele<<std::endl; 
+      exit(0);   
     }
+
   }
 
   const std::set<std::string>& get_related_elements(std::string ele) {
-    if(this->has(ele)) {
-      return this->related_elements[ele]; 
-    } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
-    }
+    assert(this->has(ele)); 
+    
+    return this->related_elements[ele]; 
   }
 
   void clear_related_elements(std::string ele) {
     this->nchanges += 1;
 
-    if(this->has(ele)) {
-      this->related_elements[ele].clear(); 
-    } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
-    }
+    assert(this->has(ele)); 
+
+    this->related_elements[ele].clear(); 
   }
 
   void erase_related_element(std::string ele, std::string related_element) {
     this->nchanges += 1;
 
-    if(this->has(ele)) {
-      this->related_elements[ele].erase(related_element); 
-    } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
-    }
+    assert(this->has(ele)); 
+      
+    this->related_elements[ele].erase(related_element); 
   }
 
   bool has_gid(std::string ele) {
@@ -244,14 +238,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   }
 
   int get_gid(std::string ele) {
-    if(this->has_gid(ele)) {
-      return this->ele2gid[ele]; 
-    } else {
-      std::cout<<"Don't have gid of "<<ele<<std::endl; 
-      exit(0); 
+    assert(this->has_gid(ele)); 
 
-      return -1; 
-    }
+    return this->ele2gid[ele]; 
   }
 
   void set_parent(std::string i, std::string par) {
@@ -266,16 +255,28 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     distributed_union_find::add_child(par, ele); 
   }
 
-  std::vector<std::string>::iterator erase_child(std::string par, std::vector<std::string>::iterator ite) {
+  std::vector<std::string>::iterator erase_local_child(std::string par, std::vector<std::string>::iterator ite) {
     this->nchanges += 1;
 
-    return distributed_union_find::erase_child(par, ite); 
+    return distributed_union_find::erase_local_child(par, ite); 
   }
 
-  void clear_children(std::string par) {
+  std::vector<std::string>::iterator erase_nonlocal_child(std::string par, std::vector<std::string>::iterator ite) {
     this->nchanges += 1;
 
-    distributed_union_find::clear_children(par); 
+    return distributed_union_find::erase_nonlocal_child(par, ite); 
+  }
+
+  void clear_local_children(std::string par) {
+    this->nchanges += 1;
+
+    distributed_union_find::clear_local_children(par); 
+  }
+
+  void clear_nonlocal_children(std::string par) {
+    this->nchanges += 1;
+
+    distributed_union_find::clear_nonlocal_children(par); 
   }
 
   void add_nonlocal_intermediate_root(std::string intermediate_root) {
@@ -345,12 +346,13 @@ struct Message_Union_Find {
     strs.push_back(std::to_string(gid)); 
   }
 
-  void send_gparent(std::string& ele, std::string& gparent, int& gid_gparent) {
+  void send_gparent(std::string& ele, std::string& gparent, int& gid_gparent, bool& is_known) {
     tag = "gparent";
 
     strs.push_back(ele); 
     strs.push_back(gparent); 
     strs.push_back(std::to_string(gid_gparent)); 
+    strs.push_back(std::to_string(is_known)); 
   }
 
   void send_child(const std::string& parent, const std::string& child, const int& gid_child, const bool& is_known) {
@@ -415,11 +417,12 @@ struct Message_Union_Find {
     parent = strs[1]; 
   }
 
-  void rec_gparent(std::string& ele, std::string& gparent, int& gid_gparent) {
+  void rec_gparent(std::string& ele, std::string& gparent, int& gid_gparent, bool& is_known) {
     ele = strs[0]; 
     gparent = strs[1];
 
     gid_gparent = std::stoi(strs[2]); 
+    is_known = std::stoi(strs[3]); 
   }
 
   void rec_child(std::string& parent, std::string& child, int& gid_child, bool& is_known) {
@@ -595,15 +598,6 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
   for(auto& ele : b->eles) {
 
-    // if(ele == "7") {
-    //   std::cout<<ele<<": "<<b->related_elements[ele].size()<<std::endl; 
-    //   for(std::vector<std::string>::iterator it_vec = b->related_elements[ele].begin(); it_vec != b->related_elements[ele].end(); ++it_vec) {
-    //     std::string related_ele = *it_vec; 
-
-    //     std::cout<<ele<<"~~~~"<<related_ele<<std::endl; 
-    //   }
-    // }
-
     if(b->is_root(ele)) {
       auto& related_elements = b->get_related_elements(ele); 
       // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
@@ -665,80 +659,82 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
   for(auto& parent : b->eles) {
     if(!b->is_root(parent)) {
-      auto& children = b->children(parent); 
+      std::string grandparent = b->parent(parent); 
+      bool is_local_grandparent = b->has(grandparent); // if the grandparent is not in this block
 
-      if(children.size() > 0) {
-        std::string grandparent = b->parent(parent); 
-        bool is_local_grandparent = b->has(grandparent); // if the grandparent is not in this block
+      if(!is_local_grandparent && !b->has_gid(grandparent)) { // if currently the gid of grandparent is not available
+        continue ;
+      }
+      int gid_grandparent = b->get_gid(grandparent); 
 
-        if(!is_local_grandparent && !b->has_gid(grandparent)) { // if currently the gid of grandparent is not available
-          continue ;
-        }
+      {
+        auto& nonlocal_children = b->nonlocal_children(parent); 
+        if(nonlocal_children.size() > 0) {
+          std::vector<std::string> cache; 
+          for(auto& child : nonlocal_children) {
 
-        int gid_grandparent = b->get_gid(grandparent); 
-
-        std::vector<std::string>::iterator i = children.begin();
-        while (i != children.end()) {
-          auto& child = (*i) ; 
-
-          // Set child's parent to grandparent
-          if(b->has(child)) {
-
-            if(is_local_grandparent || b->is_intermediate_root(grandparent)) {
-              b->set_parent(child, grandparent); 
-            } else {// For non-local grandparent and the grandparent is not an intermediate root, do not pass local children
-              ++i ;
-              continue ;
-            }
-
-          } else { // if the child is not in this block
             if(!b->has_gid(child)) { // if currently the gid of child is not available
-              ++i ;
+              cache.push_back(child); 
               continue ;
             }
 
             int gid_child = b->get_gid(child); 
+
+            // Set child's parent to grandparent
             Message_Union_Find send_msg; 
-            send_msg.send_gparent(child, grandparent, gid_grandparent); 
+            bool is_known = b->is_intermediate_root(grandparent); 
+            send_msg.send_gparent(child, grandparent, gid_grandparent, is_known); 
             // std::cout<<*ele_ptr<<" - "<<*parent_ptr<<" - "<<grandparent<<" - "<<b->ele2gid[grandparent]<<std::endl; 
             cp.enqueue(l->target(l->find(gid_child)), send_msg); 
-          }
 
-          // Add child to grandparent's child list
-          if(is_local_grandparent) {
-            b->add_child(grandparent, child); 
+            // Add child to grandparent's child list
+            if(is_local_grandparent) {
+              b->add_child(grandparent, child); 
+            } else {
+              Message_Union_Find send_msg; 
 
-            if(!b->has(child)) {
-              if(b->is_intermediate_root(grandparent)) { // however, currently it is
-                // Tell the child that it is the intermediate root
-
-                Message_Union_Find send_msg; 
-                send_msg.send_add_intermediate_root(grandparent); // Add an intermediate root to the process of child
-
-                int gid_child = b->get_gid(child); 
-                cp.enqueue(l->target(l->find(gid_child)), send_msg); 
-              }
+              bool is_known = b->is_intermediate_root(grandparent); 
+              send_msg.send_child(grandparent, child, gid_child, is_known); 
+              cp.enqueue(l->target(l->find(gid_grandparent)), send_msg); 
             }
-
-          } else {
-            int gid_child = b->get_gid(child); 
-
-            Message_Union_Find send_msg; 
-
-            bool is_known = false; 
-            if(b->has(child)) {
-              is_known = b->is_intermediate_root(grandparent);
-            }
-            send_msg.send_child(grandparent, child, gid_child, is_known); 
-
-            cp.enqueue(l->target(l->find(gid_grandparent)), send_msg); 
           }
+          b->clear_nonlocal_children(parent); 
 
-          i = b->erase_child(parent, i); 
+          if(cache.size() > 0) {
+            for(auto& cache_ele : cache) {
+              b->add_child(parent, cache_ele); 
+            }
+          }
         }
-
-
       }
+
+
+      {
+        auto& local_children = b->local_children(parent); 
+        if(local_children.size() > 0 && (is_local_grandparent || b->is_intermediate_root(grandparent))) {
+          for(auto& child : local_children) {
+
+            // Set child's parent to grandparent
+            b->set_parent(child, grandparent); 
+
+            // Add child to grandparent's child list
+            if(is_local_grandparent) {
+              b->add_child(grandparent, child); 
+            } else {
+              int gid_child = b->get_gid(child); 
+
+              Message_Union_Find send_msg; 
+              bool is_known = b->is_intermediate_root(grandparent); 
+              send_msg.send_child(grandparent, child, gid_child, is_known); 
+
+              cp.enqueue(l->target(l->find(gid_grandparent)), send_msg); 
+            }
+          }
+          b->clear_local_children(parent); 
+
+        }
+      }
+
     }
   }
 }
@@ -749,8 +745,9 @@ void distributed_save_gparent(Block_Union_Find* b, const diy::Master::ProxyWithL
   std::string ele; 
   std::string grandpar; 
   int gid_grandparent; 
+  bool is_known; 
 
-  msg.rec_gparent(ele, grandpar, gid_grandparent); 
+  msg.rec_gparent(ele, grandpar, gid_grandparent, is_known); 
   
   // std::cout<<*ele_ptr << " - " << b->parent(*ele_ptr) <<" - "<< *grandpar_ptr<<" - "<<*grandpar_gid_ptr<<std::endl; 
 
@@ -761,6 +758,9 @@ void distributed_save_gparent(Block_Union_Find* b, const diy::Master::ProxyWithL
 
   b->set_parent(ele, grandpar); 
   b->set_gid(grandpar, gid_grandparent); 
+  if(is_known && !b->has(grandpar)) {
+    b->add_nonlocal_intermediate_root(grandpar);
+  }
 
   #if ISDEBUG
     std::cout<<ele<<" -2> "<<grandpar<<std::endl; 
@@ -1280,10 +1280,11 @@ inline void Block_Union_Find::get_sets(diy::mpi::communicator& world, diy::Maste
   std::map<std::string, std::set<std::string>> root2set; 
 
   for(auto& ele : b->eles) {
-    if(!b->is_root(b->parent(ele))) {
-      std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
-      std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
-    }
+    // if(!b->is_root(b->parent(ele))) {
+    //   std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
+    //   std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
+    // }
+    assert(b->is_root(b->parent(ele))); 
 
     root2set[b->parent(ele)].insert(ele);  
   }

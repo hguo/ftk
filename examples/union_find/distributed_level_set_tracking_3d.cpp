@@ -27,7 +27,7 @@
 #include <ftk/external/diy/io/bov.hpp>
 #include <ftk/external/diy/algorithms.hpp>
 
-#include <ftk/basic/distributed_union_find_test.hh>
+#include <ftk/basic/distributed_union_find.hh>
 #include "connected_critical_point.hpp"
 
 #if FTK_HAVE_QT5

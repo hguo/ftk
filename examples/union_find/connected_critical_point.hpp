@@ -1,4 +1,4 @@
-#include <ftk/basic/distributed_union_find_test.hh>
+#include <ftk/basic/distributed_union_find.hh>
 
 // struct intersection_t {
 //   template <class Archive> void serialize(Archive & ar) {
@@ -334,10 +334,22 @@ void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, d
   for(auto& ele : b->eles) {
     if(b->is_root(ele)) {
       root2set[ele].insert(ele);  
+
       auto& children = b->children(ele); 
       for(auto& child : children) {
         root2set[ele].insert(child); 
       }
+
+      // auto& local_children = b->local_children(ele); 
+      // for(auto& child : local_children) {
+      //   root2set[ele].insert(child); 
+      // }
+
+      // auto& nonlocal_children = b->nonlocal_children(ele); 
+      // for(auto& child : nonlocal_children) {
+      //   root2set[ele].insert(child); 
+      // }
+
     }
   }
 
@@ -502,7 +514,7 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
 
 // Get sets of elements
 inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  // get_sets_on_p0(this, world, master, assigner, results); 
-  get_sets_on_roots(this, world, master, assigner, results); 
+  get_sets_on_p0(this, world, master, assigner, results); 
+  // get_sets_on_roots(this, world, master, assigner, results); 
   // get_sets_redistributed(this, world, master, assigner, results); 
 }

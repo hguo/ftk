@@ -43,10 +43,7 @@ struct distributed_union_find
   // Operations
 
   void set_parent(IdType i, IdType par) {
-    if(!has(i)) {
-      std::cout<< "No element set_parent(). " <<std::endl;
-      exit(0); 
-    }
+    assert(has(i));
 
     // Ensure the id of new parent is smaller than the id of old parent
       // Otherwise, may occur override and erase the updated parent
@@ -59,10 +56,7 @@ struct distributed_union_find
   }
 
   void add_child(IdType par, IdType ele) {
-    if(!has(par)) {
-      std::cout<< "No element parent add_child(). " <<std::endl;
-      exit(0); 
-    }
+    assert(has(par));
 
     parent2children[par].push_back(ele); 
   }
@@ -74,37 +68,25 @@ struct distributed_union_find
   }
 
   IdType parent(IdType i) {
-    if(!has(i)) {
-      std::cout<< "No element parent parent(). " <<std::endl;
-      exit(0); 
-    }
+    assert(has(i));
 
     return id2parent[i]; 
   }
 
   const std::vector<IdType>& children(IdType i) {
-    if(!has(i)) {
-      std::cout<< "No element child children(). " <<std::endl;
-      exit(0); 
-    }
+    assert(has(i));
 
     return parent2children[i]; 
   }
 
   void clear_children(std::string i) {
-    if(!has(i)) {
-      std::cout<< "No element child children(). " <<std::endl;
-      exit(0); 
-    }
+    assert(has(i));
 
     parent2children[i].clear(); 
   }
 
   bool is_root(IdType i) {
-    if(!has(i)) {
-      std::cout<< "No element is_root(). " <<i<<std::endl;
-      exit(0); 
-    }
+    assert(has(i));
 
     return i == id2parent[i]; 
   }
@@ -145,16 +127,13 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   }
 
   bool has_related_element(std::string ele, std::string related_ele) {
-    if(this->has(ele)) {
-      if(this->related_elements[ele].find(related_ele) == this->related_elements[ele].end()) {
-        return false; 
-      }
-
-      return true; 
-    } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
+    assert(this->has(ele)); 
+      
+    if(this->related_elements[ele].find(related_ele) == this->related_elements[ele].end()) {
+      return false; 
     }
+
+    return true; 
   }
 
   void add_related_element(std::string ele, std::string related_ele) {
@@ -162,45 +141,38 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
     // std::cout<<"Add union: "<<ele<<"-"<<related_ele<<std::endl; 
 
-    if(this->has(ele)) {
-      if(ele != related_ele) {
-        this->related_elements[ele].insert(related_ele);   
-      }
+    assert(this->has(ele));
+
+    if(related_ele < ele) {
+      this->related_elements[ele].insert(related_ele);   
     } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
+      std::cout<<"Related element is larger! "<<ele<<" "<<related_ele<<std::endl; 
+      exit(0);   
     }
+
   }
 
   const std::set<std::string>& get_related_elements(std::string ele) {
-    if(this->has(ele)) {
-      return this->related_elements[ele]; 
-    } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
-    }
+    assert(this->has(ele)); 
+
+
+    return this->related_elements[ele]; 
   }
 
   void clear_related_elements(std::string ele) {
     this->nchanges += 1;
 
-    if(this->has(ele)) {
-      this->related_elements[ele].clear(); 
-    } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
-    }
+    assert(this->has(ele)); 
+
+    this->related_elements[ele].clear(); 
   }
 
   void erase_related_element(std::string ele, std::string related_element) {
     this->nchanges += 1;
 
-    if(this->has(ele)) {
-      this->related_elements[ele].erase(related_element); 
-    } else {
-      std::cout<<"Don't have this element "<<ele<<std::endl; 
-      exit(0); 
-    }
+    assert(this->has(ele)); 
+    
+    this->related_elements[ele].erase(related_element); 
   }
 
   bool has_gid(std::string ele) {
@@ -220,14 +192,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   }
 
   int get_gid(std::string ele) {
-    if(this->has_gid(ele)) {
-      return this->ele2gid[ele]; 
-    } else {
-      std::cout<<"Don't have gid of "<<ele<<std::endl; 
-      exit(0); 
+    assert(this->has_gid(ele)); 
 
-      return -1; 
-    }
+    return this->ele2gid[ele]; 
   }
 
   void set_parent(std::string i, std::string par) {
@@ -1127,10 +1094,11 @@ inline void Block_Union_Find::get_sets(diy::mpi::communicator& world, diy::Maste
   std::map<std::string, std::set<std::string>> root2set; 
 
   for(auto& ele : b->eles) {
-    if(!b->is_root(b->parent(ele))) {
-      std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
-      std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
-    }
+    // if(!b->is_root(b->parent(ele))) {
+    //   std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
+    //   std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
+    // }
+    assert(b->is_root(b->parent(ele))); 
 
     root2set[b->parent(ele)].insert(ele);  
   }
