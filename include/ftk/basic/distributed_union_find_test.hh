@@ -184,8 +184,11 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     // std::cout<<"Add union: "<<ele<<"-"<<related_ele<<std::endl; 
 
     if(this->has(ele)) {
-      if(ele != related_ele) {
+      if(related_ele < ele) {
         this->related_elements[ele].insert(related_ele);   
+      } else {
+        std::cout<<"Related element is larger! "<<ele<<" "<<related_ele<<std::endl; 
+        exit(0);   
       }
     } else {
       std::cout<<"Don't have this element "<<ele<<std::endl; 
@@ -291,6 +294,8 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     if(this->has(i)) {
       if(this->get_related_elements(i).size() == 0) {
         return true ;
+      } else {
+        return false ;  
       }
     } else {
       return distributed_union_find::is_nonlocal_intermediate_root(i); 
@@ -605,7 +610,8 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
     // }
 
     if(b->is_root(ele)) {
-      auto related_elements = b->get_related_elements(ele); // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
+      auto& related_elements = b->get_related_elements(ele); 
+      // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
 
       std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
 
@@ -678,7 +684,7 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
         std::vector<std::string>::iterator i = children.begin();
         while (i != children.end()) {
-          auto child = *i ; 
+          auto& child = (*i) ; 
 
           // Set child's parent to grandparent
           if(b->has(child)) {
@@ -1203,8 +1209,12 @@ void send_2_target_processes(Block_Union_Find* b, const diy::Master::ProxyWithLi
 
   int nblocks = world.size();
 
-  auto eles = b->eles; 
-  for(auto& ele : eles) {
+  // auto eles = b->eles; 
+
+  auto i = b->eles.begin();
+  while(i != b->eles.end()) {
+    auto& ele = (*i);
+
     std::string root = b->parent(ele); 
   
     int gid_root = hash_string(root, nblocks); 
@@ -1219,8 +1229,11 @@ void send_2_target_processes(Block_Union_Find* b, const diy::Master::ProxyWithLi
 
       cp.enqueue(target, send_msg); 
 
-      b->erase_element(ele);  
-    }    
+      i = b->eles.erase(i);
+    } else {
+      ++i ;
+    }
+    
   }
 }
 

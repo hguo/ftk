@@ -287,7 +287,7 @@ struct Message_Union_Find {
     strs.push_back(std::to_string(gid)); 
   }
 
-  void send_gparent(std::string& ele, std::string& gparent, int& gid_gparent) {
+  void send_gparent(const std::string& ele, const std::string& gparent, const int& gid_gparent) {
     tag = "gparent";
 
     strs.push_back(ele); 
@@ -525,7 +525,7 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
     // }
 
     if(b->is_root(ele)) {
-      auto related_elements = b->get_related_elements(ele); // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
+      auto& related_elements = b->get_related_elements(ele); 
 
       std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
 
@@ -592,7 +592,7 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
         }
 
         std::vector<std::string> cache; 
-        for(auto child : children) {
+        for(auto& child : children) {
           
           // Set child's parent to grandparent
           if(b->has(child)) {
@@ -1051,8 +1051,12 @@ void send_2_target_processes(Block_Union_Find* b, const diy::Master::ProxyWithLi
 
   int nblocks = world.size();
 
-  auto eles = b->eles; 
-  for(auto& ele : eles) {
+  // auto eles = b->eles; 
+
+  auto i = b->eles.begin();
+  while(i != b->eles.end()) {
+    auto& ele = (*i);
+
     std::string root = b->parent(ele); 
   
     int gid_root = hash_string(root, nblocks); 
@@ -1067,8 +1071,11 @@ void send_2_target_processes(Block_Union_Find* b, const diy::Master::ProxyWithLi
 
       cp.enqueue(target, send_msg); 
 
-      b->erase_element(ele);  
-    }    
+      i = b->eles.erase(i);
+    } else {
+      ++i ;
+    }
+
   }
 }
 

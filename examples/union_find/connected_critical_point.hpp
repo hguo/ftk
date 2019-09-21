@@ -372,8 +372,9 @@ void send_2_redistributed_processes(Block_Critical_Point* b, const diy::Master::
 
   int nblocks = world.size();
 
-  auto eles = b->eles; 
-  for(auto& ele : eles) {
+  auto i = b->eles.begin();
+  while(i != b->eles.end()) {
+    auto& ele = (*i);
     std::string root = b->parent(ele); 
   
     int gid_root = hash_string(root, nblocks); 
@@ -395,7 +396,9 @@ void send_2_redistributed_processes(Block_Critical_Point* b, const diy::Master::
 
       cp.enqueue(target, send_msg_intersection); 
 
-      b->erase_element(ele);  
+      i = b->eles.erase(i);
+    } else {
+      ++i ;
     }    
   }
 }
