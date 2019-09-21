@@ -1,4 +1,4 @@
-#include <ftk/basic/distributed_union_find.hh>
+#include <ftk/basic/distributed_union_find_test.hh>
 
 // struct intersection_t {
 //   template <class Archive> void serialize(Archive & ar) {

@@ -292,7 +292,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
   bool is_intermediate_root(std::string i) {
     if(this->has(i)) {
-      if(this->get_related_elements(i).size() == 0) {
+      if(this->is_root(i) && this->get_related_elements(i).size() == 0) {
         return true ;
       } else {
         return false ;  
@@ -362,12 +362,10 @@ struct Message_Union_Find {
     strs.push_back(std::to_string(is_known)); 
   }
 
-  void send_add_intermediate_root(const std::string& child, const std::string& parent, const int& gid_parent) {
+  void send_add_intermediate_root(const std::string& parent) {
     tag = "add_intermediate_root";
 
-    strs.push_back(child); 
     strs.push_back(parent); 
-    strs.push_back(std::to_string(gid_parent)); 
   }
 
   void send_erase_intermediate_root(const std::string& parent) {
@@ -432,11 +430,8 @@ struct Message_Union_Find {
     is_known = std::stoi(strs[3]); 
   }
 
-  void rec_add_intermediate_root(std::string& child, std::string& parent, int& gid_parent) {
-    child = strs[0];
-    parent = strs[1];
-
-    gid_parent = std::stoi(strs[2]); 
+  void rec_add_intermediate_root(std::string& parent) {
+    parent = strs[0];
   }
 
   void rec_erase_intermediate_root(std::string& parent) {
@@ -712,6 +707,19 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           // Add child to grandparent's child list
           if(is_local_grandparent) {
             b->add_child(grandparent, child); 
+
+            if(!b->has(child)) {
+              if(b->is_intermediate_root(grandparent)) { // however, currently it is
+                // Tell the child that it is the intermediate root
+
+                Message_Union_Find send_msg; 
+                send_msg.send_add_intermediate_root(grandparent); // Add an intermediate root to the process of child
+
+                int gid_child = b->get_gid(child); 
+                cp.enqueue(l->target(l->find(gid_child)), send_msg); 
+              }
+            }
+
           } else {
             int gid_child = b->get_gid(child); 
 
@@ -761,7 +769,6 @@ void distributed_save_gparent(Block_Union_Find* b, const diy::Master::ProxyWithL
 
 // Distributed path compression - Step Three
 void distributed_save_child(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
-  int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
   std::string par; 
@@ -779,7 +786,6 @@ void distributed_save_child(Block_Union_Find* b, const diy::Master::ProxyWithLin
 
   // Possible that the child has the same process as the new parent
   if(!b->has(child)) { // if child is not in this block
-  
     if(is_known) {  // if child knows this parent is an intermediate root
       if(!b->is_intermediate_root(par))  { // however, currently it is not
         // Tell the child that it is not the intermediate root anymore
@@ -794,30 +800,19 @@ void distributed_save_child(Block_Union_Find* b, const diy::Master::ProxyWithLin
         // Tell the child that it is the intermediate root
 
         Message_Union_Find send_msg; 
-        send_msg.send_add_intermediate_root(child, par, gid); // Add an intermediate root to the process of child
+        send_msg.send_add_intermediate_root(par); // Add an intermediate root to the process of child
 
         cp.enqueue(l->target(l->find(gid_child)), send_msg); 
       }
     }
-
   }  
 }
 
 
 // Receive adding an intermediate root
 void distributed_add_intermediate_root(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
-  std::string ele;
   std::string par;
-  int gid_par; 
-  msg.rec_add_intermediate_root(ele, par, gid_par); // Add an intermediate root
-
-  std::string _par = b->parent(ele); 
-  if(_par > par) { 
-    b->set_parent(ele, par); 
-    b->set_gid(par, gid_par); 
-  } else if(_par < par) { // needs to ensure ele's current parent is larger or equal to this par
-    return ;
-  }
+  msg.rec_add_intermediate_root(par); // Add an intermediate root
 
   b->add_nonlocal_intermediate_root(par); 
 }
