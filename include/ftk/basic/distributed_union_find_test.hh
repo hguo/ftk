@@ -163,7 +163,7 @@ private:
 
 // DIY Block for distributed union-find
 struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
-  Block_Union_Find(): nchanges(0), related_elements(), cache_send_intermediate_roots(), ele2gid(), distributed_union_find() { 
+  Block_Union_Find(): nchanges(0), related_elements(), ele2gid(), cache_send_intermediate_roots(), distributed_union_find() { 
     
   }
 
@@ -833,21 +833,21 @@ void distributed_save_child(Block_Union_Find* b, const diy::Master::ProxyWithLin
       if(!b->is_intermediate_root(par))  { // however, currently it is not
         // Tell the child that it is not the intermediate root anymore
 
-        Message_Union_Find send_msg; 
-        send_msg.send_erase_intermediate_root(par); // Add an intermediate root to the process of child
+        b->cache_send_intermediate_roots[gid_child].insert(par); 
 
-        cp.enqueue(l->target(l->find(gid_child)), send_msg); 
+        // Message_Union_Find send_msg; 
+        // send_msg.send_erase_intermediate_root(par); // Add an intermediate root to the process of child
+
+        // cp.enqueue(l->target(l->find(gid_child)), send_msg); 
       }
     } else { // if child does not know
       if(b->is_intermediate_root(par)) { // however, currently it is
         // Tell the child that it is the intermediate root
 
-        b->cache_send_intermediate_roots[gid_child].insert(par); 
+        Message_Union_Find send_msg; 
+        send_msg.send_add_intermediate_root(par); // Add an intermediate root to the process of child
 
-        // Message_Union_Find send_msg; 
-        // send_msg.send_add_intermediate_root(par); // Add an intermediate root to the process of child
-
-        // cp.enqueue(l->target(l->find(gid_child)), send_msg); 
+        cp.enqueue(l->target(l->find(gid_child)), send_msg); 
       }
     }
   }  
@@ -1015,14 +1015,16 @@ void local_computation(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp
       auto& target = l->target(l->find(pair.first)); 
       for(auto& par : pair.second) {
         Message_Union_Find send_msg; 
-        send_msg.send_add_intermediate_root(par); // Add an intermediate root to the process of child
+        // send_msg.send_add_intermediate_root(par); // Add an intermediate root to the process of child
+        send_msg.send_erase_intermediate_root(par); // Erase an intermediate root to the process of child
 
         cp.enqueue(target, send_msg);   
       }
       pair.second.clear(); 
     } 
   }
-  // b->cache_send_intermediate_roots.clear(); 
+  // // b->cache_send_intermediate_roots.clear(); 
+
 }
 
 
