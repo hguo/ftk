@@ -618,48 +618,46 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   for(auto& ele : b->eles) {
 
     if(b->is_root(ele)) {
-      // auto& related_elements = b->get_related_elements(ele); 
-      // // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
-
-      // std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
-
-      // // Find from local related elements
-      // for(auto& related_ele : related_elements) {
-      //   if(b->has(related_ele)) {
-      //     if (related_ele < found_related_ele) {
-      //       found_related_ele = related_ele; 
-      //     }
-      //   }
-      // }
-
-      // if(found_related_ele == ele) { // Local related elements do not have the satisfied one
-      //   // Find from non-local related elements
-      //   for(auto& related_ele : related_elements) {
-      //     if(!b->has(related_ele) && b->has_gid(related_ele)) {
-      //       if (related_ele < found_related_ele) {
-      //         found_related_ele = related_ele; 
-      //       }
-      //     }
-      //   }
-      // }
-
       auto& related_elements = b->get_related_elements(ele); 
+      // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
 
       std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
 
+      // Find from local related elements
       for(auto& related_ele : related_elements) {
-        
-        if(!b->has_gid(related_ele)) {
-          continue ; 
-        }
-
-        // Unite a root element with larger id or smaller id is better? 
-          // Here is a smaller id
-
-        if (related_ele < found_related_ele) {
-          found_related_ele = related_ele; 
+        if(b->has(related_ele)) {
+          if (related_ele < found_related_ele) {
+            found_related_ele = related_ele; 
+          }
         }
       }
+
+      if(found_related_ele == ele) { // Local related elements do not have the satisfied one
+        // Find from non-local related elements
+        for(auto& related_ele : related_elements) {
+          if(!b->has(related_ele) && b->has_gid(related_ele)) {
+            if (related_ele < found_related_ele) {
+              found_related_ele = related_ele; 
+            }
+          }
+        }
+      }
+
+      // auto& related_elements = b->get_related_elements(ele); 
+      // std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
+      // for(auto& related_ele : related_elements) {
+        
+      //   if(!b->has_gid(related_ele)) {
+      //     continue ; 
+      //   }
+
+      //   // Unite a root element with larger id or smaller id is better? 
+      //     // Here is a smaller id
+
+      //   if (related_ele < found_related_ele) {
+      //     found_related_ele = related_ele; 
+      //   }
+      // }
 
       if(found_related_ele < ele) {
         int rgid = b->get_gid(found_related_ele); 
