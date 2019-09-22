@@ -664,11 +664,11 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
         if(!b->is_root(parent)) {
           std::string grandparent = b->parent(parent);
 
-          // if(b->has(grandparent) || b->is_intermediate_root(grandparent)) { // Hollow tree structure
-          //   b->set_parent(ele, grandparent);     
-          // }
+          if(b->has(grandparent) || b->is_intermediate_root(grandparent)) { // Hollow tree structure
+            b->set_parent(ele, grandparent);    
+          }
 
-          b->set_parent(ele, grandparent); // Freely
+          // b->set_parent(ele, grandparent); // Freely
 
         }
 
