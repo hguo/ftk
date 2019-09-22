@@ -897,7 +897,10 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           p_gid = b->get_gid(par); 
         }
 
-        if(!b->is_intermediate_root(par) && (!is_local_parent || (is_local_parent && b->has(b->parent(par))))) {
+        // if(!b->is_intermediate_root(par) && (!is_local_parent || (is_local_parent && b->has(b->parent(par))))) {
+        //   continue ;
+        // }
+        if(!b->is_intermediate_root(par)) {
           continue ;
         }
 
