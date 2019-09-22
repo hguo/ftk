@@ -479,10 +479,11 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
     // std::cout<<"# of elements on proc. " << world.rank() <<" : "<< b->eles.size()<<std::endl; 
   // #endif
   for(auto& ele : b->eles) {
-    if(!b->is_root(b->parent(ele))) {
-      std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
-      std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
-    }
+    // if(!b->is_root(b->parent(ele))) {
+    //   std::cout<<"Wrong! The parent is not root! get_sets_redistributed()"<< std::endl; 
+    //   std::cout<<ele<<" "<<b->parent(ele)<<" "<<b->parent(b->parent(ele))<<std::endl; 
+    // }
+    assert(b->is_root(b->parent(ele))); 
 
     root2set[b->parent(ele)].insert(ele);  
   }
