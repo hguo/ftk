@@ -144,10 +144,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     assert(this->has(ele));
 
     if(related_ele < ele) {
+      
       if(this->all_related_elements[ele].find(related_ele) == this->all_related_elements[ele].end()) {
         this->related_elements[ele].insert(related_ele); 
-
-        this->all_related_elements[ele].insert(related_ele);     
+        this->all_related_elements[ele].insert(related_ele); 
       }
       
     } else {
@@ -236,7 +236,6 @@ private:
   // map element id to ids of its related elements
   // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
   std::map<std::string, std::set<std::string>> related_elements; 
-
   std::map<std::string, std::set<std::string>> all_related_elements;   
 };
 
@@ -675,9 +674,9 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           p_gid = b->get_gid(par); 
         }
 
-        if(!(!is_local_parent || (is_local_parent && b->is_root(par)))) {
-          continue ; 
-        }
+        // if(!(!is_local_parent || (is_local_parent && b->is_root(par)))) {
+        //   continue ; 
+        // }
 
         std::vector<std::string> cache;
         for(auto& related_ele : src) {

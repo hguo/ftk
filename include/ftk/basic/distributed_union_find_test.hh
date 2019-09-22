@@ -164,7 +164,7 @@ private:
 
 // DIY Block for distributed union-find
 struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
-  Block_Union_Find(): nchanges(0), related_elements(), ele2gid(), distributed_union_find() { 
+  Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), ele2gid(), distributed_union_find() { 
     
   }
 
@@ -204,7 +204,12 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     assert(this->has(ele)); 
 
     if(related_ele < ele) {
-      this->related_elements[ele].insert(related_ele);   
+      
+      if(this->all_related_elements[ele].find(related_ele) == this->all_related_elements[ele].end()) {
+        this->related_elements[ele].insert(related_ele); 
+        this->all_related_elements[ele].insert(related_ele); 
+      }
+
     } else {
       std::cout<<"Related element is larger! "<<ele<<" "<<related_ele<<std::endl; 
       exit(0);   
@@ -345,8 +350,7 @@ private:
   // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
   
   std::map<std::string, std::set<std::string>> related_elements; 
-
-  
+  std::map<std::string, std::set<std::string>> all_related_elements;   
 };
 
 // ==========================================================
