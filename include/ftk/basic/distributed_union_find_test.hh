@@ -536,6 +536,30 @@ void save_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message
 }
 
 
+void send_erase_intermediate_root_to_all_processes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, const std::string& ele) {
+  // if(b->is_intermediate_root(ele)) {
+    
+    if(b->intermediate_root_2_gids.find(ele) != b->intermediate_root_2_gids.end()) {
+      diy::Link* l = cp.link();
+      for(auto& gid : b->intermediate_root_2_gids[ele]) {
+        Message_Union_Find send_msg; 
+        send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
+        cp.enqueue(l->target(l->find(gid)), send_msg); 
+      }
+      // b->intermediate_root_2_gids[ele].clear(); 
+      b->intermediate_root_2_gids.erase(ele); 
+    }
+    
+    // for(int i = 0; i < l->size(); ++i) {
+    //   Message_Union_Find send_msg; 
+    //   send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
+
+    //   cp.enqueue(l->target(i), send_msg); 
+    // }
+  // }
+}
+
+
 void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
@@ -583,6 +607,9 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
       // }
 
       if(found_related_ele < ele) {
+
+        send_erase_intermediate_root_to_all_processes(b, cp, ele);
+
         int rgid = b->get_gid(found_related_ele); 
         // std::cout<<gid<<" "<<rgid<<std::endl; 
         
@@ -721,40 +748,22 @@ void distributed_erase_intermediate_root (Block_Union_Find* b, const diy::Master
   std::string parent;
   msg.rec_erase_intermediate_root(parent); // Erase an intermediate root
 
-  if(b->is_intermediate_root(parent) && b->intermediate_root_2_gids.find(parent) != b->intermediate_root_2_gids.end()) {
+  // if(b->is_intermediate_root(parent) && b->intermediate_root_2_gids.find(parent) != b->intermediate_root_2_gids.end()) {
+  if(b->intermediate_root_2_gids.find(parent) != b->intermediate_root_2_gids.end()) {
     diy::Link* l = cp.link();
-    
+
     for(auto& gid : b->intermediate_root_2_gids[parent]) {
       Message_Union_Find send_msg; 
       send_msg.send_erase_intermediate_root(parent); // Erase an intermediate root to the process of child
       cp.enqueue(l->target(l->find(gid)), send_msg); 
     }
+    // b->intermediate_root_2_gids[parent].clear(); 
+    b->intermediate_root_2_gids.erase(parent); 
   }
 
   b->erase_nonlocal_intermediate_root(parent); 
 }
 
-
-void send_erase_intermediate_root_to_all_processes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, const std::string& ele) {
-  if(b->is_intermediate_root(ele)) {
-    diy::Link* l = cp.link();
-
-    if(b->intermediate_root_2_gids.find(ele) != b->intermediate_root_2_gids.end()) {
-      for(auto& gid : b->intermediate_root_2_gids[ele]) {
-        Message_Union_Find send_msg; 
-        send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
-        cp.enqueue(l->target(l->find(gid)), send_msg); 
-      }
-    }
-    
-    // for(int i = 0; i < l->size(); ++i) {
-    //   Message_Union_Find send_msg; 
-    //   send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
-
-    //   cp.enqueue(l->target(i), send_msg); 
-    // }
-  }
-}
 
 void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
@@ -795,7 +804,7 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           if(related_ele < par) {
 
             if(is_local_parent) {
-              send_erase_intermediate_root_to_all_processes(b, cp, par);
+              // send_erase_intermediate_root_to_all_processes(b, cp, par);
 
               b->add_related_element(par, related_ele); 
             } else {
@@ -818,7 +827,7 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           } else if(par < related_ele) {
 
             if(b->has(related_ele)) {
-              send_erase_intermediate_root_to_all_processes(b, cp, related_ele);
+              // send_erase_intermediate_root_to_all_processes(b, cp, related_ele);
 
               b->add_related_element(related_ele, par); 
             } else {
@@ -870,7 +879,7 @@ void distributed_save_union(Block_Union_Find* b, const diy::Master::ProxyWithLin
 
   // std::cout<<*ele_ptr<<" - "<<*par_ptr << " - " << *related_ele_ptr <<" - "<< *gid_ptr<<std::endl; 
 
-  send_erase_intermediate_root_to_all_processes(b, cp, ele); 
+  // send_erase_intermediate_root_to_all_processes(b, cp, ele); 
 
   b->add_related_element(ele, related_ele); 
   b->set_gid(related_ele, rgid); 
