@@ -554,15 +554,11 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
       if(children.size() > 0) {
         std::string grandparent = b->parent(parent); 
-        bool is_local_grandparent = true; 
-        int gid_grandparent = b->get_gid(grandparent); 
-        
-        if(!b->has(grandparent)) { // if the grandparent is not in this block
-          is_local_grandparent = false ;
-          if(gid_grandparent == -1) { // if currently the gid of grandparent is not available
-            continue ;
-          }
+        bool is_local_grandparent = b->has(grandparent); // if the grandparent is not in this block        
+        if(!is_local_grandparent && !b->has_gid(grandparent)) { // if currently the gid of grandparent is not available
+          continue ;
         }
+        int gid_grandparent = b->get_gid(grandparent); 
 
         std::vector<std::string> cache; 
         for(auto& child : children) {

@@ -705,7 +705,6 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
     if(!b->is_root(parent)) {
       std::string grandparent = b->parent(parent); 
       bool is_local_grandparent = b->has(grandparent); // if the grandparent is not in this block
-
       if(!is_local_grandparent && !b->has_gid(grandparent)) { // if currently the gid of grandparent is not available
         continue ;
       }
@@ -901,10 +900,10 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           p_gid = b->get_gid(par); 
         }
 
-        if(!b->is_intermediate_root(par)) {
+        if(!b->is_intermediate_root(par)) { // Previously test best
           continue ;
         }
-        // if(!is_local_parent && !b->is_intermediate_root(par)) { // Previously test best
+        // if(!is_local_parent && !b->is_intermediate_root(par)) { 
         //   continue ;
         // }
 
