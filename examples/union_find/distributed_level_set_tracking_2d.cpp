@@ -27,8 +27,8 @@
 #include <ftk/external/diy/io/bov.hpp>
 #include <ftk/external/diy/algorithms.hpp>
 
-#include <ftk/basic/distributed_union_find.hh>
-#include "connected_critical_point.hpp"
+#include <ftk/basic/distributed_union_find_test.hh>
+#include "connected_critical_point_test.hpp"
 
 #if FTK_HAVE_QT5
 #include "widget.h"
@@ -53,7 +53,7 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
 
-#define LOAD_BALANCING false
+#define LOAD_BALANCING true
 
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
