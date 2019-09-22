@@ -28,7 +28,7 @@ namespace ftk {
 template <class IdType=std::string>
 struct distributed_union_find
 {
-  distributed_union_find() : eles(), id2parent(), nonlocal_intermediate_roots(), not_nonlocal_intermediate_roots() {
+  distributed_union_find() : eles(), id2parent(), parent2oldchildren(), nonlocal_intermediate_roots(), not_nonlocal_intermediate_roots() {
 
   }
 
@@ -77,6 +77,12 @@ struct distributed_union_find
     return id2parent[i]; 
   }
 
+  const std::vector<IdType>& old_children(IdType i) {
+    assert(has(i));
+
+    return parent2oldchildren[i]; 
+  }
+
   bool is_nonlocal_intermediate_root(IdType i) {
     if(this->nonlocal_intermediate_roots.find(i) != this->nonlocal_intermediate_roots.end()) {
       return true ;
@@ -97,6 +103,7 @@ public:
 private:
   // Use HashMap to support sparse union-find
   std::map<IdType, IdType> id2parent;
+  std::map<IdType, std::vector<IdType>> parent2oldchildren; 
 
   std::set<IdType> nonlocal_intermediate_roots;
 
@@ -108,7 +115,7 @@ private:
 
 // DIY Block for distributed union-find
 struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
-  Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), ele2gid(), cache_send_intermediate_roots(), distributed_union_find() { 
+  Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), intermediate_root_2_gids(), ele2gid(), cache_send_intermediate_roots(), distributed_union_find() { 
     
   }
 
@@ -251,6 +258,8 @@ public:
   #endif
   
   std::map<int, std::set<std::string>> cache_send_intermediate_roots ;
+
+  std::map<std::string, std::set<int>> intermediate_root_2_gids; 
 
 private:
   // map element id to ids of its related elements
@@ -670,9 +679,13 @@ void distributed_answer_gparent_query(Block_Union_Find* b, const diy::Master::Pr
 
   msg.rec_gparent_query(child, parent, gid_child); 
 
+  b->set_gid(child, gid_child);
+
   if(b->is_root(parent)) {
     if(b->is_intermediate_root(parent)) {
       b->cache_send_intermediate_roots[gid_child].insert(parent);
+
+      b->intermediate_root_2_gids[parent].insert(gid_child);
 
       // Message_Union_Find send_msg; 
       // send_msg.send_add_intermediate_root(parent); // Add an intermediate root to the process of child
@@ -686,6 +699,11 @@ void distributed_answer_gparent_query(Block_Union_Find* b, const diy::Master::Pr
     // Set child's parent to grandparent
     Message_Union_Find send_msg; 
     bool is_known = b->is_intermediate_root(grandparent); 
+
+    if(is_known) {
+      b->intermediate_root_2_gids[grandparent].insert(gid_child);
+    }
+
     send_msg.send_gparent(child, grandparent, gid_grandparent, is_known); 
     cp.enqueue(l->target(l->find(gid_child)), send_msg); 
   }
@@ -703,6 +721,16 @@ void distributed_erase_intermediate_root (Block_Union_Find* b, const diy::Master
   std::string parent;
   msg.rec_erase_intermediate_root(parent); // Erase an intermediate root
 
+  if(b->is_intermediate_root(parent) && b->intermediate_root_2_gids.find(parent) != b->intermediate_root_2_gids.end()) {
+    diy::Link* l = cp.link();
+    
+    for(auto& gid : b->intermediate_root_2_gids[parent]) {
+      Message_Union_Find send_msg; 
+      send_msg.send_erase_intermediate_root(parent); // Erase an intermediate root to the process of child
+      cp.enqueue(l->target(l->find(gid)), send_msg); 
+    }
+  }
+
   b->erase_nonlocal_intermediate_root(parent); 
 }
 
@@ -711,6 +739,14 @@ void send_erase_intermediate_root_to_all_processes(Block_Union_Find* b, const di
   if(b->is_intermediate_root(ele)) {
     diy::Link* l = cp.link();
 
+    if(b->intermediate_root_2_gids.find(ele) != b->intermediate_root_2_gids.end()) {
+      for(auto& gid : b->intermediate_root_2_gids[ele]) {
+        Message_Union_Find send_msg; 
+        send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
+        cp.enqueue(l->target(l->find(gid)), send_msg); 
+      }
+    }
+    
     // for(int i = 0; i < l->size(); ++i) {
     //   Message_Union_Find send_msg; 
     //   send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
