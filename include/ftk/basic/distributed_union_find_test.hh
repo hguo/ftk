@@ -711,12 +711,12 @@ void send_erase_intermediate_root_to_all_processes(Block_Union_Find* b, const di
   if(b->is_intermediate_root(ele)) {
     diy::Link* l = cp.link();
 
-    for(int i = 0; i < l->size(); ++i) {
-      Message_Union_Find send_msg; 
-      send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
+    // for(int i = 0; i < l->size(); ++i) {
+    //   Message_Union_Find send_msg; 
+    //   send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
 
-      cp.enqueue(l->target(i), send_msg); 
-    }
+    //   cp.enqueue(l->target(i), send_msg); 
+    // }
   }
 }
 
