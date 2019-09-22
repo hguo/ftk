@@ -885,9 +885,14 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
     if(!b->is_root(ele)) {
 
       auto& src = b->get_related_elements(ele);
-      
       if(src.size() > 0) {
         std::string par = b->parent(ele); 
+        if(!b->is_intermediate_root(par)) { // Previously test best
+          continue ;
+        }
+        // if(!is_local_parent && !b->is_intermediate_root(par)) { 
+        //   continue ;
+        // }
 
         bool is_local_parent = true; 
         int p_gid = gid; 
@@ -899,13 +904,6 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           is_local_parent = false;
           p_gid = b->get_gid(par); 
         }
-
-        if(!b->is_intermediate_root(par)) { // Previously test best
-          continue ;
-        }
-        // if(!is_local_parent && !b->is_intermediate_root(par)) { 
-        //   continue ;
-        // }
 
         std::vector<std::string> cache;
         for(auto& related_ele : src) {

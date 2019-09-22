@@ -115,7 +115,7 @@ private:
 
 // DIY Block for distributed union-find
 struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
-  Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), intermediate_root_2_gids(), nonlocal_intermediate_roots_2_grandparents(), ele2gid(), cache_send_intermediate_roots(), distributed_union_find() { 
+  Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), intermediate_root_2_gids(), nonlocal_intermediate_roots_2_grandparents(), ele2gid(), distributed_union_find() { 
     
   }
 
@@ -258,7 +258,7 @@ public:
     double time = 0; // time for measure duration of each round;
   #endif
   
-  std::map<int, std::set<std::string>> cache_send_intermediate_roots ;
+  // std::map<int, std::set<std::string>> cache_send_intermediate_roots ;
 
   std::map<std::string, std::set<int>> intermediate_root_2_gids; 
 
@@ -715,13 +715,11 @@ void distributed_save_gparent(Block_Union_Find* b, const diy::Master::ProxyWithL
 
   b->has_sent_gparent_query[ele] = false;
 
-  // if(b->parent(ele) != grandpar) {
   b->set_parent(ele, grandpar); 
   b->set_gid(grandpar, gid_grandparent); 
   if(is_known && !b->has(grandpar)) {
     b->add_nonlocal_intermediate_root(grandpar);
   }
-  // }
 
   #if ISDEBUG
     std::cout<<ele<<" -2> "<<grandpar<<std::endl; 
@@ -740,20 +738,6 @@ void distributed_answer_gparent_query(Block_Union_Find* b, const diy::Master::Pr
 
   b->set_gid(child, gid_child);
 
-  // if(b->is_root(parent)) {
-  //   if(b->is_intermediate_root(parent)) {
-  //     b->cache_send_intermediate_roots[gid_child].insert(parent);
-
-  //     b->intermediate_root_2_gids[parent].insert(gid_child);
-
-  //     // Message_Union_Find send_msg; 
-  //     // send_msg.send_add_intermediate_root(parent); // Add an intermediate root to the process of child
-
-  //     // cp.enqueue(l->target(l->find(gid_child)), send_msg); 
-  //   }
-  // } 
-  // else {
-
   std::string grandparent = b->parent(parent); 
   int gid_grandparent = b->get_gid(grandparent);
 
@@ -767,8 +751,6 @@ void distributed_answer_gparent_query(Block_Union_Find* b, const diy::Master::Pr
 
   send_msg.send_gparent(child, grandparent, gid_grandparent, is_known); 
   cp.enqueue(l->target(l->find(gid_child)), send_msg); 
-  
-  // }
 }
 
 // Receive adding an intermediate root
@@ -784,7 +766,7 @@ void distributed_erase_intermediate_root (Block_Union_Find* b, const diy::Master
   std::string grandparent;
   int gid_grandparent; 
   bool is_known;
-  msg.rec_erase_intermediate_root(parent, grandparent, gid_grandparent, is_known); // Erase an intermediate root
+  msg.rec_erase_intermediate_root(parent, grandparent, gid_grandparent, is_known); // Erase an intermediate root, and if some elements' parents are this intermediate root before, we replace with the grandparent
 
   b->set_gid(grandparent, gid_grandparent); 
   b->nonlocal_intermediate_roots_2_grandparents[parent] = grandparent;
@@ -810,11 +792,15 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
     if(!b->is_root(ele)) {
 
       auto& src = b->get_related_elements(ele);
-      std::vector<std::string> cache;
+      if(src.size() > 0) {
+        std::string par = b->parent(ele);
+        if(!b->is_intermediate_root(par)) { // Previously test best
+          continue ;
+        }
+        // if(!is_local_parent && !b->is_intermediate_root(par)) { 
+        //   continue ;
+        // }
 
-      std::string par = b->parent(ele);
-      
-      if(src.size() > 0 && b->is_intermediate_root(par)) {
         bool is_local_parent = true; 
         int p_gid = gid; 
         if(!b->has(par)) {
@@ -826,13 +812,7 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           p_gid = b->get_gid(par); 
         }
 
-        if(!b->is_intermediate_root(par)) { // Previously test best
-          continue ;
-        }
-        // if(!is_local_parent && !b->is_intermediate_root(par)) { 
-        //   continue ;
-        // }
-
+        std::vector<std::string> cache;
         for(auto& related_ele : src) {
 
           if(related_ele < par) {
