@@ -546,7 +546,6 @@ void save_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message
 
 
 void send_erase_intermediate_root_to_all_processes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, const std::string& parent, const std::string& grandparent, const int& gid_grandparent, const bool& is_known) {
-  // if(b->is_intermediate_root(ele)) {
     
     if(b->intermediate_root_2_gids.find(parent) != b->intermediate_root_2_gids.end()) {
       diy::Link* l = cp.link();
@@ -554,18 +553,15 @@ void send_erase_intermediate_root_to_all_processes(Block_Union_Find* b, const di
         Message_Union_Find send_msg; 
         send_msg.send_erase_intermediate_root(parent, grandparent, gid_grandparent, is_known); // Erase an intermediate root to the process of child
         cp.enqueue(l->target(l->find(gid)), send_msg); 
+
+        if(is_known) {
+          b->intermediate_root_2_gids[grandparent].insert(gid); 
+        }
+
       }
-      // b->intermediate_root_2_gids[ele].clear(); 
       b->intermediate_root_2_gids.erase(parent); 
     }
-    
-    // for(int i = 0; i < l->size(); ++i) {
-    //   Message_Union_Find send_msg; 
-    //   send_msg.send_erase_intermediate_root(ele); // Erase an intermediate root to the process of child
 
-    //   cp.enqueue(l->target(i), send_msg); 
-    // }
-  // }
 }
 
 
@@ -641,6 +637,19 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
+
+  if(b->nonlocal_intermediate_roots_2_grandparents.size() > 0) {
+    for(auto& ele : b->eles) {
+      if(!b->is_root(ele)) {
+        std::string parent = b->parent(ele);
+        if(b->nonlocal_intermediate_roots_2_grandparents.find(parent) != b->nonlocal_intermediate_roots_2_grandparents.end()) {
+          std::string grandparent = b->nonlocal_intermediate_roots_2_grandparents[parent]; 
+          b->set_parent(ele, grandparent); 
+        }
+      }
+    }
+    b->nonlocal_intermediate_roots_2_grandparents.clear();
+  }
 
   for(auto& ele : b->eles) {
 
@@ -762,29 +771,15 @@ void distributed_erase_intermediate_root (Block_Union_Find* b, const diy::Master
   msg.rec_erase_intermediate_root(parent, grandparent, gid_grandparent, is_known); // Erase an intermediate root
 
   b->set_gid(grandparent, gid_grandparent); 
+  b->nonlocal_intermediate_roots_2_grandparents[parent] = grandparent;
+  b->erase_nonlocal_intermediate_root(parent); 
+
   if(is_known) {
     b->add_nonlocal_intermediate_root(grandparent); 
   }
 
-  // // if(b->is_intermediate_root(parent) && b->intermediate_root_2_gids.find(parent) != b->intermediate_root_2_gids.end()) {
-  // if(b->intermediate_root_2_gids.find(parent) != b->intermediate_root_2_gids.end()) {
-  //   diy::Link* l = cp.link();
-
-  //   for(auto& gid : b->intermediate_root_2_gids[parent]) {
-  //     Message_Union_Find send_msg; 
-  //     send_msg.send_erase_intermediate_root(parent); // Erase an intermediate root to the process of child
-  //     cp.enqueue(l->target(l->find(gid)), send_msg); 
-  //   }
-  //   // b->intermediate_root_2_gids[parent].clear(); 
-  //   b->intermediate_root_2_gids.erase(parent); 
-  // }
-
   is_known = is_known || b->is_intermediate_root(grandparent); 
   send_erase_intermediate_root_to_all_processes(b, cp, parent, grandparent, gid_grandparent, is_known);
-
-  b->erase_nonlocal_intermediate_root(parent); 
-
-  b->nonlocal_intermediate_roots_2_grandparents[parent] = grandparent;
 }
 
 
@@ -916,19 +911,6 @@ void local_computation(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp
     int gid = cp.gid();
     std::cout<<"Start Local Computation. "<<"gid: "<<gid<<std::endl; 
   #endif
-
-  if(b->nonlocal_intermediate_roots_2_grandparents.size() > 0) { // can be combined with compress path
-    for(auto& ele : b->eles) {
-      if(!b->is_root(ele)) {
-        std::string parent = b->parent(ele);
-        if(b->nonlocal_intermediate_roots_2_grandparents.find(parent) != b->nonlocal_intermediate_roots_2_grandparents.end()) {
-          b->set_parent(ele, b->nonlocal_intermediate_roots_2_grandparents[parent]); 
-        }
-      }
-    }
-    b->nonlocal_intermediate_roots_2_grandparents.clear();
-  }
-
 
   unite_once(b, cp); 
 
