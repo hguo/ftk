@@ -674,9 +674,9 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           p_gid = b->get_gid(par); 
         }
 
-        // if(!(!is_local_parent || (is_local_parent && b->is_root(par)))) {
-        //   continue ; 
-        // }
+        if(!(!is_local_parent || (is_local_parent && b->is_root(par)))) {
+          continue ; 
+        }
 
         std::vector<std::string> cache;
         for(auto& related_ele : src) {
