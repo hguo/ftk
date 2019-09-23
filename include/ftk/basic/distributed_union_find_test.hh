@@ -575,6 +575,8 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   for(auto& ele : b->eles) {
 
     if(b->is_root(ele)) {
+
+      // If having an assign_global_roots
       auto& related_elements = b->get_related_elements(ele); 
       // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
       std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
