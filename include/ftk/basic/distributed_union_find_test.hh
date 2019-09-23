@@ -233,10 +233,11 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
   bool is_intermediate_root(std::string i) {
     if(this->has(i)) {
-      if(this->is_root(i) && this->get_related_elements(i).size() == 0) {
+      // if(this->is_root(i) && this->get_related_elements(i).size() == 0) {
+      if(this->is_root(i)) {
         return true ;
       } else {
-        return false ;  
+        return false ;
       }
     } else {
       return distributed_union_find::is_nonlocal_intermediate_root(i); 
