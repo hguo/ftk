@@ -664,9 +664,13 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
         if(!b->is_root(parent)) {
           std::string grandparent = b->parent(parent);
 
-          if(b->has(grandparent) || b->is_intermediate_root(grandparent)) { // Hollow tree structure
+          if(b->has(grandparent)) { // If having an assign_global_roots
             b->set_parent(ele, grandparent);    
           }
+
+          // if(b->has(grandparent) || b->is_intermediate_root(grandparent)) { // Hollow tree structure
+          //   b->set_parent(ele, grandparent);    
+          // }
 
           // b->set_parent(ele, grandparent); // Freely
 
@@ -794,9 +798,10 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
       auto& src = b->get_related_elements(ele);
       if(src.size() > 0) {
         std::string par = b->parent(ele);
-        if(!b->is_intermediate_root(par)) { // Previously test best
-          continue ;
-        }
+
+        // if(!b->is_intermediate_root(par)) { // Previously test best
+        //   continue ;
+        // }
         // if(!is_local_parent && !b->is_intermediate_root(par)) { 
         //   continue ;
         // }
@@ -810,6 +815,10 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
           is_local_parent = false;
           p_gid = b->get_gid(par); 
+        }
+
+        if(!(b->is_intermediate_root(par) || (is_local_parent && !b->has(b->parent(par))))) {  // If having an assign_global_roots
+          continue ;
         }
 
         std::vector<std::string> cache;
@@ -1019,9 +1028,27 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
   return b->nchanges == 0; 
 }
 
+void assign_global_roots(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
+  for(auto& ele : b->eles) {
+
+    if(!b->is_root(ele)) {
+      std::string parent = b->parent(ele);
+
+      if(b->has(parent)) {
+        if(!b->is_root(parent)) {
+          std::string grandparent = b->parent(parent);
+
+          b->set_parent(ele, grandparent);
+        }
+      }
+    }
+  }
+}
+
 
 void iexchange_process(diy::Master& master) {
   master.iexchange(&union_find_iexchange); 
+  master.foreach(&assign_global_roots); 
 }
 
 void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
