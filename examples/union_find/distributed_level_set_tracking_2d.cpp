@@ -451,8 +451,10 @@ void load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::Con
   diy::RegularContinuousLink* link = new diy::RegularContinuousLink(3, domain, domain);
   master.add(gid, b, link); 
 
-  diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
+  // diy::kdtree<Block_Critical_Point, intersection_t>(master, assigner, 3, domain, &Block_Critical_Point::points, 2*hist, wrap);
       // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
+
+  diy::kdtree<Block_Critical_Point, point_t>(master, assigner, 3, domain, &Block_Critical_Point::points_test, 2*hist, wrap);
 
 
   // #ifdef FTK_HAVE_MPI
@@ -901,7 +903,14 @@ int main(int argc, char **argv)
     // std::vector<intersection_t> points; 
     for(auto intersection : *intersections) {
       if(is_in_mesh(intersection.second, block_m.lattice())) {
-        b->points.emplace_back(intersection.second);  
+        point_t point;
+        for(int i = 0; i < 3; ++i) {
+          point.x[i] = intersection.second.x[i];
+          point.corner[i] = intersection.second.corner[i];
+        }
+        point.val = intersection.second.val; 
+        // b->points.emplace_back(intersection.second);  
+        b->points_test.emplace_back(point);
       }
     }
 
@@ -983,6 +992,8 @@ int main(int argc, char **argv)
         start = end; 
       #endif
     #endif
+
+    exit(0); 
 
     #if LOAD_BALANCING
       if(world.size() > 1) {
