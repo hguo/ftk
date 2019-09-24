@@ -905,8 +905,9 @@ int main(int argc, char **argv)
       if(is_in_mesh(intersection.second, block_m.lattice())) {
         point_t point;
         for(int i = 0; i < 3; ++i) {
-          point.x.push_back(intersection.second.x[i]);
-          point.corner.push_back(intersection.second.corner[i]);
+          // point.x.push_back(intersection.second.x[i]);
+          // point.corner.push_back(intersection.second.corner[i]);
+          point.corner[i] = intersection.second.corner[i];
         }
         point.val = intersection.second.val; 
         // b->points.emplace_back(intersection.second);  

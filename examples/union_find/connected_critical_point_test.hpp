@@ -63,8 +63,9 @@ struct point_t{
   float&  operator[](unsigned i)                          { return corner[i]; }
   float   operator[](unsigned i) const                    { return corner[i]; }
 
-  std::vector<float> x; // the spacetime coordinates of the trajectory
-  std::vector<float> corner; // the spacetime coordinates of the left corner of the element
+  // std::vector<float> x; // the spacetime coordinates of the trajectory
+  // std::vector<float> corner; // the spacetime coordinates of the left corner of the element
+  float corner[3];
 
   float val; // scalar value at the intersection
 };
@@ -76,14 +77,14 @@ namespace diy
   {
       static void save(BinaryBuffer& bb, const point_t& msg)
       {
-          diy::save(bb, msg.x);
+          // diy::save(bb, msg.x);
           diy::save(bb, msg.corner);
           diy::save(bb, msg.val);
       }
 
       static void load(BinaryBuffer& bb, point_t& msg)
       {
-          diy::load(bb, msg.x);
+          // diy::load(bb, msg.x);
           diy::load(bb, msg.corner);
           diy::load(bb, msg.val);
       }
