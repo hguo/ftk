@@ -1,22 +1,9 @@
 #include <hypermesh/regular_simplex_mesh.hh>
 #include <ftk/basic/distributed_union_find_test.hh>
 
-// struct intersection_t {
-//   template <class Archive> void serialize(Archive & ar) {
-//     ar(eid, x[0], x[1], x[2], val);
-//   }
-
-//   float&  operator[](unsigned i)                          { return corner[i]; }
-//   float   operator[](unsigned i) const                    { return corner[i]; }
-
-//   float x[DIM]; // the spacetime coordinates of the trajectory
-//   float corner[DIM]; // the spacetime coordinates of the left corner of the element
-
-//   float val; // scalar value at the intersection
-  
-//   std::string eid; // element id
-//   std::set<std::string> related_elements; 
-// };
+#ifndef DIM
+  #define DIM 3
+#endif
 
 struct intersection_t {
   template <class Archive> void serialize(Archive & ar) {
@@ -63,8 +50,8 @@ struct point_t{
   int&  operator[](unsigned i)                          { return corner[i]; }
   int   operator[](unsigned i) const                    { return corner[i]; }
 
-  // int corner[DIM]; // the spacetime coordinates of the left corner of the element
-  std::vector<int> corner; 
+  int corner[DIM]; // the spacetime coordinates of the left corner of the element
+  // std::vector<int> corner; 
 
   // point_t(int DIM): corner(DIM) {}
 };
@@ -695,7 +682,7 @@ void add_related_elements_to_intersections(std::map<std::string, intersection_t>
 // Note: will eliminate features of intersections in ghost cells
 void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_simplex_mesh& block_m, Block_Critical_Point* b, int feature_dim) {
   // std::vector<intersection_t> points; 
-  int DIM = m.nd(); 
+  // int DIM = m.nd(); 
 
   // for(auto& intersection : b->intersections.begin();) {
   auto ite = b->intersections.begin();
@@ -706,7 +693,7 @@ void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_
 
     if(is_in_mesh(f, block_m.lattice())) {
       point_t point;
-      point.corner.resize(DIM); 
+      // point.corner.resize(DIM); 
       for(int i = 0; i < DIM; ++i) {
         point.corner[i] = f.corner[i];
       }
@@ -724,7 +711,7 @@ void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_
 
 
 void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b) {
-  int DIM = m.nd(); 
+  // int DIM = m.nd(); 
 
   bool wrap = false; 
   int hist = 128; //32; 512
@@ -810,7 +797,7 @@ void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master
 
 
 void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
-  int DIM = m.nd(); 
+  // int DIM = m.nd(); 
   // , diy::RegularContinuousLink* link
 
   b->intersections.clear(); 

@@ -1,3 +1,6 @@
+#define DIM 3
+#define FEATURE_DIM 2
+
 #include <fstream>
 #include <mutex>
 #include <thread>
@@ -63,9 +66,6 @@
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
-
-#define DIM 3
-#define FEATURE_DIM 2
 
 
 int CRITICAL_POINT_TYPE; // By default, track maximum points
