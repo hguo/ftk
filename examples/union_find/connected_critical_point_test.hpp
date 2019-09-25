@@ -10,7 +10,9 @@ struct intersection_t {
     ar(eid, x[0], x[1], x[2], val);
   }
 
-  std::vector<float> x; // the spacetime coordinates of the trajectory
+  // std::vector<float> x; // the spacetime coordinates of the trajectory
+  float x[DIM];
+
   // std::vector<float> corner; // the spacetime coordinates of the left corner of the element
 
   float val; // scalar value at the intersection
@@ -116,7 +118,11 @@ struct Message_Critical_Point : public Message_Union_Find {
     // strs.push_back(std::to_string(I.x[1])); 
     // strs.push_back(std::to_string(I.x[2])); 
 
-    for(int i = 0; i < I.x.size(); ++i) {
+    // for(int i = 0; i < I.x.size(); ++i) {
+    //   strs.push_back(std::to_string(I.x[i])); 
+    // }
+
+    for(int i = 0; i < DIM; ++i) {
       strs.push_back(std::to_string(I.x[i])); 
     }
   }
@@ -134,7 +140,8 @@ struct Message_Critical_Point : public Message_Union_Find {
     // I.x[2] = std::stof(strs[5]); 
 
     for(int i = 3; i < strs.size(); ++i) {
-      I.x.push_back(std::stof(strs[i])); 
+      // I.x.push_back(std::stof(strs[i])); 
+      I.x[i-3] = std::stof(strs[i]); 
     }
   }
 

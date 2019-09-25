@@ -180,7 +180,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   intersection_t I;
   I.eid = f.to_string();
   I.val = value; 
-  I.x.resize(DIM); 
+  // I.x.resize(DIM); 
 
   for(int i = 0; i < 3; ++i) {
     I.x[i] = f.corner[i]; 
