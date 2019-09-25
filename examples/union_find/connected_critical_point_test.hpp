@@ -1,3 +1,4 @@
+#include <hypermesh/regular_simplex_mesh.hh>
 #include <ftk/basic/distributed_union_find_test.hh>
 
 // struct intersection_t {
@@ -22,11 +23,8 @@ struct intersection_t {
     ar(eid, x[0], x[1], x[2], val);
   }
 
-  float&  operator[](unsigned i)                          { return corner[i]; }
-  float   operator[](unsigned i) const                    { return corner[i]; }
-
   std::vector<float> x; // the spacetime coordinates of the trajectory
-  std::vector<float> corner; // the spacetime coordinates of the left corner of the element
+  // std::vector<float> corner; // the spacetime coordinates of the left corner of the element
 
   float val; // scalar value at the intersection
   
@@ -42,7 +40,7 @@ namespace diy
       static void save(BinaryBuffer& bb, const intersection_t& msg)
       {
           diy::save(bb, msg.x);
-          diy::save(bb, msg.corner);
+          // diy::save(bb, msg.corner);
           diy::save(bb, msg.val);
           diy::save(bb, msg.eid);
           diy::save(bb, msg.related_elements);
@@ -51,7 +49,7 @@ namespace diy
       static void load(BinaryBuffer& bb, intersection_t& msg)
       {
           diy::load(bb, msg.x);
-          diy::load(bb, msg.corner);
+          // diy::load(bb, msg.corner);
           diy::load(bb, msg.val);
           diy::load(bb, msg.eid);
           diy::load(bb, msg.related_elements);
@@ -59,15 +57,16 @@ namespace diy
   };
 }
 
+// template<int DIM>
 struct point_t{
-  float&  operator[](unsigned i)                          { return corner[i]; }
-  float   operator[](unsigned i) const                    { return corner[i]; }
 
-  // std::vector<float> x; // the spacetime coordinates of the trajectory
-  // std::vector<float> corner; // the spacetime coordinates of the left corner of the element
-  float corner[3];
+  int&  operator[](unsigned i)                          { return corner[i]; }
+  int   operator[](unsigned i) const                    { return corner[i]; }
 
-  float val; // scalar value at the intersection
+  // int corner[DIM]; // the spacetime coordinates of the left corner of the element
+  std::vector<int> corner; 
+
+  // point_t(int DIM): corner(DIM) {}
 };
 
 namespace diy
@@ -77,16 +76,12 @@ namespace diy
   {
       static void save(BinaryBuffer& bb, const point_t& msg)
       {
-          // diy::save(bb, msg.x);
           diy::save(bb, msg.corner);
-          diy::save(bb, msg.val);
       }
 
       static void load(BinaryBuffer& bb, point_t& msg)
       {
-          // diy::load(bb, msg.x);
           diy::load(bb, msg.corner);
-          diy::load(bb, msg.val);
       }
   };
 }
@@ -106,8 +101,8 @@ public:
   std::map<std::string, intersection_t> intersections; // Points on trajectories of critical points
   
   // Data for load balancing
-  std::vector<intersection_t> points; 
-  std::vector<point_t> points_test; 
+  std::vector<intersection_t> features; 
+  std::vector<point_t> points; 
 
   std::vector<diy::ContinuousBounds>   block_bounds;                       // all block bounds
 
@@ -549,7 +544,355 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
 
 // Get sets of elements
 inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  // get_sets_on_p0(this, world, master, assigner, results); 
+  get_sets_on_p0(this, world, master, assigner, results); 
   // get_sets_on_roots(this, world, master, assigner, results); 
-  get_sets_redistributed(this, world, master, assigner, results); 
+  // get_sets_redistributed(this, world, master, assigner, results); 
 }
+
+// ===================================================================
+// Functions for adding edges/unions to the block
+
+bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
+  // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
+
+  for (int i = 0; i < f.corner.size(); ++i){
+    if (f.corner[i] < _lattice.start(i) || f.corner[i] > _lattice.upper_bound(i)) {
+      return false; 
+    }
+  }
+
+  return true;
+}
+
+bool is_in_mesh(const std::string& eid, const hypermesh::regular_lattice& _lattice, hypermesh::regular_simplex_mesh& m, int feature_dim) { 
+  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, eid); 
+  
+  return is_in_mesh(f, _lattice); 
+}
+
+  // If the intersection is contained in the lattice
+bool is_in_mesh(const intersection_t& intersection, const hypermesh::regular_lattice& _lattice, hypermesh::regular_simplex_mesh& m, int feature_dim) { 
+  return is_in_mesh(intersection.eid, _lattice, m, feature_dim); 
+}
+
+bool is_in_mesh(hypermesh::regular_simplex_mesh_element& f, diy::ContinuousBounds& block_bound) {
+  for (int i = 0; i < f.corner.size(); ++i){
+    if(f.corner[i] < block_bound.min[i] || f.corner[i] > block_bound.max[i]) {
+       return false;
+    }
+  }
+
+  return true;
+}
+
+
+// Add union edges to the block
+void add_unions(std::map<std::string, intersection_t>* intersections, hypermesh::regular_simplex_mesh& block_m, const hypermesh::regular_simplex_mesh_element& f) {
+  if (!f.valid()) return; // check if the 3-simplex is valid
+
+  const auto elements = f.sides();
+  std::set<std::string> features;
+  std::set<std::string> features_in_block;  
+  std::map<std::string, hypermesh::regular_simplex_mesh_element> id2element; 
+
+  for (const auto& ele : elements) {
+    std::string eid = ele.to_string(); 
+    if(intersections->find(eid) != intersections->end()) {
+      features.insert(eid); 
+      id2element.insert(std::make_pair(eid, ele)); 
+
+      if(is_in_mesh(ele, block_m.lattice())) {
+        features_in_block.insert(eid); 
+      }
+      
+    }
+  }
+
+  if(features.size()  > 1) {
+    if(features_in_block.size() > 1) {
+      // When features are local, we just need to relate to the first feature element
+
+      #if MULTITHREAD
+        std::lock_guard<std::mutex> guard(mutex);
+      #endif
+
+      std::string first_feature = *(features_in_block.begin()); 
+      for(std::set<std::string>::iterator ite_i = std::next(features_in_block.begin(), 1); ite_i != features_in_block.end(); ++ite_i) {
+        std::string curr_feature = *ite_i; 
+
+        if(first_feature < curr_feature) { // Since only when the id of related_ele < ele, then the related_ele can be the parent of ele
+          intersections->find(curr_feature)->second.related_elements.insert(first_feature); 
+        } else {
+          intersections->find(first_feature)->second.related_elements.insert(curr_feature); 
+        }
+        
+      }
+    }
+
+    if(features_in_block.size() == 0 || features.size() == features_in_block.size()) {
+      return ;
+    }
+  
+    // When features are across processors, we need to relate all local feature elements to all remote feature elements
+    for(auto& feature: features) {
+      if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
+        #if MULTITHREAD 
+          std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+        #endif
+
+        for(auto& feature_in_block : features_in_block) {
+
+          if(feature < feature_in_block) { // When across processes, also, since only when the id of related_ele < ele, then the related_ele can be the parent of ele
+            intersections->find(feature_in_block)->second.related_elements.insert(feature); 
+          }
+
+        }
+      }
+    }
+  }
+}
+
+void add_related_elements_to_intersections(std::map<std::string, intersection_t>* intersections, hypermesh::regular_simplex_mesh& m, hypermesh::regular_simplex_mesh& block_m, int feature_dim) {
+    // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
+
+  std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
+  for(auto& pair : *intersections) {
+    auto& eid = pair.first;
+    // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, eid); 
+    auto&f = eles_with_intersections.emplace_back(m, feature_dim, eid); 
+  }
+
+  // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
+
+  // Connected Component Labeling by using union-find. 
+
+  // std::cout<<"Start Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
+
+  // // Method one:
+  //   // For dense critical points
+  //   // Enumerate each 3-d element to connect 2-d faces that contain critical points  
+  // _m_ghost.element_for(3, add_unions, nthreads); 
+
+  // Method two:
+    // For sparse critical points
+    // Enumerate all critical points, find their higher-order geometry; to connect critical points in this higher-order geometry
+  std::set<std::string> visited_hypercells;
+  for(auto& e : eles_with_intersections) { 
+    const auto hypercells = e.side_of();
+    for(auto& hypercell : hypercells) {
+      std::string id_hypercell = hypercell.to_string(); 
+      if(visited_hypercells.find(id_hypercell) == visited_hypercells.end()) {
+        visited_hypercells.insert(id_hypercell); 
+        add_unions(intersections, block_m, hypercell); 
+      }
+    }
+  }
+
+  // std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
+}
+
+
+// Note: will eliminate features of intersections in ghost cells
+void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_simplex_mesh& block_m, Block_Critical_Point* b, int feature_dim) {
+  // std::vector<intersection_t> points; 
+  int DIM = m.nd(); 
+
+  // for(auto& intersection : b->intersections.begin();) {
+  auto ite = b->intersections.begin();
+  while(ite != b->intersections.end()) {
+    auto& intersection = (*ite); 
+
+    hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, intersection.first);
+
+    if(is_in_mesh(f, block_m.lattice())) {
+      point_t point;
+      point.corner.resize(DIM); 
+      for(int i = 0; i < DIM; ++i) {
+        point.corner[i] = f.corner[i];
+      }
+      b->points.push_back(point); 
+
+      ++ite;
+    } else{
+      ite = b->intersections.erase(ite);
+    }
+  }
+}
+
+// ================================================================
+// Functions for load balancing
+
+
+void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b) {
+  int DIM = m.nd(); 
+
+  bool wrap = false; 
+  int hist = 128; //32; 512
+  
+  diy::ContinuousBounds domain(DIM);
+  for(int i = 0; i < DIM; ++i) {
+    domain.min[i] = m.lb(i); domain.max[i] = m.ub(i); 
+  }
+
+  for(int i = 0; i < DIM; ++i) {
+    hist = std::min(hist, (int)(domain.max[i] - domain.min[i] + 1)); 
+  }
+
+  diy::RegularContinuousLink* link = new diy::RegularContinuousLink(DIM, domain, domain);
+  master.add(gid, b, link); 
+
+  diy::kdtree<Block_Critical_Point, point_t>(master, assigner, DIM, domain, &Block_Critical_Point::points, 2*hist, wrap);
+      // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
+
+  // Everybody sends their bounds to everybody else
+  diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
+    Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+    if (srp.round() == 0) {
+      diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
+      for (int i = 0; i < world.size(); ++i) {
+        srp.enqueue(srp.out_link().target(i), link->bounds());
+      }
+    } else {
+      b->block_bounds.resize(srp.in_link().size());
+      for (int i = 0; i < srp.in_link().size(); ++i) {
+        int _gid = srp.in_link().target(i).gid;
+
+        assert(i == _gid);
+
+        srp.dequeue(_gid, b->block_bounds[_gid]);
+      }
+    }
+  });
+}
+
+void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+  diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
+    Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+    if (srp.round() == 0) {
+      diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
+
+      for(auto& intersection : b->intersections) {
+        hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, intersection.first);
+
+        // if this point is within multiple processes' ranges; probably on a boundary, select the largest gid
+        int target_gid = -1;
+        for(int rgid = world.size() - 1; rgid >= 0; --rgid) {
+          if(is_in_mesh(f, b->block_bounds[rgid])) {
+            target_gid = rgid; 
+            break ;
+          }
+        }
+
+        if(target_gid == gid) {
+          b->features.push_back(intersection.second);   
+        } else {
+          srp.enqueue(srp.out_link().target(target_gid), intersection.second);
+        }
+      }
+
+    } else {
+      std::vector<int> in; // gids of incoming neighbors in the link
+      srp.incoming(in);
+
+      // for all neighbor blocks
+      // dequeue data received from this neighbor block in the last exchange
+      for (unsigned i = 0; i < in.size(); ++i) {
+        while(srp.incoming(in[i])) {
+          intersection_t intersection; 
+          srp.dequeue(in[i], intersection);
+
+          b->features.push_back(intersection); 
+        }
+      }
+    }
+  });
+}
+
+
+void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+  int DIM = m.nd(); 
+  // , diy::RegularContinuousLink* link
+
+  b->intersections.clear(); 
+  for(auto feature : b->features) {
+    b->intersections.insert(std::make_pair(feature.eid, feature)); 
+
+    b->add(feature.eid); 
+    b->set_gid(feature.eid, gid);
+  }
+
+  for(auto& feature : b->features) {
+    // std::cout<<p.related_elements.size()<<std::endl;
+
+    for(auto& related_ele : feature.related_elements) {
+      // std::cout<<related_ele<<std::endl;
+
+      b->add_related_element(feature.eid, related_ele); 
+
+      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, related_ele);
+
+      if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
+
+        // if this point is within multiple processes' ranges; probably on a boundary, select the largest gid
+        for(int rgid = b->block_bounds.size() - 1; rgid >= 0; --rgid) {
+          if(rgid == gid) {
+            continue;
+          }
+
+          if(is_in_mesh(f, b->block_bounds[rgid])) {
+            b->set_gid(related_ele, rgid);
+            break ;
+          }
+        }
+
+        assert(b->has_gid(related_ele)); // If not, Error! Cannot find the gid of the related element!
+        // if(!b->has_gid(related_ele)) {
+        //   std::cout<<"Error! Cannot find the gid of the related element! "<<std::endl;
+        //   exit(0);
+        // }
+
+      }
+
+    }
+  }
+}
+
+void init_block_without_load_balancing(std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>>& lattice_partitions, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+
+  b->intersections.clear(); // *
+  for(auto feature : b->features) {
+    b->intersections.insert(std::make_pair(feature.eid, feature)); // *
+
+    b->add(feature.eid); 
+    b->set_gid(feature.eid, gid);
+  }
+
+  for(auto& feature : b->features) {
+    // std::cout<<p.related_elements.size()<<std::endl;
+
+    for(auto& related_ele : feature.related_elements) {
+      // std::cout<<related_ele<<std::endl;
+
+      b->add_related_element(feature.eid, related_ele); 
+
+      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, related_ele);
+
+      if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
+        for(int i = 0; i < lattice_partitions.size(); ++i) {
+          int rgid = i;
+          if(rgid == gid) { // We know the feature is not in this partition
+            continue;
+          }
+
+          auto& _lattice = std::get<0>(lattice_partitions[i]); 
+          if(is_in_mesh(f, _lattice)) { // the feature is in mith partition
+            b->set_gid(related_ele, rgid); // Set gid of this feature to mi  
+          }
+
+        }
+      }
+
+    }
+  }
+}
+

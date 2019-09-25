@@ -262,10 +262,11 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
   intersection_t I;
   I.eid = f.to_string();
   I.val = ftk::lerp_s3(value, mu);
+  I.x.resize(DIM); 
 
   for(int i = 0; i < DIM; ++i) {
-    I.x.push_back(x[i]); 
-    I.corner.push_back(f.corner[i]); 
+    I.x[i] = x[i]; 
+    // I.corner.push_back(f.corner[i]); 
   }
 
   {

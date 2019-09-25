@@ -1,10 +1,10 @@
-add_executable              (shared_memory_parallel     shared_memory_parallel.cpp)
-# target_link_libraries       (shared_memory_parallel     ${libraries})
-target_link_libraries       (shared_memory_parallel     ftk)
+# add_executable              (shared_memory_parallel     shared_memory_parallel.cpp)
+# # target_link_libraries       (shared_memory_parallel     ${libraries})
+# target_link_libraries       (shared_memory_parallel     ftk)
 
-add_executable              (distributed_memory_parallel     distributed_memory_parallel.cpp)
-# target_link_libraries       (distributed_memory_parallel     ${libraries})
-target_link_libraries       (distributed_memory_parallel     ftk)
+# add_executable              (distributed_memory_parallel     distributed_memory_parallel.cpp)
+# # target_link_libraries       (distributed_memory_parallel     ${libraries})
+# target_link_libraries       (distributed_memory_parallel     ftk)
 
 # ============================================
 
@@ -44,21 +44,21 @@ endif ()
 
 # ============================================
 
-set (sources distributed_critical_point_tracking_3d.cpp)
+# set (sources distributed_critical_point_tracking_3d.cpp)
 
-if (FTK_HAVE_QT5)
-  set (CMAKE_AUTOMOC ON)
-  list (APPEND sources widget.cpp)
-endif ()
+# if (FTK_HAVE_QT5)
+#   set (CMAKE_AUTOMOC ON)
+#   list (APPEND sources widget.cpp)
+# endif ()
 
-add_executable              (distributed_critical_point_tracking_3d     ${sources})
-# target_link_libraries       (distributed_critical_point_tracking_3d     ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries       (distributed_critical_point_tracking_3d     ftk)
+# add_executable              (distributed_critical_point_tracking_3d     ${sources})
+# # target_link_libraries       (distributed_critical_point_tracking_3d     ${CMAKE_THREAD_LIBS_INIT})
+# target_link_libraries       (distributed_critical_point_tracking_3d     ftk)
   
-if (FTK_HAVE_QT5)
-  qt5_use_modules (distributed_critical_point_tracking_3d Widgets OpenGL)
-  target_link_libraries (distributed_critical_point_tracking_3d trackball ${OPENGL_LIBRARIES})
-endif ()
+# if (FTK_HAVE_QT5)
+#   qt5_use_modules (distributed_critical_point_tracking_3d Widgets OpenGL)
+#   target_link_libraries (distributed_critical_point_tracking_3d trackball ${OPENGL_LIBRARIES})
+# endif ()
 
 # ============================================
 
@@ -80,18 +80,18 @@ endif ()
 
 # ============================================
 
-set (sources distributed_level_set_tracking_3d.cpp)
+# set (sources distributed_level_set_tracking_3d.cpp)
 
-if (FTK_HAVE_QT5)
-  set (CMAKE_AUTOMOC ON)
-  list (APPEND sources widget.cpp)
-endif ()
+# if (FTK_HAVE_QT5)
+#   set (CMAKE_AUTOMOC ON)
+#   list (APPEND sources widget.cpp)
+# endif ()
 
-add_executable              (distributed_level_set_tracking_3d     ${sources})
-# target_link_libraries       (distributed_level_set_tracking_3d     ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries       (distributed_level_set_tracking_3d     ftk)
+# add_executable              (distributed_level_set_tracking_3d     ${sources})
+# # target_link_libraries       (distributed_level_set_tracking_3d     ${CMAKE_THREAD_LIBS_INIT})
+# target_link_libraries       (distributed_level_set_tracking_3d     ftk)
   
-if (FTK_HAVE_QT5)
-  qt5_use_modules (distributed_level_set_tracking_3d Widgets OpenGL)
-  target_link_libraries (distributed_level_set_tracking_3d trackball ${OPENGL_LIBRARIES})
-endif ()
+# if (FTK_HAVE_QT5)
+#   qt5_use_modules (distributed_level_set_tracking_3d Widgets OpenGL)
+#   target_link_libraries (distributed_level_set_tracking_3d trackball ${OPENGL_LIBRARIES})
+# endif ()
