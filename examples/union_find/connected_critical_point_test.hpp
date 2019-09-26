@@ -667,6 +667,14 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
 
 void init_block_without_load_balancing(std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>>& lattice_partitions, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
 
+  for(auto& intersection : b->intersections) {
+    hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, intersection.first);
+    auto& _lattice = std::get<0>(lattice_partitions[gid]); 
+    if(is_in_mesh(f, _lattice)) { // the feature is in this partition
+      b->features.push_back(intersection.second);   
+    }
+  }
+
   b->intersections.clear(); // *
   for(auto feature : b->features) {
     b->intersections.insert(std::make_pair(feature.eid, feature)); // *
