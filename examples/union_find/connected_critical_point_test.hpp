@@ -484,8 +484,96 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
     double start = MPI_Wtime();
   #endif
 
-  master.foreach(&send_2_redistributed_processes); 
-  master.iexchange(&gather_on_redistributed_processes); 
+  // master.foreach(&send_2_redistributed_processes); 
+  // master.iexchange(&gather_on_redistributed_processes); 
+
+
+  int nblocks = world.size();
+
+  std::vector<std::string> eles_to_send ;
+  std::vector<int> target_gids;
+  master.foreach([&](Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) {
+    int gid = cp.gid(); 
+
+    for(auto& ele : b->eles) {
+      std::string root = b->parent(ele); 
+      int gid_root = hash_string(root, nblocks); 
+
+      if(gid_root != gid) {
+        eles_to_send.push_back(ele); 
+        target_gids.push_back(gid_root); 
+      }
+    }
+  }); 
+
+  diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
+    // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+    if (srp.round() == 0) {
+      diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
+
+      for(int i = 0; i < eles_to_send.size(); ++i) {
+        auto& ele = eles_to_send[i];
+        auto& target_gid = target_gids[i]; 
+
+        std::string root = b->parent(ele); 
+        std::pair<std::string, std::string> local_pair(ele, root); 
+
+        srp.enqueue(srp.out_link().target(target_gid), local_pair);
+      }
+
+    } else {
+      std::vector<int> in; // gids of incoming neighbors in the link
+      srp.incoming(in);
+
+      // for all neighbor blocks
+      // dequeue data received from this neighbor block in the last exchange
+      for (unsigned i = 0; i < in.size(); ++i) {
+        while(srp.incoming(in[i])) {
+          std::pair<std::string, std::string> local_pair; 
+          srp.dequeue(in[i], local_pair);
+
+          b->add(local_pair.first); 
+          b->set_parent(local_pair.first, local_pair.second);           
+        }
+      }
+    }
+  });
+
+
+  diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
+    // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+    if (srp.round() == 0) {
+      diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
+
+      for(int i = 0; i < eles_to_send.size(); ++i) {
+        auto& ele = eles_to_send[i];
+        auto& target_gid = target_gids[i]; 
+
+        intersection_t& intersection = b->intersections.find(ele)->second;
+        intersection.related_elements.clear(); 
+        srp.enqueue(srp.out_link().target(target_gid), intersection);
+      }
+
+    } else {
+      std::vector<int> in; // gids of incoming neighbors in the link
+      srp.incoming(in);
+
+      // for all neighbor blocks
+      // dequeue data received from this neighbor block in the last exchange
+      for (unsigned i = 0; i < in.size(); ++i) {
+        while(srp.incoming(in[i])) {
+          intersection_t intersection; 
+          srp.dequeue(in[i], intersection);
+
+          b->intersections.insert(std::make_pair(intersection.eid, intersection));      
+        }
+      }
+    }
+  });
+
+  for(auto& ele : eles_to_send) {
+    b->eles.erase(ele); 
+  }
 
   // #ifdef FTK_HAVE_MPI
   //   MPI_Barrier(world); 
@@ -538,9 +626,9 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
 
 // Get sets of elements
 inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
-  get_sets_on_p0(this, world, master, assigner, results); 
+  // get_sets_on_p0(this, world, master, assigner, results); 
   // get_sets_on_roots(this, world, master, assigner, results); 
-  // get_sets_redistributed(this, world, master, assigner, results); 
+  get_sets_redistributed(this, world, master, assigner, results); 
 }
 
 // ===================================================================
@@ -739,8 +827,8 @@ void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& ma
       // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
 
   // Everybody sends their bounds to everybody else
-  diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
-    Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+  diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
+    // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
     if (srp.round() == 0) {
       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
       for (int i = 0; i < world.size(); ++i) {
@@ -760,8 +848,8 @@ void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& ma
 }
 
 void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
-  diy::all_to_all(master, assigner, [&](void* _b, const diy::ReduceProxy& srp) {
-    Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+  diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
+    // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
     if (srp.round() == 0) {
       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
 
