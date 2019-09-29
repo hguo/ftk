@@ -207,8 +207,8 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
 }
 
 void decompose_mesh(int nblocks) {
-  // std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
-  std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
+  std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
+  // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
   // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
 
   std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
