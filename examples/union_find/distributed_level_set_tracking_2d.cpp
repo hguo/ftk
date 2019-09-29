@@ -122,13 +122,14 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
   for (int k = 0; k < data_box.max[2] + 1 - data_offset[2]; k ++) {
     for (int j = 0; j < data_box.max[1] + 1 - data_offset[1]; j ++) {
       for (int i = 0; i < data_box.max[0] + 1 - data_offset[0]; i ++) {
-        // const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
-        //         y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
-        //         t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
+        const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
+                y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
+                t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
 
-        const T x = ((T(i + data_offset[0]) / (128-1)) - 0.5) * scaling_factor,
-                y = ((T(j + data_offset[1]) / (128-1)) - 0.5) * scaling_factor, 
-                t = (T(k + data_offset[2]) / (128-1)) + 1e-4;
+        // // For test of weak scaling
+        // const T x = ((T(i + data_offset[0]) / (128-1)) - 0.5) * scaling_factor,
+        //         y = ((T(j + data_offset[1]) / (128-1)) - 0.5) * scaling_factor, 
+        //         t = (T(k + data_offset[2]) / (128-1)) + 1e-4;
 
         scalar(i, j, k) = f(x, y, t);
       }
@@ -139,8 +140,8 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
 }
 
 void decompose_mesh(int nblocks) {
-  std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
-  // std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
+  // std::vector<size_t> given = {0}; // partition the 2D spatial space and 1D timespace
+  std::vector<size_t> given = {0, 0, 1}; // Only partition the 2D spatial space
   // std::vector<size_t> given = {1, 1, 0}; // Only partition the 1D temporal space
 
   std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
