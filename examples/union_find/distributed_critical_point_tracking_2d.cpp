@@ -388,12 +388,12 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
         eles.push_back(f); 
       }
 
-      std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
-        auto& pa = intersections->at(a.to_string());
-        auto& pb = intersections->at(b.to_string());
+      // std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
+      //   auto& pa = intersections->at(a.to_string());
+      //   auto& pb = intersections->at(b.to_string());
 
-        return (pa.x[2] < pb.x[2]); 
-      }); 
+      //   return (pa.x[2] < pb.x[2]); 
+      // }); 
       
       std::vector<float>& mycurve = trajectories.emplace_back();
       float max_value = std::numeric_limits<float>::min();
