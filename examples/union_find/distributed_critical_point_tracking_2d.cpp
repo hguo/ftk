@@ -130,14 +130,14 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
   for (int k = 0; k < data_box.max[2] + 1 - data_offset[2]; k ++) {
     for (int j = 0; j < data_box.max[1] + 1 - data_offset[1]; j ++) {
       for (int i = 0; i < data_box.max[0] + 1 - data_offset[0]; i ++) {
-        // const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
-        //         y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
-        //         t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
-
-        // For test of weak scaling
         const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
                 y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
-                t = (T(k + data_offset[2]) / (128-1)) + 1e-4;
+                t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
+
+        // // For test of weak scaling
+        // const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
+        //         y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
+        //         t = (T(k + data_offset[2]) / (128-1)) + 1e-4;
 
         scalar(i, j, k) = f(x, y, t);
       }
@@ -371,55 +371,103 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
 
   // Convert connected components to geometries
 
-  // if(world.rank() == 0) {
+
   if(connected_components_str.size() > 0) {
-    
-    std::vector<std::set<element_t>> cc; // connected components 
+
+    // std::vector<std::set<element_t>> cc; // connected components 
+
     // Convert element IDs to elements
     for(auto& comp_str : connected_components_str) {
-      std::set<element_t>& comp = cc.emplace_back(); 
+      // std::set<element_t>& comp = cc.emplace_back(); 
+      std::vector<element_t> eles; 
+
       for(auto& eid : comp_str) {
-        comp.insert(hypermesh::regular_simplex_mesh_element(m, 2, eid)); 
-      }
-    }
+        // comp.insert(hypermesh::regular_simplex_mesh_element(m, 0, eid)); 
 
-    auto neighbors = [](element_t f) {
-      std::set<element_t> neighbors;
-      const auto cells = f.side_of();
-      for (const auto c : cells) {
-        const auto elements = c.sides();
-        for (const auto f1 : elements)
-          neighbors.insert(f1);
+        hypermesh::regular_simplex_mesh_element f(m, 2, eid);
+        eles.push_back(f); 
       }
-      return neighbors;
-    };
-    
-    for (int i = 0; i < cc.size(); i ++) {
-      std::vector<std::vector<float>> mycurves;
-      auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
+
+      std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
+        // return (a.corner[2] < b.corner[2]) || (a.corner[2] == b.corner[2] && a.corner[0] < b.corner[0]) || (a.corner[2] == b.corner[2] && a.corner[0] == b.corner[0] && a.corner[1] < b.corner[1]); 
+        // return (a.corner[2] < b.corner[2]); 
+
+        auto& pa = intersections->at(a.to_string());
+        auto& pb = intersections->at(b.to_string());
+
+        return (pa.x[2] < pb.x[2]); 
+      }); 
       
-      for (int j = 0; j < linear_graphs.size(); j ++) {
-        int _size = linear_graphs[j].size();
-        if(_size > threshold_length) {
-          std::vector<float> mycurve, mycolors;
-          float max_value = std::numeric_limits<float>::min();
-          for (int k = 0; k < linear_graphs[j].size(); k ++) {
-            auto p = intersections->at(linear_graphs[j][k].to_string());
-            mycurve.push_back(p.x[0]); //  / (DW-1));
-            mycurve.push_back(p.x[1]); //  / (DH-1));
-            mycurve.push_back(p.x[2]); //  / (DT-1));
-            mycurve.push_back(p.val);
-            max_value = std::max(max_value, p.val);
-          }
-          if (max_value > threshold) {
-            trajectories.emplace_back(mycurve);
-          }
+      std::vector<float>& mycurve = trajectories.emplace_back();
+      float max_value = std::numeric_limits<float>::min();
+      for (int k = 0; k < eles.size(); k ++) {
+        auto& p = intersections->at(eles[k].to_string());
 
-        }
-
+        mycurve.push_back(p.x[0]); //  / (DW-1));
+        mycurve.push_back(p.x[1]); //  / (DH-1));
+        mycurve.push_back(p.x[2]); //  / (DT-1));
+        mycurve.push_back(p.val);
+        max_value = std::max(max_value, p.val);
+      }
+      if (max_value < threshold) {
+        trajectories.pop_back();
       }
     }
+
   }
+
+
+
+
+  // // if(world.rank() == 0) {
+  // if(connected_components_str.size() > 0) {
+    
+  //   std::vector<std::set<element_t>> cc; // connected components 
+  //   // Convert element IDs to elements
+  //   for(auto& comp_str : connected_components_str) {
+  //     std::set<element_t>& comp = cc.emplace_back(); 
+  //     for(auto& eid : comp_str) {
+  //       comp.insert(hypermesh::regular_simplex_mesh_element(m, 2, eid)); 
+  //     }
+  //   }
+
+  //   auto neighbors = [](element_t f) {
+  //     std::set<element_t> neighbors;
+  //     const auto cells = f.side_of();
+  //     for (const auto c : cells) {
+  //       const auto elements = c.sides();
+  //       for (const auto f1 : elements)
+  //         neighbors.insert(f1);
+  //     }
+  //     return neighbors;
+  //   };
+    
+  //   for (int i = 0; i < cc.size(); i ++) {
+  //     std::vector<std::vector<float>> mycurves;
+  //     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
+      
+  //     for (int j = 0; j < linear_graphs.size(); j ++) {
+  //       int _size = linear_graphs[j].size();
+  //       if(_size > threshold_length) {
+  //         std::vector<float> mycurve, mycolors;
+  //         float max_value = std::numeric_limits<float>::min();
+  //         for (int k = 0; k < linear_graphs[j].size(); k ++) {
+  //           auto p = intersections->at(linear_graphs[j][k].to_string());
+  //           mycurve.push_back(p.x[0]); //  / (DW-1));
+  //           mycurve.push_back(p.x[1]); //  / (DH-1));
+  //           mycurve.push_back(p.x[2]); //  / (DT-1));
+  //           mycurve.push_back(p.val);
+  //           max_value = std::max(max_value, p.val);
+  //         }
+  //         if (max_value > threshold) {
+  //           trajectories.emplace_back(mycurve);
+  //         }
+
+  //       }
+
+  //     }
+  //   }
+  // }
 
   // #ifdef FTK_HAVE_MPI
   //   #if TIME_OF_STEPS
