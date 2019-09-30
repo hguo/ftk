@@ -292,9 +292,9 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
         eles.push_back(f); 
       }
 
-      std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
-        return (a.corner[2] < b.corner[2]) || (a.corner[2] == b.corner[2] && a.corner[0] < b.corner[0]) || (a.corner[2] == b.corner[2] && a.corner[0] == b.corner[0] && a.corner[1] < b.corner[1]); 
-      }); 
+      // std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
+      //   return (a.corner[2] < b.corner[2]) || (a.corner[2] == b.corner[2] && a.corner[0] < b.corner[0]) || (a.corner[2] == b.corner[2] && a.corner[0] == b.corner[0] && a.corner[1] < b.corner[1]); 
+      // }); 
 
       std::vector<float>& level_set = level_sets.emplace_back();
       for (int k = 0; k < eles.size(); k ++) {
