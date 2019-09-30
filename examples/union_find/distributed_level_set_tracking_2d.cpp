@@ -56,7 +56,7 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
 
-#define LOAD_BALANCING false
+#define LOAD_BALANCING true
 
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
