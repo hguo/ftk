@@ -62,7 +62,8 @@
 #define MULTITHREAD false
 
 #define PRINT_FEATURE_DENSITY false
-#define PRINT_ELE_COUNT false
+#define PRINT_ELE_COUNT true
+#define PRINT_EDGE_COUNT true
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
@@ -984,6 +985,29 @@ int main(int argc, char **argv)
         }
         start = end; 
       #endif
+    #endif
+
+    #if PRINT_EDGE_COUNT
+      int edge_cnt = 0;
+
+      int local_edge_cnt = 0; 
+      for(auto& feature : b->features) {
+        local_edge_cnt += feature.related_elements.size();
+      }
+
+      if (world.rank() == 0) {
+        diy::mpi::reduce<int>(world, local_edge_cnt, edge_cnt, 0, std::plus<int>());
+      } else {
+        diy::mpi::reduce<int>(world, local_edge_cnt, 0, std::plus<int>());
+      }
+
+      if (world.rank() == 0) {
+        std::cout<<"Edge Count is " << edge_cnt << std::endl; 
+      }
+      
+      MPI_Barrier(world);
+      end = MPI_Wtime();
+      start = end; 
     #endif
 
     #if LOAD_BALANCING
