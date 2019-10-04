@@ -257,6 +257,7 @@ public:
 
   #if OUTPUT_TIME_EACH_ROUND
     double time = 0; // time for measure duration of each round;
+    double time_final_update_start;
   #endif
   
   // std::map<int, std::set<std::string>> cache_send_temporary_roots ;
@@ -1037,6 +1038,9 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
 }
 
 void assign_global_roots(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
+  #if OUTPUT_TIME_EACH_ROUND
+    b->time_final_update_start = MPI_Wtime();
+  #endif
   for(auto& ele : b->eles) {
 
     if(!b->is_root(ele)) {
@@ -1108,8 +1112,13 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
     #if OUTPUT_TIME_EACH_ROUND
       #ifdef FTK_HAVE_MPI
         if(!filename_time_uf_w.empty()) {
+          double time_final_update_end = MPI_Wtime(); 
+
           double duration = blocks[0]->time - start; 
           ss << " " << duration ;
+
+          double duration_final_update = time_final_update_end - blocks[0]->time_final_update_start; 
+          ss << " " << duration_final_update ;
 
           MPI_Status status;
           MPI_File fh;
@@ -1166,10 +1175,11 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
     master.foreach(&assign_global_roots); 
     #if OUTPUT_TIME_EACH_ROUND
       #ifdef FTK_HAVE_MPI
-        double duration = blocks[0]->time - start; 
+        double time_final_update_end = MPI_Wtime(); 
+        double duration_final_update = time_final_update_end - blocks[0]->time_final_update_start; 
 
         // ss << "Round "<<round_cnt << ":"; 
-        ss << " " << duration ;
+        ss << " " << duration_final_update ;
 
         round_cnt ++; 
 
