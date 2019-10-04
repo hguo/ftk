@@ -1113,8 +1113,8 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
           double duration = blocks[0]->time - start; 
           ss << " " << duration ;
 
-          double duration_final_update = time_final_update_end - blocks[0]->time_final_update_start; 
-          ss << " " << duration_final_update ;
+          // double duration_final_update = time_final_update_end - blocks[0]->time_final_update_start; 
+          // ss << " " << duration_final_update ;
 
           MPI_Status status;
           MPI_File fh;
@@ -1172,21 +1172,21 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
         #endif
       #endif
     }
-    master.foreach(&assign_global_roots); 
-    #if OUTPUT_TIME_EACH_ROUND
-      #ifdef FTK_HAVE_MPI
-        double time_final_update_end = MPI_Wtime(); 
-        double duration_final_update = time_final_update_end - blocks[0]->time_final_update_start; 
+    // master.foreach(&assign_global_roots); 
+    // #if OUTPUT_TIME_EACH_ROUND
+    //   #ifdef FTK_HAVE_MPI
+    //     double time_final_update_end = MPI_Wtime(); 
+    //     double duration_final_update = time_final_update_end - blocks[0]->time_final_update_start; 
 
-        // ss << "Round "<<round_cnt << ":"; 
-        ss << " " << duration_final_update ;
+    //     // ss << "Round "<<round_cnt << ":"; 
+    //     ss << " " << duration_final_update ;
 
-        round_cnt ++; 
+    //     round_cnt ++; 
 
-        MPI_Barrier(world); 
-        start = MPI_Wtime(); 
-      #endif
-    #endif
+    //     MPI_Barrier(world); 
+    //     start = MPI_Wtime(); 
+    //   #endif
+    // #endif
 
 
     #if OUTPUT_TIME_EACH_ROUND
