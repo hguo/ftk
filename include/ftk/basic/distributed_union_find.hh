@@ -1163,6 +1163,20 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
         #endif
       #endif
     }
+    master.foreach(&assign_global_roots); 
+    #if OUTPUT_TIME_EACH_ROUND
+      #ifdef FTK_HAVE_MPI
+        double duration = blocks[0]->time - start; 
+
+        // ss << "Round "<<round_cnt << ":"; 
+        ss << " " << duration ;
+
+        round_cnt ++; 
+
+        MPI_Barrier(world); 
+        start = MPI_Wtime(); 
+      #endif
+    #endif
 
 
     #if OUTPUT_TIME_EACH_ROUND
