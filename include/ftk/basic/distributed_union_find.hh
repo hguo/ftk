@@ -22,7 +22,7 @@
 // Add the sparse representation by using Hash map/table 
 
 #define ISDEBUG   0
-#define OUTPUT_TIME_EACH_ROUND false
+#define OUTPUT_TIME_EACH_ROUND true
 
 namespace ftk {
 template <class IdType=std::string>
@@ -1068,10 +1068,6 @@ void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
   cp.all_reduce(b->nchanges, std::plus<int>()); 
   b->nchanges = 0;
-
-  #if OUTPUT_TIME_EACH_ROUND
-    b->time = MPI_Wtime();
-  #endif
 }
 
 void exchange_process(diy::Master& master) {
@@ -1156,6 +1152,10 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
       #if ISDEBUG
         std::cout<<total_changes<<std::endl; 
+      #endif
+
+      #if OUTPUT_TIME_EACH_ROUND
+        blocks[0]->time = MPI_Wtime();
       #endif
 
       #if OUTPUT_TIME_EACH_ROUND
