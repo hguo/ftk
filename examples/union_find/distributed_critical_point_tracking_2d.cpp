@@ -56,14 +56,16 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
 
-#define LOAD_BALANCING true
+#define LOAD_BALANCING false
 
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
 
 #define PRINT_FEATURE_DENSITY false
-#define PRINT_ELE_COUNT true
-#define PRINT_EDGE_COUNT true
+#define PRINT_ELE_COUNT false
+#define PRINT_EDGE_COUNT false
+
+#define PRINT_SIMPLEX_COUNT false
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
@@ -778,6 +780,25 @@ int main(int argc, char **argv)
     #endif
   #endif
 
+  #if PRINT_FEATURE_DENSITY || PRINT_SIMPLEX_COUNT
+    int element_cnt = 0; 
+
+    m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f){
+      element_cnt++ ;
+    }, nthreads);
+  #endif
+
+  #if PRINT_SIMPLEX_COUNT
+    if (world.rank() == 0) {
+      std::cout<<"Simplex Count: "<< element_cnt << std::endl; 
+      exit(0); 
+    }
+    
+    MPI_Barrier(world);
+    end = MPI_Wtime();
+    start = end; 
+  #endif
+
 // ========================================
 
   //// For debug
@@ -933,18 +954,12 @@ int main(int argc, char **argv)
     #endif
 
     #if PRINT_FEATURE_DENSITY
-      int element_cnt = 0; 
-
-      m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f){
-        element_cnt++ ;
-      }, nthreads);
-
       if (world.rank() == 0) {
         std::cout<<"Feature Density: "<< feature_ele_cnt / (float)element_cnt << std::endl; 
       }
     #endif
 
-    #if PRINT_ELE_COUNT || PRINT_FEATURE_DENSITY
+    #if PRINT_ELE_COUNT || PRINT_FEATURE_DENSITY || PRINT_SIMPLEX_COUNT
       MPI_Barrier(world);
       end = MPI_Wtime();
       start = end; 

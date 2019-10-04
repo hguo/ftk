@@ -22,7 +22,7 @@
 // Add the sparse representation by using Hash map/table 
 
 #define ISDEBUG   0
-#define OUTPUT_TIME_EACH_ROUND 0
+#define OUTPUT_TIME_EACH_ROUND true
 
 namespace ftk {
 template <class IdType=std::string>
