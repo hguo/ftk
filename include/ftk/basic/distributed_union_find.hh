@@ -1068,13 +1068,18 @@ void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
   cp.all_reduce(b->nchanges, std::plus<int>()); 
   b->nchanges = 0;
+
+  #if OUTPUT_TIME_EACH_ROUND
+    b->time = MPI_Wtime();
+  #endif
 }
 
 void exchange_process(diy::Master& master) {
   master.foreach(&receive_msg);
   master.foreach(&local_computation);
   master.foreach(&total_changes);
-  master.exchange();
+  
+  // master.exchange();
 
   #if ISDEBUG
     std::cout<<"================================="<<std::endl; 
@@ -1143,20 +1148,6 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
     while(!all_done) {
       exchange_process(master); 
-      int total_changes = master.proxy(master.loaded_block()).read<int>();
-      // int total_changes = master.proxy(master.loaded_block()).get<int>();
-      all_done = total_changes == 0;
-
-      // =========================================
-      // Debug and Print
-
-      #if ISDEBUG
-        std::cout<<total_changes<<std::endl; 
-      #endif
-
-      #if OUTPUT_TIME_EACH_ROUND
-        blocks[0]->time = MPI_Wtime();
-      #endif
 
       #if OUTPUT_TIME_EACH_ROUND
         #ifdef FTK_HAVE_MPI
@@ -1171,7 +1162,35 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
           start = MPI_Wtime(); 
         #endif
       #endif
+
+      master.exchange();
+      int total_changes = master.proxy(master.loaded_block()).read<int>();
+      // int total_changes = master.proxy(master.loaded_block()).get<int>();
+      all_done = total_changes == 0;
+
+      // =========================================
+      // Debug and Print
+
+      #if ISDEBUG
+        std::cout<<total_changes<<std::endl; 
+      #endif
+
     }
+
+    #if OUTPUT_TIME_EACH_ROUND
+      #ifdef FTK_HAVE_MPI
+        double duration = MPI_Wtime() - start; 
+
+        // ss << "Round "<<round_cnt << ":"; 
+        ss << " " << duration ;
+
+        round_cnt ++; 
+
+        MPI_Barrier(world); 
+        start = MPI_Wtime(); 
+      #endif
+    #endif
+
     // master.foreach(&assign_global_roots); 
     // #if OUTPUT_TIME_EACH_ROUND
     //   #ifdef FTK_HAVE_MPI
