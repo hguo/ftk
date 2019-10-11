@@ -412,6 +412,10 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
+#if FTK_HAVE_KOKKOS
+  Kokkos::initialize(argc,argv);
+#endif
+
   std::string pattern, format;
   std::string filename_dump_r, filename_dump_w;
   std::string filename_traj_r, filename_traj_w, filename_traj_vtk_w;
@@ -505,6 +509,10 @@ int main(int argc, char **argv)
   } else {
     print_trajectories();
   }
+
+#if FTK_HAVE_KOKKOS
+  Kokkos::finalize();
+#endif
 
   return 0;
 }

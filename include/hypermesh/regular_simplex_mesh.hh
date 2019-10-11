@@ -16,6 +16,10 @@
 #include <functional>
 #include <hypermesh/regular_lattice.hh>
 
+#if FTK_HAVE_KOKKOS
+#include <Kokkos_Core.hpp>
+#endif
+
 #if FTK_HAVE_TBB
 #include <tbb/mutex.h>
 #include <tbb/task_scheduler_init.h>
@@ -808,7 +812,17 @@ inline size_t regular_simplex_mesh::n(int d) const
 
 inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads, int mode)
 {
-#if FTK_HAVE_TBB
+#if FTK_HAVE_KOKKOS
+  fprintf(stderr, "using kokkos..\n");
+
+  Kokkos::parallel_for("element_for", n(d), KOKKOS_LAMBDA(const int& j) {
+      regular_simplex_mesh_element e(*this, d, j);
+      if (mode == ELEMENT_ITERATION_ALL) f(e);
+      else if (mode == ELEMENT_ITERATION_FIXED_TIME) {if (e.is_fixed_time()) f(e);}
+      else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {if (!e.is_fixed_time()) f(e);}
+    });
+
+#elif FTK_HAVE_TBB
   // fprintf(stderr, "using tbb..\n");
   using namespace tbb;
   tbb::task_scheduler_init init(nthreads);
