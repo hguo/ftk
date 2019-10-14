@@ -834,8 +834,8 @@ inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_
   std::vector<std::thread> workers;
 
   for (size_t i = 0; i < nthreads; i ++) {
-    workers.push_back(std::thread([this, i, ntasks, nthreads, d, f, mode]() {
-      for (size_t j = i; j < ntasks; j += nthreads) 
+    workers.push_back(std::thread([=]() {
+      for (size_t j = i; j < ntasks; j += nthreads)
         lambda(j);
     }));
   }
