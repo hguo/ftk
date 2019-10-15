@@ -26,7 +26,7 @@ template <typename T>
 struct ndarray {
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshape(dims);}
-  ndarray(T *a, const std::vector<size_t> &shape);
+  ndarray(const T *a, const std::vector<size_t> &shape);
 
   size_t nd() const {return dims.size();}
   size_t dim(size_t i) const {return dims[i];}
@@ -334,7 +334,7 @@ void ndarray<T>::reshape(size_t ndims, const size_t dims[])
 }
 
 template <typename T>
-ndarray(T *a, const std::vector<size_t> &dims_)
+ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
 {
   dims = dims_;
   s.resize(dims.size());

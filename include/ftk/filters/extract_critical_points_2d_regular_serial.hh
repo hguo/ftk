@@ -14,33 +14,36 @@
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/filters/filter.hh>
 
 namespace ftk {
 
-struct extract_critical_points_2d_regular_serial {
-  // extract_critical_points_2d_regular_serial(const hypermesh::ndarray<double> &Vf_) : m(2), Vf(Vf_) {}
+struct extract_critical_points_2d_regular_serial : public filter {
   extract_critical_points_2d_regular_serial() : m(2) {}
 
   void execute();
 
-  void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
-  void set_input_data(const hypermesh::ndarray<double> &V) {
-    Vf = V;
-    m.set_lb_ub({1, 1}, {static_cast<int>(Vf.dim(1)-2), static_cast<int>(Vf.dim(2)-2)});
+  void set_input_data(const double *p, size_t W, size_t H) {
+    V = hypermesh::ndarray<double>(p, {W, H});
+    m.set_lb_ub({0, 0}, {static_cast<int>(W-1), static_cast<int>(H-1)});
   }
 
+  void set_input_data(const hypermesh::ndarray<double> &V_) {
+    V = V_;
+    m.set_lb_ub({1, 1}, {static_cast<int>(V.dim(1)-2), static_cast<int>(V.dim(2)-2)});
+  }
+  
+  void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
+  
   const std::vector<double>& get_critical_point_coords() const {return coords;}
 
-private:
-  // std::function<double(int, int, int)> V;
-  hypermesh::ndarray<double> Vf;
+protected:
+  hypermesh::ndarray<double> V;
   hypermesh::regular_simplex_mesh m; // spacetime mesh
 
-  int nthreads = 1;
-  std::mutex mutex;
   std::vector<double> coords;
 
-  void check_simplex(const hypermesh::regular_simplex_mesh_element& s);
+  virtual bool check_simplex(const hypermesh::regular_simplex_mesh_element& s);
 };
 
 ///////
@@ -48,20 +51,19 @@ private:
 void extract_critical_points_2d_regular_serial::execute()
 {
   fprintf(stderr, "extracting 2D critical points...\n");
-  // m.set_lb_ub({0, 0}, {static_cast<int>(Vf.dim(1)-1), static_cast<int>(Vf.dim(2)-1)});
   m.element_for(2, std::bind(&extract_critical_points_2d_regular_serial::check_simplex, this, std::placeholders::_1)); // iterate over all 3-simplices
 }
 
-void extract_critical_points_2d_regular_serial::check_simplex(const hypermesh::regular_simplex_mesh_element& s)
+bool extract_critical_points_2d_regular_serial::check_simplex(const hypermesh::regular_simplex_mesh_element& s)
 {
-  if (!s.valid()) return; // check if the 2-simplex is valid
+  if (!s.valid()) return false; // check if the 2-simplex is valid
 
   const auto &vertices = s.vertices();
   double X[3][2], v[3][2];
 
   for (int i = 0; i < 3; i ++) {
     for (int j = 0; j < 2; j ++) {
-      v[i][j] = Vf(j, vertices[i][0], vertices[i][1]);
+      v[i][j] = V(j, vertices[i][0], vertices[i][1]);
       X[i][j] = vertices[i][j];
     }
   }
@@ -69,7 +71,7 @@ void extract_critical_points_2d_regular_serial::check_simplex(const hypermesh::r
   // check intersection
   double mu[3], x[2];
   bool succ = ftk::inverse_lerp_s2v2(v, mu);
-  if (!succ) return;
+  if (!succ) return false;
 
   ftk::lerp_s2v2(X, mu, x);
   {
@@ -77,6 +79,8 @@ void extract_critical_points_2d_regular_serial::check_simplex(const hypermesh::r
     coords.push_back(x[0]);
     coords.push_back(x[1]);
   }
+
+  return true;
 }
 
 }
