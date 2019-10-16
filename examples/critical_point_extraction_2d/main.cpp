@@ -16,7 +16,7 @@ int main(int argc, char **argv)
   extractor.set_lb_ub({1, 1}, {DW-2, DH-2});
   extractor.execute();
 
-  auto polydata = ftk::points2vtk(extractor.get_critical_point_coords(), 2);
+  auto polydata = ftk::points2vtk<std::vector<ftk::critical_point_2d_t>>(extractor.get_outputs());
   ftk::write_vtp("asdf.vtp", polydata);
 
   return 0;

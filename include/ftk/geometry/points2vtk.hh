@@ -11,6 +11,27 @@
 
 namespace ftk {
 
+template <typename Array>
+vtkSmartPointer<vtkPolyData>
+points2vtk(const Array &array)
+{
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+
+  vtkIdType pid[1];
+
+  for (auto i = 0; i < array.size(); i ++) {
+    double p[3] = {array[i][0], array[i][1], array[i][2]};
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  polyData->SetPoints(points);
+  polyData->SetVerts(vertices);
+  return polyData;
+}
+
 template <typename T>
 vtkSmartPointer<vtkPolyData>
 points2vtk(const std::vector<T>& array, int skip = 3)
