@@ -147,7 +147,7 @@ bool extract_critical_points_2d_regular_serial::check_simplex(
     for (int i = 0; i < 3; i ++) 
       for (int j = 0; j < 2; j ++)
         for (int k = 0; k < 2; k ++)
-          Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2]);
+          Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1]);
     lerp_s2m2x2(Js, mu, J);
   }
 

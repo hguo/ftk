@@ -1,5 +1,5 @@
 #include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
-#include <ftk/geometry/points2vtk.hh>
+// #include <ftk/geometry/points2vtk.hh>
 #include <hypermesh/synthetic.hh>
 #include <hypermesh/grad.hh>
 
@@ -19,8 +19,8 @@ int main(int argc, char **argv)
   extractor.set_type_filter(ftk::CRITICAL_POINT_2D_ATTRACTING ^ ftk::CRITICAL_POINT_2D_REPELLING);
   extractor.execute();
 
-  auto polydata = extractor.get_results_vtk();
-  ftk::write_vtp("asdf.vtp", polydata);
+  // auto polydata = extractor.get_results_vtk();
+  // ftk::write_vtp("asdf.vtp", polydata);
 
   return 0;
 }
