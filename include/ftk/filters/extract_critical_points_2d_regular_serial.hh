@@ -44,14 +44,14 @@ enum {
 
 struct critical_point_2d_t {
   double operator[](size_t i) const {if (i > 2) return 0; else return x[i];}
-  double x[2];
+  double x[2], mu[2];
   int type = 0;
 };
 
 struct extract_critical_points_2d_regular_serial : public filter {
   extract_critical_points_2d_regular_serial() : m(2) {}
 
-  void execute();
+  virtual void execute();
 
   void set_input_vector_field(const double *p, size_t W, size_t H);
   void set_input_vector_field(const hypermesh::ndarray<double> &V_);
@@ -63,10 +63,10 @@ struct extract_critical_points_2d_regular_serial : public filter {
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
   void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
 
-  const std::vector<critical_point_2d_t>& get_results() const {return results;}
+  virtual const std::vector<critical_point_2d_t>& get_results() const {return results;}
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_results_vtk() const;
+  virtual vtkSmartPointer<vtkPolyData> get_results_vtk() const;
 #endif
 
 protected:
@@ -128,15 +128,14 @@ bool extract_critical_points_2d_regular_serial::check_simplex(
       v[i][j] = V(j, vertices[i][0], vertices[i][1]);
 
   // check intersection
-  double mu[3];
-  bool succ = inverse_lerp_s2v2(v, mu);
+  bool succ = inverse_lerp_s2v2(v, cp.mu);
   if (!succ) return false; // returns false if the cp is outside the triangle
   
   double X[3][2];
   for (int i = 0; i < 3; i ++) 
     for (int j = 0; j < 2; j ++) 
       X[i][j] = vertices[i][j];
-  lerp_s2v2(X, mu, cp.x);
+  lerp_s2v2(X, cp.mu, cp.x);
 
   if (!type_filter) return true; // returns if the cp type is not desired
 
@@ -151,7 +150,7 @@ bool extract_critical_points_2d_regular_serial::check_simplex(
       for (int j = 0; j < 2; j ++)
         for (int k = 0; k < 2; k ++)
           Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1]);
-    lerp_s2m2x2(Js, mu, J);
+    lerp_s2m2x2(Js, cp.mu, J);
   }
 
   if (symmetric_jacobians) { // treat jacobian matrix as symmetric
@@ -192,22 +191,26 @@ vtkSmartPointer<vtkPolyData> extract_critical_points_2d_regular_serial::get_resu
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
-  vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-
-  scalars->SetNumberOfValues(results.size());
-
+  
   vtkIdType pid[1];
-  for (auto i = 0; i < results.size(); i ++) {
-    const auto &cp = results[i];
+  for (const auto &cp : results) {
     double p[3] = {cp.x[0], cp.x[1], 0};
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
-    scalars->SetValue(i, static_cast<double>(cp.type));
   }
 
   polyData->SetPoints(points);
   polyData->SetVerts(vertices);
-  polyData->GetPointData()->SetScalars(scalars);
+ 
+  // point data
+  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
+  types->SetNumberOfValues(results.size());
+  for (auto i = 0; i < results.size(); i ++) {
+    types->SetValue(i, static_cast<double>(results[i].type));
+  }
+  types->SetName("type");
+  polyData->GetPointData()->AddArray(types);
+
   return polyData;
 }
 #endif

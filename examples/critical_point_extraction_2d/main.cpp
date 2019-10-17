@@ -12,7 +12,7 @@ const int DW = 256, DH = 256;
 int main(int argc, char **argv)
 {
   auto scalar = hypermesh::synthetic_woven_2D<double>(DW, DH);
-#if 1
+#if 0
   auto grad = hypermesh::gradient2D(scalar);
   auto hess = hypermesh::jacobian2D(grad);
 
