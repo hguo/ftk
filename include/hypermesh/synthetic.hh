@@ -1,6 +1,8 @@
 #ifndef _HYPERMESH_SYNTHETIC_DATA_H
 #define _HYPERMESH_SYNTHETIC_DATA_H
 
+#include <hypermesh/ndarray.hh>
+
 namespace hypermesh {
 
 // the synthetic woven function
@@ -12,9 +14,9 @@ T woven_function_2Dt(T x, T y, T t)
 
 // generate 2D woven data
 template <typename T>
-hypermesh::ndarray<T> synthetic_woven_2D(int DW, int DH, T t = T(1e-4), T scaling_factor = T(15))
+ndarray<T> synthetic_woven_2D(int DW, int DH, T t = T(1e-4), T scaling_factor = T(15))
 {
-  hypermesh::ndarray<T> scalar;
+  ndarray<T> scalar;
   scalar.reshape(DW, DH);
 
   // const T scaling_factor = 15; // the factor that controls the shape of the synthesize data
@@ -31,9 +33,9 @@ hypermesh::ndarray<T> synthetic_woven_2D(int DW, int DH, T t = T(1e-4), T scalin
 
 // generate 2D time-varying woven data
 template <typename T>
-hypermesh::ndarray<T> synthetic_woven_2Dt(int DW, int DH, int DT, T scaling_factor = T(15))
+ndarray<T> synthetic_woven_2Dt(int DW, int DH, int DT, T scaling_factor = T(15))
 {
-  hypermesh::ndarray<T> scalar;
+  ndarray<T> scalar;
   scalar.reshape(DW, DH, DT);
 
   // const T scaling_factor = 15; // the factor that controls the shape of the synthesize data

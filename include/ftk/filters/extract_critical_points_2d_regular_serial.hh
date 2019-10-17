@@ -92,7 +92,7 @@ void extract_critical_points_2d_regular_serial::set_input_vector_field(const dou
 void extract_critical_points_2d_regular_serial::set_input_vector_field(const hypermesh::ndarray<double> &V_) 
 {
   V = V_;
-  m.set_lb_ub({1, 1}, {static_cast<int>(V.dim(1)-2), static_cast<int>(V.dim(2)-2)});
+  m.set_lb_ub({0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1)});
 }
 
 void extract_critical_points_2d_regular_serial::set_input_jacobian_field(const double *p, size_t W, size_t H)
@@ -102,6 +102,9 @@ void extract_critical_points_2d_regular_serial::set_input_jacobian_field(const d
 
 void extract_critical_points_2d_regular_serial::execute()
 {
+  if (m.lb() == m.ub()) // unspecified bounds
+    m.set_lb_ub({0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1)});
+
   fprintf(stderr, "extracting 2D critical points...\n");
   m.element_for(2, [=](hypermesh::regular_simplex_mesh_element e) {
       critical_point_2d_t cp;
