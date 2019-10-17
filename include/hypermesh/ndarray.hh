@@ -32,6 +32,7 @@ struct ndarray {
   size_t dim(size_t i) const {return dims[i];}
   size_t shape(size_t i) const {return dim(i);}
   size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
+  bool empty() const  {return p.empty();}
   std::vector<size_t> shape() const {return dims;}
 
   const T* data() const {return p.data();}
