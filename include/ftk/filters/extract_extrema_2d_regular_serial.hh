@@ -5,8 +5,8 @@ namespace ftk {
 struct extract_extremum_2d_regular_serial : public filter {
   void set_lb_ub(const std::vector<int> &lb, const std::vector<int> &ub);
 
-  void set_input_data(const hypermesh::ndarray<double> &scalar);
-  void set_input_data(const double *p, size_t W, size_t H);
+  void set_input_scalar_field(const hypermesh::ndarray<double>&);
+  void set_input_scalar_field(const double *p, size_t W, size_t H);
 
   void derive_gradients();
   void set_input_gradient_data(const hypermesh::ndarray<double> &grad);

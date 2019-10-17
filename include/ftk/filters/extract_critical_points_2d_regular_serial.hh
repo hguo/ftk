@@ -57,7 +57,7 @@ struct extract_critical_points_2d_regular_serial : public filter {
   void set_input_vector_field(const hypermesh::ndarray<double> &V_);
 
   void set_input_jacobian_field(const double *p, size_t W, size_t H); // must be the same dimension as the input data
-  void set_input_jacobian_field(const hypermesh::ndarray<double> &J);
+  void set_input_jacobian_field(const hypermesh::ndarray<double> &J) {gradV = J;}
   void set_symmetric_jacobians(bool s) {symmetric_jacobians = s;}
 
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
@@ -93,6 +93,11 @@ void extract_critical_points_2d_regular_serial::set_input_vector_field(const hyp
 {
   V = V_;
   m.set_lb_ub({1, 1}, {static_cast<int>(V.dim(1)-2), static_cast<int>(V.dim(2)-2)});
+}
+
+void extract_critical_points_2d_regular_serial::set_input_jacobian_field(const double *p, size_t W, size_t H)
+{
+  gradV = hypermesh::ndarray<double>(p, {2, 2, W, H});
 }
 
 void extract_critical_points_2d_regular_serial::execute()

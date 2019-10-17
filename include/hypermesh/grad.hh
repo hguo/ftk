@@ -43,7 +43,7 @@ hypermesh::ndarray<T> gradient2Dt(const hypermesh::ndarray<T>& scalar)
 
 // derive gradients for 2D vector field
 template <typename T>
-hypermesh::ndarray<T> gradient2D_vector(const hypermesh::ndarray<T>& vec)
+hypermesh::ndarray<T> jacobian2D(const hypermesh::ndarray<T>& vec)
 {
   const int DW = vec.dim(1), DH = vec.dim(2);
   hypermesh::ndarray<T> grad;
@@ -66,7 +66,7 @@ hypermesh::ndarray<T> gradient2D_vector(const hypermesh::ndarray<T>& vec)
 
 // derive 2D gradients for 2D vector field
 template <typename T>
-hypermesh::ndarray<T> gradient2Dt_vector(const hypermesh::ndarray<T>& vec)
+hypermesh::ndarray<T> jacobian2Dt(const hypermesh::ndarray<T>& vec)
 {
   const int DW = vec.dim(1), DH = vec.dim(2), DT = vec.dim(3);
   hypermesh::ndarray<T> grad;
