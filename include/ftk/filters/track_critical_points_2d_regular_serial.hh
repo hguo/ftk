@@ -12,33 +12,47 @@
 // #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
+#include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
 
 namespace ftk {
 
+struct critical_point_2dt_t {
+  double operator[](size_t i) const {if (i > 3) return 0; else return x[i];}
+  double x[3];
+  double scalar;
+  int type = 0;
+};
+
 struct track_critical_points_2d_regular_serial {
   track_critical_points_2d_regular_serial() : m(3) {}
   
   void execute();
+  
+  void set_input_scalar_field(const double *p, size_t W, size_t H, size_t T);
+  void set_input_scalar_field(const hypermesh::ndarray<double>&);
 
-  void set_input_data(const double *p, size_t W, size_t H, size_t T) {
-    V = hypermesh::ndarray<double>(p, {W, H, T});
-    m.set_lb_ub({0, 0, 0}, {static_cast<int>(W), static_cast<int>(H), static_cast<int>(T)});
-  }
+  void set_input_vector_field(const double *p, size_t W, size_t H, size_t T);
+  void set_input_vector_field(const hypermesh::ndarray<double>&);
 
-  void set_input_data(const hypermesh::ndarray<double> &V_) {
-    V = V_;
-    m.set_lb_ub({0, 0, 0}, {static_cast<int>(V.dim(1)-2), static_cast<int>(Vf.dim(2)-2), static_cast<int>(Vf.dim(3)-2)});
-  }
+  void set_input_jacobian_field(const double *p, size_t W, size_t H, size_t T); 
+  void set_input_jacobian_field(const hypermesh::ndarray<double> &J) {gradV = J;}
   
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
 
   void get_results();
 
 private:
-  hypermesh::ndarray<double> V;
+  hypermesh::ndarray<double> scalar, V, gradV;
   hypermesh::regular_simplex_mesh m;
+  
+  unsigned int type_filter = 0xffffffff;
+  unsigned int jacobian_mode = JACOBIAN_NONE;
+
+  std::vector<critical_point_2dt_t> results;
+
+  bool check_simplex(const hypermesh::regular_simplex_mesh_element& s, critical_point_2d_t& cp);
 };
 
 

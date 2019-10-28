@@ -24,6 +24,7 @@
 #include <vtkPoints.h>
 #include <vtkPointData.h>
 #include <vtkPolyData.h>
+#include <vtkImageData.h>
 #include <vtkCellArray.h>
 #include <vtkXMLPolyDataWriter.h>
 #endif
@@ -77,7 +78,8 @@ struct extract_critical_points_2d_regular_serial : public filter {
   virtual const std::vector<critical_point_2d_t>& get_results() const {return results;}
 
 #if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_results_vtk() const;
+  void set_input_scalar_field(vtkSmartPointer<vtkImageData>);
+  vtkSmartPointer<vtkPolyData> get_results_vtk() const;
 #endif
 
 protected:
