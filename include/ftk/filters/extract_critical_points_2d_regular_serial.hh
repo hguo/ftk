@@ -14,6 +14,7 @@
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <hypermesh/ndarray.hh>
+#include <hypermesh/grad.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
 #include <ftk/filters/filter.hh>
 
@@ -42,23 +43,33 @@ enum {
   CRITICAL_POINT_2D_MAXIMUM = 0x10,
 };
 
+enum {
+  JACOBIAN_NONE = 0,
+  JACOBIAN_SYMMETRIC = 1,
+  JACOBIAN_NONSYMMETRIC = 2
+};
+
 struct critical_point_2d_t {
   double operator[](size_t i) const {if (i > 2) return 0; else return x[i];}
-  double x[2], mu[2];
+
+  double x[2];
+  double scalar; // used only if the scalar field is available
   int type = 0;
 };
 
 struct extract_critical_points_2d_regular_serial : public filter {
   extract_critical_points_2d_regular_serial() : m(2) {}
 
-  virtual void execute();
+  void execute();
+
+  void set_input_scalar_field(const double *p, size_t W, size_t H);
+  void set_input_scalar_field(const hypermesh::ndarray<double>&);
 
   void set_input_vector_field(const double *p, size_t W, size_t H);
-  void set_input_vector_field(const hypermesh::ndarray<double> &V_);
+  void set_input_vector_field(const hypermesh::ndarray<double>&);
 
   void set_input_jacobian_field(const double *p, size_t W, size_t H); // must be the same dimension as the input data
   void set_input_jacobian_field(const hypermesh::ndarray<double> &J) {gradV = J;}
-  void set_symmetric_jacobians(bool s) {symmetric_jacobians = s;}
 
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
   void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
@@ -70,11 +81,11 @@ struct extract_critical_points_2d_regular_serial : public filter {
 #endif
 
 protected:
-  hypermesh::ndarray<double> V, gradV;
+  hypermesh::ndarray<double> scalar, V, gradV;
   hypermesh::regular_simplex_mesh m; // spacetime mesh
   
   unsigned int type_filter = 0xffffffff;
-  bool symmetric_jacobians = false;
+  unsigned int jacobian_mode = JACOBIAN_NONE;
 
   std::vector<critical_point_2d_t> results;
 
@@ -82,6 +93,12 @@ protected:
 };
 
 ///////
+
+void extract_critical_points_2d_regular_serial::set_input_scalar_field(const hypermesh::ndarray<double>& s)
+{
+  scalar = s;
+  m.set_lb_ub({2, 2}, {static_cast<int>(s.dim(0)-3), static_cast<int>(s.dim(1)-3)});
+}
   
 void extract_critical_points_2d_regular_serial::set_input_vector_field(const double *p, size_t W, size_t H)
 {
@@ -102,6 +119,12 @@ void extract_critical_points_2d_regular_serial::set_input_jacobian_field(const d
 
 void extract_critical_points_2d_regular_serial::execute()
 {
+  if (!scalar.empty()) {
+    if (V.empty()) V = hypermesh::gradient2D(scalar);
+    if (gradV.empty()) gradV = hypermesh::jacobian2D(V);
+    jacobian_mode = JACOBIAN_SYMMETRIC;
+  }
+
   if (m.lb() == m.ub()) // unspecified bounds
     m.set_lb_ub({0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1)});
 
@@ -128,14 +151,23 @@ bool extract_critical_points_2d_regular_serial::check_simplex(
       v[i][j] = V(j, vertices[i][0], vertices[i][1]);
 
   // check intersection
-  bool succ = inverse_lerp_s2v2(v, cp.mu);
+  double mu[3];
+  bool succ = inverse_lerp_s2v2(v, mu);
   if (!succ) return false; // returns false if the cp is outside the triangle
   
+  // lerp position
   double X[3][2];
   for (int i = 0; i < 3; i ++) 
     for (int j = 0; j < 2; j ++) 
       X[i][j] = vertices[i][j];
-  lerp_s2v2(X, cp.mu, cp.x);
+  lerp_s2v2(X, mu, cp.x);
+
+  if (!scalar.empty()) { // lerp scalar value
+    double values[3];
+    for (int i = 0; i < 3; i ++)
+      values[i] = scalar(vertices[i][0], vertices[i][1]);
+    cp.scalar = lerp_s2(values, mu);
+  }
 
   if (!type_filter) return true; // returns if the cp type is not desired
 
@@ -150,17 +182,17 @@ bool extract_critical_points_2d_regular_serial::check_simplex(
       for (int j = 0; j < 2; j ++)
         for (int k = 0; k < 2; k ++)
           Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1]);
-    lerp_s2m2x2(Js, cp.mu, J);
+    lerp_s2m2x2(Js, mu, J);
   }
 
-  if (symmetric_jacobians) { // treat jacobian matrix as symmetric
+  if (jacobian_mode == JACOBIAN_SYMMETRIC) { // treat jacobian matrix as symmetric
     double eig[2];
     solve_eigenvalues_symmetric2x2(J, eig);
     
     if (eig[0] > 0 && eig[1] > 0) cp.type = CRITICAL_POINT_2D_MAXIMUM;
     else if (eig[0] < 0 && eig[1] < 0) cp.type = CRITICAL_POINT_2D_MINIMUM;
     else if (eig[0] * eig[1] < 0) cp.type = CRITICAL_POINT_2D_SADDLE;
-  } else {
+  } else if (jacobian_mode == JACOBIAN_NONSYMMETRIC) {
     std::complex<double> eig[2];
     double delta = ftk::solve_eigenvalues2x2(J, eig);
     
@@ -202,7 +234,7 @@ vtkSmartPointer<vtkPolyData> extract_critical_points_2d_regular_serial::get_resu
   polyData->SetPoints(points);
   polyData->SetVerts(vertices);
  
-  // point data
+  // point data for types
   vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
   types->SetNumberOfValues(results.size());
   for (auto i = 0; i < results.size(); i ++) {
@@ -210,6 +242,17 @@ vtkSmartPointer<vtkPolyData> extract_critical_points_2d_regular_serial::get_resu
   }
   types->SetName("type");
   polyData->GetPointData()->AddArray(types);
+  
+  // point data for scalars
+  if (!scalar.empty()) {
+    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
+    scalars->SetNumberOfValues(results.size());
+    for (auto i = 0; i < results.size(); i ++) {
+      scalars->SetValue(i, static_cast<double>(results[i].scalar));
+    }
+    scalars->SetName("scalar");
+    polyData->GetPointData()->AddArray(scalars);
+  }
 
   return polyData;
 }

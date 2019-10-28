@@ -1,5 +1,5 @@
 #include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
-#include <ftk/filters/extract_extrema_2d_regular_serial.hh>
+// #include <ftk/filters/extract_extrema_2d_regular_serial.hh>
 #include <hypermesh/synthetic.hh>
 #include <hypermesh/grad.hh>
 
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
   extractor.set_type_filter(ftk::CRITICAL_POINT_2D_ATTRACTING ^ ftk::CRITICAL_POINT_2D_REPELLING);
   extractor.execute();
 #else
-  ftk::extract_extrema_2d_regular_serial extractor;
+  ftk::extract_critical_points_2d_regular_serial extractor;
   extractor.set_input_scalar_field(scalar);
   extractor.execute();
 #endif
