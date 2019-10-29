@@ -14,8 +14,8 @@
 // #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 
 #if FTK_HAVE_QT5
 #include "widget.h"
@@ -43,8 +43,8 @@
 int DW, DH; // the dimensionality of the data is DW*DH
 int DT; // number of timesteps
 
-hypermesh::ndarray<float> scalar, grad, hess;
-hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
+ftk::ndarray<float> scalar, grad, hess;
+ftk::regular_simplex_mesh m(3); // the 3D space-time mesh
 float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
 
 std::mutex mutex;
@@ -59,7 +59,7 @@ struct intersection_t {
   }
 };
  
-std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
+std::map<ftk::regular_simplex_mesh_element, intersection_t> intersections;
 
 // the output sets of connected elements
 std::vector<std::set<std::string>> connected_components_str; // connected components 
@@ -74,9 +74,9 @@ T f(T x, T y, T t)
 }
 
 template <typename T>
-hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
+ftk::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
 {
-  hypermesh::ndarray<T> scalar;
+  ftk::ndarray<T> scalar;
   scalar.reshape(DW, DH, DT);
 
   const T scaling_factor = 15; // the factor that controls the shape of the synthesize data
@@ -95,9 +95,9 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
 }
 
 template <typename T>
-hypermesh::ndarray<T> derive_gradients2(const hypermesh::ndarray<T>& scalar)
+ftk::ndarray<T> derive_gradients2(const ftk::ndarray<T>& scalar)
 {
-  hypermesh::ndarray<T> grad;
+  ftk::ndarray<T> grad;
   grad.reshape(2, scalar.dim(0), scalar.dim(1), scalar.dim(2));
   
   for (int k = 0; k < DT; k ++) {
@@ -112,9 +112,9 @@ hypermesh::ndarray<T> derive_gradients2(const hypermesh::ndarray<T>& scalar)
 }
 
 template <typename T>
-hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
+ftk::ndarray<T> derive_hessians2(const ftk::ndarray<T>& grad)
 {
-  hypermesh::ndarray<T> hess;
+  ftk::ndarray<T> hess;
   hess.reshape(2, grad.dim(0), grad.dim(1), grad.dim(2), grad.dim(3));
 
   for (int k = 0; k < DT; k ++) {
@@ -134,7 +134,7 @@ hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
   return hess;
 }
 
-void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
+void check_simplex(const ftk::regular_simplex_mesh_element& f)
 {
   if (!f.valid()) return; // check if the 2-simplex is valid
   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
@@ -184,9 +184,9 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 }
 
 
-void extract_connected_components(std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components)
+void extract_connected_components(std::vector<std::set<ftk::regular_simplex_mesh_element>>& components)
 {
-  typedef hypermesh::regular_simplex_mesh_element element_t;
+  typedef ftk::regular_simplex_mesh_element element_t;
 
   // Initialization
   ftk::union_find<std::string> uf; 
@@ -198,7 +198,7 @@ void extract_connected_components(std::vector<std::set<hypermesh::regular_simple
   }
 
   // Connected Component Labeling by using union-find. 
-  m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  m.element_for(3, [&](const ftk::regular_simplex_mesh_element& f) {
     const auto elements = f.sides();
     std::set<std::string> features; 
 
@@ -233,7 +233,7 @@ void extract_connected_components(std::vector<std::set<hypermesh::regular_simple
 
 void trace_intersections()
 {
-  typedef hypermesh::regular_simplex_mesh_element element_t; 
+  typedef ftk::regular_simplex_mesh_element element_t; 
 
   std::vector<std::set<element_t>> cc; // connected components 
   extract_connected_components(cc);
@@ -321,7 +321,7 @@ void read_dump_file(const std::string& f)
   ifs.close();
 
   for (const auto &i : vector) {
-    hypermesh::regular_simplex_mesh_element e(m, 2, i.eid);
+    ftk::regular_simplex_mesh_element e(m, 2, i.eid);
     intersections[e] = i;
   }
 }

@@ -194,7 +194,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
 
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ftk DESTINATION include)
-install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/hypermesh DESTINATION include)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh DESTINATION include)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in

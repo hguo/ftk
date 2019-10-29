@@ -20,7 +20,7 @@
 }
 #endif
 
-namespace hypermesh {
+namespace ftk {
 
 template <typename T>
 struct ndarray {

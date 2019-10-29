@@ -1,16 +1,16 @@
 #ifndef _HYPERMESH_GRAD_HH
 #define _HYPERMESH_GRAD_HH
 
-#include "ndarray.hh"
+#include <ftk/ndarray.hh>
 
-namespace hypermesh {
+namespace ftk {
 
 // derive 2D gradients for 2D scalar field
 template <typename T>
-hypermesh::ndarray<T> gradient2D(const hypermesh::ndarray<T>& scalar)
+ndarray<T> gradient2D(const ndarray<T>& scalar)
 {
   const int DW = scalar.dim(0), DH = scalar.dim(1);
-  hypermesh::ndarray<T> grad;
+  ndarray<T> grad;
   grad.reshape(2, DW, DH); 
   
   for (int j = 1; j < DH-1; j ++) {
@@ -24,10 +24,10 @@ hypermesh::ndarray<T> gradient2D(const hypermesh::ndarray<T>& scalar)
 
 // derive 2D gradients for 2D time varying scalar field
 template <typename T>
-hypermesh::ndarray<T> gradient2Dt(const hypermesh::ndarray<T>& scalar)
+ndarray<T> gradient2Dt(const ndarray<T>& scalar)
 {
   const int DW = scalar.dim(0), DH = scalar.dim(1), DT = scalar.dim(2);
-  hypermesh::ndarray<T> grad;
+  ndarray<T> grad;
   grad.reshape(2, DW, DH, DT);
   
   for (int k = 0; k < DT; k ++) {
@@ -43,10 +43,10 @@ hypermesh::ndarray<T> gradient2Dt(const hypermesh::ndarray<T>& scalar)
 
 // derive gradients for 2D vector field
 template <typename T>
-hypermesh::ndarray<T> jacobian2D(const hypermesh::ndarray<T>& vec)
+ndarray<T> jacobian2D(const ndarray<T>& vec)
 {
   const int DW = vec.dim(1), DH = vec.dim(2);
-  hypermesh::ndarray<T> grad;
+  ndarray<T> grad;
   grad.reshape(2, 2, DW, DH);
 
   for (int j = 2; j < DH-2; j ++) {
@@ -66,10 +66,10 @@ hypermesh::ndarray<T> jacobian2D(const hypermesh::ndarray<T>& vec)
 
 // derive 2D gradients for 2D vector field
 template <typename T>
-hypermesh::ndarray<T> jacobian2Dt(const hypermesh::ndarray<T>& vec)
+ndarray<T> jacobian2Dt(const ndarray<T>& vec)
 {
   const int DW = vec.dim(1), DH = vec.dim(2), DT = vec.dim(3);
-  hypermesh::ndarray<T> grad;
+  ndarray<T> grad;
   grad.reshape(2, 2, DW, DH, DT);
 
   for (int k = 0; k < DT; k ++) {

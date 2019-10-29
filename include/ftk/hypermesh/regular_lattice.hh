@@ -8,7 +8,7 @@
 #include <queue>
 #include <ostream>
 
-namespace hypermesh {
+namespace ftk {
 
 struct regular_lattice {
   regular_lattice() {}

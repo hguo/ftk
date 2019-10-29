@@ -20,8 +20,8 @@
 // #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 
 
 #include <ftk/external/diy/mpi.hpp>
@@ -80,16 +80,16 @@ int DT; // number of timesteps
 
 double start, end; 
 
-hypermesh::ndarray<float> scalar, grad, hess;
+ftk::ndarray<float> scalar, grad, hess;
 diy::DiscreteBounds data_box(3); // bounds of data box
 std::vector<int> data_offset(3);
 
-hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
+ftk::regular_simplex_mesh m(3); // the 3D space-time mesh
 
-hypermesh::regular_simplex_mesh block_m(3); // the 3D space-time mesh of this block
-hypermesh::regular_simplex_mesh block_m_ghost(3); // the 3D space-time mesh of this block with ghost cells
+ftk::regular_simplex_mesh block_m(3); // the 3D space-time mesh of this block
+ftk::regular_simplex_mesh block_m_ghost(3); // the 3D space-time mesh of this block with ghost cells
 
-std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>> lattice_partitions;
+std::vector<std::tuple<ftk::regular_lattice, ftk::regular_lattice>> lattice_partitions;
 float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
 int threshold_length; // threshold for trajectory length.  
 
@@ -116,9 +116,9 @@ T f(T x, T y, T t)
 }
 
 template <typename T>
-hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
+ftk::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
 {
-  hypermesh::ndarray<T> scalar;
+  ftk::ndarray<T> scalar;
   // scalar.reshape(DW, DH, DT);
   scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
 
@@ -151,9 +151,9 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
 }
 
 template <typename T>
-hypermesh::ndarray<T> derive_gradients2(const hypermesh::ndarray<T>& scalar)
+ftk::ndarray<T> derive_gradients2(const ftk::ndarray<T>& scalar)
 {
-  hypermesh::ndarray<T> grad;
+  ftk::ndarray<T> grad;
   grad.reshape(2, scalar.dim(0), scalar.dim(1), scalar.dim(2));
   
   // for (int k = 0; k < DT; k ++) {
@@ -177,9 +177,9 @@ hypermesh::ndarray<T> derive_gradients2(const hypermesh::ndarray<T>& scalar)
 }
 
 template <typename T>
-hypermesh::ndarray<T> derive_hessians2(const hypermesh::ndarray<T>& grad)
+ftk::ndarray<T> derive_hessians2(const ftk::ndarray<T>& grad)
 {
-  hypermesh::ndarray<T> hess;
+  ftk::ndarray<T> hess;
   hess.reshape(2, grad.dim(0), grad.dim(1), grad.dim(2), grad.dim(3));
 
 
@@ -216,12 +216,12 @@ void decompose_mesh(int nblocks) {
 
   std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
 
-  const hypermesh::regular_lattice& lattice = m.lattice(); 
+  const ftk::regular_lattice& lattice = m.lattice(); 
   lattice.partition(nblocks, given, ghost, lattice_partitions); 
 
   auto& lattice_pair = lattice_partitions[gid]; 
-  hypermesh::regular_lattice& lattice_p = std::get<0>(lattice_pair); 
-  hypermesh::regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
+  ftk::regular_lattice& lattice_p = std::get<0>(lattice_pair); 
+  ftk::regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
   
   block_m.set_lb_ub(lattice_p);
   block_m_ghost.set_lb_ub(lattice_ghost_p);
@@ -233,7 +233,7 @@ void decompose_mesh(int nblocks) {
   data_offset = {data_box.min[0], data_box.min[1], data_box.min[2]}; 
 }
 
-void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
+void check_simplex(const ftk::regular_simplex_mesh_element& f)
 {
   if (!f.valid()) return; // check if the 2-simplex is valid
   const auto &vertices = f.vertices(); // obtain the vertices of the simplex
@@ -347,7 +347,7 @@ void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy
 
 void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
 {
-  typedef hypermesh::regular_simplex_mesh_element element_t; 
+  typedef ftk::regular_simplex_mesh_element element_t; 
 
   // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
 
@@ -385,9 +385,9 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
       std::vector<element_t> eles; 
 
       for(auto& eid : comp_str) {
-        // comp.insert(hypermesh::regular_simplex_mesh_element(m, 0, eid)); 
+        // comp.insert(ftk::regular_simplex_mesh_element(m, 0, eid)); 
 
-        hypermesh::regular_simplex_mesh_element f(m, 2, eid);
+        ftk::regular_simplex_mesh_element f(m, 2, eid);
         eles.push_back(f); 
       }
 
@@ -427,7 +427,7 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   //   for(auto& comp_str : connected_components_str) {
   //     std::set<element_t>& comp = cc.emplace_back(); 
   //     for(auto& eid : comp_str) {
-  //       comp.insert(hypermesh::regular_simplex_mesh_element(m, 2, eid)); 
+  //       comp.insert(ftk::regular_simplex_mesh_element(m, 2, eid)); 
   //     }
   //   }
 
@@ -567,7 +567,7 @@ void read_dump_file(const std::string& f)
   ifs.close();
 
   for (const auto &i : vector) {
-    hypermesh::regular_simplex_mesh_element e(m, 2, i.eid);
+    ftk::regular_simplex_mesh_element e(m, 2, i.eid);
     intersections->at(e.to_string()) = i;
   }
 }
@@ -783,7 +783,7 @@ int main(int argc, char **argv)
   #if PRINT_FEATURE_DENSITY || PRINT_SIMPLEX_COUNT
     int element_cnt = 0; 
 
-    m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f){
+    m.element_for(2, [&](const ftk::regular_simplex_mesh_element& f){
       element_cnt++ ;
     }, nthreads);
   #endif
@@ -805,8 +805,8 @@ int main(int argc, char **argv)
   
   // if(world.rank() == 0) {
   //   for (auto& _m_pair : ms) {
-  //     hypermesh::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
-  //     hypermesh::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
+  //     ftk::regular_simplex_mesh& _m = std::get<0>(_m_pair); 
+  //     ftk::regular_simplex_mesh& _m_ghost = std::get<1>(_m_pair); 
 
   //     auto sizes = _m_ghost.sizes(); 
   //     std::cout << sizes[0] << " " << sizes[1] << " " << sizes[2] << std::endl; 
@@ -1098,7 +1098,7 @@ int main(int argc, char **argv)
       QGLFormat::setDefaultFormat(fmt);
 
       // scalar data with full domain
-      hypermesh::ndarray<float> full_scalar; full_scalar.reshape(DW, DH, DT);
+      ftk::ndarray<float> full_scalar; full_scalar.reshape(DW, DH, DT);
       
       for (int k = data_box.min[2]; k < data_box.max[2]+1; k ++) {
         for (int j = data_box.min[1]; j < data_box.max[1]+1; j ++) {

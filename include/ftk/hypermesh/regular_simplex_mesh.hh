@@ -14,7 +14,7 @@
 #include <cassert>
 #include <iterator>
 #include <functional>
-#include <hypermesh/regular_lattice.hh>
+#include <ftk/hypermesh/regular_lattice.hh>
 
 #if FTK_HAVE_KOKKOS
 #include <Kokkos_Core.hpp>
@@ -24,7 +24,7 @@
 #include <tbb/tbb.h>
 #endif
 
-namespace hypermesh {
+namespace ftk {
 
 struct regular_simplex_mesh;
 

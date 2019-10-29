@@ -1,4 +1,4 @@
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 #include <ftk/basic/distributed_union_find.hh>
 
 #ifndef DIM
@@ -360,7 +360,7 @@ inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::M
 // ===================================================================
 // Functions for adding edges/unions to the block
 
-bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
+bool is_in_mesh(const ftk::regular_simplex_mesh_element& f, const ftk::regular_lattice& _lattice) { 
   // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
 
   for (int i = 0; i < f.corner.size(); ++i){
@@ -372,18 +372,18 @@ bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermes
   return true;
 }
 
-bool is_in_mesh(const std::string& eid, const hypermesh::regular_lattice& _lattice, hypermesh::regular_simplex_mesh& m, int feature_dim) { 
-  hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, eid); 
+bool is_in_mesh(const std::string& eid, const ftk::regular_lattice& _lattice, ftk::regular_simplex_mesh& m, int feature_dim) { 
+  ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, eid); 
   
   return is_in_mesh(f, _lattice); 
 }
 
   // If the intersection is contained in the lattice
-bool is_in_mesh(const intersection_t& intersection, const hypermesh::regular_lattice& _lattice, hypermesh::regular_simplex_mesh& m, int feature_dim) { 
+bool is_in_mesh(const intersection_t& intersection, const ftk::regular_lattice& _lattice, ftk::regular_simplex_mesh& m, int feature_dim) { 
   return is_in_mesh(intersection.eid, _lattice, m, feature_dim); 
 }
 
-bool is_in_mesh(hypermesh::regular_simplex_mesh_element& f, diy::ContinuousBounds& block_bound) {
+bool is_in_mesh(ftk::regular_simplex_mesh_element& f, diy::ContinuousBounds& block_bound) {
   for (int i = 0; i < f.corner.size(); ++i){
     if(f.corner[i] < block_bound.min[i] || f.corner[i] > block_bound.max[i]) {
        return false;
@@ -395,13 +395,13 @@ bool is_in_mesh(hypermesh::regular_simplex_mesh_element& f, diy::ContinuousBound
 
 
 // Add union edges to the block
-void add_unions(std::map<std::string, intersection_t>* intersections, hypermesh::regular_simplex_mesh& block_m, const hypermesh::regular_simplex_mesh_element& f) {
+void add_unions(std::map<std::string, intersection_t>* intersections, ftk::regular_simplex_mesh& block_m, const ftk::regular_simplex_mesh_element& f) {
   if (!f.valid()) return; // check if the 3-simplex is valid
 
   const auto elements = f.sides();
   std::set<std::string> features;
   std::set<std::string> features_in_block;  
-  std::map<std::string, hypermesh::regular_simplex_mesh_element> id2element; 
+  std::map<std::string, ftk::regular_simplex_mesh_element> id2element; 
 
   for (const auto& ele : elements) {
     std::string eid = ele.to_string(); 
@@ -460,13 +460,13 @@ void add_unions(std::map<std::string, intersection_t>* intersections, hypermesh:
   }
 }
 
-void add_related_elements_to_intersections(std::map<std::string, intersection_t>* intersections, hypermesh::regular_simplex_mesh& m, hypermesh::regular_simplex_mesh& block_m, int feature_dim) {
+void add_related_elements_to_intersections(std::map<std::string, intersection_t>* intersections, ftk::regular_simplex_mesh& m, ftk::regular_simplex_mesh& block_m, int feature_dim) {
     // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
 
-  std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
+  std::vector<ftk::regular_simplex_mesh_element> eles_with_intersections;
   for(auto& pair : *intersections) {
     auto& eid = pair.first;
-    // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 0, eid); 
+    // ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, 0, eid); 
     auto&f = eles_with_intersections.emplace_back(m, feature_dim, eid); 
   }
 
@@ -501,7 +501,7 @@ void add_related_elements_to_intersections(std::map<std::string, intersection_t>
 
 
 // Note: will eliminate features of intersections in ghost cells
-void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_simplex_mesh& block_m, Block_Critical_Point* b, int feature_dim) {
+void add_points_to_block(ftk::regular_simplex_mesh& m, ftk::regular_simplex_mesh& block_m, Block_Critical_Point* b, int feature_dim) {
   // std::vector<intersection_t> points; 
   // int DIM = m.nd(); 
 
@@ -510,7 +510,7 @@ void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_
   while(ite != b->intersections.end()) {
     auto& intersection = (*ite); 
 
-    hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, intersection.first);
+    ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, intersection.first);
 
     if(is_in_mesh(f, block_m.lattice())) {
       point_t point;
@@ -531,7 +531,7 @@ void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_
 // Functions for load balancing
 
 
-void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b) {
+void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, ftk::regular_simplex_mesh& m, int gid, Block_Critical_Point* b) {
   // int DIM = m.nd(); 
 
   bool wrap = false; 
@@ -573,14 +573,14 @@ void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& ma
   });
 }
 
-void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, ftk::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
   diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
     // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
     if (srp.round() == 0) {
       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
 
       for(auto& intersection : b->intersections) {
-        hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, intersection.first);
+        ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, intersection.first);
 
         // if this point is within multiple processes' ranges; probably on a boundary, select the largest gid
         int target_gid = -1;
@@ -617,7 +617,7 @@ void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master
 }
 
 
-void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, ftk::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
   // int DIM = m.nd(); 
   // , diy::RegularContinuousLink* link
 
@@ -637,7 +637,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
 
       b->add_related_element(feature.eid, related_ele); 
 
-      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, related_ele);
+      ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, related_ele);
 
       if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
 
@@ -665,10 +665,10 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
   }
 }
 
-void init_block_without_load_balancing(std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>>& lattice_partitions, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+void init_block_without_load_balancing(std::vector<std::tuple<ftk::regular_lattice, ftk::regular_lattice>>& lattice_partitions, ftk::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
 
   for(auto& intersection : b->intersections) {
-    hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, intersection.first);
+    ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, intersection.first);
     auto& _lattice = std::get<0>(lattice_partitions[gid]); 
     if(is_in_mesh(f, _lattice)) { // the feature is in this partition
       b->features.push_back(intersection.second);   
@@ -691,7 +691,7 @@ void init_block_without_load_balancing(std::vector<std::tuple<hypermesh::regular
 
       b->add_related_element(feature.eid, related_ele); 
 
-      hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, related_ele);
+      ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, related_ele);
 
       if(!b->has_gid(related_ele)) { // If the block id of this feature is unknown, search the block id of this feature
         for(int i = 0; i < lattice_partitions.size(); ++i) {

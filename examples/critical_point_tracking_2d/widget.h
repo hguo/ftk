@@ -10,8 +10,8 @@
 #include <mutex>
 #include <cmath>
 #include <set>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 #include "trackball/trackball.h"
 
 class QMouseEvent;
@@ -28,7 +28,7 @@ class CGLWidget : public QGLWidget
   Q_OBJECT
 
 public:
-  CGLWidget(const hypermesh::ndarray<float> &scalar, const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
+  CGLWidget(const ftk::ndarray<float> &scalar, const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
   ~CGLWidget(); 
 
   void set_trajectories(const std::vector<std::vector<float>>& traj, float threshold);
@@ -58,7 +58,7 @@ private:
   int current_t = 0;
   int DW, DH, DT;
 
-  const hypermesh::ndarray<float>& scalar;
+  const ftk::ndarray<float>& scalar;
   float scalar_min, scalar_max;
 
   std::vector<std::vector<float>> trajectories;

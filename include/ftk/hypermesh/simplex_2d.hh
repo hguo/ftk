@@ -2,11 +2,11 @@
 #define _HYPERMESH_SIMPLEX_2D_HH
 
 #include <ftk/ftk_config.hh>
-#include <ftk/hypermesh/ndarray.hh>
+#include <ftk/ndarray.hh>
 #include <iostream>
 #include <vector>
 
-namespace hypermesh {
+namespace ftk {
 
 struct simplex_2d_mesh;
 

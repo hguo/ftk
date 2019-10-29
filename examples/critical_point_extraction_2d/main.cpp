@@ -1,7 +1,7 @@
 #include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
 // #include <ftk/filters/extract_extrema_2d_regular_serial.hh>
-#include <hypermesh/synthetic.hh>
-#include <hypermesh/grad.hh>
+#include <ftk/ndarray/synthetic.hh>
+#include <ftk/ndarray/grad.hh>
 
 #if FTK_HAVE_VTK
 #include <ftk/geometry/points2vtk.hh>
@@ -11,7 +11,7 @@ const int DW = 256, DH = 256;
 
 int main(int argc, char **argv)
 {
-  auto scalar = hypermesh::synthetic_woven_2D<double>(DW, DH);
+  auto scalar = ftk::synthetic_woven_2D<double>(DW, DH);
 #if 0
   auto grad = hypermesh::gradient2D(scalar);
   auto hess = hypermesh::jacobian2D(grad);

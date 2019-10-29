@@ -14,8 +14,8 @@
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
 #include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 
 namespace ftk {
 
@@ -32,13 +32,13 @@ struct track_critical_points_2d_regular_serial : public filter {
   void execute();
   
   void set_input_scalar_field(const double *p, size_t W, size_t H, size_t T);
-  void set_input_scalar_field(const hypermesh::ndarray<double>& scalar_) {scalar = scalar_;}
+  void set_input_scalar_field(const ndarray<double>& scalar_) {scalar = scalar_;}
 
   void set_input_vector_field(const double *p, size_t W, size_t H, size_t T);
-  void set_input_vector_field(const hypermesh::ndarray<double>& V_) {V = V_;}
+  void set_input_vector_field(const ndarray<double>& V_) {V = V_;}
 
   void set_input_jacobian_field(const double *p, size_t W, size_t H, size_t T); 
-  void set_input_jacobian_field(const hypermesh::ndarray<double> &J) {gradV = J;}
+  void set_input_jacobian_field(const ndarray<double> &J) {gradV = J;}
   
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
   void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
@@ -50,14 +50,14 @@ struct track_critical_points_2d_regular_serial : public filter {
 #endif
 
 protected:
-  hypermesh::ndarray<double> scalar, V, gradV;
-  hypermesh::regular_simplex_mesh m;
+  ndarray<double> scalar, V, gradV;
+  regular_simplex_mesh m;
   
   unsigned int type_filter = 0xffffffff;
   bool has_jacobian = false;
   bool symmetric_jacobian = false;
 
-  typedef hypermesh::regular_simplex_mesh_element element_t;
+  typedef regular_simplex_mesh_element element_t;
   
   std::map<element_t, critical_point_2dt_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
@@ -74,8 +74,8 @@ void track_critical_points_2d_regular_serial::execute()
 {
   // initializing vector fields
   if (!scalar.empty()) {
-    if (V.empty()) V = hypermesh::gradient2Dt(scalar);
-    if (gradV.empty()) gradV = hypermesh::jacobian2Dt(V);
+    if (V.empty()) V = gradient2Dt(scalar);
+    if (gradV.empty()) gradV = jacobian2Dt(V);
     has_jacobian = true;
     symmetric_jacobian = true;
   }
@@ -90,7 +90,7 @@ void track_critical_points_2d_regular_serial::execute()
 
   // scan 2-simplices
   fprintf(stderr, "tracking 2D critical points...\n");
-  m.element_for(2, [=](hypermesh::regular_simplex_mesh_element e) {
+  m.element_for(2, [=](regular_simplex_mesh_element e) {
       critical_point_2dt_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
@@ -104,7 +104,7 @@ void track_critical_points_2d_regular_serial::execute()
   for (const auto &kv : discrete_critical_points) 
     uf.add(kv.first);
 
-  m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+  m.element_for(3, [&](const regular_simplex_mesh_element& f) {
     const auto sides = f.sides();
     std::set<element_t> intersected_sides;
 
@@ -153,7 +153,7 @@ void track_critical_points_2d_regular_serial::trace_connected_components()
 }
 
 bool track_critical_points_2d_regular_serial::check_simplex(
-    const hypermesh::regular_simplex_mesh_element& e,
+    const regular_simplex_mesh_element& e,
     critical_point_2dt_t& cp)
 {
   if (!e.valid()) return false; // check if the 2-simplex is valid

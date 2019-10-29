@@ -14,9 +14,9 @@
 #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/grad.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
+#include <ftk/ndarray/grad.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 #include <ftk/filters/filter.hh>
 
 #if FTK_HAVE_VTK
@@ -46,13 +46,13 @@ struct extract_critical_points_2d_regular_serial : public filter {
   void execute();
 
   void set_input_scalar_field(const double *p, size_t W, size_t H);
-  void set_input_scalar_field(const hypermesh::ndarray<double>&);
+  void set_input_scalar_field(const ndarray<double>&);
 
   void set_input_vector_field(const double *p, size_t W, size_t H);
-  void set_input_vector_field(const hypermesh::ndarray<double>&);
+  void set_input_vector_field(const ndarray<double>&);
 
   void set_input_jacobian_field(const double *p, size_t W, size_t H); // must be the same dimension as the input data
-  void set_input_jacobian_field(const hypermesh::ndarray<double> &J) {gradV = J;}
+  void set_input_jacobian_field(const ndarray<double> &J) {gradV = J;}
 
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
   void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
@@ -65,8 +65,8 @@ struct extract_critical_points_2d_regular_serial : public filter {
 #endif
 
 protected:
-  hypermesh::ndarray<double> scalar, V, gradV;
-  hypermesh::regular_simplex_mesh m; // spacetime mesh
+  ndarray<double> scalar, V, gradV;
+  regular_simplex_mesh m; // spacetime mesh
   
   unsigned int type_filter = 0xffffffff;
   bool has_jacobian = false;
@@ -74,36 +74,36 @@ protected:
 
   std::vector<critical_point_2d_t> results;
 
-  bool check_simplex(const hypermesh::regular_simplex_mesh_element& s, critical_point_2d_t& cp);
+  bool check_simplex(const regular_simplex_mesh_element& s, critical_point_2d_t& cp);
 };
 
 ///////
 
-void extract_critical_points_2d_regular_serial::set_input_scalar_field(const hypermesh::ndarray<double>& s)
+void extract_critical_points_2d_regular_serial::set_input_scalar_field(const ndarray<double>& s)
 {
   scalar = s;
 }
   
 void extract_critical_points_2d_regular_serial::set_input_vector_field(const double *p, size_t W, size_t H)
 {
-  V = hypermesh::ndarray<double>(p, {2, W, H});
+  V = ndarray<double>(p, {2, W, H});
 }
 
-void extract_critical_points_2d_regular_serial::set_input_vector_field(const hypermesh::ndarray<double> &V_) 
+void extract_critical_points_2d_regular_serial::set_input_vector_field(const ndarray<double> &V_) 
 {
   V = V_;
 }
 
 void extract_critical_points_2d_regular_serial::set_input_jacobian_field(const double *p, size_t W, size_t H)
 {
-  gradV = hypermesh::ndarray<double>(p, {2, 2, W, H});
+  gradV = ndarray<double>(p, {2, 2, W, H});
 }
 
 void extract_critical_points_2d_regular_serial::execute()
 {
   if (!scalar.empty()) {
-    if (V.empty()) V = hypermesh::gradient2D(scalar);
-    if (gradV.empty()) gradV = hypermesh::jacobian2D(V);
+    if (V.empty()) V = gradient2D(scalar);
+    if (gradV.empty()) gradV = jacobian2D(V);
     has_jacobian =  true;
     symmetric_jacobian = true;
   }
@@ -116,7 +116,7 @@ void extract_critical_points_2d_regular_serial::execute()
   }
 
   fprintf(stderr, "extracting 2D critical points...\n");
-  m.element_for(2, [=](hypermesh::regular_simplex_mesh_element e) {
+  m.element_for(2, [=](regular_simplex_mesh_element e) {
       critical_point_2d_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
@@ -126,7 +126,7 @@ void extract_critical_points_2d_regular_serial::execute()
 }
 
 bool extract_critical_points_2d_regular_serial::check_simplex(
-    const hypermesh::regular_simplex_mesh_element& s, 
+    const regular_simplex_mesh_element& s, 
     critical_point_2d_t &cp)
 {
   if (!s.valid()) return false; // check if the 2-simplex is valid

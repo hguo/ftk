@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-namespace hypermesh {
+namespace ftk {
 
 template <int N>
 struct regular_mesh;

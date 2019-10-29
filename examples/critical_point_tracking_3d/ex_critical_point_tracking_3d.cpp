@@ -30,14 +30,14 @@
 #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 
 const int DW = 128, DH = 128, DD = 128;// the dimensionality of the data is DW*DH
 const int DT = 2; // number of timesteps
 
-hypermesh::ndarray<float> scalar, grad, hess;
-hypermesh::regular_simplex_mesh m(4); // the 4D space-time mesh
+ftk::ndarray<float> scalar, grad, hess;
+ftk::regular_simplex_mesh m(4); // the 4D space-time mesh
 
 std::mutex mutex;
 
@@ -45,7 +45,7 @@ struct intersection_t {
   float x[4]; // the spacetime coordinates of the trajectory
 };
  
-std::map<hypermesh::regular_simplex_mesh_element, intersection_t> intersections;
+std::map<ftk::regular_simplex_mesh_element, intersection_t> intersections;
 
 // the output trajectories
 std::vector<std::vector<std::vector<float>>> trajectories;
@@ -100,7 +100,7 @@ void derive_hessians()
   }
 }
 
-void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
+void check_simplex(const ftk::regular_simplex_mesh_element& s)
 {
   if (!s.valid()) return; // check if the 3-simplex is valid
   
@@ -151,7 +151,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
 
 void trace_intersections()
 {
-  typedef hypermesh::regular_simplex_mesh_element element_t;
+  typedef ftk::regular_simplex_mesh_element element_t;
 
   std::set<element_t> qualified_elements;
   for (const auto &f : intersections)

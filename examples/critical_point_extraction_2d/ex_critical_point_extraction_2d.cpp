@@ -10,11 +10,11 @@
 #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 
-hypermesh::ndarray<float> Vf; // vector field
-hypermesh::regular_simplex_mesh m(2); // the 2D mesh
+ftk::ndarray<float> Vf; // vector field
+ftk::regular_simplex_mesh m(2); // the 2D mesh
 
 std::mutex mutex;
 
@@ -22,9 +22,9 @@ struct critical_point_t {
   float x[2]; // coordinates of the cp
 };
  
-std::map<hypermesh::regular_simplex_mesh_element, critical_point_t> critical_points;
+std::map<ftk::regular_simplex_mesh_element, critical_point_t> critical_points;
 
-void check_simplex(const hypermesh::regular_simplex_mesh_element& s)
+void check_simplex(const ftk::regular_simplex_mesh_element& s)
 {
   if (!s.valid()) return; // check if the 2-simplex is valid
 
@@ -91,7 +91,7 @@ void extract_critical_points()
 
 void load_vector_field(const std::string &filename)
 {
-  hypermesh::ndarray<float> U, V;
+  ftk::ndarray<float> U, V;
   U.from_netcdf(filename, "u");
   V.from_netcdf(filename, "v");
 

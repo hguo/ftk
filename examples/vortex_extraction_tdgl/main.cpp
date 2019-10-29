@@ -12,8 +12,8 @@
 #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
 #include <random>
 #include <numeric>
 #include <cxxopts.hpp>
@@ -45,8 +45,8 @@
 #endif
 
 GLHeader hdr;
-hypermesh::ndarray<float> Re, Im, Rho, Phi;
-hypermesh::regular_simplex_mesh m(3);
+ftk::ndarray<float> Re, Im, Rho, Phi;
+ftk::regular_simplex_mesh m(3);
 
 std::mutex mutex;
 
@@ -211,7 +211,7 @@ void extract_vortices()
   m.set_lb_ub({0, 0, 0}, {hdr.dims[0]-2, hdr.dims[1]-2, hdr.dims[2]-2});
 
   fprintf(stderr, "sweeping 2-simplices...\n");
-  m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element &f) {
+  m.element_for(2, [&](const ftk::regular_simplex_mesh_element &f) {
       const auto &vertices = f.vertices();
       float X[3][3], A[3][3];
       float rho[3], phi[3], re[3], im[3];
@@ -264,7 +264,7 @@ void extract_vortices()
   });
 
   fprintf(stderr, "sweeping 3-simplices...\n");
-  m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element &c) {
+  m.element_for(3, [&](const ftk::regular_simplex_mesh_element &c) {
       const auto &sides = c.sides();
       std::vector<size_t> vector;
       for (const auto& f : sides)

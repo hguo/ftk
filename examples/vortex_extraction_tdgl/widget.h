@@ -10,8 +10,8 @@
 #include <mutex>
 #include <cmath>
 #include <set>
-#include <hypermesh/ndarray.hh>
-#include <hypermesh/regular_simplex_mesh.hh>
+#include <ftk/ndarray.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 #include "trackball/trackball.h"
 #include "puncture.h"
 

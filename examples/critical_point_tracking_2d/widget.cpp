@@ -37,7 +37,7 @@
   }\
 }
 
-CGLWidget::CGLWidget(const hypermesh::ndarray<float> &s, const QGLFormat& fmt, QWidget *parent, QGLWidget *sharedWidget)
+CGLWidget::CGLWidget(const ftk::ndarray<float> &s, const QGLFormat& fmt, QWidget *parent, QGLWidget *sharedWidget)
   : QGLWidget(fmt, parent, sharedWidget), 
     scalar(s),
     fovy(30.f), znear(0.1f), zfar(10.f), 
@@ -283,7 +283,7 @@ void CGLWidget::paintGL()
 
 void CGLWidget::update_texture()
 {
-  hypermesh::ndarray<unsigned char> colors({3, (size_t)DW, (size_t)DH});
+  ftk::ndarray<unsigned char> colors({3, (size_t)DW, (size_t)DH});
   // fprintf(stderr, "current_t=%d\n", current_t);
 
   for (int j = 0; j < DH; j ++) {

@@ -1,9 +1,9 @@
 #ifndef _HYPERMESH_SYNTHETIC_DATA_H
 #define _HYPERMESH_SYNTHETIC_DATA_H
 
-#include <hypermesh/ndarray.hh>
+#include <ftk/ndarray.hh>
 
-namespace hypermesh {
+namespace ftk {
 
 // the synthetic woven function
 template <typename T> 
