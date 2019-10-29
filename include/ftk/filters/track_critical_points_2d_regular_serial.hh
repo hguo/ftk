@@ -12,6 +12,7 @@
 #include <ftk/numeric/gradient.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
+#include <ftk/geometry/curve2vtk.hh>
 #include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
 #include <hypermesh/ndarray.hh>
 #include <hypermesh/regular_simplex_mesh.hh>
@@ -215,6 +216,8 @@ bool track_critical_points_2d_regular_serial::check_simplex(
 #if FTK_HAVE_VTK
 vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_results_vtk() const
 {
+  return curves2vtk(trajectories, 4);
+
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
