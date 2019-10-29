@@ -25,16 +25,16 @@ struct critical_point_2dt_t {
   int type = 0;
 };
 
-struct track_critical_points_2d_regular_serial {
+struct track_critical_points_2d_regular_serial : public filter {
   track_critical_points_2d_regular_serial() : m(3) {}
   
   void execute();
   
   void set_input_scalar_field(const double *p, size_t W, size_t H, size_t T);
-  void set_input_scalar_field(const hypermesh::ndarray<double>&);
+  void set_input_scalar_field(const hypermesh::ndarray<double>& scalar_) {scalar = scalar_;}
 
   void set_input_vector_field(const double *p, size_t W, size_t H, size_t T);
-  void set_input_vector_field(const hypermesh::ndarray<double>&);
+  void set_input_vector_field(const hypermesh::ndarray<double>& V_) {V = V_;}
 
   void set_input_jacobian_field(const double *p, size_t W, size_t H, size_t T); 
   void set_input_jacobian_field(const hypermesh::ndarray<double> &J) {gradV = J;}
@@ -50,34 +50,68 @@ private:
   unsigned int type_filter = 0xffffffff;
   unsigned int jacobian_mode = JACOBIAN_NONE;
 
-  std::vector<critical_point_2dt_t> results;
+  std::map<hypermesh::regular_simplex_mesh_element, critical_point_2dt_t> intersections;
+  // std::vector<critical_point_2dt_t> results;
 
-  bool check_simplex(const hypermesh::regular_simplex_mesh_element& s, critical_point_2d_t& cp);
+  bool check_simplex(const hypermesh::regular_simplex_mesh_element& s, critical_point_2dt_t& cp);
 };
 
 
 ////////////////////
-void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
+void track_critical_points_2d_regular_serial::execute()
 {
-  if (!f.valid()) return; // check if the 2-simplex is valid
-  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
-  double X[3][2], v[3][2];
+  if (!scalar.empty()) {
+    if (V.empty()) V = hypermesh::gradient2Dt(scalar);
+    if (gradV.empty()) gradV = hypermesh::jacobian2Dt(V);
+    jacobian_mode = JACOBIAN_SYMMETRIC;
+  }
 
+  if (m.lb() == m.ub()) {
+    if (!scalar.empty())
+      m.set_lb_ub({2, 2, 0}, {static_cast<int>(V.dim(1)-3), static_cast<int>(V.dim(2)-3), static_cast<int>(V.dim(3)-1)});
+    else
+      m.set_lb_ub({0, 0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1), static_cast<int>(V.dim(3)-1)});
+  }
+
+  fprintf(stderr, "tracking 2D critical points...\n");
+  m.element_for(2, [=](hypermesh::regular_simplex_mesh_element e) {
+      critical_point_2dt_t cp;
+      if (check_simplex(e, cp)) {
+        std::lock_guard<std::mutex> guard(mutex);
+        intersections[e] = cp;
+        // results.push_back(cp);
+      }
+    }); 
+}
+
+bool track_critical_points_2d_regular_serial::check_simplex(
+    const hypermesh::regular_simplex_mesh_element& e,
+    critical_point_2dt_t& cp)
+{
+  if (!e.valid()) return false; // check if the 2-simplex is valid
+  const auto &vertices = e.vertices(); // obtain the vertices of the simplex
+  
+  double v[3][2]; // obtain vector values
   for (int i = 0; i < 3; i ++) {
     v[i][0] = V(0, vertices[i][0], vertices[i][1], vertices[i][2]);
     v[i][1] = V(1, vertices[i][0], vertices[i][1], vertices[i][2]);
   }
  
-  float mu[3];
-  bool succ = ftk::inverse_lerp_s2v2(v, mu);
-  if (!succ) return;
+  double mu[3]; // check intersection
+  bool succ = inverse_lerp_s2v2(v, mu);
+  if (!succ) return false;
 
-  for (int i = 0; i < vertices.size(); i ++)
+  double X[3][3]; // lerp position
+  for (int i = 0; i < 3; i ++)
     for (int j = 0; j < 3; j ++)
       X[i][j] = vertices[i][j];
+  lerp_s2v3(X, mu, cp.x);
 
-  intersection_t I;
-  I.eid = f.to_integer();
+  return true;
+
+#if 0
+  critical_point_2dt_t cp;
+  auto eid = f.to_integer();
   ftk::lerp_s2v3(X, mu, I.x);
   I.val = ftk::lerp_s2(value, mu);
 
@@ -86,6 +120,7 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
     intersections[f] = I;
     // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
   }
+#endif
 }
 
 }

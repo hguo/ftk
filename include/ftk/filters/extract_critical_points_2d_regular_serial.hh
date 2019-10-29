@@ -99,19 +99,16 @@ protected:
 void extract_critical_points_2d_regular_serial::set_input_scalar_field(const hypermesh::ndarray<double>& s)
 {
   scalar = s;
-  m.set_lb_ub({2, 2}, {static_cast<int>(s.dim(0)-3), static_cast<int>(s.dim(1)-3)});
 }
   
 void extract_critical_points_2d_regular_serial::set_input_vector_field(const double *p, size_t W, size_t H)
 {
   V = hypermesh::ndarray<double>(p, {2, W, H});
-  m.set_lb_ub({0, 0}, {static_cast<int>(W-1), static_cast<int>(H-1)});
 }
 
 void extract_critical_points_2d_regular_serial::set_input_vector_field(const hypermesh::ndarray<double> &V_) 
 {
   V = V_;
-  m.set_lb_ub({0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1)});
 }
 
 void extract_critical_points_2d_regular_serial::set_input_jacobian_field(const double *p, size_t W, size_t H)
@@ -127,8 +124,12 @@ void extract_critical_points_2d_regular_serial::execute()
     jacobian_mode = JACOBIAN_SYMMETRIC;
   }
 
-  if (m.lb() == m.ub()) // unspecified bounds
-    m.set_lb_ub({0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1)});
+  if (m.lb() == m.ub()) { // unspecified bounds
+    if (!scalar.empty()) 
+      m.set_lb_ub({2, 2}, {static_cast<int>(V.dim(1)-3), static_cast<int>(V.dim(2)-3)});
+    else
+      m.set_lb_ub({0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1)});
+  }
 
   fprintf(stderr, "extracting 2D critical points...\n");
   m.element_for(2, [=](hypermesh::regular_simplex_mesh_element e) {
