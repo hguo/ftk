@@ -41,6 +41,7 @@ struct track_critical_points_2d_regular_serial : public filter {
   void set_input_jacobian_field(const hypermesh::ndarray<double> &J) {gradV = J;}
   
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
+  void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
 
   void get_results();
 
@@ -181,23 +182,23 @@ bool track_critical_points_2d_regular_serial::check_simplex(
     cp.scalar = lerp_s2(values, mu);
   }
 
-  if (!type_filter) return true; // returns if cp types are not desired
-
-  // derive jacobian
-  double J[2][2] = {0};
-  if (gradV.empty()) {
-    // TODO: jacobian is not given
-  } else { // lerp jacobian
-    double Js[3][2][2];
-    for (int i = 0; i < 3; i ++)
-      for (int j = 0; j < 2; j ++)
-        for (int k = 0; k < 2; k ++) 
-          Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2]);
-    lerp_s2m2x2(Js, mu, J);
-  }
-  cp.type = critical_point_type_2d(J, symmetric_jacobian);
-
-  return true;
+  if (has_jacobian) {
+    // derive jacobian
+    double J[2][2] = {0};
+    if (gradV.empty()) {
+      // TODO: jacobian is not given
+    } else { // lerp jacobian
+      double Js[3][2][2];
+      for (int i = 0; i < 3; i ++)
+        for (int j = 0; j < 2; j ++)
+          for (int k = 0; k < 2; k ++) 
+            Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2]);
+      lerp_s2m2x2(Js, mu, J);
+    }
+    cp.type = critical_point_type_2d(J, symmetric_jacobian);
+    if (cp.type & type_filter) return true;
+    else return false;
+  } else return true;
 }
 
 #if FTK_HAVE_VTK

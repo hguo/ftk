@@ -156,8 +156,6 @@ bool extract_critical_points_2d_regular_serial::check_simplex(
     cp.scalar = lerp_s2(values, mu);
   }
 
-  if (!type_filter) return true; // returns if the cp type is not desired
-
   if (has_jacobian) {
     // derive jacobian
     double J[2][2]; // jacobian
