@@ -57,7 +57,7 @@ protected:
 
   typedef hypermesh::regular_simplex_mesh_element element_t;
   
-  std::map<element_t, critical_point_2dt_t> critical_points;
+  std::map<element_t, critical_point_2dt_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
   std::vector<std::vector<critical_point_2dt_t>> traced_critical_points;
 
@@ -91,14 +91,14 @@ void track_critical_points_2d_regular_serial::execute()
       critical_point_2dt_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
-        critical_points[e] = cp;
+        discrete_critical_points[e] = cp;
       }
     }); 
 
   // scan 3-simplices to get connected components
   fprintf(stderr, "trace intersections...\n");
   union_find<element_t> uf;
-  for (const auto &kv : critical_points) 
+  for (const auto &kv : discrete_critical_points) 
     uf.add(kv.first);
 
   m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
@@ -143,7 +143,7 @@ void track_critical_points_2d_regular_serial::trace_connected_components()
     for (int j = 0; j < linear_graphs.size(); j ++) {
       std::vector<critical_point_2dt_t> traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
-        traj.push_back(critical_points[linear_graphs[j][k]]);
+        traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.emplace_back(traj);
     }
   }
