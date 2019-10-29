@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/numeric/print.hh>
+#include <ftk/numeric/critical_point.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -30,25 +31,6 @@
 #endif
 
 namespace ftk {
-
-enum {
-  CRITICAL_POINT_2D_UNKNOWN = 0,
-  CRITICAL_POINT_2D_ATTRACTING = 0x1,
-  CRITICAL_POINT_2D_REPELLING = 0x10,
-  CRITICAL_POINT_2D_SADDLE = 0x100,
-  CRITICAL_POINT_2D_ATTRACTING_FOCUS = 0x1000,
-  CRITICAL_POINT_2D_REPELLING_FOCUS = 0x10000,
-  CRITICAL_POINT_2D_CENTER = 0x100000,
-  // for scalar field 
-  CRITICAL_POINT_2D_MINIMUM = 0x1,
-  CRITICAL_POINT_2D_MAXIMUM = 0x10,
-};
-
-enum {
-  JACOBIAN_NONE = 0,
-  JACOBIAN_SYMMETRIC = 1,
-  JACOBIAN_NONSYMMETRIC = 2
-};
 
 struct critical_point_2d_t {
   double operator[](size_t i) const {if (i > 2) return 0; else return x[i];}
@@ -87,7 +69,8 @@ protected:
   hypermesh::regular_simplex_mesh m; // spacetime mesh
   
   unsigned int type_filter = 0xffffffff;
-  unsigned int jacobian_mode = JACOBIAN_NONE;
+  bool has_jacobian = false;
+  bool symmetric_jacobian = false;
 
   std::vector<critical_point_2d_t> results;
 
@@ -121,7 +104,8 @@ void extract_critical_points_2d_regular_serial::execute()
   if (!scalar.empty()) {
     if (V.empty()) V = hypermesh::gradient2D(scalar);
     if (gradV.empty()) gradV = hypermesh::jacobian2D(V);
-    jacobian_mode = JACOBIAN_SYMMETRIC;
+    has_jacobian =  true;
+    symmetric_jacobian = true;
   }
 
   if (m.lb() == m.ub()) { // unspecified bounds
@@ -174,50 +158,25 @@ bool extract_critical_points_2d_regular_serial::check_simplex(
 
   if (!type_filter) return true; // returns if the cp type is not desired
 
-  // derive jacobian
-  double J[2][2]; // jacobian
+  if (has_jacobian) {
+    // derive jacobian
+    double J[2][2]; // jacobian
 
-  if (gradV.empty()) // jacobian is not given
-    ftk::gradient_2dsimplex2_2(X, v, J);
-  else { // lerp jacobian
-    double Js[3][2][2];
-    for (int i = 0; i < 3; i ++) 
-      for (int j = 0; j < 2; j ++)
-        for (int k = 0; k < 2; k ++)
-          Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1]);
-    lerp_s2m2x2(Js, mu, J);
-  }
-
-  if (jacobian_mode == JACOBIAN_SYMMETRIC) { // treat jacobian matrix as symmetric
-    double eig[2];
-    solve_eigenvalues_symmetric2x2(J, eig);
-    
-    if (eig[0] > 0 && eig[1] > 0) cp.type = CRITICAL_POINT_2D_MAXIMUM;
-    else if (eig[0] < 0 && eig[1] < 0) cp.type = CRITICAL_POINT_2D_MINIMUM;
-    else if (eig[0] * eig[1] < 0) cp.type = CRITICAL_POINT_2D_SADDLE;
-  } else if (jacobian_mode == JACOBIAN_NONSYMMETRIC) {
-    std::complex<double> eig[2];
-    double delta = ftk::solve_eigenvalues2x2(J, eig);
-    
-    if (delta >= 0) { // two real roots
-      if (eig[0].real() * eig[1].real() < 0) 
-        cp.type = CRITICAL_POINT_2D_SADDLE;
-      else if (eig[0].real() > 0 && eig[1].real() > 0)
-        cp.type = CRITICAL_POINT_2D_REPELLING;
-      else if (eig[0].real() < 0 && eig[1].real() < 0)
-        cp.type = CRITICAL_POINT_2D_ATTRACTING;
-    } else { // two conjugate roots
-      if (eig[0].real() < 0) 
-        cp.type = CRITICAL_POINT_2D_ATTRACTING_FOCUS;
-      else if (eig[0].real() > 0) 
-        cp.type = CRITICAL_POINT_2D_REPELLING_FOCUS;
-      else 
-        cp.type = CRITICAL_POINT_2D_CENTER;
+    if (gradV.empty()) // jacobian is not given
+      ftk::gradient_2dsimplex2_2(X, v, J);
+    else { // lerp jacobian
+      double Js[3][2][2];
+      for (int i = 0; i < 3; i ++) 
+        for (int j = 0; j < 2; j ++)
+          for (int k = 0; k < 2; k ++)
+            Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1]);
+      lerp_s2m2x2(Js, mu, J);
     }
-  }
+    cp.type = critical_point_type_2d(J, symmetric_jacobian);
 
-  if (cp.type & type_filter) return true;
-  else return false; // type mismatch
+    if (cp.type & type_filter) return true;
+    else return false; // type mismatch
+  } else return true;
 }
 
 #if FTK_HAVE_VTK

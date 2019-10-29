@@ -53,7 +53,8 @@ protected:
   hypermesh::regular_simplex_mesh m;
   
   unsigned int type_filter = 0xffffffff;
-  unsigned int jacobian_mode = JACOBIAN_NONE;
+  bool has_jacobian = false;
+  bool symmetric_jacobian = false;
 
   typedef hypermesh::regular_simplex_mesh_element element_t;
   
@@ -74,7 +75,8 @@ void track_critical_points_2d_regular_serial::execute()
   if (!scalar.empty()) {
     if (V.empty()) V = hypermesh::gradient2Dt(scalar);
     if (gradV.empty()) gradV = hypermesh::jacobian2Dt(V);
-    jacobian_mode = JACOBIAN_SYMMETRIC;
+    has_jacobian = true;
+    symmetric_jacobian = true;
   }
 
   // initializing bounds
@@ -172,6 +174,29 @@ bool track_critical_points_2d_regular_serial::check_simplex(
       X[i][j] = vertices[i][j];
   lerp_s2v3(X, mu, cp.x);
 
+  if (!scalar.empty()) {
+    double values[3];
+    for (int i = 0; i < 3; i ++)
+      values[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
+    cp.scalar = lerp_s2(values, mu);
+  }
+
+  if (!type_filter) return true; // returns if cp types are not desired
+
+  // derive jacobian
+  double J[2][2] = {0};
+  if (gradV.empty()) {
+    // TODO: jacobian is not given
+  } else { // lerp jacobian
+    double Js[3][2][2];
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 2; j ++)
+        for (int k = 0; k < 2; k ++) 
+          Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2]);
+    lerp_s2m2x2(Js, mu, J);
+  }
+  cp.type = critical_point_type_2d(J, symmetric_jacobian);
+
   return true;
 }
 
@@ -183,7 +208,7 @@ vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_result
   vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
 
   for (const auto &curve : traced_critical_points)
-    for (int i = 0; i < curve.size(); i ++) {
+    for (auto i = 0; i < curve.size(); i ++) {
       double p[3] = {curve[i][0], curve[i][1], curve[i][2]};
       points->InsertNextPoint(p);
     }
@@ -198,9 +223,35 @@ vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_result
     cells->InsertNextCell(polyLine);
     nv += curve.size();
   }
-
+  
   polyData->SetPoints(points);
   polyData->SetLines(cells);
+
+  // point data for types
+  if (type_filter) {
+    vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
+    types->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &curve : traced_critical_points) {
+      for (auto j = 0; j < curve.size(); j ++)
+        types->SetValue(i ++, curve[j].type);
+    }
+    types->SetName("type");
+    polyData->GetPointData()->AddArray(types);
+  }
+
+  // point data for scalars
+  if (!scalar.empty()) {
+    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
+    scalars->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &curve : traced_critical_points) {
+      for (auto j = 0; j < curve.size(); j ++)
+        scalars->SetValue(i ++, curve[j].scalar);
+    }
+    scalars->SetName("scalar");
+    polyData->GetPointData()->AddArray(scalars);
+  }
 
   return polyData;
 }
