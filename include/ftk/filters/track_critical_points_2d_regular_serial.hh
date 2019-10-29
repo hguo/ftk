@@ -10,7 +10,6 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
-// #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
@@ -48,7 +47,7 @@ struct track_critical_points_2d_regular_serial : public filter {
   vtkSmartPointer<vtkPolyData> get_results_vtk() const;
 #endif
 
-private:
+protected:
   hypermesh::ndarray<double> scalar, V, gradV;
   hypermesh::regular_simplex_mesh m;
   
@@ -56,9 +55,12 @@ private:
   unsigned int jacobian_mode = JACOBIAN_NONE;
 
   std::map<hypermesh::regular_simplex_mesh_element, critical_point_2dt_t> intersections;
-  // std::vector<critical_point_2dt_t> results;
+  std::vector<std::vector<double>> trajectories; // the output trajectories
 
+protected:
   bool check_simplex(const hypermesh::regular_simplex_mesh_element& s, critical_point_2dt_t& cp);
+  void trace_intersections();
+  void extract_connected_components(std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components);
 };
 
 
@@ -87,6 +89,101 @@ void track_critical_points_2d_regular_serial::execute()
         // results.push_back(cp);
       }
     }); 
+
+  fprintf(stderr, "trace intersections...\n");
+  trace_intersections();
+}
+
+void track_critical_points_2d_regular_serial::extract_connected_components(std::vector<std::set<hypermesh::regular_simplex_mesh_element>>& components)
+{
+  typedef hypermesh::regular_simplex_mesh_element element_t;
+
+  // Initialization
+  ftk::union_find<std::string> uf; 
+  std::map<std::string, element_t> id2ele; 
+  for (const auto &f : intersections) {
+    std::string eid = f.first.to_string(); 
+    uf.add(eid); 
+    id2ele.insert(std::make_pair(eid, f.first));
+  }
+
+  // Connected Component Labeling by using union-find. 
+  m.element_for(3, [&](const hypermesh::regular_simplex_mesh_element& f) {
+    const auto elements = f.sides();
+    std::set<std::string> features; 
+
+    for (const auto& ele : elements) {
+      std::string eid = ele.to_string(); 
+
+      if(uf.has(eid)) {
+        features.insert(eid); 
+      }
+    }
+
+    if(features.size()  > 1) {
+      for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
+        std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
+        uf.unite(*(features.begin()), *ite_i); 
+      }
+    }
+  }); 
+
+
+  // the output sets of connected elements
+  std::vector<std::set<std::string>> connected_components_str; // connected components 
+  
+  // Get disjoint sets of element IDs
+  uf.get_sets(connected_components_str);
+
+  // Convert element IDs to elements
+  for(auto& comp_str : connected_components_str) {
+    std::set<element_t>& comp = components.emplace_back(); 
+    for(auto& ele_id : comp_str) {
+      comp.insert(id2ele.find(ele_id)->second); 
+    }
+  }
+}
+
+void track_critical_points_2d_regular_serial::trace_intersections()
+{
+  typedef hypermesh::regular_simplex_mesh_element element_t; 
+
+  std::vector<std::set<element_t>> cc; // connected components 
+  extract_connected_components(cc);
+
+  // Convert connected components to geometries
+
+  auto neighbors = [](element_t f) {
+    std::set<element_t> neighbors;
+    const auto cells = f.side_of();
+    for (const auto c : cells) {
+      const auto elements = c.sides();
+      for (const auto f1 : elements)
+        neighbors.insert(f1);
+    }
+    return neighbors;
+  };
+
+  fprintf(stderr, "generating curves...\n");
+#if 1
+  for (int i = 0; i < cc.size(); i ++) {
+    std::vector<std::vector<double>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      std::vector<double> mycurve, mycolors;
+      // float max_value = std::numeric_limits<float>::min();
+      for (int k = 0; k < linear_graphs[j].size(); k ++) {
+        auto p = intersections[linear_graphs[j][k]];
+        mycurve.push_back(p.x[0]); //  / (DW-1));
+        mycurve.push_back(p.x[1]); //  / (DH-1));
+        mycurve.push_back(p.x[2]); //  / (DT-1));
+        mycurve.push_back(p.scalar);
+        // max_value = std::max(max_value, p.scalar);
+      }
+      trajectories.emplace_back(mycurve);
+    }
+  }
+#endif
 }
 
 bool track_critical_points_2d_regular_serial::check_simplex(
