@@ -1,6 +1,7 @@
 #ifndef _FTK_TRACK_CRITICAL_POINTS_2D_REGULAR_SERIAL_HH
 #define _FTK_TRACK_CRITICAL_POINTS_2D_REGULAR_SERIAL_HH
 
+#include <ftk/ftk_config.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
@@ -42,6 +43,10 @@ struct track_critical_points_2d_regular_serial : public filter {
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
 
   void get_results();
+
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_results_vtk() const;
+#endif
 
 private:
   hypermesh::ndarray<double> scalar, V, gradV;
@@ -108,20 +113,29 @@ bool track_critical_points_2d_regular_serial::check_simplex(
   lerp_s2v3(X, mu, cp.x);
 
   return true;
-
-#if 0
-  critical_point_2dt_t cp;
-  auto eid = f.to_integer();
-  ftk::lerp_s2v3(X, mu, I.x);
-  I.val = ftk::lerp_s2(value, mu);
-
-  {
-    std::lock_guard<std::mutex> guard(mutex);
-    intersections[f] = I;
-    // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
-  }
-#endif
 }
+
+#if FTK_HAVE_VTK
+vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_results_vtk() const
+{
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+  
+  vtkIdType pid[1];
+  for (const auto &kv : intersections) {
+    const auto &cp = kv.second;
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  polyData->SetPoints(points);
+  polyData->SetVerts(vertices);
+ 
+  return polyData;
+}
+#endif
 
 }
 

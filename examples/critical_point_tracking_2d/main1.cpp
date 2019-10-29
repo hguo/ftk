@@ -2,6 +2,10 @@
 #include <hypermesh/synthetic.hh>
 #include <hypermesh/grad.hh>
 
+#if FTK_HAVE_VTK
+#include <ftk/geometry/points2vtk.hh>
+#endif
+
 const int DW = 256, DH = 256, DT = 10;
 
 int main(int argc, char **argv)
@@ -12,9 +16,9 @@ int main(int argc, char **argv)
   tracker.set_input_scalar_field(scalar);
   tracker.execute();
 
-#if 0 // FTK_HAVE_VTK
-  auto polydata = extractor.get_results_vtk();
-  ftk::write_vtp("asdf.vtp", polydata);
+#if 1 // FTK_HAVE_VTK
+  auto polydata = tracker.get_results_vtk();
+  ftk::write_vtp("asdf1.vtp", polydata);
 #endif
 
   return 0;
