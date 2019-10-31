@@ -9,6 +9,8 @@ namespace ftk {
 struct filter {
   int nthreads = 1;
   std::mutex mutex;
+
+  virtual void update() = 0;
 };
 
 }

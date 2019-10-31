@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 #else
   ftk::extract_critical_points_2d_regular_serial extractor;
   extractor.set_input_scalar_field(scalar);
-  extractor.execute();
+  extractor.update();
 #endif
 
 #if FTK_HAVE_VTK

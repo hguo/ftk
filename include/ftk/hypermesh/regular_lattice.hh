@@ -10,6 +10,8 @@
 
 namespace ftk {
 
+static const int unlimited_timestep = std::numeric_limits<int>::max();
+
 struct regular_lattice {
   regular_lattice() {}
   regular_lattice(int n);

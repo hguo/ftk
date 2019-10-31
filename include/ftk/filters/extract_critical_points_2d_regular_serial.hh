@@ -43,7 +43,7 @@ struct critical_point_2d_t {
 struct extract_critical_points_2d_regular_serial : public filter {
   extract_critical_points_2d_regular_serial() : m(2) {}
 
-  void execute();
+  void update();
 
   void set_input_scalar_field(const double *p, size_t W, size_t H);
   void set_input_scalar_field(const ndarray<double>&);
@@ -99,7 +99,7 @@ void extract_critical_points_2d_regular_serial::set_input_jacobian_field(const d
   gradV = ndarray<double>(p, {2, 2, W, H});
 }
 
-void extract_critical_points_2d_regular_serial::execute()
+void extract_critical_points_2d_regular_serial::update()
 {
   if (!scalar.empty()) {
     if (V.empty()) V = gradient2D(scalar);

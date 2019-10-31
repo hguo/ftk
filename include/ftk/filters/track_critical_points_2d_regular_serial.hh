@@ -29,7 +29,7 @@ struct critical_point_2dt_t {
 struct track_critical_points_2d_regular_serial : public filter {
   track_critical_points_2d_regular_serial() : m(3) {}
   
-  void execute();
+  void update();
   
   void set_input_scalar_field(const double *p, size_t W, size_t H, size_t T);
   void set_input_scalar_field(const ndarray<double>& scalar_) {scalar = scalar_;}
@@ -70,7 +70,7 @@ protected:
 
 
 ////////////////////
-void track_critical_points_2d_regular_serial::execute()
+void track_critical_points_2d_regular_serial::update()
 {
   // initializing vector fields
   if (!scalar.empty()) {
@@ -90,7 +90,7 @@ void track_critical_points_2d_regular_serial::execute()
 
   // scan 2-simplices
   fprintf(stderr, "tracking 2D critical points...\n");
-  m.element_for(2, [=](regular_simplex_mesh_element e) {
+  m.element_for(2, [=](element_t e) {
       critical_point_2dt_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
