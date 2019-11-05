@@ -61,7 +61,7 @@ void track_critical_points_2d_regular_serial_streaming::update()
       }
     };
 
-  m.element_for_fixed_time(2, current_timestep, func2); 
+  // m.element_for(2, current_timestep, func2, ftk::ELEMENT_SCOPE_ORDINAL); 
 
 #if 0
   // scan 3-simplices to get connected components

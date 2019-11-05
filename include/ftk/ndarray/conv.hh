@@ -3,9 +3,9 @@
 
 #include <cmath>
 #include <string>
-#include "ndarray.hh"
+#include <ftk/ndarray.hh>
 
-namespace hypermesh {
+namespace ftk {
 
 // 2D convolutions
 template <typename T>
@@ -185,6 +185,6 @@ ndarray<T> conv3D_gaussian(
   return res;
 }
 
-}  // namespace hypermesh
+}  // namespace ftk
 
 #endif  // _HYPERMESH_CONV_HH

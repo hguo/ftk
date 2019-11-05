@@ -26,6 +26,12 @@
 
 namespace ftk {
 
+enum {
+  ELEMENT_SCOPE_ALL = 0,
+  ELEMENT_SCOPE_ORDINAL = 1, 
+  ELEMENT_SCOPE_INTERVAL = 2
+};
+
 struct regular_simplex_mesh;
 
 struct regular_simplex_mesh_element {
@@ -35,7 +41,7 @@ struct regular_simplex_mesh_element {
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d); 
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, 
       const std::vector<int>& corner, int type); 
-  regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t i);
+  regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t i, int scope = ELEMENT_SCOPE_ALL);
   regular_simplex_mesh_element(const regular_simplex_mesh &_m, int _d, std::string i);
 
   regular_simplex_mesh_element& operator=(const regular_simplex_mesh_element& e);
@@ -49,13 +55,12 @@ struct regular_simplex_mesh_element {
 
   void increase_corner(int d=0);
   bool valid() const;
-  bool is_fixed_time() const;
 
   template <int nd> std::tuple<std::array<int, nd>, int> to_index() const;
   template <int nd> void from_index(const std::tuple<std::array<int, nd>, int>&);
 
-  template <typename uint = uint64_t> uint to_integer() const;
-  template <typename uint = uint64_t> void from_integer(uint i);
+  template <typename uint = uint64_t> uint to_integer(int scope = ELEMENT_SCOPE_ALL) const;
+  template <typename uint = uint64_t> void from_integer(uint i, int scope = ELEMENT_SCOPE_ALL);
 
   std::string to_string() const;
   void from_string(const std::string& index);
@@ -68,13 +73,6 @@ struct regular_simplex_mesh_element {
   const regular_simplex_mesh &m;
   std::vector<int> corner;
   int dim, type;
-};
-
-
-enum {
-  ELEMENT_ITERATION_ALL = 0,
-  ELEMENT_ITERATION_FIXED_TIME = 1, 
-  ELEMENT_ITERATION_FIXED_INTERVAL = 2
 };
 
 
@@ -113,16 +111,20 @@ struct regular_simplex_mesh {
   int nd() const {return nd_;}
 
   // Number of unique types of d-simplices
-  int ntypes(int d) const {return ntypes_.at(d);}
+  int ntypes(int d, int scope = ELEMENT_SCOPE_ALL) const;
 
   // Number of d-dimensional elements
-  size_t n(int d) const;
+  size_t n(int d, int scope = ELEMENT_SCOPE_ALL) const;
+
+  // number of d-dimensional ordinal and interval elements
+  size_t n_ordinal(int d) const;
+  size_t n_interval(int d) const;
 
   // Returns d+1 vertices that build up the d-dimensional simplex of the given type
   std::vector<std::vector<int>> unit_simplex(int d, int t) const {return unit_simplices[d][t];}
 
   // Check if the unit simplex type is fixed-time
-  bool is_fixed_time(int d, int type) const {return is_unit_simpleces_fixed_time[d][type];}
+  // bool is_fixed_time(int d, int type) const {return is_unit_simpleces_fixed_time[d][type];}
 
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub);
   void set_lb_ub(const regular_lattice& lattice); 
@@ -134,27 +136,14 @@ struct regular_simplex_mesh {
 
   const regular_lattice& lattice() const {return lattice_; }
 
-  iterator element_begin(int d);
-  iterator element_end(int d);
+  iterator element_begin(int d, int scope = ELEMENT_SCOPE_ALL);
+  iterator element_end(int d, int scope = ELEMENT_SCOPE_ALL);
 
   // Iterate all d-simplices with the given f() function using the given number of threads.
   // There are three different modes: all, fixed time, and fixed interval.  Please
   // see the comments in the next two functions for more details.
   void element_for(int d, std::function<void(regular_simplex_mesh_element)> f, 
-      int nthreads=std::thread::hardware_concurrency(), int mode = ELEMENT_ITERATION_ALL);
-
-  // Iterate all d-simplices in the fixed time t, assuming that the mesh is extruded 
-  // from the (n-1)-dimensional mesh and the last dimension is time.  Each element is
-  // iterated with the f() function using the given number of threads
-  void element_for_fixed_time(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency())  {element_for(d, f, nthreads, ELEMENT_ITERATION_FIXED_TIME);}
-
-  // Iterate all d-simplices in the fixed time interval [t, t+1], assuming that the 
-  // mesh is extruded from the (n-1)-dimensional mesh and the last dimension is time.
-  // Each element is iterated with the f() function using the given number of threads
-  void element_for_fixed_interval(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency())  {element_for(d, f, nthreads, ELEMENT_ITERATION_FIXED_INTERVAL);}
-
+      int nthreads=std::thread::hardware_concurrency(), int scope = ELEMENT_SCOPE_ALL);
 
 // partitioning
 public: 
@@ -192,23 +181,25 @@ private: // initialization functions
   // Enumerate all element that contains the specific type of k-simplex
   std::vector<std::tuple<int, std::vector<int>>> enumerate_unit_simplex_side_of(int k, int type);
 
-  std::vector<std::vector<bool>> enumerate_fixed_time_simplices();
+  void derive_ordinal_and_interval_simplices();
 
   // bool is_simplex_identical(const std::vector<std::string>&, const std::vector<std::string>&) const;
 
 private:
   const int nd_;
   std::vector<int> lb_, ub_; // lower and upper bounds of each dimension
-  std::vector<int> ntypes_; // number of types for k-simplex
+  std::vector<int> ntypes_, ntypes_ordinal_, ntypes_interval_; // number of types for k-simplex
   std::vector<int> dimprod_;
 
   regular_lattice lattice_; 
 
   // list of k-simplices types; each simplex contains k vertices
   // unit_simplices[d][type] retunrs d+1 vertices that build up the simplex
-  std::vector<std::vector<std::vector<std::vector<int>>>> unit_simplices;
+  std::vector<std::vector<std::vector<std::vector<int>>>> unit_simplices, 
+                                                          unit_ordinal_simplices,
+                                                          unit_interval_simplices;
   
-  std::vector<std::vector<bool>> is_unit_simpleces_fixed_time;
+  // std::vector<std::vector<bool>> is_unit_simpleces_fixed_time;
 
   // (dim,type) --> vector of (type,offset)
   std::vector<std::vector<std::vector<std::tuple<int, std::vector<int>>>>> unit_simplex_sides;
@@ -232,7 +223,7 @@ inline regular_simplex_mesh_element::regular_simplex_mesh_element(
 }
 
 inline regular_simplex_mesh_element::regular_simplex_mesh_element(
-    const regular_simplex_mesh &m_, int d_, size_t i) : m(m_)
+    const regular_simplex_mesh &m_, int d_, size_t i, int scope) : m(m_)
 {
   dim = d_;
   corner.resize(m.nd());
@@ -306,11 +297,6 @@ inline bool regular_simplex_mesh_element::valid() const {
   }
 }
 
-inline bool regular_simplex_mesh_element::is_fixed_time() const 
-{
-  return m.is_fixed_time(dim, type);
-}
-
 inline std::vector<std::vector<int> > regular_simplex_mesh_element::vertices() const
 {
   std::vector<std::vector<int>> vertices;
@@ -378,19 +364,19 @@ inline std::ostream& operator<<(std::ostream& os, const regular_simplex_mesh_ele
 }
 
 template <typename uint>
-uint regular_simplex_mesh_element::to_integer() const
+uint regular_simplex_mesh_element::to_integer(int scope) const
 {
   uint corner_index = 0;
   for (size_t i = 0; i < m.nd(); i ++)
     corner_index += (corner[i] - m.lb(i)) * m.dimprod_[i];
-  return corner_index * m.ntypes(dim) + type;
+  return corner_index * m.ntypes(dim, scope) + type;
 }
 
 template <typename uint>
-void regular_simplex_mesh_element::from_integer(uint index)
+void regular_simplex_mesh_element::from_integer(uint index, int scope)
 {
-  type = index % m.ntypes(dim);
-  uint corner_index = index / m.ntypes(dim); // m.dimprod_[m.nd()];
+  type = index % m.ntypes(dim, scope);
+  uint corner_index = index / m.ntypes(dim, scope); // m.dimprod_[m.nd()];
 
   for (int i = m.nd() - 1; i >= 0; i --) {
     corner[i] = corner_index / m.dimprod_[i]; 
@@ -479,6 +465,16 @@ inline std::vector<regular_simplex_mesh_element> regular_simplex_mesh_element::s
   }
 
   return side_of;
+}
+
+inline int regular_simplex_mesh::ntypes(int d, int scope) const 
+{
+  switch (scope) {
+  case ELEMENT_SCOPE_ALL: return ntypes_.at(d);
+  case ELEMENT_SCOPE_ORDINAL: return ntypes_ordinal_.at(d);
+  case ELEMENT_SCOPE_INTERVAL: return ntypes_interval_.at(d);
+  default: return 0;
+  }
 }
 
 inline std::vector<std::vector<std::vector<int>>> regular_simplex_mesh::subdivide_unit_cube(int n)
@@ -654,32 +650,32 @@ inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enum
   return sides;
 }
 
-inline std::vector<std::vector<bool>> 
-regular_simplex_mesh::enumerate_fixed_time_simplices()
+inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
 {
-  std::vector<std::vector<bool>> vec;
-
-  for (int d = 0; d < nd(); d ++) {
-    std::vector<bool> is_fixed_time(ntypes(d), false);
+  for (int d = 0; d < nd()+1; d ++) {
+    std::vector<std::vector<std::vector<int>>> ordinal_simplicies, interval_simplices;
     
     if (d == 0) {
-      is_fixed_time[0] = true;
+      ordinal_simplicies.push_back({{0}});
     } else {
       for (int t = 0; t < ntypes(d); t ++) {
-        const auto vertices = unit_simplices[d][t];
+        const auto simplex = unit_simplices[d][t];
         int time = 0;
-        for (int i = 0; i < vertices.size(); i ++) {
-          time = time | vertices[i][d-1];
+        for (int i = 0; i < simplex.size(); i ++) {
+          time = time | simplex[i][d-1];
         }
-        if (time == 0) 
-          is_fixed_time[t] = true;
-        // fprintf(stderr, "d=%d, type=%d, time=%d\n", d, t, time);
+        if (time == 0) {
+          ordinal_simplicies.push_back(simplex);
+        }
+        else 
+          interval_simplices.push_back(simplex);
       }
     }
-    vec.push_back(is_fixed_time);
+    unit_ordinal_simplices.push_back(ordinal_simplicies);
+    unit_interval_simplices.push_back(interval_simplices);
+    ntypes_ordinal_.push_back(ordinal_simplicies.size());
+    ntypes_interval_.push_back(interval_simplices.size());
   }
-
-  return vec;
 }
 
 inline void regular_simplex_mesh::partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
@@ -720,7 +716,6 @@ inline void regular_simplex_mesh::initialize_subdivision()
   for (int k = 0; k <= nd(); k ++) {
     unit_simplices[k] = enumerate_unit_simplices(nd(), k);
     ntypes_[k] = unit_simplices[k].size();
-    // fprintf(stderr, "k=%d, count=%d\n", k, ntypes(k));
 #if 0
     for (const auto s : unit_simplices[k]) {
       for (const auto v : s)
@@ -745,7 +740,7 @@ inline void regular_simplex_mesh::initialize_subdivision()
   }
   // enumerate_unit_simplex_side_of(0, 0);
 
-  is_unit_simpleces_fixed_time = enumerate_fixed_time_simplices();
+  derive_ordinal_and_interval_simplices();
 }
 
 inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std::vector<int>& u)
@@ -786,34 +781,32 @@ inline std::vector<int> regular_simplex_mesh::sizes() {
   return sizes; 
 }
 
-inline regular_simplex_mesh::iterator regular_simplex_mesh::element_begin(int d)
+inline regular_simplex_mesh::iterator regular_simplex_mesh::element_begin(int d, int scope)
 {
   regular_simplex_mesh_element e(*this, d);
   e.corner = lb();
   return e;
 }
 
-inline regular_simplex_mesh::iterator regular_simplex_mesh::element_end(int d)
+inline regular_simplex_mesh::iterator regular_simplex_mesh::element_end(int d, int scope)
 {
   regular_simplex_mesh_element e(*this, d);
   e.corner = ub();
   // e.type = ntypes(d) - 1;
-  e.type = ntypes(d); // the invalid type id combines with the ub corner encodes the end.
+  e.type = ntypes(d, scope); // the invalid type id combines with the ub corner encodes the end.
   return e;
 }
 
-inline size_t regular_simplex_mesh::n(int d) const
+inline size_t regular_simplex_mesh::n(int d, int scope) const
 {
-  return (size_t)ntypes(d) * dimprod_[nd()];
+  return (size_t)ntypes(d, scope) * dimprod_[nd()];
 }
 
 inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads, int mode)
 {
   auto lambda = [=](size_t j) {
     regular_simplex_mesh_element e(*this, d, j);
-    if (mode == ELEMENT_ITERATION_ALL) f(e);
-    else if (mode == ELEMENT_ITERATION_FIXED_TIME) {if (e.is_fixed_time()) f(e);}
-    else if (mode == ELEMENT_ITERATION_FIXED_INTERVAL) {if (!e.is_fixed_time()) f(e);}
+    f(e);
   };
 
 #if FTK_HAVE_KOKKOS
