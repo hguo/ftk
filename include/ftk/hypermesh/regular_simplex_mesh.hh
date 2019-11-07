@@ -14,7 +14,7 @@
 #include <cassert>
 #include <iterator>
 #include <functional>
-#include <ftk/hypermesh/regular_lattice.hh>
+#include <ftk/hypermesh/lattice.hh>
 
 #if FTK_HAVE_KOKKOS
 #include <Kokkos_Core.hpp>
@@ -59,6 +59,9 @@ struct regular_simplex_mesh_element {
   template <int nd> std::tuple<std::array<int, nd>, int> to_index() const;
   template <int nd> void from_index(const std::tuple<std::array<int, nd>, int>&);
 
+  size_t to_work_index(const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
+  void from_work_index(size_t, const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
+
   template <typename uint = uint64_t> uint to_integer(int scope = ELEMENT_SCOPE_ALL) const;
   template <typename uint = uint64_t> void from_integer(uint i, int scope = ELEMENT_SCOPE_ALL);
 
@@ -91,7 +94,7 @@ struct regular_simplex_mesh {
     lattice_.reshape(lb_, sizes()); 
   }
 
-  regular_simplex_mesh(int n, regular_lattice& _lattice) : regular_simplex_mesh(n) {
+  regular_simplex_mesh(int n, lattice& _lattice) : regular_simplex_mesh(n) {
     std::vector<int> _lb, _ub;
 
     for (int i = 0; i < n; i ++) {
@@ -127,14 +130,14 @@ struct regular_simplex_mesh {
   // bool is_fixed_time(int d, int type) const {return is_unit_simpleces_fixed_time[d][type];}
 
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub);
-  void set_lb_ub(const regular_lattice& lattice); 
+  void set_lb_ub(const lattice& lattice); 
   int lb(int d) const {return lb_[d];}
   int ub(int d) const {return ub_[d];}
   const std::vector<int>& lb() const {return lb_;}
   const std::vector<int>& ub() const {return ub_;}
   std::vector<int> sizes();  
 
-  const regular_lattice& lattice() const {return lattice_; }
+  const lattice& get_lattice() const {return lattice_; }
 
   iterator element_begin(int d, int scope = ELEMENT_SCOPE_ALL);
   iterator element_end(int d, int scope = ELEMENT_SCOPE_ALL);
@@ -143,10 +146,17 @@ struct regular_simplex_mesh {
   // There are three different modes: all, fixed time, and fixed interval.  Please
   // see the comments in the next two functions for more details.
   void element_for(int d, std::function<void(regular_simplex_mesh_element)> f, 
-      int nthreads=std::thread::hardware_concurrency(), int scope = ELEMENT_SCOPE_ALL);
+      int nthreads=std::thread::hardware_concurrency()); // , int scope = ELEMENT_SCOPE_ALL);
 
-// partitioning
-public: 
+  void element_for_ordinal(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
+      int nthreads=std::thread::hardware_concurrency());
+
+  void element_for_interval(int d, int t0, int t1, std::function<void(regular_simplex_mesh_element)> f,
+      int nthreads=std::thread::hardware_concurrency());
+
+  void parallel_for(std::function<void(size_t)> f, int ntasks, int nthreads);
+
+public: // partitioning
   void partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
   void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
@@ -191,7 +201,7 @@ private:
   std::vector<int> ntypes_, ntypes_ordinal_, ntypes_interval_; // number of types for k-simplex
   std::vector<int> dimprod_;
 
-  regular_lattice lattice_; 
+  struct lattice lattice_; 
 
   // list of k-simplices types; each simplex contains k vertices
   // unit_simplices[d][type] retunrs d+1 vertices that build up the simplex
@@ -361,6 +371,12 @@ inline std::ostream& operator<<(std::ostream& os, const regular_simplex_mesh_ele
 #endif
   
   return os;
+}
+
+inline size_t regular_simplex_mesh_element::to_work_index(const lattice& l, int scope) const
+{
+  size_t idx = l.to_integer(corner);
+  return idx * m.ntypes(dim, scope);
 }
 
 template <typename uint>
@@ -692,14 +708,15 @@ inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &g
   partition(np, given, ghost, ghost, partitions); 
 }
 
-inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
-  std::vector<std::tuple<regular_lattice, regular_lattice>> lattice_partitions;
+inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, 
+    const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+  std::vector<std::tuple<lattice, lattice>> lattice_partitions;
   this->lattice_.partition(np, given, ghost_low, ghost_high, lattice_partitions); 
 
   // Lattice partitions 2 regular simplex mesh partitions
   for(auto& lattice_pair : lattice_partitions) {
-    regular_lattice& lattice_p = std::get<0>(lattice_pair); 
-    regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
+    lattice& lattice_p = std::get<0>(lattice_pair); 
+    lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
 
     regular_simplex_mesh p(this->nd(), lattice_p); 
     regular_simplex_mesh ghost_p(this->nd(), lattice_ghost_p); 
@@ -762,7 +779,7 @@ inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std
   }
 }
 
-inline void regular_simplex_mesh::set_lb_ub(const regular_lattice& _lattice) {
+inline void regular_simplex_mesh::set_lb_ub(const lattice& _lattice) {
   std::vector<size_t> _lattice_lb = _lattice.lower_bounds(); 
   std::vector<int> _lb(_lattice_lb.begin(), _lattice_lb.end());
 
@@ -802,39 +819,36 @@ inline size_t regular_simplex_mesh::n(int d, int scope) const
   return (size_t)ntypes(d, scope) * dimprod_[nd()];
 }
 
-inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads, int mode)
+inline void regular_simplex_mesh::parallel_for(std::function<void(size_t)> f, int ntasks, int nthreads)
+{
+#if FTK_HAVE_KOKKOS
+  Kokkos::parallel_for("element_for", ntasks, KOKKOS_LAMBDA(const int& j) {f(j);});
+#elif FTK_HAVE_TBB
+  tbb::parallel_for(tbb::blocked_range<size_t>(0, ntasks),
+      [=](const blocked_range<size_t>& r) {
+        for (size_t i = r.begin(); i != r.end(); ++ i) 
+          f(i);
+      });
+#else
+  std::vector<std::thread> workers;
+  for (size_t i = 0; i < nthreads; i ++) {
+    workers.push_back(std::thread([=]() {
+      for (size_t j = i; j < ntasks; j += nthreads)
+        f(j);
+    }));
+  }
+  std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
+#endif
+}
+
+inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
 {
   auto lambda = [=](size_t j) {
     regular_simplex_mesh_element e(*this, d, j);
     f(e);
   };
 
-#if FTK_HAVE_KOKKOS
-  fprintf(stderr, "using kokkos..\n");
-
-  Kokkos::parallel_for("element_for", n(d), KOKKOS_LAMBDA(const int& j) {lambda(j);});
-#elif FTK_HAVE_TBB
-  fprintf(stderr, "using tbb..\n");
-  using namespace tbb;
-
-  parallel_for(tbb::blocked_range<size_t>(0, n(d)), 
-      [=](const blocked_range<size_t>& r) {
-        for (size_t i = r.begin(); i != r.end(); ++ i) 
-          lambda(i);
-      });
-#else
-  const size_t ntasks = n(d);
-  std::vector<std::thread> workers;
-
-  for (size_t i = 0; i < nthreads; i ++) {
-    workers.push_back(std::thread([=]() {
-      for (size_t j = i; j < ntasks; j += nthreads)
-        lambda(j);
-    }));
-  }
-
-  std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
-#endif
+  parallel_for(lambda, n(d), nthreads);
 }
 
 }

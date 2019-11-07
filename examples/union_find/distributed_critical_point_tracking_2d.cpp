@@ -89,7 +89,7 @@ ftk::regular_simplex_mesh m(3); // the 3D space-time mesh
 ftk::regular_simplex_mesh block_m(3); // the 3D space-time mesh of this block
 ftk::regular_simplex_mesh block_m_ghost(3); // the 3D space-time mesh of this block with ghost cells
 
-std::vector<std::tuple<ftk::regular_lattice, ftk::regular_lattice>> lattice_partitions;
+std::vector<std::tuple<ftk::lattice, ftk::lattice>> lattice_partitions;
 float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
 int threshold_length; // threshold for trajectory length.  
 
@@ -216,12 +216,12 @@ void decompose_mesh(int nblocks) {
 
   std::vector<size_t> ghost = {1, 1, 1}; // at least 1, larger is ok
 
-  const ftk::regular_lattice& lattice = m.lattice(); 
+  const ftk::lattice& lattice = m.get_lattice(); 
   lattice.partition(nblocks, given, ghost, lattice_partitions); 
 
   auto& lattice_pair = lattice_partitions[gid]; 
-  ftk::regular_lattice& lattice_p = std::get<0>(lattice_pair); 
-  ftk::regular_lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
+  ftk::lattice& lattice_p = std::get<0>(lattice_pair); 
+  ftk::lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
   
   block_m.set_lb_ub(lattice_p);
   block_m_ghost.set_lb_ub(lattice_ghost_p);

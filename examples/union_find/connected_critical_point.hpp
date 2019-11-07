@@ -360,7 +360,7 @@ inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::M
 // ===================================================================
 // Functions for adding edges/unions to the block
 
-bool is_in_mesh(const ftk::regular_simplex_mesh_element& f, const ftk::regular_lattice& _lattice) { 
+bool is_in_mesh(const ftk::regular_simplex_mesh_element& f, const ftk::lattice& _lattice) { 
   // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
 
   for (int i = 0; i < f.corner.size(); ++i){
@@ -372,14 +372,14 @@ bool is_in_mesh(const ftk::regular_simplex_mesh_element& f, const ftk::regular_l
   return true;
 }
 
-bool is_in_mesh(const std::string& eid, const ftk::regular_lattice& _lattice, ftk::regular_simplex_mesh& m, int feature_dim) { 
+bool is_in_mesh(const std::string& eid, const ftk::lattice& _lattice, ftk::regular_simplex_mesh& m, int feature_dim) { 
   ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, eid); 
   
   return is_in_mesh(f, _lattice); 
 }
 
   // If the intersection is contained in the lattice
-bool is_in_mesh(const intersection_t& intersection, const ftk::regular_lattice& _lattice, ftk::regular_simplex_mesh& m, int feature_dim) { 
+bool is_in_mesh(const intersection_t& intersection, const ftk::lattice& _lattice, ftk::regular_simplex_mesh& m, int feature_dim) { 
   return is_in_mesh(intersection.eid, _lattice, m, feature_dim); 
 }
 
@@ -409,7 +409,7 @@ void add_unions(std::map<std::string, intersection_t>* intersections, ftk::regul
       features.insert(eid); 
       id2element.insert(std::make_pair(eid, ele)); 
 
-      if(is_in_mesh(ele, block_m.lattice())) {
+      if(is_in_mesh(ele, block_m.get_lattice())) {
         features_in_block.insert(eid); 
       }
       
@@ -512,7 +512,7 @@ void add_points_to_block(ftk::regular_simplex_mesh& m, ftk::regular_simplex_mesh
 
     ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, intersection.first);
 
-    if(is_in_mesh(f, block_m.lattice())) {
+    if(is_in_mesh(f, block_m.get_lattice())) {
       point_t point;
       // point.corner.resize(DIM); 
       for(int i = 0; i < DIM; ++i) {
@@ -665,7 +665,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
   }
 }
 
-void init_block_without_load_balancing(std::vector<std::tuple<ftk::regular_lattice, ftk::regular_lattice>>& lattice_partitions, ftk::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+void init_block_without_load_balancing(std::vector<std::tuple<ftk::lattice, ftk::lattice>>& lattice_partitions, ftk::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
 
   for(auto& intersection : b->intersections) {
     ftk::regular_simplex_mesh_element f = ftk::regular_simplex_mesh_element(m, feature_dim, intersection.first);

@@ -1,8 +1,7 @@
-#ifndef _FTK_REGULAR_LATTICE_HH
-#define _FTK_REGULAR_LATTICE_HH
+#ifndef _FTK_LATTICE_HH
+#define _FTK_LATTICE_HH
 
 #include <cmath>
-
 #include <vector>
 #include <tuple>
 #include <queue>
@@ -10,13 +9,11 @@
 
 namespace ftk {
 
-static const int unlimited_timestep = std::numeric_limits<int>::max();
-
-struct regular_lattice {
-  regular_lattice() {}
-  regular_lattice(int n);
-  regular_lattice(const std::vector<size_t> &starts, const std::vector<size_t> &sizes) {reshape(starts, sizes);}
-  regular_lattice(const std::vector<size_t> &sizes) {reshape(sizes);}
+struct lattice {
+  lattice() {}
+  lattice(int n);
+  lattice(const std::vector<size_t> &starts, const std::vector<size_t> &sizes) {reshape(starts, sizes);}
+  lattice(const std::vector<size_t> &sizes) {reshape(sizes);}
 
   void print(std::ostream& os);
 
@@ -37,6 +34,9 @@ struct regular_lattice {
   void reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes);
   void reshape(const std::vector<int> &starts, const std::vector<int> &sizes);
 
+  template <typename uint=uint64_t> uint to_integer(const std::vector<int> &coords) const;
+  template <typename uint=uint64_t> std::vector<int> from_integer(uint i) const;
+
   // size_t global_index(const std::vector<size_t> &coords) const;
   size_t local_index(int p, const std::vector<size_t> &coords) const;
 
@@ -50,31 +50,31 @@ public: // the last dimension, aka time.  these functions are mainly for I/O and
 
 // partitioning
 public: 
-  void partition(int np, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const;
-  void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const;
-  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const;
-  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const;
+  void partition(int np, std::vector<std::tuple<lattice, lattice>>& partitions) const;
+  void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<lattice, lattice>>& partitions) const;
+  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<lattice, lattice>>& partitions) const;
+  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<lattice, lattice>>& partitions) const;
 private:
-  void partition(std::vector<std::vector<size_t>> prime_factors_dims, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const; 
+  void partition(std::vector<std::vector<size_t>> prime_factors_dims, std::vector<std::tuple<lattice, lattice>>& partitions) const; 
 
-  // std::vector<regular_lattice> partition_all();
+  // std::vector<lattice> partition_all();
   size_t partition_id(const std::vector<size_t> &coords) const;
 
 private:
   bool unlimited_ = false; 
   std::vector<size_t> starts_, sizes_; // the last dimension can be unlimited
-  std::vector<size_t> local_prod_, global_prod_;
+  std::vector<size_t> prod_; 
 };
 
 /////
 
-inline regular_lattice::regular_lattice(int n)
+inline lattice::lattice(int n)
 {
   starts_.resize(n);
   sizes_.resize(n);
 }
 
-inline void regular_lattice::print(std::ostream& os)
+inline void lattice::print(std::ostream& os)
 {
   os << "starts: {";
   for (int i = 0; i < nd(); i ++)
@@ -87,7 +87,7 @@ inline void regular_lattice::print(std::ostream& os)
 }
 
 
-inline std::vector<size_t> regular_lattice::lower_bounds() const {
+inline std::vector<size_t> lattice::lower_bounds() const {
   std::vector<size_t> lb; 
   for(int i = 0; i < nd(); ++i) {
     lb.push_back(starts_[i]); 
@@ -96,7 +96,7 @@ inline std::vector<size_t> regular_lattice::lower_bounds() const {
   return lb; 
 }
 
-inline std::vector<size_t> regular_lattice::upper_bounds() const {
+inline std::vector<size_t> lattice::upper_bounds() const {
   std::vector<size_t> ub; 
   for(int i = 0; i < nd(); ++i) {
     ub.push_back(starts_[i] + sizes_[i] - 1); 
@@ -105,26 +105,20 @@ inline std::vector<size_t> regular_lattice::upper_bounds() const {
   return ub; 
 }
 
-inline void regular_lattice::reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes)
+inline void lattice::reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes)
 {
   starts_ = starts;
   sizes_ = sizes;
+  prod_.resize(sizes.size());
 
-  local_prod_.resize(sizes.size());
-  global_prod_.resize(sizes.size());
-
-  for (int i = 0; i < nd(); i ++) {
-    if (i == 0) {
-      local_prod_[i] = 1;
-      global_prod_[i] = 1;
-    } else {
-      local_prod_[i] = local_prod_[i-1] * sizes[i];
-      global_prod_[i] = global_prod_[i-1] * (starts[i] + sizes[i]);
-    }
-  }
+  for (int i = 0; i < nd(); i ++)
+    if (i == 0)
+      prod_[i] = 1;
+    else
+      prod_[i] = prod_[i-1] * sizes[i];
 }
 
-inline void regular_lattice::reshape(const std::vector<int> &starts, const std::vector<int> &sizes) 
+inline void lattice::reshape(const std::vector<int> &starts, const std::vector<int> &sizes) 
 {
   // Convert int to size_t
 
@@ -134,13 +128,13 @@ inline void regular_lattice::reshape(const std::vector<int> &starts, const std::
   reshape(_starts, _sizes); 
 }
 
-inline void regular_lattice::reshape(const std::vector<size_t> &sizes)
+inline void lattice::reshape(const std::vector<size_t> &sizes)
 {
   starts_.resize(sizes.size());
   reshape(starts_, sizes);
 }
 
-inline void regular_lattice::reshape(const std::vector<int> &sizes)
+inline void lattice::reshape(const std::vector<int> &sizes)
 {
   // Convert int to size_t
   std::vector<size_t> _sizes(sizes.size()); 
@@ -151,14 +145,42 @@ inline void regular_lattice::reshape(const std::vector<int> &sizes)
   reshape(_sizes); 
 }
 
+template <typename uint> 
+inline uint lattice::to_integer(const std::vector<int> &idx1) const
+{
+  std::vector<int> idx(idx1);
+  for (auto j = 0; j < nd(); j ++)
+    idx[j] -= starts_[j];
 
-// inline size_t regular_lattice::global_index(const std::vector<size_t> &coords)
+  uint i(idx[0]);
+  for (auto j = 1; j < nd(); j ++)
+    i += idx[j] * prod_[j];
+  return i;
+}
+
+template <typename uint>
+inline std::vector<int> lattice::from_integer(uint i) const
+{
+  std::vector<int> idx(nd());
+  for (auto j = nd()-1; j > 0; j --) {
+    idx[j] = i / prod_[j];
+    i -= idx[j] * prod_[j];
+  }
+  idx[0] = i;
+
+  for (auto j = 0; j < nd(); j ++)
+    idx[j] += starts_[j];
+
+  return idx;
+}
+
+// inline size_t lattice::global_index(const std::vector<size_t> &coords)
 // {
 
 // }
 
 // // Each grid point is a regular lattice
-// inline std::vector<regular_lattice> regular_lattice::partition_all() {
+// inline std::vector<lattice> lattice::partition_all() {
 //   int ngridpoints = std::accumulate(sizes_.begin(), sizes_.end(), 1, std::multiplies<int>()); 
 
 //   int ndim = unlimited_ ? nd() - 1 : nd(); // # of cuttable dimensions
@@ -176,7 +198,7 @@ inline void regular_lattice::reshape(const std::vector<int> &sizes)
 //   }
 //   sizes[0] = 1;
 
-//   std::vector<regular_lattice> partitions;
+//   std::vector<lattice> partitions;
 //   std::vector<size_t> starts(starts_); 
 //   for(int i = 0; i < ngridpoints; ++i) {
   
@@ -190,7 +212,7 @@ inline void regular_lattice::reshape(const std::vector<int> &sizes)
 //       }
 //     }
   
-//     partitions.push_back(regular_lattice(starts, sizes)); 
+//     partitions.push_back(lattice(starts, sizes)); 
 //   }
 
 //   return partitions; 
@@ -225,21 +247,21 @@ inline bool is_vector_zero(const std::vector<size_t> vec) {
   return false; 
 }
 
-inline void regular_lattice::partition(int np, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const {  
+inline void lattice::partition(int np, std::vector<std::tuple<lattice, lattice>>& partitions) const {  
   std::vector<size_t> vector_zero = {0}; 
   partition(np, vector_zero, vector_zero, vector_zero, partitions); 
 }
 
-inline void regular_lattice::partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const {
+inline void lattice::partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<lattice, lattice>>& partitions) const {
   std::vector<size_t> vector_zero = {0}; 
   partition(np, given, vector_zero, vector_zero, partitions); 
 }
 
-inline void regular_lattice::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const {
+inline void lattice::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<lattice, lattice>>& partitions) const {
   partition(np, given, ghost, ghost, partitions); 
 }
 
-inline void regular_lattice::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const 
+inline void lattice::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<lattice, lattice>>& partitions) const 
 {
   if(np <= 0) {
     return ;
@@ -310,7 +332,7 @@ inline void regular_lattice::partition(int np, const std::vector<size_t> &given,
   if(!is_vector_zero(ghost_low)) {
     for(auto& p : partitions) {
       for(int d = 0; d < ndim; ++d) {
-        regular_lattice& ghost_p = std::get<1>(p); 
+        lattice& ghost_p = std::get<1>(p); 
 
         std::vector<size_t> starts(ghost_p.starts());  
         std::vector<size_t> sizes(ghost_p.sizes()); 
@@ -332,7 +354,7 @@ inline void regular_lattice::partition(int np, const std::vector<size_t> &given,
   if(!is_vector_zero(ghost_high)) {
     for(auto& p : partitions) {
       for(int d = 0; d < ndim; ++d) {
-        regular_lattice& ghost_p = std::get<1>(p); 
+        lattice& ghost_p = std::get<1>(p); 
 
         std::vector<size_t> sizes(ghost_p.sizes()); 
 
@@ -351,11 +373,11 @@ inline void regular_lattice::partition(int np, const std::vector<size_t> &given,
 
 
 // Partition dimensions by given prime factors of each dimension
-inline void regular_lattice::partition(std::vector<std::vector<size_t>> prime_factors_dims, std::vector<std::tuple<regular_lattice, regular_lattice>>& partitions) const {
+inline void lattice::partition(std::vector<std::vector<size_t>> prime_factors_dims, std::vector<std::tuple<lattice, lattice>>& partitions) const {
 
   int ndim = this->nd_cuttable(); // # of cuttable dimensions
 
-  std::queue<regular_lattice> lattice_queue; 
+  std::queue<lattice> lattice_queue; 
   lattice_queue.push(*this);
 
   for(int curr = 0; curr < ndim; ++curr) { // current dim for cutting
@@ -374,28 +396,28 @@ inline void regular_lattice::partition(std::vector<std::vector<size_t>> prime_fa
         std::vector<size_t> sizes(p.sizes()); 
         sizes[curr] = ns;
         for(int k = 0; k < nslice - 1; ++k) {
-          lattice_queue.push(regular_lattice(starts, sizes));
+          lattice_queue.push(lattice(starts, sizes));
           starts[curr] += ns;
         }
 
         sizes[curr] = p.size(curr) - ns * (nslice - 1);
-        lattice_queue.push(regular_lattice(starts, sizes));
+        lattice_queue.push(lattice(starts, sizes));
 
         lattice_queue.pop();
       }
     }
   }
 
-  // std::vector<std::tuple<regular_lattice, regular_lattice>> partitions;
+  // std::vector<std::tuple<lattice, lattice>> partitions;
   while (!lattice_queue.empty()) {
 
-    regular_lattice core = lattice_queue.front(); 
+    lattice core = lattice_queue.front(); 
     core.set_unlimited_time(this->unlimited_); 
 
-    regular_lattice ghost(core.starts(), core.sizes()); 
+    lattice ghost(core.starts(), core.sizes()); 
     ghost.set_unlimited_time(this->unlimited_);     
 
-    std::tuple<regular_lattice, regular_lattice> p = std::make_tuple(core, ghost); 
+    std::tuple<lattice, lattice> p = std::make_tuple(core, ghost); 
     
     partitions.push_back(p); 
     lattice_queue.pop();
