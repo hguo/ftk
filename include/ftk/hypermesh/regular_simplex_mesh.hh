@@ -697,7 +697,7 @@ inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
         const auto simplex = unit_simplices[d][t];
         int time = 0;
         for (int i = 0; i < simplex.size(); i ++) {
-          time = time | simplex[i][d-1];
+          time = time + simplex[i][nd()-1];
         }
         if (time == 0)
           ordinal_simplex_types.push_back(t);
@@ -705,6 +705,7 @@ inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
           interval_simplex_types.push_back(t);
       }
     }
+
     unit_ordinal_simplex_types.push_back(ordinal_simplex_types);
     unit_interval_simplex_types.push_back(interval_simplex_types);
     ntypes_ordinal_.push_back(ordinal_simplex_types.size());
