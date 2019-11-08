@@ -41,7 +41,8 @@ struct regular_simplex_mesh_element {
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d); 
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, 
       const std::vector<int>& corner, int type); 
-  regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t i, int scope = ELEMENT_SCOPE_ALL);
+  regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t work_index, 
+      const lattice& l, int scope = ELEMENT_SCOPE_ALL);
   regular_simplex_mesh_element(const regular_simplex_mesh &_m, int _d, std::string i);
 
   regular_simplex_mesh_element& operator=(const regular_simplex_mesh_element& e);
@@ -60,7 +61,7 @@ struct regular_simplex_mesh_element {
   template <int nd> void from_index(const std::tuple<std::array<int, nd>, int>&);
 
   size_t to_work_index(const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
-  void from_work_index(size_t, const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
+  void from_work_index(size_t, const lattice& l, int scope = ELEMENT_SCOPE_ALL);
 
   template <typename uint = uint64_t> uint to_integer(int scope = ELEMENT_SCOPE_ALL) const;
   template <typename uint = uint64_t> void from_integer(uint i, int scope = ELEMENT_SCOPE_ALL);
@@ -154,8 +155,6 @@ struct regular_simplex_mesh {
   void element_for_interval(int d, int t0, int t1, std::function<void(regular_simplex_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency());
   
-  void parallel_for(std::function<void(size_t)> f, int ntasks, int nthreads);
-  
   void element_for(int d, const lattice& subdomain, int scope, 
       std::function<void(regular_simplex_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency());
@@ -237,11 +236,11 @@ inline regular_simplex_mesh_element::regular_simplex_mesh_element(
 }
 
 inline regular_simplex_mesh_element::regular_simplex_mesh_element(
-    const regular_simplex_mesh &m_, int d_, size_t i, int scope) : m(m_)
+    const regular_simplex_mesh &m_, int d_, size_t i, const lattice& l, int scope) : m(m_)
 {
   dim = d_;
   corner.resize(m.nd());
-  from_integer(i);
+  from_work_index(i, l, scope);
 }
 
 inline regular_simplex_mesh_element::regular_simplex_mesh_element(
@@ -381,6 +380,19 @@ inline size_t regular_simplex_mesh_element::to_work_index(const lattice& l, int 
 {
   size_t idx = l.to_integer(corner);
   return idx * m.ntypes(dim, scope);
+}
+
+inline void regular_simplex_mesh_element::from_work_index(size_t i, const lattice& l, int scope)
+{
+  const auto itype = i % m.ntypes(dim, scope);
+  auto ii = i / m.ntypes(dim, scope);
+  
+  type = itype; // FIXME.
+  corner = l.from_integer(ii);
+  
+  // fprintf(stderr, "i=%lu, itype=%lu, ii=%lu, ntypes=%d, scope=%d, corner=%d, %d, %d\n", 
+  //     i, itype, ii, m.ntypes(dim, scope), scope, 
+  //     corner[0], corner[1], corner[2]);
 }
 
 template <typename uint>
@@ -823,40 +835,53 @@ inline size_t regular_simplex_mesh::n(int d, int scope) const
   return (size_t)ntypes(d, scope) * dimprod_[nd()];
 }
   
+inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
+{
+  element_for(d, lattice_, ELEMENT_SCOPE_ALL, f, nthreads);
+}
+  
+inline void regular_simplex_mesh::element_for_ordinal(int d, int t, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
+{
+  auto st = lattice_.starts(), sz = lattice_.sizes();
+  st[nd()-1] = t;
+  sz[nd()-1] = 1;
+
+  lattice my_lattice(st, sz);
+  my_lattice.print(std::cerr);
+
+  element_for(d, my_lattice, ELEMENT_SCOPE_ORDINAL, f, nthreads);
+}
+
 inline void regular_simplex_mesh::element_for(
-    int d, const lattice& subdomain, int scope, 
+    int d, const lattice& l, int scope, 
     std::function<void(regular_simplex_mesh_element)> f,
     int nthreads)
 {
   auto lambda = [=](size_t j) {
-    regular_simplex_mesh_element e(*this, d, j);
-    // f(e);
+    regular_simplex_mesh_element e(*this, d, j, l, scope);
+    f(e);
   };
 
-  const auto ntasks = n(d);
+  const auto ntasks = l.n() * ntypes(d, scope);
+  fprintf(stderr,  "ntasks=%lu\n", ntasks);
 #if FTK_HAVE_KOKKOS
   Kokkos::parallel_for("element_for", ntasks, KOKKOS_LAMBDA(const int& j) {f(j);});
 #elif FTK_HAVE_TBB
   tbb::parallel_for(tbb::blocked_range<size_t>(0, ntasks),
       [=](const blocked_range<size_t>& r) {
         for (size_t i = r.begin(); i != r.end(); ++ i) 
-          f(i);
+          lambda(i);
       });
 #else
   std::vector<std::thread> workers;
   for (size_t i = 0; i < nthreads; i ++) {
     workers.push_back(std::thread([=]() {
       for (size_t j = i; j < ntasks; j += nthreads)
-        break; // f(j);
+        lambda(j);
     }));
   }
   std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
 #endif
-}
-
-inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
-{
-  // TODO
 }
 
 }

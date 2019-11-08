@@ -23,7 +23,7 @@ struct lattice {
   size_t size(size_t i) const {return sizes_[i];}
   size_t upper_bound(size_t i) const {return starts_[i] + sizes_[i] - 1;}
 
-  size_t n() const {return prod_[nd()-1] * sizes_[0];}
+  size_t n() const {return prod_[nd()-1] * sizes_[nd()-1];}
   const std::vector<size_t>& starts() const {return starts_;}
   const std::vector<size_t>& sizes() const {return sizes_;}
 
@@ -84,7 +84,11 @@ inline void lattice::print(std::ostream& os)
 
   for (int i = 0; i < nd(); i ++)
     if (i < nd()-1) os << sizes_[i] << ",";
-    else os << sizes_[i] << "}" << std::endl;
+    else os << sizes_[i] << "}, prod: {";
+  
+  for (int i = 0; i < nd(); i ++)
+    if (i < nd()-1) os << prod_[i] << ",";
+    else os << prod_[i] << "}" << std::endl;
 }
 
 
@@ -116,7 +120,7 @@ inline void lattice::reshape(const std::vector<size_t> &starts, const std::vecto
     if (i == 0)
       prod_[i] = 1;
     else
-      prod_[i] = prod_[i-1] * sizes[i];
+      prod_[i] = prod_[i-1] * sizes[i-1];
 }
 
 inline void lattice::reshape(const std::vector<int> &starts, const std::vector<int> &sizes) 
