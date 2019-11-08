@@ -5,11 +5,11 @@ int main(int argc, char **argv)
   ftk::regular_simplex_mesh m(3);
   m.set_lb_ub({0, 0, 0}, {3, 3, 3});
 
-  // m.element_for(2, [=](ftk::regular_simplex_mesh_element e) {
-  //     std::cerr << e << std::endl;
-  //   }, 1);
+  m.element_for(2, [=](ftk::regular_simplex_mesh_element e) {
+      std::cerr << e << std::endl;
+    }, 1);
  
-#if 1
+#if 0
   m.element_for_ordinal(2, 1, [=](ftk::regular_simplex_mesh_element e) {
       std::cerr << e << std::endl;
     }, 1);

@@ -16,7 +16,7 @@ int main(int argc, char **argv)
   for (int k = 0; k < DT; k ++) {
     auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, double(k) / (DT - 1));
    
-    tracker.set_input_scalar_field(scalar);
+    tracker.push_input_scalar_field(scalar);
     tracker.update();
     tracker.advance_timestep();
   }

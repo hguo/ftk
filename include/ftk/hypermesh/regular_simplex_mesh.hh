@@ -40,7 +40,8 @@ struct regular_simplex_mesh_element {
   regular_simplex_mesh_element(const regular_simplex_mesh_element& e) : m(e.m), corner(e.corner), dim(e.dim), type(e.type) {}
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d); 
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, 
-      const std::vector<int>& corner, int type); 
+      const std::vector<int>& corner, int type);
+  regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t index);
   regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t work_index, 
       const lattice& l, int scope = ELEMENT_SCOPE_ALL);
   regular_simplex_mesh_element(const regular_simplex_mesh &_m, int _d, std::string i);
@@ -63,8 +64,8 @@ struct regular_simplex_mesh_element {
   size_t to_work_index(const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
   void from_work_index(size_t, const lattice& l, int scope = ELEMENT_SCOPE_ALL);
 
-  template <typename uint = uint64_t> uint to_integer(int scope = ELEMENT_SCOPE_ALL) const;
-  template <typename uint = uint64_t> void from_integer(uint i, int scope = ELEMENT_SCOPE_ALL);
+  template <typename uint = uint64_t> uint to_integer() const;
+  template <typename uint = uint64_t> void from_integer(uint i);
 
   std::string to_string() const;
   void from_string(const std::string& index);
@@ -237,6 +238,14 @@ inline regular_simplex_mesh_element::regular_simplex_mesh_element(
 }
 
 inline regular_simplex_mesh_element::regular_simplex_mesh_element(
+    const regular_simplex_mesh &m_, int d_, size_t i) : m(m_)
+{
+  dim = d_;
+  corner.resize(m.nd());
+  from_integer(i);
+}
+
+inline regular_simplex_mesh_element::regular_simplex_mesh_element(
     const regular_simplex_mesh &m_, int d_, size_t i, const lattice& l, int scope) : m(m_)
 {
   dim = d_;
@@ -399,19 +408,19 @@ inline void regular_simplex_mesh_element::from_work_index(size_t i, const lattic
 }
 
 template <typename uint>
-uint regular_simplex_mesh_element::to_integer(int scope) const
+uint regular_simplex_mesh_element::to_integer() const
 {
   uint corner_index = 0;
   for (size_t i = 0; i < m.nd(); i ++)
     corner_index += (corner[i] - m.lb(i)) * m.dimprod_[i];
-  return corner_index * m.ntypes(dim, scope) + type;
+  return corner_index * m.ntypes(dim) + type;
 }
 
 template <typename uint>
-void regular_simplex_mesh_element::from_integer(uint index, int scope)
+void regular_simplex_mesh_element::from_integer(uint index)
 {
-  type = index % m.ntypes(dim, scope);
-  uint corner_index = index / m.ntypes(dim, scope); // m.dimprod_[m.nd()];
+  type = index % m.ntypes(dim);
+  uint corner_index = index / m.ntypes(dim); // m.dimprod_[m.nd()];
 
   for (int i = m.nd() - 1; i >= 0; i --) {
     corner[i] = corner_index / m.dimprod_[i]; 
@@ -877,7 +886,7 @@ inline void regular_simplex_mesh::element_for(
   };
 
   const auto ntasks = l.n() * ntypes(d, scope);
-  fprintf(stderr,  "ntasks=%lu\n", ntasks);
+  // fprintf(stderr,  "ntasks=%lu\n", ntasks);
 #if FTK_HAVE_KOKKOS
   Kokkos::parallel_for("element_for", ntasks, KOKKOS_LAMBDA(const int& j) {f(j);});
 #elif FTK_HAVE_TBB
