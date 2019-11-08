@@ -208,9 +208,7 @@ private:
 
   // list of k-simplices types; each simplex contains k vertices
   // unit_simplices[d][type] retunrs d+1 vertices that build up the simplex
-  std::vector<std::vector<std::vector<std::vector<int>>>> unit_simplices, 
-                                                          unit_ordinal_simplices,
-                                                          unit_interval_simplices;
+  std::vector<std::vector<std::vector<std::vector<int>>>> unit_simplices;
 
   std::vector<std::vector<int>> unit_ordinal_simplex_types, 
                                 unit_interval_simplex_types;
@@ -690,11 +688,10 @@ inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enum
 inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
 {
   for (int d = 0; d < nd()+1; d ++) {
-    std::vector<std::vector<std::vector<int>>> ordinal_simplicies, interval_simplices;
     std::vector<int> ordinal_simplex_types, interval_simplex_types;
     
     if (d == 0) {
-      ordinal_simplicies.push_back({{0}});
+      ordinal_simplex_types.push_back(0);
     } else {
       for (int t = 0; t < ntypes(d); t ++) {
         const auto simplex = unit_simplices[d][t];
@@ -702,22 +699,16 @@ inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
         for (int i = 0; i < simplex.size(); i ++) {
           time = time | simplex[i][d-1];
         }
-        if (time == 0) {
-          ordinal_simplicies.push_back(simplex);
+        if (time == 0)
           ordinal_simplex_types.push_back(t);
-        }
-        else {
-          interval_simplices.push_back(simplex);
+        else
           interval_simplex_types.push_back(t);
-        }
       }
     }
-    unit_ordinal_simplices.push_back(ordinal_simplicies);
-    unit_interval_simplices.push_back(interval_simplices);
     unit_ordinal_simplex_types.push_back(ordinal_simplex_types);
     unit_interval_simplex_types.push_back(interval_simplex_types);
-    ntypes_ordinal_.push_back(ordinal_simplicies.size());
-    ntypes_interval_.push_back(interval_simplices.size());
+    ntypes_ordinal_.push_back(ordinal_simplex_types.size());
+    ntypes_interval_.push_back(interval_simplex_types.size());
   }
 }
 
@@ -858,9 +849,20 @@ inline void regular_simplex_mesh::element_for_ordinal(int d, int t, std::functio
   sz[nd()-1] = 1;
 
   lattice my_lattice(st, sz);
-  my_lattice.print(std::cerr);
+  // my_lattice.print(std::cerr);
 
   element_for(d, my_lattice, ELEMENT_SCOPE_ORDINAL, f, nthreads);
+}
+  
+inline void regular_simplex_mesh::element_for_interval(int d, int t0, int t1, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
+{
+  auto st = lattice_.starts(), sz = lattice_.sizes();
+  st[nd()-1] = t0;
+  sz[nd()-1] = 1; // TODO: t1
+
+  lattice my_lattice(st, sz);
+
+  element_for(d, my_lattice, ELEMENT_SCOPE_INTERVAL, f, nthreads);
 }
 
 inline void regular_simplex_mesh::element_for(

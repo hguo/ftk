@@ -9,11 +9,15 @@ int main(int argc, char **argv)
   //     std::cerr << e << std::endl;
   //   }, 1);
  
-#if 1
+#if 0
   m.element_for_ordinal(2, 1, [=](ftk::regular_simplex_mesh_element e) {
       std::cerr << e << std::endl;
     }, 1);
 #endif
+  
+  m.element_for_interval(2, 1, 2, [=](ftk::regular_simplex_mesh_element e) {
+      std::cerr << e << std::endl;
+    }, 1);
 
 
 #if 0
