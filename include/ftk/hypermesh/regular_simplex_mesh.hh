@@ -211,6 +211,9 @@ private:
   std::vector<std::vector<std::vector<std::vector<int>>>> unit_simplices, 
                                                           unit_ordinal_simplices,
                                                           unit_interval_simplices;
+
+  std::vector<std::vector<int>> unit_ordinal_simplex_types, 
+                                unit_interval_simplex_types;
   
   // std::vector<std::vector<bool>> is_unit_simpleces_fixed_time;
 
@@ -386,10 +389,12 @@ inline void regular_simplex_mesh_element::from_work_index(size_t i, const lattic
 {
   const auto itype = i % m.ntypes(dim, scope);
   auto ii = i / m.ntypes(dim, scope);
-  
-  type = itype; // FIXME.
+ 
+  if (scope == ELEMENT_SCOPE_ORDINAL) type = m.unit_ordinal_simplex_types[dim][itype];
+  else if (scope == ELEMENT_SCOPE_INTERVAL) type = m.unit_interval_simplex_types[dim][itype];
+  else type = itype;
+
   corner = l.from_integer(ii);
-  
   // fprintf(stderr, "i=%lu, itype=%lu, ii=%lu, ntypes=%d, scope=%d, corner=%d, %d, %d\n", 
   //     i, itype, ii, m.ntypes(dim, scope), scope, 
   //     corner[0], corner[1], corner[2]);
@@ -686,6 +691,7 @@ inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
 {
   for (int d = 0; d < nd()+1; d ++) {
     std::vector<std::vector<std::vector<int>>> ordinal_simplicies, interval_simplices;
+    std::vector<int> ordinal_simplex_types, interval_simplex_types;
     
     if (d == 0) {
       ordinal_simplicies.push_back({{0}});
@@ -698,13 +704,18 @@ inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
         }
         if (time == 0) {
           ordinal_simplicies.push_back(simplex);
+          ordinal_simplex_types.push_back(t);
         }
-        else 
+        else {
           interval_simplices.push_back(simplex);
+          interval_simplex_types.push_back(t);
+        }
       }
     }
     unit_ordinal_simplices.push_back(ordinal_simplicies);
     unit_interval_simplices.push_back(interval_simplices);
+    unit_ordinal_simplex_types.push_back(ordinal_simplex_types);
+    unit_interval_simplex_types.push_back(interval_simplex_types);
     ntypes_ordinal_.push_back(ordinal_simplicies.size());
     ntypes_interval_.push_back(interval_simplices.size());
   }
