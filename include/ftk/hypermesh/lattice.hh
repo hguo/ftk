@@ -23,6 +23,7 @@ struct lattice {
   size_t size(size_t i) const {return sizes_[i];}
   size_t upper_bound(size_t i) const {return starts_[i] + sizes_[i] - 1;}
 
+  size_t n() const {return prod_[nd()-1] * sizes_[0];}
   const std::vector<size_t>& starts() const {return starts_;}
   const std::vector<size_t>& sizes() const {return sizes_;}
 
@@ -60,7 +61,7 @@ private:
   // std::vector<lattice> partition_all();
   size_t partition_id(const std::vector<size_t> &coords) const;
 
-private:
+public:
   bool unlimited_ = false; 
   std::vector<size_t> starts_, sizes_; // the last dimension can be unlimited
   std::vector<size_t> prod_; 

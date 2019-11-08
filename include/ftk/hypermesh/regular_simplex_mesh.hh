@@ -153,8 +153,12 @@ struct regular_simplex_mesh {
 
   void element_for_interval(int d, int t0, int t1, std::function<void(regular_simplex_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency());
-
+  
   void parallel_for(std::function<void(size_t)> f, int ntasks, int nthreads);
+  
+  void element_for(int d, const lattice& subdomain, int scope, 
+      std::function<void(regular_simplex_mesh_element)> f,
+      int nthreads=std::thread::hardware_concurrency());
 
 public: // partitioning
   void partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
@@ -818,9 +822,18 @@ inline size_t regular_simplex_mesh::n(int d, int scope) const
 {
   return (size_t)ntypes(d, scope) * dimprod_[nd()];
 }
-
-inline void regular_simplex_mesh::parallel_for(std::function<void(size_t)> f, int ntasks, int nthreads)
+  
+inline void regular_simplex_mesh::element_for(
+    int d, const lattice& subdomain, int scope, 
+    std::function<void(regular_simplex_mesh_element)> f,
+    int nthreads)
 {
+  auto lambda = [=](size_t j) {
+    regular_simplex_mesh_element e(*this, d, j);
+    // f(e);
+  };
+
+  const auto ntasks = n(d);
 #if FTK_HAVE_KOKKOS
   Kokkos::parallel_for("element_for", ntasks, KOKKOS_LAMBDA(const int& j) {f(j);});
 #elif FTK_HAVE_TBB
@@ -834,7 +847,7 @@ inline void regular_simplex_mesh::parallel_for(std::function<void(size_t)> f, in
   for (size_t i = 0; i < nthreads; i ++) {
     workers.push_back(std::thread([=]() {
       for (size_t j = i; j < ntasks; j += nthreads)
-        f(j);
+        break; // f(j);
     }));
   }
   std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
@@ -843,12 +856,7 @@ inline void regular_simplex_mesh::parallel_for(std::function<void(size_t)> f, in
 
 inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
 {
-  auto lambda = [=](size_t j) {
-    regular_simplex_mesh_element e(*this, d, j);
-    f(e);
-  };
-
-  parallel_for(lambda, n(d), nthreads);
+  // TODO
 }
 
 }
