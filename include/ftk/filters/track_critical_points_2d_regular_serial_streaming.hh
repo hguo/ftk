@@ -13,8 +13,11 @@ struct track_critical_points_2d_regular_serial_streaming : public track_critical
   void push_input_vector_field(const ndarray<double>& V0) {V.push_front(V0); has_vector_field = true;}
   void push_input_jacobian_field(const ndarray<double>& gradV0) {gradV.push_front(gradV0); has_jacobian_field = true;}
 
-  void update();
   void advance_timestep();
+  void update();
+
+protected:
+  void update_timestep();
 
 protected:
   typedef regular_simplex_mesh_element element_t;
@@ -33,7 +36,9 @@ protected:
 ////////////////////
 void track_critical_points_2d_regular_serial_streaming::advance_timestep()
 {
-  // fprintf(stderr, "advancing timestep!\n");
+  update_timestep();
+
+  fprintf(stderr, "advancing timestep!\n");
   const int nt = 2;
   if (scalar.size() > nt) scalar.pop_back();
   if (V.size() > nt) V.pop_back();
@@ -49,6 +54,20 @@ void track_critical_points_2d_regular_serial_streaming::advance_timestep()
 }
 
 void track_critical_points_2d_regular_serial_streaming::update()
+{
+  std::vector<int> lb, ub;
+  m.get_lb_ub(lb, ub);
+  ub[2] = current_timestep - 1;
+  m.set_lb_ub(lb, ub);
+
+  fprintf(stderr, "trace1\n");
+  trace_intersections();
+  fprintf(stderr, "trace2\n");
+  trace_connected_components();
+  fprintf(stderr, "done.\n");
+}
+
+void track_critical_points_2d_regular_serial_streaming::update_timestep()
 {
   // initializing vector fields
   if (has_scalar_field) { 
@@ -85,35 +104,6 @@ void track_critical_points_2d_regular_serial_streaming::update()
     m.element_for_interval(2, current_timestep-1, current_timestep, func2);
 
   m.element_for_ordinal(2, current_timestep, func2);
-
-#if 0
-  // scan 3-simplices to get connected components
-  fprintf(stderr, "trace intersections...\n");
-  union_find<element_t> uf;
-  for (const auto &kv : discrete_critical_points) 
-    uf.add(kv.first);
-
-  m.element_for(3, [&](const ftk::regular_simplex_mesh_element& f) {
-    const auto sides = f.sides();
-    std::set<element_t> intersected_sides;
-
-    for (const auto& side : sides)
-      if (uf.has(side)) 
-        intersected_sides.insert(side);
-
-    if (intersected_sides.size() > 1) {// the size of intersected_size should be 0 or 2
-      for (auto it = std::next(intersected_sides.begin(), 1); it != intersected_sides.end(); it ++) {
-        std::lock_guard<std::mutex> guard(mutex);
-        uf.unite(*intersected_sides.begin(), *it);
-      }
-    }
-  });
-  uf.get_sets(connected_components);
-
-  // convert connected components to traced critical points
-  fprintf(stderr, "tracing critical points...\n");
-  trace_connected_components();
-#endif
 }
 
 void track_critical_points_2d_regular_serial_streaming::simplex_vectors(

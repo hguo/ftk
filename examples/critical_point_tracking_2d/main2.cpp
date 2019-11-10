@@ -15,15 +15,15 @@ int main(int argc, char **argv)
  
   for (int k = 0; k < DT; k ++) {
     auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, double(k) / (DT - 1));
-   
     tracker.push_input_scalar_field(scalar);
-    tracker.update();
     tracker.advance_timestep();
   }
 
+  tracker.update();
+
 #if 1 // FTK_HAVE_VTK
-  // auto polydata = tracker.get_results_vtk();
-  auto polydata = tracker.get_discrete_critical_points_vtk();
+  auto polydata = tracker.get_results_vtk();
+  // auto polydata = tracker.get_discrete_critical_points_vtk();
   ftk::write_vtp("asdf2.vtp", polydata);
 #endif
 

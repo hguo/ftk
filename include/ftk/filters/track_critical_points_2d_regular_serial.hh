@@ -68,6 +68,7 @@ protected:
 
 protected:
   bool check_simplex(const element_t& s, critical_point_2dt_t& cp);
+  void trace_intersections();
   void trace_connected_components();
 
   virtual void simplex_positions(const std::vector<std::vector<int>>& vertices, double X[3][3]) const;
@@ -111,9 +112,18 @@ void track_critical_points_2d_regular_serial::update()
         discrete_critical_points[e] = cp;
       }
     }); 
-
-  // scan 3-simplices to get connected components
+  
   fprintf(stderr, "trace intersections...\n");
+  trace_intersections();
+
+  // convert connected components to traced critical points
+  fprintf(stderr, "tracing critical points...\n");
+  trace_connected_components();
+}
+
+void track_critical_points_2d_regular_serial::trace_intersections()
+{
+  // scan 3-simplices to get connected components
   union_find<element_t> uf;
   for (const auto &kv : discrete_critical_points) 
     uf.add(kv.first);
@@ -134,10 +144,6 @@ void track_critical_points_2d_regular_serial::update()
     }
   });
   uf.get_sets(connected_components);
-
-  // convert connected components to traced critical points
-  fprintf(stderr, "tracing critical points...\n");
-  trace_connected_components();
 }
 
 void track_critical_points_2d_regular_serial::trace_connected_components()

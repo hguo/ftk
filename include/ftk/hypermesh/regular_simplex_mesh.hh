@@ -131,6 +131,7 @@ struct regular_simplex_mesh {
   // Check if the unit simplex type is fixed-time
   // bool is_fixed_time(int d, int type) const {return is_unit_simpleces_fixed_time[d][type];}
 
+  void get_lb_ub(std::vector<int>& lb, std::vector<int>& ub) {lb = lb_; ub = ub_;}
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub);
   void set_lb_ub(const lattice& lattice); 
   int lb(int d) const {return lb_[d];}
