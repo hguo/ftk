@@ -32,13 +32,13 @@ struct track_critical_points_2d_regular_serial : public filter {
   void update();
   
   void set_input_scalar_field(const double *p, size_t W, size_t H, size_t T);
-  void set_input_scalar_field(const ndarray<double>& scalar_) {scalar = scalar_;}
+  void set_input_scalar_field(const ndarray<double>& scalar_) {scalar = scalar_; has_scalar_field = true;}
 
   void set_input_vector_field(const double *p, size_t W, size_t H, size_t T);
-  void set_input_vector_field(const ndarray<double>& V_) {V = V_;}
+  void set_input_vector_field(const ndarray<double>& V_) {V = V_; has_vector_field = true;}
 
   void set_input_jacobian_field(const double *p, size_t W, size_t H, size_t T); 
-  void set_input_jacobian_field(const ndarray<double> &J) {gradV = J;}
+  void set_input_jacobian_field(const ndarray<double> &J) {gradV = J; has_jacobian_field = true;}
   
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
   void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
@@ -47,6 +47,7 @@ struct track_critical_points_2d_regular_serial : public filter {
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_results_vtk() const;
+  vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
 #endif
 
 protected:
@@ -54,7 +55,9 @@ protected:
   regular_simplex_mesh m;
   
   unsigned int type_filter = 0xffffffff;
-  bool has_jacobian = false;
+  bool has_scalar_field = false, 
+       has_vector_field = false, 
+       has_jacobian_field = false;
   bool symmetric_jacobian = false;
 
   typedef regular_simplex_mesh_element element_t;
@@ -66,6 +69,12 @@ protected:
 protected:
   bool check_simplex(const element_t& s, critical_point_2dt_t& cp);
   void trace_connected_components();
+
+  virtual void simplex_positions(const std::vector<std::vector<int>>& vertices, double X[3][3]) const;
+  virtual void simplex_vectors(const std::vector<std::vector<int>>& vertices, double v[3][2]) const;
+  virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[3]) const;
+  virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
+      double Js[3][2][2]) const;
 };
 
 
@@ -73,18 +82,23 @@ protected:
 void track_critical_points_2d_regular_serial::update()
 {
   // initializing vector fields
-  if (!scalar.empty()) {
-    if (V.empty()) V = gradient2Dt(scalar);
-    if (gradV.empty()) gradV = jacobian2Dt(V);
-    has_jacobian = true;
+  if (has_scalar_field) {
+    if (!has_vector_field) {
+      V = gradient2Dt(scalar);
+      has_vector_field = true;
+    }
+    if (!has_jacobian_field) {
+      gradV = jacobian2Dt(V);
+      has_vector_field = true;
+    }
     symmetric_jacobian = true;
   }
 
   // initializing bounds
   if (m.lb() == m.ub()) {
-    if (!scalar.empty())
+    if (has_scalar_field) // default lb/ub for scalar field
       m.set_lb_ub({2, 2, 0}, {static_cast<int>(V.dim(1)-3), static_cast<int>(V.dim(2)-3), static_cast<int>(V.dim(3)-1)});
-    else
+    else // defaulat lb/ub for vector field
       m.set_lb_ub({0, 0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1), static_cast<int>(V.dim(3)-1)});
   }
 
@@ -152,54 +166,76 @@ void track_critical_points_2d_regular_serial::trace_connected_components()
   }
 }
 
+void track_critical_points_2d_regular_serial::simplex_positions(
+    const std::vector<std::vector<int>>& vertices, double X[3][3]) const
+{
+  for (int i = 0; i < 3; i ++)
+    for (int j = 0; j < 3; j ++)
+      X[i][j] = vertices[i][j];
+}
+
+void track_critical_points_2d_regular_serial::simplex_vectors(
+    const std::vector<std::vector<int>>& vertices, double v[3][2]) const
+{
+  for (int i = 0; i < 3; i ++) {
+    v[i][0] = V(0, vertices[i][0], vertices[i][1], vertices[i][2]);
+    v[i][1] = V(1, vertices[i][0], vertices[i][1], vertices[i][2]);
+  }
+}
+
+void track_critical_points_2d_regular_serial::simplex_scalars(
+    const std::vector<std::vector<int>>& vertices, double values[3]) const
+{
+  for (int i = 0; i < 3; i ++)
+    values[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
+}
+  
+void track_critical_points_2d_regular_serial::simplex_jacobians(
+    const std::vector<std::vector<int>>& vertices, 
+    double Js[3][2][2]) const
+{
+  for (int i = 0; i < 3; i ++)
+    for (int j = 0; j < 2; j ++)
+      for (int k = 0; k < 2; k ++) 
+        Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2]);
+}
+
 bool track_critical_points_2d_regular_serial::check_simplex(
     const regular_simplex_mesh_element& e,
     critical_point_2dt_t& cp)
 {
   if (!e.valid()) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(); // obtain the vertices of the simplex
-  
+ 
   double v[3][2]; // obtain vector values
-  for (int i = 0; i < 3; i ++) {
-    v[i][0] = V(0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    v[i][1] = V(1, vertices[i][0], vertices[i][1], vertices[i][2]);
-  }
+  simplex_vectors(vertices, v);
  
   double mu[3]; // check intersection
   bool succ = inverse_lerp_s2v2(v, mu);
   if (!succ) return false;
 
-  double X[3][3]; // lerp position
-  for (int i = 0; i < 3; i ++)
-    for (int j = 0; j < 3; j ++)
-      X[i][j] = vertices[i][j];
+  double X[3][3]; // position
+  simplex_positions(vertices, X);
   lerp_s2v3(X, mu, cp.x);
 
-  if (!scalar.empty()) {
+  if (has_scalar_field) {
     double values[3];
-    for (int i = 0; i < 3; i ++)
-      values[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
+    simplex_scalars(vertices, values);
     cp.scalar = lerp_s2(values, mu);
   }
 
-  if (has_jacobian) {
-    // derive jacobian
-    double J[2][2] = {0};
-    if (gradV.empty()) {
-      // TODO: jacobian is not given
-    } else { // lerp jacobian
-      double Js[3][2][2];
-      for (int i = 0; i < 3; i ++)
-        for (int j = 0; j < 2; j ++)
-          for (int k = 0; k < 2; k ++) 
-            Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2]);
-      lerp_s2m2x2(Js, mu, J);
-    }
-    cp.type = critical_point_type_2d(J, symmetric_jacobian);
-    if (cp.type & type_filter) return true;
-    else return false;
-  } else return true;
-}
+  double J[2][2] = {0}; // jacobian
+  if (has_jacobian_field) { // lerp jacobian
+    double Js[3][2][2];
+    simplex_jacobians(vertices, Js);
+    lerp_s2m2x2(Js, mu, J);
+  } else {
+    // TODO: jacobian is not given
+  }
+  cp.type = critical_point_type_2d(J, symmetric_jacobian);
+  if (cp.type & type_filter) return true;
+  else return false;
+} 
 
 #if FTK_HAVE_VTK
 vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_results_vtk() const
@@ -254,6 +290,47 @@ vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_result
     polyData->GetPointData()->AddArray(scalars);
   }
 
+  return polyData;
+}
+
+vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_discrete_critical_points_vtk() const
+{
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+  
+  vtkIdType pid[1];
+  for (const auto &kv : discrete_critical_points) {
+    const auto &cp = kv.second;
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  polyData->SetPoints(points);
+  polyData->SetVerts(vertices);
+
+#if 0
+  // point data for types
+  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
+  types->SetNumberOfValues(results.size());
+  for (auto i = 0; i < results.size(); i ++) {
+    types->SetValue(i, static_cast<double>(results[i].type));
+  }
+  types->SetName("type");
+  polyData->GetPointData()->AddArray(types);
+  
+  // point data for scalars
+  if (!scalar.empty()) {
+    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
+    scalars->SetNumberOfValues(results.size());
+    for (auto i = 0; i < results.size(); i ++) {
+      scalars->SetValue(i, static_cast<double>(results[i].scalar));
+    }
+    scalars->SetName("scalar");
+    polyData->GetPointData()->AddArray(scalars);
+  }
+#endif
   return polyData;
 }
 #endif

@@ -21,9 +21,10 @@ int main(int argc, char **argv)
     tracker.advance_timestep();
   }
 
-#if 0 // FTK_HAVE_VTK
-  auto polydata = tracker.get_results_vtk();
-  ftk::write_vtp("asdf1.vtp", polydata);
+#if 1 // FTK_HAVE_VTK
+  // auto polydata = tracker.get_results_vtk();
+  auto polydata = tracker.get_discrete_critical_points_vtk();
+  ftk::write_vtp("asdf2.vtp", polydata);
 #endif
 
   return 0;
