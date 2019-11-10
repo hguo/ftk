@@ -1,13 +1,13 @@
 #ifndef _FTK_TRACK_CRITICAL_POINTS_2D_REGULAR_SERIAL_STREAMING_HH
 #define _FTK_TRACK_CRITICAL_POINTS_2D_REGULAR_SERIAL_STREAMING_HH
 
-#include <ftk/filters/track_critical_points_2d_regular_serial.hh>
+#include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <deque>
 
 namespace ftk {
 
-struct track_critical_points_2d_regular_serial_streaming : public track_critical_points_2d_regular_serial {
-  track_critical_points_2d_regular_serial_streaming() {}
+struct critical_point_tracker_2d_regular_streaming : public critical_point_tracker_2d_regular {
+  critical_point_tracker_2d_regular_streaming() {}
 
   void push_input_scalar_field(const ndarray<double>& scalar0) {scalar.push_front(scalar0); has_scalar_field = true;}
   void push_input_vector_field(const ndarray<double>& V0) {V.push_front(V0); has_vector_field = true;}
@@ -34,7 +34,7 @@ protected:
 
 
 ////////////////////
-void track_critical_points_2d_regular_serial_streaming::advance_timestep()
+void critical_point_tracker_2d_regular_streaming::advance_timestep()
 {
   update_timestep();
 
@@ -53,7 +53,7 @@ void track_critical_points_2d_regular_serial_streaming::advance_timestep()
   current_timestep ++;
 }
 
-void track_critical_points_2d_regular_serial_streaming::update()
+void critical_point_tracker_2d_regular_streaming::update()
 {
   std::vector<int> lb, ub;
   m.get_lb_ub(lb, ub);
@@ -67,7 +67,7 @@ void track_critical_points_2d_regular_serial_streaming::update()
   fprintf(stderr, "done.\n");
 }
 
-void track_critical_points_2d_regular_serial_streaming::update_timestep()
+void critical_point_tracker_2d_regular_streaming::update_timestep()
 {
   // initializing vector fields
   if (has_scalar_field) { 
@@ -106,7 +106,7 @@ void track_critical_points_2d_regular_serial_streaming::update_timestep()
   m.element_for_ordinal(2, current_timestep, func2);
 }
 
-void track_critical_points_2d_regular_serial_streaming::simplex_vectors(
+void critical_point_tracker_2d_regular_streaming::simplex_vectors(
     const std::vector<std::vector<int>>& vertices, double v[3][2]) const
 {
   for (int i = 0; i < 3; i ++) {
@@ -116,7 +116,7 @@ void track_critical_points_2d_regular_serial_streaming::simplex_vectors(
   }
 }
 
-void track_critical_points_2d_regular_serial_streaming::simplex_scalars(
+void critical_point_tracker_2d_regular_streaming::simplex_scalars(
     const std::vector<std::vector<int>>& vertices, double values[3]) const
 {
   for (int i = 0; i < 3; i ++) {
@@ -125,7 +125,7 @@ void track_critical_points_2d_regular_serial_streaming::simplex_scalars(
   }
 }
 
-void track_critical_points_2d_regular_serial_streaming::simplex_jacobians(
+void critical_point_tracker_2d_regular_streaming::simplex_jacobians(
     const std::vector<std::vector<int>>& vertices, 
     double Js[3][2][2]) const
 {

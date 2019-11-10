@@ -45,8 +45,8 @@ public: // the last dimension, aka time.  these functions are mainly for I/O and
   bool unlimited_time() const {return unlimited_;}
   void set_unlimited_time(bool u) {unlimited_ = u;}
 
-  void advance_time(int nt = 1) {starts_[nd()-1] += nt;}
-  void recess_time(int nt = 1) {starts_[nd()-1] -= nt;}
+  // void advance_time(int nt = 1) {starts_[nd()-1] += nt;} // deprecated
+  // void recess_time(int nt = 1) {starts_[nd()-1] -= nt;}
 
 
 // partitioning

@@ -26,8 +26,8 @@ struct critical_point_2dt_t {
   int type = 0;
 };
 
-struct track_critical_points_2d_regular_serial : public filter {
-  track_critical_points_2d_regular_serial() : m(3) {}
+struct critical_point_tracker_2d_regular : public filter {
+  critical_point_tracker_2d_regular() : m(3) {}
   
   void update();
   
@@ -80,7 +80,7 @@ protected:
 
 
 ////////////////////
-void track_critical_points_2d_regular_serial::update()
+void critical_point_tracker_2d_regular::update()
 {
   // initializing vector fields
   if (has_scalar_field) {
@@ -121,7 +121,7 @@ void track_critical_points_2d_regular_serial::update()
   trace_connected_components();
 }
 
-void track_critical_points_2d_regular_serial::trace_intersections()
+void critical_point_tracker_2d_regular::trace_intersections()
 {
   // scan 3-simplices to get connected components
   union_find<element_t> uf;
@@ -146,7 +146,7 @@ void track_critical_points_2d_regular_serial::trace_intersections()
   uf.get_sets(connected_components);
 }
 
-void track_critical_points_2d_regular_serial::trace_connected_components()
+void critical_point_tracker_2d_regular::trace_connected_components()
 {
   // Convert connected components to geometries
   auto neighbors = [](element_t f) {
@@ -172,7 +172,7 @@ void track_critical_points_2d_regular_serial::trace_connected_components()
   }
 }
 
-void track_critical_points_2d_regular_serial::simplex_positions(
+void critical_point_tracker_2d_regular::simplex_positions(
     const std::vector<std::vector<int>>& vertices, double X[3][3]) const
 {
   for (int i = 0; i < 3; i ++)
@@ -180,7 +180,7 @@ void track_critical_points_2d_regular_serial::simplex_positions(
       X[i][j] = vertices[i][j];
 }
 
-void track_critical_points_2d_regular_serial::simplex_vectors(
+void critical_point_tracker_2d_regular::simplex_vectors(
     const std::vector<std::vector<int>>& vertices, double v[3][2]) const
 {
   for (int i = 0; i < 3; i ++) {
@@ -189,14 +189,14 @@ void track_critical_points_2d_regular_serial::simplex_vectors(
   }
 }
 
-void track_critical_points_2d_regular_serial::simplex_scalars(
+void critical_point_tracker_2d_regular::simplex_scalars(
     const std::vector<std::vector<int>>& vertices, double values[3]) const
 {
   for (int i = 0; i < 3; i ++)
     values[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
 }
   
-void track_critical_points_2d_regular_serial::simplex_jacobians(
+void critical_point_tracker_2d_regular::simplex_jacobians(
     const std::vector<std::vector<int>>& vertices, 
     double Js[3][2][2]) const
 {
@@ -206,7 +206,7 @@ void track_critical_points_2d_regular_serial::simplex_jacobians(
         Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2]);
 }
 
-bool track_critical_points_2d_regular_serial::check_simplex(
+bool critical_point_tracker_2d_regular::check_simplex(
     const regular_simplex_mesh_element& e,
     critical_point_2dt_t& cp)
 {
@@ -244,7 +244,7 @@ bool track_critical_points_2d_regular_serial::check_simplex(
 } 
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_results_vtk() const
+vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_results_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -300,7 +300,7 @@ vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_result
   return polyData;
 }
 
-vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_discrete_critical_points_vtk() const
+vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_critical_points_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();

@@ -1,4 +1,4 @@
-#include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
+#include <ftk/filters/critical_point_extractor_2d_regular.hh>
 // #include <ftk/filters/extract_extrema_2d_regular_serial.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
@@ -16,7 +16,7 @@ int main(int argc, char **argv)
   auto grad = hypermesh::gradient2D(scalar);
   auto hess = hypermesh::jacobian2D(grad);
 
-  ftk::extract_critical_points_2d_regular_serial extractor;
+  ftk::critical_point_extractor_2d_regular extractor;
   extractor.set_input_vector_field(grad);
   extractor.set_input_jacobian_field(hess);
   extractor.set_symmetric_jacobians(true);
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
   extractor.set_type_filter(ftk::CRITICAL_POINT_2D_ATTRACTING ^ ftk::CRITICAL_POINT_2D_REPELLING);
   extractor.execute();
 #else
-  ftk::extract_critical_points_2d_regular_serial extractor;
+  ftk::critical_point_extractor_2d_regular extractor;
   extractor.set_input_scalar_field(scalar);
   extractor.update();
 #endif

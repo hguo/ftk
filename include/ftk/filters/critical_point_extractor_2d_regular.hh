@@ -40,8 +40,8 @@ struct critical_point_2d_t {
   int type = 0;
 };
 
-struct extract_critical_points_2d_regular_serial : public filter {
-  extract_critical_points_2d_regular_serial() : m(2) {}
+struct critical_point_extractor_2d_regular : public filter {
+  critical_point_extractor_2d_regular() : m(2) {}
 
   void update();
 
@@ -79,27 +79,27 @@ protected:
 
 ///////
 
-void extract_critical_points_2d_regular_serial::set_input_scalar_field(const ndarray<double>& s)
+void critical_point_extractor_2d_regular::set_input_scalar_field(const ndarray<double>& s)
 {
   scalar = s;
 }
   
-void extract_critical_points_2d_regular_serial::set_input_vector_field(const double *p, size_t W, size_t H)
+void critical_point_extractor_2d_regular::set_input_vector_field(const double *p, size_t W, size_t H)
 {
   V = ndarray<double>(p, {2, W, H});
 }
 
-void extract_critical_points_2d_regular_serial::set_input_vector_field(const ndarray<double> &V_) 
+void critical_point_extractor_2d_regular::set_input_vector_field(const ndarray<double> &V_) 
 {
   V = V_;
 }
 
-void extract_critical_points_2d_regular_serial::set_input_jacobian_field(const double *p, size_t W, size_t H)
+void critical_point_extractor_2d_regular::set_input_jacobian_field(const double *p, size_t W, size_t H)
 {
   gradV = ndarray<double>(p, {2, 2, W, H});
 }
 
-void extract_critical_points_2d_regular_serial::update()
+void critical_point_extractor_2d_regular::update()
 {
   if (!scalar.empty()) {
     if (V.empty()) V = gradient2D(scalar);
@@ -125,7 +125,7 @@ void extract_critical_points_2d_regular_serial::update()
     }); 
 }
 
-bool extract_critical_points_2d_regular_serial::check_simplex(
+bool critical_point_extractor_2d_regular::check_simplex(
     const regular_simplex_mesh_element& s, 
     critical_point_2d_t &cp)
 {
@@ -178,7 +178,7 @@ bool extract_critical_points_2d_regular_serial::check_simplex(
 }
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> extract_critical_points_2d_regular_serial::get_results_vtk() const
+vtkSmartPointer<vtkPolyData> critical_point_extractor_2d_regular::get_results_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();

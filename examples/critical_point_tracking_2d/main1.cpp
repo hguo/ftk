@@ -1,4 +1,4 @@
-#include <ftk/filters/track_critical_points_2d_regular_serial.hh>
+#include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 
@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 {
   auto scalar = ftk::synthetic_woven_2Dt<double>(DW, DH, DT);
   
-  ftk::track_critical_points_2d_regular_serial tracker;
+  ftk::critical_point_tracker_2d_regular tracker;
   tracker.set_input_scalar_field(scalar);
   // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
   tracker.update();
