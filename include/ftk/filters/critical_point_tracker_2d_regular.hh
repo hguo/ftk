@@ -13,7 +13,7 @@
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
-#include <ftk/filters/extract_critical_points_2d_regular_serial.hh>
+#include <ftk/filters/critical_point_extractor_2d_regular.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
 
