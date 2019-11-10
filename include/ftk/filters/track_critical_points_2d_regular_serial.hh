@@ -284,7 +284,8 @@ vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_result
   }
 
   // point data for scalars
-  if (!scalar.empty()) {
+  // if (has_scalar_field) {
+  if (1) {
     vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
     scalars->SetNumberOfValues(nv);
     size_t i = 0;
@@ -327,7 +328,7 @@ vtkSmartPointer<vtkPolyData> track_critical_points_2d_regular_serial::get_discre
   polyData->GetPointData()->AddArray(types);
   
   // point data for scalars
-  if (!scalar.empty()) {
+  if (has_scalar_field) {
     vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
     scalars->SetNumberOfValues(results.size());
     for (auto i = 0; i < results.size(); i ++) {
