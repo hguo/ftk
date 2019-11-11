@@ -902,12 +902,16 @@ inline void regular_simplex_mesh::element_for(
       });
 #else
   std::vector<std::thread> workers;
-  for (size_t i = 0; i < nthreads; i ++) {
+  for (size_t i = 1; i < nthreads; i ++) {
     workers.push_back(std::thread([=]() {
       for (size_t j = i; j < ntasks; j += nthreads)
         lambda(j);
     }));
   }
+
+  for (size_t j = 0; j < ntasks; j += nthreads) // the main thread
+    lambda(j);
+
   std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
 #endif
 }

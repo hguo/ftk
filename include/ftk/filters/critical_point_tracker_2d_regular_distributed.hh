@@ -4,6 +4,7 @@
 #include <ftk/filters/critical_point_tracker_2d_regular_streaming.hh>
 #include <ftk/hypermesh/lattice_partitioner.hh>
 #include <ftk/external/diy/master.hpp>
+#include <mpi.h>
 
 namespace ftk {
 
@@ -20,23 +21,79 @@ struct critical_point_tracker_2d_regular_distributed
   void set_input_vector_field_distributed(const ndarray<double>& V);
   void set_input_jacobian_field_distributed(const ndarray<double>& gradV);
 
+#if 0
   void simplex_vectors(const std::vector<std::vector<int>>& vertices, double v[3][2]) const;
   void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[3]) const;
   void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
       double Js[3][2][2]) const;
+#endif
 
 protected:
   ndarray<double> scalar_part, V_part, gradV_part;
   lattice_partitioner partitioner;
+
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int np, rank;
   
   typedef regular_simplex_mesh_element element_t;
 };
- 
+
+//////////////////
 void critical_point_tracker_2d_regular_distributed::update()
 {
+  // initializing vector fields
+  if (has_scalar_field) {
+    if (!has_vector_field) {
+      V = gradient2Dt(scalar);
+      has_vector_field = true;
+    }
+    if (!has_jacobian_field) {
+      gradV = jacobian2Dt(V);
+      has_vector_field = true;
+    }
+    symmetric_jacobian = true;
+  }
 
+  // initializing bounds
+  if (m.lb() == m.ub()) {
+    if (has_scalar_field) // default lb/ub for scalar field
+      m.set_lb_ub({2, 2, 0}, {static_cast<int>(V.dim(1)-3), static_cast<int>(V.dim(2)-3), static_cast<int>(V.dim(3)-1)});
+    else // defaulat lb/ub for vector field
+      m.set_lb_ub({0, 0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1), static_cast<int>(V.dim(3)-1)});
+  }
+ 
+  // initialize partitions
+  MPI_Comm_size(comm, &np);
+  MPI_Comm_rank(comm, &rank);
+  partitioner.partition(np, {}, {1, 1, 0});
+  // std::cerr << partitioner << std::endl;
+  
+  // scan 2-simplices
+  fprintf(stderr, "tracking 2D critical points...\n");
+  m.element_for(2, 
+      partitioner.get_ext(rank), 
+      ftk::ELEMENT_SCOPE_ALL, 
+      [=](element_t e) {
+        critical_point_2dt_t cp;
+        if (check_simplex(e, cp)) {
+          std::lock_guard<std::mutex> guard(mutex);
+          discrete_critical_points[e] = cp;
+          fprintf(stderr, "%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
+        }
+      }, 
+      1); 
+
+#if 0
+  fprintf(stderr, "trace intersections...\n");
+  trace_intersections();
+
+  // convert connected components to traced critical points
+  fprintf(stderr, "tracing critical points...\n");
+  trace_connected_components();
+#endif
 }
 
+#if 0
 void critical_point_tracker_2d_regular_distributed::simplex_vectors(const std::vector<std::vector<int>>& vertices, double v[3][2]) const
 {
   // TODO
@@ -53,6 +110,7 @@ void critical_point_tracker_2d_regular_distributed::simplex_jacobians(
 {
   // TODO
 }
+#endif
 
 }
 

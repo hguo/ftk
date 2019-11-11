@@ -24,7 +24,10 @@ public: // partitioning
       const std::vector<size_t> &given, 
       const std::vector<size_t> &ghost_low, 
       const std::vector<size_t> &ghost_high); // regular partition w/ given number of cuts and ghost sizes per dimension
-  
+
+  const lattice& get_core(size_t i) const {return cores[i];}
+  const lattice& get_ext(size_t i) const {return extents[i];}
+
   size_t partition_id(const std::vector<size_t> &p) const;
 
 private:
@@ -290,7 +293,8 @@ inline std::ostream& operator<<(std::ostream& os, const lattice_partitioner& par
 {
   os << "lattice.nd=" << partitioner.nd() << std::endl;
   for (auto i = 0; i < partitioner.np(); i ++) {
-    os << "--" << "core: " << partitioner.cores[i] << "; "
+    os << "--" << "id=" << i <<", "
+               << "core: " << partitioner.cores[i] << "; "
                << "ext: " << partitioner.extents[i];
     if  (i < partitioner.np() - 1) os << std::endl;
   }
