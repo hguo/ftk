@@ -20,3 +20,6 @@ target_link_libraries (ex_critical_point_tracking_2d_regular_serial ftk)
 
 add_executable (ex_critical_point_tracking_2d_regular_serial_streaming main2.cpp)
 target_link_libraries (ex_critical_point_tracking_2d_regular_serial_streaming ftk)
+
+add_executable (ex_critical_point_tracking_2d_regular_distributed main3.cpp)
+target_link_libraries (ex_critical_point_tracking_2d_regular_distributed ftk)

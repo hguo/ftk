@@ -10,12 +10,14 @@
 namespace ftk {
 
 struct lattice {
+  friend class lattice_partitioner;
+
   lattice() {}
   lattice(int n);
   lattice(const std::vector<size_t> &starts, const std::vector<size_t> &sizes) {reshape(starts, sizes);}
   lattice(const std::vector<size_t> &sizes) {reshape(sizes);}
 
-  void print(std::ostream& os);
+  friend std::ostream& operator<<(std::ostream& os, const lattice&);
 
   size_t nd() const {return sizes_.size();}
   size_t nd_cuttable() const {return unlimited_ ? nd() - 1 : nd();}
@@ -48,19 +50,6 @@ public: // the last dimension, aka time.  these functions are mainly for I/O and
   // void advance_time(int nt = 1) {starts_[nd()-1] += nt;} // deprecated
   // void recess_time(int nt = 1) {starts_[nd()-1] -= nt;}
 
-
-// partitioning
-public: 
-  void partition(int np, std::vector<std::tuple<lattice, lattice>>& partitions) const;
-  void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<lattice, lattice>>& partitions) const;
-  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<lattice, lattice>>& partitions) const;
-  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<lattice, lattice>>& partitions) const;
-private:
-  void partition(std::vector<std::vector<size_t>> prime_factors_dims, std::vector<std::tuple<lattice, lattice>>& partitions) const; 
-
-  // std::vector<lattice> partition_all();
-  size_t partition_id(const std::vector<size_t> &coords) const;
-
 public:
   bool unlimited_ = false; 
   std::vector<size_t> starts_, sizes_; // the last dimension can be unlimited
@@ -75,20 +64,22 @@ inline lattice::lattice(int n)
   sizes_.resize(n);
 }
 
-inline void lattice::print(std::ostream& os)
+inline std::ostream& operator<<(std::ostream& os, const lattice& l)
 {
-  os << "starts: {";
-  for (int i = 0; i < nd(); i ++)
-    if (i < nd()-1) os << starts_[i] << ",";
-    else os << starts_[i] << "}, sizes: {";
+  os << "starts={";
+  for (int i = 0; i < l.nd(); i ++)
+    if (i < l.nd()-1) os << l.starts_[i] << ",";
+    else os << l.starts_[i] << "}, sizes={";
 
-  for (int i = 0; i < nd(); i ++)
-    if (i < nd()-1) os << sizes_[i] << ",";
-    else os << sizes_[i] << "}, prod: {";
+  for (int i = 0; i < l.nd(); i ++)
+    if (i < l.nd()-1) os << l.sizes_[i] << ",";
+    else os << l.sizes_[i] << "}, prod={";
   
-  for (int i = 0; i < nd(); i ++)
-    if (i < nd()-1) os << prod_[i] << ",";
-    else os << prod_[i] << "}" << std::endl;
+  for (int i = 0; i < l.nd(); i ++)
+    if (i < l.nd()-1) os << l.prod_[i] << ",";
+    else os << l.prod_[i] << "}"; // << std::endl;
+
+  return os;
 }
 
 
@@ -177,256 +168,6 @@ inline std::vector<int> lattice::from_integer(uint i) const
     idx[j] += starts_[j];
 
   return idx;
-}
-
-// inline size_t lattice::global_index(const std::vector<size_t> &coords)
-// {
-
-// }
-
-// // Each grid point is a regular lattice
-// inline std::vector<lattice> lattice::partition_all() {
-//   int ngridpoints = std::accumulate(sizes_.begin(), sizes_.end(), 1, std::multiplies<int>()); 
-
-//   int ndim = unlimited_ ? nd() - 1 : nd(); // # of cuttable dimensions
-  
-//   std::vector<size_t> bounds(starts_);
-//   for(int i = 0; i < ndim; ++i) {
-//     bounds[i] += sizes_[i]; 
-//   }
-
-//   // Each time, the first dim plus one
-
-//   std::vector<size_t> sizes(sizes_);
-//   for(int i = 1; i < ndim; ++i) {
-//     sizes[i] = 0; 
-//   }
-//   sizes[0] = 1;
-
-//   std::vector<lattice> partitions;
-//   std::vector<size_t> starts(starts_); 
-//   for(int i = 0; i < ngridpoints; ++i) {
-  
-//     for(int j = 0; j < ndim; ++j) {
-//       if(starts[j] < bounds[j]) {
-//         starts[j] += 1;
-
-//         break ;
-//       } else {
-//         starts[j] = 0; 
-//       }
-//     }
-  
-//     partitions.push_back(lattice(starts, sizes)); 
-//   }
-
-//   return partitions; 
-// }
-
-// factors of a given number n in decreasing order
-inline void prime_factorization(int n, std::vector<size_t>& factors) {  
-  while (n % 2 == 0) {  
-    factors.push_back(2); 
-    n = n/2; 
-  }  
-
-  for (int i = 3; i <= sqrt(n); i += 2) {
-    while (n % i == 0) {
-      factors.push_back(i); 
-      n = n / i; 
-    }
-  }
-
-  if(n > 1) {
-    factors.push_back(n); 
-  }
-
-  std::reverse(factors.begin(), factors.end()); 
-}
-
-inline bool is_vector_zero(const std::vector<size_t> vec) {
-  if(vec.size() == 0 || (vec.size() == 1 && vec[0] == 0)) {
-    return true; 
-  }
-
-  return false; 
-}
-
-inline void lattice::partition(int np, std::vector<std::tuple<lattice, lattice>>& partitions) const {  
-  std::vector<size_t> vector_zero = {0}; 
-  partition(np, vector_zero, vector_zero, vector_zero, partitions); 
-}
-
-inline void lattice::partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<lattice, lattice>>& partitions) const {
-  std::vector<size_t> vector_zero = {0}; 
-  partition(np, given, vector_zero, vector_zero, partitions); 
-}
-
-inline void lattice::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<lattice, lattice>>& partitions) const {
-  partition(np, given, ghost, ghost, partitions); 
-}
-
-inline void lattice::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<lattice, lattice>>& partitions) const 
-{
-  if(np <= 0) {
-    return ;
-  }
-
-  int ndim = this->nd_cuttable(); // # of cuttable dimensions
-
-  // // Compute number of grid points by product
-  // int ngridpoints = std::accumulate(sizes_.begin(), sizes_.end(), 1, std::multiplies<int>());  
-  // if(ngridpoints <= np) {
-  //   return empty; // return an empty vector 
-  // }
-
-  std::vector<std::vector<size_t>> prime_factors_dims(ndim, std::vector<size_t>()); // Prime factors of each dimension
-
-  if(!is_vector_zero(given)) {
-    bool has_zero = false; // Whither exist non-given dimensions
-    // Compute np for non-given dimensions
-    for(size_t nslice: given) {
-      if(nslice != 0) {
-        if(np % nslice != 0) { 
-          return ;
-        }
-
-        np /= nslice; 
-      } else {
-        has_zero = true; 
-      }
-    }
-
-    if(!has_zero && np > 1) { // If partitions of all dims are given, but np for non-given dim is not 1
-      return ; 
-    }
-
-    for(int i = 0; i < given.size(); ++i) {
-      int nslice = given[i]; 
-      if(nslice > 1) {
-        std::vector<size_t> prime_factors_dim;
-        prime_factorization(nslice, prime_factors_dim); 
-
-        prime_factors_dims[i] = prime_factors_dim; 
-      }
-    }
-  }
-  
-  // Get prime factors of non-given dimensions
-  if(np > 1) {
-    std::vector<size_t> prime_factors_all;
-    prime_factorization(np, prime_factors_all); 
-
-    int curr = 0;
-    for(size_t& prime : prime_factors_all) {
-      while(!is_vector_zero(given) && given[curr] != 0) { // if current dim is given, then skip it
-        curr = (curr + 1) % ndim;   
-      }
-      prime_factors_dims[curr].push_back(prime); 
-      curr = (curr + 1) % ndim; 
-    }
-  }
-
-  partition(prime_factors_dims, partitions); // get partitions given the prime factors of each dimension
-
-  if(partitions.size() == 0) {
-    return ;
-  }
-
-  // Add ghost_low layer
-  if(!is_vector_zero(ghost_low)) {
-    for(auto& p : partitions) {
-      for(int d = 0; d < ndim; ++d) {
-        lattice& ghost_p = std::get<1>(p); 
-
-        std::vector<size_t> starts(ghost_p.starts());  
-        std::vector<size_t> sizes(ghost_p.sizes()); 
-
-        size_t offset = starts[d] - this->start(d); 
-        if(ghost_low[d] < offset) {
-          offset = ghost_low[d]; 
-        }
-
-        starts[d] -= offset; 
-        sizes[d] += offset; 
-
-        ghost_p.reshape(starts, sizes); 
-      }
-    }
-  }
-
-  // Add ghost_high layer
-  if(!is_vector_zero(ghost_high)) {
-    for(auto& p : partitions) {
-      for(int d = 0; d < ndim; ++d) {
-        lattice& ghost_p = std::get<1>(p); 
-
-        std::vector<size_t> sizes(ghost_p.sizes()); 
-
-        size_t offset = (this->start(d) + this->size(d)) - (ghost_p.start(d) + sizes[d]); 
-        if(ghost_high[d] < offset) {
-          offset = ghost_high[d]; 
-        }
-
-        sizes[d] += offset;      
-
-        ghost_p.reshape(ghost_p.starts(), sizes); 
-      }
-    }
-  }
-}
-
-
-// Partition dimensions by given prime factors of each dimension
-inline void lattice::partition(std::vector<std::vector<size_t>> prime_factors_dims, std::vector<std::tuple<lattice, lattice>>& partitions) const {
-
-  int ndim = this->nd_cuttable(); // # of cuttable dimensions
-
-  std::queue<lattice> lattice_queue; 
-  lattice_queue.push(*this);
-
-  for(int curr = 0; curr < ndim; ++curr) { // current dim for cutting
-    for(size_t& nslice : prime_factors_dims[curr]) {
-      int n = lattice_queue.size();
-
-      for (int j = 0; j < n; ++j) {
-        auto p = lattice_queue.front();
-
-        if(p.size(curr) < nslice) { // what if p.sizes(curr) < nslice? 
-          return ; 
-        }
-        size_t ns = p.size(curr) / nslice; 
-
-        std::vector<size_t> starts(p.starts()); 
-        std::vector<size_t> sizes(p.sizes()); 
-        sizes[curr] = ns;
-        for(int k = 0; k < nslice - 1; ++k) {
-          lattice_queue.push(lattice(starts, sizes));
-          starts[curr] += ns;
-        }
-
-        sizes[curr] = p.size(curr) - ns * (nslice - 1);
-        lattice_queue.push(lattice(starts, sizes));
-
-        lattice_queue.pop();
-      }
-    }
-  }
-
-  // std::vector<std::tuple<lattice, lattice>> partitions;
-  while (!lattice_queue.empty()) {
-
-    lattice core = lattice_queue.front(); 
-    core.set_unlimited_time(this->unlimited_); 
-
-    lattice ghost(core.starts(), core.sizes()); 
-    ghost.set_unlimited_time(this->unlimited_);     
-
-    std::tuple<lattice, lattice> p = std::make_tuple(core, ghost); 
-    
-    partitions.push_back(p); 
-    lattice_queue.pop();
-  }
 }
 
 }

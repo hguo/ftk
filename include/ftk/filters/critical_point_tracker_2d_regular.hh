@@ -1,5 +1,5 @@
-#ifndef _FTK_TRACK_CRITICAL_POINTS_2D_REGULAR_SERIAL_HH
-#define _FTK_TRACK_CRITICAL_POINTS_2D_REGULAR_SERIAL_HH
+#ifndef _FTK_CRITICAL_POINT_TRACKER_2D_REGULAR_HH
+#define _FTK_CRITICAL_POINT_TRACKER_2D_REGULAR_HH
 
 #include <ftk/ftk_config.hh>
 #include <ftk/numeric/print.hh>
@@ -28,6 +28,7 @@ struct critical_point_2dt_t {
 
 struct critical_point_tracker_2d_regular : public filter {
   critical_point_tracker_2d_regular() : m(3) {}
+  virtual ~critical_point_tracker_2d_regular() {}
   
   void update();
   

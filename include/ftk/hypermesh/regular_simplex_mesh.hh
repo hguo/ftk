@@ -161,11 +161,13 @@ struct regular_simplex_mesh {
       std::function<void(regular_simplex_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency());
 
+#if 0
 public: // partitioning
   void partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
   void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
+#endif
 
 private: // initialization functions
   void initialize_subdivision();
@@ -723,6 +725,7 @@ inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
   }
 }
 
+#if 0
 inline void regular_simplex_mesh::partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
   std::vector<size_t> vector_zero = {0}; 
   partition(np, vector_zero, vector_zero, vector_zero, partitions); 
@@ -753,6 +756,7 @@ inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &g
     partitions.push_back(std::make_tuple(p, ghost_p)); 
   }
 }
+#endif
 
 inline void regular_simplex_mesh::initialize_subdivision()
 {

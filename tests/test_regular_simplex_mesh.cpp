@@ -1,13 +1,24 @@
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
+#include <ftk/hypermesh/lattice_partitioner.hh>
 
 int main(int argc, char **argv)
 {
+  ftk::lattice l({0, 0, 0}, {256, 256, 256});
+  ftk::lattice_partitioner partitioner(l);
+
+  // partitioner.partition(14);
+  partitioner.partition(1024, {}, {2, 2, 2});
+
+  std::cerr << partitioner <<  std::endl;
+
+#if 0
   ftk::regular_simplex_mesh m(3);
   m.set_lb_ub({0, 0, 0}, {3, 3, 3});
 
   m.element_for(2, [=](ftk::regular_simplex_mesh_element e) {
       std::cerr << e << std::endl;
     }, 1);
+#endif
  
 #if 0
   m.element_for_ordinal(2, 1, [=](ftk::regular_simplex_mesh_element e) {
