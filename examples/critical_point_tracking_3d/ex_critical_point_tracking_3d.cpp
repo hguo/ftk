@@ -102,9 +102,9 @@ void derive_hessians()
 
 void check_simplex(const ftk::regular_simplex_mesh_element& s)
 {
-  if (!s.valid()) return; // check if the 3-simplex is valid
+  if (!s.valid(m)) return; // check if the 3-simplex is valid
   
-  const auto &vertices = s.vertices();
+  const auto &vertices = s.vertices(m);
   float X[4][4], g[4][3], value[4];
 
   for (int i = 0; i < 4; i ++) {
@@ -158,11 +158,11 @@ void trace_intersections()
     qualified_elements.insert(f.first);
 
   // std::function<std::set<face_t>(face_t)> neighbors = 
-  auto neighbors = [](element_t e) {
+  auto neighbors = [&](element_t e) {
     std::set<element_t> neighbors;
-    const auto hypercells = e.side_of();
+    const auto hypercells = e.side_of(m);
     for (const auto c : hypercells) {
-      const auto sides = c.sides();
+      const auto sides = c.sides(m);
       for (const auto s : sides)
         neighbors.insert(s);
     }

@@ -79,10 +79,10 @@ void derive_hessians()
 
 void check_simplex(const ftk::regular_simplex_mesh_element& s)
 {
-  if (!s.valid()) return; // check if the 3-simplex is valid
+  if (!s.valid(m)) return; // check if the 3-simplex is valid
   // fprintf(stderr, "%zu\n", s.to_integer());
 
-  const auto &vertices = s.vertices();
+  const auto &vertices = s.vertices(m);
   float X[4][4], g[4][3], value[4];
 
   for (int i = 0; i < 4; i ++) {

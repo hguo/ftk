@@ -26,9 +26,9 @@ std::map<ftk::regular_simplex_mesh_element, critical_point_t> critical_points;
 
 void check_simplex(const ftk::regular_simplex_mesh_element& s)
 {
-  if (!s.valid()) return; // check if the 2-simplex is valid
+  if (!s.valid(m)) return; // check if the 2-simplex is valid
 
-  const auto &vertices = s.vertices();
+  const auto &vertices = s.vertices(m);
   float X[3][2], v[3][2];
 
   for (int i = 0; i < 3; i ++) {

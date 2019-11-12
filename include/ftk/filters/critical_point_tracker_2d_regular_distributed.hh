@@ -29,15 +29,15 @@ struct critical_point_tracker_2d_regular_distributed
       double Js[3][2][2]) const;
 #endif
 
+public:
+  diy::mpi::communicator comm;
+
 protected:
   ndarray<double> scalar_part, V_part, gradV_part;
   lattice_partitioner partitioner;
 
-  MPI_Comm comm = MPI_COMM_WORLD;
-  int np, rank;
-  
   typedef regular_simplex_mesh_element element_t;
-  std::map<std::string, critical_point_2dt_t> discrete_critical_points;
+  // std::map<std::string, critical_point_2dt_t> discrete_critical_points_map;
 };
 
 //////////////////
@@ -65,37 +65,35 @@ void critical_point_tracker_2d_regular_distributed::update()
   }
  
   // initialize partitions
-  MPI_Comm_size(comm, &np);
-  MPI_Comm_rank(comm, &rank);
-  partitioner.partition(np, {}, {1, 1, 0});
+  partitioner.partition(comm.size(), {}, {1, 1, 0});
   // std::cerr << partitioner << std::endl;
   
   // scan 2-simplices
-  fprintf(stderr, "tracking 2D critical points...\n");
+  // fprintf(stderr, "tracking 2D critical points...\n");
   m.element_for(2, 
-      partitioner.get_ext(rank), 
+      partitioner.get_ext(comm.rank()), 
       ftk::ELEMENT_SCOPE_ALL, 
       [=](element_t e) {
         critical_point_2dt_t cp;
         if (check_simplex(e, cp)) {
           std::lock_guard<std::mutex> guard(mutex);
           discrete_critical_points[e.to_string()] = cp;
-          fprintf(stderr, "%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
+          // fprintf(stderr, "%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
         }
       }, 
       1);
 
-  diy::mpi::communicator comm;
+  // gathering all discrete critical points
   diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
 
-#if 0
-  fprintf(stderr, "trace intersections...\n");
-  trace_intersections();
+  if (comm.rank() == 0) {
+    fprintf(stderr, "trace intersections... %lu\n", discrete_critical_points.size());
+    trace_intersections();
 
-  // convert connected components to traced critical points
-  fprintf(stderr, "tracing critical points...\n");
-  trace_connected_components();
-#endif
+    // convert connected components to traced critical points
+    fprintf(stderr, "tracing critical points...\n");
+    trace_connected_components();
+  }
 }
 
 #if 0

@@ -129,8 +129,8 @@ bool critical_point_extractor_2d_regular::check_simplex(
     const regular_simplex_mesh_element& s, 
     critical_point_2d_t &cp)
 {
-  if (!s.valid()) return false; // check if the 2-simplex is valid
-  const auto &vertices = s.vertices();
+  if (!s.valid(m)) return false; // check if the 2-simplex is valid
+  const auto &vertices = s.vertices(m);
 
   double v[3][2];
   for (int i = 0; i < 3; i ++)

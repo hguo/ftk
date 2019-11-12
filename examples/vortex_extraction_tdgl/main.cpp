@@ -50,9 +50,9 @@ ftk::regular_simplex_mesh m(3);
 
 std::mutex mutex;
 
-std::map<size_t, punctured_face_t> punctures;
-ftk::union_find<size_t> uf;
-std::map<size_t, std::set<size_t>> links;
+std::map<ftk::regular_simplex_mesh_element, punctured_face_t> punctures;
+ftk::union_find<ftk::regular_simplex_mesh_element> uf;
+std::map<ftk::regular_simplex_mesh_element, std::set<ftk::regular_simplex_mesh_element>> links;
 std::vector<std::vector<punctured_face_t>> vortices;
 
 #if FTK_HAVE_BOOST
@@ -212,7 +212,7 @@ void extract_vortices()
 
   fprintf(stderr, "sweeping 2-simplices...\n");
   m.element_for(2, [&](const ftk::regular_simplex_mesh_element &f) {
-      const auto &vertices = f.vertices();
+      const auto &vertices = f.vertices(m);
       float X[3][3], A[3][3];
       float rho[3], phi[3], re[3], im[3];
 
@@ -259,17 +259,17 @@ void extract_vortices()
 
       {
         std::lock_guard<std::mutex> guard(mutex);
-        punctures[f.to_integer()] = puncture;
+        punctures[f] = puncture;
       }
   });
 
   fprintf(stderr, "sweeping 3-simplices...\n");
   m.element_for(3, [&](const ftk::regular_simplex_mesh_element &c) {
-      const auto &sides = c.sides();
-      std::vector<size_t> vector;
+      const auto &sides = c.sides(m);
+      std::vector<ftk::regular_simplex_mesh_element> vector;
       for (const auto& f : sides)
-        if (punctures.find(f.to_integer()) != punctures.end())
-          vector.push_back(f.to_integer());
+        if (punctures.find(f) != punctures.end())
+          vector.push_back(f);
       if (vector.size() == 2) {
         std::lock_guard<std::mutex> guard(mutex);
         uf.add(vector[0]);
@@ -284,8 +284,8 @@ void extract_vortices()
   const auto cc = uf.get_sets();
   fprintf(stderr, "number of connected components: %zu\n", cc.size());
 
-  auto neighbors = [&](size_t i) {
-    std::set<size_t> neighbors;
+  auto neighbors = [&](ftk::regular_simplex_mesh_element i) {
+    std::set<ftk::regular_simplex_mesh_element> neighbors;
     auto iterator = links.find(i);
     if (iterator == links.end()) return neighbors;
     else return iterator->second;
@@ -293,7 +293,7 @@ void extract_vortices()
 
   for (int i = 0; i < cc.size(); i ++) {
     std::vector<std::vector<float>> mycurves;
-    auto linear_graphs = ftk::connected_component_to_linear_components<size_t>(cc[i], neighbors);
+    auto linear_graphs = ftk::connected_component_to_linear_components<ftk::regular_simplex_mesh_element>(cc[i], neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
       std::vector<punctured_face_t> mycurve;
       for (int k = 0; k < linear_graphs[j].size(); k ++) {

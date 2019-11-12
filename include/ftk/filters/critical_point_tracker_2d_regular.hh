@@ -132,7 +132,7 @@ void critical_point_tracker_2d_regular::trace_intersections()
     uf.add(kv.first);
 
   m.element_for(3, [&](const regular_simplex_mesh_element& f) {
-    const auto sides = f.sides();
+    const auto sides = f.sides(m);
     std::set<element_t> intersected_sides;
 
     for (const auto& side : sides)
@@ -152,11 +152,11 @@ void critical_point_tracker_2d_regular::trace_intersections()
 void critical_point_tracker_2d_regular::trace_connected_components()
 {
   // Convert connected components to geometries
-  auto neighbors = [](element_t f) {
+  auto neighbors = [&](element_t f) {
     std::set<element_t> neighbors;
-    const auto cells = f.side_of();
+    const auto cells = f.side_of(m);
     for (const auto c : cells) {
-      const auto elements = c.sides();
+      const auto elements = c.sides(m);
       for (const auto f1 : elements)
         neighbors.insert(f1);
     }
@@ -213,8 +213,8 @@ bool critical_point_tracker_2d_regular::check_simplex(
     const regular_simplex_mesh_element& e,
     critical_point_2dt_t& cp)
 {
-  if (!e.valid()) return false; // check if the 2-simplex is valid
-  const auto &vertices = e.vertices(); // obtain the vertices of the simplex
+  if (!e.valid(m)) return false; // check if the 2-simplex is valid
+  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
  
   double v[3][2]; // obtain vector values
   simplex_vectors(vertices, v);

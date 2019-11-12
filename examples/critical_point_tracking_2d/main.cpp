@@ -50,12 +50,12 @@ float threshold; // threshold for trajectories. The max scalar on each trajector
 std::mutex mutex;
 
 struct intersection_t {
-  size_t eid;
+  // size_t eid;
   float x[3]; // the spacetime coordinates of the trajectory
   float val; // scalar value at the intersection
 
   template <class Archive> void serialize(Archive & ar) {
-    ar(eid, x[0], x[1], x[2], val);
+    ar(/*eid,*/ x[0], x[1], x[2], val);
   }
 };
  
@@ -136,8 +136,8 @@ ftk::ndarray<T> derive_hessians2(const ftk::ndarray<T>& grad)
 
 void check_simplex(const ftk::regular_simplex_mesh_element& f)
 {
-  if (!f.valid()) return; // check if the 2-simplex is valid
-  const auto &vertices = f.vertices(); // obtain the vertices of the simplex
+  if (!f.valid(m)) return; // check if the 2-simplex is valid
+  const auto &vertices = f.vertices(m); // obtain the vertices of the simplex
   float g[3][2], value[3];
 
   for (int i = 0; i < 3; i ++) {
@@ -171,7 +171,7 @@ void check_simplex(const ftk::regular_simplex_mesh_element& f)
         X[i][j] = vertices[i][j];
 
     intersection_t I;
-    I.eid = f.to_integer();
+    // I.eid = f.to_integer(); // FIXME
     ftk::lerp_s2v3(X, mu, I.x);
     I.val = ftk::lerp_s2(value, mu);
 
@@ -199,7 +199,7 @@ void extract_connected_components(std::vector<std::set<ftk::regular_simplex_mesh
 
   // Connected Component Labeling by using union-find. 
   m.element_for(3, [&](const ftk::regular_simplex_mesh_element& f) {
-    const auto elements = f.sides();
+    const auto elements = f.sides(m);
     std::set<std::string> features; 
 
     for (const auto& ele : elements) {
@@ -242,9 +242,9 @@ void trace_intersections()
 
   auto neighbors = [](element_t f) {
     std::set<element_t> neighbors;
-    const auto cells = f.side_of();
+    const auto cells = f.side_of(m);
     for (const auto c : cells) {
-      const auto elements = c.sides();
+      const auto elements = c.sides(m);
       for (const auto f1 : elements)
         neighbors.insert(f1);
     }
@@ -321,8 +321,8 @@ void read_dump_file(const std::string& f)
   ifs.close();
 
   for (const auto &i : vector) {
-    ftk::regular_simplex_mesh_element e(m, 2, i.eid);
-    intersections[e] = i;
+    // ftk::regular_simplex_mesh_element e(m, 2, i.eid); // FIXME
+    // intersections[e] = i; // FIXME
   }
 }
 
