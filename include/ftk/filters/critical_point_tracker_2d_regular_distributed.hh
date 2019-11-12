@@ -4,6 +4,7 @@
 #include <ftk/filters/critical_point_tracker_2d_regular_streaming.hh>
 #include <ftk/hypermesh/lattice_partitioner.hh>
 #include <ftk/external/diy/master.hpp>
+#include <ftk/external/diy-ext/gather.hh>
 #include <mpi.h>
 
 namespace ftk {
@@ -36,6 +37,7 @@ protected:
   int np, rank;
   
   typedef regular_simplex_mesh_element element_t;
+  std::map<std::string, critical_point_2dt_t> discrete_critical_points;
 };
 
 //////////////////
@@ -77,11 +79,14 @@ void critical_point_tracker_2d_regular_distributed::update()
         critical_point_2dt_t cp;
         if (check_simplex(e, cp)) {
           std::lock_guard<std::mutex> guard(mutex);
-          discrete_critical_points[e] = cp;
+          discrete_critical_points[e.to_string()] = cp;
           fprintf(stderr, "%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
         }
       }, 
-      1); 
+      1);
+
+  diy::mpi::communicator comm;
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
 
 #if 0
   fprintf(stderr, "trace intersections...\n");

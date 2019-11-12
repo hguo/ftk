@@ -17,6 +17,8 @@
 #include <ftk/ndarray.hh>
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
 
+#include <ftk/external/diy/serialization.hpp>
+
 namespace ftk {
 
 struct critical_point_2dt_t {
@@ -343,6 +345,25 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_cri
 }
 #endif
 
+}
+
+
+namespace diy {
+  template <> struct Serialization<ftk::critical_point_2dt_t> {
+    static void save(diy::BinaryBuffer& bb, const ftk::critical_point_2dt_t &cp) {
+      diy::save(bb, cp.x[0]);
+      diy::save(bb, cp.x[1]);
+      diy::save(bb, cp.x[2]);
+      diy::save(bb, cp.type);
+    }
+
+    static void load(diy::BinaryBuffer& bb, ftk::critical_point_2dt_t& cp) {
+      diy::load(bb, cp.x[0]);
+      diy::load(bb, cp.x[1]);
+      diy::load(bb, cp.x[2]);
+      diy::load(bb, cp.type);
+    }
+  };
 }
 
 #endif

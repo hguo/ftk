@@ -1,8 +1,27 @@
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
 #include <ftk/hypermesh/lattice_partitioner.hh>
+#include <ftk/external/diy-ext/gather.hh>
 
 int main(int argc, char **argv)
 {
+#if 0
+  MPI_Init(&argc, &argv);
+  diy::mpi::communicator comm;
+
+  std::map<int, int> mymap, mymap1;
+  // if (comm.rank() != 2) 
+    mymap[comm.rank()] = comm.rank();
+
+  diy::mpi::gather(comm, mymap, mymap1, 0);
+
+  if (comm.rank() == 0) {
+    for (const auto kv : mymap1) 
+      fprintf(stderr, "k=%d, v=%d\n", kv.first, kv.second);
+  }
+  MPI_Finalize();
+#endif
+
+#if 0
   ftk::lattice l({0, 0, 0}, {256, 256, 256});
   ftk::lattice_partitioner partitioner(l);
 
@@ -10,6 +29,7 @@ int main(int argc, char **argv)
   partitioner.partition(1024, {}, {2, 2, 2});
 
   std::cerr << partitioner <<  std::endl;
+#endif
 
 #if 0
   ftk::regular_simplex_mesh m(3);
