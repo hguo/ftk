@@ -68,8 +68,8 @@ struct regular_simplex_mesh_element {
   // template <typename uint = uint64_t> uint to_integer() const;
   // template <typename uint = uint64_t> void from_integer(uint i);
 
-  std::string to_string() const;
-  void from_string(const std::string& index);
+  // std::string to_string() const;
+  // void from_string(const std::string& index);
 
   template <typename Archive> void serialize(Archive &ar) {ar(dim, type, corner);}
 
@@ -248,10 +248,12 @@ inline regular_simplex_mesh_element::regular_simplex_mesh_element(
   from_work_index(m, i, l, scope);
 }
 
+#if 0
 inline regular_simplex_mesh_element::regular_simplex_mesh_element(const std::string &i)
 {
   from_string(i);
 }
+#endif
 
 inline regular_simplex_mesh_element& regular_simplex_mesh_element::operator=(const regular_simplex_mesh_element& e)
 {
@@ -408,6 +410,7 @@ void regular_simplex_mesh_element::from_integer(uint index)
 }
 #endif
 
+#if 0
 inline std::string regular_simplex_mesh_element::to_string() const
 {
   std::stringstream res;
@@ -436,6 +439,7 @@ inline void regular_simplex_mesh_element::from_string(const std::string& index)
   
   type = *(arr.end()-1); 
 }
+#endif
 
 #if 0
 template <int nd> 

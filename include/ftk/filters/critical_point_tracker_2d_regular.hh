@@ -354,6 +354,7 @@ namespace diy {
       diy::save(bb, cp.x[0]);
       diy::save(bb, cp.x[1]);
       diy::save(bb, cp.x[2]);
+      diy::save(bb, cp.scalar);
       diy::save(bb, cp.type);
     }
 
@@ -361,6 +362,7 @@ namespace diy {
       diy::load(bb, cp.x[0]);
       diy::load(bb, cp.x[1]);
       diy::load(bb, cp.x[2]);
+      diy::load(bb, cp.scalar);
       diy::load(bb, cp.type);
     }
   };

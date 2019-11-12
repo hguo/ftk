@@ -77,7 +77,7 @@ void critical_point_tracker_2d_regular_distributed::update()
         critical_point_2dt_t cp;
         if (check_simplex(e, cp)) {
           std::lock_guard<std::mutex> guard(mutex);
-          discrete_critical_points[e.to_string()] = cp;
+          discrete_critical_points[e] = cp;
           // fprintf(stderr, "%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
         }
       }, 

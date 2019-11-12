@@ -13,6 +13,7 @@ namespace ftk {
 // ================================================================
 // Extract connected components by given mesh elements
 
+#if 0
 typedef regular_simplex_mesh_element EleType;
 template <class ContainerType>
 std::vector<std::set<EleType> > extract_connected_components_element(
@@ -58,6 +59,7 @@ std::vector<std::set<EleType> > extract_connected_components_element(
 
   return components;
 }
+#endif
 
 // ================================================================
 // Extract connected components by given IDs

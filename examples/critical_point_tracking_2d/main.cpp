@@ -62,7 +62,7 @@ struct intersection_t {
 std::map<ftk::regular_simplex_mesh_element, intersection_t> intersections;
 
 // the output sets of connected elements
-std::vector<std::set<std::string>> connected_components_str; // connected components 
+std::vector<std::set<ftk::regular_simplex_mesh_element>> connected_components; // connected components 
 
 // the output trajectories
 std::vector<std::vector<float>> trajectories;
@@ -189,46 +189,39 @@ void extract_connected_components(std::vector<std::set<ftk::regular_simplex_mesh
   typedef ftk::regular_simplex_mesh_element element_t;
 
   // Initialization
-  ftk::union_find<std::string> uf; 
-  std::map<std::string, element_t> id2ele; 
+  ftk::union_find<ftk::regular_simplex_mesh_element> uf; 
+  // std::map<std::string, element_t> id2ele; 
   for (const auto &f : intersections) {
-    std::string eid = f.first.to_string(); 
-    uf.add(eid); 
-    id2ele.insert(std::make_pair(eid, f.first));
+    // std::string eid = f.first.to_string(); 
+    uf.add(f.first); 
+    // id2ele.insert(std::make_pair(eid, f.first));
   }
 
   // Connected Component Labeling by using union-find. 
   m.element_for(3, [&](const ftk::regular_simplex_mesh_element& f) {
     const auto elements = f.sides(m);
-    std::set<std::string> features; 
+    std::set<ftk::regular_simplex_mesh_element> features; 
 
     for (const auto& ele : elements) {
-      std::string eid = ele.to_string(); 
-
-      if(uf.has(eid)) {
-        features.insert(eid); 
+      // std::string eid = ele.to_string(); 
+      if(uf.has(ele)) {
+        features.insert(ele); 
       }
     }
 
     if(features.size()  > 1) {
-      for(std::set<std::string>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
+      for(std::set<ftk::regular_simplex_mesh_element>::iterator ite_i = std::next(features.begin(), 1); ite_i != features.end(); ++ite_i) {
         std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
         uf.unite(*(features.begin()), *ite_i); 
       }
     }
   }); 
 
-
-  // Get disjoint sets of element IDs
-  uf.get_sets(connected_components_str);
-
-  // Convert element IDs to elements
-  for(auto& comp_str : connected_components_str) {
-    std::set<element_t>& comp = components.emplace_back(); 
-    for(auto& ele_id : comp_str) {
-      comp.insert(id2ele.find(ele_id)->second); 
-    }
-  }
+  // Get disjoint sets
+  uf.get_sets(connected_components);
+  for(auto& comp : connected_components) 
+    for(auto& ele : comp) 
+      comp.insert(ele);
 }
 
 void trace_intersections()
@@ -356,8 +349,8 @@ void write_cpt_file(const std::string& f)
 void write_element_sets_file(const std::string& f)
 {
   std::ofstream ofs(f, std::ios::out); 
-
-  for(auto& comp_str : connected_components_str) {
+#if 0 // FIXME
+  for(auto& comp : connected_components) {
     std::vector<std::string> comp_str_vec(comp_str.begin(), comp_str.end()); 
     std::sort(comp_str_vec.begin(), comp_str_vec.end()); 
 
@@ -366,7 +359,7 @@ void write_element_sets_file(const std::string& f)
     }
     ofs<<std::endl; 
   }
-
+#endif
   ofs.close();
 }
 
