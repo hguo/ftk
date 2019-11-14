@@ -19,6 +19,10 @@
 
 #include <ftk/external/diy/serialization.hpp>
 
+#if FTK_HAVE_VTK
+#include <vtkUnsignedIntArray.h>
+#endif
+
 namespace ftk {
 
 struct critical_point_2dt_t {
@@ -283,7 +287,7 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_results_vtk(
 
   // point data for types
   if (type_filter) {
-    vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
+    vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
     types->SetNumberOfValues(nv);
     size_t i = 0;
     for (const auto &curve : traced_critical_points) {
@@ -294,9 +298,21 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_results_vtk(
     polyData->GetPointData()->AddArray(types);
   }
 
+  if (1) { // ids
+    vtkSmartPointer<vtkUnsignedIntArray> ids = vtkSmartPointer<vtkUnsignedIntArray>::New();
+    ids->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (auto k = 0; k < traced_critical_points.size(); k ++)
+      for (auto j = 0; j < traced_critical_points[k].size(); j ++)
+        ids->SetValue(i ++, k);
+    ids->SetName("id");
+    polyData->GetPointData()->AddArray(ids);
+
+  }
+
   // point data for scalars
   // if (has_scalar_field) {
-  if (1) {
+  if (1) { // scalar is 0 if no scalar field available
     vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
     scalars->SetNumberOfValues(nv);
     size_t i = 0;
