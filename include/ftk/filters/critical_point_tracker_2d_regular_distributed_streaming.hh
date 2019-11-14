@@ -26,7 +26,7 @@ void critical_point_tracker_2d_regular_distributed_streaming::update()
   if (comm.rank() == 0) {
     // fprintf(stderr, "trace1\n");
     // trace_intersections();
-    fprintf(stderr, "trace2\n");
+    // fprintf(stderr, "trace2\n");
     trace_connected_components();
     fprintf(stderr, "done.\n");
   }
@@ -65,7 +65,7 @@ void critical_point_tracker_2d_regular_distributed_streaming::update_timestep()
 
   lattice_partitioner partitioner(current_lattice);
   partitioner.partition(comm.size(), {0, 0, 1}, {1, 1, 0});
-  std::cerr << partitioner << std::endl;
+  // std::cerr << partitioner << std::endl;
 
   // scan 2-simplices
   // fprintf(stderr, "tracking 2D critical points...\n");
@@ -73,7 +73,7 @@ void critical_point_tracker_2d_regular_distributed_streaming::update_timestep()
       critical_point_2dt_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
-        fprintf(stderr, "%f, %f, %f\n", cp[0], cp[1], cp[2]);
+        // fprintf(stderr, "%f, %f, %f\n", cp[0], cp[1], cp[2]);
         discrete_critical_points[e] = cp;
       }
     };
