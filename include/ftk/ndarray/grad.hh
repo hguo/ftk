@@ -15,8 +15,9 @@ ndarray<T> gradient2D(const ndarray<T>& scalar)
   
   for (int j = 1; j < DH-1; j ++) {
     for (int i = 1; i < DW-1; i ++) {
-      grad(0, i, j) = 0.5 * (scalar(i+1, j) - scalar(i-1, j)) * (DW-1);
-      grad(1, i, j) = 0.5 * (scalar(i, j+1) - scalar(i, j-1)) * (DH-1);
+      auto dfdx = grad(0, i, j) = 0.5 * (scalar(i+1, j) - scalar(i-1, j)) * (DW-1);
+      auto dfdy = grad(1, i, j) = 0.5 * (scalar(i, j+1) - scalar(i, j-1)) * (DH-1);
+      // fprintf(stderr, "s=%f, grad=%f, %f\n", scalar(i, j), dfdx, dfdy);
     }
   }
   return grad;

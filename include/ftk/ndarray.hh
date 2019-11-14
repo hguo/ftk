@@ -20,6 +20,13 @@
 }
 #endif
 
+#if FTK_HAVE_VTK
+#include <vtkSmartPointer.h>
+#include <vtkImageData.h>
+#include <vtkXMLImageDataReader.h>
+#include <vtkDataReader.h>
+#endif
+
 namespace ftk {
 
 template <typename T>
@@ -112,6 +119,12 @@ struct ndarray {
   void to_vector(std::vector<T> &out_vector) const;
   void to_binary_file(const std::string& filename);
   void to_binary_file(FILE *fp);
+
+  void from_vtk_image_data_file(const std::string& filename);
+  void from_vtk_image_data_file_sequence(const std::string& pattern);
+#if FTK_HAVE_VTK
+  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d);
+#endif
 
   void from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
@@ -216,6 +229,87 @@ void ndarray<T>::from_binary_file_sequence(const std::string& pattern)
   }
 }
 
+#ifdef FTK_HAVE_VTK
+template<typename T>
+inline void ndarray<T>::from_vtk_image_data(vtkSmartPointer<vtkImageData> d)
+{
+  const int nd = d->GetDataDimension(), 
+            nc = d->GetNumberOfScalarComponents();
+
+  d->PrintSelf(std::cerr, vtkIndent(2));
+  if (nd == 2) {
+    if (nc == 1) { // scalar field
+      reshape(d->GetDimensions()[0], d->GetDimensions()[1]);
+      for (int j = 0; j < d->GetDimensions()[1]; j ++)
+        for (int i = 0; i < d->GetDimensions()[0]; i ++)
+          p.push_back(d->GetScalarComponentAsDouble(i, j, 0, 0));
+    } else {
+      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1]);
+      for (int j = 0; j < d->GetDimensions()[1]; j ++)
+        for (int i = 0; i < d->GetDimensions()[0]; i ++)
+          for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
+            p.push_back(d->GetScalarComponentAsDouble(i, j, 0, c));
+    }
+  } else if (nd == 3) {
+    if (nc == 1) { // scalar field
+      reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
+      for (int k = 0; k < d->GetDimensions()[2]; k ++)
+        for (int j = 0; j < d->GetDimensions()[1]; j ++)
+          for (int i = 0; i < d->GetDimensions()[0]; i ++)
+            p.push_back(d->GetScalarComponentAsDouble(i, j, 0, 0));
+    } else {
+      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
+      for (int k = 0; k < d->GetDimensions()[2]; k ++)
+        for (int j = 0; j < d->GetDimensions()[1]; j ++)
+          for (int i = 0; i < d->GetDimensions()[0]; i ++)
+            for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
+              p.push_back(d->GetScalarComponentAsDouble(i, j, k, c));
+    }
+  } else 
+    fprintf(stderr, "[FTK] fatal error: unsupported data dimension %d.\n", nd);
+
+}
+
+template<typename T>
+inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename)
+{
+  vtkNew<vtkXMLImageDataReader> reader;
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+  from_vtk_image_data(reader->GetOutput());
+}
+
+template<typename T>
+inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pattern)
+{
+  const auto filenames = ndarray<T>::glob(pattern);
+  if (filenames.size() == 0) return;
+  p.clear();
+
+  ndarray<T> array;
+  for (int t = 0; t < filenames.size(); t ++) {
+    array.from_vtk_image_data_file(filenames[t]);
+    p.insert(p.end(), array.p.begin(), array.p.end());
+  }
+
+  auto dims = array.dims;
+  dims.push_back(filenames.size());
+  reshape(dims);
+}
+#else
+template<typename T>
+inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename)
+{
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
+}
+
+template<typename T>
+inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pattern)
+{
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
+}
+#endif
+
 #ifdef FTK_HAVE_NETCDF
 template <>
 inline void ndarray<float>::from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
@@ -305,25 +399,25 @@ inline void ndarray<T>::from_netcdf(const std::string& filename, const std::stri
 template <typename T>
 inline void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
-  fprintf(stderr, "[FTK] fatal error: your code is not compiled with netcdf.\n");
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
 }
 
 template <typename T>
 inline void ndarray<T>::from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
-  fprintf(stderr, "[FTK] fatal error: your code is not compiled with netcdf.\n");
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
 }
 
 template <typename T>
 inline void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname)
 {
-  fprintf(stderr, "[FTK] fatal error: your code is not compiled with netcdf.\n");
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
 }
 
 template <typename T>
 inline void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
-  fprintf(stderr, "[FTK] fatal error: your code is not compiled with netcdf.\n");
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
 }
 #endif
 

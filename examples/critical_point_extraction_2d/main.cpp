@@ -11,7 +11,11 @@ const int DW = 256, DH = 256;
 
 int main(int argc, char **argv)
 {
-  auto scalar = ftk::synthetic_woven_2D<double>(DW, DH);
+  MPI_Init(&argc, &argv);
+
+  ftk::ndarray<double> scalar;
+  scalar.from_vtk_image_data_file(argv[1]);
+  // auto scalar = ftk::synthetic_woven_2D<double>(DW, DH);
 #if 0
   auto grad = hypermesh::gradient2D(scalar);
   auto hess = hypermesh::jacobian2D(grad);
@@ -27,12 +31,16 @@ int main(int argc, char **argv)
   ftk::critical_point_extractor_2d_regular extractor;
   extractor.set_input_scalar_field(scalar);
   extractor.update();
+
+  fprintf(stderr, "FUCK\n");
 #endif
 
 #if FTK_HAVE_VTK
+  fprintf(stderr, "FUCK1\n");
   auto polydata = extractor.get_results_vtk();
   ftk::write_vtp("asdf.vtp", polydata);
 #endif
 
+  MPI_Finalize();
   return 0;
 }
