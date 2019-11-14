@@ -14,10 +14,10 @@ struct critical_point_tracker_2d_regular_streaming : public critical_point_track
   void push_input_jacobian_field(const ndarray<double>& gradV0) {gradV.push_front(gradV0); has_jacobian_field = true;}
 
   void advance_timestep();
-  void update();
+  virtual void update();
 
 protected:
-  void update_timestep();
+  virtual void update_timestep();
 
 protected:
   typedef regular_simplex_mesh_element element_t;
@@ -38,7 +38,7 @@ void critical_point_tracker_2d_regular_streaming::advance_timestep()
 {
   update_timestep();
 
-  fprintf(stderr, "advancing timestep!\n");
+  // fprintf(stderr, "advancing timestep!\n");
   const int nt = 2;
   if (scalar.size() > nt) scalar.pop_back();
   if (V.size() > nt) V.pop_back();
@@ -60,8 +60,8 @@ void critical_point_tracker_2d_regular_streaming::update()
   ub[2] = current_timestep - 1;
   m.set_lb_ub(lb, ub);
 
-  fprintf(stderr, "trace1\n");
-  trace_intersections();
+  // fprintf(stderr, "trace1\n");
+  // trace_intersections();
   fprintf(stderr, "trace2\n");
   trace_connected_components();
   fprintf(stderr, "done.\n");

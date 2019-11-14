@@ -233,10 +233,10 @@ inline void lattice_partitioner::partition(std::vector<std::vector<size_t>> prim
   while (!lattice_queue.empty()) {
 
     lattice core = lattice_queue.front(); 
-    core.set_unlimited_time(l.unlimited_); 
+    // core.set_unlimited_time(l.unlimited_); //TODO
 
     lattice ghost(core.starts(), core.sizes()); 
-    ghost.set_unlimited_time(l.unlimited_);     
+    // ghost.set_unlimited_time(l.unlimited_); // TODO
 
     cores.push_back(core);
     // extents.push_back(ghost);
@@ -291,7 +291,7 @@ inline void lattice_partitioner::partition(std::vector<std::vector<size_t>> prim
   
 inline std::ostream& operator<<(std::ostream& os, const lattice_partitioner& partitioner)
 {
-  os << "lattice.nd=" << partitioner.nd() << std::endl;
+  os << "lattice.nd=" << partitioner.nd() << ", np=" << partitioner.np() << std::endl;
   for (auto i = 0; i < partitioner.np(); i ++) {
     os << "--" << "id=" << i <<", "
                << "core: " << partitioner.cores[i] << "; "

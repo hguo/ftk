@@ -29,9 +29,6 @@ struct critical_point_tracker_2d_regular_distributed
       double Js[3][2][2]) const;
 #endif
 
-public:
-  diy::mpi::communicator comm;
-
 protected:
   ndarray<double> scalar_part, V_part, gradV_part;
   lattice_partitioner partitioner;

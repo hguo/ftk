@@ -108,8 +108,7 @@ struct regular_simplex_mesh {
       _ub.push_back(_start + _size - 1);
     }
 
-    lattice_.set_unlimited_time(_lattice.unlimited_time()); 
-
+    // lattice_.set_unlimited_time(_lattice.unlimited_time()); 
     set_lb_ub(_lb, _ub); 
   }
 

@@ -20,7 +20,7 @@ struct lattice {
   friend std::ostream& operator<<(std::ostream& os, const lattice&);
 
   size_t nd() const {return sizes_.size();}
-  size_t nd_cuttable() const {return unlimited_ ? nd() - 1 : nd();}
+  size_t nd_cuttable() const {return unlimited_time() ? nd() - 1 : nd();}
   size_t start(size_t i) const {return starts_[i];}
   size_t size(size_t i) const {return sizes_[i];}
   size_t upper_bound(size_t i) const {return starts_[i] + sizes_[i] - 1;}
@@ -44,14 +44,14 @@ struct lattice {
   size_t local_index(int p, const std::vector<size_t> &coords) const;
 
 public: // the last dimension, aka time.  these functions are mainly for I/O and streaming purposes
-  bool unlimited_time() const {return unlimited_;}
-  void set_unlimited_time(bool u) {unlimited_ = u;}
+  bool unlimited_time() const {return size(nd()-1) == std::numeric_limits<int>::max();}// return unlimited_;}
+  // void set_unlimited_time(bool u) {unlimited_ = u;}
 
   // void advance_time(int nt = 1) {starts_[nd()-1] += nt;} // deprecated
   // void recess_time(int nt = 1) {starts_[nd()-1] -= nt;}
 
 public:
-  bool unlimited_ = false; 
+  // bool unlimited_ = false; 
   std::vector<size_t> starts_, sizes_; // the last dimension can be unlimited
   std::vector<size_t> prod_; 
 };
