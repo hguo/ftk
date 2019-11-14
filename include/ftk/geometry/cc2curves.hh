@@ -6,7 +6,7 @@
 #include <set>
 
 namespace ftk {
-  
+
 template <typename NodeType>
 std::vector<std::vector<NodeType>> connected_component_to_linear_components(
     const std::set<NodeType>& connected_component,

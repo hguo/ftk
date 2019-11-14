@@ -80,15 +80,14 @@ void critical_point_tracker_2d_regular_distributed::update()
           discrete_critical_points[e] = cp;
           // fprintf(stderr, "%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
         }
-      }, 
-      1);
+      });
 
   // gathering all discrete critical points
   diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
 
   if (comm.rank() == 0) {
-    fprintf(stderr, "trace intersections... %lu\n", discrete_critical_points.size());
-    trace_intersections();
+    // fprintf(stderr, "trace intersections... %lu\n", discrete_critical_points.size());
+    // trace_intersections();
 
     // convert connected components to traced critical points
     fprintf(stderr, "tracing critical points...\n");

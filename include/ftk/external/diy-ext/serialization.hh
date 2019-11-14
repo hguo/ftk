@@ -24,7 +24,7 @@ namespace diy {
     }
 
     inline void append_binary(const char *x, size_t count) {
-      // TODO: check with tom to see what should append_binary do for binary buffer.
+      str.append(x, count);
     }
 
     inline void load_binary(char *x, size_t count) {
@@ -38,7 +38,7 @@ namespace diy {
   };
 
   //////////
-  template <typename T> void serialize(const T& obj, std::string& buf)
+  template <typename T> void serializeToString(const T& obj, std::string& buf)
   {
     buf.clear();
     diy::StringBuffer bb(buf);
@@ -54,17 +54,11 @@ namespace diy {
     fclose(fp);
   }
 
-  template <typename T> void unserialize(std::string& buf, T& obj)
+  template <typename T> void unserializeFromString(const std::string& buf, T& obj)
   {
-    diy::StringBuffer bb(buf);
+    std::string buf1(buf);
+    diy::StringBuffer bb(buf1);
     diy::load(bb, obj);
-    buf.clear();
-  }
-
-  template <typename T> void unserialize(const std::string& str, T& obj)
-  {
-    std::string buf(str);
-    unserialize(buf, obj);
   }
 
   template <typename T> void unserializeFromFile(const std::string& filename, T& obj)

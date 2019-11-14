@@ -1,9 +1,52 @@
+#include <ftk/basic/distributed_union_find.hh>
+#include <ftk/basic/duf.hh>
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
 #include <ftk/hypermesh/lattice_partitioner.hh>
 #include <ftk/external/diy-ext/gather.hh>
 
 int main(int argc, char **argv)
 {
+  MPI_Init(&argc, &argv);
+
+#if 0
+  diy::mpi::communicator comm;
+  ftk::duf<int> uf;
+  uf.pid = [](int i) {
+    if (i < 8) return 0; 
+    else return 1;
+  };
+
+  if (comm.rank() == 0) {
+    uf.unite(0, 1);
+    uf.unite(0, 2);
+    uf.unite(3, 4);
+    uf.unite(2, 3);
+    uf.unite(1, 2);
+    uf.unite(1, 3);
+
+    uf.unite(5, 6);
+    uf.unite(5, 7);
+    uf.unite(6, 7);
+    uf.unite(6, 8);
+    uf.unite(7, 8);
+  } else {
+    uf.unite(8, 6);
+    uf.unite(8, 7);
+    uf.unite(8, 9);
+
+    uf.unite(10, 11);
+    uf.unite(10, 12);
+    uf.unite(11, 12);
+  }
+
+  uf.exchange();
+
+  for (const auto &kv : uf.parents) {
+    fprintf(stderr, "pid=%d, %d --> %d, is_root=%d\n", comm.rank(), kv.first, kv.second, kv.first == uf.find(kv.second));
+  }
+#endif  
+  MPI_Finalize();
+
 #if 0
   MPI_Init(&argc, &argv);
   diy::mpi::communicator comm;

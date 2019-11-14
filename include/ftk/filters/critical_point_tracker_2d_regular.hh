@@ -117,7 +117,7 @@ void critical_point_tracker_2d_regular::update()
     }); 
   
   fprintf(stderr, "trace intersections...\n");
-  trace_intersections();
+  // trace_intersections();
 
   // convert connected components to traced critical points
   fprintf(stderr, "tracing critical points...\n");
@@ -162,6 +162,14 @@ void critical_point_tracker_2d_regular::trace_connected_components()
     }
     return neighbors;
   };
+
+#if 1
+  std::set<element_t> elements;
+  for (const auto &kv : discrete_critical_points)
+    elements.insert(kv.first);
+  connected_components = extract_connected_components<element_t, std::set<element_t>>(
+      neighbors, elements);
+#endif
 
   for (const auto &component : connected_components) {
     std::vector<std::vector<double>> mycurves;

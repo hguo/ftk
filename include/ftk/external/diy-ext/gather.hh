@@ -12,7 +12,7 @@ inline void gather(const communicator& comm, const std::map<K, V>& in, std::map<
   // serialize input map
   std::string serialized_in;
   if (comm.rank() != root) // avoid serializing data from the root proc
-    serialize(in, serialized_in);
+    serializeToString(in, serialized_in);
 
   // gathering length of serialized data
   int length_serialized_in = serialized_in.size();
