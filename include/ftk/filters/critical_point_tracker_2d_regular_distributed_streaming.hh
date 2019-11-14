@@ -64,7 +64,8 @@ void critical_point_tracker_2d_regular_distributed_streaming::update_timestep()
   lattice current_lattice(starts, sizes);
 
   lattice_partitioner partitioner(current_lattice);
-  partitioner.partition(comm.size(), {0, 0, 1}, {1, 1, 0});
+  // partitioner.partition(comm.size(), {0, 0, 1}, {1, 1, 0});
+  partitioner.partition(comm.size(), {0, 0, 1}, {0, 0, 0});
   // std::cerr << partitioner << std::endl;
 
   // scan 2-simplices
