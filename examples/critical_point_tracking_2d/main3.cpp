@@ -33,7 +33,7 @@ int main(int argc, char **argv)
   tracker.update();
 #endif
 
-#if 1 // FTK_HAVE_VTK
+#if FTK_HAVE_VTK
   diy::mpi::communicator comm;
   if (comm.rank() == 0) {
     auto polydata = tracker.get_results_vtk();

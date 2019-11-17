@@ -137,7 +137,7 @@ void critical_point_tracker_3d_regular::update()
         discrete_critical_points[e] = cp;
         fprintf(stderr, "%f, %f, %f, %f\n", cp[0], cp[1], cp[2], cp[3]);
       }
-    }); 
+    });
   
   // convert connected components to traced critical points
   fprintf(stderr, "tracing critical points...\n");
@@ -218,6 +218,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
 
   double v[4][3]; // vector values on vertices
   simplex_vectors(vertices, v);
+  // ftk::print4x3("v", v);
 
   double mu[4]; // check intersection
   bool succ = ftk::inverse_lerp_s3v3(v, mu);

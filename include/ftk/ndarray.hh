@@ -117,6 +117,9 @@ struct ndarray {
   T& operator[](size_t i) {return p[i];}
   const T& operator[](size_t i) const {return p[i];}
 
+  template <typename T1>
+  void from_array(const ndarray<T1>& array1);
+
   void from_vector(const std::vector<T> &array);
   void copy_vector(const std::vector<T> &array);
 
@@ -160,6 +163,15 @@ private:
 template <typename T>
 void ndarray<T>::to_vector(std::vector<T> &out_vector) const{
   out_vector = p; 
+}
+
+template <typename T>
+template <typename T1>
+void ndarray<T>::from_array(const ndarray<T1>& array1)
+{
+  reshape(array1.shape());
+  for (auto i = 0; i < p.size(); i ++)
+    p[i] = static_cast<T>(array1[i]);
 }
 
 template <typename T>

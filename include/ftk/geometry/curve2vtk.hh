@@ -1,6 +1,8 @@
 #ifndef _FTK_CURVE2VTK_HH
 #define _FTK_CURVE2VTK_HH
 
+#if FTK_HAVE_VTK
+
 #include <vtkPolyData.h>
 #include <vtkPolyLine.h>
 #include <vtkCellArray.h>
@@ -73,5 +75,7 @@ void write_curves_vtk(const std::vector<std::vector<T>>& curves, const std::stri
 }
 
 }
+
+#endif
 
 #endif

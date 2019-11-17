@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 
   tracker.update();
 
-#if 1 // FTK_HAVE_VTK
+#if FTK_HAVE_VTK
   auto polydata = tracker.get_results_vtk();
   // auto polydata = tracker.get_discrete_critical_points_vtk();
   ftk::write_vtp("asdf2.vtp", polydata);

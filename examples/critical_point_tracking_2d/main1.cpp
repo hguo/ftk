@@ -17,7 +17,7 @@ int main(int argc, char **argv)
   // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
   tracker.update();
 
-#if 1 // FTK_HAVE_VTK
+#if FTK_HAVE_VTK
   auto polydata = tracker.get_results_vtk();
   ftk::write_vtp("asdf1.vtp", polydata);
 #endif
