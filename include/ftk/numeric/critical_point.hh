@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/numeric/eigen_solver2.hh>
+#include <ftk/numeric/eigen_solver3.hh>
 
 namespace ftk {
 
@@ -17,7 +18,21 @@ enum {
   CRITICAL_POINT_2D_CENTER = 0x1000000,
   // for scalar field 
   CRITICAL_POINT_2D_MINIMUM = 0x10,
-  CRITICAL_POINT_2D_MAXIMUM = 0x100,
+  CRITICAL_POINT_2D_MAXIMUM = 0x100
+};
+
+enum {
+  CRITICAL_POINT_3D_UNKNOWN = 0,
+  CRITICAL_POINT_3D_DEGENERACY = 0x1,
+  CRITICAL_POINT_3D_ATTRACTING = 0x10,
+  CRITICAL_POINT_3D_REPELLING = 0x100,
+  CRITICAL_POINT_3D_SADDLE = 0x1000,
+  CRITICAL_POINT_3D_UNSTABLE_ATTRACTING = 0x10000,
+  CRITICAL_POINT_3D_UNSTABLE_REPELLING = 0x100000,
+  CRITICAL_POINT_3D_UNSTABLE_SADDLE = 0x1000000,
+  // for scalar field
+  CRITICAL_POINT_3D_MINIMUM = 0x10,
+  CRITICAL_POINT_3D_MAXIMUM = 0x100
 };
 
 template <typename T>
@@ -32,8 +47,8 @@ unsigned int critical_point_type_2d(T J[2][2], bool symmetric)
     else if (eig[0] * eig[1] < 0) return CRITICAL_POINT_2D_SADDLE;
     else return CRITICAL_POINT_2D_DEGENERACY;
   } else {
-    std::complex<double> eig[2];
-    double delta = ftk::solve_eigenvalues2x2(J, eig);
+    std::complex<T> eig[2];
+    T delta = ftk::solve_eigenvalues2x2(J, eig);
     
     if (delta >= 0) { // two real roots
       if (eig[0].real() * eig[1].real() < 0) 
@@ -52,6 +67,26 @@ unsigned int critical_point_type_2d(T J[2][2], bool symmetric)
       else 
         return CRITICAL_POINT_2D_CENTER;
     }
+  }
+}
+
+template <typename T>
+unsigned int critical_point_type_3d(T J[3][3], bool symmetric)
+{
+  if (symmetric) {
+    T eig[3];
+    solve_eigenvalues_symmetric3x3(J, eig);
+
+    if (eig[0] * eig[1] * eig[2] == T(0)) return CRITICAL_POINT_3D_DEGENERACY;
+    if (eig[0] < 0 && eig[1] < 0 && eig[2] < 0) return CRITICAL_POINT_3D_MINIMUM;
+    else if (eig[0] > 0 && eig[1] > 0 && eig[2] > 0) return CRITICAL_POINT_3D_MAXIMUM;
+    else return CRITICAL_POINT_2D_SADDLE;
+  } else {
+    // std::complex<T> eig[3];
+    // ftk::solve_eigenvalues3x3(J, eig); 
+
+    // TODO
+    return CRITICAL_POINT_3D_UNKNOWN;
   }
 }
 

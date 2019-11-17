@@ -53,6 +53,21 @@ ndarray<T> synthetic_woven_2Dt(int DW, int DH, int DT, T scaling_factor = T(15))
   return scalar;
 }
 
+// double gyre 2D flow
+template <typename T>
+ndarray<T> synthetic_double_gyre(int DW, int DH)
+{
+
+}
+
+// ABC flow
+template <typename T>
+ndarray<T> synthetic_abc_flow(int DW, int DH, int DD, 
+    T A=std::sqrt(T(3)), T B=std::sqrt(T(2)), T C=T(1))
+{
+
+}
+
 }
 
 #endif

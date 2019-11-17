@@ -1,2 +1,5 @@
 add_executable (ex_critical_point_tracking_3d ex_critical_point_tracking_3d.cpp)
 target_link_libraries (ex_critical_point_tracking_3d ftk)
+
+add_executable (ex_critical_point_tracking_3d_regular main1.cpp)
+target_link_libraries (ex_critical_point_tracking_3d_regular ftk)
