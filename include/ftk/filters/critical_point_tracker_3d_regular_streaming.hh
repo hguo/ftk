@@ -38,7 +38,7 @@ void critical_point_tracker_3d_regular_streaming::advance_timestep()
 {
   update_timestep();
 
-  fprintf(stderr, "advancing timestep!\n");
+  // fprintf(stderr, "advancing timestep!\n");
   const int nt = 2;
   if (scalar.size() > nt) scalar.pop_back();
   if (V.size() > nt) V.pop_back();
@@ -55,11 +55,12 @@ void critical_point_tracker_3d_regular_streaming::advance_timestep()
 
 void critical_point_tracker_3d_regular_streaming::update()
 {
+#if 0 // doesn't make difference
   std::vector<int> lb, ub;
   m.get_lb_ub(lb, ub);
-  ub[2] = current_timestep - 1;
+  ub[3] = current_timestep - 1;
   m.set_lb_ub(lb, ub);
-
+#endif
   // fprintf(stderr, "trace1\n");
   // trace_intersections();
   fprintf(stderr, "trace2\n");
@@ -94,7 +95,7 @@ void critical_point_tracker_3d_regular_streaming::update_timestep()
 
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
-  auto func2 = [=](element_t e) {
+  auto func3 = [=](element_t e) {
       critical_point_3dt_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
@@ -104,9 +105,9 @@ void critical_point_tracker_3d_regular_streaming::update_timestep()
     };
 
   if (V.size() >= 2)
-    m.element_for_interval(3, current_timestep-1, current_timestep, func2);
+    m.element_for_interval(3, current_timestep-1, current_timestep, func3);
 
-  m.element_for_ordinal(3, current_timestep, func2);
+  m.element_for_ordinal(3, current_timestep, func3);
 }
 
 void critical_point_tracker_3d_regular_streaming::simplex_vectors(

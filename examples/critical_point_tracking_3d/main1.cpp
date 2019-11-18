@@ -1,6 +1,7 @@
 #include <ftk/filters/critical_point_tracker_3d_regular.hh>
 #include <ftk/filters/critical_point_tracker_3d_regular_streaming.hh>
 #include <ftk/filters/critical_point_tracker_3d_regular_distributed.hh>
+#include <ftk/filters/critical_point_tracker_3d_regular_distributed_streaming.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 
@@ -15,7 +16,7 @@ int main(int argc, char **argv)
 {
   diy::mpi::environment env(argc, argv);
 
-#if 1 // non-streaming version
+#if 0 // non-streaming version
   size_t starts[4] = {0, 0, 0, 0}, 
          sizes[4]  = {size_t(DT), size_t(DD), size_t(DH), size_t(DW)};
 
@@ -30,8 +31,9 @@ int main(int argc, char **argv)
   tracker.set_lb_ub({32, 32, 32, 0}, {64, 64, 64, DT-1});
   tracker.update();
 #else // streaming version
-  ftk::critical_point_tracker_3d_regular_streaming tracker;
-  tracker.set_lb_ub({32, 32, 32, 0}, {64, 64, 64, DT-1});
+  // ftk::critical_point_tracker_3d_regular_streaming tracker;
+  ftk::critical_point_tracker_3d_regular_distributed_streaming tracker;
+  tracker.set_lb_ub({32, 32, 32, 0}, {64, 64, 64, DT});
 
   for (size_t t = 0; t < DT; t ++) {
     size_t starts[4] = {t, 0, 0, 0}, 

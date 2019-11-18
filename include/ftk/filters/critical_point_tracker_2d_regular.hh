@@ -50,12 +50,12 @@ struct critical_point_tracker_2d_regular : public filter {
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
   void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
 
-  void get_results();
-
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_results_vtk() const;
-  vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
+  virtual vtkSmartPointer<vtkPolyData> get_results_vtk() const;
+  virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
 #endif
+  void save_traced_critical_points_vtk(const std::string& filename);
+  void save_discrete_critical_points_vtk(const std::string& filename);
 
 protected:
   ndarray<double> scalar, V, gradV;
