@@ -9,6 +9,7 @@ namespace diy { namespace mpi {
 template <typename K, typename V> // merging an std::map to root using gather
 inline void gather(const communicator& comm, const std::map<K, V>& in, std::map<K, V> &out, int root)
 {
+#if FTK_HAVE_MPI
   // serialize input map
   std::string serialized_in;
   if (comm.rank() != root) // avoid serializing data from the root proc
@@ -50,6 +51,9 @@ inline void gather(const communicator& comm, const std::map<K, V>& in, std::map<
         out.insert(kv);
     }
   }
+#else
+  out = in;
+#endif
 }
 
 }

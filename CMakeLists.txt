@@ -20,7 +20,7 @@ function (ftk_option name description default)
 endfunction ()
 
 ftk_option (VTK "Use VTK" AUTO)
-ftk_option (Kokkos "Use Kokkos" AUTO)
+ftk_option (Kokkos "Use Kokkos" FALSE) # experimental
 ftk_option (Qt5 "Use Qt5" AUTO)
 ftk_option (MPI "Use MPI" AUTO)
 ftk_option (NETCDF "Use NetCDF" AUTO)
