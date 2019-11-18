@@ -2,6 +2,7 @@
 #define _HYPERMESH_SYNTHETIC_DATA_H
 
 #include <ftk/ndarray.hh>
+#include <ftk/hypermesh/lattice.hh>
 
 namespace ftk {
 
@@ -24,6 +25,25 @@ ndarray<T> synthetic_woven_2D(int DW, int DH, T t = T(1e-4), T scaling_factor = 
     for (int i = 0; i < DW; i ++) {
       const T x = ((T(i) / (DW-1)) - 0.5) * scaling_factor,
               y = ((T(j) / (DH-1)) - 0.5) * scaling_factor;
+      scalar(i, j) = woven_function_2Dt(x, y, t);
+    }
+  }
+
+  return scalar;
+}
+
+// generate 2D woven data in a subdomain
+template <typename T>
+ndarray<T> synthetic_woven_2D_part(const lattice& domain, const lattice& subdomain, T t = T(1e-4), T scaling_factor = T(15))
+{
+  ndarray<T> scalar;
+  scalar.reshape(subdomain.sizes());
+
+  const int DW = domain.size(0), DH = domain.size(1);
+  for (int j = 0; j < subdomain.size(1) ; j ++) {
+    for (int i = 0; i < subdomain.size(0); i ++) {
+      const T x = ((T(i + subdomain.start(0)) / (DW-1)) - 0.5) * scaling_factor,
+              y = ((T(j + subdomain.start(1)) / (DH-1)) - 0.5) * scaling_factor;
       scalar(i, j) = woven_function_2Dt(x, y, t);
     }
   }

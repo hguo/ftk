@@ -8,6 +8,10 @@
 #include <tuple>
 #include <glob.h>
 
+#if FTK_HAVE_MPI
+#include <mpi.h>
+#endif
+
 #if FTK_HAVE_NETCDF
 #include <netcdf.h>
 #define NC_SAFE_CALL(call) {\
@@ -139,6 +143,10 @@ struct ndarray {
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d);
 #endif
 
+#if FTK_HAVE_PNETCDF
+  void from_pnetcdf_all(int ncid, int varid, const MPI_Offset *st, const MPI_Offset *sz);
+#endif
+
   void from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[]);
@@ -154,6 +162,10 @@ struct ndarray {
 
   // statistics
   std::tuple<T, T> min_max() const;
+
+#if FTK_HAVE_MPI
+  static MPI_Datatype mpi_datatype();
+#endif
 
 private:
   std::vector<size_t> dims, s;
@@ -509,6 +521,26 @@ std::tuple<T, T> ndarray<T>::min_max() const {
 
   return std::make_tuple(min, max);
 }
+
+#if FTK_HAVE_MPI
+template <>
+MPI_Datatype ndarray<double>::mpi_datatype()
+{
+  return MPI_DOUBLE;
+}
+
+template <>
+MPI_Datatype ndarray<float>::mpi_datatype()
+{
+  return MPI_FLOAT;
+}
+
+template <>
+MPI_Datatype ndarray<int>::mpi_datatype()
+{
+  return MPI_INT;
+}
+#endif
 
 }
 
