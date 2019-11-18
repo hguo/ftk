@@ -97,7 +97,7 @@ void critical_point_tracker_2d_regular::update()
     }
     if (!has_jacobian_field) {
       gradV = jacobian2Dt(V);
-      has_vector_field = true;
+      has_jacobian_field = true;
     }
     symmetric_jacobian = true;
   }
@@ -120,7 +120,7 @@ void critical_point_tracker_2d_regular::update()
       }
     }); 
   
-  fprintf(stderr, "trace intersections...\n");
+  // fprintf(stderr, "trace intersections...\n");
   // trace_intersections();
 
   // convert connected components to traced critical points

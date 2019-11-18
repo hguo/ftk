@@ -137,7 +137,6 @@ ndarray<T> gradient3Dt(const ndarray<T>& scalar)
 template <typename T>
 ndarray<T> jacobian3D(const ndarray<T>& V)
 {
-  // WIF
   const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3);
   ndarray<T> J;
   J.reshape({3, 3, DW, DH, DD});

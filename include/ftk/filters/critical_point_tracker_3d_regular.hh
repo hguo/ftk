@@ -107,7 +107,7 @@ void critical_point_tracker_3d_regular::update()
     }
     if (!has_jacobian_field) {
       gradV = jacobian3Dt(V);
-      has_vector_field = true;
+      has_jacobian_field = true;
     }
     symmetric_jacobian = true;
   }
@@ -135,7 +135,7 @@ void critical_point_tracker_3d_regular::update()
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         discrete_critical_points[e] = cp;
-        fprintf(stderr, "%f, %f, %f, %f\n", cp[0], cp[1], cp[2], cp[3]);
+        fprintf(stderr, "%f, %f, %f, %f, type=%d\n", cp[0], cp[1], cp[2], cp[3], cp.type);
       }
     });
   
@@ -206,7 +206,7 @@ void critical_point_tracker_3d_regular::simplex_jacobians(
   for (int i = 0; i < 4; i ++)
     for (int j = 0; j < 3; j ++)
       for (int k = 0; k < 3; k ++) 
-        Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2], vertices[i][3]);
+        Js[i][j][k] = gradV(j, k, vertices[i][0], vertices[i][1], vertices[i][2], vertices[i][3]);
 }
 
 bool critical_point_tracker_3d_regular::check_simplex(
@@ -239,6 +239,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
     double Js[4][3][3];
     simplex_jacobians(vertices, Js);
     ftk::lerp_s3m3x3(Js, mu, J);
+    // ftk::print3x3("J", J); // FIXME: I don't understand why J is usually not symmetric here...
   } else {
     // TODO: jacobian not given
   }
