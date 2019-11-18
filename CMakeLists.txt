@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.1.3)
+cmake_minimum_required (VERSION 3.9)
 project (ftk)
 
 set (FTK_MAJOR_VERSION 0)
@@ -10,6 +10,8 @@ set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set (LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
 # dependencies
 function (ftk_option name description default)
@@ -18,6 +20,7 @@ function (ftk_option name description default)
 endfunction ()
 
 ftk_option (VTK "Use VTK" AUTO)
+ftk_option (Kokkos "Use Kokkos" AUTO)
 ftk_option (Qt5 "Use Qt5" AUTO)
 ftk_option (MPI "Use MPI" AUTO)
 ftk_option (NETCDF "Use NetCDF" AUTO)
@@ -25,11 +28,14 @@ ftk_option (HDF5 "Use HDF5" AUTO)
 ftk_option (PNETCDF "Use parallel-netcdf" AUTO)
 ftk_option (MPSolve "Use MPSolve" AUTO)
 ftk_option (GSL "Use GSL (GNU Scientific Library)" AUTO)
-ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" AUTO)
+ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # this feature is experimental
 ftk_option (PNG "Use PNG" AUTO)
 ftk_option (LevelDB "Use LevelDB" AUTO)
 ftk_option (RocksDB "Use RocksDB" AUTO)
 ftk_option (Boost "Use Boost" AUTO)
+ftk_option (OpenMP "Use OpenMP" AUTO)
+
+find_package (Threads REQUIRED)
 
 if (FTK_USE_VTK STREQUAL AUTO)
   find_package (VTK QUIET)
@@ -41,7 +47,15 @@ if (VTK_FOUND)
   include (${VTK_USE_FILE})
 endif ()
 
-find_package (Threads REQUIRED)
+if (FTK_USE_Kokkos STREQUAL AUTO)
+  find_package (Kokkos QUIET)
+elseif (FTK_USE_Kokkos)
+  find_package (Kokkos REQUIRED)
+endif ()
+if (Kokkos_FOUND)
+  set (FTK_HAVE_KOKKOS TRUE)
+  include_directories (${Kokkos_INCLUDE_DIRS})
+endif ()
 
 if (FTK_USE_Qt5 STREQUAL AUTO)
   find_package (OpenGL QUIET)
@@ -153,7 +167,16 @@ if (RocksDB_FOUND)
   set (FTK_HAVE_ROCKSDB TRUE)
   include_directories (${RocksDB_INCLUDE_DIR})
 endif ()
-  
+
+if (FTK_USE_OpenMP STREQUAL AUTO)
+  find_package (OpenMP QUIET)
+elseif (FTK_USE_OpenMP)
+  find_package (OpenMP REQUIRED)
+endif ()
+if (OpenMP_CXX_FOUND)
+  set (FTK_HAVE_OPENMP TRUE)
+endif ()
+
 set (Boost_USE_STATIC_LIBS ON)
 set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME OFF)
@@ -183,7 +206,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
 
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ftk DESTINATION include)
-install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/hypermesh DESTINATION include)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh DESTINATION include)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in

@@ -347,6 +347,7 @@ namespace diy
     public:
       std::shared_ptr<spd::logger>  log = get_logger();
       stats::Profiler               prof;
+      stats::Annotation             exchange_round_annotation { "diy.exchange-round" };
   };
 
   struct Master::SkipNoIncoming
@@ -619,6 +620,8 @@ void
 diy::Master::
 foreach_(const Callback<Block>& f, const Skip& skip)
 {
+    exchange_round_annotation.set(exchange_round_);
+
     auto scoped = prof.scoped("foreach");
     DIY_UNUSED(scoped);
 
@@ -689,10 +692,12 @@ iexchange_(const    ICallback<Block>&   f,
            bool                         fine)
 {
     auto scoped = prof.scoped("iexchange");
+    DIY_UNUSED(scoped);
 
     // prepare for next round
     incoming_.erase(exchange_round_);
     ++exchange_round_;
+    exchange_round_annotation.set(exchange_round_);
 
     //IExchangeInfoDUD iexchange(comm_, min_queue_size, max_hold_time, fine, prof);
     IExchangeInfoCollective iexchange(comm_, min_queue_size, max_hold_time, fine, prof);
@@ -704,6 +709,7 @@ iexchange_(const    ICallback<Block>&   f,
         for (size_t i = 0; i < size(); i++)     // for all blocks
         {
             iexchange.from_gid = gid(i);       // for shortcut sending only from current block during icommunicate
+            stats::Annotation::Guard g( stats::Annotation("diy.block").set(iexchange.from_gid) );
 
             icommunicate(&iexchange);               // TODO: separate comm thread std::thread t(icommunicate);
             ProxyWithLink cp = proxy(i, &iexchange);
@@ -744,6 +750,7 @@ diy::Master::
 comm_exchange(GidSendOrder& gid_order, IExchangeInfo* iexchange)
 {
     auto scoped = prof.scoped("comm-exchange");
+    DIY_UNUSED(scoped);
 
     send_outgoing_queues(gid_order, false, iexchange);
 
@@ -852,6 +859,7 @@ diy::Master::
 icommunicate(IExchangeInfo* iexchange)
 {
     auto scoped = prof.scoped("icommunicate");
+    DIY_UNUSED(scoped);
 
     log->debug("Entering icommunicate()");
 
@@ -889,6 +897,10 @@ send_queue(int              from_gid,
            bool             remote,
            IExchangeInfo*   iexchange)
 {
+    stats::Annotation::Guard gb( stats::Annotation("diy.block").set(from_gid) );
+    stats::Annotation::Guard gt( stats::Annotation("diy.to").set(to_gid) );
+    stats::Annotation::Guard gq( stats::Annotation("diy.q-size").set(stats::Variant(static_cast<uint64_t>(out_queue.size()))) );
+
     // skip empty queues and hold queues shorter than some limit for some time
     if ( iexchange && (out_queue.size() == 0 || iexchange->hold(out_queue.size())) )
         return;
@@ -910,6 +922,7 @@ send_outgoing_queues(GidSendOrder&   gid_order,
                      IExchangeInfo*  iexchange)
 {
     auto scoped = prof.scoped("send-outgoing-queues");
+    DIY_UNUSED(scoped);
 
     if (iexchange)                                      // for iexchange, send queues from a single block
     {
@@ -1136,6 +1149,7 @@ diy::Master::
 check_incoming_queues(IExchangeInfo* iexchange)
 {
     auto scoped = prof.scoped("check-incoming-queues");
+    DIY_UNUSED(scoped);
 
     mpi::optional<mpi::status> ostatus = comm_.iprobe(mpi::any_source, tags::queue);
     while (ostatus)
@@ -1176,6 +1190,8 @@ flush(bool remote)
   // prepare for next round
   incoming_.erase(exchange_round_);
   ++exchange_round_;
+  exchange_round_annotation.set(exchange_round_);
+
 
   if (remote)
       rcomm_exchange();

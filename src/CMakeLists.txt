@@ -12,6 +12,10 @@ if (FTK_HAVE_VTK)
   target_link_libraries (ftk ${VTK_LIBRARIES})
 endif ()
 
+if (FTK_HAVE_KOKKOS)
+  target_link_libraries (ftk ${Kokkos_LIBRARIES})
+endif ()
+
 if (FTK_HAVE_NETCDF)
   target_link_libraries (ftk ${NETCDF_LIBRARY})
 endif ()
@@ -42,4 +46,8 @@ endif ()
 
 if (FTK_HAVE_ROCKSDB)
   target_link_libraries (ftk ${RocksDB_LIBRARY})
+endif ()
+
+if (FTK_HAVE_OPENMP)
+  target_link_libraries (ftk OpenMP::OpenMP_CXX)
 endif ()

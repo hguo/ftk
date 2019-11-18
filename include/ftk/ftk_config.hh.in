@@ -3,6 +3,7 @@
 
 #cmakedefine FTK_HAVE_MPI 1
 #cmakedefine FTK_HAVE_TBB 1
+#cmakedefine FTK_HAVE_KOKKOS 1
 #cmakedefine FTK_HAVE_MPSOLVE 1
 #cmakedefine FTK_HAVE_NETCDF 1
 #cmakedefine FTK_HAVE_PNETCDF 1
@@ -14,5 +15,6 @@
 #cmakedefine FTK_HAVE_LEVELDB 1
 #cmakedefine FTK_HAVE_ROCKSDB 1
 #cmakedefine FTK_HAVE_BOOST 1
+#cmakedefine FTK_HAVE_OPENMP 1
 
 #endif

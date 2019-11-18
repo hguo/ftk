@@ -11,7 +11,7 @@ public:
 
 // test (sparse) union-find
 TEST_F(union_find_test, union_find) {
-  ftk::union_find<std::string> UF = ftk::union_find<std::string>(); 
+  ftk::union_find<std::string> UF; 
   UF.add("00"); 
   UF.add("11"); 
   UF.add("22"); 
@@ -31,7 +31,7 @@ TEST_F(union_find_test, union_find) {
 
 // test simple union-find
 TEST_F(union_find_test, simple_union_find) {
-  ftk::simple_union_find<int> UF = ftk::simple_union_find<int>(10); 
+  ftk::simple_union_find<int> UF(10); 
   UF.unite(1, 2);
   UF.unite(2, 3); 
 

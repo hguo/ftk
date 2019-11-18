@@ -1,9 +1,68 @@
 #ifndef _FTK_CCA_H
 #define _FTK_CCA_H
 
-#include "ftk/basic/union_find.hh"
+#include <set>
+#include <map>
+#include <string>
+
+#include <ftk/basic/union_find.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 
 namespace ftk {
+
+// ================================================================
+// Extract connected components by given mesh elements
+
+#if 0
+typedef regular_simplex_mesh_element EleType;
+template <class ContainerType>
+std::vector<std::set<EleType> > extract_connected_components_element(
+    const std::function<ContainerType(EleType) >& neighbors,
+    const std::set<EleType> &qualified_)
+{
+  std::set<EleType> qualified(qualified_);
+
+  union_find<std::string> UF; 
+  std::map<std::string, EleType> id2ele; 
+  // for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
+  for(auto& ele : qualified) {
+    std::string id = ele.to_string(); 
+
+    UF.add(id); 
+    id2ele.insert(std::make_pair (id, ele)); 
+  }
+
+  for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
+    std::string current = ite->to_string(); 
+
+    for (auto nei_ite : neighbors(*ite)) {
+      std::string neighbor = nei_ite.to_string(); 
+
+      if (UF.has(neighbor)) {
+        UF.unite(current, neighbor); 
+      }
+    }
+  }
+
+  std::vector<std::set<std::string> > components_str = UF.get_sets();
+
+  // Convert element ids to elements
+  std::vector<std::set<EleType> >  components; 
+  for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
+    std::set<EleType> comp; 
+    for(auto ele_id = comp_str->begin(); ele_id != comp_str->end(); ++ele_id) {
+      comp.insert(id2ele.find(*ele_id)->second); 
+    }
+
+    components.push_back(comp); 
+  }
+
+  return components;
+}
+#endif
+
+// ================================================================
+// Extract connected components by given IDs
 
 template <class IdType>
 std::set<std::pair<IdType, IdType> > track_connected_components(

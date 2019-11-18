@@ -6,6 +6,12 @@
 #include <set>
 #include <iostream>
 
+
+// Sequential union-find
+  // All elements need to be added by invoking the add function at the initialization stage. 
+  // This program cannot be used for parallel purpose since it is not thread-safe. 
+  // This program assumes all elements are stored on the same memory. 
+
 // Reference 
   // Paper: "Worst-case Analysis of Set Union Algorithms"
   // Online slides: https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf
@@ -16,13 +22,17 @@ namespace ftk {
 template <class IdType=std::string>
 struct union_find
 {
-  union_find() {
+  union_find() : eles(), id2parent(), sz() {
     
   }
 
   // Initialization
-  // Add and initialize elements
+  // Add and initialize an element
   void add(IdType i) {
+    if(has(i)) { // If the element has been added, then skip it. 
+      return ;
+    }
+
     eles.insert(i); 
     // id2parent[i] = i; 
     id2parent.insert(std::make_pair (i, i)); 
@@ -32,10 +42,12 @@ struct union_find
   // Operations
   
   // Union by size
-  bool unite(IdType i, IdType j) {
-    if(!has(i) || !has(j)) {
-      return false ;
-    }
+  void unite(IdType i, IdType j) {
+    // if(!has(i) || !has(j)) {
+    //   throw "No such element. ";
+
+    //   return  ;
+    // }
 
     i = find(i);
     j = find(j);
@@ -49,8 +61,6 @@ struct union_find
       id2parent.find(j)->second = i; 
       sz[i] += sz[j];
     }
-
-    return true; 
   }
 
   // Queries
@@ -60,9 +70,9 @@ struct union_find
   }
 
   IdType parent(IdType i) {
-    if(!has(i)) {
-      return i; 
-    }
+    // if(!has(i)) {
+    //   throw "No such element. ";
+    // }
 
     // return id2parent[i]; 
     return id2parent.find(i)->second; 
@@ -72,9 +82,9 @@ struct union_find
     // If the element is not in the data structure, return the element itself. 
     // Path compression by path halving method
   IdType find(IdType i) {
-    if(!has(i)) {
-      return i; 
-    }
+    // if(!has(i)) {
+    //   throw "No such element. "; 
+    // }
 
     IdType& parent_i = id2parent.find(i)->second; 
     while (i != parent_i) {
@@ -89,18 +99,24 @@ struct union_find
   }
 
   bool is_root(IdType i) {
-    if(!has(i)) {
-      return false; 
-    }
+    // if(!has(i)) {
+    //   throw "No such element. ";
+    // }
 
     return i == id2parent[i]; 
   }
 
   bool same_set(IdType i, IdType j) {
+    // if(!has(i) || !has(j)) {
+    //   throw "No such element. ";
+    // }
+
     return find(i) == find(j);
   }
 
-  std::vector<std::set<IdType>> get_sets() {
+  // Get sets of elements
+
+  void get_sets(std::vector<std::set<IdType>>& results) {
     std::map<IdType, std::set<IdType>> root2set; 
     for(auto ite = eles.begin(); ite != eles.end(); ++ite) {
       IdType root = find(*ite); 
@@ -108,11 +124,15 @@ struct union_find
       root2set[root].insert(*ite);
     }
 
-    std::vector<std::set<IdType>> results; 
     for(auto ite = root2set.begin(); ite != root2set.end(); ++ite) {
       // if(is_root(*ite))
       results.push_back(ite->second); 
     }
+  }
+
+  std::vector<std::set<IdType>> get_sets() {
+    std::vector<std::set<IdType>> results; 
+    this->get_sets(results); 
 
     return results; 
   }

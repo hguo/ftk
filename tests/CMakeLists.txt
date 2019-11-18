@@ -24,6 +24,9 @@ target_link_libraries (test_quadratic_interpolation ftk ${GTEST_BOTH_LIBRARIES})
 add_executable (test_union_find test_union_find.cpp)
 target_link_libraries (test_union_find ftk ${GTEST_BOTH_LIBRARIES})
 
+add_executable (test_regular_simplex_mesh test_regular_simplex_mesh.cpp)
+target_link_libraries (test_regular_simplex_mesh ftk ${GTEST_BOTH_LIBRARIES})
+
 gtest_discover_tests (test_matrix)
 gtest_discover_tests (test_conv)
 gtest_discover_tests (test_polynomial)

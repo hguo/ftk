@@ -13,7 +13,7 @@ namespace ftk {
 template <class IdType=size_t>
 struct simple_union_find
 {
-  simple_union_find(IdType size) {
+  simple_union_find(IdType size) : id2parent(), sz() {
     id2parent.resize(size);
     sz.resize(size, 1);
 
