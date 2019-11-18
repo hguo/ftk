@@ -8,6 +8,11 @@
 namespace ftk {
 
 struct filter {
+  filter() {
+    if (comm.size() > 1) nthreads = 1;
+    else nthreads = std::thread::hardware_concurrency(); // TODO
+  }
+
   diy::mpi::communicator comm;
 
   int nthreads = 1;

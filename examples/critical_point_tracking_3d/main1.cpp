@@ -9,7 +9,7 @@
 #include <ftk/geometry/points2vtk.hh>
 #endif
 
-const int DW = 128, DH = 128, DD = 128;// the dimensionality of the data is DW*DH
+const int DW = 128, DH = 128, DD = 128;
 const int DT = 6; // number of timesteps
 
 int main(int argc, char **argv)
