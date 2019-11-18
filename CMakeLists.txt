@@ -34,6 +34,7 @@ ftk_option (LevelDB "Use LevelDB" AUTO)
 ftk_option (RocksDB "Use RocksDB" AUTO)
 ftk_option (Boost "Use Boost" AUTO)
 ftk_option (OpenMP "Use OpenMP" AUTO)
+ftk_option (CUDA "Use CUDA" FALSE) # experimental
 
 find_package (Threads REQUIRED)
 
@@ -175,6 +176,16 @@ elseif (FTK_USE_OpenMP)
 endif ()
 if (OpenMP_CXX_FOUND)
   set (FTK_HAVE_OPENMP TRUE)
+endif ()
+
+if (FTK_USE_CUDA STREQUAL AUTO)
+  find_package (CUDA QUIET)
+elseif (FTK_USE_CUDA)
+  find_package (CUDA REQUIRED)
+endif ()
+if (CUDA_FOUND)
+  set (FTK_HAVE_CUDA TRUE)
+  set (CUDA_PROPAGATE_HOST_FLAGS OFF)
 endif ()
 
 set (Boost_USE_STATIC_LIBS ON)
