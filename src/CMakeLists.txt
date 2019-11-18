@@ -47,3 +47,7 @@ endif ()
 if (FTK_HAVE_ROCKSDB)
   target_link_libraries (ftk ${RocksDB_LIBRARY})
 endif ()
+
+if (FTK_HAVE_OPENMP)
+  target_link_libraries (ftk OpenMP::OpenMP_CXX)
+endif ()

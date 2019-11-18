@@ -15,5 +15,6 @@
 #cmakedefine FTK_HAVE_LEVELDB 1
 #cmakedefine FTK_HAVE_ROCKSDB 1
 #cmakedefine FTK_HAVE_BOOST 1
+#cmakedefine FTK_HAVE_OPENMP 1
 
 #endif
