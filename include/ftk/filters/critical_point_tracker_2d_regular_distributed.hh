@@ -3,6 +3,7 @@
 
 #include <ftk/filters/critical_point_tracker_2d_regular_streaming.hh>
 #include <ftk/hypermesh/lattice_partitioner.hh>
+#include <ftk/numeric/critical_point.hh>
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy-ext/gather.hh>
 #include <mpi.h>

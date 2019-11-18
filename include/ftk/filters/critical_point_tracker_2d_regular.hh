@@ -10,13 +10,14 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
+#include <ftk/numeric/critical_point.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
-#include <ftk/filters/critical_point_extractor_2d_regular.hh>
+#include <ftk/filters/critical_point_tracker.hh>
 #include <ftk/ndarray.hh>
+#include <ftk/ndarray/grad.hh>
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
-
 #include <ftk/external/diy/serialization.hpp>
 
 #if FTK_HAVE_VTK
@@ -25,14 +26,9 @@
 
 namespace ftk {
 
-struct critical_point_2dt_t {
-  double operator[](size_t i) const {if (i > 3) return 0; else return x[i];}
-  double x[3];
-  double scalar;
-  int type = 0;
-};
+typedef critical_point_t<3, double> critical_point_2dt_t;
 
-struct critical_point_tracker_2d_regular : public filter {
+struct critical_point_tracker_2d_regular : public critical_point_tracker {
   critical_point_tracker_2d_regular() : m(3) {}
   virtual ~critical_point_tracker_2d_regular() {}
   
@@ -51,11 +47,9 @@ struct critical_point_tracker_2d_regular : public filter {
   void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
 
 #if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_results_vtk() const;
+  virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
   virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
 #endif
-  void save_traced_critical_points_vtk(const std::string& filename);
-  void save_discrete_critical_points_vtk(const std::string& filename);
 
 protected:
   ndarray<double> scalar, V, gradV;
@@ -259,7 +253,7 @@ bool critical_point_tracker_2d_regular::check_simplex(
 } 
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_results_vtk() const
+vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_traced_critical_points_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -368,7 +362,6 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_cri
   return polyData;
 }
 #endif
-
 }
 
 

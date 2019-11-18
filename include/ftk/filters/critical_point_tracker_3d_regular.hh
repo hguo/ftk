@@ -17,7 +17,7 @@
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
-#include <ftk/filters/filter.hh>
+#include <ftk/filters/critical_point_tracker.hh>
 
 #include <ftk/external/diy/serialization.hpp>
 
@@ -35,14 +35,9 @@
 
 namespace ftk {
 
-struct critical_point_3dt_t {
-  double operator[](size_t i) const {if (i > 4) return 0; else return x[i];}
-  double x[4]; // spatiotemporal coordinates of critical points
-  double scalar = 0.0; // scalar is available only if the vector field is conservative
-  int type = 0;
-};
+typedef critical_point_t<4, double> critical_point_3dt_t;
 
-struct critical_point_tracker_3d_regular : public filter {
+struct critical_point_tracker_3d_regular : public critical_point_tracker {
   critical_point_tracker_3d_regular() : m(4) {}
   virtual ~critical_point_tracker_3d_regular() {}
   
@@ -60,10 +55,8 @@ struct critical_point_tracker_3d_regular : public filter {
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
   void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
 
-  void get_results();
-
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_results_vtk() const;
+  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
   vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
 #endif
 
@@ -250,7 +243,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
 } 
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_results_vtk() const
+vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_traced_critical_points_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();

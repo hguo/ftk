@@ -1,6 +1,9 @@
 #ifndef _FTK_POINTS2VTK_HH
 #define _FTK_POINTS2VTK_HH
 
+#include <ftk/ftk_config.hh>
+
+#if FTK_HAVE_VTK
 #include <vtkSmartPointer.h>
 #include <vtkDoubleArray.h>
 #include <vtkPoints.h>
@@ -79,5 +82,5 @@ void write_vtp(const std::string& filename, vtkSmartPointer<vtkPolyData> polydat
 }
 
 }
-
+#endif
 #endif

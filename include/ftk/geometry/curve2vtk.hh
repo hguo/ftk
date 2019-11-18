@@ -1,6 +1,8 @@
 #ifndef _FTK_CURVE2VTK_HH
 #define _FTK_CURVE2VTK_HH
 
+#include <ftk/ftk_config.hh>
+
 #if FTK_HAVE_VTK
 
 #include <vtkPolyData.h>
