@@ -299,9 +299,10 @@ inline void ndarray<T>::from_vtk_image_data(vtkSmartPointer<vtkImageData> d)
             for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
               p.push_back(d->GetScalarComponentAsDouble(i, j, k, c));
     }
-  } else 
+  } else {
     fprintf(stderr, "[FTK] fatal error: unsupported data dimension %d.\n", nd);
-
+    assert(false);
+  }
 }
 
 template<typename T>
@@ -335,12 +336,14 @@ template<typename T>
 inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename)
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
+  assert(false);
 }
 
 template<typename T>
 inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pattern)
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
+  assert(false);
 }
 #endif
 
@@ -434,24 +437,28 @@ template <typename T>
 inline void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
+  assert(false);
 }
 
 template <typename T>
 inline void ndarray<T>::from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
+  assert(false);
 }
 
 template <typename T>
 inline void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname)
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
+  assert(false);
 }
 
 template <typename T>
 inline void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
+  assert(false);
 }
 #endif
 

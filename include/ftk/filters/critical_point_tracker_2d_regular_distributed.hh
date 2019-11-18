@@ -6,7 +6,6 @@
 #include <ftk/numeric/critical_point.hh>
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy-ext/gather.hh>
-#include <mpi.h>
 
 namespace ftk {
 

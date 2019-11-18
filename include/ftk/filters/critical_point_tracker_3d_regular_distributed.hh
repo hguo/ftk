@@ -5,7 +5,6 @@
 #include <ftk/hypermesh/lattice_partitioner.hh>
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy-ext/gather.hh>
-#include <mpi.h>
 
 namespace ftk {
 
