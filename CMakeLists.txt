@@ -188,7 +188,7 @@ set (FTK_INCLUDE_DIR
 include_directories (${FTK_INCLUDE_DIR})
 
 option (FTK_BUILD_TESTS "Build the test programs." OFF)
-option (FTK_BUILD_EXAMPLES "Build the example programs." OFF)
+option (FTK_BUILD_EXAMPLES "Build the example programs." ON)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
