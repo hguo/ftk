@@ -139,7 +139,7 @@ ndarray<T> jacobian3D(const ndarray<T>& V)
 {
   const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3);
   ndarray<T> J;
-  J.reshape({3, 3, DW, DH, DD});
+  J.reshape(3, 3, DW, DH, DD);
 
   for (int k = 0; k < DD-2; k ++) {
     for (int j = 2; j < DH-2; j ++) {
