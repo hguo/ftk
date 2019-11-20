@@ -53,6 +53,7 @@ struct regular_simplex_mesh_element {
   bool operator==(const regular_simplex_mesh_element& e) const;
   // regular_simplex_mesh_element& operator++();
   friend std::ostream& operator<<(std::ostream& os, const regular_simplex_mesh_element&);
+  void print(std::ostream& os, const regular_simplex_mesh& m) const;
 
   std::vector<std::vector<int> > vertices(const regular_simplex_mesh&) const;
 
@@ -168,6 +169,9 @@ public: // partitioning
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
 #endif
+
+public:
+  void print_unit_simplices(int nd, int d) const;
 
 private: // initialization functions
   void initialize_subdivision();
@@ -305,7 +309,40 @@ inline std::vector<std::vector<int> > regular_simplex_mesh_element::vertices(con
 
   return vertices;
 }
-  
+ 
+inline void regular_simplex_mesh_element::print(std::ostream& os, const regular_simplex_mesh& m) const
+{
+  const auto &e = *this;
+
+  os << "dim=" << e.dim << ",cornor={";
+  for (size_t i = 0; i < e.corner.size(); i ++)
+    if (i < e.corner.size()-1) os << e.corner[i] << ",";
+    else os << e.corner[i];
+  os << "},type=" << e.type << "/{";
+
+  const auto s_vertices = m.unit_simplex(e.dim, e.type);
+  for (size_t i = 0; i < s_vertices.size(); i ++) {
+    for (size_t j = 0; j < s_vertices[i].size(); j ++)
+      os << s_vertices[i][j];
+    if (i < s_vertices.size()-1) os << ",";
+  }
+  os << "},";
+
+  const auto vertices = e.vertices(m);
+  os << "vertices={";
+  for (size_t i = 0; i < vertices.size(); i ++) {
+    os << "{";
+    for (size_t j = 0; j < vertices[i].size(); j ++)
+      if (j < vertices[i].size()-1) os << vertices[i][j] << ",";
+      else os << vertices[i][j] << "}";;
+    if (i < vertices.size()-1) os << ",";
+    else os << "},";
+  }
+
+  // os << "int=" << e.to_integer(m) << ",";
+  os << "valid=" << e.valid(m);
+}
+
 inline std::ostream& operator<<(std::ostream& os, const regular_simplex_mesh_element& e)
 {
   os << "dim=" << e.dim << ",cornor={";
@@ -733,6 +770,11 @@ inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &g
   }
 }
 #endif
+
+inline void regular_simplex_mesh::print_unit_simplices(int nd, int d) const
+{
+
+}
 
 inline void regular_simplex_mesh::initialize_subdivision()
 {

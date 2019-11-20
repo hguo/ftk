@@ -6,7 +6,16 @@
 
 int main(int argc, char **argv)
 {
-  MPI_Init(&argc, &argv);
+  diy::mpi::environment env;
+
+  ftk::regular_simplex_mesh m(3);
+  m.set_lb_ub({0, 0, 0}, {1, 1, 1});
+  m.element_for(2, [&](ftk::regular_simplex_mesh_element e) {
+      e.print(std::cerr, m);
+      std::cerr << std::endl;
+    }, 1);
+
+  return 0;
 
 #if 0
   diy::mpi::communicator comm;
@@ -45,7 +54,6 @@ int main(int argc, char **argv)
     fprintf(stderr, "pid=%d, %d --> %d, is_root=%d\n", comm.rank(), kv.first, kv.second, kv.first == uf.find(kv.second));
   }
 #endif  
-  MPI_Finalize();
 
 #if 0
   MPI_Init(&argc, &argv);
