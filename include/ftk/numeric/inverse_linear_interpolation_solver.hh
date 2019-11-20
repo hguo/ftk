@@ -8,6 +8,7 @@
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 bool inverse_lerp_s2v2(const T V[3][2], T mu[3], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   const T A[2][2] = {

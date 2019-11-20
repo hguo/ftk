@@ -1,0 +1,735 @@
+#include "vfgpu.h"
+#include "utils.cuh"
+#include "mesh.cuh"
+#include "threadIdx.cuh"
+#include "inverseInterpolation.cuh"
+#include <cstdio>
+#include <cassert>
+#include <algorithm>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+static double get_wall_time() {
+  struct timeval time;
+  if (gettimeofday(&time,NULL)) return 0;
+  return (double)time.tv_sec + (double)time.tv_usec * .000001;
+}
+
+struct vfgpu_ctx_t {
+  // global information
+  vfgpu_cfg_t cfg;
+  vfgpu_cfg_t *d_cfg;
+ 
+  // headers
+  vfgpu_hdr_t h, h0;
+  vfgpu_hdr_t *d_h, *d_h0;
+  float *d_re_im, *d_rho_phi; // the ``current'' frame, mem allocated by GLGPU
+  float *d_phi0; // the ``previous'' frame mem allocated by vfgpu
+
+  // GPU memory
+  unsigned int *d_pfcount, *d_pecount;
+  vfgpu_pf_t *d_pflist;
+  vfgpu_pe_t *d_pelist; 
+ 
+  // CPU memory
+  unsigned int pfcount, pecount;
+  vfgpu_pf_t *pflist;
+  vfgpu_pe_t *pelist;
+
+  // cuda related
+  int blockSize, minGridSize, gridSize;
+
+  // output
+  FILE *fp;
+
+  // statistics
+  double t_pf, t_pe;
+  int n_skipped;
+};
+
+template <typename T> 
+__device__
+T line_integral(
+    const vfgpu_cfg_t& c, const vfgpu_hdr_t& h, 
+    const T X0[], const T X1[], const T A0[], const T A1[]) 
+{
+  T dX[3] = {X1[0] - X0[0], X1[1] - X0[1], X1[2] - X0[2]};
+  T A[3] = {A0[0] + A1[0], A0[1] + A1[1], A0[2] + A1[2]};
+
+  for (int i=0; i<3; i++)
+    if (dX[i] > c.lengths[i]/2) dX[i] -= c.lengths[i];
+    else if (dX[i] < -c.lengths[i]/2) dX[i] += c.lengths[i];
+
+  return 0.5 * inner_product(A, dX);
+}
+
+template <typename T, int gauge>
+__device__
+inline void magnetic_potential(const vfgpu_hdr_t& h, T X[3], T A[3])
+{
+  // if (h.B[1]>0) { // yz gauge
+  if (gauge == VFGPU_GAUGE_YZ) {
+    A[0] = -h.Kx; 
+    A[1] = X[0] * h.B[2];
+    A[2] = -X[0] * h.B[1];
+  } else { // xz gauge
+    A[0] = -X[1] * h.B[2] - h.Kx;
+    A[1] = 0;
+    A[2] = X[1] * h.B[0];
+  }
+}
+
+template <typename T, int meshtype, int gauge>
+__device__
+inline bool get_face_values(
+    const vfgpu_cfg_t& c,
+    const vfgpu_hdr_t& h, 
+    int fid, 
+    T X[][3],
+    T A[][3],
+    T rho[],
+    T phi[],
+    const T *rho_phi_)
+{
+  const int nnodes = meshtype == VFGPU_MESH_TET ? 3 : 4;
+  int nidxs[nnodes][3], nids[nnodes];
+  bool valid;
+  
+  if (meshtype == VFGPU_MESH_TET) valid = fid2nodes3D_tet(c, fid, nidxs);
+  else if (meshtype == VFGPU_MESH_HEX) valid = fid2nodes3D_hex(c, fid, nidxs);
+  else valid = fid2nodes2D(c, fid, nidxs);
+  
+  if (valid) {
+    for (int i=0; i<nnodes; i++) {
+      if (meshtype == VFGPU_MESH_2D) {
+        nids[i] = nidx2nid2D(c, nidxs[i]);
+        nidx2pos2D(c, nidxs[i], X[i]);
+      } else {
+        nids[i] = nidx2nid3D(c, nidxs[i]);
+        nidx2pos3D(c, nidxs[i], X[i]);
+      }
+
+      rho[i] = rho_phi_[nids[i]*2];
+      phi[i] = rho_phi_[nids[i]*2+1];
+      
+      magnetic_potential<T, gauge>(h, X[i], A[i]); 
+    }
+  }
+
+  return valid;
+}
+
+template <typename T, int meshtype, int gauge>
+__device__
+inline bool get_vface_values(
+    const vfgpu_cfg_t& c,
+    const vfgpu_hdr_t& h0,
+    const vfgpu_hdr_t& h,
+    int eid, 
+    T X[4][3],
+    T A[4][3],
+    T phi[4],
+    const T *rho_phi_,
+    const T *phi0_)
+{
+  int nidxs[2][3], nids[2];
+  bool valid = meshtype == VFGPU_MESH_TET ? eid2nodes3D_tet(c, eid, nidxs) : eid2nodes3D_hex(c, eid, nidxs);
+
+  if (valid) {
+    nids[0] = nidx2nid3D(c, nidxs[0]);
+    nids[1] = nidx2nid3D(c, nidxs[1]);
+
+    phi[0] = phi0_[nids[0]]; 
+    phi[1] = phi0_[nids[1]];
+    phi[2] = rho_phi_[nids[1]*2+1];
+    phi[3] = rho_phi_[nids[0]*2+1];
+
+    nidx2pos3D(c, nidxs[0], X[0]);
+    nidx2pos3D(c, nidxs[1], X[1]);
+    nidx2pos3D(c, nidxs[1], X[2]);
+    nidx2pos3D(c, nidxs[0], X[3]);
+
+    magnetic_potential<T, gauge>(h0, X[0], A[0]);
+    magnetic_potential<T, gauge>(h0, X[1], A[1]);
+    magnetic_potential<T, gauge>(h, X[2], A[2]);
+    magnetic_potential<T, gauge>(h, X[3], A[3]);
+
+    return true;
+  } else 
+    return false;
+}
+
+template <typename T>
+__device__
+inline int contour_chirality(
+    const vfgpu_cfg_t &c,
+    const vfgpu_hdr_t &h, 
+    int nnodes, // nnodes <= 4
+    const T phi[], 
+    const T X[][3], 
+    const T A[][3],
+    T delta[])
+{
+  T phase_jump = 0;
+  for (int i=0; i<nnodes; i++) {
+    int j = (i+1) % nnodes;
+    delta[i] = phi[j] - phi[i]; 
+    T li = line_integral(c, h, X[i], X[j], A[i], A[j]), 
+      qp = 0; // TODO
+    delta[i] = mod2pi1(delta[i] - li + qp);
+    phase_jump -= delta[i];
+  }
+  
+  if (fabs(phase_jump)<0.5) return 0; // not punctured
+  else return sgn(phase_jump);
+}
+
+// for space-time vfaces
+template <typename T>
+__device__
+inline int contour_chirality_spt(
+    const vfgpu_cfg_t &c,
+    const vfgpu_hdr_t &h, 
+    const vfgpu_hdr_t &h1, 
+    const T phi[4], 
+    const T X[4][3], 
+    const T A[4][3],
+    T delta[])
+{
+  T li[4] = { // FIXME: varying B
+    line_integral(c, h, X[0], X[1], A[0], A[1]), 
+    0, 
+    line_integral(c, h, X[1], X[0], A[2], A[3]), 
+    0};
+  T qp[4] = {0, 0, 0, 0}; // FIXME
+
+  T phase_jump = 0;
+  for (int i=0; i<4; i++) {
+    int j = (i+1) % 4;
+    delta[i] = phi[j] - phi[i]; 
+    delta[i] = mod2pi1(delta[i] - li[i] + qp[i]);
+    phase_jump -= delta[i];
+  }
+  
+  if (fabs(phase_jump)<0.5) return 0; // not punctured
+  else return sgn(phase_jump);
+}
+
+template <typename T>
+__device__
+inline void gauge_transform(
+    int nnodes, 
+    const T rho[],
+    const T delta[],
+    T phi[], 
+    T re[], 
+    T im[])
+{
+  re[0] = rho[0] * cos(phi[0]);
+  im[0] = rho[0] * sin(phi[0]);
+  for (int i=1; i<nnodes; i++) {
+    phi[i] = phi[i-1] + delta[i-1];
+    re[i] = rho[i] * cos(phi[i]);
+    im[i] = rho[i] * sin(phi[i]);
+  }
+}
+
+template <typename T, int meshtype, int gauge>
+__device__
+inline int extract_face(
+    const vfgpu_cfg_t &c,
+    const vfgpu_hdr_t &h, 
+    unsigned int fid,
+    unsigned int *pfcount,
+    vfgpu_pf_t *pflist,
+    const T *rho_phi_)
+{
+  const int nnodes = meshtype == VFGPU_MESH_TET ? 3 : 4;
+  T X[nnodes][3], A[nnodes][3], rho[nnodes], phi[nnodes], re[nnodes], im[nnodes];
+  T delta[nnodes];
+  
+  bool valid = get_face_values<T, meshtype, gauge>(c, h, fid, X, A, rho, phi, rho_phi_);
+  if (!valid) return 0;
+
+  // compute phase shift
+  int chirality = contour_chirality(c, h, nnodes, phi, X, A, delta);
+  if (chirality == 0) return 0;
+  
+  // gauge transformation
+  gauge_transform(nnodes, rho, delta, phi, re, im);
+
+  // find puncture point
+  vfgpu_pf_t pf;
+  pf.fid_and_chirality = fid;
+  if (chirality>0) pf.fid_and_chirality |= 0x80000000;
+  // pf.fid = fid;
+  // pf.chirality = chirality;
+  find_zero<T, meshtype>(re, im, X, pf.pos, T(1));
+  
+  unsigned int idx = atomicInc(pfcount, 0xffffffff);
+  pflist[idx] = pf;
+
+  return chirality;
+}
+
+template <typename T, int meshtype, int gauge>
+__device__
+inline int extract_edge(
+    const vfgpu_cfg_t &c,
+    const vfgpu_hdr_t& h0, 
+    const vfgpu_hdr_t& h, 
+    unsigned int eid,
+    unsigned int *pecount,
+    vfgpu_pe_t *pelist, 
+    const T *rho_phi_,
+    const T *phi0_)
+{
+  const int nnodes = 4;
+  T X[nnodes][3], A[nnodes][3], phi[nnodes];
+  T delta[nnodes];
+  
+  bool valid = get_vface_values<T, meshtype, gauge>(c, h0, h, eid, X, A, phi, rho_phi_, phi0_);
+  if (!valid) return 0;
+
+  // compute phase shift
+  int chirality = contour_chirality_spt(c, h0, h, phi, X, A, delta);
+  if (chirality == 0) return 0;
+  
+  unsigned int idx = atomicInc(pecount, 0xffffffff);
+  pelist[idx] = eid;
+  if (chirality>0) pelist[idx] |= 0x80000000;
+  
+  return chirality;
+}
+
+template <typename T>
+__global__
+static void compute_rho_phi_kernel(
+    int count, 
+    const T *re_im, T *rho_phi)
+{
+  int idx = getGlobalIdx_3D_1D();
+  if (idx>count) return;
+
+  T r, i;
+  r = re_im[idx*2];
+  i = re_im[idx*2+1];
+
+  rho_phi[idx*2] = sqrt(r*r + i*i);
+  rho_phi[idx*2+1] = atan2(i, r);
+}
+
+template <typename T>
+__global__
+static void copy_phi_kernel(
+    int count,
+    const T *rho_phi, T *phi)
+{
+  int idx = getGlobalIdx_3D_1D();
+  if (idx>count) return;
+  phi[idx] = rho_phi[idx*2+1];
+}
+
+template <typename T, int meshtype, int gauge>
+__global__
+static void extract_faces_kernel(
+    const vfgpu_cfg_t* c, 
+    const vfgpu_hdr_t* h, 
+    unsigned int *pfcount,
+    unsigned int pflimit,
+    vfgpu_pf_t *pflist,
+    const T *rho_phi)
+{
+  int nfacetypes;
+  if (meshtype == VFGPU_MESH_TET) nfacetypes = 12;
+  else if (meshtype == VFGPU_MESH_HEX) nfacetypes = 3;
+  else nfacetypes = 1;
+  
+  int fid = getGlobalIdx_3D_1D();
+  if (fid>c->count*nfacetypes) return;
+
+#if 0 // use global memory
+  extract_face<T, meshtype, gauge>(*c, *h, fid, pfcount, pflist, rho, phi);
+#else // use shared memory
+  extern __shared__ char smem[];
+  unsigned int *spfcount = (unsigned int*)smem;
+  vfgpu_pf_t *spflist= (vfgpu_pf_t*)(smem + sizeof(int));
+ 
+  if (threadIdx.x == 0)
+    *spfcount = 0;
+  __syncthreads();
+
+  extract_face<T, meshtype, gauge>(*c, *h, fid, spfcount, spflist, rho_phi);
+  __syncthreads();
+
+  if (threadIdx.x == 0 && (*spfcount)>0) {
+    unsigned int idx = atomicAdd(pfcount, *spfcount);
+    // printf("idx=%d, count=%d\n", idx, *spfcount);
+    if (idx + *spfcount < pflimit)
+      memcpy(pflist + idx, spflist, (*spfcount) * sizeof(vfgpu_pf_t));
+  }
+#endif
+}
+
+template <typename T, int meshtype, int gauge>
+__global__
+static void extract_edges_kernel(
+    const vfgpu_cfg_t* c, 
+    const vfgpu_hdr_t* h0, 
+    const vfgpu_hdr_t* h,
+    unsigned int *pecount,
+    unsigned int pelimit,
+    vfgpu_pe_t *pelist,
+    const T *rho_phi, 
+    const T *phi0)
+{
+  const int nedgetypes = meshtype == VFGPU_MESH_TET ? 7 : 3;
+  const int eid = getGlobalIdx_3D_1D();
+  if (eid>c->count*nedgetypes) return;
+
+#if 0 // use global memory
+  extract_edge<T, meshtype>(*c, *h, *h1, eid, pecount, pelist, phi, phi1);
+#else // use shared memory
+  extern __shared__ char smem[];
+  unsigned int *specount = (unsigned int*)smem;
+  vfgpu_pe_t *spelist = (vfgpu_pe_t*)(smem + sizeof(int));
+ 
+  if (threadIdx.x == 0)
+    *specount = 0;
+  __syncthreads();
+  
+  extract_edge<T, meshtype, gauge>(*c, *h0, *h, eid, specount, spelist, rho_phi, phi0);
+  __syncthreads();
+
+  if (threadIdx.x == 0 && (*specount)>0) {
+    unsigned int idx = atomicAdd(pecount, *specount);
+    // printf("idx=%d, count=%d\n", idx, *specount);
+    if (idx + *specount < pelimit)
+      memcpy(pelist + idx, spelist, (*specount) * sizeof(vfgpu_pe_t));
+  }
+#endif
+}
+
+void vfgpu_compute_rho_phi(vfgpu_ctx_t* c)
+{
+  const int count = c->cfg.count;
+  const int maxGridDim = 1024; // 32768;
+  const int blockSize = 256;
+  const int nBlocks = idivup(count, blockSize);
+  dim3 gridSize; 
+  if (nBlocks >= maxGridDim) 
+    gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else 
+    gridSize = dim3(nBlocks);
+
+  compute_rho_phi_kernel<float><<<gridSize, blockSize>>>(count, c->d_re_im, c->d_rho_phi);
+
+  checkLastCudaError("[vfgpu] compute rho and phi");
+}
+
+void vfgpu_copy_previous_frame(vfgpu_ctx_t* c)
+{
+  const int count = c->cfg.count;
+  const int maxGridDim = 1024; // 32768;
+  const int blockSize = 256;
+  const int nBlocks = idivup(count, blockSize);
+  dim3 gridSize; 
+  if (nBlocks >= maxGridDim) 
+    gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else 
+    gridSize = dim3(nBlocks);
+
+  if (c->d_phi0 == NULL)
+    cudaMalloc((void**)&c->d_phi0, sizeof(float)*count);
+  if (c->d_h0 == NULL)
+    cudaMalloc((void**)&c->d_h0, sizeof(vfgpu_hdr_t));
+
+  memcpy(&c->h0, &c->h, sizeof(vfgpu_hdr_t));
+  cudaMemcpy(c->d_h0, c->d_h, sizeof(vfgpu_hdr_t), cudaMemcpyDeviceToDevice);
+  copy_phi_kernel<float><<<gridSize, blockSize>>>(count, c->d_rho_phi, c->d_phi0);
+
+  checkLastCudaError("[vfgpu] copy previous frame");
+}
+
+int vfgpu_extract_faces(vfgpu_ctx_t* c)
+{
+  double t0 = get_wall_time();
+
+  int nfacetypes;
+  if (c->cfg.meshtype == VFGPU_MESH_TET) nfacetypes = 12;
+  else if (c->cfg.meshtype == VFGPU_MESH_HEX) nfacetypes = 3;
+  else nfacetypes = 1;
+ 
+  const int count = c->cfg.count;
+  const int threadCount = count * nfacetypes;
+  const int maxGridDim = 1024; // 32768;
+  const int blockSize = 256;
+  const int nBlocks = idivup(threadCount, blockSize);
+  dim3 gridSize; 
+  if (nBlocks >= maxGridDim) 
+    gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else 
+    gridSize = dim3(nBlocks);
+  const int sharedSize = blockSize * sizeof(vfgpu_pf_t) + sizeof(unsigned int); // enough shared memory for every block
+  const unsigned int pflimit = sizeof(float) * count / sizeof(vfgpu_pf_t);
+  const int gauge = c->h.B[1]>0 ? VFGPU_GAUGE_YZ : VFGPU_GAUGE_XZ;
+
+  cudaMemset(c->d_pfcount, 0, sizeof(unsigned int));
+
+  if (c->cfg.meshtype == VFGPU_MESH_HEX) {
+    if (gauge == VFGPU_GAUGE_YZ) 
+      extract_faces_kernel<float, VFGPU_MESH_HEX, VFGPU_GAUGE_YZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h, c->d_pfcount, pflimit, c->d_pflist, c->d_rho_phi);
+    else
+      extract_faces_kernel<float, VFGPU_MESH_HEX, VFGPU_GAUGE_XZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h, c->d_pfcount, pflimit, c->d_pflist, c->d_rho_phi);
+  } else if (c->cfg.meshtype == VFGPU_MESH_TET) {
+    if (gauge == VFGPU_GAUGE_YZ) 
+      extract_faces_kernel<float, VFGPU_MESH_TET, VFGPU_GAUGE_YZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h, c->d_pfcount, pflimit, c->d_pflist, c->d_rho_phi);
+    else
+      extract_faces_kernel<float, VFGPU_MESH_TET, VFGPU_GAUGE_XZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h, c->d_pfcount, pflimit, c->d_pflist, c->d_rho_phi);
+  } else if (c->cfg.meshtype == VFGPU_MESH_2D) {
+    if (gauge == VFGPU_GAUGE_YZ) 
+      extract_faces_kernel<float, VFGPU_MESH_2D, VFGPU_GAUGE_YZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h, c->d_pfcount, pflimit, c->d_pflist, c->d_rho_phi);
+    else
+      extract_faces_kernel<float, VFGPU_MESH_2D, VFGPU_GAUGE_XZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h, c->d_pfcount, pflimit, c->d_pflist, c->d_rho_phi);
+  }
+
+  cudaMemcpy((void*)&c->pfcount, c->d_pfcount, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+  if (c->pfcount > pflimit) {
+    fprintf(stderr, "pf buffer overflow, pfcount=%d, pflimit=%d\n", c->pfcount, pflimit);
+  } else {
+    if (c->pflist == NULL)
+      c->pflist = (vfgpu_pf_t*)malloc(sizeof(float)*c->cfg.count);
+    cudaMemcpy(c->pflist, c->d_pflist, sizeof(vfgpu_pf_t)*c->pfcount, cudaMemcpyDeviceToHost);
+  }
+  // fprintf(stderr, "pfcount=%d\n", c->pfcount);
+  
+  checkLastCudaError("[vfgpu] extract faces");
+  double t1 = get_wall_time();
+  fprintf(stderr, "EX, %d, %f\n", c->pfcount, (t1-t0)*1000);
+  c->t_pf += t1-t0;
+
+  return c->pfcount;
+}
+
+int vfgpu_extract_edges(vfgpu_ctx_t* c)
+{
+  if (c->d_phi0 == NULL) return -1;
+
+  double t0 = get_wall_time();
+  const int count = c->cfg.count;
+  const int nedgetypes = c->cfg.meshtype == VFGPU_MESH_TET ? 7 : 3;
+  const int threadCount = count * nedgetypes;
+  const int maxGridDim = 1024; // 32768;
+  const int blockSize = 256;
+  const int nBlocks = idivup(threadCount, blockSize);
+  dim3 gridSize; 
+  if (nBlocks >= maxGridDim) 
+    gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else 
+    gridSize = dim3(nBlocks);
+  const int sharedSize = blockSize * sizeof(vfgpu_pe_t) + sizeof(unsigned int);
+  const unsigned int pelimit = sizeof(float) * count / sizeof(vfgpu_pe_t);
+  const int gauge = c->h.B[1]>0 ? VFGPU_GAUGE_YZ : VFGPU_GAUGE_XZ;
+  
+  cudaMemset(c->d_pecount, 0, sizeof(unsigned int));
+  checkLastCudaError("extract edges [0]");
+  if (c->cfg.meshtype == VFGPU_MESH_TET) {
+    if (gauge == VFGPU_GAUGE_YZ) 
+      extract_edges_kernel<float, VFGPU_MESH_TET, VFGPU_GAUGE_YZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h0, c->d_h, c->d_pecount, pelimit, c->d_pelist, c->d_rho_phi, c->d_phi0);
+    else
+      extract_edges_kernel<float, VFGPU_MESH_TET, VFGPU_GAUGE_XZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h0, c->d_h, c->d_pecount, pelimit, c->d_pelist, c->d_rho_phi, c->d_phi0);
+  }
+  else if (c->cfg.meshtype == VFGPU_MESH_HEX) {
+    if (gauge == VFGPU_GAUGE_YZ) 
+      extract_edges_kernel<float, VFGPU_MESH_HEX, VFGPU_GAUGE_YZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h0, c->d_h, c->d_pecount, pelimit, c->d_pelist, c->d_rho_phi, c->d_phi0);
+    else
+      extract_edges_kernel<float, VFGPU_MESH_HEX, VFGPU_GAUGE_XZ><<<gridSize, blockSize, sharedSize>>>
+        (c->d_cfg, c->d_h0, c->d_h, c->d_pecount, pelimit, c->d_pelist, c->d_rho_phi, c->d_phi0);
+  }
+  checkLastCudaError("extract edges [1]");
+ 
+  cudaMemcpy((void*)&c->pecount, c->d_pecount, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+  if (c->pecount != 0 && c->pecount < pelimit) {
+    if (c->pelist == NULL)
+      c->pelist = (vfgpu_pe_t*)malloc(sizeof(float)*count);
+    cudaMemcpy(c->pelist, c->d_pelist, sizeof(vfgpu_pe_t)*c->pecount, cudaMemcpyDeviceToHost);
+  }
+  
+  // printf("pecount=%d\n", c->pecount);
+  checkLastCudaError("extract edges [2]");
+  // cudaDeviceSynchronize();
+  
+  double t1 = get_wall_time();
+  fprintf(stderr, "TR, %d, %f\n", c->pecount, (t1-t0)*1000);
+  c->t_pe += t1-t0;
+  
+  return c->pecount;
+}
+
+void vfgpu_set_data_insitu(
+    vfgpu_ctx_t* c,
+    const vfgpu_hdr_t &h,
+    float *d_re_im,
+    float *d_tmp1,
+    float *d_tmp2)
+{
+  if (c->d_h == NULL) 
+    cudaMalloc((void**)&c->d_h, sizeof(vfgpu_hdr_t));
+ 
+  memcpy(&c->h, &h, sizeof(vfgpu_hdr_t));
+  cudaMemcpy(c->d_h, &c->h, sizeof(vfgpu_hdr_t), cudaMemcpyHostToDevice);
+
+  c->d_re_im = d_re_im;
+  c->d_rho_phi = d_tmp1;
+  c->d_pfcount = (unsigned int*)d_tmp2;
+  c->d_pflist = (vfgpu_pf_t*)(d_tmp2 + 1);
+  //
+  c->d_pecount = (unsigned int*)d_tmp2;
+  c->d_pelist = (vfgpu_pe_t*)(d_tmp2 + 1);
+ 
+  vfgpu_compute_rho_phi(c);
+}
+
+int vfgpu_write_binary(vfgpu_ctx_t* c, const char *filename)
+{
+  int pfcount;
+  cudaMemcpy(&pfcount, c->d_pfcount, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+  const unsigned int pflimit = sizeof(float) * c->cfg.count / sizeof(vfgpu_pf_t);
+  if (pfcount == 0 || pfcount>pflimit) return 0;
+
+  vfgpu_pf_t *pflist = (vfgpu_pf_t*)malloc(sizeof(vfgpu_pf_t) * pfcount);
+  cudaMemcpy(pflist, c->d_pflist, sizeof(vfgpu_pf_t)*pfcount, cudaMemcpyDeviceToHost);
+
+  FILE *fp = fopen(filename, "wb");
+  fwrite(&pfcount, sizeof(int), 1, fp);
+  fwrite(pflist, sizeof(vfgpu_pf_t), pfcount, fp);
+  fclose(fp);
+
+  free(pflist);
+  return pfcount;
+}
+
+int vfgpu_write_ascii(vfgpu_ctx_t* c, const char *filename)
+{
+  int pfcount;
+  cudaMemcpy(&pfcount, c->d_pfcount, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+  const unsigned int pflimit = sizeof(float) * c->cfg.count / sizeof(vfgpu_pf_t);
+  if (pfcount == 0 || pfcount>pflimit) return 0;
+
+  vfgpu_pf_t *pflist = (vfgpu_pf_t*)malloc(sizeof(vfgpu_pf_t) * pfcount);
+  cudaMemcpy(pflist, c->d_pflist, sizeof(vfgpu_pf_t)*pfcount, cudaMemcpyDeviceToHost);
+
+  FILE *fp = fopen(filename, "w");
+  fprintf(fp, "%d\n", pfcount);
+  for (int i=0; i<pfcount; i++) {
+    int chirality = pflist[i].fid_and_chirality & 0x80000000 ? 1 : -1;
+    unsigned int fid = pflist[i].fid_and_chirality & 0x7ffffff;
+    fprintf(fp, "%d, %d, %f, %f, %f\n", fid, chirality, pflist[i].pos[0], pflist[i].pos[1], pflist[i].pos[2]);
+  }
+  fclose(fp);
+
+  free(pflist);
+  return pfcount;
+}
+
+void vfgpu_write_config(vfgpu_ctx_t* c)
+{
+  assert(c->fp);
+  fwrite(&c->cfg, sizeof(vfgpu_cfg_t), 1, c->fp);
+}
+
+void vfgpu_write_pfs(vfgpu_ctx_t* c)
+{
+  if (c->fp == NULL) return;
+
+  const int type = 0; // punctured faces
+  fwrite(&type, sizeof(int), 1, c->fp);
+  fwrite(&c->h, sizeof(vfgpu_hdr_t), 1, c->fp);
+  fwrite(&c->pfcount, sizeof(int), 1, c->fp);
+  fwrite(c->pflist, sizeof(vfgpu_pf_t), c->pfcount, c->fp);
+}
+
+void vfgpu_write_pes(vfgpu_ctx_t* c)
+{
+  if (c->fp == NULL) return;
+  if (c->pelist == 0) return;
+
+  const int type = 1; // intersected edges
+  fwrite(&type, sizeof(int), 1, c->fp);
+  fwrite(&c->h0.frame, sizeof(int), 1, c->fp);
+  fwrite(&c->h.frame, sizeof(int), 1, c->fp);
+  fwrite(&c->pecount, sizeof(int), 1, c->fp);
+  fwrite(c->pelist, sizeof(vfgpu_pe_t), c->pecount, c->fp);
+}
+
+///////////////////
+
+void vfgpu_open_output(vfgpu_ctx_t* ctx, const char* filename)
+{
+  ctx->fp = fopen(filename, "wb");
+}
+
+vfgpu_ctx_t* vfgpu_create_ctx()
+{
+  vfgpu_ctx_t *c = (vfgpu_ctx_t*)malloc(sizeof(vfgpu_ctx_t));
+  memset(c, 0, sizeof(vfgpu_ctx_t));
+
+  // cudaOccupancyMaxPotentialBlockSize(
+  //     &c->minGridSize, &c->blockSize, 
+  //     extract_faces_kernel, 0, 0);
+
+  return c;
+}
+
+void vfgpu_destroy_ctx(vfgpu_ctx_t *c)
+{
+  fprintf(stderr, "t_pf=%f, t_pe=%f, n_skipped=%d\n", c->t_pf, c->t_pe, c->n_skipped);
+
+  if (c == NULL) return;
+
+  if (c->fp != NULL) 
+    fclose(c->fp);
+
+  if (c->d_phi0 != NULL)
+    cudaFree(c->d_phi0);
+  if (c->d_h0 != NULL)
+    cudaFree(c->d_h0);
+
+  cudaFree(c->d_cfg);
+  cudaFree(c->d_h);
+  // free(c->pflist);
+  free(c);
+  
+  checkLastCudaError("[vfgpu] destroying ctx");
+}
+
+void vfgpu_set_config(vfgpu_ctx_t* c, vfgpu_cfg_t *cfg)
+{
+  if (c->d_cfg == NULL)
+    cudaMalloc((void**)&c->d_cfg, sizeof(vfgpu_cfg_t));
+
+  memcpy(&c->cfg, cfg, sizeof(vfgpu_cfg_t));
+  cudaMemcpy(c->d_cfg, cfg, sizeof(vfgpu_cfg_t), cudaMemcpyHostToDevice);
+}
+
+void vfgpu_get_pflist(vfgpu_ctx_t* c, int *n, vfgpu_pf_t **pflist)
+{
+  *n = c->pfcount; 
+  // *pflist = c->pflist;
+}
+
+void vfgpu_skip_frame(vfgpu_ctx_t* c) {
+  c->n_skipped ++;
+}

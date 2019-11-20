@@ -6,6 +6,7 @@
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 inline T det2(const T A[2][2])
 {
   return A[0][0] * A[1][1] - A[1][0] * A[0][1];

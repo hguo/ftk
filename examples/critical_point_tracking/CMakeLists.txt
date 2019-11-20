@@ -21,3 +21,6 @@ target_link_libraries (ex_critical_point_tracking_3d_regular_streaming ftk)
 
 add_executable (ex_critical_point_tracking_3d_regular_distributed_streaming ex_critical_point_tracking_3d_regular_distributed_streaming.cpp)
 target_link_libraries (ex_critical_point_tracking_3d_regular_distributed_streaming ftk)
+
+add_executable (playground playground.cpp)
+target_link_libraries (playground ftk)
