@@ -177,9 +177,7 @@ struct ndarray {
   static MPI_Datatype mpi_datatype();
 #endif
 
-#if FTK_HAVE_CUDA
-  void copy_to_device();
-#endif
+  void copy_to_cuda_device();
 
 private:
   std::vector<size_t> dims, s;
@@ -575,10 +573,10 @@ MPI_Datatype ndarray<int>::mpi_datatype()
 }
 #endif
 
-#if FTK_HAVE_CUDA
 template <typename T>
-void ndarray<T>::copy_to_device()
+void ndarray<T>::copy_to_cuda_device()
 {
+#if FTK_HAVE_CUDA
   if (d_dims == NULL)
     cudaMalloc((void**)&d_dims, sizeof(size_t) * dims.size());
   cudaMemcpy(d_dims, dims.data(), sizeof(size_t) * dims.size(), cudaMemcpyHostToDevice);
@@ -590,8 +588,11 @@ void ndarray<T>::copy_to_device()
   if (d_p == NULL)
     cudaMalloc((void**)&d_p, sizeof(T) * nelem());
   cudaMemcpy(d_p, p.data(), sizeof(T) * p.size(), cudaMemcpyHostToDevice);
-}
+#else
+  fprintf(stderr, "[FTK] fatal: FTK not compiled with CUDA.\n");
+  assert(false);
 #endif
+}
 
 }
 

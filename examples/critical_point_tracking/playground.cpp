@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 {
   ftk::ndarray<double> array;
   array.reshape(128, 128);
-  array.copy_to_device();
+  array.copy_to_cuda_device();
 
   return 0;
 }
