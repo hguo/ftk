@@ -2,11 +2,19 @@
 #define _HYPERMESH_ARRAY_HH
 
 #include <ftk/ftk_config.hh>
+#include <ftk/hypermesh/lattice.hh>
 #include <vector>
 #include <array>
 #include <numeric>
 #include <tuple>
+#include <algorithm>
+#include <cassert>
 #include <glob.h>
+
+#if FTK_HAVE_CUDA
+#include <cuda.h>
+#include <cuda_runtime.h>
+#endif
 
 #if FTK_HAVE_MPI
 #include <mpi.h>
@@ -55,6 +63,8 @@ struct ndarray {
   size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
   bool empty() const  {return p.empty();}
   std::vector<size_t> shape() const {return dims;}
+
+  lattice get_lattice() const;
 
   const T* data() const {return p.data();}
   T* data() {return p.data();}
@@ -167,10 +177,26 @@ struct ndarray {
   static MPI_Datatype mpi_datatype();
 #endif
 
+#if FTK_HAVE_CUDA
+  void copy_to_device();
+#endif
+
 private:
   std::vector<size_t> dims, s;
   std::vector<T> p;
+
+#if FTK_HAVE_CUDA
+  // arrays on GPU
+  size_t *d_dims = NULL, *d_prod = NULL;
+  T *d_p = NULL;
+#endif
 };
+
+template <typename T>
+lattice ndarray<T>::get_lattice() const {
+  std::vector<size_t> st(nd(), 0), sz(dims);
+  return lattice(st, sz);
+}
 
 template <typename T>
 void ndarray<T>::to_vector(std::vector<T> &out_vector) const{
@@ -546,6 +572,24 @@ template <>
 MPI_Datatype ndarray<int>::mpi_datatype()
 {
   return MPI_INT;
+}
+#endif
+
+#if FTK_HAVE_CUDA
+template <typename T>
+void ndarray<T>::copy_to_device()
+{
+  if (d_dims == NULL)
+    cudaMalloc((void**)&d_dims, sizeof(size_t) * dims.size());
+  cudaMemcpy(d_dims, dims.data(), sizeof(size_t) * dims.size(), cudaMemcpyHostToDevice);
+
+  if (d_prod == NULL)
+    cudaMalloc((void**)&d_prod, sizeof(size_t) * s.size());
+  cudaMemcpy(d_prod, s.data(), sizeof(size_t) * s.size(), cudaMemcpyHostToDevice);
+
+  if (d_p == NULL)
+    cudaMalloc((void**)&d_p, sizeof(T) * nelem());
+  cudaMemcpy(d_p, p.data(), sizeof(T) * p.size(), cudaMemcpyHostToDevice);
 }
 #endif
 

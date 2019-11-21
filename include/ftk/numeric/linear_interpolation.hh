@@ -1,6 +1,8 @@
 #ifndef _FTK_LINEAR_INTERPOLATION_H
 #define _FTK_LINEAR_INTERPOLATION_H
 
+#include <ftk/ftk_config.hh>
+
 namespace ftk {
 
 template <typename T>
@@ -38,6 +40,7 @@ inline void lerp_s2v2(const T V[3][2], const T mu[3], T v[2])
 }
 
 template <typename T>
+__device__ __host__
 inline void lerp_s2v3(const T V[3][3], const T mu[3], T v[3])
 {
   v[0] = V[0][0] * mu[0] + V[1][0] * mu[1] + V[2][0] * mu[2];

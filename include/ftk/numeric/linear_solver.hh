@@ -19,6 +19,7 @@ inline T solve_linear3x3(const T A[3][3], const T b[3], T x[3])
 }
 
 template <typename T> // returns determinant
+__device__ __host__
 inline T solve_linear2x2(const T A[2][2], const T b[2], T x[2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   const T D  = det2(A),

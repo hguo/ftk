@@ -24,6 +24,11 @@
 #include <vtkUnsignedIntArray.h>
 #endif
 
+#if FTK_HAVE_CUDA
+extern void extract_cp2dt(const ftk::lattice&, int, 
+    const ftk::lattice&, double*);
+#endif
+
 namespace ftk {
 
 typedef critical_point_t<3, double> critical_point_2dt_t;
@@ -106,6 +111,7 @@ void critical_point_tracker_2d_regular::update()
 
   // scan 2-simplices
   fprintf(stderr, "tracking 2D critical points...\n");
+#if 1
   m.element_for(2, [=](element_t e) {
       critical_point_2dt_t cp;
       if (check_simplex(e, cp)) {
@@ -113,6 +119,10 @@ void critical_point_tracker_2d_regular::update()
         discrete_critical_points[e] = cp;
       }
     }); 
+#else
+  extract_cp2dt(m.get_lattice(), 0, 
+      ftk::lattice({0, 0, 0}, {V.dim(1), V.dim(2), V.dim(3)}), V.data());
+#endif
   
   // fprintf(stderr, "trace intersections...\n");
   // trace_intersections();
