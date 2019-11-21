@@ -6,6 +6,7 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/hypermesh/lattice.hh>
+#include <ftk/filters/critical_point.hh>
 
 template <int N=3>
 struct lite_lattice_t {
@@ -72,16 +73,9 @@ struct lite_element_t {
   int corner[N], /*d,*/ type;
 };
 
-template <int N=3>
-struct lite_cp_t {
-  size_t idx;
-  double x[N]; 
-  int type;
-};
-  
 typedef lite_lattice_t<3> lattice3_t;
 typedef lite_element_t<3> element32_t;
-typedef lite_cp_t<3> cp3_t;
+typedef ftk::critical_point_t<3, double> cp3_t;
   
 __device__ __constant__ 
 int ntypes_3[4] = {1, 7, 12, 6}, 
@@ -123,11 +117,10 @@ uint element32_to_index(const lattice3_t& l, int scope, const int idx[3]) {
   
 __device__
 bool check_simplex_cp2t(
-    int tid,
-    const lattice3_t& domain, 
-    const lattice3_t& block, 
+    const lattice3_t& core, 
+    const lattice3_t& ext, 
     const element32_t& e, 
-    double *V, 
+    const double *V, 
     cp3_t &cp)
 {
   int vertices[3][3];
@@ -135,16 +128,16 @@ bool check_simplex_cp2t(
     for (int j = 0; j < 3; j ++) {
       vertices[i][j] = e.corner[j]
         + unit_simplices_3_2[e.type][i][j];
-      if (vertices[i][j] < block.st[j] || 
-          vertices[i][j] > block.st[j] + block.sz[j] - 1)
+      if (vertices[i][j] < core.st[j] || 
+          vertices[i][j] > core.st[j] + core.sz[j] - 1)
         return false;
     }
 
   double v[3][2];
   for (int i = 0; i < 3; i ++) {
-    size_t k = block.to_index(vertices[i]);
+    size_t k = ext.to_index(vertices[i]);
     for (int j = 0; j < 2; j ++)
-      v[i][j] = V[k*2+j];
+      v[i][j] = V[k*2+j]; // V has two channels
   }
 
   double mu[3];
@@ -156,14 +149,6 @@ bool check_simplex_cp2t(
       for (int j = 0; j < 3; j ++)
         X[i][j] = vertices[i][j];
     ftk::lerp_s2v3(X, mu, cp.x);
-#if 0
-    printf("tid=%d, mu=%f, %f, %f, v={%f, %f, %f, %f, %f, %f}, verts=(%d, %d, %d), (%d, %d, %d), (%d, %d, %d)\n",
-        tid, mu[0], mu[1], mu[2], 
-        v[0][0], v[0][1], v[1][0], v[1][1], v[2][0], v[2][1],
-        vertices[0][0], vertices[0][1], vertices[0][2],
-        vertices[1][0], vertices[1][1], vertices[1][2],
-        vertices[2][0], vertices[2][1], vertices[2][2]);
-#endif
     return true;
   } else 
     return false;
@@ -171,26 +156,27 @@ bool check_simplex_cp2t(
 
 __global__
 void sweep_simplices(
-    const lattice3_t domain, int scope, 
-    const lattice3_t block, double *V)
+    const lattice3_t core, int scope,
+    const lattice3_t ext, const double *V, 
+    unsigned long long &ncps, cp3_t *cps)
 {
   int tid = getGlobalIdx_3D_1D();
-  const element32_t e = element32_from_index(domain, scope, tid);
+  const element32_t e = element32_from_index(core, scope, tid);
 
   cp3_t cp;
-  bool succ = check_simplex_cp2t(tid, domain, block, e, V, cp);
-#if 1
-  if (succ && tid < 4000000)
-    printf("succ, tid=%d, x=%f, %f, %f\n", tid, 
-        cp.x[0], cp.x[1], cp.x[2]);
-#endif
+  bool succ = check_simplex_cp2t(core, ext, e, V, cp);
+  if (succ) {
+    unsigned long long i = atomicAdd(&ncps, 1ul);
+    cp.tag = tid;
+    cps[i] = cp;
+  }
 }
 
-static void extract_cp2dt(
-    const lattice3_t& domain, int scope, 
-    const lattice3_t& block, double *V/* 4D array: 2*W*H*T */)
+static std::vector<cp3_t> extract_cp2dt(
+    const lattice3_t& core, int scope, 
+    const lattice3_t& ext, const double *V/* 4D array: 2*W*H*T */)
 {
-  const size_t ntasks = block.n() * 12; // ntypes_3[2] = 12; ntypes_3 is in device constant memory
+  const size_t ntasks = core.n() * 12; // ntypes_3[2] = 12; ntypes_3 is in device constant memory
   const int maxGridDim = 1024;
   const int blockSize = 256;
   const int nBlocks = idivup(ntasks, blockSize);
@@ -202,64 +188,44 @@ static void extract_cp2dt(
     gridSize = dim3(nBlocks);
 
   double *dV;
-  cudaMalloc((void**)&dV, 2 * sizeof(double) * block.n());
-  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc");
+  cudaMalloc((void**)&dV, 2 * sizeof(double) * ext.n());
+  cudaMemcpy(dV, V, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
 
-  cudaMemcpy(dV, V, 2*sizeof(double)*block.n(), cudaMemcpyHostToDevice);
-  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpy");
+  unsigned long long *dncps; // number of cps
+  cudaMalloc((void**)&dncps, sizeof(unsigned long long));
+  cudaMemset(dncps, 0, sizeof(unsigned long long));
+
+  cp3_t *dcps;
+  cudaMalloc((void**)&dcps, sizeof(cp3_t) * ext.n());
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");
-  sweep_simplices<<<gridSize, blockSize>>>(domain, scope, block, dV);
+  sweep_simplices<<<gridSize, blockSize>>>(core, scope, ext, dV, *dncps, dcps);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
 
-  cudaFree(dV);
-  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
+  unsigned long long ncps;
+  cudaMemcpy(&ncps, dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
+  fprintf(stderr, "ncps=%lu\n", ncps);
+
+  std::vector<cp3_t> cps(ncps);
+  cudaMemcpy(cps.data(), dcps, sizeof(cp3_t) * ncps, cudaMemcpyDeviceToHost);
   
+  cudaFree(dV);
+  cudaFree(dncps);
+  cudaFree(dcps);
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
+ 
   cudaDeviceSynchronize();
-  fprintf(stderr, "exit.\n");
+  fprintf(stderr, "exit, ncps=%lu\n", ncps);
+
+  return cps;
 }
 
-void extract_cp2dt(
-    const ftk::lattice& domain, int scope, 
-    const ftk::lattice& block, double *V)
+std::vector<cp3_t>
+extract_cp2dt_cuda(
+    const ftk::lattice& core, int scope, 
+    const ftk::lattice& ext, const double *V)
 {
-  lattice3_t D(domain), B(block);
-  std::cerr << domain << std::endl;
-  std::cerr << block << std::endl;
-  extract_cp2dt(D, scope, B, V);
+  lattice3_t C(core), E(ext);
+  return extract_cp2dt(C, scope, E, V);
 }
-
-#if 0
-int main(int argc, char **argv)
-{
-  int st[3] = {0, 0, 0}, 
-      sz[3] = {256, 256, 16};
-  lattice3_t domain(st, sz);
-  double *V = NULL;
-  int scope = 0;
-
-  extract_cp2dt(domain, scope, domain, V);
-  return 0;
-}
-#endif
-
-
-
-
-#if 0
-struct cp2d_tracker_context {
-public:
-  __device__ __host__
-  void element_for_3_2(
-      const lattice3_t& l, int scope,
-      size_t tid, // thread id
-      const nvstd::function<bool(const element32_t&)> &f)
-      // const nvstd::function<void()> &f)
-  {
-    element32_t e = element32_from_index(l, scope, tid);
-    f(e);
-    // f(e);
-  }
-
-};
-#endif
