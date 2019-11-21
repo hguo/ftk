@@ -111,7 +111,7 @@ void critical_point_tracker_2d_regular::update()
 
   // scan 2-simplices
   fprintf(stderr, "tracking 2D critical points...\n");
-#if 0
+#if 1
   m.element_for(2, [=](element_t e) {
       critical_point_2dt_t cp;
       if (check_simplex(e, cp)) {
