@@ -24,7 +24,7 @@ struct filter {
 
   virtual void update() = 0;
 
-  void use_accelerator(int);
+  void use_accelerator(int i) {xl = i;}
 
 protected:
   diy::mpi::communicator comm;
