@@ -25,7 +25,8 @@
 #endif
 
 #if FTK_HAVE_CUDA
-extern void extract_cp2dt_cuda(const ftk::lattice&, int, 
+extern std::vector<ftk::critical_point_t<3, double>> 
+extract_cp2dt_cuda(const ftk::lattice&, int, 
     const ftk::lattice&, const double*);
 #endif
 
@@ -112,9 +113,14 @@ void critical_point_tracker_2d_regular::update()
   // scan 2-simplices
   fprintf(stderr, "tracking 2D critical points...\n");
 #if FTK_HAVE_CUDA
-  ftk::lattice core = m.get_lattice(), 
-               ext({0, 0, 0}, {V.dim(1), V.dim(2), V.dim(3)});
-  extract_cp2dt_cuda(core, 0, ext, V.data());
+  const ftk::lattice core = m.get_lattice(), 
+                     ext({0, 0, 0}, {V.dim(1), V.dim(2), V.dim(3)});
+  const auto cps = extract_cp2dt_cuda(core, 0, ext, V.data());
+  for (const auto &cp : cps) {
+    element_t e;
+    e.from_work_index(m, cp.tag, core, 0);
+    discrete_critical_points[e] = cp;
+  }
 #else
   m.element_for(2, [=](element_t e) {
       critical_point_2dt_t cp;

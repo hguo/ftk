@@ -172,7 +172,7 @@ void sweep_simplices(
   }
 }
 
-static void extract_cp2dt(
+static std::vector<cp3_t> extract_cp2dt(
     const lattice3_t& core, int scope, 
     const lattice3_t& ext, const double *V/* 4D array: 2*W*H*T */)
 {
@@ -217,12 +217,15 @@ static void extract_cp2dt(
  
   cudaDeviceSynchronize();
   fprintf(stderr, "exit, ncps=%lu\n", ncps);
+
+  return cps;
 }
 
-void extract_cp2dt_cuda(
+std::vector<cp3_t>
+extract_cp2dt_cuda(
     const ftk::lattice& core, int scope, 
     const ftk::lattice& ext, const double *V)
 {
   lattice3_t C(core), E(ext);
-  extract_cp2dt(C, scope, E, V);
+  return extract_cp2dt(C, scope, E, V);
 }
