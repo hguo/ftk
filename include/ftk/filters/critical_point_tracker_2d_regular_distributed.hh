@@ -29,6 +29,11 @@ struct critical_point_tracker_2d_regular_distributed
       double Js[3][2][2]) const;
 #endif
 
+  const lattice& core(size_t rank) const {return partitioner.get_core(rank);}
+  const lattice& ext(size_t rank) const {return partitioner.get_ext(rank);}
+  const lattice& core() const {return core(comm.rank());}
+  const lattice& ext() const {return ext(comm.rank());}
+
 protected:
   ndarray<double> scalar_part, V_part, gradV_part;
   lattice_partitioner partitioner;
