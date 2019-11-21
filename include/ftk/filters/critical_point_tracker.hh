@@ -3,17 +3,10 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/filters/filter.hh>
+#include <ftk/filters/critical_point.hh>
 #include <ftk/geometry/points2vtk.hh>
 
 namespace ftk {
-
-template <int N, typename T>
-struct critical_point_t {
-  T operator[](size_t i) const {if (i >= N) return 0; else return x[i];}
-  T x[N];
-  T scalar = T(0);
-  int type = 0;
-};
 
 struct critical_point_tracker : public filter {
   virtual void update() = 0;
