@@ -126,8 +126,8 @@ void critical_point_tracker_2d_regular::update()
                        ext({0, 0, 0}, {V.dim(1), V.dim(2), V.dim(3)});
     const auto cps = extract_cp2dt_cuda(core, 0, ext, V.data());
     for (const auto &cp : cps) {
-      element_t e;
-      e.from_work_index(m, cp.tag, core, 0);
+      element_t e(3, 2);
+      e.from_work_index(m, cp.tag, core/*domain*/, 0);
       discrete_critical_points[e] = cp;
     }
 #else
