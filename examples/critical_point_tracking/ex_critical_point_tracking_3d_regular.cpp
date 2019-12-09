@@ -20,6 +20,7 @@ int main(int argc, char **argv)
   scalar.from_netcdf(argv[1], "vort", starts, sizes);
 
   ftk::critical_point_tracker_3d_regular tracker;
+  tracker.use_accelerator(ftk::FTK_XL_CUDA);
   tracker.set_input_scalar_field(scalar);
   // tracker.set_type_filter(ftk::CRITICAL_POINT_3D_MAXIMUM);
   tracker.set_lb_ub({32, 32, 32, 0}, {64, 64, 64, DT-1});

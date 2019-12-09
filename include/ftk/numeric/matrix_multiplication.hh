@@ -25,6 +25,7 @@ void matrix2x3_vector3_multiplication(const T A[2][3], const T b[3], T x[2])
 }
 
 template <class T>
+__device__ __host__
 void matrix3x3_vector3_multiplication(const T A[9], const T b[3], T c[3]) 
 {
   c[0] = A[0] * b[0] + A[1] * b[1] + A[2] * b[2];
@@ -33,6 +34,7 @@ void matrix3x3_vector3_multiplication(const T A[9], const T b[3], T c[3])
 }
 
 template <class T>
+__device__ __host__
 void matrix3x3_vector3_multiplication(const T A[3][3], const T b[3], T c[3])
 {
   c[0] = A[0][0] * b[0] + A[0][1] * b[1] + A[0][2] * b[2];

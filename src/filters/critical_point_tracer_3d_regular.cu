@@ -95,7 +95,7 @@ uint element43_to_index(const lattice4_t& l, int scope, const int idx[4]) {
 }
   
 __device__
-bool check_simplex_cp2t(
+bool check_simplex_cp3t(
     const lattice4_t& core, 
     const lattice4_t& ext, 
     const element43_t& e, 
@@ -143,7 +143,7 @@ void sweep_simplices(
   const element43_t e = element43_from_index(core, scope, tid);
 
   cp4_t cp;
-  bool succ = check_simplex_cp2t(core, ext, e, V, cp);
+  bool succ = check_simplex_cp3t(core, ext, e, V, cp);
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
     cp.tag = tid;
@@ -151,7 +151,7 @@ void sweep_simplices(
   }
 }
 
-static std::vector<cp4_t> extract_cp2dt(
+static std::vector<cp4_t> extract_cp3dt(
     const lattice4_t& core, int scope, 
     const lattice4_t& ext, const double *V/* 5D array: 2*W*H*D*T */)
 {
@@ -177,18 +177,22 @@ static std::vector<cp4_t> extract_cp2dt(
 
   cp4_t *dcps;
   cudaMalloc((void**)&dcps, sizeof(cp4_t) * ext.n());
+  cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");
   sweep_simplices<<<gridSize, blockSize>>>(core, scope, ext, dV, *dncps, dcps);
-  checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
+  cudaDeviceSynchronize();
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices, kernel function");
 
-  unsigned long long ncps;
+  unsigned long long ncps = 0;
   cudaMemcpy(&ncps, dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpyDeviceToHost, dncps");
   fprintf(stderr, "ncps=%lu\n", ncps);
 
   std::vector<cp4_t> cps(ncps);
   cudaMemcpy(cps.data(), dcps, sizeof(cp4_t) * ncps, cudaMemcpyDeviceToHost);
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpyDeviceToHost");
   
   cudaFree(dV);
   cudaFree(dncps);
@@ -202,10 +206,10 @@ static std::vector<cp4_t> extract_cp2dt(
 }
 
 std::vector<cp4_t>
-extract_cp2dt_cuda(
+extract_cp3dt_cuda(
     const ftk::lattice& core, int scope, 
     const ftk::lattice& ext, const double *V)
 {
   lattice4_t C(core), E(ext);
-  return extract_cp2dt(C, scope, E, V);
+  return extract_cp3dt(C, scope, E, V);
 }

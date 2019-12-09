@@ -10,6 +10,7 @@
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 inline T solve_linear3x3(const T A[3][3], const T b[3], T x[3])
 {
   T invA[3][3];
