@@ -156,7 +156,7 @@ static std::vector<cp4_t> extract_cp3dt(
     const lattice4_t& ext, const double *V/* 5D array: 2*W*H*D*T */)
 {
   fprintf(stderr, "init GPU...\n");
-  const size_t ntasks = core.n() * 12; // ntypes_3[2] = 12; ntypes_3 is in device constant memory
+  const size_t ntasks = core.n() * 60; // ntypes_4[3] = 60; 
   const int maxGridDim = 1024;
   const int blockSize = 256;
   const int nBlocks = idivup(ntasks, blockSize);
@@ -176,7 +176,7 @@ static std::vector<cp4_t> extract_cp3dt(
   cudaMemset(dncps, 0, sizeof(unsigned long long));
 
   cp4_t *dcps;
-  cudaMalloc((void**)&dcps, sizeof(cp4_t) * ext.n());
+  cudaMalloc((void**)&dcps, sizeof(cp4_t) * core.n());
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 

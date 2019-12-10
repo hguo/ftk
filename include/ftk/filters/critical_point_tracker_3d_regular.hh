@@ -129,7 +129,7 @@ void critical_point_tracker_3d_regular::update()
 
   // scan 3-simplices
   fprintf(stderr, "tracking 3D critical points...\n");
-  if (0) { // xl = FTK_XL_NONE) {
+  if (xl == FTK_XL_NONE) {
     m.element_for(3, [=](element_t e) {
         critical_point_3dt_t cp;
         if (check_simplex(e, cp)) {
@@ -138,11 +138,12 @@ void critical_point_tracker_3d_regular::update()
           // fprintf(stderr, "%f, %f, %f, %f, type=%d\n", cp[0], cp[1], cp[2], cp[3], cp.type);
         }
       });
-  } else if (1) { // xl == FTK_XL_CUDA) {
-    fprintf(stderr, "CUDA!!!\n");
+  } else if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     const ftk::lattice core = m.get_lattice(), 
                        ext({0, 0, 0, 0}, {V.dim(1), V.dim(2), V.dim(3), V.dim(4)});
+    std::cerr << "core: " << core << std::endl;
+    std::cerr << "ext: " << ext << std::endl;
     const auto cps = extract_cp3dt_cuda(core, 0, ext, V.data());
     for (const auto &cp : cps) {
       element_t e(4, 3);
