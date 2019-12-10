@@ -36,6 +36,8 @@ typedef critical_point_t<3, double> critical_point_2dt_t;
 
 struct critical_point_tracker_2d_regular : public critical_point_tracker {
   critical_point_tracker_2d_regular() : m(3) {}
+  critical_point_tracker_2d_regular(int argc, char **argv) 
+    : critical_point_tracker(argc, argv), m(3) {}
   virtual ~critical_point_tracker_2d_regular() {}
   
   void update();

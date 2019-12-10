@@ -10,8 +10,8 @@ int main(int argc, char **argv)
 
   auto scalar = ftk::synthetic_woven_2Dt<double>(DW, DH, DT);
 
-  ftk::critical_point_tracker_2d_regular tracker;
-  tracker.use_accelerator(ftk::FTK_XL_CUDA);
+  ftk::critical_point_tracker_2d_regular tracker(argc, argv);
+  // tracker.use_accelerator(ftk::FTK_XL_CUDA);
   tracker.set_input_scalar_field(scalar);
   // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
   tracker.update();
