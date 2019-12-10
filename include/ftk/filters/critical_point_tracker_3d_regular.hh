@@ -143,8 +143,8 @@ void critical_point_tracker_3d_regular::update()
 #if FTK_HAVE_CUDA
     const ftk::lattice core = m.get_lattice(), 
                        ext({0, 0, 0, 0}, {V.dim(1), V.dim(2), V.dim(3), V.dim(4)});
-    std::cerr << "core: " << core << std::endl;
-    std::cerr << "ext: " << ext << std::endl;
+    // std::cerr << "core: " << core << std::endl;
+    // std::cerr << "ext: " << ext << std::endl;
     const auto cps = extract_cp3dt_cuda(core, 0, ext, V.data());
     for (const auto &cp : cps) {
       element_t e(4, 3);
@@ -156,6 +156,8 @@ void critical_point_tracker_3d_regular::update()
     assert(false);
 #endif
   }
+
+  fprintf(stderr, "ncps=%lu\n", discrete_critical_points.size());
   
   // convert connected components to traced critical points
   fprintf(stderr, "tracing critical points...\n");
