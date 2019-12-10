@@ -10,7 +10,21 @@
 typedef lite_lattice_t<4> lattice4_t;
 typedef lite_element_t<4> element43_t;
 typedef ftk::critical_point_t<4, double> cp4_t;
-  
+
+__device__ __constant__
+int ordinal_unit_simplex_indices_4_3[6] = {
+  16, 20, 30, 34, 46, 50
+};
+
+__device__ __constant__
+int interval_unit_simplex_indices_4_3[54] = {
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 
+  13, 14, 15, 17, 18, 19, 21, 22, 23, 24, 25, 
+  26, 27, 28, 29, 31, 32, 33, 35, 36, 37, 38, 
+  39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 51, 
+  52, 53, 54, 55, 56, 57, 58, 59
+};
+
 __device__ __constant__ 
 int unit_simplices_4_3[60][4][4] = {
   {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 1, 1}, {0, 1, 1, 1}},
