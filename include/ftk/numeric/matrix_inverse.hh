@@ -1,6 +1,8 @@
 #ifndef _FTK_MATRIX_INVERSE_H
 #define _FTK_MATRIX_INVERSE_H
 
+#include <ftk/ftk_config.hh>
+
 namespace ftk {
 
 template <class T>

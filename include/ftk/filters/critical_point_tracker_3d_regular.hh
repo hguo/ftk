@@ -44,6 +44,7 @@ namespace ftk {
 typedef critical_point_t<4, double> critical_point_3dt_t;
 
 struct critical_point_tracker_3d_regular : public critical_point_tracker {
+  critical_point_tracker_3d_regular(int argc, char **argv) : critical_point_tracker(argc, argv), m(4) {}
   critical_point_tracker_3d_regular() : m(4) {}
   virtual ~critical_point_tracker_3d_regular() {}
   
