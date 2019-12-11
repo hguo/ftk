@@ -1,5 +1,6 @@
 #include <nvfunctional>
 #include <cstdio>
+#include <cassert>
 // #include <ftk/filters/critical_point_tracker_2d.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -92,30 +93,43 @@ int unit_simplices_4_3[N_UNIT_SIMPLICES_4_3][4][4] = {
   {{0, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 0, 1}, {1, 1, 1, 1}},
   {{0, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 1, 0}, {1, 1, 1, 1}}
 };
-  
-template <typename uint=size_t>
+
+template <int scope>
+__device__ __host__ inline int ntypes_4_3();
+
+template <>
+__device__ __host__ inline int ntypes_4_3<0>() { return 60; }
+
+template <>
+__device__ __host__ inline int ntypes_4_3<1>() { return 6; }
+
+template <>
+__device__ __host__ inline int ntypes_4_3<2>() { return 54; }
+
+template <int scope=0, typename uint=size_t>
 __device__ __host__
-element43_t element43_from_index(const lattice4_t& l, int scope, uint i) {
+element43_t element43_from_index(const lattice4_t& l, uint i) {
   element43_t e;
   
-  e.type = i % N_UNIT_SIMPLICES_4_3;
-  uint ii = i / N_UNIT_SIMPLICES_4_3; // m.ntypes(dim, scope);
+  e.type = i % ntypes_4_3<scope>();
+  uint ii = i / ntypes_4_3<scope>(); 
   l.from_index(ii, e.corner);
 
   return e;
 }
 
-template <typename uint=size_t>
+template <int scope=0, typename uint=size_t>
 __device__ __host__
-uint element43_to_index(const lattice4_t& l, int scope, const int idx[4]) {
+uint element43_to_index(const lattice4_t& l, const int idx[4]) {
   size_t i = l.to_index(idx);
-  return i * 60; // m.ntypes(dim, scope);
+  return i * ntypes_4_3<scope>; 
 }
-  
+
+template <int scope=0>
 __device__
 bool check_simplex_cp3t(
     const lattice4_t& core, 
-    const lattice4_t& ext, 
+    const lattice4_t& ext, // array dimension
     const element43_t& e, 
     const double *V, 
     cp4_t &cp)
@@ -151,14 +165,15 @@ bool check_simplex_cp3t(
     return false;
 }
 
+template <int scope=0>
 __global__
 void sweep_simplices(
-    const lattice4_t core, int scope,
+    const lattice4_t core,
     const lattice4_t ext, const double *V, 
     unsigned long long &ncps, cp4_t *cps)
 {
   int tid = getGlobalIdx_3D_1D();
-  const element43_t e = element43_from_index(core, scope, tid);
+  const element43_t e = element43_from_index<scope>(core, tid);
 
   cp4_t cp;
   bool succ = check_simplex_cp3t(core, ext, e, V, cp);
@@ -169,8 +184,9 @@ void sweep_simplices(
   }
 }
 
+template <int scope=0>
 static std::vector<cp4_t> extract_cp3dt(
-    const lattice4_t& core, int scope, 
+    const lattice4_t& core, 
     const lattice4_t& ext, const double *V/* 5D array: 2*W*H*D*T */)
 {
   fprintf(stderr, "init GPU...\n");
@@ -199,7 +215,7 @@ static std::vector<cp4_t> extract_cp3dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");
-  sweep_simplices<<<gridSize, blockSize>>>(core, scope, ext, dV, *dncps, dcps);
+  sweep_simplices<scope><<<gridSize, blockSize>>>(core, ext, dV, *dncps, dcps);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices, kernel function");
 
@@ -225,9 +241,13 @@ static std::vector<cp4_t> extract_cp3dt(
 
 std::vector<cp4_t>
 extract_cp3dt_cuda(
-    const ftk::lattice& core, int scope, 
+    const ftk::lattice& core, int scope,
     const ftk::lattice& ext, const double *V)
 {
   lattice4_t C(core), E(ext);
-  return extract_cp3dt(C, scope, E, V);
+
+  if (scope == 0) return extract_cp3dt<0>(C, E, V);
+  else if (scope == 1) return extract_cp3dt<1>(C, E, V);
+  else if (scope == 2) return extract_cp3dt<2>(C, E, V);
+  else assert(false);
 }

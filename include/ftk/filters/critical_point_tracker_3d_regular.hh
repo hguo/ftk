@@ -145,7 +145,7 @@ void critical_point_tracker_3d_regular::update()
                        ext({0, 0, 0, 0}, {V.dim(1), V.dim(2), V.dim(3), V.dim(4)});
     // std::cerr << "core: " << core << std::endl;
     // std::cerr << "ext: " << ext << std::endl;
-    const auto cps = extract_cp3dt_cuda(core, 0, ext, V.data());
+    const auto cps = extract_cp3dt_cuda(core, ftk::ELEMENT_SCOPE_ALL, ext, V.data());
     for (const auto &cp : cps) {
       element_t e(4, 3);
       e.from_work_index(m, cp.tag, core/*domain*/, 0);
