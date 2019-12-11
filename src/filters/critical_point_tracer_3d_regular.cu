@@ -37,7 +37,15 @@ bool check_simplex_cp3t_streaming_ordinal(
     const double *V, 
     cp4_t &cp)
 {
+#if 0
+  int vertices[4][4];
+  for (int i = 0; i < 4; i ++) 
+    for (int j = 0; j < 4; j ++) {
+      vertices[i][j] = e.corner[j]
+        + unit_simplices_4_3[ordinal_unit_simplex_indices_4_3[e.type]][i][j];
+    }
   return false;
+#endif
 }
 
 __device__
