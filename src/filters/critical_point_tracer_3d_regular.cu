@@ -8,121 +8,48 @@
 #include <ftk/filters/critical_point.hh>
 #include "common.cuh"
 
-#define N_UNIT_SIMPLICES_4_3 60
-#define N_UNIT_SIMPLICES_ORDINAL_4_3 6
-#define N_UNIT_SIMPLICES_INTERVAL_4_3 54
-
-typedef lite_lattice_t<4> lattice4_t;
-typedef lite_element_t<4> element43_t;
-typedef ftk::critical_point_t<4, double> cp4_t;
-
-__device__ __constant__
-int ordinal_unit_simplex_indices_4_3[N_UNIT_SIMPLICES_ORDINAL_4_3] = {
-  16, 20, 30, 34, 46, 50
-};
-
-__device__ __constant__
-int interval_unit_simplex_indices_4_3[N_UNIT_SIMPLICES_INTERVAL_4_3] = {
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 
-  13, 14, 15, 17, 18, 19, 21, 22, 23, 24, 25, 
-  26, 27, 28, 29, 31, 32, 33, 35, 36, 37, 38, 
-  39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 51, 
-  52, 53, 54, 55, 56, 57, 58, 59
-};
-
-__device__ __constant__ 
-int unit_simplices_4_3[N_UNIT_SIMPLICES_4_3][4][4] = {
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 1, 1}, {0, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 1, 1}, {1, 0, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 0, 1}, {0, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 0, 1}, {1, 1, 0, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 0, 0, 1}, {1, 0, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 0, 0, 1}, {1, 1, 0, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 0, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 0, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 1, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 1, 1}, {0, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 1, 1}, {1, 0, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 1, 0}, {0, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 0, 1, 0}, {1, 0, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 0, 1, 0}, {1, 1, 1, 0}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 0, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 0, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 1, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 0, 1, 1}, {1, 0, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 1}, {0, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 1}, {1, 1, 0, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 0}, {0, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 0}, {1, 1, 1, 0}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {1, 1, 0, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {1, 1, 1, 0}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 0, 1}, {1, 1, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 1, 0}, {0, 1, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {0, 1, 1, 0}, {1, 1, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 0, 1}, {1, 0, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 0, 1}, {1, 1, 0, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 1, 0}, {1, 0, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 1, 0}, {1, 1, 1, 0}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 0, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 1, 0}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 1}, {1, 0, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 0, 1}, {1, 1, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 1, 0}, {1, 0, 1, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 0, 1, 0}, {1, 1, 1, 0}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 0, 1}, {1, 1, 1, 1}},
-  {{0, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 1, 0}, {1, 1, 1, 1}}
-};
-
-template <int scope>
-__device__ __host__ inline int ntypes_4_3();
-
-template <>
-__device__ __host__ inline int ntypes_4_3<0>() { return 60; }
-
-template <>
-__device__ __host__ inline int ntypes_4_3<1>() { return 6; }
-
-template <>
-__device__ __host__ inline int ntypes_4_3<2>() { return 54; }
-
-template <int scope=0, typename uint=size_t>
-__device__ __host__
-element43_t element43_from_index(const lattice4_t& l, uint i) {
-  element43_t e;
-  
-  e.type = i % ntypes_4_3<scope>();
-  uint ii = i / ntypes_4_3<scope>(); 
-  l.from_index(ii, e.corner);
-
-  return e;
+__device__
+bool detect_cp3t(
+    const double v[4][3],
+    const int vertices[4][4], 
+    cp4_t &cp)
+{
+  double mu[4];
+  bool succ = ftk::inverse_lerp_s3v3(v, mu);
+ 
+  if (succ) {
+    double X[4][4];
+    for (int i = 0; i < 4; i ++)
+      for (int j = 0; j < 4; j ++)
+        X[i][j] = vertices[i][j];
+    ftk::lerp_s3v4(X, mu, cp.x);
+    return true;
+  } else 
+    return false;
 }
 
-template <int scope=0, typename uint=size_t>
-__device__ __host__
-uint element43_to_index(const lattice4_t& l, const int idx[4]) {
-  size_t i = l.to_index(idx);
-  return i * ntypes_4_3<scope>; 
+__device__
+bool check_simplex_cp3t_streaming_ordinal(
+    int current_timestep,
+    const lattice3_t& core, 
+    const lattice3_t& ext, 
+    const element43_t& e, 
+    const double *V, 
+    cp4_t &cp)
+{
+  return false;
+}
+
+__device__
+bool check_simplex_cp3t_streaming_interval(
+    int current_timestep,
+    const lattice3_t& core,
+    const lattice4_t& ext, 
+    const element43_t& e, 
+    const double *V0, const double *V1, 
+    cp4_t &cp)
+{
+  return false;
 }
 
 template <int scope=0>
@@ -131,7 +58,7 @@ bool check_simplex_cp3t(
     const lattice4_t& core, 
     const lattice4_t& ext, // array dimension
     const element43_t& e, 
-    const double *V, 
+    const double *V, // , const double *V1, // vector field for two adjacent timesteps
     cp4_t &cp)
 {
   int vertices[4][4];
@@ -151,18 +78,7 @@ bool check_simplex_cp3t(
       v[i][j] = V[k*3+j]; // V has three channels
   }
 
-  double mu[4];
-  bool succ = ftk::inverse_lerp_s3v3(v, mu);
- 
-  if (succ) {
-    double X[4][4];
-    for (int i = 0; i < 4; i ++)
-      for (int j = 0; j < 4; j ++)
-        X[i][j] = vertices[i][j];
-    ftk::lerp_s3v4(X, mu, cp.x);
-    return true;
-  } else 
-    return false;
+  return detect_cp3t(v, vertices, cp);
 }
 
 template <int scope=0>
@@ -176,7 +92,7 @@ void sweep_simplices(
   const element43_t e = element43_from_index<scope>(core, tid);
 
   cp4_t cp;
-  bool succ = check_simplex_cp3t(core, ext, e, V, cp);
+  bool succ = check_simplex_cp3t<scope>(core, ext, e, V, cp);
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
     cp.tag = tid;
@@ -249,5 +165,8 @@ extract_cp3dt_cuda(
   if (scope == 0) return extract_cp3dt<0>(C, E, V);
   else if (scope == 1) return extract_cp3dt<1>(C, E, V);
   else if (scope == 2) return extract_cp3dt<2>(C, E, V);
-  else assert(false);
+  else {
+    assert(false);
+    return std::vector<cp4_t>(); // make compiler happy
+  }
 }

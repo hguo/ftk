@@ -6,48 +6,6 @@
 #include <ftk/hypermesh/lattice.hh>
 #include <ftk/filters/critical_point.hh>
 #include "common.cuh"
-
-typedef lite_lattice_t<3> lattice3_t;
-typedef lite_element_t<3> element32_t;
-typedef ftk::critical_point_t<3, double> cp3_t;
-  
-__device__ __constant__ 
-int ntypes_3[4] = {1, 7, 12, 6}, 
-    // unit_simplices_3_3[6][4] = {0}, // TODO
-    unit_simplices_3_2[12][3][3] = {
-      {{0,0,0},{0,0,1},{0,1,1}},
-      {{0,0,0},{0,0,1},{1,0,1}},
-      {{0,0,0},{0,0,1},{1,1,1}},
-      {{0,0,0},{0,1,0},{0,1,1}},
-      {{0,0,0},{0,1,0},{1,1,0}},
-      {{0,0,0},{0,1,0},{1,1,1}},
-      {{0,0,0},{0,1,1},{1,1,1}},
-      {{0,0,0},{1,0,0},{1,0,1}},
-      {{0,0,0},{1,0,0},{1,1,0}},
-      {{0,0,0},{1,0,0},{1,1,1}},
-      {{0,0,0},{1,0,1},{1,1,1}},
-      {{0,0,0},{1,1,0},{1,1,1}}
-    };
-    // unit_simplices_3_1[7][2] = {0};
-  
-template <typename uint=size_t>
-__device__ __host__
-element32_t element32_from_index(const lattice3_t& l, int scope, uint i) {
-  element32_t e; // TODO
-  
-  e.type = i % 12; // m.ntypes(dim, scope);
-  uint ii = i / 12; // m.ntypes(dim, scope);
-  l.from_index(ii, e.corner);
-
-  return e;
-}
-
-template <typename uint=size_t>
-__device__ __host__
-uint element32_to_index(const lattice3_t& l, int scope, const int idx[3]) {
-  size_t i = l.to_index(idx);
-  return i * 12; // m.ntypes(dim, scope);
-}
   
 __device__
 bool check_simplex_cp2t(
