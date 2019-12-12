@@ -14,7 +14,7 @@
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
-#include <ftk/filters/critical_point_tracker.hh>
+#include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
@@ -34,10 +34,10 @@ namespace ftk {
 
 typedef critical_point_t<3, double> critical_point_2dt_t;
 
-struct critical_point_tracker_2d_regular : public critical_point_tracker {
+struct critical_point_tracker_2d_regular : public critical_point_tracker_regular {
   critical_point_tracker_2d_regular() : m(3) {}
   critical_point_tracker_2d_regular(int argc, char **argv) 
-    : critical_point_tracker(argc, argv), m(3) {}
+    : critical_point_tracker_regular(argc, argv), m(3) {}
   virtual ~critical_point_tracker_2d_regular() {}
   
   void update();
