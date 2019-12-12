@@ -46,14 +46,15 @@ bool check_simplex_cp2t(
     return false;
 }
 
+template <int scope=0>
 __global__
 void sweep_simplices(
-    const lattice3_t core, int scope,
+    const lattice3_t core,
     const lattice3_t ext, const double *V, 
     unsigned long long &ncps, cp3_t *cps)
 {
   int tid = getGlobalIdx_3D_1D();
-  const element32_t e = element32_from_index(core, scope, tid);
+  const element32_t e = element32_from_index(core, tid);
 
   cp3_t cp;
   bool succ = check_simplex_cp2t(core, ext, e, V, cp);
@@ -93,7 +94,7 @@ static std::vector<cp3_t> extract_cp2dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");
-  sweep_simplices<<<gridSize, blockSize>>>(core, scope, ext, dV, *dncps, dcps);
+  sweep_simplices<<<gridSize, blockSize>>>(core, ext, dV, *dncps, dcps);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
 
   unsigned long long ncps;

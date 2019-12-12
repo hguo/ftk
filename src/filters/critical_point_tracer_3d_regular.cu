@@ -111,7 +111,7 @@ void sweep_simplices(
 template <int scope=0>
 static std::vector<cp4_t> extract_cp3dt(
     const lattice4_t& core, 
-    const lattice4_t& ext, const double *V/* 5D array: 2*W*H*D*T */)
+    const lattice4_t& ext, const double *V/* 5D array: 3*W*H*D*T */)
 {
   fprintf(stderr, "init GPU...\n");
   const size_t ntasks = core.n() * 60; // ntypes_4[3] = 60; 

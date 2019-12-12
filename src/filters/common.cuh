@@ -173,6 +173,18 @@ int unit_simplices_4_3[][4][4] = {
 };
 
 template <int scope>
+__device__ __host__ inline int ntypes_3_2();
+
+template <>
+__device__ __host__ inline int ntypes_3_2<0>() { return 12; }
+
+template <>
+__device__ __host__ inline int ntypes_3_2<1>() { return 2; }
+
+template <>
+__device__ __host__ inline int ntypes_3_2<2>() { return 10; }
+
+template <int scope>
 __device__ __host__ inline int ntypes_4_3();
 
 template <>
@@ -184,23 +196,23 @@ __device__ __host__ inline int ntypes_4_3<1>() { return 6; }
 template <>
 __device__ __host__ inline int ntypes_4_3<2>() { return 54; }
 
-template <typename uint=size_t>
+template <int scope=0, typename uint=size_t>
 __device__ __host__
-element32_t element32_from_index(const lattice3_t& l, int scope, uint i) {
+element32_t element32_from_index(const lattice3_t& l, uint i) {
   element32_t e; // TODO
   
-  e.type = i % 12; // m.ntypes(dim, scope);
-  uint ii = i / 12; // m.ntypes(dim, scope);
+  e.type = i % ntypes_3_2<scope>();
+  uint ii = i / ntypes_3_2<scope>();
   l.from_index(ii, e.corner);
 
   return e;
 }
 
-template <typename uint=size_t>
+template <int scope=0, typename uint=size_t>
 __device__ __host__
-uint element32_to_index(const lattice3_t& l, int scope, const int idx[3]) {
+uint element32_to_index(const lattice3_t& l, const int idx[3]) {
   size_t i = l.to_index(idx);
-  return i * 12; // m.ntypes(dim, scope);
+  return i * ntypes_3_2<scope>();
 }
 
 template <int scope=0, typename uint=size_t>
