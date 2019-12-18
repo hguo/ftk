@@ -12,7 +12,7 @@ struct critical_point_tracker : public filter {
   critical_point_tracker(int argc, char **argv) : filter(argc, argv) {}
   critical_point_tracker() {}
 
-  virtual void update() = 0;
+  virtual void update() {}; // TODO
 
 #if FTK_HAVE_VTK
   virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const = 0;

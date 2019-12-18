@@ -55,6 +55,7 @@ template <typename T>
 struct ndarray {
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshape(dims);}
+  ndarray(const lattice& l) {reshape(l.sizes());}
   ndarray(const T *a, const std::vector<size_t> &shape);
 
   size_t nd() const {return dims.size();}
@@ -82,6 +83,9 @@ struct ndarray {
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4) {reshape({n0, n1, n2, n3, n4});}
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5) {reshape({n0, n1, n2, n3, n4, n5});}
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshape({n0, n1, n2, n3, n4, n5, n6});}
+
+  ndarray<T> slice(const lattice&);
+  ndarray<T> slice(const std::vector<size_t>& starts, const std::vector<size_t> &sizes);
 
   size_t index(const std::vector<size_t>& idx) const;
   size_t index(const std::vector<int>& idx) const;
@@ -592,6 +596,23 @@ void ndarray<T>::copy_to_cuda_device()
   fprintf(stderr, "[FTK] fatal: FTK not compiled with CUDA.\n");
   assert(false);
 #endif
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::slice(const lattice& l)
+{
+  ndarray<T> array(l);
+  for (auto i = 0; i < l.n(); i ++) {
+    auto idx = l.from_integer(i);
+    array[i] = at(idx);
+  }
+  return array;
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::slice(const std::vector<size_t>& st, const std::vector<size_t>& sz)
+{
+  return slice(lattice(st, sz));
 }
 
 }

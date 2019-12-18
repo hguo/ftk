@@ -39,35 +39,22 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   critical_point_tracker_2d_regular(int argc, char **argv) 
     : critical_point_tracker_regular(argc, argv), m(3) {}
   virtual ~critical_point_tracker_2d_regular() {}
-  
-  void update();
-  
-  void set_input_scalar_field(const double *p, size_t W, size_t H, size_t T);
-  void set_input_scalar_field(const ndarray<double>& scalar_) {scalar = scalar_; has_scalar_field = true;}
 
-  void set_input_vector_field(const double *p, size_t W, size_t H, size_t T);
-  void set_input_vector_field(const ndarray<double>& V_) {V = V_; has_vector_field = true;}
+  void initialize();
+  void finalize();
 
-  void set_input_jacobian_field(const double *p, size_t W, size_t H, size_t T); 
-  void set_input_jacobian_field(const ndarray<double> &J) {gradV = J; has_jacobian_field = true;}
+  void advance_timestep();
+  void update_timestep();
   
-  void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub) {m.set_lb_ub(lb, ub);}
-  void set_type_filter(unsigned int mask = 0xffffffff) {type_filter = mask;}
-
 #if FTK_HAVE_VTK
   virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
   virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
 #endif
 
 protected:
-  ndarray<double> scalar, V, gradV;
   regular_simplex_mesh m;
   
   unsigned int type_filter = 0xffffffff;
-  bool has_scalar_field = false, 
-       has_vector_field = false, 
-       has_jacobian_field = false;
-  bool symmetric_jacobian = false;
 
   typedef regular_simplex_mesh_element element_t;
   
@@ -89,61 +76,98 @@ protected:
 
 
 ////////////////////
-void critical_point_tracker_2d_regular::update()
+void critical_point_tracker_2d_regular::initialize()
 {
-  // initializing vector fields
-  if (has_scalar_field) {
-    if (!has_vector_field) {
-      V = gradient2Dt(scalar);
-      has_vector_field = true;
-    }
-    if (!has_jacobian_field) {
-      gradV = jacobian2Dt(V);
-      has_jacobian_field = true;
-    }
-    symmetric_jacobian = true;
+  // initializing bounds
+  m.set_lb_ub({
+      static_cast<int>(domain.start(0)),
+      static_cast<int>(domain.start(1)),
+      start_timestep
+    }, {
+      static_cast<int>(domain.size(0)),
+      static_cast<int>(domain.size(1)),
+      end_timestep
+    });
+
+  if (use_default_domain_partition) {
+    lattice_partitioner partitioner(domain);
+    
+    // a ghost size of 2 is necessary for jacobian derivaition; 
+    // even if jacobian is not necessary, a ghost size of 1 is 
+    // necessary for accessing values on boundaries
+    partitioner.partition(comm.size(), {}, {2, 2});
+
+    local_domain = partitioner.get_core(comm.rank());
+    local_array_domain = partitioner.get_ext(comm.rank());
   }
 
-  // initializing bounds
-  if (m.lb() == m.ub()) {
-    if (has_scalar_field) // default lb/ub for scalar field
-      m.set_lb_ub({2, 2, 0}, {static_cast<int>(V.dim(1)-3), static_cast<int>(V.dim(2)-3), static_cast<int>(V.dim(3)-1)});
-    else // defaulat lb/ub for vector field
-      m.set_lb_ub({0, 0, 0}, {static_cast<int>(V.dim(1)-1), static_cast<int>(V.dim(2)-1), static_cast<int>(V.dim(3)-1)});
+  if (!is_input_array_partial)
+    local_array_domain = array_domain;
+}
+
+void critical_point_tracker_2d_regular::finalize()
+{
+  // trace_intersections();
+  trace_connected_components();
+}
+
+void critical_point_tracker_2d_regular::advance_timestep()
+{
+  update_timestep();
+
+  const int nt = 2;
+  if (scalar.size() > nt) scalar.pop_back();
+  if (V.size() > nt) V.pop_back();
+  if (gradV.size() > nt) gradV.pop_back();
+
+  current_timestep ++;
+}
+
+void critical_point_tracker_2d_regular::update_timestep()
+{
+  // derive fields
+  if (scalar_field_source == SOURCE_GIVEN) {
+    if (vector_field_source == SOURCE_DERIVED) push_input_vector_field(gradient2D(scalar[0])); // 0 is the current timestep; 1 is the last timestep
+    if (jacobian_field_source == SOURCE_DERIVED) push_input_jacobian_field(jacobian2D(V[0]));
   }
 
   // scan 2-simplices
-  fprintf(stderr, "tracking 2D critical points...\n");
-  if (xl == FTK_XL_NONE) {
-    m.element_for(2, [=](element_t e) {
-        critical_point_2dt_t cp;
-        if (check_simplex(e, cp)) {
-          std::lock_guard<std::mutex> guard(mutex);
-          discrete_critical_points[e] = cp;
-        }
-      }); 
-  } else if (xl == FTK_XL_CUDA) {
-#if FTK_HAVE_CUDA
-    const ftk::lattice core = m.get_lattice(), 
-                       ext({0, 0, 0}, {V.dim(1), V.dim(2), V.dim(3)});
-    const auto cps = extract_cp2dt_cuda(core, 0, ext, V.data());
-    for (const auto &cp : cps) {
-      element_t e(3, 2);
-      e.from_work_index(m, cp.tag, core/*domain*/, 0);
-      discrete_critical_points[e] = cp;
-    }
-#else
-    fprintf(stderr, "[FTK] fatal: FTK not compiled with CUDA.\n");
-    assert(false);
-#endif
-  }
-  
-  // fprintf(stderr, "trace intersections...\n");
-  // trace_intersections();
+  // fprintf(stderr, "tracking 2D critical points...\n");
+  auto func2 = [=](element_t e) {
+      critical_point_2dt_t cp;
+      if (check_simplex(e, cp)) {
+        std::lock_guard<std::mutex> guard(mutex);
+        discrete_critical_points[e] = cp;
+      }
+    };
 
-  // convert connected components to traced critical points
-  fprintf(stderr, "tracing critical points...\n");
-  trace_connected_components();
+  if (V.size() >= 2) { // interval
+    // m.element_for_interval(2, current_timestep-1, current_timestep, func2);
+    m.element_for(2, lattice({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          static_cast<size_t>(current_timestep - 1), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          1
+        }),
+        ftk::ELEMENT_SCOPE_INTERVAL, 
+        func2, nthreads);
+  }
+
+  // m.element_for_ordinal(2, current_timestep, func2);
+  m.element_for(2, lattice({ // ordinal
+        local_domain.start(0), 
+        local_domain.start(1), 
+        static_cast<size_t>(current_timestep), 
+      }, {
+        local_domain.size(0), 
+        local_domain.size(1), 
+        1
+      }), 
+      ftk::ELEMENT_SCOPE_ORDINAL, 
+      func2, nthreads);
 }
 
 void critical_point_tracker_2d_regular::trace_intersections()
@@ -217,26 +241,39 @@ void critical_point_tracker_2d_regular::simplex_vectors(
     const std::vector<std::vector<int>>& vertices, double v[3][2]) const
 {
   for (int i = 0; i < 3; i ++) {
-    v[i][0] = V(0, vertices[i][0], vertices[i][1], vertices[i][2]);
-    v[i][1] = V(1, vertices[i][0], vertices[i][1], vertices[i][2]);
+    const int iv = vertices[i][2] == current_timestep ? 0 : 1;
+    for (int j = 0; j < 2; j ++)
+      v[i][j] = V[iv](j, 
+          vertices[i][0] - local_array_domain.start(0), 
+          vertices[i][1] - local_array_domain.start(1));
   }
 }
 
 void critical_point_tracker_2d_regular::simplex_scalars(
     const std::vector<std::vector<int>>& vertices, double values[3]) const
 {
-  for (int i = 0; i < 3; i ++)
-    values[i] = scalar(vertices[i][0], vertices[i][1], vertices[i][2]);
+  for (int i = 0; i < 3; i ++) {
+    const int iv = vertices[i][2] == current_timestep ? 0 : 1;
+    values[i] = scalar[iv](
+        vertices[i][0] - local_array_domain.start(0), 
+        vertices[i][1] - local_array_domain.start(1));
+  }
 }
-  
+
 void critical_point_tracker_2d_regular::simplex_jacobians(
     const std::vector<std::vector<int>>& vertices, 
     double Js[3][2][2]) const
 {
-  for (int i = 0; i < 3; i ++)
-    for (int j = 0; j < 2; j ++)
-      for (int k = 0; k < 2; k ++) 
-        Js[i][j][k] = gradV(k, j, vertices[i][0], vertices[i][1], vertices[i][2]);
+  for (int i = 0; i < 3; i ++) {
+    const int iv = vertices[i][2] == 0 ? 0 : 1;
+    for (int j = 0; j < 2; j ++) {
+      for (int k = 0; k < 2; k ++) {
+        Js[i][j][k] = gradV[iv](k, j, 
+            vertices[i][0] - local_array_domain.start(0), 
+            vertices[i][1] - local_array_domain.start(1));
+      }
+    }
+  }
 }
 
 bool critical_point_tracker_2d_regular::check_simplex(
@@ -257,21 +294,23 @@ bool critical_point_tracker_2d_regular::check_simplex(
   simplex_positions(vertices, X);
   lerp_s2v3(X, mu, cp.x);
 
-  if (has_scalar_field) {
+  return true; // TODO: jacobians
+
+  if (scalar_field_source != SOURCE_NONE) {
     double values[3];
     simplex_scalars(vertices, values);
     cp.scalar = lerp_s2(values, mu);
   }
 
   double J[2][2] = {0}; // jacobian
-  if (has_jacobian_field) { // lerp jacobian
+  if (jacobian_field_source != SOURCE_NONE) { // lerp jacobian
     double Js[3][2][2];
     simplex_jacobians(vertices, Js);
     lerp_s2m2x2(Js, mu, J);
   } else {
     // TODO: jacobian is not given
   }
-  cp.type = critical_point_type_2d(J, symmetric_jacobian);
+  cp.type = critical_point_type_2d(J, is_jacobian_field_symmetric);
   if (cp.type & type_filter) return true;
   else return false;
 } 
