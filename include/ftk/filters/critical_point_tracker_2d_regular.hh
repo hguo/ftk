@@ -107,8 +107,13 @@ void critical_point_tracker_2d_regular::initialize()
 
 void critical_point_tracker_2d_regular::finalize()
 {
-  // trace_intersections();
-  trace_connected_components();
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
+
+  if (comm.rank() == 0) {
+    fprintf(stderr, "finalizing...\n");
+    // trace_intersections();
+    trace_connected_components();
+  }
 }
 
 void critical_point_tracker_2d_regular::advance_timestep()
@@ -125,6 +130,8 @@ void critical_point_tracker_2d_regular::advance_timestep()
 
 void critical_point_tracker_2d_regular::update_timestep()
 {
+  if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+
   // derive fields
   if (scalar_field_source == SOURCE_GIVEN) {
     if (vector_field_source == SOURCE_DERIVED) push_input_vector_field(gradient2D(scalar[0])); // 0 is the current timestep; 1 is the last timestep

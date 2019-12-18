@@ -4,6 +4,7 @@
 #include <ftk/ndarray.hh>
 #include <ftk/hypermesh/lattice_partitioner.hh>
 #include <ftk/filters/critical_point_tracker.hh>
+#include <ftk/external/diy-ext/gather.hh>
 
 namespace ftk {
 
