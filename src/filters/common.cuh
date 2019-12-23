@@ -69,6 +69,8 @@ struct lite_element_t {
   int corner[N], /*d,*/ type;
 };
 
+typedef lite_lattice_t<2> lattice2_t;
+
 typedef lite_lattice_t<3> lattice3_t;
 typedef lite_element_t<3> element32_t;
 typedef ftk::critical_point_t<3, double> cp3_t;

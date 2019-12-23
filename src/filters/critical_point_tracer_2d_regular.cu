@@ -9,10 +9,12 @@
   
 __device__
 bool check_simplex_cp2t(
+    int current_timestep,
     const lattice3_t& core, 
-    const lattice3_t& ext, 
+    const lattice2_t& ext, 
     const element32_t& e, 
-    const double *V, 
+    const double *Vc, // last timestep
+    const double *Vl, // current timestep
     cp3_t &cp)
 {
   int vertices[3][3];
@@ -28,8 +30,12 @@ bool check_simplex_cp2t(
   double v[3][2];
   for (int i = 0; i < 3; i ++) {
     size_t k = ext.to_index(vertices[i]);
-    for (int j = 0; j < 2; j ++)
-      v[i][j] = V[k*2+j]; // V has two channels
+    if (vertices[i][2] == current_timestep) 
+      for (int j = 0; j < 2; j ++)
+        v[i][j] = Vc[k*2+j]; // V has two channels
+    else 
+      for (int j = 0; j < 2; j ++)
+        v[i][j] = Vl[k*2+j]; // V has two channels
   }
 
   double mu[3];
@@ -49,15 +55,18 @@ bool check_simplex_cp2t(
 template <int scope=0>
 __global__
 void sweep_simplices(
+    int current_timestep,
     const lattice3_t core,
-    const lattice3_t ext, const double *V, 
+    const lattice2_t ext, // array dimensions
+    const double *Vc, // current timestep
+    const double *Vl, // last timestep
     unsigned long long &ncps, cp3_t *cps)
 {
   int tid = getGlobalIdx_3D_1D();
   const element32_t e = element32_from_index(core, tid);
 
   cp3_t cp;
-  bool succ = check_simplex_cp2t(core, ext, e, V, cp);
+  bool succ = check_simplex_cp2t(current_timestep, core, ext, e, Vc, Vl, cp);
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
     cp.tag = tid;
@@ -65,9 +74,13 @@ void sweep_simplices(
   }
 }
 
+template<int scope>
 static std::vector<cp3_t> extract_cp2dt(
-    const lattice3_t& core, int scope, 
-    const lattice3_t& ext, const double *V/* 4D array: 2*W*H*T */)
+    int current_timestep,
+    const lattice3_t& core, 
+    const lattice2_t& ext, 
+    const double *Vc, // 3D array: 2*W*H
+    const double *Vl)
 {
   fprintf(stderr, "init GPU...\n");
   const size_t ntasks = core.n() * 12; // ntypes_3[2] = 12; ntypes_3 is in device constant memory
@@ -81,9 +94,11 @@ static std::vector<cp3_t> extract_cp2dt(
   else 
     gridSize = dim3(nBlocks);
 
-  double *dV;
-  cudaMalloc((void**)&dV, 2 * sizeof(double) * ext.n());
-  cudaMemcpy(dV, V, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  double *dVc, *dVl;
+  cudaMalloc((void**)&dVc, 2 * sizeof(double) * ext.n());
+  cudaMalloc((void**)&dVl, 2 * sizeof(double) * ext.n());
+  cudaMemcpy(dVc, Vc, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  cudaMemcpy(dVl, Vl, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
 
   unsigned long long *dncps; // number of cps
   cudaMalloc((void**)&dncps, sizeof(unsigned long long));
@@ -94,7 +109,10 @@ static std::vector<cp3_t> extract_cp2dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");
-  sweep_simplices<<<gridSize, blockSize>>>(core, ext, dV, *dncps, dcps);
+  sweep_simplices<scope><<<gridSize, blockSize>>>(
+      current_timestep, 
+      core, ext, dVc, dVl, 
+      *dncps, dcps);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
 
   unsigned long long ncps;
@@ -104,7 +122,8 @@ static std::vector<cp3_t> extract_cp2dt(
   std::vector<cp3_t> cps(ncps);
   cudaMemcpy(cps.data(), dcps, sizeof(cp3_t) * ncps, cudaMemcpyDeviceToHost);
   
-  cudaFree(dV);
+  cudaFree(dVc);
+  cudaFree(dVl);
   cudaFree(dncps);
   cudaFree(dcps);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
@@ -117,9 +136,18 @@ static std::vector<cp3_t> extract_cp2dt(
 
 std::vector<cp3_t>
 extract_cp2dt_cuda(
-    const ftk::lattice& core, int scope, 
-    const ftk::lattice& ext, const double *V)
+    int scope, 
+    int current_timestep,
+    const ftk::lattice& core, 
+    const ftk::lattice& ext, 
+    const double *Vc, 
+    const double *Vl)
 {
-  lattice3_t C(core), E(ext);
-  return extract_cp2dt(C, scope, E, V);
+  lattice3_t C(core);
+  lattice2_t E(ext);
+
+  if (scope == 1) 
+    return extract_cp2dt<1>(current_timestep, C, E, Vc, Vl);
+  else // scope == 2
+    return extract_cp2dt<2>(current_timestep, C, E, Vc, Vl);
 }
