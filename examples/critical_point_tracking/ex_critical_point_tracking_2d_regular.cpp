@@ -8,7 +8,7 @@ int main(int argc, char **argv)
 {
   diy::mpi::environment env;
 
-  ftk::critical_point_tracker_2d_regular tracker;
+  ftk::critical_point_tracker_2d_regular tracker(argc, argv);
   tracker.set_domain(ftk::lattice({2, 2}, {DW-4, DH-4}));
   tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   tracker.set_input_array_partial(false);

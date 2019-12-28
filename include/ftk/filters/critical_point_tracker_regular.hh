@@ -62,7 +62,7 @@ protected: // config
 
 protected:
   std::deque<ndarray<double>> scalar, V, gradV;
-  int current_timestep;
+  int current_timestep = 0;
 };
 
 /////

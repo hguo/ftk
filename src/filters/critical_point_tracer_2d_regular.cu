@@ -6,10 +6,12 @@
 #include <ftk/hypermesh/lattice.hh>
 #include <ftk/filters/critical_point.hh>
 #include "common.cuh"
-  
+
+template <int scope>
 __device__
 bool check_simplex_cp2t(
     int current_timestep,
+    const lattice3_t& domain,
     const lattice3_t& core, 
     const lattice2_t& ext, 
     const element32_t& e, 
@@ -17,20 +19,26 @@ bool check_simplex_cp2t(
     const double *Vl, // current timestep
     cp3_t &cp)
 {
+  if (scope == 2 && e.corner[2] == current_timestep) return false; // FIXME
   int vertices[3][3];
   for (int i = 0; i < 3; i ++)
     for (int j = 0; j < 3; j ++) {
-      vertices[i][j] = e.corner[j]
-        + unit_simplices_3_2[e.type][i][j];
-      if (vertices[i][j] < core.st[j] || 
-          vertices[i][j] > core.st[j] + core.sz[j] - 1)
+      vertices[i][j] = e.corner[j];
+      if (scope == 2) 
+        vertices[i][j] += unit_simplices_3_2_interval[e.type][i][j];
+      else if (scope == 1)
+        vertices[i][j] += unit_simplices_3_2_ordinal[e.type][i][j];
+      else 
+        vertices[i][j] += unit_simplices_3_2[e.type][i][j];
+      if (vertices[i][j] < domain.st[j] || 
+          vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
     }
 
   double v[3][2];
   for (int i = 0; i < 3; i ++) {
     size_t k = ext.to_index(vertices[i]);
-    if (vertices[i][2] == current_timestep) 
+    if (vertices[i][2] == current_timestep)
       for (int j = 0; j < 2; j ++)
         v[i][j] = Vc[k*2+j]; // V has two channels
     else 
@@ -52,10 +60,11 @@ bool check_simplex_cp2t(
     return false;
 }
 
-template <int scope=0>
+template <int scope>
 __global__
 void sweep_simplices(
     int current_timestep,
+    const lattice3_t domain,
     const lattice3_t core,
     const lattice2_t ext, // array dimensions
     const double *Vc, // current timestep
@@ -63,10 +72,18 @@ void sweep_simplices(
     unsigned long long &ncps, cp3_t *cps)
 {
   int tid = getGlobalIdx_3D_1D();
-  const element32_t e = element32_from_index(core, tid);
+  const element32_t e = element32_from_index<scope>(core, tid);
+
+#if 0
+  if (tid % 10000 == 0)
+    printf("core.st=%d, %d, %d, core.sz=%d, %d, %d, corner=%d, %d, %d\n",
+        core.st[0], core.st[1], core.st[2], 
+        core.sz[0], core.sz[1], core.sz[2], 
+        e.corner[0], e.corner[1], e.corner[2]);
+#endif
 
   cp3_t cp;
-  bool succ = check_simplex_cp2t(current_timestep, core, ext, e, Vc, Vl, cp);
+  bool succ = check_simplex_cp2t<scope>(current_timestep, domain, core, ext, e, Vc, Vl, cp);
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
     cp.tag = tid;
@@ -77,13 +94,14 @@ void sweep_simplices(
 template<int scope>
 static std::vector<cp3_t> extract_cp2dt(
     int current_timestep,
+    const lattice3_t& domain,
     const lattice3_t& core, 
     const lattice2_t& ext, 
     const double *Vc, // 3D array: 2*W*H
     const double *Vl)
 {
   fprintf(stderr, "init GPU...\n");
-  const size_t ntasks = core.n() * 12; // ntypes_3[2] = 12; ntypes_3 is in device constant memory
+  const size_t ntasks = core.n() * ntypes_3_2<scope>();
   const int maxGridDim = 1024;
   const int blockSize = 256;
   const int nBlocks = idivup(ntasks, blockSize);
@@ -94,10 +112,10 @@ static std::vector<cp3_t> extract_cp2dt(
   else 
     gridSize = dim3(nBlocks);
 
-  double *dVc, *dVl;
+  double *dVc, *dVl = NULL;
   cudaMalloc((void**)&dVc, 2 * sizeof(double) * ext.n());
-  cudaMalloc((void**)&dVl, 2 * sizeof(double) * ext.n());
   cudaMemcpy(dVc, Vc, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&dVl, 2 * sizeof(double) * ext.n());
   cudaMemcpy(dVl, Vl, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
 
   unsigned long long *dncps; // number of cps
@@ -111,16 +129,18 @@ static std::vector<cp3_t> extract_cp2dt(
   fprintf(stderr, "calling kernel func...\n");
   sweep_simplices<scope><<<gridSize, blockSize>>>(
       current_timestep, 
-      core, ext, dVc, dVl, 
+      domain, core, ext, dVc, dVl, 
       *dncps, dcps);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
 
   unsigned long long ncps;
   cudaMemcpy(&ncps, dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpy, ncps");
   fprintf(stderr, "ncps=%lu\n", ncps);
 
   std::vector<cp3_t> cps(ncps);
   cudaMemcpy(cps.data(), dcps, sizeof(cp3_t) * ncps, cudaMemcpyDeviceToHost);
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpy, dcps");
   
   cudaFree(dVc);
   cudaFree(dVl);
@@ -138,16 +158,24 @@ std::vector<cp3_t>
 extract_cp2dt_cuda(
     int scope, 
     int current_timestep,
+    const ftk::lattice& domain,
     const ftk::lattice& core, 
     const ftk::lattice& ext, 
     const double *Vc, 
     const double *Vl)
 {
+  lattice3_t D(domain);
   lattice3_t C(core);
   lattice2_t E(ext);
 
+  std::cerr << "domain=" << domain 
+    << ", core=" << core << ", current_timestep=" 
+    << current_timestep << std::endl;
+
+  if (scope == 2) 
+    return extract_cp2dt<2>(current_timestep, D, C, E, Vc, Vl);
   if (scope == 1) 
-    return extract_cp2dt<1>(current_timestep, C, E, Vc, Vl);
+    return extract_cp2dt<1>(current_timestep, D, C, E, Vc, Vl);
   else // scope == 2
-    return extract_cp2dt<2>(current_timestep, C, E, Vc, Vl);
+    return extract_cp2dt<0>(current_timestep, D, C, E, Vc, Vl);
 }
