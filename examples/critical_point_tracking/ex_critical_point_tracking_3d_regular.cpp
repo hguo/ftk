@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 {
   diy::mpi::environment env(argc, argv);
 
-  ftk::critical_point_tracker_3d_regular tracker;
+  ftk::critical_point_tracker_3d_regular tracker(argc, argv);
   tracker.set_domain(ftk::lattice({32, 32, 32}, {64, 64, 64}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   tracker.set_input_array_partial(false);

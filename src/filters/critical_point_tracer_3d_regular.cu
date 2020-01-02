@@ -39,7 +39,7 @@ bool check_simplex_cp3t(
     cp4_t &cp)
 {
   const int last_timestep = current_timestep - 1;
-  if (scope == scope_interval && e.corner[2] != last_timestep)
+  if (scope == scope_interval && e.corner[3] != last_timestep)
     return false;
   
   int vertices[4][4];
@@ -56,7 +56,7 @@ bool check_simplex_cp3t(
   for (int i = 0; i < 4; i ++) {
     size_t k = ext.to_index(vertices[i]);
     for (int j = 0; j < 3; j ++)
-      v[i][j] = V[unit_simplex_offset_4_3<scope>(e.type, i, 2)][k*3+j]; // V has three channels
+      v[i][j] = V[unit_simplex_offset_4_3<scope>(e.type, i, 3)][k*3+j]; // V has three channels
   }
 
   return detect_cp3t(v, vertices, cp);
@@ -114,7 +114,7 @@ static std::vector<cp4_t> extract_cp3dt(
   cudaMalloc((void**)&dVc, 3 * sizeof(double) * ext.n());
   cudaMemcpy(dVc, Vc, 3 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
   cudaMalloc((void**)&dVl, 3 * sizeof(double) * ext.n());
-  cudaMemcpy(dVc, Vc, 3 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  cudaMemcpy(dVl, Vl, 3 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
 
   unsigned long long *dncps; // number of cps
   cudaMalloc((void**)&dncps, sizeof(unsigned long long));

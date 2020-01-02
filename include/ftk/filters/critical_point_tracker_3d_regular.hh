@@ -35,8 +35,13 @@
 
 #if FTK_HAVE_CUDA
 extern std::vector<ftk::critical_point_t<4, double>> 
-extract_cp3dt_cuda(const ftk::lattice&, int, 
-    const ftk::lattice&, const double*);
+extract_cp3dt_cuda(
+    int scope, int current_timestep, 
+    const ftk::lattice& domain4,
+    const ftk::lattice& core4, 
+    const ftk::lattice& ext3,
+    const double *Vc, // current timestep
+    const double *Vl); // last timestep
 #endif
 
 namespace ftk {
@@ -159,35 +164,116 @@ void critical_point_tracker_3d_regular::update_timestep()
       }
     };
 
-  if (V.size() >= 2) { // interval
-    m.element_for(3, lattice({
+  if (xl == FTK_XL_NONE) {
+    if (V.size() >= 2) { // interval
+      m.element_for(3, lattice({
+            local_domain.start(0), 
+            local_domain.start(1), 
+            local_domain.start(2), 
+            static_cast<size_t>(current_timestep - 1), 
+          }, {
+            local_domain.size(0), 
+            local_domain.size(1), 
+            local_domain.size(2), 
+            1
+          }),
+          ftk::ELEMENT_SCOPE_INTERVAL, 
+          func3, nthreads);
+    }
+
+    m.element_for(3, lattice({ // ordinal
           local_domain.start(0), 
           local_domain.start(1), 
           local_domain.start(2), 
-          static_cast<size_t>(current_timestep - 1), 
+          static_cast<size_t>(current_timestep), 
         }, {
           local_domain.size(0), 
           local_domain.size(1), 
           local_domain.size(2), 
           1
-        }),
-        ftk::ELEMENT_SCOPE_INTERVAL, 
+        }), 
+        ftk::ELEMENT_SCOPE_ORDINAL, 
         func3, nthreads);
-  }
+  } else if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    ftk::lattice domain4({
+          domain.start(0), 
+          domain.start(1), 
+          domain.start(2), 
+          0
+        }, {
+          domain.size(0)-1,
+          domain.size(1)-1,
+          domain.size(2)-1,
+          std::numeric_limits<int>::max()
+        });
 
-  m.element_for(3, lattice({ // ordinal
-        local_domain.start(0), 
-        local_domain.start(1), 
-        local_domain.start(2), 
-        static_cast<size_t>(current_timestep), 
-      }, {
-        local_domain.size(0), 
-        local_domain.size(1), 
-        local_domain.size(2), 
-        1
-      }), 
-      ftk::ELEMENT_SCOPE_ORDINAL, 
-      func3, nthreads);
+    ftk::lattice ordinal_core({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        });
+
+    ftk::lattice interval_core({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          static_cast<size_t>(current_timestep-1), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        });
+
+    ftk::lattice ext({0, 0, 0}, 
+        {V[0].dim(1), V[0].dim(2), V[0].dim(3)});
+
+    if (V.size() >= 2) { // interval
+      fprintf(stderr, "processing interval %d, %d\n", current_timestep - 1, current_timestep);
+      auto results = extract_cp3dt_cuda(
+          ELEMENT_SCOPE_INTERVAL, 
+          current_timestep,
+          domain4,
+          interval_core,
+          ext,
+          V[0].data(), // current
+          V[1].data() // last
+        );
+      fprintf(stderr, "interval_results#=%d\n", results.size());
+      for (auto cp : results) {
+        element_t e(4, 3);
+        e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
+        discrete_critical_points[e] = cp;
+      }
+    }
+
+    // ordinal
+    auto results = extract_cp3dt_cuda(
+        ELEMENT_SCOPE_ORDINAL, 
+        current_timestep, 
+        domain4,
+        ordinal_core,
+        ext,
+        V[0].data(),
+        V[0].data()
+      );
+    
+    for (auto cp : results) {
+      element_t e(4, 3);
+      e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
+      discrete_critical_points[e] = cp;
+    }
+#else
+    assert(false);
+#endif
+  }
 }
 
 void critical_point_tracker_3d_regular::trace_connected_components()
