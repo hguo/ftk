@@ -7,6 +7,26 @@
 #include "common.cuh"
 
 //// 
+__device__
+bool detect_cp2t(
+    const double v[3][2],
+    const int vertices[3][3],
+    cp3_t& cp)
+{
+  double mu[3];
+  bool succ = ftk::inverse_lerp_s2v2(v, mu, 0.0);
+ 
+  if (succ) {
+    double X[3][3];
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 3; j ++)
+        X[i][j] = vertices[i][j];
+    ftk::lerp_s2v3(X, mu, cp.x);
+    return true;
+  } else 
+    return false;
+}
+
 template <int scope>
 __device__
 bool check_simplex_cp2t(
@@ -25,7 +45,8 @@ bool check_simplex_cp2t(
   int vertices[3][3];
   for (int i = 0; i < 3; i ++)
     for (int j = 0; j < 3; j ++) {
-      vertices[i][j] = e.corner[j] + unit_simplex_offset_3_2<scope>(e.type, i, j);
+      vertices[i][j] = e.corner[j] 
+        + unit_simplex_offset_3_2<scope>(e.type, i, j);
       if (vertices[i][j] < domain.st[j] || 
           vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
@@ -38,18 +59,7 @@ bool check_simplex_cp2t(
       v[i][j] = V[unit_simplex_offset_3_2<scope>(e.type, i, 2)][k*2+j];
   }
 
-  double mu[3];
-  bool succ = ftk::inverse_lerp_s2v2(v, mu, 0.0);
- 
-  if (succ) {
-    double X[3][3];
-    for (int i = 0; i < 3; i ++)
-      for (int j = 0; j < 3; j ++)
-        X[i][j] = vertices[i][j];
-    ftk::lerp_s2v3(X, mu, cp.x);
-    return true;
-  } else 
-    return false;
+  return detect_cp2t(v, vertices, cp);
 }
 
 template <int scope>
@@ -69,7 +79,10 @@ void sweep_simplices(
   const element32_t e = element32_from_index<scope>(core, tid);
 
   cp3_t cp;
-  bool succ = check_simplex_cp2t<scope>(current_timestep, domain, core, ext, e, V, cp);
+  bool succ = check_simplex_cp2t<scope>(
+      current_timestep, 
+      domain, core, ext, e, V, cp);
+
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
     cp.tag = tid;
@@ -86,7 +99,6 @@ static std::vector<cp3_t> extract_cp2dt(
     const double *Vc, // 3D array: 2*W*H
     const double *Vl)
 {
-  fprintf(stderr, "init GPU...\n");
   const size_t ntasks = core.n() * ntypes_3_2<scope>();
   const int maxGridDim = 1024;
   const int blockSize = 256;
@@ -117,6 +129,7 @@ static std::vector<cp3_t> extract_cp2dt(
       current_timestep, 
       domain, core, ext, dVc, dVl, 
       *dncps, dcps);
+  cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
 
   unsigned long long ncps;
@@ -135,7 +148,7 @@ static std::vector<cp3_t> extract_cp2dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
  
   cudaDeviceSynchronize();
-  fprintf(stderr, "exit, ncps=%lu\n", ncps);
+  fprintf(stderr, "exitting gpu kernel, ncps=%lu\n", ncps);
 
   return cps;
 }

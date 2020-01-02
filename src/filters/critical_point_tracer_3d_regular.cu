@@ -1,7 +1,6 @@
 #include <nvfunctional>
 #include <cstdio>
 #include <cassert>
-// #include <ftk/filters/critical_point_tracker_2d.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/hypermesh/lattice.hh>
@@ -28,54 +27,28 @@ bool detect_cp3t(
     return false;
 }
 
-__device__
-bool check_simplex_cp3t_streaming_ordinal(
-    int current_timestep,
-    const lattice3_t& core, 
-    const lattice3_t& ext, 
-    const element43_t& e, 
-    const double *V, 
-    cp4_t &cp)
-{
-#if 0
-  int vertices[4][4];
-  for (int i = 0; i < 4; i ++) 
-    for (int j = 0; j < 4; j ++) {
-      vertices[i][j] = e.corner[j]
-        + unit_simplices_4_3[ordinal_unit_simplex_indices_4_3[e.type]][i][j];
-    }
-  return false;
-#endif
-}
-
-__device__
-bool check_simplex_cp3t_streaming_interval(
-    int current_timestep,
-    const lattice3_t& core,
-    const lattice4_t& ext, 
-    const element43_t& e, 
-    const double *V0, const double *V1, 
-    cp4_t &cp)
-{
-  return false;
-}
-
-template <int scope=0>
+template <int scope>
 __device__
 bool check_simplex_cp3t(
+    int current_timestep,
+    const lattice4_t& domain, 
     const lattice4_t& core, 
-    const lattice4_t& ext, // array dimension
+    const lattice3_t& ext, // array dimension
     const element43_t& e, 
-    const double *V, // , const double *V1, // vector field for two adjacent timesteps
+    const double *V[2],
     cp4_t &cp)
 {
+  const int last_timestep = current_timestep - 1;
+  if (scope == scope_interval && e.corner[2] != last_timestep)
+    return false;
+  
   int vertices[4][4];
   for (int i = 0; i < 4; i ++)
     for (int j = 0; j < 4; j ++) {
       vertices[i][j] = e.corner[j]
-        + unit_simplices_4_3[e.type][i][j];
-      if (vertices[i][j] < core.st[j] || 
-          vertices[i][j] > core.st[j] + core.sz[j] - 1)
+        + unit_simplex_offset_4_3<scope>(e.type, i, j);
+      if (vertices[i][j] < domain.st[j] || 
+          vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
     }
 
@@ -83,24 +56,33 @@ bool check_simplex_cp3t(
   for (int i = 0; i < 4; i ++) {
     size_t k = ext.to_index(vertices[i]);
     for (int j = 0; j < 3; j ++)
-      v[i][j] = V[k*3+j]; // V has three channels
+      v[i][j] = V[unit_simplex_offset_4_3<scope>(e.type, i, 2)][k*3+j]; // V has three channels
   }
 
   return detect_cp3t(v, vertices, cp);
 }
 
-template <int scope=0>
+template <int scope>
 __global__
 void sweep_simplices(
+    int current_timestep,
+    const lattice4_t domain,
     const lattice4_t core,
-    const lattice4_t ext, const double *V, 
+    const lattice3_t ext, // array dimension
+    const double *Vc, // current timestep
+    const double *Vl, // last timestep
     unsigned long long &ncps, cp4_t *cps)
 {
+  const double *V[2] = {Vl, Vc};
+  
   int tid = getGlobalIdx_3D_1D();
   const element43_t e = element43_from_index<scope>(core, tid);
 
   cp4_t cp;
-  bool succ = check_simplex_cp3t<scope>(core, ext, e, V, cp);
+  bool succ = check_simplex_cp3t<scope>(
+      current_timestep,
+      domain, core, ext, e, V, cp);
+
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
     cp.tag = tid;
@@ -108,13 +90,16 @@ void sweep_simplices(
   }
 }
 
-template <int scope=0>
+template <int scope>
 static std::vector<cp4_t> extract_cp3dt(
+    int current_timestep,
+    const lattice4_t& domain,
     const lattice4_t& core, 
-    const lattice4_t& ext, const double *V/* 5D array: 3*W*H*D*T */)
+    const lattice3_t& ext, 
+    const double *Vc, 
+    const double *Vl)
 {
-  fprintf(stderr, "init GPU...\n");
-  const size_t ntasks = core.n() * 60; // ntypes_4[3] = 60; 
+  const size_t ntasks = core.n() * ntypes_4_3<scope>();
   const int maxGridDim = 1024;
   const int blockSize = 256;
   const int nBlocks = idivup(ntasks, blockSize);
@@ -125,9 +110,11 @@ static std::vector<cp4_t> extract_cp3dt(
   else 
     gridSize = dim3(nBlocks);
 
-  double *dV;
-  cudaMalloc((void**)&dV, 3 * sizeof(double) * ext.n());
-  cudaMemcpy(dV, V, 3 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  double *dVc, *dVl;
+  cudaMalloc((void**)&dVc, 3 * sizeof(double) * ext.n());
+  cudaMemcpy(dVc, Vc, 3 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&dVl, 3 * sizeof(double) * ext.n());
+  cudaMemcpy(dVc, Vc, 3 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
 
   unsigned long long *dncps; // number of cps
   cudaMalloc((void**)&dncps, sizeof(unsigned long long));
@@ -139,7 +126,10 @@ static std::vector<cp4_t> extract_cp3dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");
-  sweep_simplices<scope><<<gridSize, blockSize>>>(core, ext, dV, *dncps, dcps);
+  sweep_simplices<scope><<<gridSize, blockSize>>>(
+      current_timestep, 
+      domain, core, ext, dVc, dVl, 
+      *dncps, dcps);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices, kernel function");
 
@@ -152,29 +142,36 @@ static std::vector<cp4_t> extract_cp3dt(
   cudaMemcpy(cps.data(), dcps, sizeof(cp4_t) * ncps, cudaMemcpyDeviceToHost);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpyDeviceToHost");
   
-  cudaFree(dV);
+  cudaFree(dVc);
+  cudaFree(dVl);
   cudaFree(dncps);
   cudaFree(dcps);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
  
   cudaDeviceSynchronize();
-  fprintf(stderr, "exit, ncps=%lu\n", ncps);
+  fprintf(stderr, "exitting gpu kernel, ncps=%lu\n", ncps);
 
   return cps;
 }
 
 std::vector<cp4_t>
 extract_cp3dt_cuda(
-    const ftk::lattice& core, int scope,
-    const ftk::lattice& ext, const double *V)
+    int scope, 
+    int current_timestep, 
+    const ftk::lattice& domain,
+    const ftk::lattice& core, 
+    const ftk::lattice& ext, 
+    const double *Vc, 
+    const double *Vl)
 {
-  lattice4_t C(core), E(ext);
+  lattice4_t D(domain);
+  lattice4_t C(core);
+  lattice3_t E(ext);
 
-  if (scope == 0) return extract_cp3dt<0>(C, E, V);
-  else if (scope == 1) return extract_cp3dt<1>(C, E, V);
-  else if (scope == 2) return extract_cp3dt<2>(C, E, V);
-  else {
-    assert(false);
-    return std::vector<cp4_t>(); // make compiler happy
-  }
+  if (scope == scope_interval) 
+    return extract_cp3dt<scope_interval>(current_timestep, D, C, E, Vc, Vl);
+  if (scope == scope_ordinal) 
+    return extract_cp3dt<scope_ordinal>(current_timestep, D, C, E, Vc, Vl);
+  else // scope == 2
+    return extract_cp3dt<scope_all>(current_timestep, D, C, E, Vc, Vl);
 }
