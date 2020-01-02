@@ -4,6 +4,10 @@
 #include "threadIdx.cuh"
 #include "utils.cuh"
 
+const int scope_all = 0, 
+          scope_ordinal = 1, 
+          scope_interval = 2;
+
 template <int N=3>
 struct lite_lattice_t {
   int st[N], sz[N], prod[N];
@@ -213,6 +217,27 @@ __device__ __host__ inline int ntypes_4_3<1>() { return 6; }
 
 template <>
 __device__ __host__ inline int ntypes_4_3<2>() { return 54; }
+
+template <int scope>
+__device__ __host__ inline int unit_simplex_offset_3_2(int type, int i, int j);
+
+template <>
+__device__ inline int unit_simplex_offset_3_2<0>(int type, int i, int j)
+{
+  return unit_simplices_3_2[type][i][j];
+}
+
+template <>
+__device__ inline int unit_simplex_offset_3_2<1>(int type, int i, int j)
+{
+  return unit_simplices_3_2_ordinal[type][i][j];
+}
+
+template <>
+__device__ inline int unit_simplex_offset_3_2<2>(int type, int i, int j)
+{
+  return unit_simplices_3_2_interval[type][i][j];
+}
 
 template <int scope=0, typename uint=size_t>
 __device__ __host__

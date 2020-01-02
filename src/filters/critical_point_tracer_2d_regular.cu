@@ -7,6 +7,7 @@
 #include <ftk/filters/critical_point.hh>
 #include "common.cuh"
 
+//// 
 template <int scope>
 __device__
 bool check_simplex_cp2t(
@@ -15,21 +16,17 @@ bool check_simplex_cp2t(
     const lattice3_t& core, 
     const lattice2_t& ext, 
     const element32_t& e, 
-    const double *Vc, // last timestep
-    const double *Vl, // current timestep
+    const double *V[2], // last and current timestep
     cp3_t &cp)
 {
-  if (scope == 2 && e.corner[2] == current_timestep) return false; // FIXME
+  const int last_timestep = current_timestep - 1;
+  if (scope == scope_interval && e.corner[2] != last_timestep)
+    return false;
+
   int vertices[3][3];
   for (int i = 0; i < 3; i ++)
     for (int j = 0; j < 3; j ++) {
-      vertices[i][j] = e.corner[j];
-      if (scope == 2) 
-        vertices[i][j] += unit_simplices_3_2_interval[e.type][i][j];
-      else if (scope == 1)
-        vertices[i][j] += unit_simplices_3_2_ordinal[e.type][i][j];
-      else 
-        vertices[i][j] += unit_simplices_3_2[e.type][i][j];
+      vertices[i][j] = e.corner[j] + unit_simplex_offset_3_2<scope>(e.type, i, j);
       if (vertices[i][j] < domain.st[j] || 
           vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
@@ -38,12 +35,8 @@ bool check_simplex_cp2t(
   double v[3][2];
   for (int i = 0; i < 3; i ++) {
     size_t k = ext.to_index(vertices[i]);
-    if (vertices[i][2] == current_timestep)
-      for (int j = 0; j < 2; j ++)
-        v[i][j] = Vc[k*2+j]; // V has two channels
-    else 
-      for (int j = 0; j < 2; j ++)
-        v[i][j] = Vl[k*2+j]; // V has two channels
+    for (int j = 0; j < 2; j ++)
+      v[i][j] = V[unit_simplex_offset_3_2<scope>(e.type, i, 2)][k*2+j];
   }
 
   double mu[3];
@@ -71,19 +64,13 @@ void sweep_simplices(
     const double *Vl, // last timestep
     unsigned long long &ncps, cp3_t *cps)
 {
+  const double *V[2] = {Vl, Vc};
+  
   int tid = getGlobalIdx_3D_1D();
   const element32_t e = element32_from_index<scope>(core, tid);
 
-#if 0
-  if (tid % 10000 == 0)
-    printf("core.st=%d, %d, %d, core.sz=%d, %d, %d, corner=%d, %d, %d\n",
-        core.st[0], core.st[1], core.st[2], 
-        core.sz[0], core.sz[1], core.sz[2], 
-        e.corner[0], e.corner[1], e.corner[2]);
-#endif
-
   cp3_t cp;
-  bool succ = check_simplex_cp2t<scope>(current_timestep, domain, core, ext, e, Vc, Vl, cp);
+  bool succ = check_simplex_cp2t<scope>(current_timestep, domain, core, ext, e, V, cp);
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
     cp.tag = tid;

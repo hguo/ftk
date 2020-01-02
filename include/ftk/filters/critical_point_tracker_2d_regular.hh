@@ -183,7 +183,7 @@ void critical_point_tracker_2d_regular::update_timestep()
         func2, nthreads);
   } else if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
-    ftk::lattice my_domain({
+    ftk::lattice domain3({
           domain.start(0), 
           domain.start(1), 
           0
@@ -216,13 +216,12 @@ void critical_point_tracker_2d_regular::update_timestep()
     ftk::lattice ext({0, 0}, 
         {V[0].dim(1), V[0].dim(2)});
 
-#if 1
     if (V.size() >= 2) { // interval
       fprintf(stderr, "processing interval %d, %d\n", current_timestep - 1, current_timestep);
       auto results = extract_cp2dt_cuda(
           ELEMENT_SCOPE_INTERVAL, 
           current_timestep,
-          my_domain, 
+          domain3, 
           interval_core,
           ext,
           V[0].data(), // current
@@ -235,13 +234,12 @@ void critical_point_tracker_2d_regular::update_timestep()
         discrete_critical_points[e] = cp;
       }
     }
-#endif
 
-#if 1
+    // ordinal
     auto results = extract_cp2dt_cuda(
         ELEMENT_SCOPE_ORDINAL, 
         current_timestep, 
-        my_domain, 
+        domain3,
         ordinal_core,
         ext,
         V[0].data(),
@@ -253,7 +251,6 @@ void critical_point_tracker_2d_regular::update_timestep()
       e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
       discrete_critical_points[e] = cp;
     }
-#endif
 #else
     assert(false);
 #endif
