@@ -1,6 +1,5 @@
 #include <nvfunctional>
 #include <cstdio>
-// #include <ftk/filters/critical_point_tracker_2d.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/hypermesh/lattice.hh>
@@ -155,14 +154,14 @@ extract_cp2dt_cuda(
   lattice3_t C(core);
   lattice2_t E(ext);
 
-  std::cerr << "domain=" << domain 
-    << ", core=" << core << ", current_timestep=" 
-    << current_timestep << std::endl;
+  // std::cerr << "domain=" << domain 
+  //   << ", core=" << core << ", current_timestep=" 
+  //   << current_timestep << std::endl;
 
-  if (scope == 2) 
-    return extract_cp2dt<2>(current_timestep, D, C, E, Vc, Vl);
-  if (scope == 1) 
-    return extract_cp2dt<1>(current_timestep, D, C, E, Vc, Vl);
+  if (scope == scope_interval) 
+    return extract_cp2dt<scope_interval>(current_timestep, D, C, E, Vc, Vl);
+  if (scope == scope_ordinal) 
+    return extract_cp2dt<scope_ordinal>(current_timestep, D, C, E, Vc, Vl);
   else // scope == 2
-    return extract_cp2dt<0>(current_timestep, D, C, E, Vc, Vl);
+    return extract_cp2dt<scope_all>(current_timestep, D, C, E, Vc, Vl);
 }

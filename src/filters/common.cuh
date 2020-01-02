@@ -4,9 +4,11 @@
 #include "threadIdx.cuh"
 #include "utils.cuh"
 
-const int scope_all = 0, 
-          scope_ordinal = 1, 
-          scope_interval = 2;
+enum {
+  scope_all = 0, 
+  scope_ordinal = 1, 
+  scope_interval = 2
+}; 
 
 template <int N=3>
 struct lite_lattice_t {
