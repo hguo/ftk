@@ -6,12 +6,14 @@
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 inline T lerp_s1(const T v[2], const T mu[2])
 {
   return v[0] * mu[0] + v[1] * mu[1];
 }
 
 template <typename T>
+__device__ __host__
 inline void lerp_s1v2(const T V[2][2], const T mu[2], T v[2])
 {
   v[0] = V[0][0] * mu[0] + V[1][0] * mu[1];
@@ -19,6 +21,7 @@ inline void lerp_s1v2(const T V[2][2], const T mu[2], T v[2])
 }
 
 template <typename T>
+__device__ __host__
 inline void lerp_s1v3(const T V[2][3], const T mu[2], T v[3])
 {
   v[0] = V[0][0] * mu[0] + V[1][0] * mu[1];
@@ -27,6 +30,7 @@ inline void lerp_s1v3(const T V[2][3], const T mu[2], T v[3])
 }
 
 template <typename T>
+__device__ __host__
 inline T lerp_s2(const T v[3], const T mu[3])
 {
   return v[0] * mu[0] + v[1] * mu[1] + v[2] * mu[2];

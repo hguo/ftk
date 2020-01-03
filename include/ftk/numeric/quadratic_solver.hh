@@ -10,6 +10,7 @@
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 inline T solve_quadratic(const T P[3], std::complex<T> x[2])
 {
   const T delta = P[1]*P[1] - 4*P[2]*P[0];

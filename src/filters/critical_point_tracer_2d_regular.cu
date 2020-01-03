@@ -19,6 +19,7 @@ bool check_simplex_cp2t(
     const element32_t& e, 
     const double *V[2], // last and current timesteps
     const double *gradV[2], // jacobian of last and current timesteps
+    const double *scalar[2],
     cp3_t &cp)
 {
   const int last_timestep = current_timestep - 1;
@@ -47,17 +48,30 @@ bool check_simplex_cp2t(
  
   if (succ) {
     // linear jacobian interpolation
-    double Js[3][2][2], J[2][2];
-    for (int i = 0; i < 3; i ++) {
-      size_t ii = ext.to_index(vertices[i]);
-      int t = unit_simplex_offset_3_2<scope>(e.type, i, 2);
-      for (int j = 0; j < 2; j ++) 
-        for (int k = 0; k < 2; k ++)
-          Js[i][j][k] = gradV[t][ii*4 + j*2 + k];
+    if (gradV[1]) { // have given jacobian
+      double Js[3][2][2], J[2][2];
+      for (int i = 0; i < 3; i ++) {
+        size_t ii = ext.to_index(vertices[i]);
+        int t = unit_simplex_offset_3_2<scope>(e.type, i, 2);
+        for (int j = 0; j < 2; j ++) 
+          for (int k = 0; k < 2; k ++)
+            Js[i][j][k] = gradV[t][ii*4 + j*2 + k];
+      }
+      ftk::lerp_s2m2x2(Js, mu, J);
+      ftk::make_symmetric2x2(J);
+      cp.type = ftk::critical_point_type_2d(J, true/*symmetric*/);
     }
-    ftk::lerp_s2m2x2(Js, mu, J);
-    ftk::make_symmetric2x2(J);
-    cp.type = ftk::critical_point_type_2d(J, true/*symmetric*/);
+
+    // scalar interpolation
+    if (scalar[1]) { // have given scalar
+      double values[3];
+      for (int i = 0; i < 3; i ++) {
+        size_t ii = ext.to_index(vertices[i]);
+        int t = unit_simplex_offset_3_2<scope>(e.type, i, 2);
+        values[i] = scalar[t][ii];
+      }
+      cp.scalar = ftk::lerp_s2(values, mu);
+    }
 
     // location interpolation
     double X[3][3];
@@ -82,10 +96,13 @@ void sweep_simplices(
     const double *Vl, // last timestep
     const double *Jc, 
     const double *Jl,
+    const double *Sc, 
+    const double *Sl,
     unsigned long long &ncps, cp3_t *cps)
 {
   const double *V[2] = {Vl, Vc};
   const double *J[2] = {Jl, Jc};
+  const double *S[2] = {Sl, Sc};
   
   int tid = getGlobalIdx_3D_1D();
   const element32_t e = element32_from_index<scope>(core, tid);
@@ -93,7 +110,7 @@ void sweep_simplices(
   cp3_t cp;
   bool succ = check_simplex_cp2t<scope>(
       current_timestep, 
-      domain, core, ext, e, V, J, cp);
+      domain, core, ext, e, V, J, S, cp);
 
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
@@ -111,7 +128,9 @@ static std::vector<cp3_t> extract_cp2dt(
     const double *Vc, // 3D array: 2*W*H
     const double *Vl, 
     const double *Jc,
-    const double *Jl)
+    const double *Jl,
+    const double *Sc,
+    const double *Sl)
 {
   const size_t ntasks = core.n() * ntypes_3_2<scope>();
   const int maxGridDim = 1024;
@@ -140,6 +159,16 @@ static std::vector<cp3_t> extract_cp2dt(
     cudaMemcpy(dJl, Jl, 4 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
   }
 
+  double *dSc = NULL, *dSl = NULL;
+  if (Sc) {
+    cudaMalloc((void**)&dSc, sizeof(double) * ext.n());
+    cudaMemcpy(dSc, Sc, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  }
+  if (Sl) {
+    cudaMalloc((void**)&dSl, sizeof(double) * ext.n());
+    cudaMemcpy(dSl, Sl, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  }
+
   unsigned long long *dncps; // number of cps
   cudaMalloc((void**)&dncps, sizeof(unsigned long long));
   cudaMemset(dncps, 0, sizeof(unsigned long long));
@@ -151,7 +180,7 @@ static std::vector<cp3_t> extract_cp2dt(
   fprintf(stderr, "calling kernel func...\n");
   sweep_simplices<scope><<<gridSize, blockSize>>>(
       current_timestep, 
-      domain, core, ext, dVc, dVl, dJc, dJl,
+      domain, core, ext, dVc, dVl, dJc, dJl, dSc, dSl,
       *dncps, dcps);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
@@ -189,7 +218,9 @@ extract_cp2dt_cuda(
     const double *Vc, 
     const double *Vl, 
     const double *Jc, 
-    const double *Jl)
+    const double *Jl, 
+    const double *Sc,
+    const double *Sl)
 {
   lattice3_t D(domain);
   lattice3_t C(core);
@@ -200,9 +231,9 @@ extract_cp2dt_cuda(
   //   << current_timestep << std::endl;
 
   if (scope == scope_interval) 
-    return extract_cp2dt<scope_interval>(current_timestep, D, C, E, Vc, Vl, Jc, Jl);
+    return extract_cp2dt<scope_interval>(current_timestep, D, C, E, Vc, Vl, Jc, Jl, Sc, Sl);
   if (scope == scope_ordinal) 
-    return extract_cp2dt<scope_ordinal>(current_timestep, D, C, E, Vc, Vl, Jc, Jl);
+    return extract_cp2dt<scope_ordinal>(current_timestep, D, C, E, Vc, Vl, Jc, Jl, Sc, Sl);
   else // scope == 2
-    return extract_cp2dt<scope_all>(current_timestep, D, C, E, Vc, Vl, Jc, Jl);
+    return extract_cp2dt<scope_all>(current_timestep, D, C, E, Vc, Vl, Jc, Jl, Sc, Sl);
 }

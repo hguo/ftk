@@ -5,10 +5,6 @@
 #include <ftk/numeric/eigen_solver2.hh>
 #include <ftk/numeric/eigen_solver3.hh>
 
-#ifdef __CUDACC__
-// #include <ftk/numeric/complex.cuh>
-#endif
-
 namespace ftk {
 
 enum {
