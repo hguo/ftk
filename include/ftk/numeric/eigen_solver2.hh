@@ -49,6 +49,7 @@ inline void solve_eigenvalues_symmetric2x2(const T m[2][2], T eig[2])
 }
 
 template <typename T>
+__device__ __host__
 inline int solve_eigenvalues2x2(const T M[2][2], T eig[2])
 {
   T P[3];
@@ -59,6 +60,7 @@ inline int solve_eigenvalues2x2(const T M[2][2], T eig[2])
 }
 
 template <typename T>
+__device__ __host__
 inline T solve_eigenvalues2x2(const T M[2][2], std::complex<T> eig[2])
 {
   T P[3];

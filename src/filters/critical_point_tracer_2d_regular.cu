@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/hypermesh/lattice.hh>
 #include <ftk/filters/critical_point.hh>
@@ -55,6 +56,7 @@ bool check_simplex_cp2t(
           Js[i][j][k] = gradV[t][ii*4 + j*2 + k];
     }
     ftk::lerp_s2m2x2(Js, mu, J);
+    ftk::make_symmetric2x2(J);
     cp.type = ftk::critical_point_type_2d(J, true/*symmetric*/);
 
     // location interpolation
