@@ -49,6 +49,7 @@ inline void lerp_s2v3(const T V[3][3], const T mu[3], T v[3])
 }
 
 template <typename T>
+__device__ __host__
 inline void lerp_s2m2x2(const T V[3][2][2], const T mu[3], T v[2][2])
 {
   v[0][0] = V[0][0][0] * mu[0] + V[1][0][0] * mu[1] + V[2][0][0] * mu[2];
@@ -58,12 +59,14 @@ inline void lerp_s2m2x2(const T V[3][2][2], const T mu[3], T v[2][2])
 }
 
 template <typename T>
+__device__ __host__
 inline T lerp_s3(const T v[4], const T mu[4])
 {
   return v[0] * mu[0] + v[1] * mu[1] + v[2] * mu[2] + v[3] * mu[3];
 }
 
 template <typename T>
+__device__ __host__
 inline void lerp_s3v3(const T V[4][3], const T mu[4], T v[3])
 {
   v[0] = V[0][0] * mu[0] + V[1][0] * mu[1] + V[2][0] * mu[2] + V[3][0] * mu[3];
@@ -82,6 +85,7 @@ inline void lerp_s3v4(const T V[4][4], const T mu[4], T v[4])
 }
 
 template <typename T>
+__device__ __host__
 inline void lerp_s3m3x3(const T V[4][3][3], const T mu[4], T v[3][3])
 {
   for (int j = 0; j < 3; j ++)

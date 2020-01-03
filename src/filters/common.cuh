@@ -8,7 +8,18 @@ enum {
   scope_all = 0, 
   scope_ordinal = 1, 
   scope_interval = 2
-}; 
+};
+
+enum {
+  jacobian_none = 0,
+  jacobian_given = 1,
+  jacobian_derived = 2
+};
+
+enum {
+  jacobian_asymmetric = 0,
+  jacobian_symmetric = 1
+};
 
 template <int N=3>
 struct lite_lattice_t {

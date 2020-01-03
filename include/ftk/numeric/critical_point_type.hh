@@ -36,6 +36,7 @@ enum {
 };
 
 template <typename T>
+__host__ __device__
 unsigned int critical_point_type_2d(T J[2][2], bool symmetric)
 {
   if (symmetric) { // treat jacobian matrix as symmetric
@@ -71,6 +72,7 @@ unsigned int critical_point_type_2d(T J[2][2], bool symmetric)
 }
 
 template <typename T>
+__host__ __device__
 unsigned int critical_point_type_3d(T J[3][3], bool symmetric)
 {
   if (symmetric) {

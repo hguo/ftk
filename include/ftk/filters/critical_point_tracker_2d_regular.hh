@@ -10,7 +10,7 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
-#include <ftk/numeric/critical_point.hh>
+#include <ftk/numeric/critical_point_type.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
@@ -32,7 +32,10 @@ extract_cp2dt_cuda(
     const ftk::lattice& core, // 3D
     const ftk::lattice& ext, // 2D, array dimension
     const double *Vc, // current timestep
-    const double *Vl); // last timestep
+    const double *Vl, // last timestep
+    const double *Jc, // jacobian of current timestep
+    const double *Jl  // jacobian of last timestep
+    ); 
 #endif
 
 namespace ftk {
@@ -225,7 +228,9 @@ void critical_point_tracker_2d_regular::update_timestep()
           interval_core,
           ext,
           V[0].data(), // current
-          V[1].data() // last
+          V[1].data(), // last
+          gradV[0].data(), 
+          gradV[1].data()
         );
       fprintf(stderr, "interal_results#=%d\n", results.size());
       for (auto cp : results) {
@@ -243,7 +248,9 @@ void critical_point_tracker_2d_regular::update_timestep()
         ordinal_core,
         ext,
         V[0].data(),
-        V[0].data()
+        V[0].data(),
+        gradV[0].data(),
+        gradV[0].data()
       );
     
     for (auto cp : results) {

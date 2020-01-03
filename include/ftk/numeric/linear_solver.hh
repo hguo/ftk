@@ -34,6 +34,7 @@ inline T solve_linear2x2(const T A[2][2], const T b[2], T x[2], const T epsilon 
 }
 
 template <typename T>
+__device__ __host__
 inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   T AT[2][3];
@@ -54,6 +55,7 @@ inline T solve_least_square3x2(const T A[3][2], const T b[3], T x[2], const T ep
 }
 
 template <typename T>
+__device__ __host__
 inline T solve_least_square3x2_2(const T A[3][2], const T B[3][2], T x[2][2], const T epsilon = std::numeric_limits<T>::epsilon())
 {
   // print3x2("A", A);

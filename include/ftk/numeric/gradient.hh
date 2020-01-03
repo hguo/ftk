@@ -6,6 +6,7 @@
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 void gradient_2dsimplex2(const T X[3][2], const T f[3], T gradf[2])
 {
   const T A[3][2] = {
@@ -19,6 +20,7 @@ void gradient_2dsimplex2(const T X[3][2], const T f[3], T gradf[2])
 }
 
 template <typename T>
+__device__ __host__
 void gradient_2dsimplex2_2(const T X[3][2], const T f[3][2], T gradf[2][2])
 {
   const T A[3][2] = {
