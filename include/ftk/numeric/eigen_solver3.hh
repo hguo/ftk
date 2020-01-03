@@ -1,6 +1,7 @@
 #ifndef _FTK_EIGEN_SOLVER3_HH
 #define _FTK_EIGEN_SOLVER3_HH
 
+#include <ftk/ftk_config.hh>
 #include <ftk/numeric/trace.hh>
 #include <ftk/numeric/det.hh>
 #include <ftk/numeric/linear_solver.hh>
@@ -15,13 +16,14 @@
 namespace ftk {
 
 template <typename T>
+__host__ __device__
 inline void solve_eigenvalues_symmetric3x3(const T A[3][3], T x[3]/*eig[3]*/)
 {
   T P[4];
   characteristic_polynomial_3x3(A, P);
   const T b = P[2], c = P[1], d = P[0];
 
-  T disc, q, r, dum1, s, t, term1, r13;
+  T disc, q, r, dum1, /*s,*/ t, term1, r13;
 
   q = (3.0*c - (b*b))/9.0; 
   r = (-(27.0*d) + b*(9.0*c - 2.0*(b*b)))/54.0;

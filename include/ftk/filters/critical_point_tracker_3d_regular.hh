@@ -41,7 +41,12 @@ extract_cp3dt_cuda(
     const ftk::lattice& core4, 
     const ftk::lattice& ext3,
     const double *Vc, // current timestep
-    const double *Vl); // last timestep
+    const double *Vl,  // last timestep
+    const double *Jc, // jacobian of current timestep
+    const double *Jl, // jacobian of last timestep
+    const double *Sc, // scalar of current timestep
+    const double *Sl  // scalar of last timestep
+  );
 #endif
 
 namespace ftk {
@@ -244,7 +249,11 @@ void critical_point_tracker_3d_regular::update_timestep()
           interval_core,
           ext,
           V[0].data(), // current
-          V[1].data() // last
+          V[1].data(), // last
+          gradV[0].data(), 
+          gradV[1].data(),
+          scalar[0].data(),
+          scalar[1].data()
         );
       fprintf(stderr, "interval_results#=%d\n", results.size());
       for (auto cp : results) {
@@ -262,7 +271,11 @@ void critical_point_tracker_3d_regular::update_timestep()
         ordinal_core,
         ext,
         V[0].data(),
-        V[0].data()
+        V[0].data(),
+        gradV[0].data(), 
+        gradV[0].data(),
+        scalar[0].data(),
+        scalar[0].data()
       );
     
     for (auto cp : results) {

@@ -37,7 +37,7 @@ extract_cp2dt_cuda(
     const double *Jl, // jacobian of last timestep
     const double *Sc, // scalar of current timestep
     const double *Sl  // scalar of last timestep
-    ); 
+  ); 
 #endif
 
 namespace ftk {

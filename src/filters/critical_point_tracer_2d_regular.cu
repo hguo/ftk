@@ -198,6 +198,8 @@ static std::vector<cp3_t> extract_cp2dt(
   cudaFree(dVl);
   if (dJc) cudaFree(dJc);
   if (dJl) cudaFree(dJl);
+  if (dSc) cudaFree(dSc);
+  if (dSl) cudaFree(dSl);
   cudaFree(dncps);
   cudaFree(dcps);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");

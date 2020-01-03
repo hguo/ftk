@@ -14,6 +14,7 @@ inline T det2(const T A[2][2])
 }
 
 template <class T>
+__device__ __host__
 inline T det3(const T m[3][3]) // untested
 {
   return m[0][0] * (m[1][1]*m[2][2] - m[1][2]*m[2][1])
@@ -22,6 +23,7 @@ inline T det3(const T m[3][3]) // untested
 }
 
 template <class T>
+__device__ __host__
 inline T det4(const T m[16]) // legacy code
 {
   return 
@@ -52,6 +54,7 @@ inline T det4(const T m[16]) // legacy code
 }
 
 template <class T>
+__device__ __host__
 inline T det2(T m00, T m01, T m10, T m11)
 {
   return m00*m11 - m10*m01;
