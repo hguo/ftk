@@ -3,7 +3,7 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-const int DW = 256, DH = 256, DT = 10;
+const int DW = 32, DH = 32, DT = 100;
 
 int main(int argc, char **argv)
 {
@@ -17,15 +17,22 @@ int main(int argc, char **argv)
   tracker.set_scalar_field_source(ftk::SOURCE_GIVEN);
   tracker.set_vector_field_source(ftk::SOURCE_DERIVED);
   tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
+  // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
   tracker.initialize();
- 
+
+  FILE *fp = fopen("out.raw", "wb");
+
   for (int k = 0; k < DT; k ++) {
-    auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, double(k) / (DT - 1));
-    scalar = ftk::conv2D_gaussian(scalar, 5.0/*sigma*/, 5/*ksizex*/, 5/*ksizey*/, 2/*padding*/);
+    // auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, double(k) / (DT - 1));
+    auto scalar = ftk::synthetic_merger_2D<double>(DW, DH, double(k) / (DT - 1) * 20);
+    // scalar = ftk::conv2D_gaussian(scalar, 5.0/*sigma*/, 5/*ksizex*/, 5/*ksizey*/, 2/*padding*/);
+    scalar.to_binary_file(fp);
 
     tracker.push_input_scalar_field(scalar);
     tracker.advance_timestep();
   }
+
+  fclose(fp);
 
   tracker.finalize();
   tracker.write_traced_critical_points_vtk("out.vtp");

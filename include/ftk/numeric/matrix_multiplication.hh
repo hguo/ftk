@@ -3,6 +3,19 @@
 
 namespace ftk {
 
+template <class T, int M, int N, /*m1=n0*/ int K>
+void matrix_matrix_multiplication(const T A[M][N], const T B[N][K], T C[M][K])
+{
+  for (int i=0; i<M; i++) {
+    for (int j=0; j<N; j++) {
+      T dot = T(0);
+      for (int k=0; k<K; k++)
+        dot += A[i][k] * B[k][j];
+      C[i][j] = dot;
+    }
+  }
+}
+
 template <class T>
 void matrix3x3_scalar_multiplication(const T A[9], T b, T C[9])
 {
@@ -89,18 +102,30 @@ void matrix3x3_matrix3x3_multiplication(const T A[3][3], const T B[3][3], T C[3]
 }
 
 template <class T>
-void matrix3x3_square(const T M[3][3], T M2[3][3])
+inline void matrix3x3_matrix3x4_multiplication(const T A[3][3], const T B[3][4], T C[3][4])
+{
+  matrix_matrix_multiplication<T, 3, 3, 4>(A, B, C);
+}
+
+template <class T>
+inline void matrix3x3_square(const T M[3][3], T M2[3][3])
 {
   matrix_matrix_multiplication_3x3_3x3(M, M, M2);
 }
 
 template <class T>
-void matrix2x3_matrix3x2_multiplication(const T A[2][3], const T B[3][2], T C[2][2])
+inline void matrix2x3_matrix3x2_multiplication(const T A[2][3], const T B[3][2], T C[2][2])
 {
   C[0][0] = A[0][0]*B[0][0] + A[0][1]*B[1][0] + A[0][2]*B[2][0];
   C[0][1] = A[0][0]*B[0][1] + A[0][1]*B[1][1] + A[0][2]*B[2][1];
   C[1][0] = A[1][0]*B[0][0] + A[1][1]*B[1][0] + A[1][2]*B[2][0];
   C[1][1] = A[1][0]*B[0][1] + A[1][1]*B[1][1] + A[1][2]*B[2][1];
+}
+
+template <class T>
+inline void matrix3x4_matrix4x3_multiplication(const T A[3][4], const T B[4][3], T C[3][3])
+{
+  matrix_matrix_multiplication<T, 3, 4, 3>(A, B, C);
 }
 
 }

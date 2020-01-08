@@ -10,6 +10,7 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
+#include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
@@ -154,7 +155,8 @@ void critical_point_tracker_2d_regular::update_timestep()
       critical_point_2dt_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
-        discrete_critical_points[e] = cp;
+        if (filter_critical_point_type(cp))
+          discrete_critical_points[e] = cp;
       }
     };
 
@@ -394,8 +396,6 @@ bool critical_point_tracker_2d_regular::check_simplex(
   simplex_positions(vertices, X);
   lerp_s2v3(X, mu, cp.x);
 
-  return true; // TODO: jacobians
-
   if (scalar_field_source != SOURCE_NONE) {
     double values[3];
     simplex_scalars(vertices, values);
@@ -407,12 +407,21 @@ bool critical_point_tracker_2d_regular::check_simplex(
     double Js[3][2][2];
     simplex_jacobians(vertices, Js);
     lerp_s2m2x2(Js, mu, J);
+    ftk::make_symmetric2x2(J); // TODO
   } else {
     // TODO: jacobian is not given
   }
+#if 0
+  double X2[3][2];
+  for (int i = 0; i < 3; i ++)
+    for (int j = 0; j < 2; j ++)
+      X2[i][j] = X[i][j];
+  jacobian_3dsimplex2(X2, v, J);
+  ftk::make_symmetric2x2(J); // TODO
+#endif
   cp.type = critical_point_type_2d(J, is_jacobian_field_symmetric);
-  if (cp.type & type_filter) return true;
-  else return false;
+
+  return true;
 } 
 
 #if FTK_HAVE_VTK

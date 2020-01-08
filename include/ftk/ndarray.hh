@@ -261,6 +261,12 @@ void ndarray<T>::from_binary_file(FILE *fp)
 }
 
 template <typename T>
+void ndarray<T>::to_binary_file(FILE *fp)
+{
+  fwrite(&p[0], sizeof(T), nelem(), fp);
+}
+
+template <typename T>
 std::vector<std::string> ndarray<T>::glob(const std::string& pattern)
 {
   std::vector<std::string> filenames;

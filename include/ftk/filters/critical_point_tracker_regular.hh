@@ -33,6 +33,8 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   void set_jacobian_field_source(int s) {jacobian_field_source = s;}
   void set_jacobian_symmetric(bool s) {is_jacobian_field_symmetric = s;}
 
+  void set_type_filter(unsigned int);
+
   virtual void initialize() = 0;
   virtual void finalize() = 0;
 
@@ -42,6 +44,10 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   void push_input_scalar_field(const ndarray<double>& scalar0) {scalar.push_front(scalar0);}
   void push_input_vector_field(const ndarray<double>& V0) {V.push_front(V0);}
   void push_input_jacobian_field(const ndarray<double>& gradV0) {gradV.push_front(gradV0);}
+
+protected:
+  template <int N, typename T=double>
+  bool filter_critical_point_type(const critical_point_t<N, T>& cp);
 
 protected: // config
   lattice domain, array_domain, 
@@ -58,7 +64,8 @@ protected: // config
       vector_field_source = SOURCE_NONE,
       jacobian_field_source = SOURCE_NONE;
   bool is_jacobian_field_symmetric = false;
-  int type_filter = 0; // TODO
+  bool use_type_filter = false;
+  unsigned int type_filter = 0;
 
 protected:
   std::deque<ndarray<double>> scalar, V, gradV;
@@ -66,6 +73,25 @@ protected:
 };
 
 /////
+void critical_point_tracker_regular::set_type_filter(unsigned int f)
+{
+  use_type_filter = true;
+  type_filter = f;
+}
+  
+template <int N, typename T>
+bool critical_point_tracker_regular::filter_critical_point_type(
+    const critical_point_t<N, T>& cp)
+{
+  // fprintf(stderr, "typefilter=%lu, type=%lu\n", 
+  //     type_filter, cp.type);
+  if (use_type_filter) {
+    if (type_filter & cp.type) return true;
+    else return false;
+  }
+  else return true;
+}
+
 }
 
 #endif

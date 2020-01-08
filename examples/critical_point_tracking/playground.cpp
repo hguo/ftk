@@ -1,6 +1,22 @@
 #include <iostream>
+#include <ftk/numeric/rand.hh>
+#include <ftk/numeric/print.hh>
+#include <ftk/numeric/linear_solver.hh>
 #include <ftk/ndarray.hh>
 
+int main(int argc, char **argv)
+{
+  double X[4][3], V[4][3], J[3][3];
+  ftk::rand<double, 4, 3>(X);
+  ftk::rand<double, 4, 3>(V);
+
+  ftk::solve_least_square4x3_3(X, V, J);
+  ftk::print3x3("J", J);
+
+  return 0;
+}
+
+#if 0
 int main(int argc, char **argv)
 {
   const int m = 7, n = 8; 
@@ -25,3 +41,4 @@ int main(int argc, char **argv)
 
   return 0;
 }
+#endif
