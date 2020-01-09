@@ -21,6 +21,13 @@ inline void print2x2(const std::string &name, const T m[2][2])
       name.c_str(), m[0][0], m[0][1], m[1][0], m[1][1]);
 }
 
+template <>
+inline void print2x2<long long>(const std::string &name, const long long m[2][2])
+{
+  fprintf(stderr, "%s=[[%lld, %lld], [%lld, %lld]]\n",
+      name.c_str(), m[0][0], m[0][1], m[1][0], m[1][1]);
+}
+
 template <typename T>
 inline void print2x2(const std::string &name, const T m[])
 {
@@ -52,8 +59,14 @@ inline void print2x3(const std::string &name, const T m[2][3])
 template <typename T>
 inline void print3x2(const std::string &name, const T m[3][2])
 {
-  fprintf(stderr, "%s=[[%.10f, %.10f], [%.10f, %.10f], [%.10f, %.10f]]\n",
-      name.c_str(), m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1]);
+  std::cerr << name << "=[[" 
+    << m[0][0] << ", " << m[0][1] << "], ["
+    << m[1][0] << ", " << m[1][1] << "], ["
+    << m[2][0] << ", " << m[2][1] << "]]"
+    << std::endl;
+
+  // fprintf(stderr, "%s=[[%.10f, %.10f], [%.10f, %.10f], [%.10f, %.10f]]\n",
+  //     name.c_str(), m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1]);
 }
 
 template <typename T>
