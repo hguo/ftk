@@ -190,8 +190,10 @@ int main(int argc, char **argv)
   int indices1[3] = {2, 1, 3}; 
   long long zero[2] = {0, 0};
 
-  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X0, indices0, zero));
-  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X1, indices1, zero));
+  // fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X0, indices0, zero));
+  // fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X1, indices1, zero));
+  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_polygon2(zero, 3, indices0, X0));
+  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_polygon2(zero, 3, indices1, X1));
 #endif
 
 #if 0

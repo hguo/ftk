@@ -4,6 +4,9 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/numeric/det.hh>
 
+// reference:
+// Edelsbrunner and Mucke, Simulation of simplicity: A technique to cope with degenerate cases in geometric algorithms.
+
 namespace ftk {
 
 template <typename T>
@@ -12,6 +15,15 @@ inline int sign(T x)
 {
   // https://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c
   return (T(0) < x) - (x < T(0));
+}
+
+template <typename T>
+__device__ __host__
+inline bool robust_smaller(int i, int j, int k, int l, T pij, T pkl)
+{
+  if (pij != pkl) return pij < pkl;
+  else if (i != k) return i > k;
+  else return j < l;
 }
 
 template <typename T=long long>
@@ -254,6 +266,45 @@ inline int positive3(const T X1[4][3], const int indices1[4])
     d = -d;
 
   return d;
+}
+
+template <typename T>
+inline bool robust_intersect_half_line2(
+    const T v[2], 
+    int j, const T vj[2], 
+    int k, const T vk[2])
+{
+  // assume j < k
+  if (k > j)
+    return robust_intersect_half_line2(v, k, vk, j, vj);
+
+  if (robust_smaller(j, 1, 0, 1, vj[1], v[1]) && 
+      robust_smaller(0, 1, k, 1, v[1], vk[1]))
+  {
+    const T M[3][2] = {
+      {v[0], v[1]},
+      {vj[0], vj[1]},
+      {vk[0], vk[1]}
+    };
+    const int d = robust_sign_det3(M);
+    fprintf(stderr, "d=%d\n", d);
+    return d == 1; 
+  } else 
+    return false;
+}
+
+template <typename T>
+inline bool robust_point_in_polygon2(
+    const T x[2], const int n, const int indices[], const T v[][2])
+{
+  int count = 0;
+  for (int i = 0; i < n-1; i ++) {
+    if (robust_intersect_half_line2(x, indices[i], v[i], indices[i+1], v[i+1]))
+      count ++;
+  }
+  fprintf(stderr, "count=%d\n", count);
+  if (count % 2 == 1) return true;
+  else return false;
 }
 
 // check if a point is in a 2-simplex
