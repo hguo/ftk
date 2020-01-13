@@ -127,10 +127,10 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
       X[i][j] = vertices[i][j];
     }
   }
-#if 0 // quantization based detection
+#if 1 // quantization based detection
   const long long M[3][3] = {
     {intv[0][0], intv[1][0], intv[2][0]},
-    {intv[1][1], intv[1][1], intv[2][1]},
+    {intv[0][1], intv[1][1], intv[2][1]},
     {factor, factor, factor}
   };
   long long adjM[3][3];
@@ -174,7 +174,7 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
   //     indices[0], indices[1], indices[2], mu[0], mu[1], mu[2]);
   // fprintf(stderr, "sign=%d, indices=%d, %d, %d, ", 
   //     sign, indices[0], indices[1], indices[2]);
-  if (!succ1) return;
+  // if (!succ1) return;
 
   // check jacobian
   double J[2][2]; // jacobian
@@ -233,7 +233,7 @@ void extract_critical_points()
 
 int main(int argc, char **argv)
 {
-  auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, 1e-3); // , 0.0);
+  auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, 0.0); // 1e-3); // , 0.0);
   Vf = gradient2D(scalar);
   extract_critical_points();
 
