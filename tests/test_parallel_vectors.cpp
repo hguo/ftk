@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <ftk/numeric/parallel_vector_solver2.hh>
 #include <ftk/numeric/parallel_vector_solver3.hh>
-#include <ftk/numeric/rational.hh>
+#include <ftk/numeric/rational_function.hh>
 #include <ftk/numeric/rand.hh>
 
 class parallel_vectors_test : public testing::Test {

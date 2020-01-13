@@ -2,7 +2,7 @@
 #define _FTK_QUADRATIC_RATIONAL_INEQUALITY_SOLVER_HH
 
 #include <ftk/numeric/quadratic_solver.hh>
-#include <ftk/numeric/rational.hh>
+#include <ftk/numeric/rational_function.hh>
 #include <ftk/numeric/disjoint_intervals.hh>
 #include <vector>
 

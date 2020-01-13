@@ -11,14 +11,6 @@ namespace ftk {
 
 template <typename T>
 __device__ __host__
-inline int sign(T x)
-{
-  // https://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c
-  return (T(0) < x) - (x < T(0));
-}
-
-template <typename T>
-__device__ __host__
 inline bool robust_smaller(int i, int j, int k, int l, T pij, T pkl)
 {
   if (pij != pkl) return pij < pkl;

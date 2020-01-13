@@ -1,5 +1,5 @@
-#ifndef _FTK_RATIONAL_HH
-#define _FTK_RATIONAL_HH
+#ifndef _FTK_RATIONAL_FUNCTION_HH
+#define _FTK_RATIONAL_FUNCTION_HH
 
 #include <ftk/numeric/polynomial.hh>
 

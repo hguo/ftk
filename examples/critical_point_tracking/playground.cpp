@@ -5,6 +5,7 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/sign_det.hh>
 #include <ftk/numeric/print.hh>
+#include <ftk/numeric/adjugate.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -12,6 +13,7 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
+#include <ftk/numeric/rational_number.hh>
 #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
@@ -19,8 +21,33 @@
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 
-#if 0 // cp2d extraction
-const int DW = 127, DH = 127;
+#if 0
+int main(int argc, char **argv)
+{
+  // fprintf(stderr, "%d\n", ftk::gcd(100, -10));
+#if 1 // test adjugate 3x3
+  long long A[3][3] = {
+    {-3, 2, -5}, 
+    {-1, 0, -2}, 
+    {3, -4, 1}
+  };
+  long long B[3][3];
+  ftk::adjugate3(A, B);
+  ftk::print3x3("B", B);
+#endif
+
+#if 0
+  ftk::rational<long long> a(3, 4), b(5, 9);
+  std::cerr << a - b << std::endl;
+#endif
+
+  return 0;
+}
+#endif
+
+#if 1 // cp2d extraction
+const int DW = 63, DH = 63;
+const long long factor = 1000;
 
 ftk::ndarray<double> Vf; // vector field
 ftk::regular_simplex_mesh m(2); // the 2D mesh
@@ -33,6 +60,58 @@ struct critical_point_t {
  
 std::map<ftk::regular_simplex_mesh_element, critical_point_t> critical_points;
 
+void check_simplex0(const ftk::regular_simplex_mesh_element& s)
+{
+  if (!s.valid(m)) return; 
+  const auto &vertices = s.vertices(m);
+
+  double v[2];
+  long long iv[2];
+  for (int j = 0; j < 2; j ++) {
+    v[j] = Vf(j, vertices[0][1], vertices[0][1]);
+    iv[j] = v[j] * factor;
+  }
+
+  if (iv[0] == 0 && iv[1] == 0) {
+    fprintf(stderr, "found cp on 0-element\n");
+  }
+}
+
+void check_simplex1(const ftk::regular_simplex_mesh_element& s)
+{
+  if (!s.valid(m)) return; 
+  const auto &vertices = s.vertices(m);
+
+  double V[2][2], X[2][2];
+  long long iV[2][2];
+  for (int i = 0; i < 2; i ++) {
+    for (int j = 0; j < 2; j ++) {
+      V[i][j] = Vf(j, vertices[i][0], vertices[i][1]);
+      iV[i][j] = V[i][j] * factor;
+      X[i][j] = vertices[i][j];
+    }
+  }
+
+  bool succ = ftk::integer_inverse_lerp_s1v2(iV);
+  if (succ) {
+#if 0
+    fprintf(stderr, "vertices=%d, %d, %d, %d\n",
+        vertices[0][0], vertices[0][1],
+        vertices[1][0], vertices[1][1]);
+    ftk::print2x2("V", V);
+    ftk::print2x2("iV", iV);
+    fprintf(stderr, "det=%lld\n", ftk::det2(iV));
+#endif
+
+    double mu;
+    ftk::inverse_lerp_s1v2(V, mu);
+    double x[2];
+    ftk::lerp_s1v2(X, mu, x);
+    fprintf(stderr, "found cp on 1-element, mu=%f, x={%f, %f}\n", 
+        mu, x[0], x[1]);
+  }
+}
+
 void check_simplex(const ftk::regular_simplex_mesh_element& s)
 {
   if (!s.valid(m)) return; // check if the 2-simplex is valid
@@ -44,11 +123,39 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
   for (int i = 0; i < 3; i ++) {
     for (int j = 0; j < 2; j ++) {
       v[i][j] = Vf(j, vertices[i][0], vertices[i][1]);
-      intv[i][j] = 10000 * v[i][j];
+      intv[i][j] = factor * v[i][j];
       X[i][j] = vertices[i][j];
     }
   }
-  
+#if 0 // quantization based detection
+  const long long M[3][3] = {
+    {intv[0][0], intv[1][0], intv[2][0]},
+    {intv[1][1], intv[1][1], intv[2][1]},
+    {factor, factor, factor}
+  };
+  long long adjM[3][3];
+  long long detM = ftk::det3(M);
+  ftk::adjugate3(M, adjM);
+  long long b[3] = {adjM[0][2]*factor, adjM[1][2]*factor, adjM[2][2]*factor};
+  // long long b[3] = {adjM[0][2], adjM[1][2], adjM[2][2]};
+
+  int sign_detM = ftk::sign(detM);
+  if (sign_detM < 0) {
+    detM *= sign_detM;
+    for (int k = 0; k < 3; k ++)
+      b[k] *= sign_detM;
+  }
+  bool succ = (b[0] > 0 && b[0] < detM && b[1] > 0 && b[1] < detM && b[2] > 0 && b[2] < detM);
+  // bool succ = (b[0] >= 0 && b[0] <= detM && b[1] >= 0 && b[1] <= detM && b[2] >= 0 && b[2] <= detM);
+
+  if (!succ) return;
+#if 0
+  fprintf(stderr, "detM=%lld, b=%lld, %lld, %lld, m=%f, %f, %f\n", detM, b[0], b[1], b[2], 
+      (double)b[0]/detM, (double)b[1]/detM, (double)b[2]/detM);
+#endif
+  // fprintf(stderr, "det=%lld, b=%lld, %lld, %lld\n", 
+  //     detM, b[0], b[1], b[2]);
+
   // pre-check with robust cp detection
   int indices[3];
   for (int i = 0; i < 3; i ++) {
@@ -56,18 +163,18 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
     indices[i] = m.get_lattice().to_integer(vertices[i]);
   }
 
-  const int sign = ftk::positive2(X, indices);
-  bool succ0 = ftk::robust_critical_point_in_simplex2(intv, indices, sign);
-  if (!succ0) return;
-
+  // const int sign = ftk::positive2(X, indices);
+  // bool succ0 = ftk::robust_critical_point_in_simplex2(intv, indices, sign);
+  // if (!succ0) return;
+#endif
   // check intersection
   double mu[3], x[2];
-  bool succ = ftk::inverse_lerp_s2v2(v, mu);
+  bool succ1 = ftk::inverse_lerp_s2v2(v, mu);
   // fprintf(stderr, "indices=%d, %d, %d, mu=%f, %f, %f, ", 
   //     indices[0], indices[1], indices[2], mu[0], mu[1], mu[2]);
-  fprintf(stderr, "sign=%d, indices=%d, %d, %d, ", 
-      sign, indices[0], indices[1], indices[2]);
-  // if (!succ) return;
+  // fprintf(stderr, "sign=%d, indices=%d, %d, %d, ", 
+  //     sign, indices[0], indices[1], indices[2]);
+  if (!succ1) return;
 
   // check jacobian
   double J[2][2]; // jacobian
@@ -85,12 +192,12 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
     critical_points[s] = p;
   
     // std::cerr << s << std::endl;
-    // fprintf(stderr, "v0={%f, %f}, v1={%f, %f}, v2={%f, %f}, x={%f, %f}\n", 
-    //     v[0][0], v[0][1], v[1][0], v[1][1], v[2][0], v[2][1],
+    fprintf(stderr, "v0={%f, %f}, v1={%f, %f}, v2={%f, %f}, mu={%f, %f, %f}, x={%f, %f}\n", 
+        v[0][0], v[0][1], v[1][0], v[1][1], v[2][0], v[2][1],
+        mu[0], mu[1], mu[2], x[0], x[1]);
+    // fprintf(stderr, "v0={%lld, %lld}, v1={%lld, %lld}, v2={%lld, %lld}, x={%f, %f}\n", 
+    //     intv[0][0], intv[0][1], intv[1][0], intv[1][1], intv[2][0], intv[2][1],
     //     x[0], x[1]);
-    fprintf(stderr, "v0={%lld, %lld}, v1={%lld, %lld}, v2={%lld, %lld}, x={%f, %f}\n", 
-        intv[0][0], intv[0][1], intv[1][0], intv[1][1], intv[2][0], intv[2][1],
-        x[0], x[1]);
 #if 0
     ftk::print2x2("J", J);
     fprintf(stderr, "delta=%f, eig0={%f, %f}, eig1={%f, %f}\n", 
@@ -117,13 +224,16 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
 void extract_critical_points()
 {
   fprintf(stderr, "extracting critical points...\n");
-  m.set_lb_ub({2, 2}, {DW-4, DH-4}); // {static_cast<int>(Vf.dim(1)-1), static_cast<int>(Vf.dim(2)-1)});
+  m.set_lb_ub({2, 2}, {DW-3, DH-3}); // {static_cast<int>(Vf.dim(1)-1), static_cast<int>(Vf.dim(2)-1)});
+  // m.element_for(2, check_simplex, 1); // iterate over all 3-simplices
+  m.element_for(0, check_simplex0, 1); // iterate over all 3-simplices
+  m.element_for(1, check_simplex1, 1); // iterate over all 3-simplices
   m.element_for(2, check_simplex, 1); // iterate over all 3-simplices
 }
 
 int main(int argc, char **argv)
 {
-  auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, 0.0); // , 0.0);
+  auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, 1e-3); // , 0.0);
   Vf = gradient2D(scalar);
   extract_critical_points();
 
@@ -132,7 +242,7 @@ int main(int argc, char **argv)
 #endif // cp2d extraction
 
 
-#if 1 // misc test
+#if 0 // misc test
 int main(int argc, char **argv)
 {
 #if 0
@@ -190,10 +300,10 @@ int main(int argc, char **argv)
   int indices1[3] = {2, 1, 3}; 
   long long zero[2] = {0, 0};
 
-  // fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X0, indices0, zero));
-  // fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X1, indices1, zero));
-  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_polygon2(zero, 3, indices0, X0));
-  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_polygon2(zero, 3, indices1, X1));
+  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X0, indices0, zero));
+  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X1, indices1, zero));
+  // fprintf(stderr, "--b=%d\n", ftk::robust_point_in_polygon2(zero, 3, indices0, X0));
+  // fprintf(stderr, "--b=%d\n", ftk::robust_point_in_polygon2(zero, 3, indices1, X1));
 #endif
 
 #if 0

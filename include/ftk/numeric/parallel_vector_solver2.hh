@@ -1,6 +1,7 @@
 #ifndef _FTK_PARALLEL_VECTOR_SOLVER2_H
 #define _FTK_PARALLEL_VECTOR_SOLVER2_H
 
+#include <ftk/ftk_config.hh>
 #include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/matrix_addition.hh>
 #include <ftk/numeric/eigen_solver2.hh>

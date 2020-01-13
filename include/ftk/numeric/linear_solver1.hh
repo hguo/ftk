@@ -3,10 +3,18 @@
 
 #include <cmath>
 #include <limits>
+#include <ftk/numeric/sign.hh>
 #include <ftk/numeric/inner_product.hh>
 #include <ftk/numeric/cross_product.hh>
 
 namespace ftk {
+
+enum {
+  LINEAR_EQUATION_NO_SOLUTION = 0, 
+  LINEAR_EQUATION_UNIQUE_SOLUTION = 1,
+  LINEAR_EQUATION_INFINITE_SOLUTIONS = 
+    std::numeric_limits<int>::max()
+};
 
 template <typename T>
 inline int solve_linear_real1(const T P[2], T x[1], const T epsilon = std::numeric_limits<T>::epsilon())
@@ -19,6 +27,33 @@ inline int solve_linear_real1(const T P[2], T x[1], const T epsilon = std::numer
       return 1;
     }
   }
+}
+
+template <typename T>
+inline int number_roots_linear1(const T a, const T b) // ax=b, returns unique/infinite/no solution
+{
+  if (a == T(0)) {
+    if (b == T(0)) return LINEAR_EQUATION_INFINITE_SOLUTIONS;
+    else return LINEAR_EQUATION_NO_SOLUTION;
+  } 
+  else return LINEAR_EQUATION_UNIQUE_SOLUTION;
+}
+
+template <typename T>
+inline int number_roots_linear1(int n, const T a[], const T b[]) // check if n ax=b equations have a unique common root
+{
+  // if any of the equations has no solution, returns no solution.
+  // if each of the equations has infinite solutions, return infinite solutions.
+  // if each equation has the same solution, return unique solution; otherwise return no solution.
+#if 0 // TODO
+  bool all_infinite_solutions = true;
+  for (int i = 0; i < n; i++) {
+    const int ns = number_roots_linear1(a[i], b[i]);
+    if (ns == LINEAR_EQUATION_NO_SOLUTION) return LINEAR_EQUATION_NO_SOLUTION;
+    else if (ns == LINEAR_EQUATION_UNIQUE_SOLUTION) all_infinite_solutions = false;
+
+  }
+#endif
 }
 
 template <typename T>
