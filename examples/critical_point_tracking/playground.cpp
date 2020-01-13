@@ -14,6 +14,7 @@
 #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
 #include <ftk/numeric/rational_number.hh>
+#include <ftk/numeric/fixed_point.hh>
 #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
@@ -24,8 +25,17 @@
 #if 0
 int main(int argc, char **argv)
 {
+  typedef ftk::fixed_point<> fp_t;
+
+  fp_t a(0.001), b(0.01), c(-1.2);
+  // std::cerr << a + b - c << std::endl;
+  std::cerr << a << std::endl;
+  std::cerr << c << std::endl;
+  // std::cerr << a + c << std::endl;
+  std::cerr << a * c << std::endl;
+
   // fprintf(stderr, "%d\n", ftk::gcd(100, -10));
-#if 1 // test adjugate 3x3
+#if 0 // test adjugate 3x3
   long long A[3][3] = {
     {-3, 2, -5}, 
     {-1, 0, -2}, 
@@ -48,6 +58,8 @@ int main(int argc, char **argv)
 #if 1 // cp2d extraction
 const int DW = 63, DH = 63;
 const long long factor = 1000;
+
+typedef ftk::fixed_point<> fp_t;
 
 ftk::ndarray<double> Vf; // vector field
 ftk::regular_simplex_mesh m(2); // the 2D mesh
@@ -118,26 +130,29 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
 
   const auto &vertices = s.vertices(m);
   double X[3][2], v[3][2];
-  long long intv[3][2];
+  fp_t vf[3][2];
 
   for (int i = 0; i < 3; i ++) {
     for (int j = 0; j < 2; j ++) {
       v[i][j] = Vf(j, vertices[i][0], vertices[i][1]);
-      intv[i][j] = factor * v[i][j];
+      vf[i][j] = factor * v[i][j];
       X[i][j] = vertices[i][j];
     }
   }
 #if 1 // quantization based detection
-  const long long M[3][3] = {
-    {intv[0][0], intv[1][0], intv[2][0]},
-    {intv[0][1], intv[1][1], intv[2][1]},
-    {factor, factor, factor}
+  const fp_t M[3][3] = {
+    {vf[0][0], vf[1][0], vf[2][0]},
+    {vf[0][1], vf[1][1], vf[2][1]},
+    {1, 1, 1}
   };
-  long long adjM[3][3];
-  long long detM = ftk::det3(M);
+  fp_t adjM[3][3];
+  fp_t detM = ftk::det3(M);
+  // std::cerr << "detM=" << detM << std::endl;
   ftk::adjugate3(M, adjM);
-  long long b[3] = {adjM[0][2]*factor, adjM[1][2]*factor, adjM[2][2]*factor};
-  // long long b[3] = {adjM[0][2], adjM[1][2], adjM[2][2]};
+  // ftk::print3x3("M", M);
+  // ftk::print3x3("adjM", adjM);
+  // long long b[3] = {adjM[0][2]*factor, adjM[1][2]*factor, adjM[2][2]*factor};
+  fp_t b[3] = {adjM[0][2], adjM[1][2], adjM[2][2]};
 
   int sign_detM = ftk::sign(detM);
   if (sign_detM < 0) {
@@ -164,7 +179,7 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
   }
 
   // const int sign = ftk::positive2(X, indices);
-  // bool succ0 = ftk::robust_critical_point_in_simplex2(intv, indices, sign);
+  // bool succ0 = ftk::robust_critical_point_in_simplex2(vf, indices, sign);
   // if (!succ0) return;
 #endif
   // check intersection
@@ -196,7 +211,7 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
         v[0][0], v[0][1], v[1][0], v[1][1], v[2][0], v[2][1],
         mu[0], mu[1], mu[2], x[0], x[1]);
     // fprintf(stderr, "v0={%lld, %lld}, v1={%lld, %lld}, v2={%lld, %lld}, x={%f, %f}\n", 
-    //     intv[0][0], intv[0][1], intv[1][0], intv[1][1], intv[2][0], intv[2][1],
+    //     vf[0][0], vf[0][1], vf[1][0], vf[1][1], vf[2][0], vf[2][1],
     //     x[0], x[1]);
 #if 0
     ftk::print2x2("J", J);
