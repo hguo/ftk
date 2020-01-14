@@ -139,7 +139,7 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
       X[i][j] = vertices[i][j];
     }
   }
-#if 1 // quantization based detection
+#if 0 // quantization based detection
   const fp_t M[3][3] = {
     {vf[0][0], vf[1][0], vf[2][0]},
     {vf[0][1], vf[1][1], vf[2][1]},
@@ -170,6 +170,7 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
 #endif
   // fprintf(stderr, "det=%lld, b=%lld, %lld, %lld\n", 
   //     detM, b[0], b[1], b[2]);
+#endif
 
   // pre-check with robust cp detection
   int indices[3];
@@ -179,9 +180,9 @@ void check_simplex(const ftk::regular_simplex_mesh_element& s)
   }
 
   // const int sign = ftk::positive2(X, indices);
-  // bool succ0 = ftk::robust_critical_point_in_simplex2(vf, indices, sign);
-  // if (!succ0) return;
-#endif
+  bool succ0 = ftk::robust_critical_point_in_simplex2(vf, indices);
+  if (!succ0) return;
+
   // check intersection
   double mu[3], x[2];
   bool succ1 = ftk::inverse_lerp_s2v2(v, mu);
@@ -240,10 +241,10 @@ void extract_critical_points()
 {
   fprintf(stderr, "extracting critical points...\n");
   m.set_lb_ub({2, 2}, {DW-3, DH-3}); // {static_cast<int>(Vf.dim(1)-1), static_cast<int>(Vf.dim(2)-1)});
-  // m.element_for(2, check_simplex, 1); // iterate over all 3-simplices
-  m.element_for(0, check_simplex0, 1); // iterate over all 3-simplices
-  m.element_for(1, check_simplex1, 1); // iterate over all 3-simplices
   m.element_for(2, check_simplex, 1); // iterate over all 3-simplices
+  // m.element_for(0, check_simplex0, 1); // iterate over all 3-simplices
+  // m.element_for(1, check_simplex1, 1); // iterate over all 3-simplices
+  // m.element_for(2, check_simplex, 1); // iterate over all 3-simplices
 }
 
 int main(int argc, char **argv)
@@ -290,20 +291,20 @@ int main(int argc, char **argv)
 
   // two test case from woven
 #if 0
-  // long long V0[3][2] = {{17751, 7354}, {0, 7406}, {0, -10396}};
-  long long V0[3][2] = {{1, 1}, {0, 1}, {0, -1}};
-  // int indices0[3] = {7341, 7463, 7464}; 
-  int indices0[3] = {0, 1, 2}; 
+  long long V0[3][2] = {{17751, 7354}, {0, 7406}, {0, -10396}};
+  // long long V0[3][2] = {{1, 1}, {0, 1}, {0, -1}};
+  int indices0[3] = {7341, 7463, 7464}; 
+  // int indices0[3] = {0, 1, 2}; 
   fprintf(stderr, "----b=%d\n", ftk::robust_critical_point_in_simplex2(V0, indices0));
 #endif
  
 #if 0
   // long long V1[3][2] = {{0, 7406}, {-17729, -10323}, {0, -10396}}; 
   // int indices1[3] = {7463, 7586, 7464};
-  long long V1[3][2] = {{0, -1}, {0, 1}, {-1, -1}}; 
-  // long long V1[3][2] = {{0, 7406}, {0, -10396}, {-17729, -10323}}; 
-  // int indices1[3] = {7463, 7464, 7586};
-  int indices1[3] = {2, 1, 3}; 
+  // long long V1[3][2] = {{0, -1}, {0, 1}, {-1, -1}}; 
+  long long V1[3][2] = {{0, 7406}, {0, -10396}, {-17729, -10323}}; 
+  int indices1[3] = {7463, 7464, 7586};
+  // int indices1[3] = {2, 1, 3}; 
   fprintf(stderr, "----b=%d\n", ftk::robust_critical_point_in_simplex2(V1, indices1));
 #endif
 
@@ -315,8 +316,8 @@ int main(int argc, char **argv)
   int indices1[3] = {2, 1, 3}; 
   long long zero[2] = {0, 0};
 
-  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X0, indices0, zero));
-  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X1, indices1, zero));
+  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X0, indices0, zero, -1));
+  fprintf(stderr, "--b=%d\n", ftk::robust_point_in_simplex2(X1, indices1, zero, -1));
   // fprintf(stderr, "--b=%d\n", ftk::robust_point_in_polygon2(zero, 3, indices0, X0));
   // fprintf(stderr, "--b=%d\n", ftk::robust_point_in_polygon2(zero, 3, indices1, X1));
 #endif

@@ -214,6 +214,19 @@ int nswaps_bubble_sort(T arr[n], T order[n])
   return nswaps;
 }
 
+
+// unrobust orientation test
+template <typename T=long long>
+inline int orientation2(const T x0[2], const T x1[2], const T x2[2])
+{
+  T X[3][3] = {
+    {x0[0], x0[1], T(1)}, 
+    {x1[0], x1[1], T(1)},
+    {x2[0], x2[1], T(1)}
+  };
+  return sign_det3(X);
+}
+
 template <typename T=long long>
 inline int positive2(const T X1[3][2], const int indices1[3])
 {
@@ -301,24 +314,28 @@ inline bool robust_point_in_polygon2(
 
 // check if a point is in a 2-simplex
 template <typename T=long long>
-inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], const T x[2]) //, const int sign=1)
+inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], const T x[2], const int ix) //, const int sign=1)
 {
   // print3x2("X", X);
-  const int s = positive2(X, indices); // * sign;
+  const int s = positive2(X, indices); // orientation of the simplex
   // fprintf(stderr, "orientation s=%d\n", s);
   for (int i = 0; i < 3; i ++) {
     T Y[3][2];
+    int my_indices[3];
     for (int j = 0; j < 3; j ++)
-      if (i == j)
+      if (i == j) {
+        my_indices[j] = ix;
         for (int k = 0; k < 2; k ++) 
           Y[j][k] = x[k];
-      else 
+      } else {
+        my_indices[j] = indices[j];
         for (int k = 0; k < 2; k ++) 
           Y[j][k] = X[j][k];
+      }
   
     // print3x2("Y", Y);
 
-    int si = positive2(Y, indices); // * sign;
+    int si = positive2(Y, my_indices);
     // fprintf(stderr, "s=%d, s[%d]=%d\n", s, i, si);
     if (s != si)
       return false;
@@ -327,10 +344,10 @@ inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], cons
 }
 
 template <typename T=long long>
-inline bool robust_critical_point_in_simplex2(const T V[3][2], const int indices[3]) // , const int sign=1)
+inline bool robust_critical_point_in_simplex2(const T V[3][2], const int indices[3])
 {
   const T zero[2] = {T(0), T(0)};
-  return robust_point_in_simplex2(V, indices, zero); // , sign);
+  return robust_point_in_simplex2(V, indices, zero, -1);
 }
 
 
