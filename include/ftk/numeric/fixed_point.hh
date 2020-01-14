@@ -46,8 +46,10 @@ struct fixed_point {
   bool operator!() const {return !num;}
 
   bool operator<(const fixed_point& x) const {return num < x.num;}
+  bool operator<=(const fixed_point& x) const {return num <= x.num;}
   bool operator==(const fixed_point& x) const {return num == x.num;}
   bool operator>(const fixed_point& x) const {return num > x.num;}
+  bool operator>=(const fixed_point& x) const {return num >= x.num;}
 
 private:
   I num;
@@ -78,6 +80,13 @@ fixed_point<I, factor> operator*(const fixed_point<I, factor>& a, const fixed_po
 {
   fixed_point<I> t(a);
   return t *= b;
+}
+
+template <typename I, int factor>
+fixed_point<I, factor> operator/(const fixed_point<I, factor>& a, const fixed_point<I, factor>& b)
+{
+  fixed_point<I> t(a);
+  return t /= b;
 }
 
 template <typename I, int factor>

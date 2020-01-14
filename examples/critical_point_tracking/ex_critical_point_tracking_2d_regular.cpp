@@ -3,6 +3,7 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
+// const int DW = 32, DH = 32, DT = 100;
 const int DW = 32, DH = 32, DT = 100;
 
 int main(int argc, char **argv)

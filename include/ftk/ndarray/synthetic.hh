@@ -100,8 +100,8 @@ T merger_function_2Dt(T x, T y, T t)
   x = xp;
   y = yp;
 
-  T cx0 = sin(t - M_PI_2) + 1e-4, 
-    cx1 = sin(t + M_PI_2) + 1e-4,
+  T cx0 = sin(t - M_PI_2), // + 1e-4, 
+    cx1 = sin(t + M_PI_2), // + 1e-4,
     cy0 = 1e-4,
     cy1 = 1e-4;
         
