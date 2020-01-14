@@ -3,15 +3,13 @@
 
 namespace ftk {
 
-template <typename I=long long/*long integer type*/, int factor=65536/*16bits*/>
+template <typename I=long long/*long integer type*/, int factor=32768/*15bits*/>
 struct fixed_point {
   fixed_point() : num(0) {}
   fixed_point(const fixed_point& x) : num(x.num) {}
   template <typename J> fixed_point(const J& x) {
     num = static_cast<I>(factor * x);
   }
-
-  // explicit fixed_point(int x) {num = static_cast<I>(factor * x);}
 
   fixed_point& operator=(const fixed_point& x) {num = x.num; return *this;}
   template <typename J>
@@ -21,6 +19,9 @@ struct fixed_point {
   }
 
   I integer() const {return num;}
+  int to_int() const {return static_cast<int>(num / factor);}
+  float to_float() const {return static_cast<float>(num) / factor;}
+  double to_double() const {return static_cast<double>(num) / factor;}
 
   fixed_point& operator+=(const fixed_point& x) {
     num += x.num;
