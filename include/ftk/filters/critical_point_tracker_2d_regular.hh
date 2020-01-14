@@ -13,6 +13,7 @@
 #include <ftk/numeric/adjugate.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/critical_point_type.hh>
+#include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
@@ -80,6 +81,7 @@ protected:
   void trace_intersections();
   void trace_connected_components();
 
+  template <typename I=int> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
   virtual void simplex_positions(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
   template <typename T=double> void simplex_vectors(const std::vector<std::vector<int>>& vertices, T v[][2]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
@@ -356,6 +358,14 @@ void critical_point_tracker_2d_regular::trace_connected_components()
   }
 }
 
+template <typename I>
+void critical_point_tracker_2d_regular::simplex_indices(
+    const std::vector<std::vector<int>>& vertices, I indices[]) const
+{
+  for (int i = 0; i < vertices.size(); i ++)
+    indices[i] = m.get_lattice().to_integer(vertices[i]);
+}
+
 void critical_point_tracker_2d_regular::simplex_positions(
     const std::vector<std::vector<int>>& vertices, double X[][3]) const
 {
@@ -408,14 +418,15 @@ bool critical_point_tracker_2d_regular::check_simplex(
     const regular_simplex_mesh_element& e,
     critical_point_2dt_t& cp)
 {
+  typedef fixed_point<> fp_t;
+  
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
  
   double v[3][2]; // obtain vector values
   simplex_vectors(vertices, v);
 
-#if 0 // working in progress
-  typedef fixed_point<> fp_t;
+#if 0 // working in progress, handling degeneracy cases
   fp_t vf[3][2];
   for (int i = 0; i < 3; i ++)
     for (int j = 0; j < 2; j ++)
@@ -445,9 +456,19 @@ bool critical_point_tracker_2d_regular::check_simplex(
   if (!succ1) return false;
 #endif
 
-  double mu[3]; // check intersection
-  bool succ = inverse_lerp_s2v2(v, mu);
+  // robust critical point test
+  fp_t vf[3][2];
+  for (int i = 0; i < 3; i ++)
+    for (int j = 0; j < 2; j ++)
+      vf[i][j] = v[i][j];
+  int indices[3];
+  simplex_indices(vertices, indices);
+  bool succ = robust_critical_point_in_simplex2(vf, indices);
   if (!succ) return false;
+
+  double mu[3]; // check intersection
+  bool succ2 = inverse_lerp_s2v2(v, mu);
+  // if (!succ2) return false;
 
   double X[3][3]; // position
   simplex_positions(vertices, X);

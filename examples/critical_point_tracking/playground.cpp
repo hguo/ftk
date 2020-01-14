@@ -15,6 +15,7 @@
 #include <ftk/numeric/gradient.hh>
 #include <ftk/numeric/rational_number.hh>
 #include <ftk/numeric/fixed_point.hh>
+#include <ftk/numeric/critical_point_test.hh>
 #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>

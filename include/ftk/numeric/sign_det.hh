@@ -331,15 +331,7 @@ inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], cons
 }
 
 template <typename T=long long>
-inline bool robust_critical_point_in_simplex2(const T V[3][2], const int indices[3])
-{
-  const T zero[2] = {T(0), T(0)};
-  return robust_point_in_simplex2(V, indices, zero, -1);
-}
-
-
-template <typename T=long long>
-inline bool robust_point_in_simplex3(const T X[4][3], const int indices[3], const T x[3])
+inline bool robust_point_in_simplex3(const T X[4][3], const int indices[3], const T x[3], int ix)
 {
   int s = positive3(X, indices);
   for (int i = 0; i < 4; i ++) {
@@ -356,13 +348,6 @@ inline bool robust_point_in_simplex3(const T X[4][3], const int indices[3], cons
     if (s != si) return false;
   }
   return true;
-}
-
-template <typename T=long long>
-inline bool robust_critical_point_in_simplex3(const T V[4][3], const int indices[4], const int sign)
-{
-  const T zero[3] = {T(0), T(0), T(0)};
-  return robust_point_in_simplex3(V, indices, zero);
 }
 
 } // namespace
