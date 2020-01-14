@@ -5,6 +5,16 @@
 
 namespace ftk {
 
+template <typename T, int n>
+__device__ __host__
+inline T trace(T A[n][n])
+{
+  T tr(0);
+  for (int i = 0; i < n; i ++)
+    tr += A[i][i];
+  return tr;
+}
+
 template <typename T>
 __device__ __host__
 inline T trace2(T A[2][2])
