@@ -535,27 +535,4 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_discrete_cri
 
 }
 
-
-namespace diy {
-  template <> struct Serialization<ftk::critical_point_3dt_t> {
-    static void save(diy::BinaryBuffer& bb, const ftk::critical_point_3dt_t &cp) {
-      diy::save(bb, cp.x[0]);
-      diy::save(bb, cp.x[1]);
-      diy::save(bb, cp.x[2]);
-      diy::save(bb, cp.x[3]);
-      diy::save(bb, cp.scalar);
-      diy::save(bb, cp.type);
-    }
-
-    static void load(diy::BinaryBuffer& bb, ftk::critical_point_3dt_t& cp) {
-      diy::load(bb, cp.x[0]);
-      diy::load(bb, cp.x[1]);
-      diy::load(bb, cp.x[2]);
-      diy::load(bb, cp.x[3]);
-      diy::load(bb, cp.scalar);
-      diy::load(bb, cp.type);
-    }
-  };
-}
-
 #endif

@@ -3,15 +3,35 @@
 
 namespace ftk {
 
-template <int N, typename T>
+template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
 struct critical_point_t {
-  T operator[](size_t i) const {if (i >= N) return 0; else return x[i];}
-  T x[N];
-  T scalar = T(0);
+  ValueType operator[](size_t i) const {if (i >= N) return 0; else return x[i];}
+  ValueType x[N];
+  ValueType scalar = ValueType(0);
   unsigned int type = 0;
-  unsigned long long tag = 0;
+  IntegerType tag = 0;
 };
 
+}
+
+// serialization
+namespace diy {
+  template <int N, typename V, typename I> struct Serialization<ftk::critical_point_t<N, V, I>> {
+    static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t<N, V, I> &cp) {
+      for (int i = 0; i < N; i ++)
+        diy::save(bb, cp.x[i]);
+      diy::save(bb, cp.scalar);
+      diy::save(bb, cp.type);
+      diy::save(bb, cp.tag);
+    }
+
+    static void load(diy::BinaryBuffer& bb, ftk::critical_point_t<N, V, I> &cp) {
+      for (int i = 0; i < N; i ++)
+        diy::load(bb, cp.x[i]);
+      diy::load(bb, cp.scalar);
+      diy::load(bb, cp.type);
+    }
+  };
 }
 
 #endif
