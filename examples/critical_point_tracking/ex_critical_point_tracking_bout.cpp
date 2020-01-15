@@ -50,6 +50,7 @@ int main(int argc, char **argv)
   }
 
   tracker.finalize();
+  tracker.write_traced_critical_points("out.traj");
   tracker.write_traced_critical_points_vtk("out.vtp");
 
   return 0;
