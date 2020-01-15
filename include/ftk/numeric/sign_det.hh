@@ -35,7 +35,7 @@ inline int robust_sign_det2(const T X[2])
 
     if (sigma != 0) return sigma;
   }
-  assert(false);
+  // assert(false);
   return 0;
 }
 
@@ -83,7 +83,7 @@ inline int robust_sign_det3(const T X[3][2])
     if (sigma != 0)
       return sigma;
   }
-  assert(false);
+  // assert(false);
   return 0; // useless
 }
 
@@ -191,7 +191,7 @@ inline int robust_sign_det4(const T X[4][3])
 
     if (sigma != 0) return sigma;
   }
-  assert(false);
+  // assert(false);
   return 0; // useless
 }
 

@@ -3,7 +3,9 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
+#include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_type.hh>
+#include <ftk/numeric/critical_point_test.hh>
 #include <ftk/hypermesh/lattice.hh>
 #include <ftk/filters/critical_point.hh>
 #include "common.cuh"
@@ -22,12 +24,14 @@ bool check_simplex_cp2t(
     const double *scalar[2],
     cp3_t &cp)
 {
+  typedef ftk::fixed_point<> fp_t;
+
   const int last_timestep = current_timestep - 1;
   if (scope == scope_interval && e.corner[2] != last_timestep)
     return false;
 
-  int vertices[3][3];
-  for (int i = 0; i < 3; i ++)
+  int vertices[3][3], indices[3];
+  for (int i = 0; i < 3; i ++) {
     for (int j = 0; j < 3; j ++) {
       vertices[i][j] = e.corner[j] 
         + unit_simplex_offset_3_2<scope>(e.type, i, j);
@@ -35,12 +39,17 @@ bool check_simplex_cp2t(
           vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
     }
+    indices[i] = domain.to_index(vertices[i]);;
+  }
 
   double v[3][2];
+  fp_t vf[3][2];
   for (int i = 0; i < 3; i ++) {
     size_t k = ext.to_index(vertices[i]);
-    for (int j = 0; j < 2; j ++)
+    for (int j = 0; j < 2; j ++) {
       v[i][j] = V[unit_simplex_offset_3_2<scope>(e.type, i, 2/*time dimension id*/)][k*2+j];
+      vf[i][j] = v[i][j];
+    }
   }
 
   double mu[3];
@@ -60,6 +69,7 @@ bool check_simplex_cp2t(
       ftk::lerp_s2m2x2(Js, mu, J);
       ftk::make_symmetric2x2(J);
       cp.type = ftk::critical_point_type_2d(J, true/*symmetric*/);
+      // if (cp.type != 0x100) return false;
     }
 
     // scalar interpolation

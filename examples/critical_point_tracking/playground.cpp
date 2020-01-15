@@ -1,4 +1,5 @@
 #include <iostream>
+#include <mutex>
 #include <ftk/numeric/rand.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/linear_solver.hh>
