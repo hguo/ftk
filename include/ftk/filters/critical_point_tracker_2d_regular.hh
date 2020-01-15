@@ -65,6 +65,9 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
 #endif
 
+  void write_discrete_critical_points(const std::string& filename) const;
+  void write_traced_critical_points(const std::string& filename) const;
+
 protected:
   regular_simplex_mesh m;
   
@@ -686,6 +689,17 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_cri
   return polyData;
 }
 #endif
+
+void critical_point_tracker_2d_regular::write_discrete_critical_points(const std::string& filename) const
+{
+  diy::serializeToFile(discrete_critical_points, filename);
+}
+
+void critical_point_tracker_2d_regular::write_traced_critical_points(const std::string& filename) const 
+{
+  diy::serializeToFile(traced_critical_points, filename);
+}
+
 }
 
 #endif
