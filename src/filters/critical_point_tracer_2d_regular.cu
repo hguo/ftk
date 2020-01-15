@@ -81,6 +81,7 @@ bool check_simplex_cp2t(
         values[i] = scalar[t][ii];
       }
       cp.scalar = ftk::lerp_s2(values, mu);
+      // if (abs(cp.scalar) < 0.02) return false; // threshold
     }
 
     // location interpolation
