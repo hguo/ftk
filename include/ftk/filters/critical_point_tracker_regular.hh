@@ -38,6 +38,7 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void initialize() = 0;
   virtual void finalize() = 0;
 
+  virtual void set_current_timestep(int t) {current_timestep = t;}
   virtual void advance_timestep() = 0;
   virtual void update_timestep() = 0;
  
