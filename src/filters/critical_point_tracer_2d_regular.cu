@@ -22,6 +22,8 @@ bool check_simplex_cp2t(
     const double *V[2], // last and current timesteps
     const double *gradV[2], // jacobian of last and current timesteps
     const double *scalar[2],
+    bool use_explicit_coords,
+    const double *coords, // coordinates of vertices
     cp3_t &cp)
 {
   typedef ftk::fixed_point<> fp_t;
@@ -31,6 +33,7 @@ bool check_simplex_cp2t(
     return false;
 
   int vertices[3][3], indices[3];
+  size_t local_indices[3];
   for (int i = 0; i < 3; i ++) {
     for (int j = 0; j < 3; j ++) {
       vertices[i][j] = e.corner[j] 
@@ -39,13 +42,15 @@ bool check_simplex_cp2t(
           vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
     }
-    indices[i] = domain.to_index(vertices[i]);;
+    indices[i] = domain.to_index(vertices[i]);
+    local_indices[i] = ext.to_index(vertices[i]);
   }
 
   double v[3][2];
   fp_t vf[3][2];
   for (int i = 0; i < 3; i ++) {
-    size_t k = ext.to_index(vertices[i]);
+    // size_t k = ext.to_index(vertices[i]);
+    const size_t k = local_indices[i];
     for (int j = 0; j < 2; j ++) {
       v[i][j] = V[unit_simplex_offset_3_2<scope>(e.type, i, 2/*time dimension id*/)][k*2+j];
       vf[i][j] = v[i][j];
@@ -60,8 +65,9 @@ bool check_simplex_cp2t(
     if (gradV[1]) { // have given jacobian
       double Js[3][2][2], J[2][2];
       for (int i = 0; i < 3; i ++) {
-        size_t ii = ext.to_index(vertices[i]);
-        int t = unit_simplex_offset_3_2<scope>(e.type, i, 2);
+        // size_t ii = ext.to_index(vertices[i]);
+        const size_t ii = local_indices[i];
+        const int t = unit_simplex_offset_3_2<scope>(e.type, i, 2);
         for (int j = 0; j < 2; j ++) 
           for (int k = 0; k < 2; k ++)
             Js[i][j][k] = gradV[t][ii*4 + j*2 + k];
@@ -76,8 +82,9 @@ bool check_simplex_cp2t(
     if (scalar[1]) { // have given scalar
       double values[3];
       for (int i = 0; i < 3; i ++) {
-        size_t ii = ext.to_index(vertices[i]);
-        int t = unit_simplex_offset_3_2<scope>(e.type, i, 2);
+        // const size_t ii = ext.to_index(vertices[i]);
+        const size_t ii = local_indices[i];
+        const int t = unit_simplex_offset_3_2<scope>(e.type, i, 2);
         values[i] = scalar[t][ii];
       }
       cp.scalar = ftk::lerp_s2(values, mu);
@@ -86,9 +93,18 @@ bool check_simplex_cp2t(
 
     // location interpolation
     double X[3][3];
-    for (int i = 0; i < 3; i ++)
-      for (int j = 0; j < 3; j ++)
-        X[i][j] = vertices[i][j];
+    if (use_explicit_coords) {
+      for (int i = 0; i < 3; i ++) {
+        for (int j = 0; j < 2; j ++) {
+          X[i][j] = coords[j + local_indices[i]*2];
+        }
+        X[i][2] = vertices[i][2]; // unit_simplex_offset_3_2<scope>(e.type, i, 2);
+      }
+    } else { // implicit coordinates
+      for (int i = 0; i < 3; i ++)
+        for (int j = 0; j < 3; j ++)
+          X[i][j] = vertices[i][j];
+    }
     ftk::lerp_s2v3(X, mu, cp.x);
 
     return true;
@@ -109,6 +125,8 @@ void sweep_simplices(
     const double *Jl,
     const double *Sc, 
     const double *Sl,
+    bool use_explicit_coords,
+    const double *coords, // coordinates of vertices
     unsigned long long &ncps, cp3_t *cps)
 {
   const double *V[2] = {Vl, Vc};
@@ -121,7 +139,9 @@ void sweep_simplices(
   cp3_t cp;
   bool succ = check_simplex_cp2t<scope>(
       current_timestep, 
-      domain, core, ext, e, V, J, S, cp);
+      domain, core, ext, e, V, J, S, 
+      use_explicit_coords, coords,
+      cp);
 
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
@@ -192,6 +212,7 @@ static std::vector<cp3_t> extract_cp2dt(
   sweep_simplices<scope><<<gridSize, blockSize>>>(
       current_timestep, 
       domain, core, ext, dVc, dVl, dJc, dJl, dSc, dSl,
+      false, NULL, // TODO
       *dncps, dcps);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
