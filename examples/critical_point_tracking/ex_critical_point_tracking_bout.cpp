@@ -5,7 +5,7 @@
 
 #define GAUSSIAN_TIME 1
 
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
   if (argc < 2) return 1;
@@ -81,8 +81,9 @@ int main(int argc, char **argv)
 }
 #endif
 
-#if 0
-const int DW = 425, DH = 880, DT = 300;
+#if 1
+// const int DW = 425, DH = 880, DT = 300;
+const int DW = 200, DH = 260, DT = 700;
 
 int main(int argc, char **argv)
 {
