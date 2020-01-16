@@ -8,9 +8,17 @@ int main(int argc, char **argv)
 {
   if (argc < 2) return 1;
 
-  ftk::ndarray<double> nitrz;
+  ftk::ndarray<double> nitrz, rxy, zxy;
   nitrz.from_netcdf(argv[1], "NI_TRZ");
-    
+  rxy.from_netcdf(argv[1], "RXY");
+  zxy.from_netcdf(argv[1], "ZXY");
+
+  ftk::ndarray<double> coords({2, rxy.shape(0), rxy.shape(1)});
+  for (size_t i = 0; i < rxy.nelem(); i ++) {
+    coords[i*2] = rxy[i];
+    coords[i*2+1] = zxy[i];
+  }
+  
   nitrz  = ftk::conv3D_gaussian(nitrz, 
       8.0/*sigma*/, 5/*ksizex*/, 5/*ksizey*/, 5/*ksizez*/, 2/*padding*/);
       // 16.0/*sigma*/, 9/*ksizex*/, 9/*ksizey*/, 9/*ksizez*/, 4/*padding*/);
@@ -30,6 +38,7 @@ int main(int argc, char **argv)
   tracker.set_domain(ftk::lattice({2300, 150}, {200, 30}));
   tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   tracker.set_input_array_partial(false);
+  tracker.set_coordinates(coords);
   tracker.set_scalar_field_source(ftk::SOURCE_GIVEN);
   tracker.set_vector_field_source(ftk::SOURCE_DERIVED);
   tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
