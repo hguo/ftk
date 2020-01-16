@@ -91,7 +91,6 @@ bool check_simplex_cp2t(
       // if (abs(cp.scalar) < 0.02) return false; // threshold
     }
 
-    // location interpolation
     double X[3][3];
     if (use_explicit_coords) {
       for (int i = 0; i < 3; i ++) {
@@ -100,14 +99,16 @@ bool check_simplex_cp2t(
         }
         X[i][2] = vertices[i][2]; // unit_simplex_offset_3_2<scope>(e.type, i, 2);
       }
-    } else { // implicit coordinates
-      for (int i = 0; i < 3; i ++)
-        for (int j = 0; j < 3; j ++)
-          X[i][j] = vertices[i][j];
-    }
+      ftk::lerp_s2v3(X, mu, cp.rx);
+    } 
+    
+    // implicit coordinates
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 3; j ++)
+        X[i][j] = vertices[i][j];
     ftk::lerp_s2v3(X, mu, cp.x);
-
-    return true;
+    
+      return true;
   } else 
     return false;
 }
@@ -220,7 +221,7 @@ static std::vector<cp3_t> extract_cp2dt(
   sweep_simplices<scope><<<gridSize, blockSize>>>(
       current_timestep, 
       domain, core, ext, dVc, dVl, dJc, dJl, dSc, dSl,
-      false, NULL, // TODO
+      use_explicit_coords, dcoords, 
       *dncps, dcps);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices");
