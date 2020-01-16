@@ -15,11 +15,11 @@ int main(int argc, char **argv)
       8.0/*sigma*/, 5/*ksizex*/, 5/*ksizey*/, 5/*ksizez*/, 2/*padding*/);
       // 16.0/*sigma*/, 9/*ksizex*/, 9/*ksizey*/, 9/*ksizez*/, 4/*padding*/);
 
-  const int DW = nitrz.shape(0), 
-            DH = nitrz.shape(1),
-            DT = nitrz.shape(2);
+  const size_t DW = nitrz.shape(0), 
+               DH = nitrz.shape(1),
+               DT = nitrz.shape(2);
 
-  fprintf(stderr, "DW=%d, DH=%d, DT=%d\n", DW, DH, DT);
+  fprintf(stderr, "DW=%lu, DH=%lu, DT=%lu\n", DW, DH, DT);
 
   diy::mpi::environment env;
 
@@ -36,8 +36,8 @@ int main(int argc, char **argv)
   tracker.initialize();
 
   // const int ts = 500, nt = 200;
-  const int ts = 0, nt = 704;
-  for (int k = 0; k < nt; k ++) {
+  const size_t ts = 0, nt = 704;
+  for (size_t k = 0; k < nt; k ++) {
     const int t = ts+k;
     tracker.set_current_timestep(t);
     ftk::ndarray<double> scalar = nitrz.slice({0, 0, ts+k}, {DW, DH, 1});

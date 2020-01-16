@@ -565,26 +565,26 @@ std::tuple<T, T> ndarray<T>::min_max() const {
 
 #if FTK_HAVE_MPI
 template <>
-MPI_Datatype ndarray<double>::mpi_datatype()
+inline MPI_Datatype ndarray<double>::mpi_datatype()
 {
   return MPI_DOUBLE;
 }
 
 template <>
-MPI_Datatype ndarray<float>::mpi_datatype()
+inline MPI_Datatype ndarray<float>::mpi_datatype()
 {
   return MPI_FLOAT;
 }
 
 template <>
-MPI_Datatype ndarray<int>::mpi_datatype()
+inline MPI_Datatype ndarray<int>::mpi_datatype()
 {
   return MPI_INT;
 }
 #endif
 
 template <typename T>
-void ndarray<T>::copy_to_cuda_device()
+inline void ndarray<T>::copy_to_cuda_device()
 {
 #if FTK_HAVE_CUDA
   if (d_dims == NULL)
@@ -605,7 +605,7 @@ void ndarray<T>::copy_to_cuda_device()
 }
 
 template <typename T>
-ndarray<T> ndarray<T>::slice(const lattice& l)
+inline ndarray<T> ndarray<T>::slice(const lattice& l)
 {
   ndarray<T> array(l);
   for (auto i = 0; i < l.n(); i ++) {
@@ -616,7 +616,7 @@ ndarray<T> ndarray<T>::slice(const lattice& l)
 }
 
 template <typename T>
-ndarray<T> ndarray<T>::slice(const std::vector<size_t>& st, const std::vector<size_t>& sz)
+inline ndarray<T> ndarray<T>::slice(const std::vector<size_t>& st, const std::vector<size_t>& sz)
 {
   return slice(lattice(st, sz));
 }

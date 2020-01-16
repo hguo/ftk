@@ -74,7 +74,7 @@ protected:
 };
 
 /////
-void critical_point_tracker_regular::set_type_filter(unsigned int f)
+inline void critical_point_tracker_regular::set_type_filter(unsigned int f)
 {
   use_type_filter = true;
   type_filter = f;

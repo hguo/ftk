@@ -24,7 +24,7 @@ struct critical_point_tracker : public filter {
 
 //////
 #if FTK_HAVE_VTK
-void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename)
+inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename)
 {
   if (comm.rank() == 0) {
     auto poly = get_traced_critical_points_vtk();
@@ -32,7 +32,7 @@ void critical_point_tracker::write_traced_critical_points_vtk(const std::string&
   }
 }
 
-void critical_point_tracker::write_discrete_critical_points_vtk(const std::string& filename)
+inline void critical_point_tracker::write_discrete_critical_points_vtk(const std::string& filename)
 {
   if (comm.rank() == 0) {
     auto poly = get_discrete_critical_points_vtk();
@@ -40,13 +40,13 @@ void critical_point_tracker::write_discrete_critical_points_vtk(const std::strin
   }
 }
 #else
-void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename)
+inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename)
 {
   if (comm.rank() == 0)
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
 }
 
-void critical_point_tracker::write_discrete_critical_points_vtk(const std::string& filename)
+inline void critical_point_tracker::write_discrete_critical_points_vtk(const std::string& filename)
 {
   if (comm.rank() == 0)
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");

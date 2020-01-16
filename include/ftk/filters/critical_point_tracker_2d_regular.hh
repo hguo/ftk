@@ -99,7 +99,7 @@ protected: // working in progress
 
 
 ////////////////////
-void critical_point_tracker_2d_regular::initialize()
+inline void critical_point_tracker_2d_regular::initialize()
 {
   // initializing bounds
   m.set_lb_ub({
@@ -128,7 +128,7 @@ void critical_point_tracker_2d_regular::initialize()
     local_array_domain = array_domain;
 }
 
-void critical_point_tracker_2d_regular::finalize()
+inline void critical_point_tracker_2d_regular::finalize()
 {
   diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
 
@@ -139,7 +139,7 @@ void critical_point_tracker_2d_regular::finalize()
   }
 }
 
-void critical_point_tracker_2d_regular::advance_timestep()
+inline void critical_point_tracker_2d_regular::advance_timestep()
 {
   update_timestep();
 
@@ -151,7 +151,7 @@ void critical_point_tracker_2d_regular::advance_timestep()
   current_timestep ++;
 }
 
-void critical_point_tracker_2d_regular::update_timestep()
+inline void critical_point_tracker_2d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
@@ -302,7 +302,7 @@ void critical_point_tracker_2d_regular::update_timestep()
   }
 }
 
-void critical_point_tracker_2d_regular::trace_intersections()
+inline void critical_point_tracker_2d_regular::trace_intersections()
 {
   // scan 3-simplices to get connected components
   union_find<element_t> uf;
@@ -327,7 +327,7 @@ void critical_point_tracker_2d_regular::trace_intersections()
   uf.get_sets(connected_components);
 }
 
-void critical_point_tracker_2d_regular::trace_connected_components()
+inline void critical_point_tracker_2d_regular::trace_connected_components()
 {
   // Convert connected components to geometries
   auto neighbors = [&](element_t f) {
@@ -362,14 +362,14 @@ void critical_point_tracker_2d_regular::trace_connected_components()
 }
 
 template <typename I>
-void critical_point_tracker_2d_regular::simplex_indices(
+inline void critical_point_tracker_2d_regular::simplex_indices(
     const std::vector<std::vector<int>>& vertices, I indices[]) const
 {
   for (int i = 0; i < vertices.size(); i ++)
     indices[i] = m.get_lattice().to_integer(vertices[i]);
 }
 
-void critical_point_tracker_2d_regular::simplex_positions(
+inline void critical_point_tracker_2d_regular::simplex_positions(
     const std::vector<std::vector<int>>& vertices, double X[][3]) const
 {
   for (int i = 0; i < vertices.size(); i ++)
@@ -378,7 +378,7 @@ void critical_point_tracker_2d_regular::simplex_positions(
 }
 
 template <typename T>
-void critical_point_tracker_2d_regular::simplex_vectors(
+inline void critical_point_tracker_2d_regular::simplex_vectors(
     const std::vector<std::vector<int>>& vertices, T v[][2]) const
 {
   for (int i = 0; i < vertices.size(); i ++) {
@@ -390,7 +390,7 @@ void critical_point_tracker_2d_regular::simplex_vectors(
   }
 }
 
-void critical_point_tracker_2d_regular::simplex_scalars(
+inline void critical_point_tracker_2d_regular::simplex_scalars(
     const std::vector<std::vector<int>>& vertices, double values[]) const
 {
   for (int i = 0; i < vertices.size(); i ++) {
@@ -401,7 +401,7 @@ void critical_point_tracker_2d_regular::simplex_scalars(
   }
 }
 
-void critical_point_tracker_2d_regular::simplex_jacobians(
+inline void critical_point_tracker_2d_regular::simplex_jacobians(
     const std::vector<std::vector<int>>& vertices, 
     double Js[][2][2]) const
 {
@@ -417,7 +417,7 @@ void critical_point_tracker_2d_regular::simplex_jacobians(
   }
 }
 
-bool critical_point_tracker_2d_regular::check_simplex(
+inline bool critical_point_tracker_2d_regular::check_simplex(
     const regular_simplex_mesh_element& e,
     critical_point_2dt_t& cp)
 {
@@ -505,7 +505,7 @@ bool critical_point_tracker_2d_regular::check_simplex(
   return true;
 } 
 
-bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e, critical_point_2dt_t& cp)
+inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e, critical_point_2dt_t& cp)
 {
   typedef fixed_point<> fp_t;
 
@@ -529,7 +529,7 @@ bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e
 #endif
 }
 
-bool critical_point_tracker_2d_regular::robust_check_simplex1(const element_t& e, critical_point_2dt_t& cp)
+inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const element_t& e, critical_point_2dt_t& cp)
 {
   typedef fixed_point<> fp_t;
 
@@ -580,7 +580,7 @@ void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s
 #endif
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_traced_critical_points_vtk() const
+inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_traced_critical_points_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -648,7 +648,7 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_traced_criti
   return polyData;
 }
 
-vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_critical_points_vtk() const
+inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_critical_points_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -690,12 +690,12 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_cri
 }
 #endif
 
-void critical_point_tracker_2d_regular::write_discrete_critical_points(const std::string& filename) const
+inline void critical_point_tracker_2d_regular::write_discrete_critical_points(const std::string& filename) const
 {
   diy::serializeToFile(discrete_critical_points, filename);
 }
 
-void critical_point_tracker_2d_regular::write_traced_critical_points(const std::string& filename) const 
+inline void critical_point_tracker_2d_regular::write_traced_critical_points(const std::string& filename) const 
 {
   diy::serializeToFile(traced_critical_points, filename);
 }

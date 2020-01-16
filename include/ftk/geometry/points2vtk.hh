@@ -73,7 +73,7 @@ points2vtk(const std::vector<T>& array, const std::vector<T>& scalar, int skip =
   return polyData;
 }
 
-void write_vtp(const std::string& filename, vtkSmartPointer<vtkPolyData> polydata)
+inline void write_vtp(const std::string& filename, vtkSmartPointer<vtkPolyData> polydata)
 {
   vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
   writer->SetFileName(filename.c_str());
