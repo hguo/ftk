@@ -161,7 +161,9 @@ static std::vector<cp3_t> extract_cp2dt(
     const double *Jc,
     const double *Jl,
     const double *Sc,
-    const double *Sl)
+    const double *Sl,
+    bool use_explicit_coords,
+    const double *coords)
 {
   const size_t ntasks = core.n() * ntypes_3_2<scope>();
   const int maxGridDim = 1024;
@@ -173,6 +175,12 @@ static std::vector<cp3_t> extract_cp2dt(
     gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else 
     gridSize = dim3(nBlocks);
+
+  double *dcoords = NULL;
+  if (coords) {
+    cudaMalloc((void**)&dcoords, 2 * sizeof(double) * ext.n());
+    cudaMemcpy(dcoords, coords, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  }
 
   double *dVc, *dVl = NULL;
   cudaMalloc((void**)&dVc, 2 * sizeof(double) * ext.n());
@@ -225,7 +233,8 @@ static std::vector<cp3_t> extract_cp2dt(
   std::vector<cp3_t> cps(ncps);
   cudaMemcpy(cps.data(), dcps, sizeof(cp3_t) * ncps, cudaMemcpyDeviceToHost);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpy, dcps");
-  
+ 
+  if (dcoords) cudaFree(dcoords);
   cudaFree(dVc);
   cudaFree(dVl);
   if (dJc) cudaFree(dJc);
@@ -254,7 +263,9 @@ extract_cp2dt_cuda(
     const double *Jc, 
     const double *Jl, 
     const double *Sc,
-    const double *Sl)
+    const double *Sl, 
+    bool use_explicit_coords,
+    const double *coords)
 {
   lattice3_t D(domain);
   lattice3_t C(core);
@@ -265,9 +276,15 @@ extract_cp2dt_cuda(
   //   << current_timestep << std::endl;
 
   if (scope == scope_interval) 
-    return extract_cp2dt<scope_interval>(current_timestep, D, C, E, Vc, Vl, Jc, Jl, Sc, Sl);
+    return extract_cp2dt<scope_interval>(current_timestep, 
+        D, C, E, Vc, Vl, Jc, Jl, Sc, Sl, 
+        use_explicit_coords, coords);
   if (scope == scope_ordinal) 
-    return extract_cp2dt<scope_ordinal>(current_timestep, D, C, E, Vc, Vl, Jc, Jl, Sc, Sl);
+    return extract_cp2dt<scope_ordinal>(current_timestep, 
+        D, C, E, Vc, Vl, Jc, Jl, Sc, Sl,
+        use_explicit_coords, coords);
   else // scope == 2
-    return extract_cp2dt<scope_all>(current_timestep, D, C, E, Vc, Vl, Jc, Jl, Sc, Sl);
+    return extract_cp2dt<scope_all>(current_timestep, 
+        D, C, E, Vc, Vl, Jc, Jl, Sc, Sl,
+        use_explicit_coords, coords);
 }

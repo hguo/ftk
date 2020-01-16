@@ -28,7 +28,6 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   void set_local_domain(const lattice&); // rank-specific "core" region of the block
   void set_local_array_domain(const lattice&); // rank-specific "ext" region of the block
 
-  void set_coordinates_source(int s) {coordinates_source = s;}
   void set_scalar_field_source(int s) {scalar_field_source = s;}
   void set_vector_field_source(int s) {vector_field_source = s;}
   void set_jacobian_field_source(int s) {jacobian_field_source = s;}
@@ -43,7 +42,7 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void advance_timestep() = 0;
   virtual void update_timestep() = 0;
 
-  void set_coordinates(const ndarray<double>& coords_) {coords = coords_; set_coordinates_source(SOURCE_GIVEN);}
+  void set_coordinates(const ndarray<double>& coords_) {coords = coords_; use_explicit_coords = true;}
   void push_input_scalar_field(const ndarray<double>& scalar0) {scalar.push_front(scalar0);}
   void push_input_vector_field(const ndarray<double>& V0) {V.push_front(V0);}
   void push_input_jacobian_field(const ndarray<double>& gradV0) {gradV.push_front(gradV0);}
@@ -63,10 +62,10 @@ protected: // config
   int start_timestep = 0, 
       end_timestep = std::numeric_limits<int>::max();
 
-  int coordinates_source = SOURCE_NONE;
   int scalar_field_source = SOURCE_NONE, 
       vector_field_source = SOURCE_NONE,
       jacobian_field_source = SOURCE_NONE;
+  bool use_explicit_coords = false;
   bool is_jacobian_field_symmetric = false;
   bool use_type_filter = false;
   unsigned int type_filter = 0;

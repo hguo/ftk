@@ -2,6 +2,7 @@
 struct cpt_cfg_t {
   double threshold;
   unsigned int type_filter;
+  bool use_explicit_coordinates;
 };
 
 template <int N> // N is 2 or 3

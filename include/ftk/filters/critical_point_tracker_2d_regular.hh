@@ -40,7 +40,9 @@ extract_cp2dt_cuda(
     const double *Jc, // jacobian of current timestep
     const double *Jl, // jacobian of last timestep
     const double *Sc, // scalar of current timestep
-    const double *Sl  // scalar of last timestep
+    const double *Sl, // scalar of last timestep
+    bool use_explicit_coords,
+    const double *coords // coords of vertices
   ); 
 #endif
 
@@ -266,7 +268,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           gradV[0].data(), 
           gradV[1].data(),
           scalar[0].data(),
-          scalar[1].data()
+          scalar[1].data(),
+          use_explicit_coords, 
+          coords.data()
         );
       fprintf(stderr, "interal_results#=%d\n", results.size());
       for (auto cp : results) {
@@ -288,7 +292,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         gradV[0].data(),
         gradV[0].data(),
         scalar[0].data(),
-        scalar[0].data()
+        scalar[0].data(),
+        use_explicit_coords, 
+        coords.data()
       );
     
     for (auto cp : results) {
@@ -370,7 +376,7 @@ inline void critical_point_tracker_2d_regular::simplex_indices(
 inline void critical_point_tracker_2d_regular::simplex_coordinates(
     const std::vector<std::vector<int>>& vertices, double X[][3]) const
 {
-  if (coordinates_source == SOURCE_GIVEN) {
+  if (use_explicit_coords) {
     for (int i = 0; i < vertices.size(); i ++) {
       for (int j = 0; j < 2; j ++) 
         X[i][j] = coords(j, vertices[i][0], vertices[i][1]);
