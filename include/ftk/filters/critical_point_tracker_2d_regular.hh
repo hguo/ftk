@@ -85,7 +85,7 @@ protected:
   void trace_connected_components();
 
   template <typename I=int> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
-  virtual void simplex_positions(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
+  virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
   template <typename T=double> void simplex_vectors(const std::vector<std::vector<int>>& vertices, T v[][2]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
@@ -341,13 +341,11 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
     return neighbors;
   };
 
-#if 1
   std::set<element_t> elements;
   for (const auto &kv : discrete_critical_points)
     elements.insert(kv.first);
   connected_components = extract_connected_components<element_t, std::set<element_t>>(
       neighbors, elements);
-#endif
 
   for (const auto &component : connected_components) {
     std::vector<std::vector<double>> mycurves;
@@ -369,12 +367,20 @@ inline void critical_point_tracker_2d_regular::simplex_indices(
     indices[i] = m.get_lattice().to_integer(vertices[i]);
 }
 
-inline void critical_point_tracker_2d_regular::simplex_positions(
+inline void critical_point_tracker_2d_regular::simplex_coordinates(
     const std::vector<std::vector<int>>& vertices, double X[][3]) const
 {
-  for (int i = 0; i < vertices.size(); i ++)
-    for (int j = 0; j < 3; j ++)
-      X[i][j] = vertices[i][j];
+  if (coordinates_source == SOURCE_GIVEN) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      for (int j = 0; j < 2; j ++) 
+        X[i][j] = coords(j, vertices[i][0], vertices[i][1]);
+      X[i][2] = vertices[i][2];
+    }
+  } else {
+    for (int i = 0; i < vertices.size(); i ++)
+      for (int j = 0; j < 3; j ++)
+        X[i][j] = vertices[i][j];
+  }
 }
 
 template <typename T>
@@ -474,7 +480,7 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   // if (!succ2) return false;
 
   double X[3][3]; // position
-  simplex_positions(vertices, X);
+  simplex_coordinates(vertices, X);
   lerp_s2v3(X, mu, cp.x);
 
   if (scalar_field_source != SOURCE_NONE) {
@@ -524,7 +530,7 @@ inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const eleme
   if (!succ) return false;
 
   double X[3][3]; // position
-  simplex_positions(vertices, X);
+  simplex_coordinates(vertices, X);
   lerp_s2v3(X, mu, cp.x);
 #endif
 }
@@ -555,7 +561,7 @@ inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const eleme
   if (!succ) return false;
 
   double X[3][3]; // position
-  simplex_positions(vertices, X);
+  simplex_coordinates(vertices, X);
   lerp_s2v3(X, mu, cp.x);
 #endif
 }
@@ -574,7 +580,7 @@ void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s
   if (!succ) return false;
 
   double X[3][3]; // position
-  simplex_positions(vertices, X);
+  simplex_coordinates(vertices, X);
   lerp_s2v3(X, mu, cp.x);
 }
 #endif

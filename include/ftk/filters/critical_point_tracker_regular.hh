@@ -10,8 +10,8 @@ namespace ftk {
 
 enum {
   SOURCE_NONE, 
-  SOURCE_GIVEN,
-  SOURCE_DERIVED
+  SOURCE_GIVEN, // explicit
+  SOURCE_DERIVED // implicit
 };
 
 struct critical_point_tracker_regular : public critical_point_tracker {
@@ -28,6 +28,7 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   void set_local_domain(const lattice&); // rank-specific "core" region of the block
   void set_local_array_domain(const lattice&); // rank-specific "ext" region of the block
 
+  void set_coordinates_source(int s) {coordinates_source = s;}
   void set_scalar_field_source(int s) {scalar_field_source = s;}
   void set_vector_field_source(int s) {vector_field_source = s;}
   void set_jacobian_field_source(int s) {jacobian_field_source = s;}
@@ -41,7 +42,8 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void set_current_timestep(int t) {current_timestep = t;}
   virtual void advance_timestep() = 0;
   virtual void update_timestep() = 0;
- 
+
+  void set_coordinates(const ndarray<double>& coords_) {coords = coords_; set_coordinates_source(SOURCE_GIVEN);}
   void push_input_scalar_field(const ndarray<double>& scalar0) {scalar.push_front(scalar0);}
   void push_input_vector_field(const ndarray<double>& V0) {V.push_front(V0);}
   void push_input_jacobian_field(const ndarray<double>& gradV0) {gradV.push_front(gradV0);}
@@ -61,6 +63,7 @@ protected: // config
   int start_timestep = 0, 
       end_timestep = std::numeric_limits<int>::max();
 
+  int coordinates_source = SOURCE_NONE;
   int scalar_field_source = SOURCE_NONE, 
       vector_field_source = SOURCE_NONE,
       jacobian_field_source = SOURCE_NONE;
@@ -69,6 +72,7 @@ protected: // config
   unsigned int type_filter = 0;
 
 protected:
+  ndarray<double> coords;
   std::deque<ndarray<double>> scalar, V, gradV;
   int current_timestep = 0;
 };
