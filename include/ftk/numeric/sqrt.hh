@@ -13,13 +13,6 @@ static std::complex<T> complex_sqrt(const std::complex<T> z)
   return pow(z, T(1)/T(2));
 }
 
-template <typename T>
-__device__ __host__
-static std::complex<T> complex_cbrt(const std::complex<T> z)
-{
-  return pow(z, T(1)/T(3));
-}
-
 }
 
 #endif

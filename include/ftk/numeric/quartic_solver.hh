@@ -4,6 +4,7 @@
 #include <cmath>
 #include <complex>
 #include <ftk/numeric/sqrt.hh>
+#include <ftk/numeric/cbrt.hh>
 
 namespace ftk {
 
