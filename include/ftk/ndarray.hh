@@ -44,8 +44,11 @@
 
 #if FTK_HAVE_VTK
 #include <vtkSmartPointer.h>
+#include <vtkDataArray.h>
 #include <vtkImageData.h>
+#include <vtkPointData.h>
 #include <vtkXMLImageDataReader.h>
+#include <vtkXMLImageDataWriter.h>
 #include <vtkDataReader.h>
 #endif
 
@@ -153,8 +156,12 @@ struct ndarray {
 
   void from_vtk_image_data_file(const std::string& filename);
   void from_vtk_image_data_file_sequence(const std::string& pattern);
+  void to_scalar_vtk_image_data_file(const std::string& filename) const;
 #if FTK_HAVE_VTK
+  static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d);
+  vtkSmartPointer<vtkImageData> to_scalar_vtk_image_data() const;
+  vtkSmartPointer<vtkDataArray> to_scalar_vtk_data_array() const;
 #endif
 
 #if FTK_HAVE_PNETCDF
@@ -298,6 +305,49 @@ void ndarray<T>::from_binary_file_sequence(const std::string& pattern)
 }
 
 #ifdef FTK_HAVE_VTK
+template<> int ndarray<char>::vtk_data_type() {return VTK_CHAR;}
+template<> int ndarray<unsigned char>::vtk_data_type() {return VTK_UNSIGNED_CHAR;}
+template<> int ndarray<short>::vtk_data_type() {return VTK_SHORT;}
+template<> int ndarray<unsigned short>::vtk_data_type() {return VTK_UNSIGNED_SHORT;}
+template<> int ndarray<int>::vtk_data_type() {return VTK_INT;}
+template<> int ndarray<unsigned int>::vtk_data_type() {return VTK_UNSIGNED_INT;}
+template<> int ndarray<long>::vtk_data_type() {return VTK_LONG;}
+template<> int ndarray<unsigned long>::vtk_data_type() {return VTK_UNSIGNED_LONG;}
+template<> int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
+template<> int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
+
+template<typename T>
+inline void ndarray<T>::to_scalar_vtk_image_data_file(const std::string& filename) const 
+{
+  vtkSmartPointer<vtkXMLImageDataWriter> writer = vtkXMLImageDataWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( to_scalar_vtk_image_data() );
+  writer->Write();
+}
+
+template<typename T>
+inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_scalar_vtk_data_array() const
+{
+  vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
+  d->SetName("scalar");
+  d->SetNumberOfComponents(1);
+  d->SetNumberOfTuples(nelem());
+  memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * p.size()); // nelem());
+  return d;
+}
+
+template<typename T>
+inline vtkSmartPointer<vtkImageData> ndarray<T>::to_scalar_vtk_image_data() const
+{
+  vtkSmartPointer<vtkImageData> d = vtkImageData::New();
+  if (nd() == 2) d->SetDimensions(shape(0), shape(1), 1);
+  else d->SetDimensions(shape(0), shape(1), shape(2));
+  d->GetPointData()->AddArray(to_scalar_vtk_data_array());
+  d->GetPointData()->SetScalars(to_scalar_vtk_data_array());
+
+  return d;
+}
+
 template<typename T>
 inline void ndarray<T>::from_vtk_image_data(vtkSmartPointer<vtkImageData> d)
 {
@@ -375,6 +425,13 @@ inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename)
 
 template<typename T>
 inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pattern)
+{
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
+  assert(false);
+}
+
+template<typename T>
+inline void ndarray<T>::to_scalar_vtk_image_data_file(const std::string& filename) const 
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
   assert(false);

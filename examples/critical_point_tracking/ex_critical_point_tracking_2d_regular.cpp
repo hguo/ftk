@@ -22,18 +22,21 @@ int main(int argc, char **argv)
   tracker.initialize();
 
   FILE *fp = fopen("out.raw", "wb");
-
   for (int k = 0; k < DT; k ++) {
-    // auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, double(k) / (DT - 1));
-    auto scalar = ftk::synthetic_merger_2D<double>(DW, DH, double(k) / (DT - 1) * 20);
+    auto scalar = ftk::synthetic_woven_2D<double>(DW, DH, double(k) / (DT - 1));
+    // auto scalar = ftk::synthetic_merger_2D<double>(DW, DH, double(k) / (DT - 1) * 20);
     // scalar = ftk::conv2D_gaussian(scalar, 5.0/*sigma*/, 5/*ksizex*/, 5/*ksizey*/, 2/*padding*/);
     scalar.to_binary_file(fp);
 
     tracker.push_input_scalar_field(scalar);
     tracker.advance_timestep();
   }
-
   fclose(fp);
+
+  ftk::ndarray<double> scalar_all;
+  scalar_all.reshape(DW, DH, DT);
+  scalar_all.from_binary_file("out.raw");
+  scalar_all.to_scalar_vtk_image_data_file("out.vti");
 
   tracker.finalize();
   tracker.write_traced_critical_points_vtk("out.vtp");

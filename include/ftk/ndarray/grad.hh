@@ -68,6 +68,21 @@ ndarray<T> jacobian2D(const ndarray<T>& vec)
   return grad;
 }
 
+// Derive Jacobians for piecewise linear vector field on regular grid.
+// The jacobian field is piecewise constant
+template <typename T>
+ndarray<T> jacobian2DPL(const ndarray<T>& V)
+{
+  const int DW = V.dim(1), DH = V.dim(2);
+  ndarray<T> J;
+  J.reshape(2, 2, 2/*upper & lower triangles*/, DW, DH);
+
+  regular_simplex_mesh m(2);
+  m.set_lb_ub({0, 0}, {DW-1, DH-1});
+  // WIP
+  // m.element_for(2, 
+}
+
 // derive 2D gradients for 2D vector field
 template <typename T>
 ndarray<T> jacobian2Dt(const ndarray<T>& vec)
