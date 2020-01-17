@@ -9,30 +9,30 @@ namespace ftk {
 
 enum {
   CRITICAL_POINT_2D_UNKNOWN = 0,
-  CRITICAL_POINT_2D_DEGENERACY = 1,
-  CRITICAL_POINT_2D_ATTRACTING = 2,
-  CRITICAL_POINT_2D_REPELLING = 4,
-  CRITICAL_POINT_2D_SADDLE = 8,
+  CRITICAL_POINT_2D_DEGENERATE = 1,
+  CRITICAL_POINT_2D_ATTRACTING = 8, // 2,
+  CRITICAL_POINT_2D_REPELLING = 2, // 4,
+  CRITICAL_POINT_2D_SADDLE = 4, // 8,
   CRITICAL_POINT_2D_ATTRACTING_FOCUS = 16,
   CRITICAL_POINT_2D_REPELLING_FOCUS = 32,
   CRITICAL_POINT_2D_CENTER = 64,
   // for scalar field 
-  CRITICAL_POINT_2D_MAXIMUM = 2,
-  CRITICAL_POINT_2D_MINIMUM = 4
+  CRITICAL_POINT_2D_MAXIMUM = 8, // 2,
+  CRITICAL_POINT_2D_MINIMUM = 2, // 4
 };
 
 enum {
   CRITICAL_POINT_3D_UNKNOWN = 0,
-  CRITICAL_POINT_3D_DEGENERACY = 1,
-  CRITICAL_POINT_3D_ATTRACTING = 2,
-  CRITICAL_POINT_3D_REPELLING = 4,
-  CRITICAL_POINT_3D_SADDLE = 8,
+  CRITICAL_POINT_3D_DEGENERATE = 1,
+  CRITICAL_POINT_3D_ATTRACTING = 8,
+  CRITICAL_POINT_3D_REPELLING = 2,
+  CRITICAL_POINT_3D_SADDLE = 4,
   CRITICAL_POINT_3D_UNSTABLE_ATTRACTING = 16,
   CRITICAL_POINT_3D_UNSTABLE_REPELLING = 32,
   CRITICAL_POINT_3D_UNSTABLE_SADDLE = 64,
   // for scalar field
+  CRITICAL_POINT_3D_MAXIMUM = 8,
   CRITICAL_POINT_3D_MINIMUM = 2,
-  CRITICAL_POINT_3D_MAXIMUM = 4
 };
 
 template <typename T>
@@ -43,10 +43,10 @@ unsigned int critical_point_type_2d(T J[2][2], bool symmetric)
     double eig[2];
     solve_eigenvalues_symmetric2x2(J, eig);
     
-    if (eig[0] > 0 && eig[1] > 0) return CRITICAL_POINT_2D_MAXIMUM;
-    else if (eig[0] < 0 && eig[1] < 0) return CRITICAL_POINT_2D_MINIMUM;
+    if (eig[0] > 0 && eig[1] > 0) return CRITICAL_POINT_2D_MINIMUM;
+    else if (eig[0] < 0 && eig[1] < 0) return CRITICAL_POINT_2D_MAXIMUM;
     else if (eig[0] * eig[1] < 0) return CRITICAL_POINT_2D_SADDLE;
-    else return CRITICAL_POINT_2D_DEGENERACY;
+    else return CRITICAL_POINT_2D_DEGENERATE;
   } else {
     std::complex<T> eig[2];
     T delta = ftk::solve_eigenvalues2x2(J, eig);
@@ -59,7 +59,7 @@ unsigned int critical_point_type_2d(T J[2][2], bool symmetric)
       else if (eig[0].real() < 0 && eig[1].real() < 0)
         return CRITICAL_POINT_2D_ATTRACTING;
       else 
-        return CRITICAL_POINT_2D_DEGENERACY;
+        return CRITICAL_POINT_2D_DEGENERATE;
     } else { // two conjugate roots
       if (eig[0].real() < 0) 
         return CRITICAL_POINT_2D_ATTRACTING_FOCUS;
@@ -79,9 +79,9 @@ unsigned int critical_point_type_3d(T J[3][3], bool symmetric)
     T eig[3];
     solve_eigenvalues_symmetric3x3(J, eig);
 
-    if (eig[0] * eig[1] * eig[2] == T(0)) return CRITICAL_POINT_3D_DEGENERACY;
-    if (eig[0] < 0 && eig[1] < 0 && eig[2] < 0) return CRITICAL_POINT_3D_MINIMUM;
-    else if (eig[0] > 0 && eig[1] > 0 && eig[2] > 0) return CRITICAL_POINT_3D_MAXIMUM;
+    if (eig[0] * eig[1] * eig[2] == T(0)) return CRITICAL_POINT_3D_DEGENERATE;
+    if (eig[0] < 0 && eig[1] < 0 && eig[2] < 0) return CRITICAL_POINT_3D_MAXIMUM;
+    else if (eig[0] > 0 && eig[1] > 0 && eig[2] > 0) return CRITICAL_POINT_3D_MINIMUM;
     else return CRITICAL_POINT_2D_SADDLE;
   } else {
     // std::complex<T> eig[3];
