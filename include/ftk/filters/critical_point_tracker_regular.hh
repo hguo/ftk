@@ -39,13 +39,20 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void finalize() = 0;
 
   virtual void set_current_timestep(int t) {current_timestep = t;}
-  virtual void advance_timestep() = 0;
+  virtual void advance_timestep();
   virtual void update_timestep() = 0;
 
   void set_coordinates(const ndarray<double>& coords_) {coords = coords_; use_explicit_coords = true;}
-  void push_input_scalar_field(const ndarray<double>& scalar0) {scalar.push_front(scalar0);}
-  void push_input_vector_field(const ndarray<double>& V0) {V.push_front(V0);}
-  void push_input_jacobian_field(const ndarray<double>& gradV0) {gradV.push_front(gradV0);}
+  void push_snapshot_scalar_field(const ndarray<double>& scalar0) {scalar.push_front(scalar0);}
+  void push_snapshot_vector_field(const ndarray<double>& V0) {V.push_front(V0);}
+  void push_snapshot_jacobian_field(const ndarray<double>& gradV0) {gradV.push_front(gradV0);}
+
+  // pushing 3D/4D spacetime volume directly
+  void push_spacetime_scalar_field(const ndarray<double>& scalar0);
+  void push_spacetime_vector_field(const ndarray<double>& V0);
+  void push_spacetime_jacobian_field(const ndarray<double>& gradV0);
+
+  void set_max_num_staged_timesteps(int);
 
 protected:
   template <int N, typename T=double>
@@ -61,6 +68,7 @@ protected: // config
 
   int start_timestep = 0, 
       end_timestep = std::numeric_limits<int>::max();
+  int max_num_staged_timesteps = 2;
 
   int scalar_field_source = SOURCE_NONE, 
       vector_field_source = SOURCE_NONE,
@@ -77,6 +85,17 @@ protected:
 };
 
 /////
+void critical_point_tracker_regular::advance_timestep()
+{
+  update_timestep();
+
+  if (scalar.size() > max_num_staged_timesteps) scalar.pop_back();
+  if (V.size() > max_num_staged_timesteps) V.pop_back();
+  if (gradV.size() > max_num_staged_timesteps) gradV.pop_back();
+
+  current_timestep ++;
+}
+
 inline void critical_point_tracker_regular::set_type_filter(unsigned int f)
 {
   use_type_filter = true;
@@ -94,6 +113,14 @@ bool critical_point_tracker_regular::filter_critical_point_type(
     else return false;
   }
   else return true;
+}
+
+inline void critical_point_tracker_regular::push_spacetime_scalar_field(const ndarray<double>& scalar_all)
+{
+  for (size_t t = 0; t < scalar_all.shape(scalar_all.nd()-1); t ++) {
+    auto array = scalar_all.slice_time(t);
+    push_snapshot_scalar_field(array);
+  }
 }
 
 }

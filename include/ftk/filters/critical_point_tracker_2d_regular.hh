@@ -59,7 +59,6 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   void initialize();
   void finalize();
 
-  void advance_timestep();
   void update_timestep();
   
 #if FTK_HAVE_VTK
@@ -141,26 +140,14 @@ inline void critical_point_tracker_2d_regular::finalize()
   }
 }
 
-inline void critical_point_tracker_2d_regular::advance_timestep()
-{
-  update_timestep();
-
-  const int nt = 2;
-  if (scalar.size() > nt) scalar.pop_back();
-  if (V.size() > nt) V.pop_back();
-  if (gradV.size() > nt) gradV.pop_back();
-
-  current_timestep ++;
-}
-
 inline void critical_point_tracker_2d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
   // derive fields
   if (scalar_field_source == SOURCE_GIVEN) {
-    if (vector_field_source == SOURCE_DERIVED) push_input_vector_field(gradient2D(scalar[0])); // 0 is the current timestep; 1 is the last timestep
-    if (jacobian_field_source == SOURCE_DERIVED) push_input_jacobian_field(jacobian2D(V[0]));
+    if (vector_field_source == SOURCE_DERIVED) push_snapshot_vector_field(gradient2D(scalar[0])); // 0 is the current timestep; 1 is the last timestep
+    if (jacobian_field_source == SOURCE_DERIVED) push_snapshot_jacobian_field(jacobian2D(V[0]));
   }
 
   auto func0 = [=](element_t e) {

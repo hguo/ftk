@@ -87,8 +87,11 @@ struct ndarray {
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5) {reshape({n0, n1, n2, n3, n4, n5});}
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshape({n0, n1, n2, n3, n4, n5, n6});}
 
-  ndarray<T> slice(const lattice&);
-  ndarray<T> slice(const std::vector<size_t>& starts, const std::vector<size_t> &sizes);
+  ndarray<T> slice(const lattice&) const;
+  ndarray<T> slice(const std::vector<size_t>& starts, const std::vector<size_t> &sizes) const;
+
+  ndarray<T> slice_time(size_t t) const; // assuming the last dimension is time, return an (n-1)-dimensional slice
+  std::vector<ndarray<T>> slice_time() const; // slice_time for all timesteps
 
   size_t index(const std::vector<size_t>& idx) const;
   size_t index(const std::vector<int>& idx) const;
@@ -353,35 +356,34 @@ inline void ndarray<T>::from_vtk_image_data(vtkSmartPointer<vtkImageData> d)
 {
   const int nd = d->GetDataDimension(), 
             nc = d->GetNumberOfScalarComponents();
+  auto da = d->GetPointData()->GetScalars();
 
-  d->PrintSelf(std::cerr, vtkIndent(2));
+  // da->PrintSelf(std::cerr, vtkIndent(2));
+  // d->PrintSelf(std::cerr, vtkIndent(2));
   if (nd == 2) {
     if (nc == 1) { // scalar field
       reshape(d->GetDimensions()[0], d->GetDimensions()[1]);
-      for (int j = 0; j < d->GetDimensions()[1]; j ++)
-        for (int i = 0; i < d->GetDimensions()[0]; i ++)
-          p.push_back(d->GetScalarComponentAsDouble(i, j, 0, 0));
-    } else {
-      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1]);
+      for (auto i = 0; i < nelem(); i ++)
+        p[i] = da->GetTuple1(i);
+    } else { // TODO
       for (int j = 0; j < d->GetDimensions()[1]; j ++)
         for (int i = 0; i < d->GetDimensions()[0]; i ++)
           for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
             p.push_back(d->GetScalarComponentAsDouble(i, j, 0, c));
+      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1]);
     }
   } else if (nd == 3) {
     if (nc == 1) { // scalar field
       reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
-      for (int k = 0; k < d->GetDimensions()[2]; k ++)
-        for (int j = 0; j < d->GetDimensions()[1]; j ++)
-          for (int i = 0; i < d->GetDimensions()[0]; i ++)
-            p.push_back(d->GetScalarComponentAsDouble(i, j, 0, 0));
-    } else {
-      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
+      for (auto i = 0; i < nelem(); i ++)
+        p[i] = da->GetTuple1(i);
+    } else { // TODO
       for (int k = 0; k < d->GetDimensions()[2]; k ++)
         for (int j = 0; j < d->GetDimensions()[1]; j ++)
           for (int i = 0; i < d->GetDimensions()[0]; i ++)
             for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
               p.push_back(d->GetScalarComponentAsDouble(i, j, k, c));
+      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
     }
   } else {
     fprintf(stderr, "[FTK] fatal error: unsupported data dimension %d.\n", nd);
@@ -621,23 +623,9 @@ std::tuple<T, T> ndarray<T>::min_max() const {
 }
 
 #if FTK_HAVE_MPI
-template <>
-inline MPI_Datatype ndarray<double>::mpi_datatype()
-{
-  return MPI_DOUBLE;
-}
-
-template <>
-inline MPI_Datatype ndarray<float>::mpi_datatype()
-{
-  return MPI_FLOAT;
-}
-
-template <>
-inline MPI_Datatype ndarray<int>::mpi_datatype()
-{
-  return MPI_INT;
-}
+template <> inline MPI_Datatype ndarray<double>::mpi_datatype() { return MPI_DOUBLE; }
+template <> inline MPI_Datatype ndarray<float>::mpi_datatype() { return MPI_FLOAT; }
+template <> inline MPI_Datatype ndarray<int>::mpi_datatype() { return MPI_INT; }
 #endif
 
 template <typename T>
@@ -662,7 +650,7 @@ inline void ndarray<T>::copy_to_cuda_device()
 }
 
 template <typename T>
-inline ndarray<T> ndarray<T>::slice(const lattice& l)
+inline ndarray<T> ndarray<T>::slice(const lattice& l) const
 {
   ndarray<T> array(l);
   for (auto i = 0; i < l.n(); i ++) {
@@ -673,9 +661,32 @@ inline ndarray<T> ndarray<T>::slice(const lattice& l)
 }
 
 template <typename T>
-inline ndarray<T> ndarray<T>::slice(const std::vector<size_t>& st, const std::vector<size_t>& sz)
+inline ndarray<T> ndarray<T>::slice(const std::vector<size_t>& st, const std::vector<size_t>& sz) const
 {
   return slice(lattice(st, sz));
+}
+
+template <typename T>
+inline ndarray<T> ndarray<T>::slice_time(size_t t) const 
+{
+  ndarray<T> array;
+  std::vector<size_t> mydims(dims);
+  mydims.resize(nd()-1);
+
+  array.reshape(mydims);
+  memcpy(&array[0], &p[t * s[nd()-1]], s[nd()-1]);
+
+  return array;
+}
+
+template <typename T>
+inline std::vector<ndarray<T>> ndarray<T>::slice_time() const
+{
+  std::vector<ndarray<T>> arrays;
+  const size_t nt = shape(nd()-1);
+  for (size_t i = 0; i < nt; i ++) 
+    arrays.push_back(slice_time(i));
+  return arrays;
 }
 
 }

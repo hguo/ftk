@@ -115,7 +115,7 @@ int main(int argc, char **argv)
     scalar.from_array(scalar32);
     // scalar = ftk::conv2D_gaussian(scalar, 1.0/*sigma*/, 5/*ksizex*/, 5/*ksizey*/, 2/*padding*/);
 
-    tracker.push_input_scalar_field(scalar);
+    tracker.push_snapshot_scalar_field(scalar);
     tracker.advance_timestep();
   }
 
