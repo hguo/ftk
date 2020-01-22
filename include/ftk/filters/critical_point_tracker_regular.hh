@@ -39,13 +39,13 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void finalize() = 0;
 
   virtual void set_current_timestep(int t) {current_timestep = t;}
-  virtual void advance_timestep();
+  virtual bool advance_timestep();
   virtual void update_timestep() = 0;
 
   void set_coordinates(const ndarray<double>& coords_) {coords = coords_; use_explicit_coords = true;}
-  void push_snapshot_scalar_field(const ndarray<double>& scalar0) {scalar.push_front(scalar0);}
-  void push_snapshot_vector_field(const ndarray<double>& V0) {V.push_front(V0);}
-  void push_snapshot_jacobian_field(const ndarray<double>& gradV0) {gradV.push_front(gradV0);}
+  virtual void push_snapshot_scalar_field(const ndarray<double>& scalar0) {scalar.push_back(scalar0);}
+  virtual void push_snapshot_vector_field(const ndarray<double>& V0) {V.push_back(V0);}
+  virtual void push_snapshot_jacobian_field(const ndarray<double>& gradV0) {gradV.push_back(gradV0);}
 
   // pushing 3D/4D spacetime volume directly
   void push_spacetime_scalar_field(const ndarray<double>& scalar0);
@@ -85,15 +85,22 @@ protected:
 };
 
 /////
-void critical_point_tracker_regular::advance_timestep()
+bool critical_point_tracker_regular::advance_timestep()
 {
   update_timestep();
 
+  // fprintf(stderr, "%lu, %lu\n", scalar.size(), V.size());
+  scalar.pop_front();
+  V.pop_front();
+  gradV.pop_front();
+#if 0
   if (scalar.size() > max_num_staged_timesteps) scalar.pop_back();
   if (V.size() > max_num_staged_timesteps) V.pop_back();
   if (gradV.size() > max_num_staged_timesteps) gradV.pop_back();
+#endif
 
   current_timestep ++;
+  return V.size() > 1; // > 0;
 }
 
 inline void critical_point_tracker_regular::set_type_filter(unsigned int f)

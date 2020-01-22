@@ -674,7 +674,7 @@ inline ndarray<T> ndarray<T>::slice_time(size_t t) const
   mydims.resize(nd()-1);
 
   array.reshape(mydims);
-  memcpy(&array[0], &p[t * s[nd()-1]], s[nd()-1]);
+  memcpy(&array[0], &p[t * s[nd()-1]], s[nd()-1] * sizeof(T));
 
   return array;
 }

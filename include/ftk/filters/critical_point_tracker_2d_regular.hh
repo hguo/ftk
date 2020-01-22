@@ -60,7 +60,11 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   void finalize();
 
   void update_timestep();
-  
+ 
+  void push_snapshot_scalar_field(const ndarray<double>&);
+  void push_snapshot_vector_field(const ndarray<double>&);
+  // void push_snapshot_jacobian_field(const ndarray<double>&); // TODO
+
 #if FTK_HAVE_VTK
   virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
   virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
@@ -140,15 +144,26 @@ inline void critical_point_tracker_2d_regular::finalize()
   }
 }
 
+inline void critical_point_tracker_2d_regular::push_snapshot_scalar_field(const ndarray<double>& s)
+{
+  scalar.push_back(s);
+  if (scalar_field_source == SOURCE_GIVEN) {
+    if (vector_field_source == SOURCE_DERIVED) push_snapshot_vector_field(gradient2D(scalar[scalar.size()-1])); // 0 is the current timestep; 1 is the last timestep
+    if (jacobian_field_source == SOURCE_DERIVED) push_snapshot_jacobian_field(jacobian2D(V[V.size()-1]));
+  }
+}
+
+inline void critical_point_tracker_2d_regular::push_snapshot_vector_field(const ndarray<double>& v)
+{
+  V.push_back(v);
+  if (vector_field_source == SOURCE_GIVEN) {
+    if (jacobian_field_source == SOURCE_DERIVED) push_snapshot_jacobian_field(jacobian2D(V[0]));
+  }
+}
+
 inline void critical_point_tracker_2d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
-
-  // derive fields
-  if (scalar_field_source == SOURCE_GIVEN) {
-    if (vector_field_source == SOURCE_DERIVED) push_snapshot_vector_field(gradient2D(scalar[0])); // 0 is the current timestep; 1 is the last timestep
-    if (jacobian_field_source == SOURCE_DERIVED) push_snapshot_jacobian_field(jacobian2D(V[0]));
-  }
 
   auto func0 = [=](element_t e) {
       critical_point_2dt_t cp;
@@ -185,7 +200,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
       m.element_for(2, lattice({
             local_domain.start(0), 
             local_domain.start(1), 
-            static_cast<size_t>(current_timestep - 1), 
+            // static_cast<size_t>(current_timestep - 1), 
+            static_cast<size_t>(current_timestep),
           }, {
             local_domain.size(0), 
             local_domain.size(1), 
