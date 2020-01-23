@@ -38,6 +38,8 @@ bool check_simplex_cp2t(
     for (int j = 0; j < 3; j ++) {
       vertices[i][j] = e.corner[j] 
         + unit_simplex_offset_3_2<scope>(e.type, i, j);
+      // if (vertices[i][j] < domain.st[j] || 
+      //     vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
       if (vertices[i][j] < domain.st[j] || 
           vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
@@ -58,8 +60,6 @@ bool check_simplex_cp2t(
   }
   
   bool succ = robust_critical_point_in_simplex2(vf, indices);
-  if (!succ) return false;
-
   if (succ) {
     // inverse interpolation
     double mu[3];
@@ -83,7 +83,7 @@ bool check_simplex_cp2t(
     }
 
     // scalar interpolation
-    if (scalar[1]) { // have given scalar
+    if (scalar[0]) { // have given scalar
       double values[3];
       for (int i = 0; i < 3; i ++) {
         // const size_t ii = ext.to_index(vertices[i]);
@@ -222,7 +222,7 @@ static std::vector<cp3_t> extract_cp2dt(
   cudaMemset(dncps, 0, sizeof(unsigned long long));
 
   cp3_t *dcps;
-  cudaMalloc((void**)&dcps, sizeof(cp3_t) * ext.n());
+  cudaMalloc((void**)&dcps, sizeof(cp3_t) * ext.n() * 2);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");

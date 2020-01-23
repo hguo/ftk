@@ -225,10 +225,11 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           domain.start(1), 
           0
         }, {
-          domain.size(0),
-          domain.size(1),
+          domain.size(0)-1,
+          domain.size(1)-1,
           std::numeric_limits<int>::max()
         });
+    std::cerr << "domain3=" << domain3 << std::endl;
 
     ftk::lattice ordinal_core({
           local_domain.start(0), 
@@ -239,6 +240,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           local_domain.size(1), 
           1
         });
+    std::cerr << "ordinal_core=" << ordinal_core << std::endl;
 
     ftk::lattice interval_core({
           local_domain.start(0), 
@@ -291,7 +293,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           field_data_snapshots[0].jacobian.data(), 
           field_data_snapshots[1].jacobian.data(),
           field_data_snapshots[0].scalar.data(),
-          field_data_snapshots[0].scalar.data(),
+          field_data_snapshots[1].scalar.data(),
           use_explicit_coords, 
           coords.data()
         );

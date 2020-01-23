@@ -195,10 +195,17 @@ inline int robust_sign_det4(const T X[4][3])
   return 0; // useless
 }
 
+template <typename T>
+__device__ __host__
+inline void swap(T& a, T& b)
+{
+  T c(a); a = b; b = c;
+}
+
 // returns number of swaps for bubble sort
 template <int n, typename T>
 __device__ __host__
-int nswaps_bubble_sort(T arr[n], T order[n])
+inline int nswaps_bubble_sort(T arr[n], T order[n])
 {
   for (int i = 0; i < n; i ++)
     order[i] = i;
@@ -207,8 +214,8 @@ int nswaps_bubble_sort(T arr[n], T order[n])
   for (int i = 0; i < n-1; i ++) 
     for (int j = 0; j < n-i-1; j ++) 
       if (arr[j] > arr[j+1]) {
-        std::swap(arr[j], arr[j+1]);
-        std::swap(order[j], order[j+1]);
+        swap(arr[j], arr[j+1]);
+        swap(order[j], order[j+1]);
         nswaps ++;
       }
   
