@@ -225,8 +225,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           domain.start(1), 
           0
         }, {
-          domain.size(0)-1,
-          domain.size(1)-1,
+          domain.size(0),
+          domain.size(1),
           std::numeric_limits<int>::max()
         });
 
