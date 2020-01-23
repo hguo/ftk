@@ -4,7 +4,7 @@
 #include <ftk/ndarray/conv.hh>
 
 // read input .vti file and track 2D critical points
-#if 1
+#if 0
 int main(int argc, char **argv)
 {
   if (argc < 2) return 1;
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
   fprintf(stderr, "DW=%lu, DH=%lu, DT=%lu\n", DW, DH, DT);
 
   ftk::critical_point_tracker_2d_regular tracker(argc, argv);
-  tracker.set_domain(ftk::lattice({2, 2}, {DW-4, DH-4}));
+  tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
   // tracker.set_domain(ftk::lattice({4, 4}, {DW-6, DH-6}));
   tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   tracker.set_input_array_partial(false);
@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
   tracker.initialize();
 
-  tracker.push_spacetime_scalar_field(scalar);
+  tracker.push_scalar_field_spacetime(scalar);
   while (tracker.advance_timestep()) {}
 
   tracker.finalize();
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 }
 #endif
 
-#if 0
+#if 1
 // const int DW = 32, DH = 32, DT = 100;
 const int DW = 32, DH = 32, DT = 100;
 
@@ -47,8 +47,8 @@ int main(int argc, char **argv)
   diy::mpi::environment env;
 
   ftk::critical_point_tracker_2d_regular tracker(argc, argv);
-  // tracker.set_domain(ftk::lattice({2, 2}, {DW-4, DH-4}));
-  tracker.set_domain(ftk::lattice({4, 4}, {DW-6, DH-6}));
+  tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
+  // tracker.set_domain(ftk::lattice({4, 4}, {DW-6, DH-6}));
   tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   tracker.set_input_array_partial(false);
   tracker.set_scalar_field_source(ftk::SOURCE_GIVEN);
@@ -64,8 +64,9 @@ int main(int argc, char **argv)
     // scalar = ftk::conv2D_gaussian(scalar, 5.0/*sigma*/, 5/*ksizex*/, 5/*ksizey*/, 2/*padding*/);
     scalar.to_binary_file(fp);
 
-    tracker.push_snapshot_scalar_field(scalar);
-    tracker.advance_timestep();
+    tracker.push_scalar_field_snapshot(scalar);
+    if (k != 0)
+      tracker.advance_timestep();
   }
   fclose(fp);
 

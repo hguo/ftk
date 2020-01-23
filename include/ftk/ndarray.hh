@@ -61,6 +61,8 @@ struct ndarray {
   ndarray(const lattice& l) {reshape(l.sizes());}
   ndarray(const T *a, const std::vector<size_t> &shape);
 
+  std::ostream& print(std::ostream& os) const;
+
   size_t nd() const {return dims.size();}
   size_t dim(size_t i) const {return dims[i];}
   size_t shape(size_t i) const {return dim(i);}
@@ -687,6 +689,16 @@ inline std::vector<ndarray<T>> ndarray<T>::slice_time() const
   for (size_t i = 0; i < nt; i ++) 
     arrays.push_back(slice_time(i));
   return arrays;
+}
+
+template <typename T>
+std::ostream& ndarray<T>::print(std::ostream& os) const
+{
+  os << "array_dims={";
+  for (size_t i = 0; i < dims.size(); i ++) 
+    if (i < dims.size()-1) os << dims[i] << ", ";
+    else os << dims[i] << "}";
+  return os;
 }
 
 }

@@ -43,16 +43,20 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void update_timestep() = 0;
 
   void set_coordinates(const ndarray<double>& coords_) {coords = coords_; use_explicit_coords = true;}
+#if 0
   virtual void push_snapshot_scalar_field(const ndarray<double>& scalar0) {scalar.push_back(scalar0);}
   virtual void push_snapshot_vector_field(const ndarray<double>& V0) {V.push_back(V0);}
-  virtual void push_snapshot_jacobian_field(const ndarray<double>& gradV0) {gradV.push_back(gradV0);}
+  virtual void push_snapshot_jacobian_field(const ndarray<double>& gradV0) {
+    std::cerr << "pushing jacobian field snapshot: ";
+    gradV0.print(std::cerr) << std::endl;
+    gradV.push_back(gradV0);
+  }
 
   // pushing 3D/4D spacetime volume directly
   void push_spacetime_scalar_field(const ndarray<double>& scalar0);
   void push_spacetime_vector_field(const ndarray<double>& V0);
   void push_spacetime_jacobian_field(const ndarray<double>& gradV0);
-
-  void set_max_num_staged_timesteps(int);
+#endif
 
 protected:
   template <int N, typename T=double>
@@ -68,7 +72,6 @@ protected: // config
 
   int start_timestep = 0, 
       end_timestep = std::numeric_limits<int>::max();
-  int max_num_staged_timesteps = 2;
 
   int scalar_field_source = SOURCE_NONE, 
       vector_field_source = SOURCE_NONE,
@@ -80,7 +83,7 @@ protected: // config
 
 protected:
   ndarray<double> coords;
-  std::deque<ndarray<double>> scalar, V, gradV;
+  // std::deque<ndarray<double>> scalar, V, gradV;
   int current_timestep = 0;
 };
 
@@ -88,19 +91,10 @@ protected:
 bool critical_point_tracker_regular::advance_timestep()
 {
   update_timestep();
-
-  // fprintf(stderr, "%lu, %lu\n", scalar.size(), V.size());
-  scalar.pop_front();
-  V.pop_front();
-  gradV.pop_front();
-#if 0
-  if (scalar.size() > max_num_staged_timesteps) scalar.pop_back();
-  if (V.size() > max_num_staged_timesteps) V.pop_back();
-  if (gradV.size() > max_num_staged_timesteps) gradV.pop_back();
-#endif
+  pop_field_data_snapshot();
 
   current_timestep ++;
-  return V.size() > 1; // > 0;
+  return field_data_snapshots.size() > 0; // > 0;
 }
 
 inline void critical_point_tracker_regular::set_type_filter(unsigned int f)
@@ -120,14 +114,6 @@ bool critical_point_tracker_regular::filter_critical_point_type(
     else return false;
   }
   else return true;
-}
-
-inline void critical_point_tracker_regular::push_spacetime_scalar_field(const ndarray<double>& scalar_all)
-{
-  for (size_t t = 0; t < scalar_all.shape(scalar_all.nd()-1); t ++) {
-    auto array = scalar_all.slice_time(t);
-    push_snapshot_scalar_field(array);
-  }
 }
 
 }

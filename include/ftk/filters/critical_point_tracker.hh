@@ -20,7 +20,77 @@ struct critical_point_tracker : public filter {
 #endif
   void write_traced_critical_points_vtk(const std::string& filename);
   void write_discrete_critical_points_vtk(const std::string& filename);
+
+  struct field_data_snapshot_t {
+    ndarray<double> scalar, vector, jacobian;
+  };
+
+  bool pop_field_data_snapshot();
+  virtual void push_field_data_snapshot(
+      const ndarray<double> &scalar, 
+      const ndarray<double> &vector,
+      const ndarray<double> &jacobian);
+  virtual void push_scalar_field_snapshot(const ndarray<double> &scalar); // push scalar only
+
+  virtual void push_field_data_spacetime(
+      const ndarray<double> &scalars, 
+      const ndarray<double> &vectors,
+      const ndarray<double> &jacobians);
+  void push_scalar_field_spacetime(const ndarray<double>& scalars);
+
+protected:
+  std::deque<field_data_snapshot_t> field_data_snapshots;
 };
+
+void critical_point_tracker::push_field_data_snapshot(
+    const ndarray<double>& scalar,
+    const ndarray<double>& vector,
+    const ndarray<double>& jacobian)
+{
+  field_data_snapshot_t snapshot;
+  snapshot.scalar = scalar;
+  snapshot.vector = vector;
+  snapshot.jacobian = jacobian;
+
+  field_data_snapshots.emplace_back(snapshot);
+}
+
+void critical_point_tracker::push_scalar_field_snapshot(const ndarray<double>& scalar)
+{
+  field_data_snapshot_t snapshot;
+  snapshot.scalar = scalar;
+
+  field_data_snapshots.emplace_back(snapshot);
+}
+
+void critical_point_tracker::push_field_data_spacetime(
+    const ndarray<double>& scalars,
+    const ndarray<double>& vectors,
+    const ndarray<double>& jacobians)
+{
+  for (size_t t = 0; t < scalars.shape(scalars.nd()-1); t ++) {
+    auto scalar = scalars.slice_time(t);
+    auto vector = vectors.slice_time(t);
+    auto jacobian = jacobians.slice_time(t);
+
+    push_field_data_snapshot(scalar, vector, jacobian);
+  }
+}
+
+void critical_point_tracker::push_scalar_field_spacetime(const ndarray<double>& scalars)
+{
+  for (size_t t = 0; t < scalars.shape(scalars.nd()-1); t ++)
+    push_scalar_field_snapshot( scalars.slice_time(t) );
+}
+
+
+bool critical_point_tracker::pop_field_data_snapshot()
+{
+  if (field_data_snapshots.size() > 0) {
+    field_data_snapshots.pop_front();
+    return true;
+  } else return false;
+}
 
 //////
 #if FTK_HAVE_VTK

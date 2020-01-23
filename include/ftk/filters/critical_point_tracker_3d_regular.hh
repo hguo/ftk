@@ -139,11 +139,13 @@ void critical_point_tracker_3d_regular::finalize()
 void critical_point_tracker_3d_regular::update_timestep()
 {
   fprintf(stderr, "current_timestep = %d\n", current_timestep);
+#if 0 //FIXME
   // derive fields
   if (scalar_field_source == SOURCE_GIVEN) {
     if (vector_field_source == SOURCE_DERIVED) push_snapshot_vector_field(gradient3D(scalar[0])); // 0 is the current timestep; 1 is the last timestep
     if (jacobian_field_source == SOURCE_DERIVED) push_snapshot_jacobian_field(jacobian3D(V[0]));
   }
+#endif
 
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
@@ -157,7 +159,7 @@ void critical_point_tracker_3d_regular::update_timestep()
     };
 
   if (xl == FTK_XL_NONE) {
-    if (V.size() >= 2) { // interval
+    if (field_data_snapshots.size() >= 2) { // interval
       m.element_for(3, lattice({
             local_domain.start(0), 
             local_domain.start(1), 
@@ -322,7 +324,7 @@ void critical_point_tracker_3d_regular::simplex_vectors(
   for (int i = 0; i < 4; i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     for (int j = 0; j < 3; j ++)
-      v[i][j] = V[iv](j, 
+      v[i][j] = field_data_snapshots[iv].vector(j, 
           vertices[i][0] - local_array_domain.start(0), 
           vertices[i][1] - local_array_domain.start(1),
           vertices[i][2] - local_array_domain.start(2));
@@ -334,7 +336,7 @@ void critical_point_tracker_3d_regular::simplex_scalars(
 {
   for (int i = 0; i < 4; i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
-    values[i] = scalar[iv](
+    values[i] = field_data_snapshots[iv].scalar(
         vertices[i][0] - local_array_domain.start(0), 
         vertices[i][1] - local_array_domain.start(1), 
         vertices[i][2] - local_array_domain.start(2));
@@ -349,7 +351,7 @@ void critical_point_tracker_3d_regular::simplex_jacobians(
     const int iv = vertices[i][3] == 0 ? 0 : 1;
     for (int j = 0; j < 3; j ++) {
       for (int k = 0; k < 3; k ++) {
-        Js[i][j][k] = gradV[iv](k, j, 
+        Js[i][j][k] = field_data_snapshots[iv].jacobian(k, j, 
             vertices[i][0] - local_array_domain.start(0), 
             vertices[i][1] - local_array_domain.start(1), 
             vertices[i][2] - local_array_domain.start(2));

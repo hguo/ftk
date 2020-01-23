@@ -60,10 +60,8 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   void finalize();
 
   void update_timestep();
- 
-  void push_snapshot_scalar_field(const ndarray<double>&);
-  void push_snapshot_vector_field(const ndarray<double>&);
-  // void push_snapshot_jacobian_field(const ndarray<double>&); // TODO
+
+  void push_scalar_field_snapshot(const ndarray<double>&);
 
 #if FTK_HAVE_VTK
   virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
@@ -144,21 +142,18 @@ inline void critical_point_tracker_2d_regular::finalize()
   }
 }
 
-inline void critical_point_tracker_2d_regular::push_snapshot_scalar_field(const ndarray<double>& s)
+inline void critical_point_tracker_2d_regular::push_scalar_field_snapshot(const ndarray<double>& s)
 {
-  scalar.push_back(s);
-  if (scalar_field_source == SOURCE_GIVEN) {
-    if (vector_field_source == SOURCE_DERIVED) push_snapshot_vector_field(gradient2D(scalar[scalar.size()-1])); // 0 is the current timestep; 1 is the last timestep
-    if (jacobian_field_source == SOURCE_DERIVED) push_snapshot_jacobian_field(jacobian2D(V[V.size()-1]));
-  }
-}
+  field_data_snapshot_t snapshot;
 
-inline void critical_point_tracker_2d_regular::push_snapshot_vector_field(const ndarray<double>& v)
-{
-  V.push_back(v);
-  if (vector_field_source == SOURCE_GIVEN) {
-    if (jacobian_field_source == SOURCE_DERIVED) push_snapshot_jacobian_field(jacobian2D(V[0]));
+  snapshot.scalar = s;
+  if (vector_field_source == SOURCE_DERIVED) {
+    snapshot.vector = gradient2D(s);
+    if (jacobian_field_source == SOURCE_DERIVED)
+      snapshot.jacobian = jacobian2D(snapshot.vector);
   }
+
+  field_data_snapshots.emplace_back( snapshot );
 }
 
 inline void critical_point_tracker_2d_regular::update_timestep()
@@ -195,7 +190,20 @@ inline void critical_point_tracker_2d_regular::update_timestep()
     };
 
   if (xl == FTK_XL_NONE) {
-    if (V.size() >= 2) { // interval
+    // m.element_for_ordinal(2, current_timestep, func2);
+    m.element_for(2, lattice({ // ordinal
+          local_domain.start(0), 
+          local_domain.start(1), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          1
+        }), 
+        ftk::ELEMENT_SCOPE_ORDINAL, 
+        func2, nthreads);
+    
+    if (field_data_snapshots.size() >= 2) { // interval
       // m.element_for_interval(2, current_timestep-1, current_timestep, func2);
       m.element_for(2, lattice({
             local_domain.start(0), 
@@ -210,19 +218,6 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           ftk::ELEMENT_SCOPE_INTERVAL, 
           func2, nthreads);
     }
-
-    // m.element_for_ordinal(2, current_timestep, func2);
-    m.element_for(2, lattice({ // ordinal
-          local_domain.start(0), 
-          local_domain.start(1), 
-          static_cast<size_t>(current_timestep), 
-        }, {
-          local_domain.size(0), 
-          local_domain.size(1), 
-          1
-        }), 
-        ftk::ELEMENT_SCOPE_ORDINAL, 
-        func2, nthreads);
   } else if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     ftk::lattice domain3({
@@ -248,7 +243,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
     ftk::lattice interval_core({
           local_domain.start(0), 
           local_domain.start(1), 
-          static_cast<size_t>(current_timestep-1), 
+          // static_cast<size_t>(current_timestep-1), 
+          static_cast<size_t>(current_timestep), 
         }, {
           local_domain.size(0), 
           local_domain.size(1), 
@@ -259,7 +255,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         {V[0].dim(1), V[0].dim(2)});
 
     if (V.size() >= 2) { // interval
-      fprintf(stderr, "processing interval %d, %d\n", current_timestep - 1, current_timestep);
+      fprintf(stderr, "processing interval %d, %d\n", current_timestep, current_timestep+1);
       auto results = extract_cp2dt_cuda(
           ELEMENT_SCOPE_INTERVAL, 
           current_timestep,
@@ -399,7 +395,7 @@ inline void critical_point_tracker_2d_regular::simplex_vectors(
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][2] == current_timestep ? 0 : 1;
     for (int j = 0; j < 2; j ++)
-      v[i][j] = V[iv](j, 
+      v[i][j] = field_data_snapshots[iv].vector(j, 
           vertices[i][0] - local_array_domain.start(0), 
           vertices[i][1] - local_array_domain.start(1));
   }
@@ -410,7 +406,7 @@ inline void critical_point_tracker_2d_regular::simplex_scalars(
 {
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][2] == current_timestep ? 0 : 1;
-    values[i] = scalar[iv](
+    values[i] = field_data_snapshots[iv].scalar(
         vertices[i][0] - local_array_domain.start(0), 
         vertices[i][1] - local_array_domain.start(1));
   }
@@ -421,10 +417,10 @@ inline void critical_point_tracker_2d_regular::simplex_jacobians(
     double Js[][2][2]) const
 {
   for (int i = 0; i < vertices.size(); i ++) {
-    const int iv = vertices[i][2] == 0 ? 0 : 1;
+    const int iv = vertices[i][2] == current_timestep ? 0 : 1;
     for (int j = 0; j < 2; j ++) {
       for (int k = 0; k < 2; k ++) {
-        Js[i][j][k] = gradV[iv](k, j, 
+        Js[i][j][k] = field_data_snapshots[iv].jacobian(k, j, 
             vertices[i][0] - local_array_domain.start(0), 
             vertices[i][1] - local_array_domain.start(1));
       }

@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     scalar = ftk::conv3D_gaussian(scalar, 8.0/*sigma*/,
         5/*ksizex*/, 5/*ksizey*/, 5/*ksizez*/, 2/*padding*/);
     
-    tracker.push_snapshot_scalar_field(scalar);
+    tracker.push_scalar_field_snapshot(scalar);
     tracker.advance_timestep();
   }
 
