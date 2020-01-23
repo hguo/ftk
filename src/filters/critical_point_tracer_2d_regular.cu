@@ -12,24 +12,24 @@
 
 //// 
 template <int scope>
-__device__
+__device__ __host__
 bool check_simplex_cp2t(
     int current_timestep,
     const lattice3_t& domain,
     const lattice3_t& core, 
     const lattice2_t& ext, 
     const element32_t& e, 
-    const double *V[2], // last and current timesteps
-    const double *gradV[2], // jacobian of last and current timesteps
-    const double *scalar[2],
+    const double *V[2], // current and next timesteps
+    const double *gradV[2], // jacobians
+    const double *scalar[2], // scalars
     bool use_explicit_coords,
     const double *coords, // coordinates of vertices
     cp3_t &cp)
 {
   typedef ftk::fixed_point<> fp_t;
 
-  const int last_timestep = current_timestep - 1;
-  if (scope == scope_interval && e.corner[2] != last_timestep)
+  // const int last_timestep = current_timestep - 1;
+  if (scope == scope_interval && e.corner[2] != current_timestep) // last_timestep)
     return false;
 
   int vertices[3][3], indices[3];
@@ -56,11 +56,15 @@ bool check_simplex_cp2t(
       vf[i][j] = v[i][j];
     }
   }
+  
+  bool succ = robust_critical_point_in_simplex2(vf, indices);
+  if (!succ) return false;
 
-  double mu[3];
-  bool succ = ftk::inverse_lerp_s2v2(v, mu, 0.0);
- 
   if (succ) {
+    // inverse interpolation
+    double mu[3];
+    ftk::inverse_lerp_s2v2(v, mu, 0.0);
+ 
     // linear jacobian interpolation
     if (gradV[1]) { // have given jacobian
       double Js[3][2][2], J[2][2];
@@ -121,18 +125,18 @@ void sweep_simplices(
     const lattice3_t core,
     const lattice2_t ext, // array dimensions
     const double *Vc, // current timestep
-    const double *Vl, // last timestep
+    const double *Vn, // next timestep
     const double *Jc, 
-    const double *Jl,
+    const double *Jn,
     const double *Sc, 
-    const double *Sl,
+    const double *Sn,
     bool use_explicit_coords,
     const double *coords, // coordinates of vertices
     unsigned long long &ncps, cp3_t *cps)
 {
-  const double *V[2] = {Vl, Vc};
-  const double *J[2] = {Jl, Jc};
-  const double *S[2] = {Sl, Sc};
+  const double *V[2] = {Vc, Vn};
+  const double *J[2] = {Jc, Jn};
+  const double *S[2] = {Sc, Sn};
   
   int tid = getGlobalIdx_3D_1D();
   const element32_t e = element32_from_index<scope>(core, tid);
@@ -158,11 +162,11 @@ static std::vector<cp3_t> extract_cp2dt(
     const lattice3_t& core, 
     const lattice2_t& ext, 
     const double *Vc, // 3D array: 2*W*H
-    const double *Vl, 
+    const double *Vn, 
     const double *Jc,
-    const double *Jl,
+    const double *Jn,
     const double *Sc,
-    const double *Sl,
+    const double *Sn,
     bool use_explicit_coords,
     const double *coords)
 {
@@ -183,30 +187,34 @@ static std::vector<cp3_t> extract_cp2dt(
     cudaMemcpy(dcoords, coords, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
   }
 
-  double *dVc, *dVl = NULL;
-  cudaMalloc((void**)&dVc, 2 * sizeof(double) * ext.n());
-  cudaMemcpy(dVc, Vc, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
-  cudaMalloc((void**)&dVl, 2 * sizeof(double) * ext.n());
-  cudaMemcpy(dVl, Vl, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  double *dVc, *dVn = NULL;
+  if (Vc) {
+    cudaMalloc((void**)&dVc, 2 * sizeof(double) * ext.n());
+    cudaMemcpy(dVc, Vc, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  }
+  if (Vn) {
+    cudaMalloc((void**)&dVn, 2 * sizeof(double) * ext.n());
+    cudaMemcpy(dVn, Vn, 2 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  }
 
-  double *dJc = NULL, *dJl = NULL;
+  double *dJc = NULL, *dJn = NULL;
   if (Jc) {
     cudaMalloc((void**)&dJc, 4 * sizeof(double) * ext.n());
     cudaMemcpy(dJc, Jc, 4 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
   }
-  if (Jl) {
-    cudaMalloc((void**)&dJl, 4 * sizeof(double) * ext.n());
-    cudaMemcpy(dJl, Jl, 4 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  if (Jn) {
+    cudaMalloc((void**)&dJn, 4 * sizeof(double) * ext.n());
+    cudaMemcpy(dJn, Jn, 4 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
   }
 
-  double *dSc = NULL, *dSl = NULL;
+  double *dSc = NULL, *dSn = NULL;
   if (Sc) {
     cudaMalloc((void**)&dSc, sizeof(double) * ext.n());
     cudaMemcpy(dSc, Sc, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
   }
-  if (Sl) {
-    cudaMalloc((void**)&dSl, sizeof(double) * ext.n());
-    cudaMemcpy(dSl, Sl, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+  if (Sn) {
+    cudaMalloc((void**)&dSn, sizeof(double) * ext.n());
+    cudaMemcpy(dSn, Sn, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
   }
 
   unsigned long long *dncps; // number of cps
@@ -220,7 +228,7 @@ static std::vector<cp3_t> extract_cp2dt(
   fprintf(stderr, "calling kernel func...\n");
   sweep_simplices<scope><<<gridSize, blockSize>>>(
       current_timestep, 
-      domain, core, ext, dVc, dVl, dJc, dJl, dSc, dSl,
+      domain, core, ext, dVc, dVn, dJc, dJn, dSc, dSn,
       use_explicit_coords, dcoords, 
       *dncps, dcps);
   cudaDeviceSynchronize();
@@ -236,12 +244,12 @@ static std::vector<cp3_t> extract_cp2dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpy, dcps");
  
   if (dcoords) cudaFree(dcoords);
-  cudaFree(dVc);
-  cudaFree(dVl);
+  if (dVc) cudaFree(dVc);
+  if (dVn) cudaFree(dVn);
   if (dJc) cudaFree(dJc);
-  if (dJl) cudaFree(dJl);
+  if (dJn) cudaFree(dJn);
   if (dSc) cudaFree(dSc);
-  if (dSl) cudaFree(dSl);
+  if (dSn) cudaFree(dSn);
   cudaFree(dncps);
   cudaFree(dcps);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
@@ -260,11 +268,11 @@ extract_cp2dt_cuda(
     const ftk::lattice& core, 
     const ftk::lattice& ext, 
     const double *Vc, 
-    const double *Vl, 
+    const double *Vn, 
     const double *Jc, 
-    const double *Jl, 
+    const double *Jn, 
     const double *Sc,
-    const double *Sl, 
+    const double *Sn, 
     bool use_explicit_coords,
     const double *coords)
 {
@@ -278,14 +286,14 @@ extract_cp2dt_cuda(
 
   if (scope == scope_interval) 
     return extract_cp2dt<scope_interval>(current_timestep, 
-        D, C, E, Vc, Vl, Jc, Jl, Sc, Sl, 
+        D, C, E, Vc, Vn, Jc, Jn, Sc, Sn, 
         use_explicit_coords, coords);
   if (scope == scope_ordinal) 
     return extract_cp2dt<scope_ordinal>(current_timestep, 
-        D, C, E, Vc, Vl, Jc, Jl, Sc, Sl,
+        D, C, E, Vc, Vn, Jc, Jn, Sc, Sn,
         use_explicit_coords, coords);
   else // scope == 2
     return extract_cp2dt<scope_all>(current_timestep, 
-        D, C, E, Vc, Vl, Jc, Jl, Sc, Sl,
+        D, C, E, Vc, Vn, Jc, Jn, Sc, Sn,
         use_explicit_coords, coords);
 }

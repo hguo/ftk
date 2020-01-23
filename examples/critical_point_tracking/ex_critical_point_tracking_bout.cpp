@@ -91,7 +91,7 @@ int main(int argc, char **argv)
   
   FILE *fp = fopen(argv[1], "rb");
   if (!fp) return 1;
-  fseek(fp, DW*DH*sizeof(float)*200, SEEK_CUR); // skip 200 timesteps
+  // fseek(fp, DW*DH*sizeof(float)*200, SEEK_CUR); // skip 200 timesteps
 
   diy::mpi::environment env;
 
@@ -108,11 +108,11 @@ int main(int argc, char **argv)
 
 
   for (int k = 0; k < DT; k ++) {
-    ftk::ndarray<float> scalar32({DW, DH});
-    scalar32.from_binary_file(fp);
+    ftk::ndarray<double> scalar({DW, DH});
+    scalar.from_binary_file(fp);
 
-    ftk::ndarray<double> scalar;
-    scalar.from_array(scalar32);
+    // ftk::ndarray<double> scalar;
+    // scalar.from_array(scalar32);
     // scalar = ftk::conv2D_gaussian(scalar, 1.0/*sigma*/, 5/*ksizex*/, 5/*ksizey*/, 2/*padding*/);
 
     tracker.push_scalar_field_snapshot(scalar);

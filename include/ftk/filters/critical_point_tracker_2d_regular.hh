@@ -36,11 +36,11 @@ extract_cp2dt_cuda(
     const ftk::lattice& core, // 3D
     const ftk::lattice& ext, // 2D, array dimension
     const double *Vc, // current timestep
-    const double *Vl, // last timestep
+    const double *Vn, // next timestep
     const double *Jc, // jacobian of current timestep
-    const double *Jl, // jacobian of last timestep
+    const double *Jn, // jacobian of next timestep
     const double *Sc, // scalar of current timestep
-    const double *Sl, // scalar of last timestep
+    const double *Sn, // scalar of next timestep
     bool use_explicit_coords,
     const double *coords // coords of vertices
   ); 
@@ -145,7 +145,7 @@ inline void critical_point_tracker_2d_regular::finalize()
 inline void critical_point_tracker_2d_regular::push_scalar_field_snapshot(const ndarray<double>& s)
 {
   field_data_snapshot_t snapshot;
-
+  
   snapshot.scalar = s;
   if (vector_field_source == SOURCE_DERIVED) {
     snapshot.vector = gradient2D(s);
@@ -252,9 +252,33 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         });
 
     ftk::lattice ext({0, 0}, 
-        {V[0].dim(1), V[0].dim(2)});
+        {field_data_snapshots[0].vector.dim(1), 
+        field_data_snapshots[0].vector.dim(2)});
+    
+    // ordinal
+    auto results = extract_cp2dt_cuda(
+        ELEMENT_SCOPE_ORDINAL, 
+        current_timestep, 
+        domain3,
+        ordinal_core,
+        ext,
+        field_data_snapshots[0].vector.data(),
+        NULL, // V[0].data(),
+        field_data_snapshots[0].jacobian.data(),
+        NULL, // gradV[0].data(),
+        field_data_snapshots[0].scalar.data(),
+        NULL, // scalar[0].data(),
+        use_explicit_coords, 
+        coords.data()
+      );
+    
+    for (auto cp : results) {
+      element_t e(3, 2);
+      e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
+      discrete_critical_points[e] = cp;
+    }
 
-    if (V.size() >= 2) { // interval
+    if (field_data_snapshots.size() >= 2) { // interval
       fprintf(stderr, "processing interval %d, %d\n", current_timestep, current_timestep+1);
       auto results = extract_cp2dt_cuda(
           ELEMENT_SCOPE_INTERVAL, 
@@ -262,12 +286,12 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           domain3, 
           interval_core,
           ext,
-          V[0].data(), // current
-          V[1].data(), // last
-          gradV[0].data(), 
-          gradV[1].data(),
-          scalar[0].data(),
-          scalar[1].data(),
+          field_data_snapshots[0].vector.data(), // current
+          field_data_snapshots[1].vector.data(), // next
+          field_data_snapshots[0].jacobian.data(), 
+          field_data_snapshots[1].jacobian.data(),
+          field_data_snapshots[0].scalar.data(),
+          field_data_snapshots[0].scalar.data(),
           use_explicit_coords, 
           coords.data()
         );
@@ -277,29 +301,6 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
         discrete_critical_points[e] = cp;
       }
-    }
-
-    // ordinal
-    auto results = extract_cp2dt_cuda(
-        ELEMENT_SCOPE_ORDINAL, 
-        current_timestep, 
-        domain3,
-        ordinal_core,
-        ext,
-        V[0].data(),
-        V[0].data(),
-        gradV[0].data(),
-        gradV[0].data(),
-        scalar[0].data(),
-        scalar[0].data(),
-        use_explicit_coords, 
-        coords.data()
-      );
-    
-    for (auto cp : results) {
-      element_t e(3, 2);
-      e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
-      discrete_critical_points[e] = cp;
     }
 #else
     assert(false);

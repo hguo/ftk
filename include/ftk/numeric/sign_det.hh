@@ -197,6 +197,7 @@ inline int robust_sign_det4(const T X[4][3])
 
 // returns number of swaps for bubble sort
 template <int n, typename T>
+__device__ __host__
 int nswaps_bubble_sort(T arr[n], T order[n])
 {
   for (int i = 0; i < n; i ++)
@@ -215,6 +216,7 @@ int nswaps_bubble_sort(T arr[n], T order[n])
 }
 
 template <typename T=long long>
+__device__ __host__
 inline int positive2(const T X1[3][2], const int indices1[3])
 {
   int indices[3], orders[3];
@@ -240,6 +242,7 @@ inline int positive2(const T X1[3][2], const int indices1[3])
 }
 
 template <typename T=long long>
+__device__ __host__
 inline int positive3(const T X1[4][3], const int indices1[4])
 {
   int indices[4], orders[4];
@@ -261,6 +264,7 @@ inline int positive3(const T X1[4][3], const int indices1[4])
 }
 
 template <typename T>
+__device__ __host__
 inline bool robust_intersect_half_line2(
     const T v[2], 
     int j, const T vj[2], 
@@ -286,6 +290,7 @@ inline bool robust_intersect_half_line2(
 }
 
 template <typename T>
+__device__ __host__
 inline bool robust_point_in_polygon2(
     const T x[2], const int n, const int indices[], const T v[][2])
 {
@@ -301,6 +306,7 @@ inline bool robust_point_in_polygon2(
 
 // check if a point is in a 2-simplex
 template <typename T=long long>
+__device__ __host__
 inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], const T x[2], const int ix) //, const int sign=1)
 {
   // print3x2("X", X);
@@ -331,6 +337,7 @@ inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], cons
 }
 
 template <typename T=long long>
+__device__ __host__
 inline bool robust_point_in_simplex3(const T X[4][3], const int indices[3], const T x[3], int ix)
 {
   int s = positive3(X, indices);

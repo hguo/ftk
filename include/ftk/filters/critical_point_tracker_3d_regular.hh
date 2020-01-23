@@ -64,6 +64,8 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
 
   void update_timestep();
   
+  void push_scalar_field_snapshot(const ndarray<double>&);
+  
 #if FTK_HAVE_VTK
   virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
   virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
@@ -136,16 +138,23 @@ void critical_point_tracker_3d_regular::finalize()
   }
 }
 
-void critical_point_tracker_3d_regular::update_timestep()
+inline void critical_point_tracker_3d_regular::push_scalar_field_snapshot(const ndarray<double>& s)
+{
+  field_data_snapshot_t snapshot;
+  
+  snapshot.scalar = s;
+  if (vector_field_source == SOURCE_DERIVED) {
+    snapshot.vector = gradient3D(s);
+    if (jacobian_field_source == SOURCE_DERIVED)
+      snapshot.jacobian = jacobian3D(snapshot.vector);
+  }
+
+  field_data_snapshots.emplace_back( snapshot );
+}
+
+inline void critical_point_tracker_3d_regular::update_timestep()
 {
   fprintf(stderr, "current_timestep = %d\n", current_timestep);
-#if 0 //FIXME
-  // derive fields
-  if (scalar_field_source == SOURCE_GIVEN) {
-    if (vector_field_source == SOURCE_DERIVED) push_snapshot_vector_field(gradient3D(scalar[0])); // 0 is the current timestep; 1 is the last timestep
-    if (jacobian_field_source == SOURCE_DERIVED) push_snapshot_jacobian_field(jacobian3D(V[0]));
-  }
-#endif
 
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
@@ -159,6 +168,20 @@ void critical_point_tracker_3d_regular::update_timestep()
     };
 
   if (xl == FTK_XL_NONE) {
+    m.element_for(3, lattice({ // ordinal
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        }), 
+        ftk::ELEMENT_SCOPE_ORDINAL, 
+        func3, nthreads);
+
     if (field_data_snapshots.size() >= 2) { // interval
       m.element_for(3, lattice({
             local_domain.start(0), 
@@ -174,20 +197,6 @@ void critical_point_tracker_3d_regular::update_timestep()
           ftk::ELEMENT_SCOPE_INTERVAL, 
           func3, nthreads);
     }
-
-    m.element_for(3, lattice({ // ordinal
-          local_domain.start(0), 
-          local_domain.start(1), 
-          local_domain.start(2), 
-          static_cast<size_t>(current_timestep), 
-        }, {
-          local_domain.size(0), 
-          local_domain.size(1), 
-          local_domain.size(2), 
-          1
-        }), 
-        ftk::ELEMENT_SCOPE_ORDINAL, 
-        func3, nthreads);
   } else if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     ftk::lattice domain4({
@@ -218,7 +227,8 @@ void critical_point_tracker_3d_regular::update_timestep()
           local_domain.start(0), 
           local_domain.start(1), 
           local_domain.start(2), 
-          static_cast<size_t>(current_timestep-1), 
+          // static_cast<size_t>(current_timestep-1), 
+          static_cast<size_t>(current_timestep), 
         }, {
           local_domain.size(0), 
           local_domain.size(1), 
@@ -227,30 +237,9 @@ void critical_point_tracker_3d_regular::update_timestep()
         });
 
     ftk::lattice ext({0, 0, 0}, 
-        {V[0].dim(1), V[0].dim(2), V[0].dim(3)});
-
-    if (V.size() >= 2) { // interval
-      fprintf(stderr, "processing interval %d, %d\n", current_timestep - 1, current_timestep);
-      auto results = extract_cp3dt_cuda(
-          ELEMENT_SCOPE_INTERVAL, 
-          current_timestep,
-          domain4,
-          interval_core,
-          ext,
-          V[0].data(), // current
-          V[1].data(), // last
-          gradV[0].data(), 
-          gradV[1].data(),
-          scalar[0].data(),
-          scalar[1].data()
-        );
-      fprintf(stderr, "interval_results#=%d\n", results.size());
-      for (auto cp : results) {
-        element_t e(4, 3);
-        e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
-        discrete_critical_points[e] = cp;
-      }
-    }
+        {field_data_snapshots[0].vector.dim(1), 
+         field_data_snapshots[0].vector.dim(2),
+         field_data_snapshots[0].vector.dim(3)});
 
     // ordinal
     auto results = extract_cp3dt_cuda(
@@ -259,18 +248,41 @@ void critical_point_tracker_3d_regular::update_timestep()
         domain4,
         ordinal_core,
         ext,
-        V[0].data(),
-        V[0].data(),
-        gradV[0].data(), 
-        gradV[0].data(),
-        scalar[0].data(),
-        scalar[0].data()
+        field_data_snapshots[0].vector.data(),
+        NULL, // V[0].data(),
+        field_data_snapshots[0].jacobian.data(),
+        NULL, // gradV[0].data(),
+        field_data_snapshots[0].scalar.data(),
+        NULL // scalar[0].data(),
       );
     
     for (auto cp : results) {
       element_t e(4, 3);
       e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
       discrete_critical_points[e] = cp;
+    }
+
+    if (field_data_snapshots.size() >= 2) { // interval
+      fprintf(stderr, "processing interval %d, %d\n", current_timestep - 1, current_timestep);
+      auto results = extract_cp3dt_cuda(
+          ELEMENT_SCOPE_INTERVAL, 
+          current_timestep,
+          domain4,
+          interval_core,
+          ext,
+          field_data_snapshots[0].vector.data(), // current
+          field_data_snapshots[1].vector.data(), // next
+          field_data_snapshots[0].jacobian.data(), 
+          field_data_snapshots[1].jacobian.data(),
+          field_data_snapshots[0].scalar.data(),
+          field_data_snapshots[0].scalar.data()
+        );
+      fprintf(stderr, "interval_results#=%d\n", results.size());
+      for (auto cp : results) {
+        element_t e(4, 3);
+        e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
+        discrete_critical_points[e] = cp;
+      }
     }
 #else
     assert(false);
@@ -348,7 +360,7 @@ void critical_point_tracker_3d_regular::simplex_jacobians(
     double Js[4][3][3]) const
 {
   for (int i = 0; i < 4; i ++) {
-    const int iv = vertices[i][3] == 0 ? 0 : 1;
+    const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     for (int j = 0; j < 3; j ++) {
       for (int k = 0; k < 3; k ++) {
         Js[i][j][k] = field_data_snapshots[iv].jacobian(k, j, 

@@ -10,6 +10,7 @@
 namespace ftk {
 
 template <typename FixedPointType=long long, typename WeightType=int>
+__device__ __host__
 inline bool robust_critical_point_in_simplex2(const FixedPointType V[3][2], const WeightType indices[3])
 {
   const FixedPointType zero[2] = {0};
@@ -17,12 +18,12 @@ inline bool robust_critical_point_in_simplex2(const FixedPointType V[3][2], cons
 }
 
 template <typename FixedPointType=long long, typename WeightType=int>
+__device__ __host__
 inline bool robust_critical_point_in_simplex3(const FixedPointType V[4][3], const WeightType indices[4])
 {
   const FixedPointType zero[3] = {0};
   return robust_point_in_simplex3(V, indices, zero, WeightType(-1));
 }
-
 
 } // namespace ftk
 
