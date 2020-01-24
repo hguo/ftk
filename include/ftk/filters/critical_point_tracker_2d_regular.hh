@@ -229,7 +229,6 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           domain.size(1)-1,
           std::numeric_limits<int>::max()
         });
-    std::cerr << "domain3=" << domain3 << std::endl;
 
     ftk::lattice ordinal_core({
           local_domain.start(0), 
@@ -240,7 +239,6 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           local_domain.size(1), 
           1
         });
-    std::cerr << "ordinal_core=" << ordinal_core << std::endl;
 
     ftk::lattice interval_core({
           local_domain.start(0), 
@@ -480,12 +478,12 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
       vf[i][j] = v[i][j];
   int indices[3];
   simplex_indices(vertices, indices);
-  bool succ = robust_critical_point_in_simplex2(vf, indices);
-  if (!succ) return false;
+  // bool succ = robust_critical_point_in_simplex2(vf, indices);
+  // if (!succ) return false;
 
   double mu[3]; // check intersection
   bool succ2 = inverse_lerp_s2v2(v, mu);
-  // if (!succ2) return false;
+  if (!succ2) return false;
 
   double X[3][3]; // position
   simplex_coordinates(vertices, X);

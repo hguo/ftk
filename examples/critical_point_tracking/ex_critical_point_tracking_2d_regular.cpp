@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
 #if 1
 // const int DW = 32, DH = 32, DT = 100;
-const int DW = 32, DH = 32, DT = 100;
+const int DW = 32, DH = 32, DT = 10;
 
 int main(int argc, char **argv)
 {
@@ -77,6 +77,7 @@ int main(int argc, char **argv)
 
   tracker.finalize();
   tracker.write_traced_critical_points_vtk("out.vtp");
+  // tracker.write_discrete_critical_points_vtk("out.vtp");
 
   return 0;
 }

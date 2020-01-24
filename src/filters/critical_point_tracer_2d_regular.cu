@@ -29,7 +29,8 @@ bool check_simplex_cp2t(
   typedef ftk::fixed_point<> fp_t;
 
   // const int last_timestep = current_timestep - 1;
-  if (scope == scope_interval && e.corner[2] != current_timestep) // last_timestep)
+  // if (scope == scope_interval && e.corner[2] != current_timestep) // last_timestep)
+  if (e.corner[2] != current_timestep) // last_timestep)
     return false;
 
   int vertices[3][3], indices[3];
@@ -38,10 +39,10 @@ bool check_simplex_cp2t(
     for (int j = 0; j < 3; j ++) {
       vertices[i][j] = e.corner[j] 
         + unit_simplex_offset_3_2<scope>(e.type, i, j);
-      // if (vertices[i][j] < domain.st[j] || 
-      //     vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
       if (vertices[i][j] < domain.st[j] || 
-          vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
+           vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
+      // if (vertices[i][j] < core.st[j] || 
+      //     vertices[i][j] > core.st[j] + core.sz[j] - 1)
         return false;
     }
     indices[i] = domain.to_index(vertices[i]);
@@ -64,7 +65,6 @@ bool check_simplex_cp2t(
     // inverse interpolation
     double mu[3];
     ftk::inverse_lerp_s2v2(v, mu, 0.0);
- 
     // linear jacobian interpolation
     if (gradV[1]) { // have given jacobian
       double Js[3][2][2], J[2][2];
@@ -94,7 +94,7 @@ bool check_simplex_cp2t(
       cp.scalar = ftk::lerp_s2(values, mu);
       // if (abs(cp.scalar) < 0.02) return false; // threshold
     }
-
+    
     double X[3][3];
     if (use_explicit_coords) {
       for (int i = 0; i < 3; i ++) {
@@ -222,7 +222,8 @@ static std::vector<cp3_t> extract_cp2dt(
   cudaMemset(dncps, 0, sizeof(unsigned long long));
 
   cp3_t *dcps;
-  cudaMalloc((void**)&dcps, sizeof(cp3_t) * ext.n() * 2);
+  // cudaMalloc((void**)&dcps, sizeof(cp3_t) * ext.n() * 2);
+  cudaMalloc((void**)&dcps, 1024*1024*64); // sizeof(cp3_t) * ext.n() * 2);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");
