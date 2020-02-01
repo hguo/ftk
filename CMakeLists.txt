@@ -211,8 +211,9 @@ set (FTK_INCLUDE_DIR
 )
 include_directories (${FTK_INCLUDE_DIR})
 
-option (FTK_BUILD_TESTS "Build the test programs." OFF)
-option (FTK_BUILD_EXAMPLES "Build the example programs." ON)
+option (FTK_BUILD_TESTS "Build tests" OFF)
+option (FTK_BUILD_EXAMPLES "Build examples" ON)
+option (FTK_BUILD_EXPERIMENTS "Build experimental code" OFF)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
@@ -245,6 +246,10 @@ endif ()
 # If FTK_BUILD_EXAMPLES is on, add the examples subdirectory to the build.
 if (FTK_BUILD_EXAMPLES)
   add_subdirectory (examples)
+endif ()
+
+if (FTK_BUILD_EXPERIMENTS)
+  add_subdirectory (experiments)
 endif ()
 
 add_subdirectory (src)

@@ -143,6 +143,15 @@ struct ndarray {
   T& operator[](size_t i) {return p[i];}
   const T& operator[](size_t i) const {return p[i];}
 
+  template <typename F=float> // scalar multilinear interpolation
+  T lerp(F x[]) const;
+
+  template <int N, typename F=float> // vector multilinear interpolation
+  T lerpv(F x[]) const;
+
+  template <int N, typename F=float> // NxN tensor multilinear interpolation
+  T lerpt(F x[]) const; 
+
   template <typename T1>
   void from_array(const ndarray<T1>& array1);
 
@@ -167,6 +176,11 @@ struct ndarray {
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d);
   vtkSmartPointer<vtkImageData> to_scalar_vtk_image_data() const;
   vtkSmartPointer<vtkDataArray> to_scalar_vtk_data_array() const;
+#endif
+
+  void from_h5(const std::string& filename, const std::string& name); 
+#if FTK_HAVE_H5
+  void from_h5(hid_t fid, const std::string& name);
 #endif
 
 #if FTK_HAVE_PNETCDF

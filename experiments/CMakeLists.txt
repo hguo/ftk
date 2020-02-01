@@ -1,0 +1,1 @@
+add_subdirectory (scale_space_critical_point_extraction)
