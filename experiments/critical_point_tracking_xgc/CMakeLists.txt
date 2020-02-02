@@ -1,0 +1,2 @@
+add_executable (critical_point_tracking_xgc main.cpp)
+target_link_libraries (critical_point_tracking_xgc ftk)

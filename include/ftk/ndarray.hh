@@ -20,6 +20,10 @@
 #include <mpi.h>
 #endif
 
+#if FTK_HAVE_HDF5
+#include <hdf5.h>
+#endif
+
 #if FTK_HAVE_NETCDF
 #include <netcdf.h>
 #define NC_SAFE_CALL(call) {\
@@ -152,6 +156,9 @@ struct ndarray {
   template <int N, typename F=float> // NxN tensor multilinear interpolation
   T lerpt(F x[]) const; 
 
+  ndarray<T> transpose() const; // only works for 2D arrays
+  ndarray<T> transpose(const std::vector<size_t> order) const; // works for general tensors
+
   template <typename T1>
   void from_array(const ndarray<T1>& array1);
 
@@ -168,6 +175,12 @@ struct ndarray {
   void to_binary_file(const std::string& filename);
   void to_binary_file(FILE *fp);
 
+  void from_numpy(const std::string& filename);
+  void to_numpy(const std::string& filename) const;
+
+  void from_bov(const std::string& filename);
+  void to_bov(const std::string& filename) const;
+
   void from_vtk_image_data_file(const std::string& filename);
   void from_vtk_image_data_file_sequence(const std::string& pattern);
   void to_scalar_vtk_image_data_file(const std::string& filename) const;
@@ -179,8 +192,11 @@ struct ndarray {
 #endif
 
   void from_h5(const std::string& filename, const std::string& name); 
-#if FTK_HAVE_H5
+#if FTK_HAVE_HDF5
   void from_h5(hid_t fid, const std::string& name);
+  void from_h5(hid_t did);
+
+  static hid_t h5_mem_type_id();
 #endif
 
 #if FTK_HAVE_PNETCDF
@@ -665,6 +681,51 @@ inline void ndarray<T>::copy_to_cuda_device()
 #endif
 }
 
+#if FTK_HAVE_HDF5
+template <typename T>
+inline void ndarray<T>::from_h5(const std::string& filename, const std::string& name)
+{
+  auto fid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  from_h5(fid, name);
+  H5Fclose(fid);
+}
+
+template <typename T>
+inline void ndarray<T>::from_h5(hid_t fid, const std::string& name)
+{
+  auto did = H5Dopen2(fid, name.c_str(), H5P_DEFAULT);
+  from_h5(did);
+  H5Dclose(did);
+}
+
+template <typename T>
+inline void ndarray<T>::from_h5(hid_t did)
+{
+  auto sid = H5Dget_space(did);
+  const int h5ndims = H5Sget_simple_extent_ndims(sid);
+  hsize_t h5dims[h5ndims];
+  H5Sget_simple_extent_dims(sid, h5dims, NULL);
+  
+  std::vector<size_t> dims(h5ndims);
+  for (auto i = 0; i < h5ndims; i ++)
+    dims[i] = h5dims[i];
+  reshape(dims);
+  
+  H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
+}
+
+template <> inline hid_t ndarray<double>::h5_mem_type_id() { return H5T_NATIVE_DOUBLE; }
+template <> inline hid_t ndarray<float>::h5_mem_type_id() { return H5T_NATIVE_FLOAT; }
+template <> inline hid_t ndarray<int>::h5_mem_type_id() { return H5T_NATIVE_INT; }
+#else
+template <typename T>
+inline void ndarray<T>::from_h5(const std::string& filename, const std::string& name)
+{
+  fprintf(stderr, "[FTK] fatal: FTK not compiled with HDF5.\n");
+  assert(false);
+}
+#endif
+
 template <typename T>
 inline ndarray<T> ndarray<T>::slice(const lattice& l) const
 {
@@ -713,6 +774,17 @@ std::ostream& ndarray<T>::print(std::ostream& os) const
     if (i < dims.size()-1) os << dims[i] << ", ";
     else os << dims[i] << "}";
   return os;
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::transpose() const 
+{
+  ndarray<T> a;
+  a.reshape(dim(1), dim(0));
+  for (auto i = 0; i < dim(0); i ++) 
+    for (auto j = 0; j < dim(1); j ++)
+      a(j, i) = at(i, j);
+  return a;
 }
 
 }
