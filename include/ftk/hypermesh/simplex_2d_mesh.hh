@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/ndarray.hh>
+#include <set>
 #include <iostream>
 #include <vector>
 
@@ -22,11 +23,11 @@ struct simplex_2d_mesh { // 2D triangular mesh
 
   simplex_2d_mesh(
       const std::vector<double>& coords, // coordinates of vertices; the dimension of the array is 2 * n_vertices
-      const std::vector<size_t>& triangles); // vertex id of triangles; the dimension of the array is 3 * n_triangles
+      const std::vector<int>& triangles); // vertex id of triangles; the dimension of the array is 3 * n_triangles
 
   simplex_2d_mesh(
       const ndarray<double>& coords_, // 2 * n_vertices
-      const ndarray<size_t>& triangles_) // 3 * n_triangles
+      const ndarray<int>& triangles_) // 3 * n_triangles
     : vertex_coords(coords_), triangles(triangles_) {}
 
   // dimensionality of the mesh
@@ -39,17 +40,17 @@ struct simplex_2d_mesh { // 2D triangular mesh
 
 private:
   ndarray<double> vertex_coords; // 2 * n_vertices
-  std::vector<std::vector<size_t>> vertex_side_of;
+  std::vector<std::vector<int>> vertex_side_of;
 
-  ndarray<size_t> triangles; // 3 * n_triangles
+  ndarray<int> triangles; // 3 * n_triangles
 
-  ndarray<size_t> edges; // 2 * n_edges
-  ndarray<size_t> edges_side_of; // 2 * n_edges
+  ndarray<int> edges; // 2 * n_edges
+  ndarray<int> edges_side_of; // 2 * n_edges
 };
 
 /////////
 
-simplex_2d_mesh::simplex_2d_mesh(const std::vector<double> &coords_, const std::vector<size_t> &triangles_)
+simplex_2d_mesh::simplex_2d_mesh(const std::vector<double> &coords_, const std::vector<int> &triangles_)
 {
   vertex_coords.copy_vector(coords_);
   vertex_coords.reshape({2, coords_.size()/2});
@@ -61,22 +62,23 @@ simplex_2d_mesh::simplex_2d_mesh(const std::vector<double> &coords_, const std::
 size_t simplex_2d_mesh::n(int d) const
 {
   if (d == 0) return vertex_coords.dim(1);
-  else if (d == 1) { // TODO
+  else if (d == 1) { // TODO FIXME
     return 0;
   } else if (d == 2)
     return triangles.dim(2);
+  else return 0;
 }
 
 void simplex_2d_mesh::build_edges()
 {
-  typedef std::tuple<size_t, size_t> edge_t;
+  typedef std::tuple<int, int> edge_t;
   std::set<edge_t> unique_edges;
 
-  std::auto convert_edge = [](edge_t e) {
+  auto convert_edge = [](edge_t e) {
     if (std::get<0>(e) > std::get<1>(e))
       return std::make_tuple(std::get<1>(e), std::get<0>(e));
     else return e;
-  }
+  };
 
   for (auto i = 0; i < triangles.dim(1); i ++) {
     unique_edges.insert(std::make_tuple(triangles(0, i), triangles(1, i)));
@@ -86,7 +88,7 @@ void simplex_2d_mesh::build_edges()
 
   edges.reshape(2, unique_edges.size());
 
-  size_t i = 0;
+  int i = 0;
   for (const auto e : unique_edges) {
     edges(0, i) = std::get<0>(e);
     edges(1, i) = std::get<1>(e);

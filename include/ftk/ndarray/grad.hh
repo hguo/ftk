@@ -2,6 +2,7 @@
 #define _HYPERMESH_GRAD_HH
 
 #include <ftk/ndarray.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 
 namespace ftk {
 

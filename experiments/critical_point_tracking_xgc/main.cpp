@@ -1,4 +1,5 @@
-#include <ftk/filters/critical_point_tracker_2d_regular.hh>
+// #include <ftk/filters/critical_point_tracker_2d_regular.hh>
+#include <ftk/hypermesh/simplex_2d_mesh.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
@@ -7,11 +8,23 @@ int main(int argc, char **argv)
 {
   if (argc < 3) return 1; // mesh.h5, dpot.h5
 
+#if 1 // load mesh & data from hdf5
+  ftk::ndarray<int> triangles;
+  triangles.from_h5(argv[1], "/cell_set[0]/node_connect_list");
+  // triangles.print(std::cerr) << std::endl;
+
+  ftk::ndarray<double> coords;
+  coords.from_h5(argv[1], "/coordinates/values");
+  // coords.print(std::cerr) << std::endl;
+
   ftk::ndarray<double> dpot;
   dpot.from_h5(argv[2], "/dpot");
-  dpot.print(std::cerr) << std::endl;
   dpot = dpot.transpose();
-  dpot.print(std::cerr) << std::endl;
+  // dpot.print(std::cerr) << std::endl;
+#endif
+
+  ftk::simplex_2d_mesh m(coords, triangles);
+
 
 #if 0
   ftk::ndarray<double> nitrz0, rxy, zxy;
