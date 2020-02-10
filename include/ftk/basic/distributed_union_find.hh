@@ -270,7 +270,7 @@ public:
 
 private:
   // map element id to ids of its related elements
-  // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
+  // Can be optimized by ordered the related elements, put related elements on process first and ordered descendingly by ids
   
   std::map<std::string, std::set<std::string>> related_elements; 
   std::map<std::string, std::set<std::string>> all_related_elements;   
@@ -1177,6 +1177,8 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
     }
 
+    master.foreach(&assign_global_roots); 
+
     #if OUTPUT_TIME_EACH_ROUND
       #ifdef FTK_HAVE_MPI
         double duration = MPI_Wtime() - start; 
@@ -1191,7 +1193,6 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
       #endif
     #endif
 
-    // master.foreach(&assign_global_roots); 
     // #if OUTPUT_TIME_EACH_ROUND
     //   #ifdef FTK_HAVE_MPI
     //     double time_final_update_end = MPI_Wtime(); 
