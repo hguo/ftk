@@ -24,6 +24,27 @@
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 
+int main(int argc, char **argv)
+{
+  if (argc < 2) return 1;
+
+  ftk::ndarray<float> u, v, w;
+  u.from_netcdf(argv[1], "U");
+  v.from_netcdf(argv[1], "V");
+  w.from_netcdf(argv[1], "W");
+
+  ftk::ndarray<float> mag;
+  mag.reshape(128, 128, 128);
+
+  for (auto i = 0; i < mag.nelem(); i ++)
+    mag[i] = std::sqrt(u[i]*u[i] + v[i]*v[i] + w[i]*w[i]);
+
+  mag.print(std::cerr) << std::endl;
+  mag.to_binary_file("tornado");
+
+  return 1;
+}
+
 #if 0
 int main(int argc, char **argv)
 {
@@ -57,7 +78,7 @@ int main(int argc, char **argv)
 }
 #endif
 
-#if 1 // cp2d extraction
+#if 0 // cp2d extraction
 const int DW = 63, DH = 63;
 const long long factor = 1000;
 

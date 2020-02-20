@@ -303,6 +303,14 @@ void ndarray<T>::from_binary_file(FILE *fp)
 }
 
 template <typename T>
+void ndarray<T>::to_binary_file(const std::string& f)
+{
+  FILE *fp = fopen(f.c_str(), "wb");
+  to_binary_file(fp);
+  fclose(fp);
+}
+
+template <typename T>
 void ndarray<T>::to_binary_file(FILE *fp)
 {
   fwrite(&p[0], sizeof(T), nelem(), fp);
