@@ -66,8 +66,8 @@ struct regular_simplex_mesh_element {
   size_t to_work_index(const regular_simplex_mesh& m, const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
   void from_work_index(const regular_simplex_mesh& m, size_t, const lattice& l, int scope = ELEMENT_SCOPE_ALL);
 
-  // template <typename uint = uint64_t> uint to_integer() const;
-  // template <typename uint = uint64_t> void from_integer(uint i);
+  template <typename uint = uint64_t> uint to_integer(const regular_simplex_mesh& m) const;
+  template <typename uint = uint64_t> void from_integer(const regular_simplex_mesh& m, uint i);
 
   // std::string to_string() const;
   // void from_string(const std::string& index);
@@ -417,9 +417,8 @@ inline void regular_simplex_mesh_element::from_work_index(const regular_simplex_
   //     corner[0], corner[1], corner[2]);
 }
 
-#if 0
 template <typename uint>
-uint regular_simplex_mesh_element::to_integer() const
+uint regular_simplex_mesh_element::to_integer(const regular_simplex_mesh& m) const
 {
   uint corner_index = 0;
   for (size_t i = 0; i < m.nd(); i ++)
@@ -428,7 +427,7 @@ uint regular_simplex_mesh_element::to_integer() const
 }
 
 template <typename uint>
-void regular_simplex_mesh_element::from_integer(uint index)
+void regular_simplex_mesh_element::from_integer(const regular_simplex_mesh& m, uint index)
 {
   type = index % m.ntypes(dim);
   uint corner_index = index / m.ntypes(dim); // m.dimprod_[m.nd()];
@@ -444,7 +443,6 @@ void regular_simplex_mesh_element::from_integer(uint index)
   // fprintf(stderr, "lb=%d, %d, %d\n", m.lb(0), m.lb(1), m.lb(2));
   // std::cerr << "idx=" << index << "," << *this << std::endl;
 }
-#endif
 
 #if 0
 inline std::string regular_simplex_mesh_element::to_string() const
