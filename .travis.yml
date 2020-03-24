@@ -1,1 +1,12 @@
-language: c++
+language:
+  - cpp
+
+script:
+  - mkdir build
+  - cd build
+  - cmake ..
+  - cmake --build .
+  - ctest
+
+notifications:
+  - email
