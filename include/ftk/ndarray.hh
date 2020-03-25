@@ -8,6 +8,7 @@
 #include <numeric>
 #include <tuple>
 #include <algorithm>
+#include <cstring>
 #include <cassert>
 #include <glob.h>
 
