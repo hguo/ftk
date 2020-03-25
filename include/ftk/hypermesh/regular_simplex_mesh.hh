@@ -616,7 +616,10 @@ inline std::vector<std::vector<std::vector<int>>> regular_simplex_mesh::enumerat
         std::vector<std::vector<int>> simplex = hyper_simplex;
         simplex.resize(hyper_simplex.size() - 1);
 
-        auto [reduced_simplex, offset] = reduce_unit_simplex(simplex); // TODO: take care of offset
+        // auto [reduced_simplex, offset] = reduce_unit_simplex(simplex); // TODO: take care of offset
+        auto tuple = reduce_unit_simplex(simplex); // TODO: take care of offset
+        auto reduced_simplex = std::get<0>(tuple);
+        auto offset = std::get<1>(tuple);
         std::sort(reduced_simplex.begin(), reduced_simplex.end());
         results.insert(reduced_simplex);
       } while (std::next_permutation(hyper_simplex.begin(), hyper_simplex.end()));
@@ -686,7 +689,10 @@ inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enum
     std::vector<std::vector<int>> side = simplex;
     side.resize(simplex.size() - 1);
 
-    auto [reduced_side, offset] = reduce_unit_simplex(side);
+    // auto [reduced_side, offset] = reduce_unit_simplex(side);
+    auto tuple = reduce_unit_simplex(side);
+    auto reduced_side = std::get<0>(tuple);
+    auto offset = std::get<1>(tuple);
     std::sort(reduced_side.begin(), reduced_side.end());
 
     int k_minums_one_type; // TODO: replace the linear search

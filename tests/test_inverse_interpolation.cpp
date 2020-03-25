@@ -53,6 +53,7 @@ TEST_F(inverse_interpolation_test, trilinear_interpolation3) {
   }
 }
 
+#if FTK_HAVE_MPSOLVE
 TEST_F(inverse_interpolation_test, inverse_trilinear_interpolation3) {
   double V[8][3];
   for (int run = 0; run < nruns; run ++) {
@@ -68,3 +69,4 @@ TEST_F(inverse_interpolation_test, inverse_trilinear_interpolation3) {
     }
   }
 }
+#endif
