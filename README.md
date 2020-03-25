@@ -1,6 +1,8 @@
 # FTK: The Feature Tracking Kit
 
-FTK is a library that provides building blocks for feature tracking algorithms in scientific datasets.  FTK is header-only and written in C++17.  
+[![Build Status](https://travis-ci.org/hguo/ftk.svg?branch=master)](https://travis-ci.org/hguo/ftk)
+
+FTK is a library that provides building blocks for feature tracking algorithms in scientific datasets.  
 
 ## Major components in FTK
 
