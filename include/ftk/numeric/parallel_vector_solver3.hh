@@ -339,7 +339,10 @@ template <typename T>
 disjoint_intervals<T> solve_pv_inequalities_s3v3(
     const T V[4][3], const T W[4][3], const long long factor = 1000000000L, const T epsilon=std::numeric_limits<T>::epsilon())
 {
-  const auto [I, R] = solve_pv_inequalities_quantized_s3v3(V, W, factor, epsilon);
+  // const auto [I, R] = solve_pv_inequalities_quantized_s3v3(V, W, factor, epsilon); // require c++17
+  const auto tuple = solve_pv_inequalities_quantized_s3v3(V, W, factor, epsilon);
+  const auto I = std::get<0>(tuple);
+  const auto R = std::get<1>(tuple);
   return disjoint_intervals<T>(I, factor);
 }
 
