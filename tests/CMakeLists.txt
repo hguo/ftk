@@ -1,4 +1,5 @@
 include_directories (${GTEST_INCLUDE_DIR})
+set (GTEST_BOTH_LIBRARIES gtest gtest_main)
 
 add_executable (test_matrix test_matrix.cpp)
 target_link_libraries (test_matrix ftk ${GTEST_BOTH_LIBRARIES})
