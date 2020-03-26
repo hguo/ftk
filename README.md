@@ -1,5 +1,6 @@
 # FTK: The Feature Tracking Kit
 
+[![Build Status](https://travis-ci.org/hguo/ftk.svg?branch=master)](https://travis-ci.org/hguo/ftk)
 FTK is a library that provides building blocks for feature tracking algorithms in scientific datasets.  
 
 ## Major components in FTK
