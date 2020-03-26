@@ -143,6 +143,26 @@ If you built the example with VTK, you may also explore the trajectories with a 
 $ ./examples/critical_point_tracking_2d/ex_critical_point_tracking_2d --vtk
 ```
 
+### Use MPI
+
+You may use MPI and CUDA to accelerate feature tracking with both distributed- and GPU-parallelism.  To build FTK with MPI, you need to use MPI C/C++ compilers: 
+
+```bash
+$ CC=mpicc CXX=mpicxx cmake ..
+```
+
+In order to build FTK with CUDA, you also need to specify the path to the CUDA installation:
+
+```bash
+$ cmake .. -DCUDA_TOOLKIT_ROOT_DIR=$YOUR_CUDA_TOOLKIT_DIR
+```
+
+To run the above example with both MPI and CUDA, use `mpiexec` and `-x cuda`
+
+```bash
+$ mpiexec -n $NUM_PROCS ./examples/critical_point_tracking_2d/ex_critical_point_tracking_2d -x cuda
+```
+
 ## Applications that use FTK
 
 * [vortexfinder2](https://github.com/hguo/vortexfinder2): Vortex finder for time-dependent Ginzburg-Landau superconductor simulation data
