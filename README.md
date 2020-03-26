@@ -1,7 +1,10 @@
 # FTK: The Feature Tracking Kit
 
 [![Build Status](https://travis-ci.org/hguo/ftk.svg?branch=master)](https://travis-ci.org/hguo/ftk)
+
 FTK is a library that provides building blocks for feature tracking algorithms in scientific datasets.  
+
+![](docs/images/critical_point_tracking_2d_paraview.png)
 
 ## Major components in FTK
 
@@ -36,11 +39,7 @@ $ make
 
 If built successfully, you will see the plugins binary as`lib/paraview-5.8/plugins/FTK/FTK.so`.  Open the "Plugin Manager" in ParaView, and load this binary with "Load New..." button, and then select and load FTK in the list.  
 
-We demo the use the 2D critical point tracking filter (`vtkCriticalPoint2DTracker`) with a dataset.  The input of this filter must be a 3D volumetric data that stacks 2D time-varying scalar fields in the Z direction.  In this demo, we first add a synthetic 3D volume data by using Sources / FTK / Spiral2DSource.  We then track the trajectories of 2D critical points with Filters / FTK / CriticalPoint2DTracker.  The output trajectires can be visualized as tubes and color-coded by their types, scalar values, or IDs. 
-
-![](docs/images/critical_point_tracking_2d_paraview.png)
-
-In this demo, the time-varying scalar field is defined in closed form: 
+We demo the use the 2D critical point tracking filter (`vtkCriticalPoint2DTracker`) with a dataset.  The input of this filter must be a 3D volumetric data that stacks 2D time-varying scalar fields in the Z direction.  In this demo, we first add a synthetic 3D volume data by using Sources / FTK / Spiral2DSource.  We then track the trajectories of 2D critical points with Filters / FTK / CriticalPoint2DTracker.  The output trajectires can be visualized as tubes and color-coded by their types, scalar values, or IDs.  In this demo, the time-varying scalar field is defined in closed form: 
 
 $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\sin t + y\cos t),$
 
