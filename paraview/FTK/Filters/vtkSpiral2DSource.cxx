@@ -18,7 +18,7 @@
 
 vtkStandardNewMacro(vtkSpiral2DSource);
 
-vtkSpiral2DSource::vtkSpiral2DSource()
+vtkSpiral2DSource::vtkSpiral2DSource() : DW(32), DH(32), DT(10), scale(15.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
@@ -39,7 +39,6 @@ int vtkSpiral2DSource::RequestInformation(
     vtkInformationVector**, 
     vtkInformationVector* outVec)
 {
-  const int DW = 32, DH = 32, DT = 10;
   int extent[6] = {0, DW-1, 0, DH-1, 0, DT-1};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
@@ -59,13 +58,9 @@ int vtkSpiral2DSource::RequestData(
   vtkImageData *imageData = 
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  const int DW = 32, DH = 32, DT = 10;
-  auto scalar = ftk::synthetic_woven_2Dt<float>(DW, DH, DT);
+  auto scalar = ftk::synthetic_woven_2Dt<float>(DW, DH, DT, scale);
   auto imageData1 = scalar.to_scalar_vtk_image_data();
   imageData->DeepCopy(imageData1);
-  // imageData->Print(std::cerr);
-
-  // scalar.to_scalar_vtk_image_data_file("out.vti");
   
   int extent[6] = {0, DW-1, 0, DH-1, 0, DT-1};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 

@@ -12,6 +12,11 @@ public:
   static vtkSpiral2DSource *New();
   vtkTypeMacro(vtkSpiral2DSource, vtkImageAlgorithm);
 
+  void setW(int w) {DW = w;}
+  void setH(int h) {DH = h;}
+  void setT(int t) {DT = t;}
+  void setScalingFactor(double s) {scale = s;}
+
 protected:
   vtkSpiral2DSource();
   ~vtkSpiral2DSource();
@@ -25,8 +30,8 @@ private:
   void operator=(const vtkSpiral2DSource&);
 
 private:
-  bool bUseGPU;
-  double dGaussianKernelSize;
+  int DW, DH, DT;
+  double scale;
 };
 
 #endif
