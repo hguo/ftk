@@ -88,7 +88,7 @@ protected:
 };
 
 /////
-bool critical_point_tracker_regular::advance_timestep()
+inline bool critical_point_tracker_regular::advance_timestep()
 {
   update_timestep();
   pop_field_data_snapshot();
@@ -104,7 +104,7 @@ inline void critical_point_tracker_regular::set_type_filter(unsigned int f)
 }
   
 template <int N, typename T>
-bool critical_point_tracker_regular::filter_critical_point_type(
+inline bool critical_point_tracker_regular::filter_critical_point_type(
     const critical_point_t<N, T>& cp)
 {
   // fprintf(stderr, "typefilter=%lu, type=%lu\n", 

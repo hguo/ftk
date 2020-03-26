@@ -42,7 +42,9 @@ protected:
   std::deque<field_data_snapshot_t> field_data_snapshots;
 };
 
-void critical_point_tracker::push_field_data_snapshot(
+///////
+
+inline void critical_point_tracker::push_field_data_snapshot(
     const ndarray<double>& scalar,
     const ndarray<double>& vector,
     const ndarray<double>& jacobian)
@@ -55,7 +57,7 @@ void critical_point_tracker::push_field_data_snapshot(
   field_data_snapshots.emplace_back(snapshot);
 }
 
-void critical_point_tracker::push_scalar_field_snapshot(const ndarray<double>& scalar)
+inline void critical_point_tracker::push_scalar_field_snapshot(const ndarray<double>& scalar)
 {
   field_data_snapshot_t snapshot;
   snapshot.scalar = scalar;
@@ -63,7 +65,7 @@ void critical_point_tracker::push_scalar_field_snapshot(const ndarray<double>& s
   field_data_snapshots.emplace_back(snapshot);
 }
 
-void critical_point_tracker::push_field_data_spacetime(
+inline void critical_point_tracker::push_field_data_spacetime(
     const ndarray<double>& scalars,
     const ndarray<double>& vectors,
     const ndarray<double>& jacobians)
@@ -77,14 +79,14 @@ void critical_point_tracker::push_field_data_spacetime(
   }
 }
 
-void critical_point_tracker::push_scalar_field_spacetime(const ndarray<double>& scalars)
+inline void critical_point_tracker::push_scalar_field_spacetime(const ndarray<double>& scalars)
 {
   for (size_t t = 0; t < scalars.shape(scalars.nd()-1); t ++)
     push_scalar_field_snapshot( scalars.slice_time(t) );
 }
 
 
-bool critical_point_tracker::pop_field_data_snapshot()
+inline bool critical_point_tracker::pop_field_data_snapshot()
 {
   if (field_data_snapshots.size() > 0) {
     field_data_snapshots.pop_front();

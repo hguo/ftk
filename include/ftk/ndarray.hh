@@ -349,16 +349,16 @@ void ndarray<T>::from_binary_file_sequence(const std::string& pattern)
 }
 
 #ifdef FTK_HAVE_VTK
-template<> int ndarray<char>::vtk_data_type() {return VTK_CHAR;}
-template<> int ndarray<unsigned char>::vtk_data_type() {return VTK_UNSIGNED_CHAR;}
-template<> int ndarray<short>::vtk_data_type() {return VTK_SHORT;}
-template<> int ndarray<unsigned short>::vtk_data_type() {return VTK_UNSIGNED_SHORT;}
-template<> int ndarray<int>::vtk_data_type() {return VTK_INT;}
-template<> int ndarray<unsigned int>::vtk_data_type() {return VTK_UNSIGNED_INT;}
-template<> int ndarray<long>::vtk_data_type() {return VTK_LONG;}
-template<> int ndarray<unsigned long>::vtk_data_type() {return VTK_UNSIGNED_LONG;}
-template<> int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
-template<> int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
+template<> inline int ndarray<char>::vtk_data_type() {return VTK_CHAR;}
+template<> inline int ndarray<unsigned char>::vtk_data_type() {return VTK_UNSIGNED_CHAR;}
+template<> inline int ndarray<short>::vtk_data_type() {return VTK_SHORT;}
+template<> inline int ndarray<unsigned short>::vtk_data_type() {return VTK_UNSIGNED_SHORT;}
+template<> inline int ndarray<int>::vtk_data_type() {return VTK_INT;}
+template<> inline int ndarray<unsigned int>::vtk_data_type() {return VTK_UNSIGNED_INT;}
+template<> inline int ndarray<long>::vtk_data_type() {return VTK_LONG;}
+template<> inline int ndarray<unsigned long>::vtk_data_type() {return VTK_UNSIGNED_LONG;}
+template<> inline int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
+template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
 
 template<typename T>
 inline void ndarray<T>::to_scalar_vtk_image_data_file(const std::string& filename) const 
@@ -384,8 +384,15 @@ template<typename T>
 inline vtkSmartPointer<vtkImageData> ndarray<T>::to_scalar_vtk_image_data() const
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
-  if (nd() == 2) d->SetDimensions(shape(0), shape(1), 1);
-  else d->SetDimensions(shape(0), shape(1), shape(2));
+  if (nd() == 2) {
+    int extent[6] = {0, static_cast<int>(shape(0)), 0, static_cast<int>(shape(1)), 0, 0};
+    d->SetDimensions(shape(0), shape(1), 1);
+    // d->SetExtent(extent);
+  } else {
+    int extent[6] = {0, static_cast<int>(shape(0)), 0, static_cast<int>(shape(1)), 0, static_cast<int>(shape(2))};
+    d->SetDimensions(shape(0), shape(1), shape(2));
+    // d->SetExtent(extent);
+  }
   d->GetPointData()->AddArray(to_scalar_vtk_data_array());
   d->GetPointData()->SetScalars(to_scalar_vtk_data_array());
 

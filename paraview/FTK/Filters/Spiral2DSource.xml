@@ -1,0 +1,14 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+    <SourceProxy name="Spiral2DSource" class="vtkSpiral2DSource" label="Spiral2DSource">
+      <Documentation
+        short_help="synthetic 2D time-varying data for FTK"
+        long_help="synthetic 2D time-varying data for FTK">
+      </Documentation>
+
+      <Hints>
+        <ShowInMenu category="FTK"/>
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>
