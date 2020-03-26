@@ -16,23 +16,6 @@ set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set (LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
-#ExternalProject_Add(
-#  googletest
-#  SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/googletest-src"
-#  BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/googletest-build"
-#  GIT_REPOSITORY https://github.com/google/googletest.git
-#  GIT_TAG release-1.10.0
-#  CMAKE_ARGS
-#  # -DBUILD_SHARED_LIBS:BOOL=ON
-#    -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
-#    -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_CURRENT_BINARY_DIR}/googletest-install
-#    -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
-#)
-
-#set(GTEST_ROOT ${CMAKE_CURRENT_BINARY_DIR}/googletest-install CACHE STRING "")
-#set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
-#set(GTEST_LIBRARIES)
-
 include(cmake/googletest.cmake)
 fetch_googletest(
   ${PROJECT_SOURCE_DIR}/cmake
@@ -241,6 +224,7 @@ include_directories (${FTK_INCLUDE_DIR})
 option (FTK_BUILD_TESTS "Build tests" OFF)
 option (FTK_BUILD_EXAMPLES "Build examples" ON)
 option (FTK_BUILD_EXPERIMENTS "Build experimental code" OFF)
+option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
@@ -277,6 +261,10 @@ endif ()
 
 if (FTK_BUILD_EXPERIMENTS)
   add_subdirectory (experiments)
+endif ()
+
+if (FTK_BUILD_PARAVIEW)
+  add_subdirectory (paraview)
 endif ()
 
 add_subdirectory (src)

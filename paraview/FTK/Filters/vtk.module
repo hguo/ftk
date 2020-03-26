@@ -1,0 +1,11 @@
+NAME
+  FTKFilters
+LIBRARY_NAME
+  vtkFTKFilters
+DEPENDS
+  VTK::CommonExecutionModel
+  VTK::IOLegacy
+PRIVATE_DEPENDS
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::FiltersSources
