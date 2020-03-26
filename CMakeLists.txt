@@ -9,6 +9,10 @@ set (FTK_VERSION ${FTK_MAJOR_VERSION}.${FTK_MINOR_VERSION}.${FTK_PATCH_VERSION})
 include (GoogleTest)
 include (ExternalProject)
 
+if (FTK_BUILD_PARAVIEW)
+  find_package (ParaView REQUIRED)
+endif ()
+
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -55,7 +59,7 @@ elseif (FTK_USE_VTK)
 endif ()
 if (VTK_FOUND)
   set (FTK_HAVE_VTK TRUE)
-  include (${VTK_USE_FILE})
+  # include (${VTK_USE_FILE})
 endif ()
 
 if (FTK_USE_Kokkos STREQUAL AUTO)

@@ -1,9 +1,6 @@
-find_package (ParaView REQUIRED)
-
-message ("configuring paraview plugins...")
-
-# set (_paraview_plugin_default_FTK ON)
-set (PARAVIEW_PLUGIN_ENABLE_FTK ON)
+set (_paraview_plugin_default_FTK ON)
+set (BUILD_SHARED_LIBS ON)
+# option (PARAVIEW_PLUGIN_ENABLE_FTK ON)
 
 paraview_plugin_scan(
   PLUGIN_FILES "${CMAKE_CURRENT_SOURCE_DIR}/FTK/paraview.plugin"
