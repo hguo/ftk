@@ -1,4 +1,6 @@
-include_directories (${GTEST_INCLUDE_DIR})
+add_subdirectory (gtest)
+
+include_directories (${CMAKE_CURRENT_SOURCE_DIR}/gtest/include)
 set (GTEST_BOTH_LIBRARIES gtest gtest_main)
 
 add_executable (test_matrix test_matrix.cpp)

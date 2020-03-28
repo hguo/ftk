@@ -7,7 +7,7 @@ set (FTK_PATCH_VERSION 1)
 set (FTK_VERSION ${FTK_MAJOR_VERSION}.${FTK_MINOR_VERSION}.${FTK_PATCH_VERSION})
 
 include (GoogleTest)
-include (ExternalProject)
+# include (ExternalProject)
 
 if (FTK_BUILD_PARAVIEW)
   find_package (ParaView REQUIRED)
@@ -19,13 +19,6 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set (LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
-
-include(cmake/googletest.cmake)
-fetch_googletest(
-  ${PROJECT_SOURCE_DIR}/cmake
-  ${PROJECT_BINARY_DIR}/googletest
-)
-include_directories (${CMAKE_CURRENT_BINARY_DIR}/googletest/googletest-src/googletest/include)
 
 # dependencies
 function (ftk_option name description default)
