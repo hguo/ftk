@@ -1,16 +1,16 @@
-#ifndef __vtkABCFlowSource_h
-#define __vtkABCFlowSource_h
+#ifndef __vtkDoubleGyreFlowSource_h
+#define __vtkDoubleGyreFlowSource_h
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkDataSet;
 
-class vtkABCFlowSource : public vtkImageAlgorithm
+class vtkDoubleGyreFlowSource : public vtkImageAlgorithm
 {
 public:
-  static vtkABCFlowSource *New();
-  vtkTypeMacro(vtkABCFlowSource, vtkImageAlgorithm);
+  static vtkDoubleGyreFlowSource *New();
+  vtkTypeMacro(vtkDoubleGyreFlowSource, vtkImageAlgorithm);
 
   void setA(double a) {A = a;}
   void setB(double b) {B = b;}
@@ -21,16 +21,16 @@ public:
   // void setScalingFactor(double s) {scale = s;}
 
 protected:
-  vtkABCFlowSource();
-  ~vtkABCFlowSource();
+  vtkDoubleGyreFlowSource();
+  ~vtkDoubleGyreFlowSource();
 
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
-  vtkABCFlowSource(const vtkABCFlowSource&);
-  void operator=(const vtkABCFlowSource&);
+  vtkDoubleGyreFlowSource(const vtkDoubleGyreFlowSource&);
+  void operator=(const vtkDoubleGyreFlowSource&);
 
 private:
   double A, B, C;

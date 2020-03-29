@@ -392,7 +392,7 @@ inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(bool multicom
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
   if (multicomponent) {
-    if (nd() == 2) d->SetDimensions(shape(1), shape(2), 1);
+    if (nd() == 3) d->SetDimensions(shape(1), shape(2), 1);
     else d->SetDimensions(shape(1), shape(2), shape(3));
   } else {
     if (nd() == 2) d->SetDimensions(shape(0), shape(1), 1);

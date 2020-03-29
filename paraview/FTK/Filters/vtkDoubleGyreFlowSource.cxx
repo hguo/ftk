@@ -1,4 +1,4 @@
-#include "vtkABCFlowSource.h"
+#include "vtkDoubleGyreFlowSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,9 +16,9 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkABCFlowSource);
+vtkStandardNewMacro(vtkDoubleGyreFlowSource);
 
-vtkABCFlowSource::vtkABCFlowSource() : 
+vtkDoubleGyreFlowSource::vtkDoubleGyreFlowSource() : 
   DW(32), DH(32), DD(10), 
   A(std::sqrt(3.0)), B(std::sqrt(2.0)), C(1.0)
 {
@@ -26,22 +26,22 @@ vtkABCFlowSource::vtkABCFlowSource() :
   SetNumberOfOutputPorts(1);
 }
 
-vtkABCFlowSource::~vtkABCFlowSource()
+vtkDoubleGyreFlowSource::~vtkDoubleGyreFlowSource()
 {
 }
 
-int vtkABCFlowSource::FillOutputPortInformation(int, vtkInformation *info)
+int vtkDoubleGyreFlowSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkABCFlowSource::RequestInformation(
+int vtkDoubleGyreFlowSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
 {
-  int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
+  int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
 
@@ -53,7 +53,7 @@ int vtkABCFlowSource::RequestInformation(
   return 1;
 }
 
-int vtkABCFlowSource::RequestData(
+int vtkDoubleGyreFlowSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -62,11 +62,11 @@ int vtkABCFlowSource::RequestData(
   vtkImageData *imageData = 
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  auto vector_field = ftk::synthetic_abc_flow<float>(DW, DH, DD, A, B, C);
-  auto imageData1 = vector_field.to_vector_vtk_image_data();
+  auto vector_field = ftk::synthetic_double_gyre<float>(DW, DH, 0.2f);
+  auto imageData1 = vector_field.to_vtk_image_data(true);
   imageData->DeepCopy(imageData1);
   
-  int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
+  int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
 

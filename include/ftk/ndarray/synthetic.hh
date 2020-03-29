@@ -75,9 +75,39 @@ ndarray<T> synthetic_woven_2Dt(int DW, int DH, int DT, T scaling_factor = T(15))
 
 // double gyre 2D flow
 template <typename T>
-ndarray<T> synthetic_double_gyre(int DW, int DH)
+ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, 
+    const T A = 0.1, 
+    const T omega = M_PI * 0.2, 
+    const T epsilon = 0.25)
 {
-  // TODO
+  const auto a = [&](T t) { return epsilon * sin(omega * t); };
+  const auto b = [&](T t) { return (1 - 2 * epsilon) * sin(omega * t); };
+  const auto f = [&](T x, T t) { return a(t) * x * x + b(t) * x; };
+  const auto dfdx = [&](T x, T t) {
+    return 2 * a(t) * x * x + b(t);
+  };
+  const auto u = [&](T x, T y, T t) {
+    return -M_PI * A * sin(M_PI * f(x, t)) * cos(M_PI * y);
+  };
+  const auto v = [&](T x, T y, T t) {
+    return  M_PI * A * cos(M_PI * f(x, t)) * sin(M_PI * y) * dfdx(x, t);
+  };
+
+  ndarray<T> Vf;
+  Vf.reshape(2, DW, DH);
+
+  for (int j = 0; j < DH; j ++) {
+    for (int i = 0; i < DW; i ++) {
+      // the domain is [0, 2]x[0, 1]
+      const T x = (T(i) / (DW-1)) * 2,
+              y = (T(j) / (DH-1));
+
+      Vf(0, i, j) = u(x, y, time);
+      Vf(1, i, j) = v(x, y, time);
+    }
+  }
+
+  return Vf;
 }
 
 // ABC flow
