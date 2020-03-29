@@ -1,0 +1,56 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+    <SourceProxy name="ABCFlowSource" class="vtkABCFlowSource" label="ABCFlowSource">
+      <Documentation
+        short_help="synthetic 2D ABC flow data for FTK"
+        long_help="synthetic 2D ABC flow data for FTK">
+      </Documentation>
+
+      <IntVectorProperty 
+        name="Width"
+        command="setW"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Height"
+        command="setH"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Depth"
+        command="setD"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+      
+      <DoubleVectorProperty
+        name="A"
+        command="setA"
+        number_of_elements="1"
+        default_values="1.7321">
+      </DoubleVectorProperty>
+      
+      <DoubleVectorProperty
+        name="B"
+        command="setB"
+        number_of_elements="1"
+        default_values="1.4142">
+      </DoubleVectorProperty>
+      
+      <DoubleVectorProperty
+        name="C"
+        command="setC"
+        number_of_elements="1"
+        default_values="1.0">
+      </DoubleVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="FTK"/>
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>

@@ -85,7 +85,22 @@ template <typename T>
 ndarray<T> synthetic_abc_flow(int DW, int DH, int DD, 
     T A=std::sqrt(T(3)), T B=std::sqrt(T(2)), T C=T(1))
 {
+  ndarray<T> Vf;
+  Vf.reshape(3, DW, DH, DD);
 
+  for (int k = 0; k < DD; k ++)
+    for (int j = 0; j < DH; j ++)
+      for (int i = 0; i < DW; i ++) {
+        const T x = ((T(i) / (DW-1))) * 2 * M_PI,
+                y = ((T(j) / (DH-1))) * 2 * M_PI,
+                z = ((T(k) / (DD-1))) * 2 * M_PI;
+
+        Vf(0, i, j, k) = A * sin(z) + C * cos(y);
+        Vf(1, i, j, k) = B * sin(x) + A * cos(z);
+        Vf(2, i, j, k) = C * sin(y) + B * cos(x);
+      }
+
+  return Vf;
 }
 
 // 2D merger

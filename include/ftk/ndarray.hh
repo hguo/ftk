@@ -189,7 +189,9 @@ struct ndarray {
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d);
   vtkSmartPointer<vtkImageData> to_scalar_vtk_image_data() const;
+  vtkSmartPointer<vtkImageData> to_vector_vtk_image_data() const;
   vtkSmartPointer<vtkDataArray> to_scalar_vtk_data_array() const;
+  vtkSmartPointer<vtkDataArray> to_vector_vtk_data_array() const;
 #endif
 
   void from_h5(const std::string& filename, const std::string& name); 
@@ -381,6 +383,24 @@ inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_scalar_vtk_data_array() cons
 }
 
 template<typename T>
+inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vector_vtk_data_array() const
+{
+  vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
+  d->SetName("vector");
+
+  const auto ncomp = shape(0); 
+  const auto nelems = std::accumulate(dims.begin()+1, dims.end(), 1, std::multiplies<size_t>());
+  
+  d->SetNumberOfComponents( ncomp );
+  d->SetNumberOfTuples( nelems );
+  // for (auto i = 0; i < nelems; i ++)
+  //   d->SetTuple(i, &at(i*ncomp));
+
+  memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * nelem());
+  return d;
+}
+
+template<typename T>
 inline vtkSmartPointer<vtkImageData> ndarray<T>::to_scalar_vtk_image_data() const
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
@@ -396,6 +416,17 @@ inline vtkSmartPointer<vtkImageData> ndarray<T>::to_scalar_vtk_image_data() cons
   d->GetPointData()->AddArray(to_scalar_vtk_data_array());
   d->GetPointData()->SetScalars(to_scalar_vtk_data_array());
 
+  return d;
+}
+
+template<typename T>
+inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vector_vtk_image_data() const
+{
+  vtkSmartPointer<vtkImageData> d = vtkImageData::New();
+  if (nd() == 2) d->SetDimensions(shape(1), shape(2), 1);
+  else d->SetDimensions(shape(1), shape(2), shape(3));
+  d->GetPointData()->AddArray(to_vector_vtk_data_array());
+  d->GetPointData()->SetScalars(to_vector_vtk_data_array());
   return d;
 }
 
