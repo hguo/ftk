@@ -1,6 +1,6 @@
 set(classes
   vtkCriticalPoint2DTracker
-  vtkSpiral2DSource
+  vtkSpiral2DStackSource
   vtkABCFlowSource
 )
 
@@ -11,6 +11,6 @@ vtk_module_link(FTKFilters
 
 paraview_add_server_manager_xmls(XMLS 
   CriticalPoint2DTracker.xml
-  Spiral2DSource.xml
+  Spiral2DStackSource.xml
   ABCFlowSource.xml
 )

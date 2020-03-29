@@ -1,9 +1,9 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="sources">
-    <SourceProxy name="Spiral2DSource" class="vtkSpiral2DSource" label="Spiral2DSource">
+    <SourceProxy name="Spiral2DStackSource" class="vtkSpiral2DStackSource" label="Spiral2DStackSource">
       <Documentation
-        short_help="synthetic 2D time-varying data for FTK"
-        long_help="synthetic 2D time-varying data for FTK">
+        short_help="synthetic 2D time-varying stack for FTK"
+        long_help="synthetic 2D time-varying stack for FTK">
       </Documentation>
 
       <IntVectorProperty 

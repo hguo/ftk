@@ -1,4 +1,4 @@
-#include "vtkSpiral2DSource.h"
+#include "vtkSpiral2DStackSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,25 +16,25 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkSpiral2DSource);
+vtkStandardNewMacro(vtkSpiral2DStackSource);
 
-vtkSpiral2DSource::vtkSpiral2DSource() : DW(32), DH(32), DT(10), scale(15.0)
+vtkSpiral2DStackSource::vtkSpiral2DStackSource() : DW(32), DH(32), DT(10), scale(15.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }
 
-vtkSpiral2DSource::~vtkSpiral2DSource()
+vtkSpiral2DStackSource::~vtkSpiral2DStackSource()
 {
 }
 
-int vtkSpiral2DSource::FillOutputPortInformation(int, vtkInformation *info)
+int vtkSpiral2DStackSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkSpiral2DSource::RequestInformation(
+int vtkSpiral2DStackSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
@@ -51,7 +51,7 @@ int vtkSpiral2DSource::RequestInformation(
   return 1;
 }
 
-int vtkSpiral2DSource::RequestData(
+int vtkSpiral2DStackSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)

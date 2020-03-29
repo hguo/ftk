@@ -1,16 +1,16 @@
-#ifndef __vtkSpiral2DSource_h
-#define __vtkSpiral2DSource_h
+#ifndef __vtkSpiral2DStackSource_h
+#define __vtkSpiral2DStackSource_h
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkDataSet;
 
-class vtkSpiral2DSource : public vtkImageAlgorithm
+class vtkSpiral2DStackSource : public vtkImageAlgorithm
 {
 public:
-  static vtkSpiral2DSource *New();
-  vtkTypeMacro(vtkSpiral2DSource, vtkImageAlgorithm);
+  static vtkSpiral2DStackSource *New();
+  vtkTypeMacro(vtkSpiral2DStackSource, vtkImageAlgorithm);
 
   void setW(int w) {DW = w;}
   void setH(int h) {DH = h;}
@@ -18,16 +18,16 @@ public:
   void setScalingFactor(double s) {scale = s;}
 
 protected:
-  vtkSpiral2DSource();
-  ~vtkSpiral2DSource();
+  vtkSpiral2DStackSource();
+  ~vtkSpiral2DStackSource();
 
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
-  vtkSpiral2DSource(const vtkSpiral2DSource&);
-  void operator=(const vtkSpiral2DSource&);
+  vtkSpiral2DStackSource(const vtkSpiral2DStackSource&);
+  void operator=(const vtkSpiral2DStackSource&);
 
 private:
   int DW, DH, DT;
