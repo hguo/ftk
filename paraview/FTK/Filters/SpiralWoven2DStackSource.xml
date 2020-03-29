@@ -1,6 +1,6 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="sources">
-    <SourceProxy name="Spiral2DStackSource" class="vtkSpiral2DStackSource" label="Spiral2DStackSource">
+    <SourceProxy name="SpiralWoven2DStackSource" class="vtkSpiralWoven2DStackSource" label="SpiralWoven2DStackSource">
       <Documentation
         short_help="synthetic 2D time-varying stack for FTK"
         long_help="synthetic 2D time-varying stack for FTK">
