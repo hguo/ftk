@@ -73,7 +73,7 @@ int main(int argc, char **argv)
   ftk::ndarray<double> scalar_all;
   scalar_all.reshape(DW, DH, DT);
   scalar_all.from_binary_file("out.raw");
-  scalar_all.to_scalar_vtk_image_data_file("out.vti");
+  scalar_all.to_vtk_image_data_file("out.vti");
 
   tracker.finalize();
   tracker.write_traced_critical_points_vtk("out.vtp");

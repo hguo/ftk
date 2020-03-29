@@ -184,14 +184,12 @@ struct ndarray {
 
   void from_vtk_image_data_file(const std::string& filename);
   void from_vtk_image_data_file_sequence(const std::string& pattern);
-  void to_scalar_vtk_image_data_file(const std::string& filename) const;
+  void to_vtk_image_data_file(const std::string& filename, bool multicomponent=false) const;
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d);
-  vtkSmartPointer<vtkImageData> to_scalar_vtk_image_data() const;
-  vtkSmartPointer<vtkImageData> to_vector_vtk_image_data() const;
-  vtkSmartPointer<vtkDataArray> to_scalar_vtk_data_array() const;
-  vtkSmartPointer<vtkDataArray> to_vector_vtk_data_array() const;
+  vtkSmartPointer<vtkImageData> to_vtk_image_data(bool multicomponent=false) const;
+  vtkSmartPointer<vtkDataArray> to_vtk_data_array(bool multicomponent=false) const;
 #endif
 
   void from_h5(const std::string& filename, const std::string& name); 
@@ -363,70 +361,46 @@ template<> inline int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
 template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
 
 template<typename T>
-inline void ndarray<T>::to_scalar_vtk_image_data_file(const std::string& filename) const 
+inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, bool multicomponent) const 
 {
   vtkSmartPointer<vtkXMLImageDataWriter> writer = vtkXMLImageDataWriter::New();
   writer->SetFileName(filename.c_str());
-  writer->SetInputData( to_scalar_vtk_image_data() );
+  writer->SetInputData( to_vtk_image_data(multicomponent) );
   writer->Write();
 }
 
 template<typename T>
-inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_scalar_vtk_data_array() const
+inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(bool multicomponent) const
 {
   vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
-  d->SetName("scalar");
-  d->SetNumberOfComponents(1);
-  d->SetNumberOfTuples(nelem());
+  if (multicomponent) d->SetName("vector");
+  else d->SetName("scalar");
+  if (multicomponent) {
+    d->SetNumberOfComponents(shape(0));
+    d->SetNumberOfTuples( std::accumulate(dims.begin()+1, dims.end(), 1, std::multiplies<size_t>()) );
+  }
+  else {
+    d->SetNumberOfComponents(1);
+    d->SetNumberOfTuples(nelem());
+  }
   memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * p.size()); // nelem());
   return d;
 }
 
 template<typename T>
-inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vector_vtk_data_array() const
-{
-  vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
-  d->SetName("vector");
-
-  const auto ncomp = shape(0); 
-  const auto nelems = std::accumulate(dims.begin()+1, dims.end(), 1, std::multiplies<size_t>());
-  
-  d->SetNumberOfComponents( ncomp );
-  d->SetNumberOfTuples( nelems );
-  // for (auto i = 0; i < nelems; i ++)
-  //   d->SetTuple(i, &at(i*ncomp));
-
-  memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * nelem());
-  return d;
-}
-
-template<typename T>
-inline vtkSmartPointer<vtkImageData> ndarray<T>::to_scalar_vtk_image_data() const
+inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(bool multicomponent) const
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
-  if (nd() == 2) {
-    int extent[6] = {0, static_cast<int>(shape(0)), 0, static_cast<int>(shape(1)), 0, 0};
-    d->SetDimensions(shape(0), shape(1), 1);
-    // d->SetExtent(extent);
+  if (multicomponent) {
+    if (nd() == 2) d->SetDimensions(shape(1), shape(2), 1);
+    else d->SetDimensions(shape(1), shape(2), shape(3));
   } else {
-    int extent[6] = {0, static_cast<int>(shape(0)), 0, static_cast<int>(shape(1)), 0, static_cast<int>(shape(2))};
-    d->SetDimensions(shape(0), shape(1), shape(2));
-    // d->SetExtent(extent);
+    if (nd() == 2) d->SetDimensions(shape(0), shape(1), 1);
+    else d->SetDimensions(shape(0), shape(1), shape(2));
   }
-  d->GetPointData()->AddArray(to_scalar_vtk_data_array());
-  d->GetPointData()->SetScalars(to_scalar_vtk_data_array());
+  // d->GetPointData()->AddArray(to_vtk_data_array(multicomponent));
+  d->GetPointData()->SetScalars(to_vtk_data_array(multicomponent));
 
-  return d;
-}
-
-template<typename T>
-inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vector_vtk_image_data() const
-{
-  vtkSmartPointer<vtkImageData> d = vtkImageData::New();
-  if (nd() == 2) d->SetDimensions(shape(1), shape(2), 1);
-  else d->SetDimensions(shape(1), shape(2), shape(3));
-  d->GetPointData()->AddArray(to_vector_vtk_data_array());
-  d->GetPointData()->SetScalars(to_vector_vtk_data_array());
   return d;
 }
 

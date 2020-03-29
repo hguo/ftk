@@ -61,7 +61,7 @@ int vtkSpiral2DSource::RequestData(
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
   auto scalar = ftk::synthetic_woven_2Dt<float>(DW, DH, DT, scale);
-  auto imageData1 = scalar.to_scalar_vtk_image_data();
+  auto imageData1 = scalar.to_vtk_image_data();
   imageData->DeepCopy(imageData1);
   
   int extent[6] = {0, DW-1, 0, DH-1, 0, DT-1};
