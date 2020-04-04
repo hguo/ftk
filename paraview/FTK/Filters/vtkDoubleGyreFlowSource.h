@@ -15,9 +15,11 @@ public:
   void setA(double a) {A = a;}
   void setOmega(double omega) {Omega = omega;}
   void setEpsilon(double epsilon) {Epsilon = epsilon;}
-  void setTime(double t) {Time = t;}
+  void setStartTime(double t) {StartTime = t;}
+  void setTImeScale(double ts) {TimeScale = ts;}
   void setW(int w) {DW = w;}
   void setH(int h) {DH = h;}
+  void setT(int t) {DT = t;}
 
 protected:
   vtkDoubleGyreFlowSource();
@@ -32,8 +34,9 @@ private:
   void operator=(const vtkDoubleGyreFlowSource&);
 
 private:
-  double A, Omega, Epsilon, Time;
-  int DW, DH;
+  double A, Omega, Epsilon;
+  double StartTime, TimeScale;
+  int DW, DH, DT;
 };
 
 #endif
