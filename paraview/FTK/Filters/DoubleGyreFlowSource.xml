@@ -10,7 +10,7 @@
         name="Width"
         command="setW"
         number_of_elements="1"
-        default_values="32">
+        default_values="64">
       </IntVectorProperty>
       
       <IntVectorProperty 
@@ -20,32 +20,32 @@
         default_values="32">
       </IntVectorProperty>
       
-      <IntVectorProperty 
-        name="Depth"
-        command="setD"
+      <DoubleVectorProperty
+        name="Time"
+        command="setTime"
         number_of_elements="1"
-        default_values="32">
-      </IntVectorProperty>
+        default_values="0.1">
+      </DoubleVectorProperty>
       
       <DoubleVectorProperty
         name="A"
         command="setA"
         number_of_elements="1"
-        default_values="1.7321">
+        default_values="0.1">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
-        name="B"
-        command="setB"
+        name="Omega"
+        command="setOmega"
         number_of_elements="1"
-        default_values="1.4142">
+        default_values="6.28318530718">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
-        name="C"
-        command="setC"
+        name="Epsilon"
+        command="setEpsilon"
         number_of_elements="1"
-        default_values="1.0">
+        default_values="0.25">
       </DoubleVectorProperty>
 
       <Hints>

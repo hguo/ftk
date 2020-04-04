@@ -13,12 +13,11 @@ public:
   vtkTypeMacro(vtkDoubleGyreFlowSource, vtkImageAlgorithm);
 
   void setA(double a) {A = a;}
-  void setB(double b) {B = b;}
-  void setC(double c) {C = c;}
+  void setOmega(double omega) {Omega = omega;}
+  void setEpsilon(double epsilon) {Epsilon = epsilon;}
+  void setTime(double t) {Time = t;}
   void setW(int w) {DW = w;}
   void setH(int h) {DH = h;}
-  void setD(int d) {DD = d;}
-  // void setScalingFactor(double s) {scale = s;}
 
 protected:
   vtkDoubleGyreFlowSource();
@@ -33,9 +32,8 @@ private:
   void operator=(const vtkDoubleGyreFlowSource&);
 
 private:
-  double A, B, C;
-  int DW, DH, DD;
-  // double scale;
+  double A, Omega, Epsilon, Time;
+  int DW, DH;
 };
 
 #endif

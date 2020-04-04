@@ -19,8 +19,8 @@
 vtkStandardNewMacro(vtkDoubleGyreFlowSource);
 
 vtkDoubleGyreFlowSource::vtkDoubleGyreFlowSource() : 
-  DW(32), DH(32), DD(10), 
-  A(std::sqrt(3.0)), B(std::sqrt(2.0)), C(1.0)
+  DW(32), DH(32),
+  A(0.1), Omega(M_PI*2), Epsilon(0.25)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
@@ -62,7 +62,7 @@ int vtkDoubleGyreFlowSource::RequestData(
   vtkImageData *imageData = 
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  auto vector_field = ftk::synthetic_double_gyre<float>(DW, DH, 0.2f);
+  auto vector_field = ftk::synthetic_double_gyre<float>(DW, DH, Time, true, A, Omega, Epsilon);
   auto imageData1 = vector_field.to_vtk_image_data(true);
   imageData->DeepCopy(imageData1);
   

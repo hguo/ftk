@@ -75,13 +75,13 @@ ndarray<T> synthetic_woven_2Dt(int DW, int DH, int DT, T scaling_factor = T(15))
 
 // double gyre 2D flow
 template <typename T>
-ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, 
+ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=false,
     const T A = 0.1, 
     const T omega = M_PI * 0.2, 
     const T epsilon = 0.25)
 {
   const auto a = [&](T t) { return epsilon * sin(omega * t); };
-  const auto b = [&](T t) { return (1 - 2 * epsilon) * sin(omega * t); };
+  const auto b = [&](T t) { return 1 - 2 * epsilon * sin(omega * t); };
   const auto f = [&](T x, T t) { return a(t) * x * x + b(t) * x; };
   const auto dfdx = [&](T x, T t) {
     return 2 * a(t) * x * x + b(t);
@@ -94,7 +94,7 @@ ndarray<T> synthetic_double_gyre(int DW, int DH, const T time,
   };
 
   ndarray<T> Vf;
-  Vf.reshape(2, DW, DH);
+  Vf.reshape(2 + zchannel, DW, DH);
 
   for (int j = 0; j < DH; j ++) {
     for (int i = 0; i < DW; i ++) {
@@ -104,10 +104,29 @@ ndarray<T> synthetic_double_gyre(int DW, int DH, const T time,
 
       Vf(0, i, j) = u(x, y, time);
       Vf(1, i, j) = v(x, y, time);
+      // if (zchannel) Vf(2, i, j) = T(0);
     }
   }
 
   return Vf;
+}
+
+template <typename T>
+ndarray<T> synthetic_time_varying_double_gyre(
+    const int DW, const int DH, const int DT, 
+    const T time_start, const T time_step, 
+    const T A = 0.1, const T omega = M_PI * 0.2, const T epsilon = 0.25)
+{
+  ndarray<T> Vft;
+
+  for (int t = 0; t < DT; t ++) {
+    auto Vf = synthetic_double_gyre(DW, DH, 
+        time_start + t * time_step, 
+        A, omega, epsilon);
+    Vft.p.insert(Vft.p.end(), Vf.p.begin(), Vf.p.end());
+  }
+
+  return Vft;
 }
 
 // ABC flow
