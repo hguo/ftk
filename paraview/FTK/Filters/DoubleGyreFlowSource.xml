@@ -31,6 +31,13 @@
         name="StartTime"
         command="setStartTime"
         number_of_elements="1"
+        default_values="0.0">
+      </DoubleVectorProperty>
+      
+      <DoubleVectorProperty
+        name="TimeScale"
+        command="setTimeScale"
+        number_of_elements="1"
         default_values="0.1">
       </DoubleVectorProperty>
       
@@ -58,7 +65,8 @@
 			<DoubleVectorProperty
 			  information_only="1"
 			  name="TimestepValues"
-			  repeatable="1">
+        repeatable="1">
+        <TimeStepsInformationHelper/>
 			  <Documentation>
 			    Available timestep values.
 			  </Documentation>

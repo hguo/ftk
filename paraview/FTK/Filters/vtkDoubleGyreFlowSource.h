@@ -16,7 +16,7 @@ public:
   void setOmega(double omega) {Omega = omega;}
   void setEpsilon(double epsilon) {Epsilon = epsilon;}
   void setStartTime(double t) {StartTime = t;}
-  void setTImeScale(double ts) {TimeScale = ts;}
+  void setTimeScale(double ts) {TimeScale = ts;}
   void setW(int w) {DW = w;}
   void setH(int h) {DH = h;}
   void setT(int t) {DT = t;}

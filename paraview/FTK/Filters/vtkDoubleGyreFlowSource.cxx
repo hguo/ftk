@@ -52,7 +52,7 @@ int vtkDoubleGyreFlowSource::RequestInformation(
   double timeRange[2] = {0.0, DT - 1.0};
   std::vector<double> timeSteps;
   for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i));
+    timeSteps.push_back(static_cast<double>(i) * TimeScale + StartTime);
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);
@@ -82,16 +82,6 @@ int vtkDoubleGyreFlowSource::RequestData(
   auto vector_field = ftk::synthetic_double_gyre<float>(DW, DH, currentTime, true, A, Omega, Epsilon);
   auto imageData1 = vector_field.to_vtk_image_data(true);
   imageData->ShallowCopy(imageData1);
-
-#if 0
-  int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
-  double cell_lengths[3] = {1.0, 1.0, 1.0}, 
-         origins[3] = {0.0, 0.0, 0.0};
-
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent, 6);
-  outInfo->Set(vtkDataObject::SPACING(), cell_lengths, 3);
-  outInfo->Set(vtkDataObject::ORIGIN(), origins, 3);
-#endif
 
   return 1;
 }
