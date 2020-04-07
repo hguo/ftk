@@ -1,16 +1,16 @@
-#ifndef __vtkDoubleGyreFlowSource_h
-#define __vtkDoubleGyreFlowSource_h
+#ifndef __vtkDoubleGyreVectorField2DSource_h
+#define __vtkDoubleGyreVectorField2DSource_h
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkDataSet;
 
-class vtkDoubleGyreFlowSource : public vtkImageAlgorithm
+class vtkDoubleGyreVectorField2DSource : public vtkImageAlgorithm
 {
 public:
-  static vtkDoubleGyreFlowSource *New();
-  vtkTypeMacro(vtkDoubleGyreFlowSource, vtkImageAlgorithm);
+  static vtkDoubleGyreVectorField2DSource *New();
+  vtkTypeMacro(vtkDoubleGyreVectorField2DSource, vtkImageAlgorithm);
 
   void setA(double a) {A = a;}
   void setOmega(double omega) {Omega = omega;}
@@ -22,16 +22,16 @@ public:
   void setT(int t) {DT = t;}
 
 protected:
-  vtkDoubleGyreFlowSource();
-  ~vtkDoubleGyreFlowSource();
+  vtkDoubleGyreVectorField2DSource();
+  ~vtkDoubleGyreVectorField2DSource();
 
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
-  vtkDoubleGyreFlowSource(const vtkDoubleGyreFlowSource&);
-  void operator=(const vtkDoubleGyreFlowSource&);
+  vtkDoubleGyreVectorField2DSource(const vtkDoubleGyreVectorField2DSource&);
+  void operator=(const vtkDoubleGyreVectorField2DSource&);
 
 private:
   double A, Omega, Epsilon;

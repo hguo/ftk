@@ -1,4 +1,4 @@
-#include "vtkDoubleGyreFlowSource.h"
+#include "vtkDoubleGyreVectorField2DSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,9 +16,9 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkDoubleGyreFlowSource);
+vtkStandardNewMacro(vtkDoubleGyreVectorField2DSource);
 
-vtkDoubleGyreFlowSource::vtkDoubleGyreFlowSource() : 
+vtkDoubleGyreVectorField2DSource::vtkDoubleGyreVectorField2DSource() : 
   DW(32), DH(32), DT(10),
   StartTime(0.0), TimeScale(1.0),
   A(0.1), Omega(M_PI*2), Epsilon(0.25)
@@ -27,17 +27,17 @@ vtkDoubleGyreFlowSource::vtkDoubleGyreFlowSource() :
   SetNumberOfOutputPorts(1);
 }
 
-vtkDoubleGyreFlowSource::~vtkDoubleGyreFlowSource()
+vtkDoubleGyreVectorField2DSource::~vtkDoubleGyreVectorField2DSource()
 {
 }
 
-int vtkDoubleGyreFlowSource::FillOutputPortInformation(int, vtkInformation *info)
+int vtkDoubleGyreVectorField2DSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkDoubleGyreFlowSource::RequestInformation(
+int vtkDoubleGyreVectorField2DSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
@@ -64,7 +64,7 @@ int vtkDoubleGyreFlowSource::RequestInformation(
   return 1;
 }
 
-int vtkDoubleGyreFlowSource::RequestData(
+int vtkDoubleGyreVectorField2DSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
