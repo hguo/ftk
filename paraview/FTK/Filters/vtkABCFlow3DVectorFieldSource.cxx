@@ -1,4 +1,4 @@
-#include "vtkABCFlowSource.h"
+#include "vtkABCFlow3DVectorFieldSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,9 +16,9 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkABCFlowSource);
+vtkStandardNewMacro(vtkABCFlow3DVectorFieldSource);
 
-vtkABCFlowSource::vtkABCFlowSource() : 
+vtkABCFlow3DVectorFieldSource::vtkABCFlow3DVectorFieldSource() : 
   DW(32), DH(32), DD(10), 
   A(std::sqrt(3.0)), B(std::sqrt(2.0)), C(1.0)
 {
@@ -26,17 +26,17 @@ vtkABCFlowSource::vtkABCFlowSource() :
   SetNumberOfOutputPorts(1);
 }
 
-vtkABCFlowSource::~vtkABCFlowSource()
+vtkABCFlow3DVectorFieldSource::~vtkABCFlow3DVectorFieldSource()
 {
 }
 
-int vtkABCFlowSource::FillOutputPortInformation(int, vtkInformation *info)
+int vtkABCFlow3DVectorFieldSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkABCFlowSource::RequestInformation(
+int vtkABCFlow3DVectorFieldSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
@@ -53,7 +53,7 @@ int vtkABCFlowSource::RequestInformation(
   return 1;
 }
 
-int vtkABCFlowSource::RequestData(
+int vtkABCFlow3DVectorFieldSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
