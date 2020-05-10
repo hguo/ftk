@@ -1,3 +1,4 @@
+#include "feature.hpp"
 #include <hypermesh/regular_simplex_mesh.hh>
 #include <ftk/basic/distributed_union_find.hh>
 
@@ -5,81 +6,11 @@
   #define DIM 3
 #endif
 
-struct intersection_t {
-  template <class Archive> void serialize(Archive & ar) {
-    ar(eid, x[0], x[1], x[2], val);
-  }
 
-  // std::vector<float> x; // the spacetime coordinates of the trajectory
-  float x[DIM];
 
-  // std::vector<float> corner; // the spacetime coordinates of the left corner of the element
-
-  float val; // scalar value at the intersection
-  
-  std::string eid; // element id
-  std::set<std::string> related_elements; 
-};
-
-namespace diy
-{
-  template<>
-  struct Serialization<intersection_t>
-  {
-      static void save(BinaryBuffer& bb, const intersection_t& msg)
-      {
-          diy::save(bb, msg.x);
-          // diy::save(bb, msg.corner);
-          diy::save(bb, msg.val);
-          diy::save(bb, msg.eid);
-          diy::save(bb, msg.related_elements);
-      }
-
-      static void load(BinaryBuffer& bb, intersection_t& msg)
-      {
-          diy::load(bb, msg.x);
-          // diy::load(bb, msg.corner);
-          diy::load(bb, msg.val);
-          diy::load(bb, msg.eid);
-          diy::load(bb, msg.related_elements);
-      }
-  };
-}
-
-// template<int DIM>
-struct point_t{
-
-  int&  operator[](unsigned i)                          { return corner[i]; }
-  int   operator[](unsigned i) const                    { return corner[i]; }
-
-  int corner[DIM]; // the spacetime coordinates of the left corner of the element
-  // std::vector<int> corner; 
-
-  // point_t(int DIM): corner(DIM) {}
-};
-
-namespace diy
-{
-  template<>
-  struct Serialization<point_t>
-  {
-      static void save(BinaryBuffer& bb, const point_t& msg)
-      {
-          diy::save(bb, msg.corner);
-      }
-
-      static void load(BinaryBuffer& bb, point_t& msg)
-      {
-          diy::load(bb, msg.corner);
-      }
-  };
-}
-
-// ==========================================================
-
-// DIY Block for distributed critical point tracking
-struct Block_Critical_Point : public Block_Union_Find {
-  Block_Critical_Point() : intersections(), Block_Union_Find() {
+// DIY Block for distributed feature tracking
+struct Block_Feature : public Block_Union_Find {
+  Block_Feature() : intersections(), Block_Union_Find() {
 
   }
 
@@ -87,7 +18,7 @@ struct Block_Critical_Point : public Block_Union_Find {
   void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results);
 
 public:
-  std::map<std::string, intersection_t> intersections; // Points on trajectories of critical points
+  std::map<std::string, intersection_t> intersections; // Features on trajectories
   
   // Data for load balancing
   std::vector<intersection_t> features; 
@@ -97,88 +28,16 @@ public:
 
 };
 
-// ==========================================================
-
-struct Message_Critical_Point : public Message_Union_Find {
-  Message_Critical_Point() {
-
-  }
-
-  void send_intersection(const std::pair<std::string, intersection_t>& pair) {
-    tag = "intersection"; 
-
-    strs.push_back(pair.first); 
-
-    auto& I = pair.second; 
-    
-    strs.push_back(I.eid); 
-    strs.push_back(std::to_string(I.val)); 
-    
-    // strs.push_back(std::to_string(I.x[0])); 
-    // strs.push_back(std::to_string(I.x[1])); 
-    // strs.push_back(std::to_string(I.x[2])); 
-
-    // for(int i = 0; i < I.x.size(); ++i) {
-    //   strs.push_back(std::to_string(I.x[i])); 
-    // }
-
-    for(int i = 0; i < DIM; ++i) {
-      strs.push_back(std::to_string(I.x[i])); 
-    }
-  }
-
-  void receive_intersection(std::pair<std::string, intersection_t>& pair) {
-    pair.first = strs[0]; 
-    
-    intersection_t& I = pair.second; 
-    
-    I.eid = strs[1];
-    I.val = std::stof(strs[2]); 
-
-    // I.x[0] = std::stof(strs[3]); 
-    // I.x[1] = std::stof(strs[4]); 
-    // I.x[2] = std::stof(strs[5]); 
-
-    for(int i = 3; i < strs.size(); ++i) {
-      // I.x.push_back(std::stof(strs[i])); 
-      I.x[i-3] = std::stof(strs[i]); 
-    }
-  }
-
-};
-
-namespace diy
-{
-  template<>
-  struct Serialization<Message_Critical_Point>
-  {
-      static void save(BinaryBuffer& bb, const Message_Critical_Point& msg)
-      {
-          diy::save(bb, msg.tag);
-          // diy::save(bb, msg.str);
-          diy::save(bb, msg.strs);
-      }
-
-      static void load(BinaryBuffer& bb, Message_Critical_Point& msg)
-      {
-          diy::load(bb, msg.tag);
-          // diy::load(bb, msg.str);
-          diy::load(bb, msg.strs);
-      }
-  };
-}
 
 // ==========================================================
+// Generate sets of elements and send to targets
+// Three types of targets: (1) Process 0; (2) Processes of roots of elements; (3) Redistribute randomly
 
 
-// Generate sets of elements
-
-
-
-
-void send_to_target_processes(Block_Critical_Point* b, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::string>& eles_to_send, std::vector<int>& target_gids) {
-  diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
-    // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+// Send features to target processes
+void send_to_target_processes(Block_Feature* b, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::string>& eles_to_send, std::vector<int>& target_gids) {
+  diy::all_to_all(master, assigner, [&](Block_Feature* b, const diy::ReduceProxy& srp) {
+    // Block_Feature* b = static_cast<Block_Feature*>(_b);
     if (srp.round() == 0) {
       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
 
@@ -211,8 +70,8 @@ void send_to_target_processes(Block_Critical_Point* b, diy::Master& master, diy:
   });
 
 
-  diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
-    // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+  diy::all_to_all(master, assigner, [&](Block_Feature* b, const diy::ReduceProxy& srp) {
+    // Block_Feature* b = static_cast<Block_Feature*>(_b);
     if (srp.round() == 0) {
       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
 
@@ -252,11 +111,12 @@ void send_to_target_processes(Block_Critical_Point* b, diy::Master& master, diy:
 
 // Method 1:
   // Send to p0
+  // Use when visualizing the trajectories by using the parameter --qt
 
 // Get sets of elements
-void get_sets_on_p0(Block_Critical_Point* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::string>& eles_to_send, std::vector<int>& target_gids) {
+void get_sets_on_p0(Block_Feature* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::string>& eles_to_send, std::vector<int>& target_gids) {
   int target_gid = 0;
-  master.foreach([&](Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) {
+  master.foreach([&](Block_Feature* b, const diy::Master::ProxyWithLink& cp) {
     int gid = cp.gid(); 
 
     for(auto& ele : b->eles) {
@@ -278,8 +138,8 @@ void get_sets_on_p0(Block_Critical_Point* b, diy::mpi::communicator& world, diy:
   // Step two: gather on root
 
 // Get sets of elements on processes of roots
-void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::string>& eles_to_send, std::vector<int>& target_gids) {
-  master.foreach([&](Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) {
+void get_sets_on_roots(Block_Feature* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::string>& eles_to_send, std::vector<int>& target_gids) {
+  master.foreach([&](Block_Feature* b, const diy::Master::ProxyWithLink& cp) {
     int gid = cp.gid(); 
 
     for(auto& ele : b->eles) {
@@ -301,9 +161,9 @@ void get_sets_on_roots(Block_Critical_Point* b, diy::mpi::communicator& world, d
   // Step two: gather on redistributed processes
 
 // Get sets of elements by redistributing data
-void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::string>& eles_to_send, std::vector<int>& target_gids) {
+void get_sets_redistributed(Block_Feature* b, diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::string>& eles_to_send, std::vector<int>& target_gids) {
   int nblocks = world.size();
-  master.foreach([&](Block_Critical_Point* b, const diy::Master::ProxyWithLink& cp) {
+  master.foreach([&](Block_Feature* b, const diy::Master::ProxyWithLink& cp) {
     int gid = cp.gid(); 
 
     for(auto& ele : b->eles) {
@@ -319,19 +179,19 @@ void get_sets_redistributed(Block_Critical_Point* b, diy::mpi::communicator& wor
 }
 
 // Get sets of elements
-inline void Block_Critical_Point::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
+inline void Block_Feature::get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results) {
 
   std::vector<std::string> eles_to_send ;
   std::vector<int> target_gids;
 
-  // get_sets_on_p0(this, world, master, assigner, eles_to_send, target_gids); 
-  get_sets_on_roots(this, world, master, assigner, eles_to_send, target_gids); 
+  get_sets_on_p0(this, world, master, assigner, eles_to_send, target_gids); 
+  // get_sets_on_roots(this, world, master, assigner, eles_to_send, target_gids); 
   // get_sets_redistributed(this, world, master, assigner, eles_to_send, target_gids); 
 
 
   // ===============================
 
-  Block_Critical_Point* b = this;
+  Block_Feature* b = this;
   send_to_target_processes(b, master, assigner, eles_to_send, target_gids); 
 
   std::map<std::string, std::set<std::string>> root2set; 
@@ -501,7 +361,7 @@ void add_related_elements_to_intersections(std::map<std::string, intersection_t>
 
 
 // Note: will eliminate features of intersections in ghost cells
-void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_simplex_mesh& block_m, Block_Critical_Point* b, int feature_dim) {
+void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_simplex_mesh& block_m, Block_Feature* b, int feature_dim) {
   // std::vector<intersection_t> points; 
   // int DIM = m.nd(); 
 
@@ -531,7 +391,7 @@ void add_points_to_block(hypermesh::regular_simplex_mesh& m, hypermesh::regular_
 // Functions for load balancing
 
 
-void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b) {
+void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Feature* b) {
   // int DIM = m.nd(); 
 
   bool wrap = false; 
@@ -549,12 +409,12 @@ void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& ma
   diy::RegularContinuousLink* link = new diy::RegularContinuousLink(DIM, domain, domain);
   master.add(gid, b, link); 
 
-  diy::kdtree<Block_Critical_Point, point_t>(master, assigner, DIM, domain, &Block_Critical_Point::points, 2*hist, wrap);
+  diy::kdtree<Block_Feature, point_t>(master, assigner, DIM, domain, &Block_Feature::points, 2*hist, wrap);
       // For weighted kdtree, look at kdtree.hpp diy::detail::KDTreePartition<Block,Point>::compute_local_histogram, pass and weights along with particles
 
   // Everybody sends their bounds to everybody else
-  diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
-    // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+  diy::all_to_all(master, assigner, [&](Block_Feature* b, const diy::ReduceProxy& srp) {
+    // Block_Feature* b = static_cast<Block_Feature*>(_b);
     if (srp.round() == 0) {
       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
       for (int i = 0; i < world.size(); ++i) {
@@ -573,9 +433,9 @@ void load_balancing_resize_bounds(diy::mpi::communicator& world, diy::Master& ma
   });
 }
 
-void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
-  diy::all_to_all(master, assigner, [&](Block_Critical_Point* b, const diy::ReduceProxy& srp) {
-    // Block_Critical_Point* b = static_cast<Block_Critical_Point*>(_b);
+void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Feature* b, int feature_dim) {
+  diy::all_to_all(master, assigner, [&](Block_Feature* b, const diy::ReduceProxy& srp) {
+    // Block_Feature* b = static_cast<Block_Feature*>(_b);
     if (srp.round() == 0) {
       diy::RegularContinuousLink* link = static_cast<diy::RegularContinuousLink*>(srp.master()->link(srp.master()->lid(srp.gid())));
 
@@ -617,7 +477,7 @@ void load_balancing_redistribute_data(diy::mpi::communicator& world, diy::Master
 }
 
 
-void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, hypermesh::regular_simplex_mesh& m, int gid, Block_Feature* b, int feature_dim) {
   // int DIM = m.nd(); 
   // , diy::RegularContinuousLink* link
 
@@ -665,7 +525,7 @@ void init_block_after_load_balancing(diy::mpi::communicator& world, diy::Master&
   }
 }
 
-void init_block_without_load_balancing(std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>>& lattice_partitions, hypermesh::regular_simplex_mesh& m, int gid, Block_Critical_Point* b, int feature_dim) {
+void init_block_without_load_balancing(std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>>& lattice_partitions, hypermesh::regular_simplex_mesh& m, int gid, Block_Feature* b, int feature_dim) {
 
   for(auto& intersection : b->intersections) {
     hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, feature_dim, intersection.first);

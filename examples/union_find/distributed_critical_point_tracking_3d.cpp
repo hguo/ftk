@@ -31,7 +31,7 @@
 #include <ftk/external/diy/algorithms.hpp>
 
 #include <ftk/basic/distributed_union_find.hh>
-#include "connected_critical_point.hpp"
+#include "connected_component_labeling.hpp"
 
 #if FTK_HAVE_QT5
 #include "widget.h"
@@ -93,7 +93,7 @@ int threshold_length; // threshold for trajectory length.
 
 std::mutex mutex;
  
-Block_Critical_Point* b = new Block_Critical_Point(); 
+Block_Feature* b = new Block_Feature(); 
 int gid; // global id of this block / this process
 std::map<std::string, intersection_t>* intersections;
 
@@ -326,7 +326,7 @@ void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy
   // Obtain geometries
 
   // Get disjoint sets of element IDs
-  // b = static_cast<Block_Critical_Point*> (master.get(0)); // load block with local id 0
+  // b = static_cast<Block_Feature*> (master.get(0)); // load block with local id 0
   b->get_sets(world, master, assigner, connected_components_str); 
 
   // #ifdef FTK_HAVE_MPI

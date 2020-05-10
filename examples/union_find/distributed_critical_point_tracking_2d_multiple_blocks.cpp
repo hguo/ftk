@@ -1,8 +1,13 @@
+#define DIM 3
+#define FEATURE_DIM 2
+
 #include <fstream>
 #include <mutex>
 #include <thread>
 #include <cassert>
 #include <cxxopts.hpp>
+
+#define NDEBUG // Disable assert()
 
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
@@ -23,8 +28,10 @@
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy/assigner.hpp>
 #include <ftk/external/diy/io/bov.hpp>
+#include <ftk/external/diy/algorithms.hpp>
+
 #include <ftk/basic/distributed_union_find.hh>
-#include "connected_critical_point.hpp"
+#include "connected_component_labeling.hpp"
 
 #if FTK_HAVE_QT5
 #include "widget.h"
@@ -49,9 +56,24 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/vector.hpp>
 
+#define LOAD_BALANCING true
+
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
+
 #define PRINT_FEATURE_DENSITY false
+#define PRINT_ELE_COUNT false
+#define PRINT_EDGE_COUNT false
+
+#define PRINT_SIMPLEX_COUNT false
+
+#define ALL_CRITICAL_POINT 0
+#define MAXIMUM_POINT      1
+
+
+std::mutex mutex;
+
+int CRITICAL_POINT_TYPE; // By default, track maximum points
 
 int nthreads;
 
@@ -61,23 +83,31 @@ int DT; // number of timesteps
 double start, end; 
 
 hypermesh::ndarray<float> scalar, grad, hess;
-diy::DiscreteBounds data_box(3); // bounds of data box
-std::vector<int> data_offset(3);
 
 hypermesh::regular_simplex_mesh m(3); // the 3D space-time mesh
 
+
+// =============
+
+int gid; // global id of this block / this process
+Block_Critical_Point* b = new Block_Critical_Point(); 
+
 hypermesh::regular_simplex_mesh block_m(3); // the 3D space-time mesh of this block
 hypermesh::regular_simplex_mesh block_m_ghost(3); // the 3D space-time mesh of this block with ghost cells
+
+std::map<std::string, intersection_t>* intersections;
+
+diy::DiscreteBounds data_box(3); // bounds of data box
+std::vector<int> data_offset(3);
+
+// =============
+
+
 
 std::vector<std::tuple<hypermesh::regular_lattice, hypermesh::regular_lattice>> lattice_partitions;
 float threshold; // threshold for trajectories. The max scalar on each trajectory should be larger than the threshold. 
 int threshold_length; // threshold for trajectory length.  
 
-std::mutex mutex;
- 
-Block_Critical_Point* b = new Block_Critical_Point(); 
-int gid; // global id of this block / this process
-std::map<std::string, intersection_t>* intersections;
 
 // the output sets of connected elements
 std::vector<std::set<std::string>> connected_components_str; // connected components 
@@ -116,6 +146,11 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
         const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
                 y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
                 t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
+
+        // // For test of weak scaling
+        // const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
+        //         y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
+        //         t = (T(k + data_offset[2]) / (128-1)) + 1e-4;
 
         scalar(i, j, k) = f(x, y, t);
       }
@@ -208,271 +243,6 @@ void decompose_mesh(int nblocks) {
   data_offset = {data_box.min[0], data_box.min[1], data_box.min[2]}; 
 }
 
-bool is_in_mesh(const hypermesh::regular_simplex_mesh_element& f, const hypermesh::regular_lattice& _lattice) { 
-  // If the corner of the face is contained by the core lattice _lattice, we consider the element belongs to _lattice
-
-  for (int i = 0; i < f.corner.size(); ++i){
-    if (f.corner[i] < _lattice.start(i) || f.corner[i] > _lattice.upper_bound(i)) {
-      return false; 
-    }
-  }
-
-  return true;
-}
-
-
-// Add union edges to the block
-void add_unions(const hypermesh::regular_simplex_mesh_element& f) {
-  if (!f.valid()) return; // check if the 3-simplex is valid
-
-  const auto elements = f.sides();
-  std::set<std::string> features; 
-  std::map<std::string, hypermesh::regular_simplex_mesh_element> id2element; 
-
-  for (const auto& ele : elements) {
-    std::string eid = ele.to_string(); 
-    if(intersections->find(eid) != intersections->end()) {
-      features.insert(eid); 
-      id2element.insert(std::make_pair(eid, ele)); 
-    }
-  }
-
-  if(features.size()  > 1) {
-    std::set<std::string> features_in_block; 
-    for(auto& feature : features) {
-      if(b->has(feature)) {
-        features_in_block.insert(feature); 
-      }
-    }
-
-    if(features_in_block.size() > 1) {
-      // When features are local, we just need to relate to the first feature element
-
-      #if MULTITHREAD
-        std::lock_guard<std::mutex> guard(mutex);
-      #endif
-
-      std::string first_feature = *(features_in_block.begin()); 
-      for(std::set<std::string>::iterator ite_i = std::next(features_in_block.begin(), 1); ite_i != features_in_block.end(); ++ite_i) {
-        std::string curr_feature = *ite_i; 
-
-        if(first_feature < curr_feature) { // Since only when the id of related_ele < ele, then the related_ele can be the parent of ele
-          b->add_related_element(curr_feature, first_feature); 
-        } else {
-          b->add_related_element(first_feature, curr_feature);
-        }
-        
-      }
-    }
-
-    if(features_in_block.size() == 0 || features.size() == features_in_block.size()) {
-      return ;
-    }
-  
-    // When features are across processors, we need to relate all local feature elements to all remote feature elements
-    for(auto& feature: features) {
-      if(features_in_block.find(feature) == features_in_block.end()) { // if the feature is not in the block
-        
-        if(!b->has_gid(feature)) { // If the block id of this feature is unknown, search the block id of this feature
-          hypermesh::regular_simplex_mesh_element& ele = id2element.find(feature)->second; 
-          for(int i = 0; i < lattice_partitions.size(); ++i) {
-            if(i != gid){ // We know the feature is not in this partition
-              auto& _lattice = std::get<0>(lattice_partitions[i]); 
-              if(is_in_mesh(ele, _lattice)) { // the feature is in mith partition
-                #if MULTITHREAD
-                  std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-                #endif
-
-                b->set_gid(feature, i); // Set gid of this feature to mi  
-              }
-            }
-          }
-        }
-
-        #if MULTITHREAD 
-          std::lock_guard<std::mutex> guard(mutex); // Use a lock for thread-save. 
-        #endif
-
-        for(auto& feature_in_block : features_in_block) {
-
-          if(feature < feature_in_block) { // When across processes, also, since only when the id of related_ele < ele, then the related_ele can be the parent of ele
-            b->add_related_element(feature_in_block, feature); 
-          }
-
-        }
-      }
-    }
-  }
-}
-
-void extract_connected_components(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
-{
-  // Initialization
-    // Init union-find blocks
-  std::vector<Block_Union_Find*> local_blocks;
-  local_blocks.push_back(b); 
-
-  // std::cout<<"Start Adding Elements to Blocks: "<<world.rank()<<std::endl; 
-
-  std::vector<hypermesh::regular_simplex_mesh_element> eles_with_intersections;
-  for(auto& pair : *intersections) {
-    auto& eid = pair.first;
-    // hypermesh::regular_simplex_mesh_element f = hypermesh::regular_simplex_mesh_element(m, 2, eid); 
-    auto&f = eles_with_intersections.emplace_back(m, 2, eid); 
-
-    if(is_in_mesh(f, block_m.lattice())) {
-      b->add(eid); 
-      b->set_gid(eid, gid);
-    }
-  }
-
-  // std::cout<<"Finish Adding Elements to Blocks: "<<world.rank()<<std::endl; 
-
-  // Connected Component Labeling by using union-find. 
-
-  // std::cout<<"Start Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
-
-  // // Method one:
-  //   // For dense critical points
-  //   // Enumerate each 3-d element to connect 2-d faces that contain critical points  
-  // _m_ghost.element_for(3, add_unions, nthreads); 
-
-  // Method two:
-    // For sparse critical points
-    // Enumerate all critical points, find their higher-order geometry; to connect critical points in this higher-order geometry
-  std::set<std::string> visited_hypercells;
-  for(auto& e : eles_with_intersections) { 
-    const auto hypercells = e.side_of();
-    for(auto& hypercell : hypercells) {
-      std::string id_hypercell = hypercell.to_string(); 
-      if(visited_hypercells.find(id_hypercell) == visited_hypercells.end()) {
-        visited_hypercells.insert(id_hypercell); 
-        add_unions(hypercell); 
-      }
-    }
-  }
-
-  #ifdef FTK_HAVE_MPI
-    #if TIME_OF_STEPS
-      MPI_Barrier(world);
-      end = MPI_Wtime();
-      if(world.rank() == 0) {
-        std::cout << "CCL: Init Blocks: " << end - start << " seconds. " << std::endl;
-      }
-      start = end; 
-    #endif
-  #endif
-
-  // std::cout<<"Finish Adding Union Operations of Elements to Blocks: "<<world.rank()<<std::endl; 
-
-  // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
-
-  // get_connected_components
-  bool is_iexchange = true; // true false
-  exec_distributed_union_find(world, master, assigner, local_blocks, is_iexchange, filename_time_uf_w); 
-
-  #ifdef FTK_HAVE_MPI
-    #if TIME_OF_STEPS
-      MPI_Barrier(world);
-      end = MPI_Wtime();
-      if(world.rank() == 0) {
-        std::cout << "CCL: Distributed Union-Find: " << end - start << " seconds. " << std::endl;
-      }
-      start = end; 
-    #endif
-  #endif
-
-  // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
-
-  // Get disjoint sets of element IDs
-  // b = static_cast<Block_Critical_Point*> (master.get(0)); // load block with local id 0
-  b->get_sets(world, master, assigner, components_str); 
-
-  #ifdef FTK_HAVE_MPI
-    #if TIME_OF_STEPS
-      MPI_Barrier(world);
-      end = MPI_Wtime();
-      if(world.rank() == 0) {
-        std::cout << "CCL: Gather Connected Components: " << end - start << " seconds. " << std::endl;
-      }
-      start = end; 
-    #endif
-  #endif 
-}
-
-void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
-{
-  typedef hypermesh::regular_simplex_mesh_element element_t; 
-
-  // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
-
-  extract_connected_components(world, master, assigner, connected_components_str);
-
-  // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
-
-  // Convert connected components to geometries
-
-  // if(world.rank() == 0) {
-  if(connected_components_str.size() > 0) {
-    
-    std::vector<std::set<element_t>> cc; // connected components 
-    // Convert element IDs to elements
-    for(auto& comp_str : connected_components_str) {
-      cc.push_back(std::set<element_t>()); 
-      std::set<element_t>& comp = cc[cc.size() - 1]; 
-      for(auto& eid : comp_str) {
-        comp.insert(hypermesh::regular_simplex_mesh_element(m, 2, eid)); 
-      }
-    }
-
-    auto neighbors = [](element_t f) {
-      std::set<element_t> neighbors;
-      const auto cells = f.side_of();
-      for (const auto c : cells) {
-        const auto elements = c.sides();
-        for (const auto f1 : elements)
-          neighbors.insert(f1);
-      }
-      return neighbors;
-    };
-    
-    for (int i = 0; i < cc.size(); i ++) {
-      std::vector<std::vector<float>> mycurves;
-      auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(cc[i], neighbors);
-      for (int j = 0; j < linear_graphs.size(); j ++) {
-        int _size = linear_graphs[j].size();
-        if(_size > threshold_length) {
-          std::vector<float> mycurve, mycolors;
-          float max_value = std::numeric_limits<float>::min();
-          for (int k = 0; k < linear_graphs[j].size(); k ++) {
-            auto p = intersections->at(linear_graphs[j][k].to_string());
-            mycurve.push_back(p.x[0]); //  / (DW-1));
-            mycurve.push_back(p.x[1]); //  / (DH-1));
-            mycurve.push_back(p.x[2]); //  / (DT-1));
-            mycurve.push_back(p.val);
-            max_value = std::max(max_value, p.val);
-          }
-          if (max_value > threshold) {
-            trajectories.emplace_back(mycurve);
-          }
-        }
-      }
-    }
-
-  }
-
-  #ifdef FTK_HAVE_MPI
-    #if TIME_OF_STEPS
-      MPI_Barrier(world);
-      end = MPI_Wtime();
-      if(world.rank() == 0) {
-        std::cout << "Generate trajectories: " << end - start << " seconds. " << std::endl;
-      }
-      start = end; 
-    #endif
-  #endif
-}
-
 void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
 {
   if (!f.valid()) return; // check if the 2-simplex is valid
@@ -491,51 +261,182 @@ void check_simplex(const hypermesh::regular_simplex_mesh_element& f)
  
   float mu[3];
   bool succ = ftk::inverse_lerp_s2v2(g, mu);
-  float val = ftk::lerp_s2(value, mu);
   
   if (!succ) return;
 
-  float hessxx[3], hessxy[3], hessyy[3];
-  for (int i = 0; i < vertices.size(); i ++) {
-    int _i = vertices[i][0] - data_offset[0];
-    int _j = vertices[i][1] - data_offset[1];
-    int _k = vertices[i][2] - data_offset[2];
+  if(CRITICAL_POINT_TYPE == MAXIMUM_POINT) {
 
-    hessxx[i] = hess(0, 0, _i, _j, _k);
-    hessxy[i] = hess(0, 1, _i, _j, _k);
-    hessyy[i] = hess(1, 1, _i, _j, _k);
-  }
-  float hxx = ftk::lerp_s2(hessxx, mu),
-        hxy = ftk::lerp_s2(hessxy, mu), 
-        hyy = ftk::lerp_s2(hessyy, mu);
-  float eig[2];
-  ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
+    float hessxx[3], hessxy[3], hessyy[3];
+    for (int i = 0; i < vertices.size(); i ++) {
+      int _i = vertices[i][0] - data_offset[0];
+      int _j = vertices[i][1] - data_offset[1];
+      int _k = vertices[i][2] - data_offset[2];
 
-  if (eig[0] < 0 && eig[1] < 0) { 
-    float X[3][3];
-    for (int i = 0; i < vertices.size(); i ++)
-      for (int j = 0; j < 3; j ++)
-        X[i][j] = vertices[i][j];
-
-    intersection_t I;
-    I.eid = f.to_string();
-    ftk::lerp_s2v3(X, mu, I.x);
-    I.val = ftk::lerp_s2(value, mu);
-
-    {
-      #if MULTITHREAD 
-        std::lock_guard<std::mutex> guard(mutex);
-      #endif
-
-      intersections->insert(std::make_pair(f.to_string(), I)); 
-      // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
+      hessxx[i] = hess(0, 0, _i, _j, _k);
+      hessxy[i] = hess(0, 1, _i, _j, _k);
+      hessyy[i] = hess(1, 1, _i, _j, _k);
     }
+    float hxx = ftk::lerp_s2(hessxx, mu),
+          hxy = ftk::lerp_s2(hessxy, mu), 
+          hyy = ftk::lerp_s2(hessyy, mu);
+    float eig[2];
+    ftk::solve_eigenvalues_symmetric2x2(hxx, hxy, hyy, eig);
+  
+    if (eig[0] < 0 && eig[1] < 0) { 
+      
+    } else {
+      return ;
+    }
+
   }
+
+  // A critical point is detected
+
+  float X[3][3];
+  for (int i = 0; i < vertices.size(); i ++)
+    for (int j = 0; j < 3; j ++)
+      X[i][j] = vertices[i][j];
+
+  float x[3];
+  ftk::lerp_s2v3(X, mu, x);
+
+  intersection_t I;
+  I.eid = f.to_string();
+  I.val = ftk::lerp_s2(value, mu);
+  // I.x.resize(DIM); 
+
+  for(int i = 0; i < 3; ++i) {
+    I.x[i] = x[i]; 
+    // I.corner.push_back(f.corner[i]); 
+  }
+
+  {
+    #if MULTITHREAD 
+      std::lock_guard<std::mutex> guard(mutex);
+    #endif
+
+    intersections->insert(std::make_pair(I.eid, I)); 
+    // fprintf(stderr, "x={%f, %f}, t=%f, val=%f\n", I.x[0], I.x[1], I.x[2], I.val);
+  }
+
 }
+
 
 void scan_intersections() 
 {
   block_m_ghost.element_for(2, check_simplex, nthreads); // iterate over all 2-simplices
+}
+
+
+void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& components_str)
+{
+  // Initialization
+    // Init union-find blocks
+  std::vector<Block_Union_Find*> local_blocks;
+  local_blocks.push_back(b); 
+
+  // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
+
+  // get_connected_components
+  bool is_iexchange = true; // true false
+  exec_distributed_union_find(world, master, assigner, local_blocks, is_iexchange, filename_time_uf_w); 
+
+  #ifdef FTK_HAVE_MPI
+    #if TIME_OF_STEPS
+      MPI_Barrier(world);
+      end = MPI_Wtime();
+      if(world.rank() == 0) {
+        std::cout << "UF: Unions of Disjoint Sets: " << end - start << " seconds. " << std::endl;
+      }
+      start = end; 
+    #endif
+  #endif
+
+  // std::cout<<"Finish Distributed Union-Find: "<<world.rank()<<std::endl; 
+}
+
+void trace_intersections(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner)
+{
+  typedef hypermesh::regular_simplex_mesh_element element_t; 
+
+  // std::cout<<"Start Extracting Connected Components: "<<world.rank()<<std::endl; 
+
+  unite_disjoint_sets(world, master, assigner, connected_components_str);
+
+  // std::cout<<"Finish Extracting Connected Components: "<<world.rank()<<std::endl; 
+
+  // Obtain geometries
+
+  // Get disjoint sets of element IDs
+  // b = static_cast<Block_Critical_Point*> (master.get(0)); // load block with local id 0
+  b->get_sets(world, master, assigner, connected_components_str); 
+
+  // #ifdef FTK_HAVE_MPI
+  //   #if TIME_OF_STEPS
+  //     MPI_Barrier(world);
+  //     end = MPI_Wtime();
+  //     if(world.rank() == 0) {
+  //       std::cout << "Gather Connected Components: " << end - start << " seconds. " << std::endl;
+  //     }
+  //     start = end; 
+  //   #endif
+  // #endif 
+
+  // Convert connected components to geometries
+
+
+  if(connected_components_str.size() > 0) {
+
+    // std::vector<std::set<element_t>> cc; // connected components 
+
+    // Convert element IDs to elements
+    for(auto& comp_str : connected_components_str) {
+      // std::set<element_t>& comp = cc.emplace_back(); 
+      std::vector<element_t> eles; 
+
+      for(auto& eid : comp_str) {
+        // comp.insert(hypermesh::regular_simplex_mesh_element(m, 0, eid)); 
+
+        hypermesh::regular_simplex_mesh_element f(m, 2, eid);
+        eles.push_back(f); 
+      }
+
+      std::sort(eles.begin(), eles.end(), [&](auto&a, auto& b) {
+        auto& pa = intersections->at(a.to_string());
+        auto& pb = intersections->at(b.to_string());
+
+        return (pa.x[2] < pb.x[2]); 
+      });
+      
+      std::vector<float>& mycurve = trajectories.emplace_back();
+      float max_value = std::numeric_limits<float>::min();
+      for (int k = 0; k < eles.size(); k ++) {
+        auto& p = intersections->at(eles[k].to_string());
+
+        mycurve.push_back(p.x[0]); //  / (DW-1));
+        mycurve.push_back(p.x[1]); //  / (DH-1));
+        mycurve.push_back(p.x[2]); //  / (DT-1));
+        mycurve.push_back(p.val);
+        max_value = std::max(max_value, p.val);
+      }
+      if (max_value < threshold) {
+        trajectories.pop_back();
+      }
+    }
+
+  }
+
+
+  #ifdef FTK_HAVE_MPI
+    #if TIME_OF_STEPS
+      MPI_Barrier(world);
+      end = MPI_Wtime();
+      if(world.rank() == 0) {
+        std::cout << "Obtain trajectories: " << end - start << " seconds. " << std::endl;
+      }
+      start = end; 
+    #endif
+  #endif
 }
 
 void print_trajectories()
@@ -753,6 +654,7 @@ int main(int argc, char **argv)
     ("w,width", "width", cxxopts::value<int>(DW)->default_value("128"))
     ("h,height", "height", cxxopts::value<int>(DH)->default_value("128"))
     ("t,timesteps", "timesteps", cxxopts::value<int>(DT)->default_value("10"))
+    ("critical-point-type", "Track which type of critical points", cxxopts::value<int>(CRITICAL_POINT_TYPE)->default_value(std::to_string(MAXIMUM_POINT)))
     ("scaling-factor", "scaling factor for synthetic data", cxxopts::value<int>(scaling_factor)->default_value("15"))
     ("threshold", "threshold", cxxopts::value<float>(threshold)->default_value("0"))
     ("threshold-length", "threshold for trajectory length", cxxopts::value<int>(threshold_length)->default_value("-1"))
@@ -795,19 +697,6 @@ int main(int argc, char **argv)
 
     diy::io::BOV reader(in, shape);
 
-    // int box_size = (box.max[0] - box.min[0] + 1) * (box.max[1] - box.min[1] + 1) * (box.max[2] - box.min[2] + 1); 
-    // std::vector<float> _data(box_size);
-    // reader.read(box, &_data[0], true);
-
-    // int ite = 0; 
-    // for (int k = box.min[0]; k < box.max[0]+1; k ++) {
-    //   for (int j = box.min[1]; j < box.max[1]+1; j ++) {
-    //     for (int i = box.min[2]; i < box.max[2]+1; i ++) {
-    //       scalar(i, j, k) = _data[ite++];
-    //     }
-    //   }
-    // }
-
     scalar.reshape(data_box.max[0] - data_box.min[0] + 1, data_box.max[1] - data_box.min[1] + 1, data_box.max[2] - data_box.min[2] + 1);
 
     reader.read(diy_box, scalar.data(), true);
@@ -823,6 +712,25 @@ int main(int argc, char **argv)
       }
       start = end;  
     #endif
+  #endif
+
+  #if PRINT_FEATURE_DENSITY || PRINT_SIMPLEX_COUNT
+    int element_cnt = 0; 
+
+    m.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f){
+      element_cnt++ ;
+    }, nthreads);
+  #endif
+
+  #if PRINT_SIMPLEX_COUNT
+    if (world.rank() == 0) {
+      std::cout<<"Simplex Count: "<< element_cnt << std::endl; 
+      exit(0); 
+    }
+    
+    MPI_Barrier(world);
+    end = MPI_Wtime();
+    start = end; 
   #endif
 
 // ========================================
@@ -885,62 +793,139 @@ int main(int argc, char **argv)
       grad = derive_gradients2(scalar);
       hess = derive_hessians2(grad);
 
-      // #ifdef FTK_HAVE_MPI
-      //   #if TIME_OF_STEPS
-      //     MPI_Barrier(world);
-      //     end = MPI_Wtime();
-      //     if(world.rank() == 0) {
-      //       std::cout << "Derive gradients: " << end - start << " seconds. " << std::endl;
-      //     }
-      //     start = end; 
-      //   #endif
-      // #endif
-
-      // std::cout<<"Start scanning: "<<world.rank()<<std::endl; 
-
       scan_intersections();
 
-      // #ifdef FTK_HAVE_MPI
-      //   #if TIME_OF_STEPS
-      //     end = MPI_Wtime();
-      //     std::cout << end - start <<std::endl;
-      //     // std::cout << "Scan Critical Points: " << end - start << " seconds. " << gid <<std::endl;
-      //     start = end; 
-      //   #endif
-      // #endif
-
-      #ifdef FTK_HAVE_MPI
-        #if TIME_OF_STEPS
-          MPI_Barrier(world);
-          end = MPI_Wtime();
-          if(world.rank() == 0) {
-            std::cout << "Scan for Critical Points: " << end - start << " seconds. " <<std::endl;
-          }
-          start = end; 
-        #endif
-      #endif
-
-      #if PRINT_FEATURE_DENSITY
-        int n_2d_element; 
-        block_m_ghost.element_for(2, [&](const hypermesh::regular_simplex_mesh_element& f){
-          n_2d_element++ ;
-        }, nthreads);
-        std::cout<<"Feature Density: "<< (intersections->size()) / (float)n_2d_element << std::endl; 
-        #ifdef FTK_HAVE_MPI
-          #if TIME_OF_STEPS
-            MPI_Barrier(world);
-            end = MPI_Wtime();
-            start = end; 
-          #endif
-        #endif
-      #endif
-
-      // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
+
+    add_related_elements_to_intersections(intersections, m, block_m, FEATURE_DIM); 
+
+    add_points_to_block(m, block_m, b, FEATURE_DIM); 
+
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+          std::cout << "Detect Features and Their Relationships: " << end - start << " seconds. " <<std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
+
+    // ===============================
+
+    #if PRINT_ELE_COUNT || PRINT_FEATURE_DENSITY
+      int feature_ele_cnt = 0;
+
+      if (world.rank() == 0) {
+        diy::mpi::reduce<int>(world, b->points.size(), feature_ele_cnt, 0, std::plus<int>());
+      } else {
+        diy::mpi::reduce<int>(world, b->points.size(), 0, std::plus<int>());
+      }
+    #endif
+
+    #if PRINT_ELE_COUNT
+      if (world.rank() == 0) {
+        std::cout<<"Feature Element Count is " << feature_ele_cnt << std::endl; 
+      }
+    #endif
+
+    #if PRINT_FEATURE_DENSITY
+      if (world.rank() == 0) {
+        std::cout<<"Feature Density: "<< feature_ele_cnt / (float)element_cnt << std::endl; 
+      }
+    #endif
+
+    #if PRINT_ELE_COUNT || PRINT_FEATURE_DENSITY || PRINT_SIMPLEX_COUNT
+      MPI_Barrier(world);
+      end = MPI_Wtime();
+      start = end; 
+    #endif
+
+    // ===============================
+
+
+    #if LOAD_BALANCING
+      if(world.size() > 1) {
+        load_balancing_resize_bounds(world, master, assigner, m, gid, b); 
+      }
+    #endif
+
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+            std::cout << "UF: Load balancing - Resize Bounds: " << end - start << " seconds. " << std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
+
+    #if LOAD_BALANCING
+      if(world.size() > 1) {
+        load_balancing_redistribute_data(world, master, assigner, m, gid, b, FEATURE_DIM); 
+      }
+    #endif
+
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+            std::cout << "UF: Load balancing - Redistribute Data: " << end - start << " seconds. " << std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
+
+    #if PRINT_EDGE_COUNT
+      int edge_cnt = 0;
+
+      int local_edge_cnt = 0; 
+      for(auto& feature : b->features) {
+        local_edge_cnt += feature.related_elements.size();
+      }
+
+      if (world.rank() == 0) {
+        diy::mpi::reduce<int>(world, local_edge_cnt, edge_cnt, 0, std::plus<int>());
+      } else {
+        diy::mpi::reduce<int>(world, local_edge_cnt, 0, std::plus<int>());
+      }
+
+      if (world.rank() == 0) {
+        std::cout<<"Edge Count is " << edge_cnt << std::endl; 
+      }
+      
+      MPI_Barrier(world);
+      end = MPI_Wtime();
+      start = end; 
+    #endif
+
+    #if LOAD_BALANCING
+      if(world.size() > 1) {
+        init_block_after_load_balancing(world, master, assigner, m, gid, b, FEATURE_DIM); 
+        master.clear();  // clear the added block, since we will add block into master again. 
+      } else {
+        init_block_without_load_balancing(lattice_partitions, m, gid, b, FEATURE_DIM);  
+      }
+    #else
+      init_block_without_load_balancing(lattice_partitions, m, gid, b, FEATURE_DIM);
+    #endif
+
+    #ifdef FTK_HAVE_MPI
+      #if TIME_OF_STEPS
+        MPI_Barrier(world);
+        end = MPI_Wtime();
+        if(world.rank() == 0) {
+            std::cout << "UF: Init Data Structure of Union-Find: " << end - start << " seconds. " << std::endl;
+        }
+        start = end; 
+      #endif
+    #endif
 
     if (!filename_dump_w.empty())
       write_dump_file(filename_dump_w);
-
 
     // std::cout<<"Start tracing: "<<world.rank()<<std::endl; 
 
