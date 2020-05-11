@@ -22,13 +22,13 @@
 // Add the sparse representation by using Hash map/table 
 
 #define ISDEBUG   0
-#define OUTPUT_TIME_EACH_ROUND 0
+#define OUTPUT_TIME_EACH_ROUND false
 
 namespace ftk {
 template <class IdType=std::string>
 struct distributed_union_find
 {
-  distributed_union_find() : eles(), id2parent(), parent2localchildren(), parent2nonlocalchildren() {
+  distributed_union_find() : eles(), id2parent() {
 
   }
 
@@ -37,8 +37,6 @@ struct distributed_union_find
   void add(IdType i) {
     eles.insert(i); 
     id2parent.insert(std::make_pair(i, i)); 
-    parent2localchildren.insert(std::make_pair(i, std::vector<IdType>())); 
-    parent2nonlocalchildren.insert(std::make_pair(i, std::vector<IdType>())); 
   }
 
   // Operations
@@ -56,36 +54,6 @@ struct distributed_union_find
     // }
   }
 
-  // void add_child(IdType par, IdType ele) {
-  //   assert(has(par));
-
-  //   if(this->has(ele)) {
-  //     parent2localchildren[par].push_back(ele);   
-  //   } else {
-  //     parent2nonlocalchildren[par].push_back(ele);   
-  //   }
-  // }
-
-  void add_local_child(IdType par, IdType ele) {
-    assert(has(par));
-
-    parent2localchildren[par].push_back(ele);   
-  }
-
-  void add_nonlocal_child(IdType par, IdType ele) {
-    assert(has(par));
-
-    parent2nonlocalchildren[par].push_back(ele);   
-  }
-
-  void add_nonlocal_intermediate_root(IdType intermediate_root) {
-    nonlocal_intermediate_roots.insert(intermediate_root); 
-  }
-
-  void erase_nonlocal_intermediate_root(IdType intermediate_root) {
-    nonlocal_intermediate_roots.erase(intermediate_root); 
-  }
-
   // Queries
 
   bool has(IdType i) {
@@ -96,46 +64,6 @@ struct distributed_union_find
     assert(has(i));
 
     return id2parent[i]; 
-  }
-
-  std::vector<IdType>& local_children(IdType i) {
-    assert(has(i));
-
-    return parent2localchildren[i]; 
-  }
-
-  std::vector<IdType>& nonlocal_children(IdType i) {
-    assert(has(i));
-
-    return parent2nonlocalchildren[i]; 
-  }
-
-  typename std::vector<IdType>::iterator erase_local_child(IdType par, typename std::vector<IdType>::iterator ite) {
-    return parent2localchildren[par].erase(ite); 
-  }
-
-  typename std::vector<IdType>::iterator erase_nonlocal_child(IdType par, typename std::vector<IdType>::iterator ite) {
-    return parent2nonlocalchildren[par].erase(ite); 
-  }
-
-  void clear_local_children(std::string i) {
-    assert(has(i));
-
-    parent2localchildren[i].clear(); 
-  }
-
-  void clear_nonlocal_children(std::string i) {
-    assert(has(i));
-
-    parent2nonlocalchildren[i].clear(); 
-  }
-
-  bool is_nonlocal_intermediate_root(IdType i) {
-    if(this->nonlocal_intermediate_roots.find(i) != this->nonlocal_intermediate_roots.end()) {
-      return true ;
-    }
-
-    return false ;
   }
 
   bool is_root(IdType i) {
@@ -150,14 +78,6 @@ public:
 private:
   // Use HashMap to support sparse union-find
   std::map<IdType, IdType> id2parent;
-
-  // std::map<IdType, std::vector<IdType>> parent2children;
-
-  std::map<IdType, std::vector<IdType>> parent2localchildren;
-  std::map<IdType, std::vector<IdType>> parent2nonlocalchildren;
-
-  std::set<IdType> nonlocal_intermediate_roots;
-  
 };
 
 }
@@ -177,6 +97,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     } else {
       distributed_union_find::add(ele); 
       this->related_elements.insert(std::make_pair(ele, std::set<std::string>())); 
+      this->has_sent_gparent_query[ele] = false;
     }
   }
 
@@ -248,10 +169,12 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   }
 
   void set_gid(std::string ele, int gid) {
-    this->nchanges += 1;
+    if(!this->has_gid(ele)) {
+      this->nchanges += 1;
 
-    if(gid >= 0) {
-      this->ele2gid[ele] = gid; 
+      if(gid >= 0) {
+        this->ele2gid[ele] = gid; 
+      }
     }
   }
 
@@ -267,69 +190,6 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     distributed_union_find::set_parent(i, par); 
   }
 
-  void add_local_child(std::string par, std::string ele) {
-    this->nchanges += 1;
-
-    distributed_union_find::add_local_child(par, ele); 
-  }
-
-  void add_nonlocal_child(std::string par, std::string ele) {
-    this->nchanges += 1;
-
-    distributed_union_find::add_nonlocal_child(par, ele); 
-  }
-
-
-  std::vector<std::string>::iterator erase_local_child(std::string par, std::vector<std::string>::iterator ite) {
-    this->nchanges += 1;
-
-    return distributed_union_find::erase_local_child(par, ite); 
-  }
-
-  std::vector<std::string>::iterator erase_nonlocal_child(std::string par, std::vector<std::string>::iterator ite) {
-    this->nchanges += 1;
-
-    return distributed_union_find::erase_nonlocal_child(par, ite); 
-  }
-
-  void clear_local_children(std::string par) {
-    this->nchanges += 1;
-
-    distributed_union_find::clear_local_children(par); 
-  }
-
-  void clear_nonlocal_children(std::string par) {
-    this->nchanges += 1;
-
-    distributed_union_find::clear_nonlocal_children(par); 
-  }
-
-  void add_nonlocal_intermediate_root(std::string intermediate_root) {
-    this->nchanges += 1;
-
-    distributed_union_find::add_nonlocal_intermediate_root(intermediate_root); 
-  }
-
-  void erase_nonlocal_intermediate_root(std::string intermediate_root) {
-    this->nchanges += 1;
-
-    distributed_union_find::erase_nonlocal_intermediate_root(intermediate_root); 
-  }
-
-  bool is_intermediate_root(std::string i) {
-    if(this->has(i)) {
-      if(this->is_root(i) && this->get_related_elements(i).size() == 0) {
-        return true ;
-      } else {
-        return false ;  
-      }
-    } else {
-      return distributed_union_find::is_nonlocal_intermediate_root(i); 
-    }
-
-    return false ;
-  }
-
 
   void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results);
 
@@ -341,13 +201,14 @@ public:
 
   #if OUTPUT_TIME_EACH_ROUND
     double time = 0; // time for measure duration of each round;
+    double time_final_update_start;
   #endif
-  
-  // std::map<int, std::set<std::string>> cache_send_intermediate_roots ;
+
+  std::map<std::string, bool> has_sent_gparent_query; 
 
 private:
   // map element id to ids of its related elements
-  // Can be optimized by ordered the related elements, put related elements on process first and ordered decreingly by ids
+  // Can be optimized by ordered the related elements, put related elements on process first and ordered descendingly by ids
   
   std::map<std::string, std::set<std::string>> related_elements; 
   std::map<std::string, std::set<std::string>> all_related_elements;   
@@ -374,34 +235,20 @@ struct Message_Union_Find {
     strs.push_back(std::to_string(gid)); 
   }
 
-  void send_gparent(std::string& ele, std::string& gparent, int& gid_gparent, bool& is_known) {
+  void send_gparent_query(const std::string& child, const std::string& parent, const int& gid_child) {
+    tag = "gparent_query";
+
+    strs.push_back(child); 
+    strs.push_back(parent); 
+    strs.push_back(std::to_string(gid_child)); 
+  }
+
+  void send_gparent(std::string& ele, std::string& gparent, int& gid_gparent) {
     tag = "gparent";
 
     strs.push_back(ele); 
     strs.push_back(gparent); 
     strs.push_back(std::to_string(gid_gparent)); 
-    strs.push_back(std::to_string(is_known)); 
-  }
-
-  void send_child(const std::string& parent, const std::string& child, const int& gid_child, const bool& is_known) {
-    tag = "child";
-
-    strs.push_back(parent); 
-    strs.push_back(child); 
-    strs.push_back(std::to_string(gid_child)); 
-    strs.push_back(std::to_string(is_known)); 
-  }
-
-  void send_add_intermediate_root(const std::string& parent) {
-    tag = "add_intermediate_root";
-
-    strs.push_back(parent); 
-  }
-
-  void send_erase_intermediate_root(const std::string& parent) {
-    tag = "erase_intermediate_root";
-
-    strs.push_back(parent); 
   }
 
   // Send the union (ele, related_ele) to ele
@@ -440,33 +287,24 @@ struct Message_Union_Find {
     gid = std::stoi(strs[1]);  
   }
 
-  void rec_gparent_query(std::string& ele, std::string& parent) {
-    ele = strs[0]; 
+  void rec_gparent_query(std::string& child, std::string& parent, int& gid_child) {
+    child = strs[0]; 
     parent = strs[1]; 
+    gid_child = std::stoi(strs[2]);  
   }
 
-  void rec_gparent(std::string& ele, std::string& gparent, int& gid_gparent, bool& is_known) {
+  void rec_gparent(std::string& ele, std::string& gparent, int& gid_gparent) {
     ele = strs[0]; 
     gparent = strs[1];
 
     gid_gparent = std::stoi(strs[2]); 
-    is_known = std::stoi(strs[3]); 
   }
 
-  void rec_child(std::string& parent, std::string& child, int& gid_child, bool& is_known) {
+  void rec_child(std::string& parent, std::string& child, int& gid_child) {
     parent = strs[0]; 
     child = strs[1];
 
-    gid_child = std::stoi(strs[2]); 
-    is_known = std::stoi(strs[3]); 
-  }
-
-  void rec_add_intermediate_root(std::string& parent) {
-    parent = strs[0];
-  }
-
-  void rec_erase_intermediate_root(std::string& parent) {
-    parent = strs[0];
+    gid_child = std::stoi(strs[2]);
   }
 
   void rec_union(std::string& ele, std::string& related_ele, int& rgid) {
@@ -627,63 +465,28 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   for(auto& ele : b->eles) {
 
     if(b->is_root(ele)) {
+      // If having a root
+
       auto& related_elements = b->get_related_elements(ele); 
-      // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation erro
-
-      std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
-
-      // Find from local related elements
+      
+      std::string found_related_ele = ele; // Find a the first related element has a smaller id than ele // cannot use auto&, since we will remove some elements from the original set; auto& will cause segmentation error
       for(auto& related_ele : related_elements) {
-        if(b->has(related_ele)) {
+        if(b->has_gid(related_ele)) {
           if (related_ele < found_related_ele) {
             found_related_ele = related_ele; 
+            break ;
           }
         }
       }
 
-      if(found_related_ele == ele) { // Local related elements do not have the satisfied one
-        // Find from non-local related elements
-        for(auto& related_ele : related_elements) {
-          if(!b->has(related_ele) && b->has_gid(related_ele)) {
-            if (related_ele < found_related_ele) {
-              found_related_ele = related_ele; 
-            }
-          }
-        }
-      }
-
-      // auto& related_elements = b->get_related_elements(ele); 
-      // std::string found_related_ele = ele; // Find a smallest related element has a smaller id than ele
-      // for(auto& related_ele : related_elements) {
-        
-      //   if(!b->has_gid(related_ele)) {
-      //     continue ; 
-      //   }
-
-      //   // Unite a root element with larger id or smaller id is better? 
-      //     // Here is a smaller id
-
-      //   if (related_ele < found_related_ele) {
-      //     found_related_ele = related_ele; 
-      //   }
-      // }
+      // ================================================================
 
       if(found_related_ele < ele) {
+
         int rgid = b->get_gid(found_related_ele); 
         // std::cout<<gid<<" "<<rgid<<std::endl; 
         
         b->set_parent(ele, found_related_ele); 
-
-        if(b->has(found_related_ele)) {
-          b->add_local_child(found_related_ele, ele); 
-        } else {
-          Message_Union_Find send_msg; 
-
-          bool is_known = b->is_intermediate_root(found_related_ele); 
-          send_msg.send_child(found_related_ele, ele, gid, is_known); 
-
-          cp.enqueue(l->target(l->find(rgid)), send_msg);
-        }
 
         #if ISDEBUG
           std::cout<<ele<<" -1> "<<found_related_ele<<std::endl; 
@@ -699,85 +502,39 @@ void unite_once(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
 
 void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
+  int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
-  for(auto& parent : b->eles) {
-    if(!b->is_root(parent)) {
-      std::string grandparent = b->parent(parent); 
-      bool is_local_grandparent = b->has(grandparent); // if the grandparent is not in this block
-      if(!is_local_grandparent && !b->has_gid(grandparent)) { // if currently the gid of grandparent is not available
-        continue ;
-      }
-      int gid_grandparent = b->get_gid(grandparent); 
+  for(auto& ele : b->eles) {
 
-      {
-        auto& nonlocal_children = b->nonlocal_children(parent); 
-        if(nonlocal_children.size() > 0) {
-          std::vector<std::string> cache; 
-          for(auto& child : nonlocal_children) {
+    if(!b->is_root(ele)) {
+      std::string parent = b->parent(ele);
 
-            if(!b->has_gid(child)) { // if currently the gid of child is not available
-              cache.push_back(child); 
-              continue ;
-            }
-
-            int gid_child = b->get_gid(child); 
-
-            // Set child's parent to grandparent
-            Message_Union_Find send_msg; 
-            bool is_known = b->is_intermediate_root(grandparent); 
-            send_msg.send_gparent(child, grandparent, gid_grandparent, is_known); 
-            // std::cout<<*ele_ptr<<" - "<<*parent_ptr<<" - "<<grandparent<<" - "<<b->ele2gid[grandparent]<<std::endl; 
-            cp.enqueue(l->target(l->find(gid_child)), send_msg); 
-
-            // Add child to grandparent's child list
-            if(is_local_grandparent) {
-              b->add_nonlocal_child(grandparent, child); 
-            } else {
-              Message_Union_Find send_msg; 
-
-              bool is_known = b->is_intermediate_root(grandparent); 
-              send_msg.send_child(grandparent, child, gid_child, is_known); 
-              cp.enqueue(l->target(l->find(gid_grandparent)), send_msg); 
-            }
-          }
-          b->clear_nonlocal_children(parent); 
-
-          if(cache.size() > 0) {
-            for(auto& cache_ele : cache) {
-              b->add_nonlocal_child(parent, cache_ele); 
-            }
-          }
+      if(b->has(parent)) {
+        
+        if(!b->is_root(parent)) {
+          std::string grandparent = b->parent(parent);
+          b->set_parent(ele, grandparent); // Freely
         }
-      }
 
-
-      if(is_local_grandparent || b->is_intermediate_root(grandparent)) {
-        auto& local_children = b->local_children(parent); 
-        if(local_children.size() > 0) {
-          for(auto& child : local_children) {
-
-            // Set child's parent to grandparent
-            b->set_parent(child, grandparent); 
-
-            // Add child to grandparent's child list
-            if(is_local_grandparent) {
-              b->add_local_child(grandparent, child); 
-            } else {
-              int gid_child = b->get_gid(child); 
-
-              Message_Union_Find send_msg; 
-              bool is_known = b->is_intermediate_root(grandparent); 
-              send_msg.send_child(grandparent, child, gid_child, is_known); 
-
-              cp.enqueue(l->target(l->find(gid_grandparent)), send_msg); 
-            }
-          }
-          b->clear_local_children(parent); 
-
+      } else {
+        
+        if(b->has_sent_gparent_query[ele]) {
+          continue ;
         }
-      }
 
+        if(b->has_gid(parent)) {
+          int gid_parent = b->get_gid(parent);
+
+          Message_Union_Find send_msg; 
+          
+          send_msg.send_gparent_query(ele, parent, gid); 
+          cp.enqueue(l->target(l->find(gid_parent)), send_msg); 
+
+          b->has_sent_gparent_query[ele] = true;
+        }
+
+      }
     }
   }
 }
@@ -788,91 +545,44 @@ void distributed_save_gparent(Block_Union_Find* b, const diy::Master::ProxyWithL
   std::string ele; 
   std::string grandpar; 
   int gid_grandparent; 
-  bool is_known; 
 
-  msg.rec_gparent(ele, grandpar, gid_grandparent, is_known); 
-  
-  // std::cout<<*ele_ptr << " - " << b->parent(*ele_ptr) <<" - "<< *grandpar_ptr<<" - "<<*grandpar_gid_ptr<<std::endl; 
-
-  // if(*ele_ptr == "4") {
-  //   std::cout<<*ele_ptr<<" ~ "<<*grandpar_ptr<<std::endl; 
-  // }
-
-
-  b->set_parent(ele, grandpar); 
+  msg.rec_gparent(ele, grandpar, gid_grandparent); 
   b->set_gid(grandpar, gid_grandparent); 
-  if(is_known && !b->has(grandpar)) {
-    b->add_nonlocal_intermediate_root(grandpar);
+  
+  std::string parent = b->parent(ele);
+  if(grandpar < parent) {
+    b->set_parent(ele, grandpar);   
   }
 
   #if ISDEBUG
     std::cout<<ele<<" -2> "<<grandpar<<std::endl; 
   #endif
+
+  b->has_sent_gparent_query[ele] = false;
 }
 
 // Distributed path compression - Step Three
-void distributed_save_child(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
+void distributed_answer_gparent_query(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
   diy::Link* l = cp.link();
 
-  std::string par; 
   std::string child; 
+  std::string parent; 
   int gid_child; 
-  
-  // Indicate whether child knows the new parent is an intermediate root or not: True - child knows; False - child does not know
-    // If child does not know, by default, child thinks the new parent is NOT an intermediate root. 
-  bool is_known; 
 
-  msg.rec_child(par, child, gid_child, is_known); 
+  msg.rec_gparent_query(child, parent, gid_child); 
 
-  b->set_gid(child, gid_child); 
+  b->set_gid(child, gid_child);
 
-  // Possible that the child has the same process as the new parent
+  std::string grandparent = b->parent(parent); 
+  int gid_grandparent = b->get_gid(grandparent);
 
-  if(b->has(child)) {
-    b->add_local_child(par, child); 
-  } else { // if child is not in this block
-    b->add_nonlocal_child(par, child); 
+  // Set child's parent to grandparent
+  Message_Union_Find send_msg; 
 
-    if(is_known) {  // if child knows this parent is an intermediate root
-      if(!b->is_intermediate_root(par))  { // however, currently it is not
-        // Tell the child that it is not the intermediate root anymore
-
-        // b->cache_send_intermediate_roots[gid_child].insert(par); 
-
-        Message_Union_Find send_msg; 
-        send_msg.send_erase_intermediate_root(par); // Add an intermediate root to the process of child
-
-        cp.enqueue(l->target(l->find(gid_child)), send_msg); 
-      }
-    } else { // if child does not know
-      if(b->is_intermediate_root(par)) { // however, currently it is
-        // Tell the child that it is the intermediate root
-
-        Message_Union_Find send_msg; 
-        send_msg.send_add_intermediate_root(par); // Add an intermediate root to the process of child
-
-        cp.enqueue(l->target(l->find(gid_child)), send_msg); 
-      }
-    }
-  }  
-
+  send_msg.send_gparent(child, grandparent, gid_grandparent); 
+  cp.enqueue(l->target(l->find(gid_child)), send_msg); 
 }
 
-
-// Receive adding an intermediate root
-void distributed_add_intermediate_root(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
-  std::string par;
-  msg.rec_add_intermediate_root(par); // Add an intermediate root
-
-  b->add_nonlocal_intermediate_root(par); 
-}
-
-void distributed_erase_intermediate_root (Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
-  std::string parent;
-  msg.rec_erase_intermediate_root(parent); // Erase an intermediate root
-
-  b->erase_nonlocal_intermediate_root(parent); 
-}
 
 void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   int gid = cp.gid(); 
@@ -886,13 +596,7 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
       auto& src = b->get_related_elements(ele);
       if(src.size() > 0) {
-        std::string par = b->parent(ele); 
-        if(!b->is_intermediate_root(par)) { // Previously test best
-          continue ;
-        }
-        // if(!is_local_parent && !b->is_intermediate_root(par)) { 
-        //   continue ;
-        // }
+        std::string par = b->parent(ele);
 
         bool is_local_parent = true; 
         int p_gid = gid; 
@@ -911,6 +615,7 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           if(related_ele < par) {
 
             if(is_local_parent) {
+
               b->add_related_element(par, related_ele); 
             } else {
               // Communicate with other processes
@@ -932,6 +637,7 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
           } else if(par < related_ele) {
 
             if(b->has(related_ele)) {
+
               b->add_related_element(related_ele, par); 
             } else {
               if(!b->has_gid(related_ele)) {
@@ -969,7 +675,6 @@ void pass_unions(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
 // Update unions of related elements
 void distributed_save_union(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Message_Union_Find msg) {
-  int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
   // std::cout<<"Save Unions: "<<std::endl; 
@@ -1018,22 +723,6 @@ void local_computation(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp
   #endif
 
 
-  // diy::Link* l = cp.link();
-  // for(auto& pair : b->cache_send_intermediate_roots) {
-  //   if(pair.second.size() > 0) {
-  //     auto& target = l->target(l->find(pair.first)); 
-  //     for(auto& par : pair.second) {
-  //       Message_Union_Find send_msg; 
-  //       // send_msg.send_add_intermediate_root(par); // Add an intermediate root to the process of child
-  //       send_msg.send_erase_intermediate_root(par); // Erase an intermediate root to the process of child
-
-  //       cp.enqueue(target, send_msg);   
-  //     }
-  //     pair.second.clear(); 
-  //   } 
-  // }
-  // // b->cache_send_intermediate_roots.clear(); 
-
 }
 
 
@@ -1052,12 +741,8 @@ void received_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp, Mes
 
   if(msg.tag == "gparent") {
     distributed_save_gparent(b, cp, msg); 
-  } else if(msg.tag == "child") {
-    distributed_save_child(b, cp, msg); 
-  } else if(msg.tag == "add_intermediate_root") {
-    distributed_add_intermediate_root(b, cp, msg);
-  } else if(msg.tag == "erase_intermediate_root") {
-    distributed_erase_intermediate_root(b, cp, msg);
+  } else if(msg.tag == "gparent_query") {
+    distributed_answer_gparent_query(b, cp, msg); 
   } else if(msg.tag == "union") {
     distributed_save_union(b, cp, msg); 
   } else if(msg.tag == "gid_query") {
@@ -1088,28 +773,6 @@ void receive_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   }
 }
 
-bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
-  b->nchanges = 0; 
-  
-  receive_msg(b, cp); 
-  local_computation(b, cp); 
-  
-  #if ISDEBUG
-    int gid = cp.gid(); 
-    std::cout<<"gid: "<<gid<<"================================="<<std::endl; 
-  #endif
-
-  #if OUTPUT_TIME_EACH_ROUND
-    b->time = MPI_Wtime();
-  #endif
-
-  return b->nchanges == 0; 
-}
-
-
-void iexchange_process(diy::Master& master) {
-  master.iexchange(&union_find_iexchange); 
-}
 
 void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   cp.collectives()->clear();
@@ -1126,7 +789,8 @@ void exchange_process(diy::Master& master) {
   master.foreach(&receive_msg);
   master.foreach(&local_computation);
   master.foreach(&total_changes);
-  master.exchange();
+  
+  // master.exchange();
 
   #if ISDEBUG
     std::cout<<"================================="<<std::endl; 
@@ -1149,73 +813,60 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
       double start = MPI_Wtime();
     #endif
   #endif
+  
 
-  if(is_iexchange) { // for iexchange
-    master.foreach(&query_gid);
-    iexchange_process(master);  
+  // Only supports exchange
+  bool all_done = false;
+
+  master.foreach(&query_gid);
+  master.exchange();
+
+  #if OUTPUT_TIME_EACH_ROUND
+    int round_cnt = 0; 
+  #endif
+
+  while(!all_done) {
+    exchange_process(master); 
+
+    #if OUTPUT_TIME_EACH_ROUND
+      #ifdef FTK_HAVE_MPI
+        double duration = blocks[0]->time - start; 
+
+        // ss << "Round "<<round_cnt << ":"; 
+        ss << " " << duration ;
+
+        round_cnt ++; 
+
+        MPI_Barrier(world); 
+        start = MPI_Wtime(); 
+      #endif
+    #endif
+
+    master.exchange();
+    int total_changes = master.proxy(master.loaded_block()).read<int>();
+    // int total_changes = master.proxy(master.loaded_block()).get<int>();
+    all_done = total_changes == 0;
 
     // =========================================
     // Debug and Print
 
+    #if ISDEBUG
+      std::cout<<total_changes<<std::endl; 
+    #endif
+
     #if OUTPUT_TIME_EACH_ROUND
       #ifdef FTK_HAVE_MPI
-        if(!filename_time_uf_w.empty()) {
-          double duration = blocks[0]->time - start; 
-          ss << " " << duration ;
+        double duration = MPI_Wtime() - start; 
 
-          MPI_Status status;
-          MPI_File fh;
+        // ss << "Round "<<round_cnt << ":"; 
+        ss << " " << duration ;
 
-          ss<<std::endl;
-          const std::string buf = ss.str();
+        round_cnt ++; 
 
-          MPI_File_open(world, filename_time_uf_w.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
-          
-          MPI_File_write_ordered(fh, buf.c_str(), buf.length(), MPI_CHAR, &status);
-
-          MPI_File_close(&fh);
-        }
+        MPI_Barrier(world); 
+        start = MPI_Wtime(); 
       #endif
     #endif
-
-  } else { // for exchange
-    bool all_done = false;
-
-    master.foreach(&query_gid);
-    master.exchange();
-
-    #if OUTPUT_TIME_EACH_ROUND
-      int round_cnt = 0; 
-    #endif
-
-    while(!all_done) {
-      exchange_process(master); 
-      int total_changes = master.proxy(master.loaded_block()).read<int>();
-      // int total_changes = master.proxy(master.loaded_block()).get<int>();
-      all_done = total_changes == 0;
-
-      // =========================================
-      // Debug and Print
-
-      #if ISDEBUG
-        std::cout<<total_changes<<std::endl; 
-      #endif
-
-      #if OUTPUT_TIME_EACH_ROUND
-        #ifdef FTK_HAVE_MPI
-          double duration = blocks[0]->time - start; 
-
-          // ss << "Round "<<round_cnt << ":"; 
-          ss << " " << duration ;
-
-          round_cnt ++; 
-
-          MPI_Barrier(world); 
-          start = MPI_Wtime(); 
-        #endif
-      #endif
-    }
-
 
     #if OUTPUT_TIME_EACH_ROUND
       #ifdef FTK_HAVE_MPI
@@ -1237,8 +888,6 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
       #endif
     #endif
   }
-
-  // master.iexchange(&union_find_iexchange, 16, 1000);
 }
 
 

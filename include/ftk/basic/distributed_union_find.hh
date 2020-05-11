@@ -200,10 +200,12 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   }
 
   void set_gid(std::string ele, int gid) {
-    this->nchanges += 1;
+    if(!this->has_gid(ele)) {
+      this->nchanges += 1;
 
-    if(gid >= 0) {
-      this->ele2gid[ele] = gid; 
+      if(gid >= 0) {
+        this->ele2gid[ele] = gid; 
+      }
     }
   }
 

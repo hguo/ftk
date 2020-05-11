@@ -1,5 +1,4 @@
 #include <hypermesh/regular_simplex_mesh.hh>
-#include <ftk/basic/distributed_union_find.hh>
 
 #ifndef DIM
   #define DIM 3
