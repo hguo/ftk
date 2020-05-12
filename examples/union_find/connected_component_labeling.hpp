@@ -186,8 +186,8 @@ inline void Block_Feature::get_sets(diy::mpi::communicator& world, diy::Master& 
   std::vector<std::string> eles_to_send ;
   std::vector<int> target_gids;
 
-  get_sets_on_p0(this, world, master, assigner, eles_to_send, target_gids); 
-  // get_sets_on_roots(this, world, master, assigner, eles_to_send, target_gids); 
+  // get_sets_on_p0(this, world, master, assigner, eles_to_send, target_gids); 
+  get_sets_on_roots(this, world, master, assigner, eles_to_send, target_gids); 
   // get_sets_redistributed(this, world, master, assigner, eles_to_send, target_gids); 
 
 
