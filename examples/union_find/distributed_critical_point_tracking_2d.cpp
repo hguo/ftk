@@ -134,14 +134,14 @@ hypermesh::ndarray<T> generate_synthetic_data(int DW, int DH, int DT)
     for (int j = 0; j < data_box.max[1] + 1 - data_offset[1]; j ++) {
       for (int i = 0; i < data_box.max[0] + 1 - data_offset[0]; i ++) {
         
-        // const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
-        //         y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
-        //         t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
-
-        // For test of weak scaling
         const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
                 y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
-                t = (T(k + data_offset[2]) / (128-1)) + 1e-4;
+                t = (T(k + data_offset[2]) / (DT-1)) + 1e-4;
+
+        // // For test of weak scaling
+        // const T x = ((T(i + data_offset[0]) / (DW-1)) - 0.5) * scaling_factor,
+        //         y = ((T(j + data_offset[1]) / (DH-1)) - 0.5) * scaling_factor, 
+        //         t = (T(k + data_offset[2]) / (128-1)) + 1e-4;
 
         scalar(i, j, k) = f(x, y, t);
       }
