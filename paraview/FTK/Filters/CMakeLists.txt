@@ -2,6 +2,7 @@ set(classes
   vtkCriticalPointTracker2D
   vtkCriticalPointTracker2DSpacetime
   vtkSpiralWoven2DSpacetimeSource
+  vtkSpiralWoven2DSource
   vtkABCFlow3DVectorFieldSource
   vtkDoubleGyreVectorField2DSource
 )
@@ -15,6 +16,7 @@ paraview_add_server_manager_xmls(XMLS
   CriticalPointTracker2D.xml
   CriticalPointTracker2DSpacetime.xml
   SpiralWoven2DSpacetimeSource.xml
+  SpiralWoven2DSource.xml
   ABCFlow3DVectorFieldSource.xml
   DoubleGyreVectorField2DSource.xml
 )

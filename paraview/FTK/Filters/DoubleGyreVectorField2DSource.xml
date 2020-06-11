@@ -2,8 +2,8 @@
   <ProxyGroup name="sources">
     <SourceProxy name="DoubleGyreVectorField2DSource" class="vtkDoubleGyreVectorField2DSource" label="DoubleGyreVectorField2DSource">
       <Documentation
-        short_help="synthetic 2D ABC flow data for FTK"
-        long_help="synthetic 2D ABC flow data for FTK">
+        short_help="synthetic 2D double gyre flow data for FTK"
+        long_help="synthetic 2D double gyre data for FTK">
       </Documentation>
 
       <IntVectorProperty 
