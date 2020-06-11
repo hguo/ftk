@@ -11,7 +11,6 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
@@ -60,46 +59,36 @@ int vtkCriticalPointTracker2D::RequestData(
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
+  ftk::ndarray<double> scalar;
+  scalar.from_vtk_image_data(input);
+
+  if (currentTimestep == 0) { // first timestep
+    const size_t DW = scalar.shape(0), DH = scalar.shape(1); // , DT = scalar.shape(2);
+    
+    tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
+    // tracker.set_domain(ftk::lattice({4, 4}, {DW-6, DH-6}));
+    tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+    tracker.set_input_array_partial(false);
+    tracker.set_scalar_field_source(ftk::SOURCE_GIVEN);
+    tracker.set_vector_field_source(ftk::SOURCE_DERIVED);
+    tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
+    // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
+    tracker.initialize();
+  }
+    
+  tracker.push_scalar_field_spacetime(scalar);
+  tracker.advance_timestep();
+
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() ))
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
-  else 
+  else { // the last timestep
     request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
+    
+    tracker.finalize();
+    auto poly = tracker.get_traced_critical_points_vtk();
+    output->DeepCopy(poly);
+  }
 
-  auto rtn = TrackCriticalPoints2DSpaceTime(input, output);
   currentTimestep ++;
-
-  return rtn;
-}
-
-int vtkCriticalPointTracker2D::TrackCriticalPoints2DSpaceTime(vtkImageData* imageData, vtkPolyData* polyData)
-{
-  ftk::ndarray<double> scalar;
-  scalar.from_vtk_image_data(imageData);
-  
-  const size_t DW = scalar.shape(0), DH = scalar.shape(1), DT = scalar.shape(2);
-  fprintf(stderr, "currentTimestep=%d, DW=%lu, DH=%lu, DT=%lu\n", 
-      currentTimestep, DW, DH, DT);
-
-  return 1;
-
-  ftk::critical_point_tracker_2d_regular tracker; 
-  tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
-  // tracker.set_domain(ftk::lattice({4, 4}, {DW-6, DH-6}));
-  tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
-  tracker.set_input_array_partial(false);
-  tracker.set_scalar_field_source(ftk::SOURCE_GIVEN);
-  tracker.set_vector_field_source(ftk::SOURCE_DERIVED);
-  tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
-  // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
-  tracker.initialize();
-
-  tracker.push_scalar_field_spacetime(scalar);
-  while (tracker.advance_timestep()) {}
-
-  tracker.finalize();
-  auto poly = tracker.get_traced_critical_points_vtk();
-
-  polyData->DeepCopy(poly);
-
-  return 1;
+  return 1; 
 }

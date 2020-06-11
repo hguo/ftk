@@ -3,6 +3,7 @@
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
+#include <ftk/filters/critical_point_tracker_2d_regular.hh>
 
 class vtkDataSet;
 
@@ -23,9 +24,6 @@ protected:
   int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
-  int TrackCriticalPoints2DSpaceTime(vtkImageData*, vtkPolyData*); // the input is a stack of 2D slices
-
-private:
   vtkCriticalPointTracker2D(const vtkCriticalPointTracker2D&);
   void operator=(const vtkCriticalPointTracker2D&);
 
@@ -33,8 +31,9 @@ private:
   bool bUseGPU;
   double dGaussianKernelSize;
 
-
   int currentTimestep;
+  
+  ftk::critical_point_tracker_2d_regular tracker; 
 };
 
 #endif
