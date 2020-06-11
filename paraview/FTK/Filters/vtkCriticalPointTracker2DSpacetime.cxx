@@ -1,4 +1,4 @@
-#include "vtkCriticalPointTracker2DSpaceTime.h"
+#include "vtkCriticalPointTracker2DSpacetime.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,9 +16,9 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkCriticalPointTracker2DSpaceTime);
+vtkStandardNewMacro(vtkCriticalPointTracker2DSpacetime);
 
-vtkCriticalPointTracker2DSpaceTime::vtkCriticalPointTracker2DSpaceTime()
+vtkCriticalPointTracker2DSpacetime::vtkCriticalPointTracker2DSpacetime()
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);
@@ -27,27 +27,27 @@ vtkCriticalPointTracker2DSpaceTime::vtkCriticalPointTracker2DSpaceTime()
   SetGaussianKernelSize(2.0);
 }
 
-vtkCriticalPointTracker2DSpaceTime::~vtkCriticalPointTracker2DSpaceTime()
+vtkCriticalPointTracker2DSpacetime::~vtkCriticalPointTracker2DSpacetime()
 {
 }
 
-void vtkCriticalPointTracker2DSpaceTime::SetUseGPU(bool b)
+void vtkCriticalPointTracker2DSpacetime::SetUseGPU(bool b)
 {
   bUseGPU = b;
 }
 
-void vtkCriticalPointTracker2DSpaceTime::SetGaussianKernelSize(double t)
+void vtkCriticalPointTracker2DSpacetime::SetGaussianKernelSize(double t)
 {
   dGaussianKernelSize = t;
 }
 
-int vtkCriticalPointTracker2DSpaceTime::FillOutputPortInformation(int, vtkInformation *info)
+int vtkCriticalPointTracker2DSpacetime::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
   return 1;
 }
 
-int vtkCriticalPointTracker2DSpaceTime::RequestData(
+int vtkCriticalPointTracker2DSpacetime::RequestData(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -58,11 +58,11 @@ int vtkCriticalPointTracker2DSpaceTime::RequestData(
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
   
-  auto rtn = TrackCriticalPoints2DSpaceTime(input, output);
+  auto rtn = TrackCriticalPoints2DSpacetime(input, output);
   return rtn;
 }
 
-int vtkCriticalPointTracker2DSpaceTime::TrackCriticalPoints2DSpaceTime(vtkImageData* imageData, vtkPolyData* polyData)
+int vtkCriticalPointTracker2DSpacetime::TrackCriticalPoints2DSpacetime(vtkImageData* imageData, vtkPolyData* polyData)
 {
   ftk::ndarray<double> scalar;
   scalar.from_vtk_image_data(imageData);
