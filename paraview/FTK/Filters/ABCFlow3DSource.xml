@@ -1,6 +1,6 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="sources">
-    <SourceProxy name="ABCFlow3DVectorFieldSource" class="vtkABCFlow3DVectorFieldSource" label="ABCFlow3DVectorFieldSource">
+    <SourceProxy name="ABCFlow3DSource" class="vtkABCFlow3DSource" label="ABCFlow3DSource">
       <Documentation
         short_help="synthetic 3D ABC flow data for FTK"
         long_help="synthetic 3D ABC flow data for FTK">

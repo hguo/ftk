@@ -1,4 +1,4 @@
-#include "vtkDoubleGyreVectorField2DSource.h"
+#include "vtkABCFlow3DSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,47 +16,36 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkDoubleGyreVectorField2DSource);
+vtkStandardNewMacro(vtkABCFlow3DSource);
 
-vtkDoubleGyreVectorField2DSource::vtkDoubleGyreVectorField2DSource() : 
-  DW(32), DH(32), DT(10),
-  StartTime(0.0), TimeScale(1.0),
-  A(0.1), Omega(M_PI*2), Epsilon(0.25)
+vtkABCFlow3DSource::vtkABCFlow3DSource() : 
+  DW(32), DH(32), DD(10), 
+  A(std::sqrt(3.0)), B(std::sqrt(2.0)), C(1.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }
 
-vtkDoubleGyreVectorField2DSource::~vtkDoubleGyreVectorField2DSource()
+vtkABCFlow3DSource::~vtkABCFlow3DSource()
 {
 }
 
-int vtkDoubleGyreVectorField2DSource::FillOutputPortInformation(int, vtkInformation *info)
+int vtkABCFlow3DSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkDoubleGyreVectorField2DSource::RequestInformation(
+int vtkABCFlow3DSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
 {
-  int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
+  int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
 
   vtkInformation *outInfo = outVec->GetInformationObject(0);
-
-  // time varying data
-  double timeRange[2] = {0.0, DT - 1.0};
-  std::vector<double> timeSteps;
-  for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i) * TimeScale + StartTime);
-
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);
-
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent, 6);
   outInfo->Set(vtkDataObject::SPACING(), cell_lengths, 3);
   outInfo->Set(vtkDataObject::ORIGIN(), origins, 3);
@@ -64,7 +53,7 @@ int vtkDoubleGyreVectorField2DSource::RequestInformation(
   return 1;
 }
 
-int vtkDoubleGyreVectorField2DSource::RequestData(
+int vtkABCFlow3DSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -73,28 +62,13 @@ int vtkDoubleGyreVectorField2DSource::RequestData(
   vtkImageData *imageData = 
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  double currentTime;
-  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()))
-    currentTime = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
-  else 
-    currentTime = StartTime;
-
-  auto vector_field = ftk::synthetic_double_gyre<float>(DW, DH, currentTime, true, A, Omega, Epsilon);
+  auto vector_field = ftk::synthetic_abc_flow<float>(DW, DH, DD, A, B, C);
   auto imageData1 = vector_field.to_vtk_image_data(true);
-  imageData->ShallowCopy(imageData1);
+  imageData->DeepCopy(imageData1);
   
-  
-  int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
+  int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
-
-  double timeRange[2] = {0.0, DT - 1.0};
-  std::vector<double> timeSteps;
-  for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i) * TimeScale + StartTime);
-
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent, 6);
   outInfo->Set(vtkDataObject::SPACING(), cell_lengths, 3);

@@ -1,16 +1,16 @@
-#ifndef __vtkABCFlow3DVectorFieldSource_h
-#define __vtkABCFlow3DVectorFieldSource_h
+#ifndef __vtkABCFlow3DSource_h
+#define __vtkABCFlow3DSource_h
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkDataSet;
 
-class vtkABCFlow3DVectorFieldSource : public vtkImageAlgorithm
+class vtkABCFlow3DSource : public vtkImageAlgorithm
 {
 public:
-  static vtkABCFlow3DVectorFieldSource *New();
-  vtkTypeMacro(vtkABCFlow3DVectorFieldSource, vtkImageAlgorithm);
+  static vtkABCFlow3DSource *New();
+  vtkTypeMacro(vtkABCFlow3DSource, vtkImageAlgorithm);
 
   void setA(double a) {A = a;}
   void setB(double b) {B = b;}
@@ -21,16 +21,16 @@ public:
   // void setScalingFactor(double s) {scale = s;}
 
 protected:
-  vtkABCFlow3DVectorFieldSource();
-  ~vtkABCFlow3DVectorFieldSource();
+  vtkABCFlow3DSource();
+  ~vtkABCFlow3DSource();
 
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
-  vtkABCFlow3DVectorFieldSource(const vtkABCFlow3DVectorFieldSource&);
-  void operator=(const vtkABCFlow3DVectorFieldSource&);
+  vtkABCFlow3DSource(const vtkABCFlow3DSource&);
+  void operator=(const vtkABCFlow3DSource&);
 
 private:
   double A, B, C;
