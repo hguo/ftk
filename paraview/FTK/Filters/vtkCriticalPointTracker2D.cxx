@@ -26,6 +26,7 @@ vtkCriticalPointTracker2D::vtkCriticalPointTracker2D()
   SetGaussianKernelSize(2.0);
 
   currentTimestep = 0;
+  inputDataComponents = 0;
 }
 
 vtkCriticalPointTracker2D::~vtkCriticalPointTracker2D()
@@ -51,6 +52,8 @@ int vtkCriticalPointTracker2D::RequestInformation(
 
   outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_RANGE());
+
+  return 1;
 }
 
 int vtkCriticalPointTracker2D::RequestUpdateExtent(
@@ -86,23 +89,34 @@ int vtkCriticalPointTracker2D::RequestData(
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  ftk::ndarray<double> scalar;
-  scalar.from_vtk_image_data(input);
-
   if (currentTimestep == 0) { // first timestep
-    const size_t DW = scalar.shape(0), DH = scalar.shape(1); // , DT = scalar.shape(2);
-    fprintf(stderr, "DW=%d, DH=%d\n", DW, DH);
+    inputDataComponents = input->GetNumberOfScalarComponents();
+    const size_t DW = input->GetDimensions()[0], 
+                 DH = input->GetDimensions()[1];
     
-    tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
-    // tracker.set_domain(ftk::lattice({4, 4}, {DW-6, DH-6}));
-    tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
-    tracker.set_input_array_partial(false);
-    tracker.set_scalar_field_source(ftk::SOURCE_GIVEN);
-    tracker.set_vector_field_source(ftk::SOURCE_DERIVED);
-    tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
-    // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
+    fprintf(stderr, "DW=%zu, DH=%zu\n", DW, DH);
+    if (inputDataComponents == 1) { // scalar field
+      tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+      tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+      tracker.set_input_array_partial(false);
+      tracker.set_scalar_field_source(ftk::SOURCE_GIVEN);
+      tracker.set_vector_field_source(ftk::SOURCE_DERIVED);
+      tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
+    } else if (inputDataComponents > 1) { // vector field
+      tracker.set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
+      tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+      tracker.set_input_array_partial(false);
+      tracker.set_scalar_field_source(ftk::SOURCE_NONE);
+      tracker.set_vector_field_source(ftk::SOURCE_GIVEN);
+      tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
+    } else 
+      assert(false);
+    
     tracker.initialize();
   }
+  
+  ftk::ndarray<double> field_data;
+  field_data.from_vtk_image_data(input);
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() ))
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
@@ -118,7 +132,9 @@ int vtkCriticalPointTracker2D::RequestData(
   }
    
   // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
-  tracker.push_scalar_field_snapshot(scalar);
+  if (inputDataComponents == 1) tracker.push_scalar_field_snapshot(field_data);
+  else tracker.push_vector_field_snapshot(field_data);
+
   if (currentTimestep != 0)
     tracker.advance_timestep();
 
