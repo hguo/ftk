@@ -1,4 +1,4 @@
-#include "vtkCriticalPoint2DTracker.h"
+#include "vtkCriticalPointTracker2D.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,39 +16,41 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkCriticalPoint2DTracker);
+vtkStandardNewMacro(vtkCriticalPointTracker2D);
 
-vtkCriticalPoint2DTracker::vtkCriticalPoint2DTracker()
+vtkCriticalPointTracker2D::vtkCriticalPointTracker2D()
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);
   
   SetUseGPU(false);
   SetGaussianKernelSize(2.0);
+
+  currentTimestep = 0;
 }
 
-vtkCriticalPoint2DTracker::~vtkCriticalPoint2DTracker()
+vtkCriticalPointTracker2D::~vtkCriticalPointTracker2D()
 {
 }
 
-void vtkCriticalPoint2DTracker::SetUseGPU(bool b)
+void vtkCriticalPointTracker2D::SetUseGPU(bool b)
 {
   bUseGPU = b;
 }
 
-void vtkCriticalPoint2DTracker::SetGaussianKernelSize(double t)
+void vtkCriticalPointTracker2D::SetGaussianKernelSize(double t)
 {
   dGaussianKernelSize = t;
 }
 
-int vtkCriticalPoint2DTracker::FillOutputPortInformation(int, vtkInformation *info)
+int vtkCriticalPointTracker2D::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
   return 1;
 }
 
-int vtkCriticalPoint2DTracker::RequestData(
-    vtkInformation*, 
+int vtkCriticalPointTracker2D::RequestData(
+    vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
 {
@@ -58,17 +60,27 @@ int vtkCriticalPoint2DTracker::RequestData(
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  auto rtn = TrackCriticalPoints2D(input, output);
+  if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() ))
+    request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
+  else 
+    request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
+
+  auto rtn = TrackCriticalPoints2DSpaceTime(input, output);
+  currentTimestep ++;
+
   return rtn;
 }
 
-int vtkCriticalPoint2DTracker::TrackCriticalPoints2D(vtkImageData* imageData, vtkPolyData* polyData)
+int vtkCriticalPointTracker2D::TrackCriticalPoints2DSpaceTime(vtkImageData* imageData, vtkPolyData* polyData)
 {
   ftk::ndarray<double> scalar;
   scalar.from_vtk_image_data(imageData);
   
   const size_t DW = scalar.shape(0), DH = scalar.shape(1), DT = scalar.shape(2);
-  fprintf(stderr, "DW=%lu, DH=%lu, DT=%lu\n", DW, DH, DT);
+  fprintf(stderr, "currentTimestep=%d, DW=%lu, DH=%lu, DT=%lu\n", 
+      currentTimestep, DW, DH, DT);
+
+  return 1;
 
   ftk::critical_point_tracker_2d_regular tracker; 
   tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));

@@ -1,6 +1,6 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="filters">
-    <SourceProxy name="CriticalPoint2DTracker" class="vtkCriticalPoint2DTracker" label="CriticalPoint2DTracker">
+    <SourceProxy name="CriticalPointTracker2D" class="vtkCriticalPointTracker2D" label="CriticalPointTracker2D">
       <Documentation
          short_help="track critical points in 2D time-varying scalar field data"
          long_help="track critical points in 2D time-varying scalar field data">
