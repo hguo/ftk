@@ -411,7 +411,7 @@ inline void ndarray<T>::from_vtk_image_data(vtkSmartPointer<vtkImageData> d)
             nc = d->GetNumberOfScalarComponents();
   auto da = d->GetPointData()->GetScalars();
 
-  fprintf(stderr, "nd=%d, nc=%d\n", nd, nc);
+  // fprintf(stderr, "nd=%d, nc=%d\n", nd, nc);
   // da->PrintSelf(std::cerr, vtkIndent(2));
   // d->PrintSelf(std::cerr, vtkIndent(2));
   if (nd == 2) {

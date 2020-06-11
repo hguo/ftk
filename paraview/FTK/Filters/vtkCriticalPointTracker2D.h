@@ -20,6 +20,8 @@ protected:
   vtkCriticalPointTracker2D();
   ~vtkCriticalPointTracker2D();
 
+  int RequestUpdateExtent(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
+  int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
