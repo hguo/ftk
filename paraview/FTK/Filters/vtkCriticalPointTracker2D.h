@@ -34,7 +34,7 @@ private:
   double dGaussianKernelSize;
 
 
-  int step;
+  int currentTimestep;
 };
 
 #endif
