@@ -26,11 +26,17 @@ vtkCriticalPointTracker2D::vtkCriticalPointTracker2D()
   SetGaussianKernelSize(2.0);
 
   currentTimestep = 0;
+
   inputDataComponents = 0;
 }
 
 vtkCriticalPointTracker2D::~vtkCriticalPointTracker2D()
 {
+}
+
+void vtkCriticalPointTracker2D::SetInputVariable(const char* s)
+{
+  inputVariable = s;
 }
 
 void vtkCriticalPointTracker2D::SetUseGPU(bool b)
@@ -89,6 +95,9 @@ int vtkCriticalPointTracker2D::RequestData(
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
+  const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+  // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
+  
   if (currentTimestep == 0) { // first timestep
     inputDataComponents = input->GetNumberOfScalarComponents();
     const size_t DW = input->GetDimensions()[0], 
@@ -117,11 +126,24 @@ int vtkCriticalPointTracker2D::RequestData(
   
   ftk::ndarray<double> field_data;
   input->PrintSelf(std::cerr, vtkIndent(2));
-  field_data.from_vtk_image_data(input);
+  field_data.from_vtk_image_data(input, inputVariable);
 
-  if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() ))
+  if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
+    // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
+    if (inputDataComponents == 1) tracker.push_scalar_field_snapshot(field_data);
+    else tracker.push_vector_field_snapshot(field_data);
+
+    if (currentTimestep != 0)
+      tracker.advance_timestep();
+
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
-  else { // the last timestep
+  } else { // the last timestep
+    if (nt == 0) { // the only timestp
+      if (inputDataComponents == 1) tracker.push_scalar_field_snapshot(field_data);
+      else tracker.push_vector_field_snapshot(field_data);
+      tracker.update_timestep();
+    }
+
     request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
     currentTimestep = 0;
     
@@ -132,12 +154,6 @@ int vtkCriticalPointTracker2D::RequestData(
     return 1;
   }
    
-  // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
-  if (inputDataComponents == 1) tracker.push_scalar_field_snapshot(field_data);
-  else tracker.push_vector_field_snapshot(field_data);
-
-  if (currentTimestep != 0)
-    tracker.advance_timestep();
 
   currentTimestep ++;
   return 1; 

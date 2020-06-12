@@ -15,6 +15,7 @@ public:
 
   void SetUseGPU(bool);
   void SetGaussianKernelSize(double);
+  void SetInputVariable(const char*);
 
 protected:
   vtkCriticalPointTracker2D();
@@ -35,6 +36,7 @@ private:
 
   int currentTimestep;
   int inputDataComponents;
+  std::string inputVariable;
   
   ftk::critical_point_tracker_2d_regular tracker; 
 };
