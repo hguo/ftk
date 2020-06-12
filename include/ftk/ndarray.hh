@@ -187,7 +187,7 @@ struct ndarray {
   void to_vtk_image_data_file(const std::string& filename, bool multicomponent=false) const;
 #if FTK_HAVE_VTK
   static int vtk_data_type();
-  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d);
+  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string& array_name=std::string());
   vtkSmartPointer<vtkImageData> to_vtk_image_data(bool multicomponent=false) const;
   vtkSmartPointer<vtkDataArray> to_vtk_data_array(bool multicomponent=false) const;
 #endif
@@ -405,15 +405,18 @@ inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(bool multicom
 }
 
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data(vtkSmartPointer<vtkImageData> d)
+inline void ndarray<T>::from_vtk_image_data(
+    vtkSmartPointer<vtkImageData> d, 
+    const std::string& array_name)
 {
   const int nd = d->GetDataDimension(), 
             nc = d->GetNumberOfScalarComponents();
-  auto da = d->GetPointData()->GetScalars();
+
+  vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
+  if (!da) da = d->GetPointData()->GetArray(0);
+  // auto da = d->GetPointData()->GetScalars();
 
   // fprintf(stderr, "nd=%d, nc=%d\n", nd, nc);
-  // da->PrintSelf(std::cerr, vtkIndent(2));
-  // d->PrintSelf(std::cerr, vtkIndent(2));
   if (nd == 2) {
     if (nc == 1) { // scalar field
       reshape(d->GetDimensions()[0], d->GetDimensions()[1]);

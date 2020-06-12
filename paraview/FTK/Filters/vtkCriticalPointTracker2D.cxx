@@ -94,7 +94,7 @@ int vtkCriticalPointTracker2D::RequestData(
     const size_t DW = input->GetDimensions()[0], 
                  DH = input->GetDimensions()[1];
     
-    fprintf(stderr, "DW=%zu, DH=%zu\n", DW, DH);
+    fprintf(stderr, "DW=%zu, DH=%zu, components=%d\n", DW, DH, inputDataComponents);
     if (inputDataComponents == 1) { // scalar field
       tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
       tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
@@ -116,6 +116,7 @@ int vtkCriticalPointTracker2D::RequestData(
   }
   
   ftk::ndarray<double> field_data;
+  input->PrintSelf(std::cerr, vtkIndent(2));
   field_data.from_vtk_image_data(input);
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() ))
