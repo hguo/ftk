@@ -8,56 +8,56 @@
 
       <IntVectorProperty 
         name="Width"
-        command="setW"
+        command="SetDW"
         number_of_elements="1"
         default_values="64">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Height"
-        command="setH"
+        command="SetDH"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Timesteps"
-        command="setT"
+        command="SetDT"
         number_of_elements="1"
         default_values="100">
       </IntVectorProperty>
       
       <DoubleVectorProperty
         name="StartTime"
-        command="setStartTime"
+        command="SetStartTime"
         number_of_elements="1"
         default_values="0.0">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
         name="TimeScale"
-        command="setTimeScale"
+        command="SetTimeScale"
         number_of_elements="1"
         default_values="0.1">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
         name="A"
-        command="setA"
+        command="SetA"
         number_of_elements="1"
         default_values="0.1">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
         name="Omega"
-        command="setOmega"
+        command="SetOmega"
         number_of_elements="1"
         default_values="6.28318530718">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
         name="Epsilon"
-        command="setEpsilon"
+        command="SetEpsilon"
         number_of_elements="1"
         default_values="0.25">
       </DoubleVectorProperty>

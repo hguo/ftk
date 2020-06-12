@@ -12,14 +12,14 @@ public:
   static vtkDoubleGyre2DSource *New();
   vtkTypeMacro(vtkDoubleGyre2DSource, vtkImageAlgorithm);
 
-  void setA(double a) {A = a;}
-  void setOmega(double omega) {Omega = omega;}
-  void setEpsilon(double epsilon) {Epsilon = epsilon;}
-  void setStartTime(double t) {StartTime = t;}
-  void setTimeScale(double ts) {TimeScale = ts;}
-  void setW(int w) {DW = w;}
-  void setH(int h) {DH = h;}
-  void setT(int t) {DT = t;}
+  vtkSetMacro(A, double);
+  vtkSetMacro(Omega, double);
+  vtkSetMacro(Epsilon, double);
+  vtkSetMacro(StartTime, double);
+  vtkSetMacro(TimeScale, double);
+  vtkSetMacro(DW, int);
+  vtkSetMacro(DH, int);
+  vtkSetMacro(DT, int);
 
 protected:
   vtkDoubleGyre2DSource();
