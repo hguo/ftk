@@ -34,21 +34,6 @@ vtkCriticalPointTracker2D::~vtkCriticalPointTracker2D()
 {
 }
 
-void vtkCriticalPointTracker2D::SetInputVariable(const char* s)
-{
-  inputVariable = s;
-}
-
-void vtkCriticalPointTracker2D::SetUseGPU(bool b)
-{
-  bUseGPU = b;
-}
-
-void vtkCriticalPointTracker2D::SetGaussianKernelSize(double t)
-{
-  dGaussianKernelSize = t;
-}
-
 int vtkCriticalPointTracker2D::RequestInformation(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
@@ -89,6 +74,8 @@ int vtkCriticalPointTracker2D::RequestData(
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
 {
+  fprintf(stderr, "requesting data.\n");
+
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
@@ -125,8 +112,8 @@ int vtkCriticalPointTracker2D::RequestData(
   }
   
   ftk::ndarray<double> field_data;
-  input->PrintSelf(std::cerr, vtkIndent(2));
-  field_data.from_vtk_image_data(input, inputVariable);
+  // input->PrintSelf(std::cerr, vtkIndent(2));
+  field_data.from_vtk_image_data(input, InputVariable);
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
@@ -150,6 +137,8 @@ int vtkCriticalPointTracker2D::RequestData(
     tracker.finalize();
     auto poly = tracker.get_traced_critical_points_vtk();
     output->DeepCopy(poly);
+
+    tracker.reset();
 
     return 1;
   }

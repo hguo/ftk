@@ -13,9 +13,14 @@ public:
   static vtkCriticalPointTracker2D *New();
   vtkTypeMacro(vtkCriticalPointTracker2D, vtkImageAlgorithm);
 
-  void SetUseGPU(bool);
-  void SetGaussianKernelSize(double);
-  void SetInputVariable(const char*);
+  vtkSetMacro(UseGPU, bool);
+  vtkGetMacro(UseGPU, bool);
+
+  vtkSetMacro(GaussianKernelSize, double);
+  vtkGetMacro(GaussianKernelSize, double);
+
+  vtkSetMacro(InputVariable, std::string);
+  vtkGetMacro(InputVariable, std::string);
 
 protected:
   vtkCriticalPointTracker2D();
@@ -31,12 +36,12 @@ private:
   void operator=(const vtkCriticalPointTracker2D&);
 
 private:
-  bool bUseGPU;
-  double dGaussianKernelSize;
+  bool UseGPU;
+  double GaussianKernelSize;
+  std::string InputVariable;
 
   int currentTimestep;
   int inputDataComponents;
-  std::string inputVariable;
   
   ftk::critical_point_tracker_2d_regular tracker; 
 };

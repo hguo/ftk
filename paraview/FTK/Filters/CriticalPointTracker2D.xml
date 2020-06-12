@@ -22,7 +22,7 @@
         name="InputVariable"
         command="SetInputVariable"
         number_of_elements="1"
-        animateable="0">
+        animateable="1">
         <ArrayListDomain name="array_list"
           attribute_type="Scalars"
           input_domain_name="inputs_array">
@@ -45,7 +45,8 @@
         name="GaussianKernelSize"
         command="SetGaussianKernelSize"
         number_of_elements="1"
-        default_values="2.0">
+        default_values="2.0"
+        animateable="0">
       </DoubleVectorProperty>
 
       <Hints>

@@ -13,6 +13,7 @@ struct critical_point_tracker : public filter {
   critical_point_tracker() {}
 
   virtual void update() {}; // TODO
+  void reset() {field_data_snapshots.clear();}
 
 #if FTK_HAVE_VTK
   virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const = 0;

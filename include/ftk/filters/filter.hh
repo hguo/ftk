@@ -27,6 +27,7 @@ struct filter {
   }
 
   virtual void update() = 0;
+  virtual void reset() {};
 
   void use_accelerator(int i) {xl = i;}
 

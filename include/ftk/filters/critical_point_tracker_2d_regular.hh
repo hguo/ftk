@@ -58,6 +58,7 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
 
   void initialize();
   void finalize();
+  void reset();
 
   void update_timestep();
 
@@ -141,6 +142,16 @@ inline void critical_point_tracker_2d_regular::finalize()
     // trace_intersections();
     trace_connected_components();
   }
+}
+
+inline void critical_point_tracker_2d_regular::reset()
+{
+  current_timestep = 0;
+
+  field_data_snapshots.clear();
+  discrete_critical_points.clear();
+  traced_critical_points.clear();
+  connected_components.clear();
 }
 
 inline void critical_point_tracker_2d_regular::push_scalar_field_snapshot(const ndarray<double>& s)
