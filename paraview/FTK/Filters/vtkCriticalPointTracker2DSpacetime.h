@@ -11,9 +11,9 @@ class vtkCriticalPointTracker2DSpacetime : public vtkImageAlgorithm
 public:
   static vtkCriticalPointTracker2DSpacetime *New();
   vtkTypeMacro(vtkCriticalPointTracker2DSpacetime, vtkImageAlgorithm);
-
-  void SetUseGPU(bool);
-  void SetGaussianKernelSize(double);
+  
+  vtkSetMacro(UseGPU, bool);
+  vtkSetMacro(GaussianKernelSize, double);
 
 protected:
   vtkCriticalPointTracker2DSpacetime();
@@ -30,8 +30,8 @@ private:
   void operator=(const vtkCriticalPointTracker2DSpacetime&);
 
 private:
-  bool bUseGPU;
-  double dGaussianKernelSize;
+  bool UseGPU;
+  double GaussianKernelSize;
 };
 
 #endif

@@ -8,42 +8,42 @@
 
       <IntVectorProperty 
         name="Width"
-        command="setW"
+        command="SetDW"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Height"
-        command="setH"
+        command="SetDH"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Depth"
-        command="setD"
+        command="SetDD"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <DoubleVectorProperty
         name="A"
-        command="setA"
+        command="SetA"
         number_of_elements="1"
         default_values="1.7321">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
         name="B"
-        command="setB"
+        command="SetB"
         number_of_elements="1"
         default_values="1.4142">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
         name="C"
-        command="setC"
+        command="SetC"
         number_of_elements="1"
         default_values="1.0">
       </DoubleVectorProperty>

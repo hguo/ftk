@@ -8,38 +8,38 @@
 
       <IntVectorProperty 
         name="Width"
-        command="setW"
+        command="SetDW"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Height"
-        command="setH"
+        command="SetDH"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
+      <IntVectorProperty 
+        name="Timesteps"
+        command="SetDT"
+        number_of_elements="1"
+        default_values="10">
+      </IntVectorProperty>
+      
       <DoubleVectorProperty
         name="StartTime"
-        command="setStartTime"
+        command="SetStartTime"
         number_of_elements="1"
         default_values="0.0">
       </DoubleVectorProperty>
       
       <DoubleVectorProperty
         name="TimeScale"
-        command="setTimeScale"
+        command="SetTimeScale"
         number_of_elements="1"
         default_values="0.1">
       </DoubleVectorProperty>
-      
-      <IntVectorProperty 
-        name="Timesteps"
-        command="setT"
-        number_of_elements="1"
-        default_values="10">
-      </IntVectorProperty>
       
       <DoubleVectorProperty
         name="ScalingFactor"

@@ -23,22 +23,12 @@ vtkCriticalPointTracker2DSpacetime::vtkCriticalPointTracker2DSpacetime()
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);
   
-  SetUseGPU(false);
-  SetGaussianKernelSize(2.0);
+  // SetUseGPU(false);
+  // SetGaussianKernelSize(2.0);
 }
 
 vtkCriticalPointTracker2DSpacetime::~vtkCriticalPointTracker2DSpacetime()
 {
-}
-
-void vtkCriticalPointTracker2DSpacetime::SetUseGPU(bool b)
-{
-  bUseGPU = b;
-}
-
-void vtkCriticalPointTracker2DSpacetime::SetGaussianKernelSize(double t)
-{
-  dGaussianKernelSize = t;
 }
 
 int vtkCriticalPointTracker2DSpacetime::FillOutputPortInformation(int, vtkInformation *info)

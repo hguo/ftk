@@ -18,7 +18,7 @@
 
 vtkStandardNewMacro(vtkSpiralWoven2DSpacetimeSource);
 
-vtkSpiralWoven2DSpacetimeSource::vtkSpiralWoven2DSpacetimeSource() : DW(32), DH(32), DT(10), scale(15.0)
+vtkSpiralWoven2DSpacetimeSource::vtkSpiralWoven2DSpacetimeSource() : DW(32), DH(32), DT(10), ScalingFactor(15.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
@@ -60,7 +60,7 @@ int vtkSpiralWoven2DSpacetimeSource::RequestData(
   vtkImageData *imageData = 
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  auto scalar = ftk::synthetic_woven_2Dt<float>(DW, DH, DT, scale);
+  auto scalar = ftk::synthetic_woven_2Dt<float>(DW, DH, DT, ScalingFactor);
   auto imageData1 = scalar.to_vtk_image_data();
   imageData->DeepCopy(imageData1);
   

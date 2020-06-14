@@ -18,7 +18,8 @@
 
 vtkStandardNewMacro(vtkSpiralWoven2DSource);
 
-vtkSpiralWoven2DSource::vtkSpiralWoven2DSource() : DW(32), DH(32), DT(10), scale(15.0)
+vtkSpiralWoven2DSource::vtkSpiralWoven2DSource() 
+  : DW(32), DH(32), DT(10), ScalingFactor(15.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
@@ -76,7 +77,7 @@ int vtkSpiralWoven2DSource::RequestData(
   else 
     currentTime = StartTime;
 
-  auto scalar = ftk::synthetic_woven_2D<float>(DW, DH, currentTime+1e-4, scale);
+  auto scalar = ftk::synthetic_woven_2D<float>(DW, DH, currentTime+1e-4, ScalingFactor);
   auto imageData1 = scalar.to_vtk_image_data();
   imageData->ShallowCopy(imageData1);
   
@@ -95,8 +96,6 @@ int vtkSpiralWoven2DSource::RequestData(
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent, 6);
   outInfo->Set(vtkDataObject::SPACING(), cell_lengths, 3);
   outInfo->Set(vtkDataObject::ORIGIN(), origins, 3);
-
-  return 1;
 
   return 1;
 }

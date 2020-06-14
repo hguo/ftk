@@ -12,13 +12,12 @@ public:
   static vtkABCFlow3DSource *New();
   vtkTypeMacro(vtkABCFlow3DSource, vtkImageAlgorithm);
 
-  void setA(double a) {A = a;}
-  void setB(double b) {B = b;}
-  void setC(double c) {C = c;}
-  void setW(int w) {DW = w;}
-  void setH(int h) {DH = h;}
-  void setD(int d) {DD = d;}
-  // void setScalingFactor(double s) {scale = s;}
+  vtkSetMacro(A, double);
+  vtkSetMacro(B, double);
+  vtkSetMacro(C, double);
+  vtkSetMacro(DW, int);
+  vtkSetMacro(DH, int);
+  vtkSetMacro(DD, int);
 
 protected:
   vtkABCFlow3DSource();

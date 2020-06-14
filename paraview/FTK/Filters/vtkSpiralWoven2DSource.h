@@ -12,12 +12,12 @@ public:
   static vtkSpiralWoven2DSource *New();
   vtkTypeMacro(vtkSpiralWoven2DSource, vtkImageAlgorithm);
 
-  void setW(int w) {DW = w;}
-  void setH(int h) {DH = h;}
-  void setT(int t) {DT = t;}
-  void setScalingFactor(double s) {scale = s;}
-  void setStartTime(double t) {StartTime = t;}
-  void setTimeScale(double ts) {TimeScale = ts;}
+  vtkSetMacro(DW, int);
+  vtkSetMacro(DH, int);
+  vtkSetMacro(DT, int);
+  vtkSetMacro(ScalingFactor, double);
+  vtkSetMacro(StartTime, double);
+  vtkSetMacro(TimeScale, double);
 
 protected:
   vtkSpiralWoven2DSource();
@@ -33,7 +33,7 @@ private:
 
 private:
   int DW, DH, DT;
-  double scale;
+  double ScalingFactor;
   double StartTime, TimeScale;
 };
 

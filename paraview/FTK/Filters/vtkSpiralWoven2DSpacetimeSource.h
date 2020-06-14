@@ -11,11 +11,11 @@ class vtkSpiralWoven2DSpacetimeSource : public vtkImageAlgorithm
 public:
   static vtkSpiralWoven2DSpacetimeSource *New();
   vtkTypeMacro(vtkSpiralWoven2DSpacetimeSource, vtkImageAlgorithm);
-
-  void setW(int w) {DW = w;}
-  void setH(int h) {DH = h;}
-  void setT(int t) {DT = t;}
-  void setScalingFactor(double s) {scale = s;}
+  
+  vtkSetMacro(DW, int);
+  vtkSetMacro(DH, int);
+  vtkSetMacro(DT, int);
+  vtkSetMacro(ScalingFactor, double);
 
 protected:
   vtkSpiralWoven2DSpacetimeSource();
@@ -31,7 +31,7 @@ private:
 
 private:
   int DW, DH, DT;
-  double scale;
+  double ScalingFactor;
 };
 
 #endif
