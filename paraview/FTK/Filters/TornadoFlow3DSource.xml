@@ -27,6 +27,13 @@
         default_values="32">
       </IntVectorProperty>
 
+      <IntVectorProperty 
+        name="Timesteps"
+        command="SetDT"
+        number_of_elements="1"
+        default_values="20">
+      </IntVectorProperty>
+
       <Hints>
         <ShowInMenu category="FTK"/>
       </Hints>

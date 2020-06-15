@@ -15,6 +15,7 @@ public:
   vtkSetMacro(DW, int);
   vtkSetMacro(DH, int);
   vtkSetMacro(DD, int);
+  vtkSetMacro(DT, int);
 
 protected:
   ftkTornadoFlow3DSource();
@@ -29,7 +30,7 @@ private:
   void operator=(const ftkTornadoFlow3DSource&);
 
 private:
-  int DW, DH, DD;
+  int DW, DH, DD, DT;
   // double scale;
 };
 
