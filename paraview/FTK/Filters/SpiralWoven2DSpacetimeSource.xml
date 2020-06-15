@@ -8,28 +8,28 @@
 
       <IntVectorProperty 
         name="Width"
-        command="setW"
+        command="SetW"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Height"
-        command="setH"
+        command="SetH"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Timesteps"
-        command="setT"
+        command="SetT"
         number_of_elements="1"
         default_values="10">
       </IntVectorProperty>
       
       <DoubleVectorProperty
         name="ScalingFactor"
-        command="setScalingFactor"
+        command="SetScalingFactor"
         number_of_elements="1"
         default_values="15.0">
       </DoubleVectorProperty>

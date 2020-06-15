@@ -112,7 +112,9 @@ int vtkCriticalPointTracker2D::RequestData(
   }
   
   ftk::ndarray<double> field_data;
+  // std::cerr << "InputVariable: " << InputVariable << std::endl;
   // input->PrintSelf(std::cerr, vtkIndent(2));
+
   field_data.from_vtk_image_data(input, InputVariable);
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
