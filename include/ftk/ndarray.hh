@@ -424,11 +424,18 @@ inline void ndarray<T>::from_vtk_image_data(
       for (auto i = 0; i < nelem(); i ++)
         p[i] = da->GetTuple1(i);
     } else { // TODO
+#if 0
       for (int j = 0; j < d->GetDimensions()[1]; j ++)
         for (int i = 0; i < d->GetDimensions()[0]; i ++)
           for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
             p.push_back(d->GetScalarComponentAsDouble(i, j, 0, c));
+#endif
       reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1]);
+      for (auto i = 0; i < nelem(); i ++) {
+        double *tuple = da->GetTuple(i);
+        for (auto j = 0; j < nc; j ++) 
+          p.push_back(tuple[j]);
+      }
     }
   } else if (nd == 3) {
     if (nc == 1) { // scalar field
