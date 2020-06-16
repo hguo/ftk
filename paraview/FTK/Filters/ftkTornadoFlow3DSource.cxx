@@ -49,7 +49,7 @@ int ftkTornadoFlow3DSource::RequestInformation(
   // time varying data
   double TimeRange[2] = {0.0, DT - 1.0};
   std::vector<double> TimeSteps;
-  for (int i = 0; i < DT; i ++)
+  for (int i = 0; i < DT; i ++) 
     TimeSteps.push_back(static_cast<double>(i));
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), TimeRange, 2);

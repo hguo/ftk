@@ -33,6 +33,16 @@
         number_of_elements="1"
         default_values="20">
       </IntVectorProperty>
+      
+      <DoubleVectorProperty
+			  information_only="1"
+			  name="TimestepValues"
+        repeatable="1">
+        <TimeStepsInformationHelper/>
+			  <Documentation>
+			    Available timestep values.
+			  </Documentation>
+			</DoubleVectorProperty>
 
       <Hints>
         <ShowInMenu category="FTK"/>
