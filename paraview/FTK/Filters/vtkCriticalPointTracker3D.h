@@ -3,7 +3,7 @@
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
-#include <ftk/filters/critical_point_tracker_2d_regular.hh>
+#include <ftk/filters/critical_point_tracker_3d_regular.hh>
 
 class vtkDataSet;
 
@@ -43,7 +43,7 @@ private:
   int currentTimestep;
   int inputDataComponents;
   
-  ftk::critical_point_tracker_2d_regular tracker; 
+  ftk::critical_point_tracker_3d_regular tracker; 
 };
 
 #endif

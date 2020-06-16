@@ -65,6 +65,7 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   void update_timestep();
   
   void push_scalar_field_snapshot(const ndarray<double>&);
+  void push_vector_field_snapshot(const ndarray<double>&);
   
 #if FTK_HAVE_VTK
   virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
@@ -148,6 +149,17 @@ inline void critical_point_tracker_3d_regular::push_scalar_field_snapshot(const 
     if (jacobian_field_source == SOURCE_DERIVED)
       snapshot.jacobian = jacobian3D(snapshot.vector);
   }
+
+  field_data_snapshots.emplace_back( snapshot );
+}
+
+inline void critical_point_tracker_3d_regular::push_vector_field_snapshot(const ndarray<double>& v)
+{
+  field_data_snapshot_t snapshot;
+ 
+  snapshot.vector = v;
+  if (jacobian_field_source == SOURCE_DERIVED)
+    snapshot.jacobian = jacobian3D(snapshot.vector);
 
   field_data_snapshots.emplace_back( snapshot );
 }

@@ -9,6 +9,8 @@
 #include "vtkImageData.h"
 #include "vtkSphereSource.h"
 #include "vtkInformationVector.h"
+#include "vtkTransform.h"
+#include "vtkTransformFilter.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include <ftk/ndarray/synthetic.hh>
@@ -82,14 +84,14 @@ int vtkCriticalPointTracker3D::RequestData(
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
+  const size_t DW = input->GetDimensions()[0], 
+               DH = input->GetDimensions()[1],
+               DD = input->GetDimensions()[1];
   const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
   
   if (currentTimestep == 0) { // first timestep
     inputDataComponents = input->GetNumberOfScalarComponents();
-    const size_t DW = input->GetDimensions()[0], 
-                 DH = input->GetDimensions()[1],
-                 DD = input->GetDimensions()[1];
     
     fprintf(stderr, "DW=%zu, DH=%zu, DD=%zu, components=%d\n", DW, DH, DD, inputDataComponents);
     tracker.set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
@@ -136,7 +138,20 @@ int vtkCriticalPointTracker3D::RequestData(
     
     tracker.finalize();
     auto poly = tracker.get_traced_critical_points_vtk();
-    output->DeepCopy(poly);
+
+    // transform to match the bounds of the input image data
+    const double *bounds = input->GetBounds();
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->Scale((bounds[1]-bounds[0])/(DW-1), (bounds[3]-bounds[2])/(DH-1), (bounds[5]-bounds[4])/(DD-1));
+    transform->Translate(bounds[0], bounds[2], bounds[4]);
+
+    vtkSmartPointer<vtkTransformFilter> transformFilter = vtkSmartPointer<vtkTransformFilter>::New();
+    transformFilter->SetInputData(poly);
+    transformFilter->SetTransform(transform);
+    transformFilter->Update();
+
+    // output->DeepCopy(poly);
+    output->DeepCopy(transformFilter->GetOutput());
 
     tracker.reset();
 
