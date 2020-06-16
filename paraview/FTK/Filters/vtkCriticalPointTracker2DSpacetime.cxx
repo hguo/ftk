@@ -8,6 +8,8 @@
 #include "vtkCellArray.h"
 #include "vtkImageData.h"
 #include "vtkSphereSource.h"
+#include "vtkTransform.h"
+#include "vtkTransformFilter.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
@@ -56,7 +58,9 @@ int vtkCriticalPointTracker2DSpacetime::TrackCriticalPoints2DSpacetime(vtkImageD
 {
   ftk::ndarray<double> scalar;
   scalar.from_vtk_image_data(imageData);
-  
+ 
+  imageData->PrintSelf(std::cerr, vtkIndent(2));
+
   const size_t DW = scalar.shape(0), DH = scalar.shape(1), DT = scalar.shape(2);
   // fprintf(stderr, "currentTimestep=%d, DW=%lu, DH=%lu, DT=%lu\n", 
   //     currentTimestep, DW, DH, DT);
@@ -78,7 +82,19 @@ int vtkCriticalPointTracker2DSpacetime::TrackCriticalPoints2DSpacetime(vtkImageD
   tracker.finalize();
   auto poly = tracker.get_traced_critical_points_vtk();
 
-  polyData->DeepCopy(poly);
+  // transform to match the bounds of the input image data
+  const double *bounds = imageData->GetBounds();
+  vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+  transform->Scale((bounds[1]-bounds[0])/(DW-1), (bounds[3]-bounds[2])/(DH-1), (bounds[5]-bounds[4])/(DT-1));
+  transform->Translate(bounds[0], bounds[2], bounds[4]);
+
+  vtkSmartPointer<vtkTransformFilter> transformFilter = vtkSmartPointer<vtkTransformFilter>::New();
+  transformFilter->SetInputData(poly);
+  transformFilter->SetTransform(transform);
+  transformFilter->Update();
+
+  // polyData->DeepCopy(poly);
+  polyData->DeepCopy(transformFilter->GetOutput());
 
   return 1;
 }

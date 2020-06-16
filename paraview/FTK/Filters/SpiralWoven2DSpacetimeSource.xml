@@ -8,21 +8,21 @@
 
       <IntVectorProperty 
         name="Width"
-        command="SetW"
+        command="SetDW"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Height"
-        command="SetH"
+        command="SetDH"
         number_of_elements="1"
         default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
         name="Timesteps"
-        command="SetT"
+        command="SetDT"
         number_of_elements="1"
         default_values="10">
       </IntVectorProperty>
