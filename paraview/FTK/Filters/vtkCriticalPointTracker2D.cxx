@@ -86,7 +86,8 @@ int vtkCriticalPointTracker2D::RequestData(
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
   
   if (currentTimestep == 0) { // first timestep
-    inputDataComponents = input->GetNumberOfScalarComponents();
+    vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
+    inputDataComponents = da->GetNumberOfComponents();
     const size_t DW = input->GetDimensions()[0], 
                  DH = input->GetDimensions()[1];
     

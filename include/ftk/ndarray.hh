@@ -409,50 +409,27 @@ inline void ndarray<T>::from_vtk_image_data(
     vtkSmartPointer<vtkImageData> d, 
     const std::string& array_name)
 {
-  const int nd = d->GetDataDimension(), 
-            nc = d->GetNumberOfScalarComponents();
-
   vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
   if (!da) da = d->GetPointData()->GetArray(0);
-  // auto da = d->GetPointData()->GetScalars();
-  // da->PrintSelf(std::cerr, vtkIndent(2));
+  
+  const int nd = d->GetDataDimension(), 
+            nc = da->GetNumberOfComponents();
 
-  // fprintf(stderr, "nd=%d, nc=%d\n", nd, nc);
   if (nd == 2) {
-    if (nc == 1) { // scalar field
-      reshape(d->GetDimensions()[0], d->GetDimensions()[1]);
-      for (auto i = 0; i < nelem(); i ++)
-        p[i] = da->GetTuple1(i);
-    } else { // TODO
-#if 0
-      for (int j = 0; j < d->GetDimensions()[1]; j ++)
-        for (int i = 0; i < d->GetDimensions()[0]; i ++)
-          for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
-            p.push_back(d->GetScalarComponentAsDouble(i, j, 0, c));
-#endif
-      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1]);
-      for (auto i = 0; i < nelem(); i ++) {
-        double *tuple = da->GetTuple(i);
-        for (auto j = 0; j < nc; j ++) 
-          p.push_back(tuple[j]);
-      }
-    }
+    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1]); // scalar field
+    else reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1]); // vector field
   } else if (nd == 3) {
-    if (nc == 1) { // scalar field
-      reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
-      for (auto i = 0; i < nelem(); i ++)
-        p[i] = da->GetTuple1(i);
-    } else { // TODO
-      for (int k = 0; k < d->GetDimensions()[2]; k ++)
-        for (int j = 0; j < d->GetDimensions()[1]; j ++)
-          for (int i = 0; i < d->GetDimensions()[0]; i ++)
-            for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
-              p.push_back(d->GetScalarComponentAsDouble(i, j, k, c));
-      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
-    }
+    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]); // scalar field
+    else reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
   } else {
     fprintf(stderr, "[FTK] fatal error: unsupported data dimension %d.\n", nd);
     assert(false);
+  }
+
+  for (auto i = 0; i < da->GetNumberOfTuples(); i ++) {
+    double *tuple = da->GetTuple(i);
+    for (auto j = 0; j < nc; j ++)
+      p[i*nc+j] = tuple[j];
   }
 }
 
