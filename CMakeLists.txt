@@ -266,3 +266,4 @@ if (FTK_BUILD_PARAVIEW)
 endif ()
 
 add_subdirectory (src)
+add_subdirectory (standalone)
