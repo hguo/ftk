@@ -1,0 +1,2 @@
+add_executable (ftk_track_critical_points critical_point_tracking.cpp)
+target_link_libraries (ftk_track_critical_points ftk)
