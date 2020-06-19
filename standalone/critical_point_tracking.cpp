@@ -44,6 +44,7 @@ std::string input_filename_pattern,
   input_variable_name_w;
 std::string output_filename,
   output_format;
+std::vector<std::string> input_filenames; // assuming each file contains only one timestep, and all files have the exactly same structure
 size_t DW = 0, DH = 0, DD = 0, DT = 0;
 bool verbose = false, demo = false, help = false;
 
@@ -68,11 +69,71 @@ ftk::critical_point_tracker_regular* tracker = NULL;
 ///////////////////////////////
 ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
 {
-  if (demo) {
-    const double t = DT == 1 ? 0.0 : double(k)/(DT-1);
-    return ftk::synthetic_woven_2D<double>(DW, DH, t);
+  std::vector<size_t> shape;
+  if (nd == 2) {
+    if (nv == 1) shape = std::vector<size_t>({DW, DH});
+    else shape = std::vector<size_t>({size_t(nv), DW, DH});
   } else {
-    return ftk::ndarray<double>();
+    if (nv == 1) shape = std::vector<size_t>({DW, DH, DD});
+    else shape = std::vector<size_t>({size_t(nv), DW, DH, DD});
+  }
+
+  const std::string filename = input_filenames[k];
+
+  if (demo) {
+    if (nd == 2) {
+      const double t = DT == 1 ? 0.0 : double(k)/(DT-1);
+      return ftk::synthetic_woven_2D<double>(DW, DH, t);
+    } else { // nd == 3
+      assert(false); // TODO: create a 3D demo case
+      return ftk::ndarray<double>();
+    } 
+  } else {
+    if (input_format == str_float32) {
+      ftk::ndarray<float> array32(shape);
+      array32.from_binary_file(filename);
+      
+      ftk::ndarray<double> array(shape);
+      array.from_array(array32);
+
+      return array;
+    } else if (input_format == str_float64) {
+      ftk::ndarray<double> array(shape);
+      array.from_binary_file(filename);
+      return array;
+    } else if (input_format == str_vti) {
+      ftk::ndarray<double> array;
+
+      if (input_variable_name.size() > 0) { // all data in one single variable; channels are automatically handled in ndarray
+        array.from_vtk_image_data_file(filename, input_variable_name);
+      } else { // u, v, w in separate variables
+        ftk::ndarray<double> u, v, w;
+        u.from_vtk_image_data_file(filename, input_variable_name_u);
+        v.from_vtk_image_data_file(filename, input_variable_name_v);
+        if (nv > 2)
+          w.from_vtk_image_data_file(filename, input_variable_name_w);
+
+        array.reshape(shape);
+        for (auto i = 0; i < u.nelem(); i ++) {
+          array[i*nv] = u[i];
+          array[i*nv+1] = v[i];
+          if (nv > 2) array[i*nv+2] = w[i];
+        }
+      }
+
+      return array;
+    } else if (input_format == str_netcdf) {
+      ftk::ndarray<double> array(shape);
+      array.from_netcdf(filename, input_variable_name);
+      // TODO
+      return ftk::ndarray<double>();
+    } else if (input_format == str_hdf5) {
+      // TODO
+      return ftk::ndarray<double>();
+    } else {
+      assert(false);
+      return ftk::ndarray<double>();
+    }
   }
 }
 
@@ -193,17 +254,17 @@ int parse_arguments(int argc, char **argv)
     if (input_filename_pattern.size() == 0)
       fatal("'--input' empty.  Please specify inputs or use '--demo'");
 
-    auto filenames = ftk::ndarray<double>::glob(input_filename_pattern);
-    if (filenames.size() == 0)
+    input_filenames = ftk::ndarray<double>::glob(input_filename_pattern);
+    if (input_filenames.size() == 0)
       fatal("FATAL: cannot find input files");
 
     // determine input format
     if (input_format == str_auto) {
-      if (ends_with(filenames[0], str_ext_vti))
+      if (ends_with(input_filenames[0], str_ext_vti))
         input_format = str_vti;
-      else if (ends_with(filenames[0], str_ext_netcdf)) 
+      else if (ends_with(input_filenames[0], str_ext_netcdf)) 
         input_format = str_netcdf;
-      else if (ends_with(filenames[0], str_ext_hdf5)) 
+      else if (ends_with(input_filenames[0], str_ext_hdf5)) 
         input_format = str_hdf5;
       else 
         fatal("Unable to determine file format.");
@@ -232,7 +293,7 @@ int parse_arguments(int argc, char **argv)
     } else if (input_format == str_vti) {
 #if FTK_HAVE_VTK
       vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
-      reader->SetFileName(filenames[0].c_str());
+      reader->SetFileName(input_filenames[0].c_str());
       reader->Update();
 
       vtkSmartPointer<vtkImageData> image = reader->GetOutput();
@@ -289,8 +350,8 @@ int parse_arguments(int argc, char **argv)
         fatal("Cannot override number of variables in VTI.");
 
       // determine DT
-      if (DT == 0) DT = filenames.size();
-      else DT = std::min(DT, filenames.size());
+      if (DT == 0) DT = input_filenames.size();
+      else DT = std::min(DT, input_filenames.size());
 #else
       fatal("FTK not compiled with VTK.");
 #endif
@@ -303,7 +364,7 @@ int parse_arguments(int argc, char **argv)
         fatal("Variable name missing for NetCDF files.");
 
       int ncid, my_varid;
-      NC_SAFE_CALL( nc_open(filenames[0].c_str(), NC_NOWRITE, &ncid) );
+      NC_SAFE_CALL( nc_open(input_filenames[0].c_str(), NC_NOWRITE, &ncid) );
 
       if (input_variable_name.size() > 0) { // single variable
         NC_SAFE_CALL( nc_inq_varid(ncid, input_variable_name.c_str(), &varid) );
@@ -367,8 +428,8 @@ int parse_arguments(int argc, char **argv)
       } else fatal("Unsupported NetCDF variable dimensionality");
       
       // determine DT
-      if (DT == 0) DT = filenames.size();
-      else DT = std::min(DT, filenames.size());
+      if (DT == 0) DT = input_filenames.size();
+      else DT = std::min(DT, input_filenames.size());
 
       NC_SAFE_CALL( nc_close(ncid) );
 #else

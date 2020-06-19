@@ -182,12 +182,12 @@ struct ndarray {
   void from_bov(const std::string& filename);
   void to_bov(const std::string& filename) const;
 
-  void from_vtk_image_data_file(const std::string& filename);
+  void from_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
   void from_vtk_image_data_file_sequence(const std::string& pattern);
   void to_vtk_image_data_file(const std::string& filename, bool multicomponent=false) const;
 #if FTK_HAVE_VTK
   static int vtk_data_type();
-  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string& array_name=std::string());
+  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
   vtkSmartPointer<vtkImageData> to_vtk_image_data(bool multicomponent=false) const;
   vtkSmartPointer<vtkDataArray> to_vtk_data_array(bool multicomponent=false) const;
 #endif
@@ -407,7 +407,7 @@ inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(bool multicom
 template<typename T>
 inline void ndarray<T>::from_vtk_image_data(
     vtkSmartPointer<vtkImageData> d, 
-    const std::string& array_name)
+    const std::string array_name)
 {
   vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
   if (!da) da = d->GetPointData()->GetArray(0);
@@ -434,12 +434,12 @@ inline void ndarray<T>::from_vtk_image_data(
 }
 
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename)
+inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename, const std::string array_name)
 {
   vtkNew<vtkXMLImageDataReader> reader;
   reader->SetFileName(filename.c_str());
   reader->Update();
-  from_vtk_image_data(reader->GetOutput());
+  from_vtk_image_data(reader->GetOutput(), array_name);
 }
 
 template<typename T>
