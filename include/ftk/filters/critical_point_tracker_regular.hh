@@ -17,6 +17,7 @@ enum {
 struct critical_point_tracker_regular : public critical_point_tracker {
   critical_point_tracker_regular() {}
   critical_point_tracker_regular(int argc, char **argv) : critical_point_tracker(argc, argv) {}
+  virtual ~critical_point_tracker_regular() {}
 
   void set_domain(const lattice& l) {domain = l;} // spatial domain
   void set_array_domain(const lattice& l) {array_domain = l;}
@@ -32,6 +33,9 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   void set_vector_field_source(int s) {vector_field_source = s;}
   void set_jacobian_field_source(int s) {jacobian_field_source = s;}
   void set_jacobian_symmetric(bool s) {is_jacobian_field_symmetric = s;}
+
+  virtual void push_scalar_field_snapshot(const ndarray<double>&) = 0;
+  virtual void push_vector_field_snapshot(const ndarray<double>&) = 0;
 
   void set_type_filter(unsigned int);
 

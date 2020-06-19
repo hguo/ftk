@@ -3,6 +3,9 @@
 #include <set>
 #include <cassert>
 #include "ftk/external/cxxopts.hpp"
+#include "ftk/ndarray/synthetic.hh"
+#include "ftk/filters/critical_point_tracker_2d_regular.hh"
+#include "ftk/filters/critical_point_tracker_3d_regular.hh"
 #include "ftk/ndarray.hh"
 
 static const std::string 
@@ -21,14 +24,56 @@ static const std::string
         str_text("text");
 
 static const std::string
-        str_ext_vti(".vti"),
+        str_ext_vti(".vti"), // vtkImageData
+        str_ext_vtp(".vtp"), // vtkPolyData
         str_ext_netcdf(".nc"),
         str_ext_hdf5(".h5");
 
 static const std::set<std::string>
         set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti}),
         set_valid_input_dimension({str_auto, str_two, str_three}),
-        set_valid_output_format({str_text, str_vtp});
+        set_valid_output_format({str_auto, str_text, str_vtp});
+  
+// global variables
+std::string input_filename_pattern, 
+  input_format,
+  input_dimension,
+  input_variable_name, 
+  input_variable_name_u, 
+  input_variable_name_v, 
+  input_variable_name_w;
+std::string output_filename,
+  output_format;
+size_t DW = 0, DH = 0, DD = 0, DT = 0;
+bool verbose = false, demo = false, help = false;
+
+// determined later
+int nd, // dimensionality
+    nv; // number of variables; 1 is scalar, otherwise vector
+int varid = -1, // only for vti and netcdf
+    varid_u = -1,
+    varid_v = -1,
+    varid_w = -1;
+int ncdims = 0;  // Only for netcdf.  
+                 // ndndims equals to either nd or (nd+1). 
+                 // In the latter case, one of the netcdf dimension 
+                 // is time.
+int dimids[4] = {-1}; // Only for netcdf
+size_t dimlens[4] = {0}; // Only for netcdf
+
+// tracker
+ftk::critical_point_tracker_regular* tracker = NULL;
+
+
+///////////////////////////////
+ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
+{
+  if (demo) {
+    return ftk::synthetic_woven_2D<double>(DW, DH, double(k) / (DT - 1));
+  } else {
+    return ftk::ndarray<double>();
+  }
+}
 
 inline bool ends_with(std::string const & value, std::string const & ending)
 {
@@ -36,35 +81,8 @@ inline bool ends_with(std::string const & value, std::string const & ending)
   return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
-int main(int argc, char **argv)
+int parse_arguments(int argc, char **argv)
 {
-  std::string input_filename_pattern, 
-    input_format,
-    input_dimension,
-    input_variable_name, 
-    input_variable_name_u, 
-    input_variable_name_v, 
-    input_variable_name_w;
-  std::string output_filename,
-    output_format;
-  int DW = 0, DH = 0, DD = 0, DT = 0;
-  bool verbose = false, demo = false, help = false;
-
-  // determined later
-  int nd, // dimensionality
-      nv; // number of variables; 1 is scalar, otherwise vector
-  bool is_variable_multicomponent;
-  int varid = -1, // only for vti and netcdf
-      varid_u = -1,
-      varid_v = -1,
-      varid_w = -1;
-  int ncdims = 0;  // Only for netcdf.  
-                   // ndndims equals to either nd or (nd+1). 
-                   // In the latter case, one of the netcdf dimension 
-                   // is time.
-  int dimids[4] = {-1}; // Only for netcdf
-  size_t dimlens[4] = {0}; // Only for netcdf
-
   cxxopts::Options options(argv[0]);
   options.add_options()
     ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'", 
@@ -76,10 +94,10 @@ int main(int argc, char **argv)
      cxxopts::value<std::string>(input_dimension)->default_value("auto"))
     ("nvar", "Number of variables",
      cxxopts::value<int>(nv)->default_value("0"))
-    ("w,width", "Width", cxxopts::value<int>(DW))
-    ("h,height", "Height", cxxopts::value<int>(DH))
-    ("d,depth", "Depth", cxxopts::value<int>(DH))
-    ("n,timesteps", "Number of timesteps", cxxopts::value<int>(DT))
+    ("w,width", "Width", cxxopts::value<size_t>(DW))
+    ("h,height", "Height", cxxopts::value<size_t>(DH))
+    ("d,depth", "Depth", cxxopts::value<size_t>(DH))
+    ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>(DT))
     ("var", "Variable name (only for NetCDF, HDF5, and VTK)", 
      cxxopts::value<std::string>(input_variable_name))
     ("var-u", "Variable name for u-component",
@@ -90,8 +108,8 @@ int main(int argc, char **argv)
      cxxopts::value<std::string>(input_variable_name_w))
     ("o,output", "Output file", 
      cxxopts::value<std::string>(output_filename))
-    ("r,output-format", "Output format (text|vtp)", 
-     cxxopts::value<std::string>(output_format)->default_value("text"))
+    ("r,output-format", "Output format (auto|text|vtp)", 
+     cxxopts::value<std::string>(output_format)->default_value("auto"))
     ("dry", "Dry run")
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
     ("help", "Print usage", cxxopts::value<bool>(help));
@@ -133,7 +151,18 @@ int main(int argc, char **argv)
     fatal("Cannot specify both `--var' and `--var-w|--var-v|--var-w' simultanuously");
   }
 
-  //////
+  if (output_filename.empty())
+    fatal("Missing '--output'.");
+
+  // processing output
+  if (output_format == str_auto) {
+    if (ends_with(output_filename, str_ext_vtp))
+      output_format = str_vtp;
+    else 
+      output_format = str_text;
+  }
+
+  // processing input
   if (demo) {
     if (input_filename_pattern.size())
       fprintf(stderr, "WARN: '--input' ignored.\n");
@@ -199,8 +228,6 @@ int main(int argc, char **argv)
       // determine nv
       if (nv == 0) // auto
         fatal("Unable to determine the number of variables"); // TOOD: determine nv by file size
-
-      is_variable_multicomponent = true; // not used.
     } else if (input_format == str_vti) {
 #if FTK_HAVE_VTK
       vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
@@ -262,7 +289,7 @@ int main(int argc, char **argv)
 
       // determine DT
       if (DT == 0) DT = filenames.size();
-      else DT = std::min(DT, static_cast<int>(filenames.size()));
+      else DT = std::min(DT, filenames.size());
 #else
       fatal("FTK not compiled with VTK.");
 #endif
@@ -340,7 +367,9 @@ int main(int argc, char **argv)
       
       // determine DT
       if (DT == 0) DT = filenames.size();
-      else DT = std::min(DT, static_cast<int>(filenames.size()));
+      else DT = std::min(DT, filenames.size());
+
+      NC_SAFE_CALL( nc_close(ncid) );
 #else
       fatal("FTK not compiled with NetCDF.");
 #endif
@@ -348,19 +377,95 @@ int main(int argc, char **argv)
   } 
  
   fprintf(stderr, "SUMMARY\n=============\n");
+  fprintf(stderr, "input_filename_pattern=%s\n", input_filename_pattern.c_str());
+  fprintf(stderr, "input_format=%s\n", input_format.c_str());
+  fprintf(stderr, "output_filename=%s\n", output_filename.c_str());
+  fprintf(stderr, "output_format=%s\n", output_format.c_str());
   fprintf(stderr, "nd=%d\n", nd);
   fprintf(stderr, "ncdims=%d\n", ncdims);
   fprintf(stderr, "nv=%d\n", nv);
-  fprintf(stderr, "input_format=%s\n", input_format.c_str());
   fprintf(stderr, "input_variable_name=%s\n", input_variable_name.c_str());
   fprintf(stderr, "input_variable_name_u=%s\n", input_variable_name_u.c_str());
   fprintf(stderr, "input_variable_name_v=%s\n", input_variable_name_v.c_str());
   fprintf(stderr, "input_variable_name_w=%s\n", input_variable_name_w.c_str());
-  fprintf(stderr, "DW=%d\n", DW);
-  fprintf(stderr, "DH=%d\n", DH);
-  fprintf(stderr, "DD=%d\n", DD);
-  fprintf(stderr, "DT=%d\n", DT);
-  fprintf(stderr, "SUMMARY\n=============\n");
+  fprintf(stderr, "DW=%zu\n", DW);
+  fprintf(stderr, "DH=%zu\n", DH);
+  fprintf(stderr, "DD=%zu\n", DD);
+  fprintf(stderr, "DT=%zu\n", DT);
 
+  return 0;
+}
+
+void track_critical_points()
+{
+  if (nd == 2) {
+    tracker = new ftk::critical_point_tracker_2d_regular;
+    tracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+  } else {
+    tracker = new ftk::critical_point_tracker_3d_regular;
+    tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+  }
+      
+  tracker->set_input_array_partial(false); // input data are not distributed
+  
+  if (nv == 1) { // scalar field
+    tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );
+    tracker->set_vector_field_source( ftk::SOURCE_DERIVED );
+    tracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
+    if (nd == 2) { // 2D
+      tracker->set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+    } else { // 3D
+      tracker->set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+    }
+  } else { // vector field
+    tracker->set_scalar_field_source( ftk::SOURCE_NONE );
+    tracker->set_vector_field_source( ftk::SOURCE_GIVEN );
+    tracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
+    if (nd == 2) { // 2D
+      tracker->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
+    } else {
+      tracker->set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2})); // the indentation is needed becase the jacoobian field will be automatically derived
+    }
+  }
+  tracker->initialize();
+
+  int current_timestep = 0;
+  while (1) {
+    ftk::ndarray<double> field_data = request_timestep(current_timestep);
+    if (nv == 1) // scalar field
+      tracker->push_scalar_field_snapshot(field_data);
+    else // vector field
+      tracker->push_vector_field_snapshot(field_data);
+
+    if (DT == 0 || current_timestep == DT-1) { // the input has only one timestep or reaches the last timestep
+      tracker->update_timestep();
+      break;
+    } else {
+      if (current_timestep != 0) // need to push two timestep before one can advance timestep
+        tracker->advance_timestep();
+      current_timestep ++;
+    }
+  }
+
+  tracker->finalize();
+  // delete tracker;
+}
+
+void write_outputs()
+{
+  if (output_format == str_vtp) {
+    tracker->write_traced_critical_points_vtk(output_filename);
+  } else if (output_format == str_text) {
+
+  }
+}
+
+int main(int argc, char **argv)
+{
+  parse_arguments(argc, argv);
+  track_critical_points();
+  write_outputs();
+  
+  delete tracker;
   return 0;
 }
