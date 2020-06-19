@@ -69,7 +69,8 @@ ftk::critical_point_tracker_regular* tracker = NULL;
 ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
 {
   if (demo) {
-    return ftk::synthetic_woven_2D<double>(DW, DH, double(k) / (DT - 1));
+    const double t = DT == 1 ? 0.0 : double(k)/(DT-1);
+    return ftk::synthetic_woven_2D<double>(DW, DH, t);
   } else {
     return ftk::ndarray<double>();
   }
@@ -126,7 +127,7 @@ int parse_arguments(int argc, char **argv)
   
   if (help) {
     std::cerr << options.help() << std::endl;
-    return 0;
+    exit(0); // return 0;
   }
  
   // sanity check of arguments
@@ -392,6 +393,7 @@ int parse_arguments(int argc, char **argv)
   fprintf(stderr, "DH=%zu\n", DH);
   fprintf(stderr, "DD=%zu\n", DD);
   fprintf(stderr, "DT=%zu\n", DT);
+  fprintf(stderr, "=============\n");
 
   return 0;
 }
@@ -436,15 +438,14 @@ void track_critical_points()
       tracker->push_scalar_field_snapshot(field_data);
     else // vector field
       tracker->push_vector_field_snapshot(field_data);
-
-    if (DT == 0 || current_timestep == DT-1) { // the input has only one timestep or reaches the last timestep
+     
+    if (current_timestep == DT - 1) {
       tracker->update_timestep();
       break;
-    } else {
-      if (current_timestep != 0) // need to push two timestep before one can advance timestep
-        tracker->advance_timestep();
-      current_timestep ++;
     }
+    else if (current_timestep != 0) // need to push two timestep before one can advance timestep
+      tracker->advance_timestep();
+    current_timestep ++;
   }
 
   tracker->finalize();
