@@ -56,6 +56,8 @@ struct filter {
     else return std::thread::hardware_concurrency(); 
   }
 
+  void set_number_of_threads(int n) {nthreads = n;}
+
 protected:
   diy::mpi::communicator comm;
 

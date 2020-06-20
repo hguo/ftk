@@ -21,6 +21,7 @@
 
 static const std::string 
         str_auto("auto"),
+        str_none("none"),
         str_zero("0"),
         str_two("2"),
         str_three("3"),
@@ -32,7 +33,8 @@ static const std::string
         str_vtp("vtp"),
         str_scalar("scalar"),
         str_vector("vector"),
-        str_text("text");
+        str_text("text"),
+        str_cuda("cuda");
 
 static const std::string
         str_ext_vti(".vti"), // vtkImageData
@@ -41,6 +43,7 @@ static const std::string
         str_ext_hdf5(".h5");
 
 static const std::set<std::string>
+        set_valid_accelerator({str_none, str_cuda}),
         set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti}),
         set_valid_input_dimension({str_auto, str_two, str_three}),
         set_valid_output_format({str_auto, str_text, str_vtp});
@@ -56,7 +59,9 @@ std::string input_filename_pattern,
 std::string output_filename,
   output_format;
 std::vector<std::string> input_filenames; // assuming each file contains only one timestep, and all files have the exactly same structure
+std::string accelerator;
 size_t DW = 0, DH = 0, DD = 0, DT = 0;
+int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 
 // determined later
@@ -181,9 +186,9 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(input_filename_pattern))
     ("demo", "Use synthetic data for demo", cxxopts::value<bool>(demo))
     ("f,input-format", "Input file format (auto|float32|float64|nc|h5|vti)", 
-     cxxopts::value<std::string>(input_format)->default_value("auto"))
+     cxxopts::value<std::string>(input_format)->default_value(str_auto))
     ("dim", "Spatial dimensionality of data (auto|2|3)", 
-     cxxopts::value<std::string>(input_dimension)->default_value("auto"))
+     cxxopts::value<std::string>(input_dimension)->default_value(str_auto))
     ("nvar", "Number of variables",
      cxxopts::value<int>(nv)->default_value("0"))
     ("w,width", "Width", cxxopts::value<size_t>(DW))
@@ -201,7 +206,11 @@ int parse_arguments(int argc, char **argv)
     ("o,output", "Output file", 
      cxxopts::value<std::string>(output_filename))
     ("r,output-format", "Output format (auto|text|vtp)", 
-     cxxopts::value<std::string>(output_format)->default_value("auto"))
+     cxxopts::value<std::string>(output_format)->default_value(str_auto))
+    ("nthreads", "Number of threads", 
+     cxxopts::value<int>(nthreads))
+    ("a,accelerator", "Accelerator (none|cuda)",
+     cxxopts::value<std::string>(accelerator)->default_value(str_none))
     ("vtk", "Show visualization with vtk", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -227,6 +236,8 @@ int parse_arguments(int argc, char **argv)
     fatal("invalid '--input-format'");
   if (set_valid_output_format.find(output_format) == set_valid_output_format.end())
     fatal("invalid '--output-format'");
+  if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
+    fatal("invalid '--accelerator'");
  
   if (input_dimension == str_auto || input_dimension.size() == 0) nd = 0; // auto
   else if (input_dimension == str_two) nd = 2;
@@ -500,6 +511,7 @@ int parse_arguments(int argc, char **argv)
   fprintf(stderr, "DH=%zu\n", DH);
   fprintf(stderr, "DD=%zu\n", DD);
   fprintf(stderr, "DT=%zu\n", DT);
+  fprintf(stderr, "nthreads=%d\n", nthreads);
   fprintf(stderr, "=============\n");
 
   assert(nd == 2 || nd == 3);
@@ -511,6 +523,8 @@ int parse_arguments(int argc, char **argv)
 
 void track_critical_points()
 {
+  tracker->set_number_of_threads(nthreads);
+
   if (nd == 2) {
     tracker = new ftk::critical_point_tracker_2d_regular;
     tracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
