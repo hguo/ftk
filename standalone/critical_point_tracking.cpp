@@ -123,12 +123,30 @@ ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
 
       return array;
     } else if (input_format == str_netcdf) {
-      ftk::ndarray<double> array(shape);
-      array.from_netcdf(filename, input_variable_name);
-      // TODO
-      return ftk::ndarray<double>();
+      ftk::ndarray<double> array;
+
+      if (input_variable_name.size() > 0) { // all data in one single variable; channels are automatically handled in ndarray
+        array.from_netcdf(filename, input_variable_name);
+      } else { // u, v, w in separate variables
+        ftk::ndarray<double> u, v, w;
+        u.from_netcdf(filename, input_variable_name_u);
+        v.from_netcdf(filename, input_variable_name_v);
+        if (nv > 2)
+          w.from_netcdf(filename, input_variable_name_w);
+
+        array.reshape(shape);
+        for (auto i = 0; i < u.nelem(); i ++) {
+          array[i*nv] = u[i];
+          array[i*nv+1] = v[i];
+          if (nv > 2) array[i*nv+2] = w[i];
+        }
+      }
+
+      array.reshape(shape); // ncdims may not be equal to nd
+      return array;
     } else if (input_format == str_hdf5) {
       // TODO
+      assert(false);
       return ftk::ndarray<double>();
     } else {
       assert(false);
@@ -369,6 +387,7 @@ int parse_arguments(int argc, char **argv)
       if (input_variable_name.size() > 0) { // single variable
         NC_SAFE_CALL( nc_inq_varid(ncid, input_variable_name.c_str(), &varid) );
         my_varid = varid;
+        nv = 1; // TODO: netcdf multicomponent variables
       } else {
         NC_SAFE_CALL( nc_inq_varid(ncid, input_variable_name_u.c_str(), &varid_u) );
         NC_SAFE_CALL( nc_inq_varid(ncid, input_variable_name_v.c_str(), &varid_v) );
@@ -392,7 +411,7 @@ int parse_arguments(int argc, char **argv)
         else 
           fatal("Unsupported NetCDF data dimensionality.");
       } else if (nd == ncdims) { // netcdf dimensions are spatial only
-      } else if (nd == ncdims + 1) { // netcdf file has time dimension
+      } else if (nd == ncdims - 1) { // netcdf file has time dimension
         // NOTE: we assume the time dimension is NC_UNLIMITED, and each
         //       NetCDF contains only one time step.  Will remove this 
         //       limitation in future versions.
@@ -455,6 +474,10 @@ int parse_arguments(int argc, char **argv)
   fprintf(stderr, "DD=%zu\n", DD);
   fprintf(stderr, "DT=%zu\n", DT);
   fprintf(stderr, "=============\n");
+
+  assert(nd == 2 || nd == 3);
+  assert(nv == 1 || nv == 2 || nv == 3);
+  assert(DT > 0);
 
   return 0;
 }
