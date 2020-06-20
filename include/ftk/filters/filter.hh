@@ -4,6 +4,7 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/external/diy/mpi.hpp>
 #include <ftk/external/cxxopts.hpp>
+#include <thread>
 #include <mutex>
 
 namespace ftk {
