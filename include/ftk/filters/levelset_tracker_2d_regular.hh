@@ -8,7 +8,9 @@ namespace ftk {
 struct levelset_tracker_2d_regular : public levelset_tracker_regular
 {
   levelset_tracker_2d_regular() {}
-  ~levelset_tracker_2d_regular();
+  ~levelset_tracker_2d_regular() {};
+
+  void update() {} // TODO
 };
 
 }

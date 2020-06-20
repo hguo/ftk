@@ -8,7 +8,7 @@ namespace ftk {
 struct levelset_tracker : public filter
 {
   levelset_tracker() {}
-  virtual ~levelset_tracker();
+  virtual ~levelset_tracker() {};
 };
 
 }
