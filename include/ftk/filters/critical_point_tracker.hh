@@ -22,6 +22,12 @@ struct critical_point_tracker : public filter {
   void write_traced_critical_points_vtk(const std::string& filename);
   void write_discrete_critical_points_vtk(const std::string& filename);
 
+  virtual void write_traced_critical_points_text(std::ostream& os) const = 0;
+  virtual void write_discrete_critical_points_text(std::ostream &os) const = 0;
+
+  void write_traced_critical_points_text(const std::string& filename);
+  void write_discrete_critical_points_text(const std::string& filename);
+
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
   };
@@ -125,6 +131,24 @@ inline void critical_point_tracker::write_discrete_critical_points_vtk(const std
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
 }
 #endif
+
+inline void critical_point_tracker::write_traced_critical_points_text(const std::string& filename)
+{
+  if (comm.rank() == 0) {
+    std::ofstream out(filename);
+    write_traced_critical_points_text(out);
+    out.close();
+  }
+}
+
+inline void critical_point_tracker::write_discrete_critical_points_text(const std::string& filename)
+{
+  if (comm.rank() == 0) {
+    std::ofstream out(filename);
+    write_discrete_critical_points_text(out);
+    out.close();
+  }
+}
 
 }
 

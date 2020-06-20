@@ -8,6 +8,17 @@
 #include "ftk/filters/critical_point_tracker_3d_regular.hh"
 #include "ftk/ndarray.hh"
 
+#if FTK_HAVE_VTK
+#include <ftk/geometry/curve2vtk.hh>
+#include <vtkPolyDataMapper.h>
+#include <vtkTubeFilter.h>
+#include <vtkActor.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#endif
+
 static const std::string 
         str_auto("auto"),
         str_zero("0"),
@@ -46,7 +57,7 @@ std::string output_filename,
   output_format;
 std::vector<std::string> input_filenames; // assuming each file contains only one timestep, and all files have the exactly same structure
 size_t DW = 0, DH = 0, DD = 0, DT = 0;
-bool verbose = false, demo = false, help = false;
+bool verbose = false, demo = false, show_vtk = false, help = false;
 
 // determined later
 int nd, // dimensionality
@@ -78,17 +89,18 @@ ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
     else shape = std::vector<size_t>({size_t(nv), DW, DH, DD});
   }
 
-  const std::string filename = input_filenames[k];
-
   if (demo) {
     if (nd == 2) {
       const double t = DT == 1 ? 0.0 : double(k)/(DT-1);
       return ftk::synthetic_woven_2D<double>(DW, DH, t);
     } else { // nd == 3
+      fprintf(stderr, "3D demo case not available.\n");
       assert(false); // TODO: create a 3D demo case
       return ftk::ndarray<double>();
     } 
   } else {
+    const std::string filename = input_filenames[k];
+
     if (input_format == str_float32) {
       ftk::ndarray<float> array32(shape);
       array32.from_binary_file(filename);
@@ -190,7 +202,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(output_filename))
     ("r,output-format", "Output format (auto|text|vtp)", 
      cxxopts::value<std::string>(output_format)->default_value("auto"))
-    ("dry", "Dry run")
+    ("vtk", "Show visualization with vtk", 
+     cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
     ("help", "Print usage", cxxopts::value<bool>(help));
   auto results = options.parse(argc, argv);
@@ -231,8 +244,10 @@ int parse_arguments(int argc, char **argv)
     fatal("Cannot specify both `--var' and `--var-w|--var-v|--var-w' simultanuously");
   }
 
-  if (output_filename.empty())
-    fatal("Missing '--output'.");
+  if (!show_vtk) { // output is optional if results are visualized with vtk
+    if (output_filename.empty())
+      fatal("Missing '--output'.");
+  }
 
   // processing output
   if (output_format == str_auto) {
@@ -538,19 +553,66 @@ void track_critical_points()
 
 void write_outputs()
 {
-  if (output_format == str_vtp) {
-    tracker->write_traced_critical_points_vtk(output_filename);
-  } else if (output_format == str_text) {
+  if (output_filename.empty()) return;
 
-  }
+  if (output_format == str_vtp) 
+    tracker->write_traced_critical_points_vtk(output_filename);
+  else if (output_format == str_text) 
+    tracker->write_traced_critical_points_text(output_filename);
+}
+
+void start_vtk_window()
+{
+#if FTK_HAVE_VTK
+  auto vtkcurves = tracker->get_traced_critical_points_vtk();
+  vtkcurves->Print(std::cerr);
+
+  vtkSmartPointer<vtkTubeFilter> tubeFilter = vtkSmartPointer<vtkTubeFilter>::New();
+  tubeFilter->SetInputData(vtkcurves);
+  tubeFilter->SetRadius(1);
+  tubeFilter->SetNumberOfSides(50);
+  tubeFilter->Update();
+  
+  vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  // mapper->SetInputData(vtkcurves);
+  mapper->SetInputConnection(tubeFilter->GetOutputPort());
+
+  vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+  actor->SetMapper(mapper);
+
+  // a renderer and render window
+  vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+  vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkRenderWindow>::New();
+  renderWindow->AddRenderer(renderer);
+
+  // add the actors to the scene
+  renderer->AddActor(actor);
+  renderer->SetBackground(1, 1, 1); // Background color white
+
+  vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
+    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+  renderWindowInteractor->SetRenderWindow(renderWindow);
+
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera> style = 
+      vtkSmartPointer<vtkInteractorStyleTrackballCamera>::New();
+  renderWindowInteractor->SetInteractorStyle( style );
+
+  renderWindowInteractor->Start();
+#else
+  assert(false);
+#endif
 }
 
 int main(int argc, char **argv)
 {
   parse_arguments(argc, argv);
   track_critical_points();
+    
   write_outputs();
   
+  if (show_vtk) 
+    start_vtk_window();
+
   delete tracker;
   return 0;
 }

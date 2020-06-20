@@ -58,6 +58,9 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   critical_point_tracker_3d_regular(int argc, char **argv) 
     : critical_point_tracker_regular(argc, argv), m(4) {}
   virtual ~critical_point_tracker_3d_regular() {}
+  
+  void write_traced_critical_points_text(std::ostream& os) const;
+  void write_discrete_critical_points_text(std::ostream &os) const;
 
   void initialize();
   void finalize();
@@ -545,6 +548,30 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_discrete_cri
   return polyData;
 }
 #endif
+
+inline void critical_point_tracker_3d_regular::write_traced_critical_points_text(std::ostream& os) const
+{
+  os << "#trajectories=" << traced_critical_points.size() << std::endl;
+  for (int i = 0; i < traced_critical_points.size(); i ++) {
+    os << "--trajectory " << i << std::endl;
+    const auto &curve = traced_critical_points[i];
+    for (int k = 0; k < curve.size(); k ++) {
+      const auto &cp = curve[k];
+      os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
+         << "t=" << cp[2] << ", scalar=" << cp.scalar << endl;
+    }
+  }
+}
+
+inline void critical_point_tracker_3d_regular::write_discrete_critical_points_text(std::ostream& os) const
+{
+  for (const auto &kv : discrete_critical_points) {
+    const auto &cp = kv.second;
+    os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
+       << "t=" << cp[2] << ", scalar=" << cp.scalar << endl;
+  }
+}
+
 
 }
 
