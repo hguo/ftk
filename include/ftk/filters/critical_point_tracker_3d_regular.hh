@@ -558,7 +558,7 @@ inline void critical_point_tracker_3d_regular::write_traced_critical_points_text
     for (int k = 0; k < curve.size(); k ++) {
       const auto &cp = curve[k];
       os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
-         << "t=" << cp[2] << ", scalar=" << cp.scalar << endl;
+         << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
     }
   }
 }
@@ -568,7 +568,7 @@ inline void critical_point_tracker_3d_regular::write_discrete_critical_points_te
   for (const auto &kv : discrete_critical_points) {
     const auto &cp = kv.second;
     os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
-       << "t=" << cp[2] << ", scalar=" << cp.scalar << endl;
+       << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
   }
 }
 

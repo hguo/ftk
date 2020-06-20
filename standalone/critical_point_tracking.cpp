@@ -244,15 +244,27 @@ int parse_arguments(int argc, char **argv)
     fatal("Cannot specify both `--var' and `--var-w|--var-v|--var-w' simultanuously");
   }
 
+  // processing output
+  if (show_vtk) {
+#if FTK_HAVE_VTK
+#else
+    fatal("FTK not compiled with VTK.");
+#endif
+  }
+  
   if (!show_vtk) { // output is optional if results are visualized with vtk
     if (output_filename.empty())
       fatal("Missing '--output'.");
   }
 
-  // processing output
   if (output_format == str_auto) {
-    if (ends_with(output_filename, str_ext_vtp))
+    if (ends_with(output_filename, str_ext_vtp)) {
+#if FTK_HAVE_VTK
       output_format = str_vtp;
+#else
+      fatal("FTK not compiled with VTK.");
+#endif
+    }
     else 
       output_format = str_text;
   }
