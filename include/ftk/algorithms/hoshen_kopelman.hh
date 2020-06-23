@@ -66,7 +66,7 @@ int hoshen_kopelman(ndarray<int>& matrix)
           new_labels[0] ++;
           new_labels[x] = new_labels[0];
         }
-        matrix(i, j) = new_labels[0];
+        matrix(i, j) = new_labels[x];
       }
     }
   }
