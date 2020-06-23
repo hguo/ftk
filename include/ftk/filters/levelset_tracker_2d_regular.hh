@@ -11,6 +11,9 @@ struct levelset_tracker_2d_regular : public levelset_tracker_regular
   ~levelset_tracker_2d_regular() {};
 
   void update() {} // TODO
+
+protected:
+  std::deque<ftk::ndarray<bool>> snapshots;
 };
 
 }
