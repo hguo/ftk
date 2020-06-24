@@ -28,7 +28,7 @@ TEST_F(hoshen_kopelman_test, hoshen_kopelman_2d)
     2,2,2,2,0,0,0,1, 
     0,0,0,2,2,2,0,1});
 
-  int nc = hoshen_kopelman(input);
+  int nc = hoshen_kopelman_2d(input);
   EXPECT_EQ(nc, 2);
   EXPECT_EQ(input, output);
 }

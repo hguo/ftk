@@ -6,7 +6,7 @@
 namespace ftk {
 
 // https://en.wikipedia.org/wiki/Hoshen%E2%80%93Kopelman_algorithm
-int hoshen_kopelman(ndarray<int>& matrix)
+int hoshen_kopelman_2d(ndarray<int>& matrix)
 {
   int largest_label = 0;
 
