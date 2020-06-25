@@ -98,7 +98,7 @@ inline bool critical_point_tracker_regular::advance_timestep()
   pop_field_data_snapshot();
 
   current_timestep ++;
-  return field_data_snapshots.size() > 0; // > 0;
+  return field_data_snapshots.size() > 0;
 }
 
 inline void critical_point_tracker_regular::set_type_filter(unsigned int f)

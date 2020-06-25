@@ -4,7 +4,8 @@
 #include <cassert>
 #include <ftk/external/cxxopts.hpp>
 #include <ftk/ndarray/synthetic.hh>
-#include <ftk/filters/levelset_tracker_2d_regular.hh>
+// #include <ftk/filters/levelset_tracker_2d_regular.hh>
+#include <ftk/filters/connected_component_tracker.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/algorithms/hoshen_kopelman.hh>
 #include <ftk/tracking_graph/tracking_graph.hh>
@@ -30,33 +31,21 @@ ftk::ndarray<int> threshold_filter(const ftk::ndarray<double>& array)
 
 void track_levelset()
 {
-  ftk::levelset_tracker_2d_regular *tracker = new ftk::levelset_tracker_2d_regular;
-  ftk::tracking_graph<> tg;
+  ftk::connected_component_tracker *tracker = new ftk::connected_component_tracker;
 
-  int current_timestep = 0;
-  ftk::ndarray<int> last_label_data;
-  while (1) {
+  for (int current_timestep = 0; current_timestep < 10; current_timestep ++) {
+    fprintf(stderr, "current_timestep=%d\n", current_timestep);
     ftk::ndarray<double> field_data = request_timestep(current_timestep);
     ftk::ndarray<int> label_data = threshold_filter(field_data);
     int nc = ftk::hoshen_kopelman_2d(label_data);
-    for (int i = 0; i < nc; i ++)
-      tg.add_node(current_timestep, i);
 
-    if (current_timestep == DT - 1) { // last time step
-      // tracker->update_timestep();
-      break;
-    } else if (current_timestep != 0) {
-      for (size_t i = 0; i < label_data.nelem(); i ++) {
-        if (last_label_data[i] && label_data[i])
-          tg.add_edge(current_timestep-1, last_label_data[i], 
-              current_timestep, label_data[i]);
-      }
-    }
-    last_label_data = label_data;
-    current_timestep ++;
+    tracker->push_labeled_data_snapshot(label_data.std_vector());
+    tracker->advance_timestep();
   }
 
-  tg.relabel();
+  tracker->finalize();
+
+  const auto &tg = tracker->get_tracking_graph();
   tg.generate_dot_file("dot");
 
   delete tracker;

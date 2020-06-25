@@ -73,12 +73,14 @@ struct ndarray {
   size_t shape(size_t i) const {return dim(i);}
   size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
   bool empty() const  {return p.empty();}
-  std::vector<size_t> shape() const {return dims;}
+  const std::vector<size_t> &shape() const {return dims;}
 
   lattice get_lattice() const;
 
   void fill(const std::vector<T>& values); //! fill values with std::vector
   void fill(const std::vector<std::vector<T>>& values); //! fill values
+
+  const std::vector<T>& std_vector() const {return p;}
 
   const T* data() const {return p.data();}
   T* data() {return p.data();}
