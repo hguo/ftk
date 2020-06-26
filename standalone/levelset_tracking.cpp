@@ -4,7 +4,7 @@
 #include <cassert>
 #include <ftk/external/cxxopts.hpp>
 #include <ftk/ndarray/synthetic.hh>
-// #include <ftk/filters/levelset_tracker_2d_regular.hh>
+#include <ftk/filters/levelset_tracker.hh>
 #include <ftk/filters/connected_component_tracker.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/algorithms/hoshen_kopelman.hh>
@@ -32,15 +32,17 @@ ftk::ndarray<T> threshold_filter(const ftk::ndarray<double>& array)
 
 void track_levelset()
 {
-  auto *tracker = new ftk::connected_component_tracker<>;
+  auto *tracker = new ftk::levelset_tracker<>; // ftk::connected_component_tracker<>;
+  tracker->set_threshold( threshold );
 
   for (int current_timestep = 0; current_timestep < 10; current_timestep ++) {
     fprintf(stderr, "current_timestep=%d\n", current_timestep);
     ftk::ndarray<double> field_data = request_timestep(current_timestep);
-    ftk::ndarray<size_t> label_data = threshold_filter<size_t>(field_data);
-    size_t nc = ftk::hoshen_kopelman_2d(label_data);
-
-    tracker->push_labeled_data_snapshot(label_data.std_vector());
+    // ftk::ndarray<size_t> label_data = threshold_filter<size_t>(field_data);
+    // size_t nc = ftk::hoshen_kopelman_2d(label_data);
+    // tracker->push_labeled_data_snapshot(label_data.std_vector());
+    
+    tracker->push_scalar_field_data_snapshot(field_data);
     tracker->advance_timestep();
   }
 
