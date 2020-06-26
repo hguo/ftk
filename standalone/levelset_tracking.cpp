@@ -11,13 +11,15 @@
 #include <ftk/tracking_graph/tracking_graph.hh>
 #include "cli_constants.hh"
 
-const size_t DW = 32, DH = 32, DT = 10;
+const size_t DW = 64, DH = 32, DT = 128;
 const double threshold = 0.6;
 
 ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
 {
-  const double t = DT == 1 ? 0.0 : double(k)/(DT-1);
-  return ftk::synthetic_woven_2D<double>(DW, DH, t);
+  // const double t = DT == 1 ? 0.0 : double(k)/(DT-1);
+  // return ftk::synthetic_woven_2D<double>(DW, DH, t);
+  const double t = DT == 1 ? 0.0 : double(k)/(DT-1) * 10;
+  return ftk::synthetic_merger_2D<double>(DW, DH, t);
 }
 
 void track_levelset()
@@ -25,7 +27,7 @@ void track_levelset()
   auto *tracker = new ftk::levelset_tracker<>; // ftk::connected_component_tracker<>;
   tracker->set_threshold( threshold );
 
-  for (int current_timestep = 0; current_timestep < 10; current_timestep ++) {
+  for (int current_timestep = 0; current_timestep < DT; current_timestep ++) {
     fprintf(stderr, "current_timestep=%d\n", current_timestep);
     ftk::ndarray<double> field_data = request_timestep(current_timestep);
     // ftk::ndarray<size_t> label_data = threshold_filter<size_t>(field_data);
