@@ -20,9 +20,10 @@ ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
   return ftk::synthetic_woven_2D<double>(DW, DH, t);
 }
 
-ftk::ndarray<int> threshold_filter(const ftk::ndarray<double>& array)
+template <typename T>
+ftk::ndarray<T> threshold_filter(const ftk::ndarray<double>& array)
 {
-  ftk::ndarray<int> rtn;
+  ftk::ndarray<T> rtn;
   rtn.reshape(array);
   for (size_t i = 0; i < array.nelem(); i ++)
     rtn[i] = array[i] >= threshold ? 1 : 0;
@@ -31,13 +32,13 @@ ftk::ndarray<int> threshold_filter(const ftk::ndarray<double>& array)
 
 void track_levelset()
 {
-  ftk::connected_component_tracker *tracker = new ftk::connected_component_tracker;
+  auto *tracker = new ftk::connected_component_tracker<>;
 
   for (int current_timestep = 0; current_timestep < 10; current_timestep ++) {
     fprintf(stderr, "current_timestep=%d\n", current_timestep);
     ftk::ndarray<double> field_data = request_timestep(current_timestep);
-    ftk::ndarray<int> label_data = threshold_filter(field_data);
-    int nc = ftk::hoshen_kopelman_2d(label_data);
+    ftk::ndarray<size_t> label_data = threshold_filter<size_t>(field_data);
+    size_t nc = ftk::hoshen_kopelman_2d(label_data);
 
     tracker->push_labeled_data_snapshot(label_data.std_vector());
     tracker->advance_timestep();

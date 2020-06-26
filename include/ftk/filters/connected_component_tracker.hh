@@ -6,6 +6,7 @@
 
 namespace ftk {
 
+template <typename TimeIndexType=size_t, typename LabelIdType=size_t>
 struct connected_component_tracker : public filter
 {
   connected_component_tracker() {}
@@ -16,26 +17,31 @@ struct connected_component_tracker : public filter
   void update() {};
   void finalize();
 
-  void push_labeled_data_snapshot(const std::vector<int>& labels);
+  virtual void push_labeled_data_snapshot(const std::vector<LabelIdType>& labels);
   
+  template <typename ContainerType>
+  void push_unlabeled_data_snapshot(const std::vector<LabelIdType>& labels, std::function<ContainerType(LabelIdType)> neighbors);
+
   bool pop_snapshot();
 
   const ftk::tracking_graph<>& get_tracking_graph() const {return tg;}
 
 protected:
-  ftk::tracking_graph<> tg;
-  std::deque<std::vector<int>> labeled_data_snapshots;
-  int current_timestep = 0;
+  ftk::tracking_graph<TimeIndexType, LabelIdType> tg;
+  std::deque<std::vector<LabelIdType>> labeled_data_snapshots;
+  TimeIndexType current_timestep = 0;
 };
 
 /////
 
-inline void connected_component_tracker::finalize()
+template <typename TimeIndexType, typename LabelIdType>
+void connected_component_tracker<TimeIndexType, LabelIdType>::finalize()
 {
   tg.relabel();
 }
 
-inline void connected_component_tracker::update_timestep()
+template <typename TimeIndexType, typename LabelIdType>
+void connected_component_tracker<TimeIndexType, LabelIdType>::update_timestep()
 {
   if (labeled_data_snapshots.size() < 2) return;
 
@@ -49,7 +55,8 @@ inline void connected_component_tracker::update_timestep()
     }
 }
 
-inline bool connected_component_tracker::advance_timestep()
+template <typename TimeIndexType, typename LabelIdType>
+bool connected_component_tracker<TimeIndexType, LabelIdType>::advance_timestep()
 {
   // fprintf(stderr, "#labeled_data_snapshots=%zu\n", labeled_data_snapshots.size());
   update_timestep();
@@ -61,12 +68,14 @@ inline bool connected_component_tracker::advance_timestep()
   return labeled_data_snapshots.size() > 0;
 }
 
-inline void connected_component_tracker::push_labeled_data_snapshot(const std::vector<int>& labels)
+template <typename TimeIndexType, typename LabelIdType>
+void connected_component_tracker<TimeIndexType, LabelIdType>::push_labeled_data_snapshot(const std::vector<LabelIdType>& labels)
 {
   labeled_data_snapshots.push_back(labels);
 }
 
-inline bool connected_component_tracker::pop_snapshot()
+template <typename TimeIndexType, typename LabelIdType>
+bool connected_component_tracker<TimeIndexType, LabelIdType>::pop_snapshot()
 {
   if (labeled_data_snapshots.size() > 0) {
     labeled_data_snapshots.pop_front();
