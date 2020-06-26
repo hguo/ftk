@@ -20,16 +20,6 @@ ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
   return ftk::synthetic_woven_2D<double>(DW, DH, t);
 }
 
-template <typename T>
-ftk::ndarray<T> threshold_filter(const ftk::ndarray<double>& array)
-{
-  ftk::ndarray<T> rtn;
-  rtn.reshape(array);
-  for (size_t i = 0; i < array.nelem(); i ++)
-    rtn[i] = array[i] >= threshold ? 1 : 0;
-  return rtn;
-}
-
 void track_levelset()
 {
   auto *tracker = new ftk::levelset_tracker<>; // ftk::connected_component_tracker<>;

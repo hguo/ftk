@@ -6,13 +6,20 @@
 
 namespace ftk {
 
+enum {
+  FTK_COMPARE_GE, // greater or equal to
+  FTK_COMPARE_GT, // greater than
+  FTK_COMPARE_LE, // less or equal to
+  FTK_COMPARE_LT // less than
+};
+
 template <typename TimeIndexType=size_t, typename LabelIdType=size_t>
 struct levelset_tracker : public connected_component_tracker<TimeIndexType, LabelIdType>
 {
   levelset_tracker() {}
   virtual ~levelset_tracker() {};
 
-  void set_threshold(double threshold, bool above=true);
+  void set_threshold(double threshold, int mode=FTK_COMPARE_GE);
   void set_input_shape(const lattice& shape);
 
   template <typename FloatType>
@@ -20,15 +27,15 @@ struct levelset_tracker : public connected_component_tracker<TimeIndexType, Labe
 
 protected:
   double threshold = 0.0;
-  bool above = true;
+  int mode = FTK_COMPARE_GE;
 };
 
 ///////////////
 template <typename TimeIndexType, typename LabelIdType>
-void levelset_tracker<TimeIndexType, LabelIdType>::set_threshold(double t, bool a)
+void levelset_tracker<TimeIndexType, LabelIdType>::set_threshold(double t, int m)
 {
   threshold = t;
-  above = a;
+  mode = m;
 }
 
 template <typename TimeIndexType, typename LabelIdType>
@@ -38,11 +45,16 @@ void levelset_tracker<TimeIndexType, LabelIdType>::push_scalar_field_data_snapsh
   ndarray<LabelIdType> labels; 
   labels.reshape(array);
   for (auto i = 0; i < array.nelem(); i ++) {
-    if ((above && array[i] >= threshold) || (!above && array[i] <= threshold))
-      labels[i] = 1;
+    switch (mode) {
+    case FTK_COMPARE_GE: labels[i] = array[i] >= threshold; break;
+    case FTK_COMPARE_GT: labels[i] = array[i] > threshold; break;
+    case FTK_COMPARE_LE: labels[i] = array[i] <= threshold; break;
+    case FTK_COMPARE_LT: labels[i] = array[i] < threshold; break;
+    default: break;
+    }
   }
 
-  // relabel
+  // relabel w/ ccl
   if (array.nd() == 2) hoshen_kopelman_2d(labels);
   else assert(false); // not yet implemented
 
