@@ -6,7 +6,7 @@
 
 namespace ftk {
 
-static const str_dw("DW"), str_dh("DH"), str_dd("DD"), str_dt("DT");
+static const std::string str_dw("DW"), str_dh("DH"), str_dd("DD"), str_dt("DT");
 
 struct data_stream {
   virtual void set_input_source(const std::string&) = 0;
@@ -39,10 +39,10 @@ struct data_stream_synthetic : public data_stream {
 
   void set_input_parameters(const std::map<std::string, std::string>& param) {
     data_stream::set_input_parameters(param);
-    if (param.find(str_dw)) DW = std::stoi(param.at(str_dw));
-    if (param.find(str_dh)) DH = std::stoi(param.at(str_dh));
-    if (param.find(str_dd)) DD = std::stoi(param.at(str_dd));
-    if (param.find(str_dt)) n_timesteps = std::stoi(param.at(str_dt));
+    if (param.find(str_dw) != param.end()) DW = std::stoi(param.at(str_dw));
+    if (param.find(str_dh) != param.end()) DH = std::stoi(param.at(str_dh));
+    if (param.find(str_dd) != param.end()) DD = std::stoi(param.at(str_dd));
+    if (param.find(str_dt) != param.end()) n_timesteps = std::stoi(param.at(str_dt));
   }
 
   virtual std::string default_variable_name() const {return std::string();};
