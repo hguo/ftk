@@ -7,10 +7,30 @@
 #include <ftk/filters/levelset_tracker.hh>
 #include <ftk/filters/connected_component_tracker.hh>
 #include <ftk/ndarray.hh>
+#include <ftk/io/data_stream.hh>
 #include <ftk/algorithms/hoshen_kopelman.hh>
 #include <ftk/tracking_graph/tracking_graph.hh>
 #include "cli_constants.hh"
 
+int main(int argc, char **argv)
+{
+  auto *data_group = ftk::data_group::create();
+
+  ftk::ndarray<int> A;
+  A.reshape(3, 3);
+  A.print(std::cerr) << std::endl;
+  data_group->set("A", A);
+
+  const auto &B = data_group->get<float>("A");
+  B.print(std::cerr) << std::endl;
+
+  delete data_group;
+  
+  fflush(stderr);
+  return 0;
+}
+
+#if 0
 const size_t DW = 64, DH = 32, DT = 128;
 const double threshold = 0.6;
 
@@ -51,3 +71,4 @@ int main(int argc, char **argv)
   track_levelset();
   return 0;
 }
+#endif

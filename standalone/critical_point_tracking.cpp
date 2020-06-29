@@ -495,8 +495,6 @@ int parse_arguments(int argc, char **argv)
 
 void track_critical_points()
 {
-  tracker->set_number_of_threads(nthreads);
-
   if (nd == 2) {
     tracker = new ftk::critical_point_tracker_2d_regular;
     tracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
@@ -504,6 +502,8 @@ void track_critical_points()
     tracker = new ftk::critical_point_tracker_3d_regular;
     tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
+  
+  tracker->set_number_of_threads(nthreads);
       
   tracker->set_input_array_partial(false); // input data are not distributed
   
