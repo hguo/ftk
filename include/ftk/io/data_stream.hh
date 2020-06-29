@@ -6,9 +6,11 @@
 
 namespace ftk {
 
+static const str_dw("DW"), str_dh("DH"), str_dd("DD"), str_dt("DT");
+
 struct data_stream {
   virtual void set_input_source(const std::string&) = 0;
-  virtual void set_input_parameters(const std::map<std::string, std::string>& parameters); // key-value pairs for additional parameters
+  virtual void set_input_parameters(const std::map<std::string, std::string>& parameters) {} // key-value pairs for additional parameters
   virtual void initialize();
   virtual void finalize();
 
@@ -35,12 +37,20 @@ struct data_stream_synthetic : public data_stream {
     push_timestep(g);
   }
 
+  void set_input_parameters(const std::map<std::string, std::string>& param) {
+    data_stream::set_input_parameters(param);
+    if (param.find(str_dw)) DW = std::stoi(param.at(str_dw));
+    if (param.find(str_dh)) DH = std::stoi(param.at(str_dh));
+    if (param.find(str_dd)) DD = std::stoi(param.at(str_dd));
+    if (param.find(str_dt)) n_timesteps = std::stoi(param.at(str_dt));
+  }
+
   virtual std::string default_variable_name() const {return std::string();};
 
   virtual ndarray<double> synthesize_timestep(int t) = 0;
 
 protected:
-  size_t DW = 0, DH = 0, DD = 0, DT = 0;
+  size_t DW = 32, DH = 32, DD = 32;
 };
 
 struct data_stream_synthetic_double_gyre {
