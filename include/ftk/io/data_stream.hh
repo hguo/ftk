@@ -3,29 +3,26 @@
 
 #include <ftk/ndarray.hh>
 #include <ftk/io/data_group.hh>
+#include <ftk/external/json.hh>
 
 namespace ftk {
 
-static const std::string 
-  str_dw("DW"), str_dh("DH"), str_dd("DD"), str_dt("DT"),
-  str_time_scale("time_scale");
+using nlohmann::json;
 
 enum {
+  SYNTHETIC_NONE,
   SYNTHETIC_WOVEN,
   SYNTHETIC_DOUBLE_GYRE,
   SYNTHETIC_ABC_FLOW
 };
 
 struct data_stream {
-  virtual void set_input_source(const std::string&) = 0;
-  virtual void set_input_parameters(const std::map<std::string, std::string>& parameters) {} // key-value pairs for additional parameters
+  data_stream(const json& j_) : j(j_) {}
+
   virtual void initialize();
-  virtual void finalize();
+  virtual void finalize() {};
 
-  virtual void add_scalar_variable(const std::string&);
-  virtual void add_vector_variable(const std::string&, const std::vector<std::string>&);
-
-  virtual void advance_timestep() = 0;
+  virtual void advance_timestep() {};
 
   template <typename T> const ndarray<T>& get(const std::string& key, int offset=0) {
     const size_t i = staged_data.size() - offset - 1;
@@ -36,10 +33,116 @@ struct data_stream {
   void pop_timestep();
 
 protected:
-  int n_timesteps = 0, current_timestep = 0;
+  static void fatal(const std::string& str) {
+    std::cerr << "FATAL: " << str << std::endl;
+    exit(1);
+  }
+
+  static void warn(const std::string& str) {
+    std::cerr << "WARN: " << str << std::endl;
+  }
+
+  static bool ends_with(std::string const & value, std::string const & ending)
+  {
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+  }
+
+protected:
+  json j; // configs, metadata, and everything
+
+  int current_timestep = 0;
+
+protected: 
   std::deque<data_group*> staged_data;
 };
 
+//////////////////////////////
+void data_stream::initialize()
+{
+  std::cerr << j << std::endl;
+
+  if (j.contains("type")) {
+    if (j["type"] == "synthetic") {
+      if (j.contains("name")) {
+        if (j["name"] == "woven") {
+          j["nd"] = 2;
+          if (!j.contains("scaling_factor")) j["scalaring_factor"] = 15.0;
+        } else if (j["name"] == "double_gyre") {
+          j["nd"] = 2;
+        } else if (j["name"] == "merger") {
+          j["nd"] = 2;
+        } else fatal("synthetic case not available.");
+      } else fatal("synthetic case name not given.");
+      
+      // default dimensions
+      if (j.contains("width")) assert(j["width"] != 0);
+      else j["width"] = 32;
+      
+      if (j.contains("height")) assert(j["height"] != 0);
+      else j["height"] = 32;
+        
+      if (j["nd"] == 3) {
+        if (j.contains("depth")) assert(j["depth"] != 0);
+        else j["depth"] = 32;
+      }
+
+      if (j.contains("n_timesteps")) assert(j["n_timesteps"] != 0);
+      else j["n_timesteps"] = 32;
+    } else if (j["type"] == "file") {
+      if (j.contains("filenames")) {
+        if (!j["filenames"].is_array()) {
+          auto filenames = ftk::ndarray<double>::glob(j["filenames"]);
+          if (filenames.empty()) fatal("unable to find matching filename(s).");
+          if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
+          else j["n_timesteps"] = filenames.size();
+          j["filenames"] = filenames;
+        }
+        const std::string filename0 = j["filenames"][0];
+
+        if (!j.contains("format")) { // probing file format
+          if (ends_with(filename0, "vti")) j["format"] = "vti";
+          else if (ends_with(filename0, "nc")) j["format"] = "nc";
+          else if (ends_with(filename0, "h5")) j["format"] = "h5";
+          else fatal("unabled to determine file format.");
+        }
+
+        if (j["format"] == "float32" || j["format"] == "float64") {
+          if (j.contains("nd")) {
+            if (j["nd"] != 2 && j["nd"] != 3) fatal("unsupported spatial dimensionality");
+          } else fatal("unable to determine spatial dimensionality");
+
+          if ((j["nd"] == 2 && ((!j.contains("width") || !j.contains("height")))) || 
+              (j["nd"] == 3 && ((!j.contains("width") || !j.contains("height") || !j.contains("depth")))))
+            fatal("width, height, and/or depth not specified.");
+        }
+      } else fatal("missing filenames");
+    } else fatal("invalid input type");
+  } else fatal("missing `type'");
+
+#if 0
+  if (j.contains("synthetic")) {
+    if (j.contains("nd")) warn("overriding nd.");
+
+  } else {
+    } else {
+      if (!j.contains("input_source")) fatal("input_source empty.");
+      
+    }
+      
+    const std::string filename0 = j["filenames"][0];
+  }
+#endif
+  std::cerr << j << std::endl;
+}
+
+
+
+
+
+
+
+#if 0
 struct data_stream_synthetic : public data_stream {
   void set_input_source(const std::string&) {} // nothing todo
 
@@ -126,6 +229,7 @@ struct data_stream_factory {
     }
   }
 };
+#endif
 
 }
 

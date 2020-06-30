@@ -2,6 +2,7 @@
 #include <mutex>
 #include <set>
 #include <cassert>
+#include <iostream>
 #include <ftk/external/cxxopts.hpp>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/filters/levelset_tracker.hh>
@@ -14,6 +15,17 @@
 
 int main(int argc, char **argv)
 {
+  std::ifstream ifs(argv[1]);
+  std::string json_str((std::istreambuf_iterator<char>(ifs)),
+                 std::istreambuf_iterator<char>());
+  ifs.close();
+
+  auto j = nlohmann::json::parse(json_str);
+
+  ftk::data_stream stream(j);
+  stream.initialize();
+
+#if 0
   auto *data_group = ftk::data_group::create();
 
   ftk::ndarray<int> A;
@@ -25,8 +37,8 @@ int main(int argc, char **argv)
   B.print(std::cerr) << std::endl;
 
   delete data_group;
+#endif
   
-  fflush(stderr);
   return 0;
 }
 
