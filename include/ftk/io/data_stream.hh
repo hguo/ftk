@@ -6,13 +6,24 @@
 
 namespace ftk {
 
-static const std::string str_dw("DW"), str_dh("DH"), str_dd("DD"), str_dt("DT");
+static const std::string 
+  str_dw("DW"), str_dh("DH"), str_dd("DD"), str_dt("DT"),
+  str_time_scale("time_scale");
+
+enum {
+  SYNTHETIC_WOVEN,
+  SYNTHETIC_DOUBLE_GYRE,
+  SYNTHETIC_ABC_FLOW
+};
 
 struct data_stream {
   virtual void set_input_source(const std::string&) = 0;
   virtual void set_input_parameters(const std::map<std::string, std::string>& parameters) {} // key-value pairs for additional parameters
   virtual void initialize();
   virtual void finalize();
+
+  virtual void add_scalar_variable(const std::string&);
+  virtual void add_vector_variable(const std::string&, const std::vector<std::string>&);
 
   virtual void advance_timestep() = 0;
 
@@ -30,6 +41,8 @@ protected:
 };
 
 struct data_stream_synthetic : public data_stream {
+  void set_input_source(const std::string&) {} // nothing todo
+
   void advance_timestep() {
     data_group *g = data_group::create();
     const ndarray<double>& array = synthesize_timestep(current_timestep);
@@ -43,6 +56,7 @@ struct data_stream_synthetic : public data_stream {
     if (param.find(str_dh) != param.end()) DH = std::stoi(param.at(str_dh));
     if (param.find(str_dd) != param.end()) DD = std::stoi(param.at(str_dd));
     if (param.find(str_dt) != param.end()) n_timesteps = std::stoi(param.at(str_dt));
+    if (param.find(str_time_scale) != param.end()) time_scale = stod(param.at(str_time_scale));
   }
 
   virtual std::string default_variable_name() const {return std::string();};
@@ -51,10 +65,19 @@ struct data_stream_synthetic : public data_stream {
 
 protected:
   size_t DW = 32, DH = 32, DD = 32;
+  double time_scale = 1.0;
 };
 
-struct data_stream_synthetic_double_gyre {
+struct data_stream_synthetic_woven : public data_stream_synthetic {
+  ndarray<double> synthesize_timestep(int t) {
+    return synthetic_woven_2D(DW, DH, t*time_scale);
+  };
+};
 
+struct data_stream_synthetic_double_gyre : public data_stream_synthetic {
+  ndarray<double> synthesize_timestep(int t) {
+    return synthetic_double_gyre(DW, DH, t * time_scale);
+  };
 };
 
 struct data_stream_files : public data_stream {
@@ -95,6 +118,13 @@ struct data_stream_pnc : public data_stream_files {
 struct data_stream_factory {
   static data_stream* new_data_stream(int type, const std::string& source);
   static data_stream* new_data_stream(const std::string& source);
+  static data_stream* new_synthetic_data_stream(int c) {
+    switch (c) {
+    case SYNTHETIC_WOVEN: return new data_stream_synthetic_woven;
+    case SYNTHETIC_DOUBLE_GYRE: return new data_stream_synthetic_double_gyre;
+    default: return NULL;
+    }
+  }
 };
 
 }
