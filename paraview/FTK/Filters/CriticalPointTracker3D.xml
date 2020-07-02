@@ -1,6 +1,6 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="filters">
-    <SourceProxy name="CriticalPointTracker3D" class="vtkCriticalPointTracker3D" label="CriticalPointTracker3D">
+    <SourceProxy name="CriticalPointTracker3D" class="ftkCriticalPointTracker3D" label="CriticalPointTracker3D">
       <Documentation
          short_help="track critical points in 3D time-varying scalar field data"
          long_help="track critical points in 3D time-varying scalar field data">

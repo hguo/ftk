@@ -1,4 +1,4 @@
-#include "vtkDoubleGyre2DSource.h"
+#include "ftkSpiralWoven2DSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,28 +16,26 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkDoubleGyre2DSource);
+vtkStandardNewMacro(ftkSpiralWoven2DSource);
 
-vtkDoubleGyre2DSource::vtkDoubleGyre2DSource() : 
-  DW(32), DH(32), DT(10),
-  StartTime(0.0), TimeScale(1.0),
-  A(0.1), Omega(M_PI*2), Epsilon(0.25)
+ftkSpiralWoven2DSource::ftkSpiralWoven2DSource() 
+  : DW(32), DH(32), DT(10), ScalingFactor(15.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }
 
-vtkDoubleGyre2DSource::~vtkDoubleGyre2DSource()
+ftkSpiralWoven2DSource::~ftkSpiralWoven2DSource()
 {
 }
 
-int vtkDoubleGyre2DSource::FillOutputPortInformation(int, vtkInformation *info)
+int ftkSpiralWoven2DSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkDoubleGyre2DSource::RequestInformation(
+int ftkSpiralWoven2DSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
@@ -64,7 +62,7 @@ int vtkDoubleGyre2DSource::RequestInformation(
   return 1;
 }
 
-int vtkDoubleGyre2DSource::RequestData(
+int ftkSpiralWoven2DSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -79,10 +77,9 @@ int vtkDoubleGyre2DSource::RequestData(
   else 
     currentTime = StartTime;
 
-  auto vector_field = ftk::synthetic_double_gyre<float>(DW, DH, currentTime, true, A, Omega, Epsilon);
-  auto imageData1 = vector_field.to_vtk_image_data(true);
+  auto scalar = ftk::synthetic_woven_2D<float>(DW, DH, currentTime+1e-4, ScalingFactor);
+  auto imageData1 = scalar.to_vtk_image_data();
   imageData->ShallowCopy(imageData1);
-  
   
   int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 

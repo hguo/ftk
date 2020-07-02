@@ -1,11 +1,11 @@
 set(classes
-  vtkCriticalPointTracker2D
-  vtkCriticalPointTracker2DSpacetime
-  vtkCriticalPointTracker3D
-  vtkSpiralWoven2DSpacetimeSource
-  vtkSpiralWoven2DSource
-  vtkDoubleGyre2DSource
-  vtkABCFlow3DSource
+  ftkCriticalPointTracker2D
+  ftkCriticalPointTracker2DSpacetime
+  ftkCriticalPointTracker3D
+  ftkSpiralWoven2DSpacetimeSource
+  ftkSpiralWoven2DSource
+  ftkDoubleGyre2DSource
+  ftkABCFlow3DSource
   ftkTornadoFlow3DSource
 )
 

@@ -1,4 +1,4 @@
-#include "vtkSpiralWoven2DSpacetimeSource.h"
+#include "ftkSpiralWoven2DSpacetimeSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,25 +16,25 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkSpiralWoven2DSpacetimeSource);
+vtkStandardNewMacro(ftkSpiralWoven2DSpacetimeSource);
 
-vtkSpiralWoven2DSpacetimeSource::vtkSpiralWoven2DSpacetimeSource() : DW(32), DH(32), DT(10), ScalingFactor(15.0)
+ftkSpiralWoven2DSpacetimeSource::ftkSpiralWoven2DSpacetimeSource() : DW(32), DH(32), DT(10), ScalingFactor(15.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }
 
-vtkSpiralWoven2DSpacetimeSource::~vtkSpiralWoven2DSpacetimeSource()
+ftkSpiralWoven2DSpacetimeSource::~ftkSpiralWoven2DSpacetimeSource()
 {
 }
 
-int vtkSpiralWoven2DSpacetimeSource::FillOutputPortInformation(int, vtkInformation *info)
+int ftkSpiralWoven2DSpacetimeSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkSpiralWoven2DSpacetimeSource::RequestInformation(
+int ftkSpiralWoven2DSpacetimeSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
@@ -51,7 +51,7 @@ int vtkSpiralWoven2DSpacetimeSource::RequestInformation(
   return 1;
 }
 
-int vtkSpiralWoven2DSpacetimeSource::RequestData(
+int ftkSpiralWoven2DSpacetimeSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)

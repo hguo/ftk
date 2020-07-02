@@ -1,4 +1,4 @@
-#include "vtkSpiralWoven2DSource.h"
+#include "ftkABCFlow3DSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -16,45 +16,36 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkSpiralWoven2DSource);
+vtkStandardNewMacro(ftkABCFlow3DSource);
 
-vtkSpiralWoven2DSource::vtkSpiralWoven2DSource() 
-  : DW(32), DH(32), DT(10), ScalingFactor(15.0)
+ftkABCFlow3DSource::ftkABCFlow3DSource() : 
+  DW(32), DH(32), DD(10), 
+  A(std::sqrt(3.0)), B(std::sqrt(2.0)), C(1.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }
 
-vtkSpiralWoven2DSource::~vtkSpiralWoven2DSource()
+ftkABCFlow3DSource::~ftkABCFlow3DSource()
 {
 }
 
-int vtkSpiralWoven2DSource::FillOutputPortInformation(int, vtkInformation *info)
+int ftkABCFlow3DSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkSpiralWoven2DSource::RequestInformation(
+int ftkABCFlow3DSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
 {
-  int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
+  int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
 
   vtkInformation *outInfo = outVec->GetInformationObject(0);
-
-  // time varying data
-  double timeRange[2] = {0.0, DT - 1.0};
-  std::vector<double> timeSteps;
-  for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i) * TimeScale + StartTime);
-
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);
-
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent, 6);
   outInfo->Set(vtkDataObject::SPACING(), cell_lengths, 3);
   outInfo->Set(vtkDataObject::ORIGIN(), origins, 3);
@@ -62,7 +53,7 @@ int vtkSpiralWoven2DSource::RequestInformation(
   return 1;
 }
 
-int vtkSpiralWoven2DSource::RequestData(
+int ftkABCFlow3DSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -71,27 +62,13 @@ int vtkSpiralWoven2DSource::RequestData(
   vtkImageData *imageData = 
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  double currentTime;
-  if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()))
-    currentTime = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
-  else 
-    currentTime = StartTime;
-
-  auto scalar = ftk::synthetic_woven_2D<float>(DW, DH, currentTime+1e-4, ScalingFactor);
-  auto imageData1 = scalar.to_vtk_image_data();
-  imageData->ShallowCopy(imageData1);
+  auto vector_field = ftk::synthetic_abc_flow<float>(DW, DH, DD, A, B, C);
+  auto imageData1 = vector_field.to_vtk_image_data(true);
+  imageData->DeepCopy(imageData1);
   
-  int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
+  int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
-
-  double timeRange[2] = {0.0, DT - 1.0};
-  std::vector<double> timeSteps;
-  for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i) * TimeScale + StartTime);
-
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
-  outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent, 6);
   outInfo->Set(vtkDataObject::SPACING(), cell_lengths, 3);
