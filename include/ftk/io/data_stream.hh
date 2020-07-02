@@ -74,7 +74,8 @@ void data_stream::initialize()
           j["nd"] = 2;
         } else fatal("synthetic case not available.");
       } else fatal("synthetic case name not given.");
-      
+     
+#if 0
       // default dimensions
       if (j.contains("width")) assert(j["width"] != 0);
       else j["width"] = 32;
@@ -86,6 +87,7 @@ void data_stream::initialize()
         if (j.contains("depth")) assert(j["depth"] != 0);
         else j["depth"] = 32;
       }
+#endif
 
       if (j.contains("n_timesteps")) assert(j["n_timesteps"] != 0);
       else j["n_timesteps"] = 32;
@@ -106,16 +108,36 @@ void data_stream::initialize()
           else if (ends_with(filename0, "h5")) j["format"] = "h5";
           else fatal("unabled to determine file format.");
         }
+        
+        if (j.contains("variables")) { // sanity check of variables
+          if (j["variables"].is_array()) {
+            for (const auto &v : j["variables"]) {
+              if (!v.contains("name")) fatal("missing variable name");
+              if (!v["name"].is_string()) fatal("invalid variable name");
+              if (!v.contains("components")) fatal("missing variable component list");
+              if (!v["components"].is_array()) fatal("variable components must be in an array");
+              for (const auto &c : j["components"])
+                if (!c.is_string()) fatal("invalid variable component");
+            }
+          } else fatal("variables must be an array");
+        } else fatal("missing variable list");
 
         if (j["format"] == "float32" || j["format"] == "float64") {
           if (j.contains("nd")) {
             if (j["nd"] != 2 && j["nd"] != 3) fatal("unsupported spatial dimensionality");
           } else fatal("unable to determine spatial dimensionality");
 
-          if ((j["nd"] == 2 && ((!j.contains("width") || !j.contains("height")))) || 
-              (j["nd"] == 3 && ((!j.contains("width") || !j.contains("height") || !j.contains("depth")))))
-            fatal("width, height, and/or depth not specified.");
+          // if ((j["nd"] == 2 && ((!j.contains("width") || !j.contains("height")))) || 
+          //     (j["nd"] == 3 && ((!j.contains("width") || !j.contains("height") || !j.contains("depth")))))
+          //   fatal("width, height, and/or depth not specified.");
+        } else if (j["format"] == "vti") {
+
+        } else if (j["format"] == "nc") {
+
+        } else if (j["format"] == "h5") {
+
         }
+
       } else fatal("missing filenames");
     } else fatal("invalid input type");
   } else fatal("missing `type'");
