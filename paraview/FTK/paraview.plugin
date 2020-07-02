@@ -1,0 +1,10 @@
+NAME
+  FTK
+DESCRIPTION
+  FTK is a feature tracking library
+REQUIRES_MODULES
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::CommonExecutionModel
+  VTK::FiltersSources
+  VTK::IOLegacy

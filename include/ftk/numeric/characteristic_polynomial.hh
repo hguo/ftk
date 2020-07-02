@@ -1,12 +1,14 @@
 #ifndef _FTK_CHARACTERISTIC_POLYNOMIAL_HH
 #define _FTK_CHARACTERISTIC_POLYNOMIAL_HH
 
+#include <ftk/ftk_config.hh>
 #include <ftk/numeric/trace.hh>
 #include <ftk/numeric/det.hh>
 
 namespace ftk {
 
 template <typename T>
+__host__ __device__
 void characteristic_polynomial_2x2(const T A[2][2], T P[3])
 {
   P[2] = T(1);
@@ -15,6 +17,7 @@ void characteristic_polynomial_2x2(const T A[2][2], T P[3])
 }
 
 template <typename T>
+__host__ __device__
 void characteristic_polynomial_2x2(const T A[2][2], const T B[2][2], T P[3])
 {
   P[2] = det2(B);
@@ -23,6 +26,7 @@ void characteristic_polynomial_2x2(const T A[2][2], const T B[2][2], T P[3])
 }
 
 template <typename T>
+__host__ __device__
 void characteristic_polynomial_2x2(T a00, T a01, T a10, T a11, T b00, T b01, T b10, T b11, T P[3])
 {
   P[2] = b00 * b11 - b10 * b01;
@@ -32,6 +36,7 @@ void characteristic_polynomial_2x2(T a00, T a01, T a10, T a11, T b00, T b01, T b
 
 // used for eigensolver
 template <typename T>
+__host__ __device__
 void characteristic_polynomial_3x3(const T A[3][3], T P[4])
 {
   P[3] = 1;
@@ -43,6 +48,7 @@ void characteristic_polynomial_3x3(const T A[3][3], T P[4])
 
 // used for generalized eigensolver
 template <typename T>
+__host__ __device__
 void characteristic_polynomial_3x3(const T A[3][3], const T B[3][3], T P[4]) // tested.
 {
   P[0] = det3(A);

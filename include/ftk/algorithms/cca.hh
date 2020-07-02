@@ -1,9 +1,68 @@
-#ifndef _CCA_H
-#define _CCA_H
+#ifndef _FTK_CCA_H
+#define _FTK_CCA_H
 
-#include "ftk/algorithms/bfs.h"
+#include <set>
+#include <map>
+#include <string>
+
+#include <ftk/basic/union_find.hh>
+#include <ftk/hypermesh/regular_simplex_mesh.hh>
 
 namespace ftk {
+
+// ================================================================
+// Extract connected components by given mesh elements
+
+#if 0
+typedef regular_simplex_mesh_element EleType;
+template <class ContainerType>
+std::vector<std::set<EleType> > extract_connected_components_element(
+    const std::function<ContainerType(EleType) >& neighbors,
+    const std::set<EleType> &qualified_)
+{
+  std::set<EleType> qualified(qualified_);
+
+  union_find<std::string> UF; 
+  std::map<std::string, EleType> id2ele; 
+  // for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
+  for(auto& ele : qualified) {
+    std::string id = ele.to_string(); 
+
+    UF.add(id); 
+    id2ele.insert(std::make_pair (id, ele)); 
+  }
+
+  for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
+    std::string current = ite->to_string(); 
+
+    for (auto nei_ite : neighbors(*ite)) {
+      std::string neighbor = nei_ite.to_string(); 
+
+      if (UF.has(neighbor)) {
+        UF.unite(current, neighbor); 
+      }
+    }
+  }
+
+  std::vector<std::set<std::string> > components_str = UF.get_sets();
+
+  // Convert element ids to elements
+  std::vector<std::set<EleType> >  components; 
+  for(auto comp_str = components_str.begin(); comp_str != components_str.end(); ++comp_str) {
+    std::set<EleType> comp; 
+    for(auto ele_id = comp_str->begin(); ele_id != comp_str->end(); ++ele_id) {
+      comp.insert(id2ele.find(*ele_id)->second); 
+    }
+
+    components.push_back(comp); 
+  }
+
+  return components;
+}
+#endif
+
+// ================================================================
+// Extract connected components by given IDs
 
 template <class IdType>
 std::set<std::pair<IdType, IdType> > track_connected_components(
@@ -34,53 +93,24 @@ std::vector<std::set<IdType> > extract_connected_components(
     const std::function<ContainerType(IdType) >& neighbors,
     const std::set<IdType> &qualified_)
 {
-#if 0
-  // extract connected components
-  // std::set<IdType> qualified(qualified_);
-  std::vector<std::set<IdType> > components;
-  std::set<IdType> visited;
+  std::set<IdType> qualified(qualified_);
 
-  while (!qualified.empty()) {
-    IdType seed = *qualified.begin();
-    std::set<IdType> component;
-
-    bfs<IdType>(seed, neighbors, 
-        [&component, &visited](IdType i) {component.insert(i); visited.insert(i);}, 
-        [&qualified, &visited](IdType i) {return qualified.find(i) != qualified.end() && visited.find(i) == visited.end();});
-    
-    components.emplace_back(component);
+  union_find<IdType> UF; 
+  for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
+    UF.add(*ite); 
   }
 
-  return components;
-#endif
+  for(auto ite = qualified.begin(); ite != qualified.end(); ++ite) {
+    IdType current = *ite; 
 
-  std::set<IdType> qualified(qualified_);
-  std::vector<std::set<IdType> > components;
-  std::set<IdType> Q;
-
-  while (!qualified.empty()) {
-    Q.insert(*qualified.begin());
-
-    std::set<IdType> visited;
-    while (!Q.empty()) {
-      IdType current = *Q.begin();
-      Q.erase(current);
-      visited.insert(current);
-
-      for (auto neighbor : neighbors(current)) {
-        if (qualified.find(neighbor) != qualified.end()
-            && visited.find(neighbor) == visited.end()
-            && Q.find(neighbor) == Q.end()) {
-          Q.insert(neighbor);
-        }
+    for (auto neighbor : neighbors(current)) {
+      if (UF.has(neighbor)) {
+        UF.unite(current, neighbor); 
       }
     }
+  }  
 
-    for (auto v : visited)
-      qualified.erase(v);
-
-    components.push_back(visited);
-  }
+  std::vector<std::set<IdType> > components = UF.get_sets();
 
   return components;
 }

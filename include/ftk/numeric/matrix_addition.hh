@@ -1,6 +1,8 @@
 #ifndef _FTK_MATRIX_ADDITION_H
 #define _FTK_MATRIX_ADDITION_H
 
+#include <ftk/ftk_config.hh>
+
 namespace ftk {
 
 template <class T, int m, int n>

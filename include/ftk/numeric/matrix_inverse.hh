@@ -1,9 +1,12 @@
 #ifndef _FTK_MATRIX_INVERSE_H
 #define _FTK_MATRIX_INVERSE_H
 
+#include <ftk/ftk_config.hh>
+
 namespace ftk {
 
 template <class T>
+__device__ __host__
 inline T matrix_inverse2x2(const T m[2][2], T inv[2][2])
 {
   const T det = m[0][0]*m[1][1] - m[0][1]*m[1][0];
@@ -18,6 +21,7 @@ inline T matrix_inverse2x2(const T m[2][2], T inv[2][2])
 }
 
 template <class T>
+__device__ __host__
 inline T matrix_inverse3x3(const T m[3][3], T inv[3][3]) // returns the determinant
 {
   inv[0][0] =   m[1][1]*m[2][2] - m[1][2]*m[2][1];
@@ -41,6 +45,7 @@ inline T matrix_inverse3x3(const T m[3][3], T inv[3][3]) // returns the determin
 }
 
 template <class T>
+__device__ __host__
 inline T matrix_inverse4(const T m[16], T inv[16]) // returns det
 {
   inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15]

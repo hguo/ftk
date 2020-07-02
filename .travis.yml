@@ -1,0 +1,12 @@
+language:
+  - cpp
+
+script:
+  - mkdir build
+  - cd build
+  - cmake .. -DFTK_BUILD_TESTS=ON
+  - cmake --build .
+  - ctest
+
+notifications:
+  - email

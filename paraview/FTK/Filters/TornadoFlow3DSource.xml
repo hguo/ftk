@@ -1,0 +1,52 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+    <SourceProxy name="TornadoFlow3DSource" class="ftkTornadoFlow3DSource" label="TornadoFlow3DSource">
+      <Documentation
+        short_help="synthetic 3D Tornado flow data for FTK"
+        long_help="synthetic 3D Tornado flow data for FTK">
+      </Documentation>
+
+      <IntVectorProperty 
+        name="Width"
+        command="SetDW"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Height"
+        command="SetDH"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Depth"
+        command="SetDD"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+
+      <IntVectorProperty 
+        name="Timesteps"
+        command="SetDT"
+        number_of_elements="1"
+        default_values="20">
+      </IntVectorProperty>
+      
+      <DoubleVectorProperty
+			  information_only="1"
+			  name="TimestepValues"
+        repeatable="1">
+        <TimeStepsInformationHelper/>
+			  <Documentation>
+			    Available timestep values.
+			  </Documentation>
+			</DoubleVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="FTK"/>
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>

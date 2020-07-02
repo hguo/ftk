@@ -2,7 +2,7 @@
 #define _FTK_CUBIC_RATIONAL_INEQUALITY_SOLVER_HH
 
 #include <ftk/numeric/cubic_inequality_solver.hh>
-#include <ftk/numeric/rational.hh>
+#include <ftk/numeric/rational_function.hh>
 #include <map>
 #include <set>
 

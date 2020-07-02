@@ -1,7 +1,9 @@
 #ifndef _FTK_POLYNOMIAL_HH
 #define _FTK_POLYNOMIAL_HH
 
+#include <ftk/ftk_config.hh>
 #include <cmath>
+#include <limits>
 
 namespace ftk {
 
@@ -126,7 +128,7 @@ void polynomial_scalar_multiplication(const T P[], int m, T scalar, const T R[])
 template <typename T>
 void polynomial_long_division(const T A[], int m, const T B[], int n, T Q[], T R[])
 {
-
+  // TODO
 }
 
 }

@@ -5,7 +5,7 @@
 
 class inequality_test : public testing::Test {
 public:
-  const int nruns = 100000;
+  const int nruns = 1; // 00000;
   const double epsilon = 1e-9;
 };
 
