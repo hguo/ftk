@@ -1,0 +1,52 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+    <SourceProxy name="Merger2DSource" class="ftkMerger2DSource" label="Merger2DSource">
+      <Documentation
+        short_help="synthetic 2D double gyre flow data for FTK"
+        long_help="synthetic 2D double gyre data for FTK">
+      </Documentation>
+
+      <IntVectorProperty 
+        name="Width"
+        command="SetDW"
+        number_of_elements="1"
+        default_values="64">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Height"
+        command="SetDH"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Timesteps"
+        command="SetDT"
+        number_of_elements="1"
+        default_values="100">
+      </IntVectorProperty>
+      
+      <DoubleVectorProperty
+        name="TimeScale"
+        command="SetTimeScale"
+        number_of_elements="1"
+        default_values="0.1">
+      </DoubleVectorProperty>
+
+			<DoubleVectorProperty
+			  information_only="1"
+			  name="TimestepValues"
+        repeatable="1">
+        <TimeStepsInformationHelper/>
+			  <Documentation>
+			    Available timestep values.
+			  </Documentation>
+			</DoubleVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="FTK"/>
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>
