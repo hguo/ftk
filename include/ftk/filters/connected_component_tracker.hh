@@ -18,6 +18,7 @@ struct connected_component_tracker : public filter
   void finalize();
 
   virtual void push_labeled_data_snapshot(const std::vector<LabelIdType>& labels);
+  const std::vector<LabelIdType>& get_last_labeled_data_snapshot() const {return labeled_data_snapshots.back();}
   
   template <typename ContainerType>
   void push_unlabeled_data_snapshot(const std::vector<LabelIdType>& labels, std::function<ContainerType(LabelIdType)> neighbors);

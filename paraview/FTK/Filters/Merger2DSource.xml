@@ -2,8 +2,8 @@
   <ProxyGroup name="sources">
     <SourceProxy name="Merger2DSource" class="ftkMerger2DSource" label="Merger2DSource">
       <Documentation
-        short_help="synthetic 2D double gyre flow data for FTK"
-        long_help="synthetic 2D double gyre data for FTK">
+        short_help="synthetic 2D data for FTK"
+        long_help="synthetic 2D data for FTK">
       </Documentation>
 
       <IntVectorProperty 

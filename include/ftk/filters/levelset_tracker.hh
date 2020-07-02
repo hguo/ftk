@@ -25,9 +25,13 @@ struct levelset_tracker : public connected_component_tracker<TimeIndexType, Labe
   template <typename FloatType>
   void push_scalar_field_data_snapshot(const ndarray<FloatType>&);
 
+  ndarray<LabelIdType> get_last_labeled_array_snapshot() const;
+
 protected:
   double threshold = 0.0;
   int mode = FTK_COMPARE_GE;
+
+  std::vector<size_t> input_shape;
 };
 
 ///////////////
@@ -42,6 +46,8 @@ template <typename TimeIndexType, typename LabelIdType>
 template <typename FloatType>
 void levelset_tracker<TimeIndexType, LabelIdType>::push_scalar_field_data_snapshot(const ndarray<FloatType>& array)
 {
+  input_shape = array.shape();
+
   ndarray<LabelIdType> labels; 
   labels.reshape(array);
   for (auto i = 0; i < array.nelem(); i ++) {
@@ -59,6 +65,14 @@ void levelset_tracker<TimeIndexType, LabelIdType>::push_scalar_field_data_snapsh
   else assert(false); // not yet implemented
 
   this->push_labeled_data_snapshot(labels.std_vector());
+}
+
+template <typename TimeIndexType, typename LabelIdType>
+ndarray<LabelIdType> levelset_tracker<TimeIndexType, LabelIdType>::get_last_labeled_array_snapshot() const
+{
+  ndarray<LabelIdType> array(input_shape);
+  array.from_vector(this->get_last_labeled_data_snapshot());
+  return array;
 }
 
 }

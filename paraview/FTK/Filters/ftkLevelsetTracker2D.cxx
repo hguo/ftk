@@ -3,8 +3,6 @@
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
 #include "vtkFloatArray.h"
-#include "vtkPolyData.h"
-#include "vtkPolyLine.h"
 #include "vtkCellArray.h"
 #include "vtkImageData.h"
 #include "vtkSphereSource.h"
@@ -56,7 +54,7 @@ int ftkLevelsetTracker2D::RequestData(
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
-  vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkImageData *output = vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
   const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
@@ -69,6 +67,10 @@ int ftkLevelsetTracker2D::RequestData(
 
   tracker.push_scalar_field_data_snapshot(field_data);
   tracker.advance_timestep();
+
+  auto labeled_data = tracker.get_last_labeled_array_snapshot();
+  auto img = labeled_data.to_vtk_image_data();
+  output->ShallowCopy(img);
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
