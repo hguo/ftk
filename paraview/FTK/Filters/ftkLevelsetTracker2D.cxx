@@ -60,7 +60,8 @@ int ftkLevelsetTracker2D::RequestData(
 
   const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
- 
+
+  fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
   tracker.set_threshold(Threshold);
 
   ftk::ndarray<double> field_data;
@@ -78,5 +79,6 @@ int ftkLevelsetTracker2D::RequestData(
     // auto output = tracker.get_traced_levelset_vtk();
   }
 
+  currentTimestep ++;
   return 1;
 }

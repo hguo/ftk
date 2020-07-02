@@ -10,7 +10,7 @@
         name="Width"
         command="SetDW"
         number_of_elements="1"
-        default_values="64">
+        default_values="32">
       </IntVectorProperty>
       
       <IntVectorProperty 
