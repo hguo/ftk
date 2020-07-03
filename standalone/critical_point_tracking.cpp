@@ -53,6 +53,9 @@ size_t dimlens[4] = {0}; // Only for netcdf
 // tracker
 ftk::critical_point_tracker_regular* tracker = NULL;
 
+// constants
+static const std::set<std::string> set_valid_output_format({str_auto, str_text, str_vtp});
+
 
 ///////////////////////////////
 ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
@@ -142,12 +145,6 @@ ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
       return ftk::ndarray<double>();
     }
   }
-}
-
-inline bool ends_with(std::string const & value, std::string const & ending)
-{
-  if (ending.size() > value.size()) return false;
-  return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
 int parse_arguments(int argc, char **argv)

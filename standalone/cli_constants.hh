@@ -27,7 +27,12 @@ static const std::string
 static const std::set<std::string>
         set_valid_accelerator({str_none, str_cuda}),
         set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti}),
-        set_valid_input_dimension({str_auto, str_two, str_three}),
-        set_valid_output_format({str_auto, str_text, str_vtp});
+        set_valid_input_dimension({str_auto, str_two, str_three});
+
+static inline bool ends_with(std::string const & value, std::string const & ending)
+{
+  if (ending.size() > value.size()) return false;
+  return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
 
 #endif
