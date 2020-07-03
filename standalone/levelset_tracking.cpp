@@ -68,6 +68,8 @@ int parse_arguments(int argc, char **argv)
     ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>(DT))
     ("var", "Variable name (only for NetCDF, HDF5, and VTK)", 
      cxxopts::value<std::string>(input_variable_name))
+    ("threshold", "Threshold for levelset tracking", 
+     cxxopts::value<double>(threshold))
     ("o,output", "Output file name pattern, e.g. 'out-%d.raw', 'out-%04d.vti'",
      cxxopts::value<std::string>(output_filename_pattern))
     ("output-format", "Output file format (auto|raw|nc|h5|vti)",
@@ -110,6 +112,9 @@ int parse_arguments(int argc, char **argv)
   else if (input_dimension == str_two) nd = 2;
   else if (input_dimension == str_three) nd = 3;
   else fatal("Unsupported data dimensionality.");
+
+  if (!results.count("threshold")) 
+    fatal("Missing threshold value.");
 
   // processing output
   if (show_vtk) {
@@ -307,6 +312,7 @@ int parse_arguments(int argc, char **argv)
   fprintf(stderr, "DH=%zu\n", DH);
   fprintf(stderr, "DD=%zu\n", DD);
   fprintf(stderr, "DT=%zu\n", DT);
+  fprintf(stderr, "threshold=%f\n", threshold);
   fprintf(stderr, "nthreads=%d\n", nthreads);
   fprintf(stderr, "=============\n");
 
