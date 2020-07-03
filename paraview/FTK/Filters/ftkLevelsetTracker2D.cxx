@@ -37,12 +37,6 @@ int ftkLevelsetTracker2D::RequestInformation(
   return 1;
 }
 
-int ftkLevelsetTracker2D::FillOutputPortInformation(int, vtkInformation *info)
-{
-  info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
-  return 1;
-}
-
 int ftkLevelsetTracker2D::RequestData(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 

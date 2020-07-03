@@ -24,7 +24,6 @@ protected:
 
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
-  int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
   ftkLevelsetTracker2D(const ftkLevelsetTracker2D&);
