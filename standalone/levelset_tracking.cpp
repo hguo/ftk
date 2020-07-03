@@ -45,10 +45,52 @@ ftk::levelset_tracker<> tracker;
 
 ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
 {
-  // const double t = DT == 1 ? 0.0 : double(k)/(DT-1);
-  // return ftk::synthetic_woven_2D<double>(DW, DH, t);
-  const double t = DT == 1 ? 0.0 : double(k)/(DT-1) * 10;
-  return ftk::synthetic_merger_2D<double>(DW, DH, t);
+  std::vector<size_t> shape;
+  if (nd == 2) shape = std::vector<size_t>({DW, DH});
+  else shape = std::vector<size_t>({DW, DH, DD});
+
+  if (demo) {
+    if (nd == 2) {
+      const double t = DT == 1 ? 0.0 : double(k)/(DT-1) * 10;
+      return ftk::synthetic_merger_2D<double>(DW, DH, t);
+    } else { // nd == 3
+      fprintf(stderr, "3D demo case not available.\n");
+      assert(false); // TODO: create a 3D demo case
+      return ftk::ndarray<double>();
+    } 
+  } else {
+    const std::string filename = input_filenames[k];
+
+    if (input_format == str_float32) {
+      ftk::ndarray<float> array32(shape);
+      array32.from_binary_file(filename);
+      
+      ftk::ndarray<double> array(shape);
+      array.from_array(array32);
+
+      return array;
+    } else if (input_format == str_float64) {
+      ftk::ndarray<double> array(shape);
+      array.from_binary_file(filename);
+      return array;
+    } else if (input_format == str_vti) {
+      ftk::ndarray<double> array;
+      array.from_vtk_image_data_file(filename, input_variable_name);
+      return array;
+    } else if (input_format == str_netcdf) {
+      ftk::ndarray<double> array;
+      array.from_netcdf(filename, input_variable_name);
+      array.reshape(shape); // ncdims may not be equal to nd
+      return array;
+    } else if (input_format == str_hdf5) {
+      // TODO
+      assert(false);
+      return ftk::ndarray<double>();
+    } else {
+      assert(false);
+      return ftk::ndarray<double>();
+    }
+  }
 }
 
 int parse_arguments(int argc, char **argv)
@@ -346,10 +388,14 @@ void track_levelset()
   delete tracker;
 }
 
+void write_outputs()
+{
+  // TODO
+}
+
 int main(int argc, char **argv)
 {
   parse_arguments(argc, argv);
-
-  // track_levelset();
+  track_levelset();
   return 0;
 }
