@@ -753,7 +753,9 @@ inline void critical_point_tracker_2d_regular::write_traced_critical_points_text
     for (int k = 0; k < curve.size(); k ++) {
       const auto &cp = curve[k];
       os << "---x=(" << cp[0] << ", " << cp[1] << "), "
-         << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
+         << "t=" << cp[2] << ", " 
+         << "scalar=" << cp.scalar << ", "
+         << "type=" << cp.type << std::endl;
     }
   }
 }
