@@ -11,7 +11,6 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>

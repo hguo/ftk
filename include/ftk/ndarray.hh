@@ -109,6 +109,9 @@ struct ndarray {
   size_t index(const std::vector<size_t>& idx) const;
   size_t index(const std::vector<int>& idx) const;
 
+  template <typename uint=size_t>
+  std::vector<uint> from_index(uint i) const {return lattice().from_integer(i);}
+
   T& at(const std::vector<size_t>& idx) {return p[index(idx)];}
   const T& at(const std::vector<size_t>& idx) const {return p[index(idx)];}
   

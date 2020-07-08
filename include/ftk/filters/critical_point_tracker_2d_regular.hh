@@ -507,16 +507,18 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
       vf[i][j] = v[i][j];
   int indices[3];
   simplex_indices(vertices, indices);
-  // bool succ = robust_critical_point_in_simplex2(vf, indices);
-  // if (!succ) return false;
+  bool succ = robust_critical_point_in_simplex2(vf, indices);
+  if (!succ) return false;
 
   double mu[3]; // check intersection
   bool succ2 = inverse_lerp_s2v2(v, mu);
-  if (!succ2) return false;
+  // if (!succ2) return false;
+  // fprintf(stderr, "mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
 
   double X[3][3]; // position
   simplex_coordinates(vertices, X);
   lerp_s2v3(X, mu, cp.x);
+  // fprintf(stderr, "x=%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
 
   if (scalar_field_source != SOURCE_NONE) {
     double values[3];
@@ -760,7 +762,9 @@ inline void critical_point_tracker_2d_regular::write_discrete_critical_points_te
   for (const auto &kv : discrete_critical_points) {
     const auto &cp = kv.second;
     os << "x=(" << cp[0] << ", " << cp[1] << "), "
-       << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
+       << "t=" << cp[2] << ", "
+       << "scalar=" << cp.scalar << ", "
+       << "type=" << cp.type << std::endl;
   }
 }
 
