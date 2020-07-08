@@ -513,6 +513,7 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   double mu[3]; // check intersection
   bool succ2 = inverse_lerp_s2v2(v, mu);
   // if (!succ2) return false;
+  if (isnan(mu[0]) || isnan(mu[1]) || isnan(mu[2])) return false;
   // fprintf(stderr, "mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
 
   double X[3][3]; // position

@@ -472,10 +472,14 @@ int parse_arguments(int argc, char **argv)
   fprintf(stderr, "nd=%d\n", nd);
   fprintf(stderr, "ncdims=%d\n", ncdims);
   fprintf(stderr, "nv=%d\n", nv);
-  fprintf(stderr, "input_variable_name=%s\n", input_variable_name.c_str());
-  fprintf(stderr, "input_variable_name_u=%s\n", input_variable_name_u.c_str());
-  fprintf(stderr, "input_variable_name_v=%s\n", input_variable_name_v.c_str());
-  fprintf(stderr, "input_variable_name_w=%s\n", input_variable_name_w.c_str());
+  if (input_variable_name.size())
+    fprintf(stderr, "input_variable_name=%s\n", input_variable_name.c_str());
+  if (input_variable_name_u.size())
+    fprintf(stderr, "input_variable_name_u=%s\n", input_variable_name_u.c_str());
+  if (input_variable_name_v.size())
+    fprintf(stderr, "input_variable_name_v=%s\n", input_variable_name_v.c_str());
+  if (input_variable_name_w.size())
+    fprintf(stderr, "input_variable_name_w=%s\n", input_variable_name_w.c_str());
   fprintf(stderr, "DW=%zu\n", DW);
   fprintf(stderr, "DH=%zu\n", DH);
   fprintf(stderr, "DD=%zu\n", DD);
