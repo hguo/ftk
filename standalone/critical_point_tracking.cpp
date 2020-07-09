@@ -32,9 +32,12 @@ std::string output_filename,
   output_format;
 std::vector<std::string> input_filenames; // assuming each file contains only one timestep, and all files have the exactly same structure
 std::string accelerator;
+std::string type_filter_str;
 size_t DW = 0, DH = 0, DD = 0, DT = 0;
 int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
+bool use_type_filter = false;
+unsigned int type_filter = 0;
 
 // determined later
 int nd, // dimensionality
@@ -174,6 +177,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(input_variable_name_w))
     ("o,output", "Output file", 
      cxxopts::value<std::string>(output_filename))
+    ("type-filter", "Type filter: ane single or a combination of critical point types, e.g. `min', `max', `saddle', `min|max'",
+     cxxopts::value<std::string>(type_filter_str))
     ("r,output-format", "Output format (auto|text|vtp)", 
      cxxopts::value<std::string>(output_format)->default_value(str_auto))
     ("nthreads", "Number of threads", 
@@ -222,6 +227,17 @@ int parse_arguments(int argc, char **argv)
     fprintf(stderr, "input_variable_name_v=%s\n", input_variable_name_v.c_str());
     fprintf(stderr, "input_variable_name_w=%s\n", input_variable_name_w.c_str());
     fatal("Cannot specify both `--var' and `--var-w|--var-v|--var-w' simultanuously");
+  }
+
+  if (type_filter_str.size() > 0) {
+    if (type_filter_str.find(str_critical_point_type_min) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_MINIMUM;
+    if (type_filter_str.find(str_critical_point_type_max) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_MAXIMUM;
+    if (type_filter_str.find(str_critical_point_type_saddle) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_SADDLE;
+    if (!type_filter) fatal("Invalid type filter");
+    use_type_filter = true;
   }
 
   // processing output
@@ -484,6 +500,7 @@ int parse_arguments(int argc, char **argv)
   fprintf(stderr, "DH=%zu\n", DH);
   fprintf(stderr, "DD=%zu\n", DD);
   fprintf(stderr, "DT=%zu\n", DT);
+  fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
   fprintf(stderr, "nthreads=%d\n", nthreads);
   fprintf(stderr, "=============\n");
 
@@ -507,6 +524,9 @@ void track_critical_points()
   tracker->set_number_of_threads(nthreads);
       
   tracker->set_input_array_partial(false); // input data are not distributed
+
+  if (use_type_filter)
+    tracker->set_type_filter(type_filter);
   
   if (nv == 1) { // scalar field
     tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );

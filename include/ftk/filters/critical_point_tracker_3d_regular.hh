@@ -78,8 +78,6 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
 protected:
   regular_simplex_mesh m;
   
-  unsigned int type_filter = 0xffffffff;
-
   typedef regular_simplex_mesh_element element_t;
   
   std::map<element_t, critical_point_3dt_t> discrete_critical_points;
@@ -425,7 +423,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
   }
 
   cp.type = critical_point_type_3d(J, is_jacobian_field_symmetric);
-  if (cp.type & type_filter) return true;
+  if (filter_critical_point_type(cp)) return true; 
   else return false;
 } 
 
@@ -469,7 +467,7 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_traced_criti
   }
 
   // point data for types
-  if (type_filter) {
+  if (1) { // if (type_filter) {
     vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
     types->SetNumberOfValues(nv);
     size_t i = 0;

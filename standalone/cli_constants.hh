@@ -24,6 +24,11 @@ static const std::string
         str_ext_netcdf(".nc"),
         str_ext_hdf5(".h5");
 
+static const std::string
+        str_critical_point_type_min("min"),
+        str_critical_point_type_max("max"),
+        str_critical_point_type_saddle("saddle");
+
 static const std::set<std::string>
         set_valid_accelerator({str_none, str_cuda}),
         set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti}),

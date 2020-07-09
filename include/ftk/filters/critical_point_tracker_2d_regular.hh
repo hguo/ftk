@@ -82,8 +82,6 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
 protected:
   regular_simplex_mesh m;
   
-  unsigned int type_filter = 0xffffffff;
-
   typedef regular_simplex_mesh_element element_t;
   
   std::map<element_t, critical_point_2dt_t> discrete_critical_points;
@@ -651,7 +649,7 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_trace
   polyData->SetLines(cells);
 
   // point data for types
-  if (type_filter) {
+  if (1) { // if (type_filter) {
     vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
     types->SetNumberOfValues(nv);
     size_t i = 0;
