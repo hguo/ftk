@@ -26,6 +26,7 @@
 
 #if FTK_HAVE_VTK
 #include <vtkUnsignedIntArray.h>
+#include <vtkVertex.h>
 #endif
 
 #if FTK_HAVE_CUDA
@@ -626,7 +627,8 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_trace
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
+  vtkSmartPointer<vtkCellArray> lines = vtkCellArray::New();
+  vtkSmartPointer<vtkCellArray> verts = vtkCellArray::New();
 
   for (const auto &curve : traced_critical_points)
     for (auto i = 0; i < curve.size(); i ++) {
@@ -636,17 +638,25 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_trace
 
   size_t nv = 0;
   for (const auto &curve : traced_critical_points) {
-    vtkSmartPointer<vtkPolyLine> polyLine = vtkPolyLine::New();
-    polyLine->GetPointIds()->SetNumberOfIds(curve.size());
-    for (int i = 0; i < curve.size(); i ++)
-      polyLine->GetPointIds()->SetId(i, i+nv);
-
-    cells->InsertNextCell(polyLine);
+    if (curve.size() < 2) { // isolated vertex
+      vtkSmartPointer<vtkVertex> obj = vtkVertex::New();
+      obj->GetPointIds()->SetNumberOfIds(curve.size());
+      for (int i = 0; i < curve.size(); i ++)
+        obj->GetPointIds()->SetId(i, i+nv);
+      verts->InsertNextCell(obj);
+    } else { // lines
+      vtkSmartPointer<vtkPolyLine> obj = vtkPolyLine::New();
+      obj->GetPointIds()->SetNumberOfIds(curve.size());
+      for (int i = 0; i < curve.size(); i ++)
+        obj->GetPointIds()->SetId(i, i+nv);
+      lines->InsertNextCell(obj);
+    }
     nv += curve.size();
   }
-  
+ 
   polyData->SetPoints(points);
-  polyData->SetLines(cells);
+  polyData->SetLines(lines);
+  polyData->SetVerts(verts);
 
   // point data for types
   if (1) { // if (type_filter) {
