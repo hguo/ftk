@@ -7,6 +7,7 @@
 #include "ftk/filters/critical_point_tracker_2d_regular.hh"
 #include "ftk/filters/critical_point_tracker_3d_regular.hh"
 #include "ftk/ndarray.hh"
+#include "ftk/ndarray/conv.hh"
 #include "cli_constants.hh"
 
 #if FTK_HAVE_VTK
@@ -38,6 +39,7 @@ int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 bool use_type_filter = false;
 unsigned int type_filter = 0;
+double smoothing_kernel = 0.0;
 
 // determined later
 int nd, // dimensionality
@@ -185,6 +187,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<int>(nthreads))
     ("a,accelerator", "Accelerator (none|cuda)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
+    ("smoothing-kernel", "Smoothing kernel size",
+     cxxopts::value<double>(smoothing_kernel))
     ("vtk", "Show visualization with vtk", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -552,8 +556,14 @@ void track_critical_points()
   int current_timestep = 0;
   while (1) {
     ftk::ndarray<double> field_data = request_timestep(current_timestep);
-    if (nv == 1) // scalar field
-      tracker->push_scalar_field_snapshot(field_data);
+    if (nv == 1) { // scalar field
+      if (smoothing_kernel) {
+        ftk::ndarray<double> scalar = 
+          ftk::conv2D_gaussian(field_data, smoothing_kernel, 5, 5, 2);
+        tracker->push_scalar_field_snapshot(scalar);
+      } else 
+        tracker->push_scalar_field_snapshot(field_data);
+    }
     else // vector field
       tracker->push_vector_field_snapshot(field_data);
      
