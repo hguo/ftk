@@ -42,7 +42,7 @@ if (FTK_HAVE_TBB)
 endif ()
 
 if (FTK_HAVE_MPI)
-  target_link_libraries (ftk ${MPI_C_LIBRARIES})
+  target_link_libraries (ftk ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
 endif ()
 
 if (FTK_HAVE_PNG)

@@ -5,6 +5,8 @@
 #include <ftk/external/diy/mpi.hpp>
 #include <ftk/external/cxxopts.hpp>
 #include <mutex>
+#include <thread>
+#include <cassert>
 
 namespace ftk {
 
