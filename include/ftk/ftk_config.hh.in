@@ -18,6 +18,8 @@
 #cmakedefine FTK_HAVE_OPENMP 1
 #cmakedefine FTK_HAVE_CUDA 1
 
+#define FTK_FP_PRECISION ${FTK_FP_PRECISION}
+
 #ifdef __CUDACC__
 // #define FTK_NUMERIC_FUNC __device__ __host__
 #else

@@ -223,6 +223,7 @@ option (FTK_BUILD_TESTS "Build tests" OFF)
 option (FTK_BUILD_EXAMPLES "Build examples" ON)
 option (FTK_BUILD_EXPERIMENTS "Build experimental code" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
+set (FTK_FP_PRECISION "32768" CACHE STRING "Fixed point precision")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
