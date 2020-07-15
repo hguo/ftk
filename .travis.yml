@@ -25,7 +25,6 @@ before_script:
   - cmake --build .
 
 script: 
-  - cd build
   - ctest
 
 notifications:
