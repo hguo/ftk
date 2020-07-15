@@ -53,7 +53,7 @@ elseif (FTK_USE_VTK)
 endif ()
 if (VTK_FOUND)
   set (FTK_HAVE_VTK TRUE)
-  # include (${VTK_USE_FILE})
+  include (${VTK_USE_FILE})
 endif ()
 
 if (FTK_USE_Kokkos STREQUAL AUTO)

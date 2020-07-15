@@ -38,11 +38,22 @@ jobs:
       os: linux
       dist: bionic
       addons:
-        apt:
           packages:
             - libvtk7-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_VTK=ON"
+    
+    - name: build with netcdf, hdf5, and vtk (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libnetcdf-dev
+            - libhdf5-dev
+            - libvtk7-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON"
 
     - name: build with mpi (linux)
       os: linux
@@ -53,6 +64,19 @@ jobs:
             - libmpich-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
+    - name: build with netcdf, hdf5, vtk, and mpi (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libnetcdf-dev
+            - libhdf5-dev
+            - libvtk7-dev
+            - libmpich-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPICH=ON"
 
 before_script:
   - mkdir build
