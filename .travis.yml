@@ -18,7 +18,7 @@ jobs:
           packages:
             - libnetcdf-dev
       env: 
-        - CMAKE_ARG=-DFTK_USE_NETCDF
+        - CMAKE_ARG="-DFTK_USE_NETCDF=ON"
 
     - name: build with hdf5
       os: linux
@@ -28,7 +28,7 @@ jobs:
           packages:
             - libhdf5-dev
       env: 
-        - CMAKE_ARG=-DFTK_USE_HDF5
+        - CMAKE_ARG="-DFTK_USE_HDF5=ON"
 
     - name: build with mpi
       os: linux
@@ -38,7 +38,7 @@ jobs:
           packages:
             - libmpich-dev
       env: 
-        - CMAKE_ARG=-DFTK_USE_MPI
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
 before_script:
   - mkdir build
