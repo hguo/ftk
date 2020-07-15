@@ -14,6 +14,18 @@ jobs:
       os: osx
       osx_image: xcode11
 
+    - name: build with mpsolve (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libgmp-dev
+      before_install:
+        - sh tests/travis/install-mpsolve.sh
+      env:
+        - CMAKE_ARG="-DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
+
     - name: build with netcdf (linux)
       os: linux
       dist: bionic
