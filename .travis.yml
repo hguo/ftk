@@ -34,6 +34,16 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_HDF5=ON"
 
+    - name: build with vtk (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libvtk7-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_VTK=ON"
+
     - name: build with mpi (linux)
       os: linux
       dist: bionic
