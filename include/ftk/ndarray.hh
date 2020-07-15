@@ -154,7 +154,7 @@ struct ndarray {
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
 
-  friend std::ostream& operator<<(ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
+  friend std::ostream& operator<<(std::ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
   friend bool operator==(const ndarray<T>& lhs, const ndarray<T>& rhs) {return lhs.dims == rhs.dims && lhs.p == rhs.p;}
 
   T& operator[](size_t i) {return p[i];}
@@ -808,7 +808,7 @@ std::ostream& ndarray<T>::print(std::ostream& os) const
   for (size_t i = 0; i < dims.size(); i ++) 
     if (i < dims.size()-1) os << dims[i] << ", ";
     else os << dims[i] << "}";
-  os << endl;
+  os << std::endl;
 
   if (nd() == 1) {
     os << "[";
