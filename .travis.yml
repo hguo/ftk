@@ -21,7 +21,7 @@ jobs:
 before_script:
   - mkdir build
   - cd build
-  - cmake .. -DFTK_BUILD_TESTS=ON -DFTK_USE_NETCDF=ON
+  - cmake .. -DFTK_BUILD_TESTS=ON
   - cmake --build .
 
 script: 
