@@ -1,17 +1,15 @@
 language:
   - cpp
 
+os: linux
+dist: bionic
+
 jobs:
   include:
     - name: build without external dependencies
       os: linux
       dist: bionic
-      script: 
-      - mkdir build
-      - cd build
-      - cmake .. -DFTK_BUILD_TESTS=ON
-      - cmake --build .
-      - ctest
+
     - name: build with netcdf
       os: linux
       dist: bionic
@@ -19,12 +17,16 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-      script: 
-      - mkdir build
-      - cd build
-      - cmake .. -DFTK_BUILD_TESTS=ON -DFTK_USE_NETCDF=ON
-      - cmake --build .
-      - ctest
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake .. -DFTK_BUILD_TESTS=ON -DFTK_USE_NETCDF=ON
+  - cmake --build .
+
+script: 
+  - cd build
+  - ctest
 
 notifications:
   email:
