@@ -17,11 +17,33 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
+      env: 
+        - CMAKE_ARG=-DFTK_USE_NETCDF
+
+    - name: build with hdf5
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libhdf5-dev
+      env: 
+        - CMAKE_ARG=-DFTK_USE_HDF5
+
+    - name: build with mpi
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libmpich-dev
+      env: 
+        - CMAKE_ARG=-DFTK_USE_MPI
 
 before_script:
   - mkdir build
   - cd build
-  - cmake .. -DFTK_BUILD_TESTS=ON
+  - cmake .. -DFTK_BUILD_TESTS=ON ${CMAKE_ARG}
   - cmake --build .
 
 script: 
