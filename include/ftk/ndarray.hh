@@ -55,7 +55,7 @@
 #include <vtkXMLImageDataReader.h>
 #include <vtkXMLImageDataWriter.h>
 #include <vtkDataReader.h>
-#include <vtkMeta.h>
+#include <vtkNew.h>
 #endif
 
 namespace ftk {
