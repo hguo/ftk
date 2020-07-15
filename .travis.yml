@@ -6,11 +6,15 @@ dist: bionic
 
 jobs:
   include:
-    - name: build without external dependencies
+    - name: build without external dependencies (linux)
       os: linux
       dist: bionic
 
-    - name: build with netcdf
+    - name: build without external dependencies (osx)
+      os: osx
+      osx_image: xcode11
+
+    - name: build with netcdf (linux)
       os: linux
       dist: bionic
       addons:
@@ -20,7 +24,7 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_NETCDF=ON"
 
-    - name: build with hdf5
+    - name: build with hdf5 (linux)
       os: linux
       dist: bionic
       addons:
@@ -30,7 +34,7 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_HDF5=ON"
 
-    - name: build with mpi
+    - name: build with mpi (linux)
       os: linux
       dist: bionic
       addons:
