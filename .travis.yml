@@ -26,6 +26,18 @@ jobs:
       env:
         - CMAKE_ARG="-DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
+    - name: build with cuda10 (linux)
+      os: linux
+      dist: bionic
+      sudo: required
+      before_install:
+        - sh tests/travis/install-cuda10.sh
+      env: 
+        - CMAKE_ARG="-DFTK_USE_CUDA=ON"
+        - CUDA=10.1.105-1
+        - CUDA_SHORT=10.1
+        - UBUNTU_VERSION=ubuntu1804
+
     - name: build with netcdf (linux)
       os: linux
       dist: bionic
