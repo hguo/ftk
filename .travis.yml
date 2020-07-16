@@ -31,7 +31,7 @@ jobs:
       dist: bionic
       sudo: required
       before_install:
-        - sh tests/travis/install-cuda10.sh
+        - sh tests/travis/install-cuda.sh
       env: 
         - CMAKE_ARG="-DFTK_USE_CUDA=ON"
         - CUDA=10.1.105-1
