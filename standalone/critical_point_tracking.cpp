@@ -6,6 +6,7 @@
 #include "ftk/ndarray/synthetic.hh"
 #include "ftk/filters/critical_point_tracker_2d_regular.hh"
 #include "ftk/filters/critical_point_tracker_3d_regular.hh"
+#include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
 #include "cli_constants.hh"
@@ -39,7 +40,8 @@ int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 bool use_type_filter = false;
 unsigned int type_filter = 0;
-double smoothing_kernel = 0.0;
+double spatial_smoothing = 0.0, temporal_smoothing = 0.0;
+int spatial_smoothing_kernel_size = 5, temporal_smoothing_kernel_size = 3;
 
 // determined later
 int nd, // dimensionality
@@ -187,8 +189,14 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<int>(nthreads))
     ("a,accelerator", "Accelerator (none|cuda)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
-    ("smoothing-kernel", "Smoothing kernel size",
-     cxxopts::value<double>(smoothing_kernel))
+    ("spatial-smoothing", "Spatial smoothing bandwidth",
+     cxxopts::value<double>(spatial_smoothing))
+    ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size",
+     cxxopts::value<int>(spatial_smoothing_kernel_size))
+    ("temporal-smoothing", "Temporal smoothing bandwidth",
+     cxxopts::value<double>(temporal_smoothing))
+    ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", 
+     cxxopts::value<int>(temporal_smoothing_kernel_size))
     ("vtk", "Show visualization with vtk", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -552,28 +560,52 @@ void track_critical_points()
     }
   }
   tracker->initialize();
-
-  int current_timestep = 0;
-  while (1) {
-    ftk::ndarray<double> field_data = request_timestep(current_timestep);
+    
+  auto push_timestep = [&](const ftk::ndarray<double>& field_data) {
     if (nv == 1) { // scalar field
-      if (smoothing_kernel) {
+      if (spatial_smoothing) {
         ftk::ndarray<double> scalar = 
-          ftk::conv2D_gaussian(field_data, smoothing_kernel, 5, 5, 2);
+          ftk::conv2D_gaussian(field_data, spatial_smoothing, 
+              spatial_smoothing_kernel_size, spatial_smoothing_kernel_size, 2);
         tracker->push_scalar_field_snapshot(scalar);
       } else 
         tracker->push_scalar_field_snapshot(field_data);
     }
     else // vector field
       tracker->push_vector_field_snapshot(field_data);
-     
-    if (current_timestep == DT - 1) {
-      tracker->update_timestep();
-      break;
+  };
+
+  int current_timestep = 0;
+  if (temporal_smoothing) {
+    ftk::streaming_filter<ftk::ndarray<double>, double> stream;
+    stream.set_gaussian_kernel(temporal_smoothing, temporal_smoothing_kernel_size);
+
+    bool first_time = true;
+    int counter = 0;
+    stream.set_callback([&](const ftk::ndarray<double>& field_data) {
+      // std::cerr << field_data << std::endl;
+      push_timestep(field_data);
+      if (first_time) first_time = !first_time;
+      else tracker->advance_timestep();
+    });
+
+    for (current_timestep = 0; current_timestep < DT; current_timestep ++) {
+      stream.push(request_timestep(current_timestep));
     }
-    else if (current_timestep != 0) // need to push two timestep before one can advance timestep
-      tracker->advance_timestep();
-    current_timestep ++;
+    stream.finish();
+  } else {
+    while (1) {
+      ftk::ndarray<double> field_data = request_timestep(current_timestep);
+      push_timestep(field_data);
+       
+      if (current_timestep == DT - 1) {
+        tracker->update_timestep();
+        break;
+      }
+      else if (current_timestep != 0) // need to push two timestep before one can advance timestep
+        tracker->advance_timestep();
+      current_timestep ++;
+    }
   }
 
   tracker->finalize();

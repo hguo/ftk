@@ -158,6 +158,21 @@ struct ndarray {
   friend std::ostream& operator<<(std::ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
   friend bool operator==(const ndarray<T>& lhs, const ndarray<T>& rhs) {return lhs.dims == rhs.dims && lhs.p == rhs.p;}
 
+  ndarray<T>& operator=(const ndarray<T>& x) {dims = x.dims; s = x.s; p = x.p; return *this;}
+  ndarray<T>& operator+=(const ndarray<T>& x);
+  ndarray<T>& operator-=(const ndarray<T>& x);
+  
+  template <typename T1> ndarray<T>& operator*=(const T1& x);
+  template <typename T1> ndarray<T>& operator/=(const T1& x);
+
+  friend ndarray<T> operator+(const ndarray<T>& lhs, const ndarray<T>& rhs);
+  friend ndarray<T> operator-(const ndarray<T>& lhs, const ndarray<T>& rhs);
+
+  // template <typename T1> friend ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs);
+  template <typename T1> friend ndarray<T> operator*(const T1& lhs, const ndarray<T>& rhs) {return rhs * lhs;}
+  template <typename T1> friend ndarray<T> operator/(const ndarray<T>& lhs, const T1& rhs);
+
+  // element access
   T& operator[](size_t i) {return p[i];}
   const T& operator[](size_t i) const {return p[i];}
 
@@ -249,6 +264,30 @@ private:
   T *d_p = NULL;
 #endif
 };
+
+//////////////////////////////////
+
+template <typename T>
+ndarray<T>& ndarray<T>::operator+=(const ndarray<T>& x)
+{
+  if (empty()) *this = x;
+  else {
+    assert(this->shape() == x.shape());
+    for (auto i = 0; i < p.size(); i ++)
+      p[i] += x.p[i];
+  }
+  return *this;
+}
+
+template <typename T, typename T1>
+ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs) 
+{
+  ndarray<T> array;
+  array.reshape(lhs);
+  for (auto i = 0; i < array.nelem(); i ++)
+    array[i] = lhs[i] * rhs;
+  return array;
+}
 
 template <typename T>
 lattice ndarray<T>::get_lattice() const {
