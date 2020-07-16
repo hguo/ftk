@@ -1,0 +1,42 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+    <SourceProxy name="SpiralWoven2DSpacetimeSource" class="ftkSpiralWoven2DSpacetimeSource" label="SpiralWoven2DSpacetimeSource">
+      <Documentation
+        short_help="synthetic 2D time-varying stack for FTK"
+        long_help="synthetic 2D time-varying stack for FTK">
+      </Documentation>
+
+      <IntVectorProperty 
+        name="Width"
+        command="SetDW"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Height"
+        command="SetDH"
+        number_of_elements="1"
+        default_values="32">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Timesteps"
+        command="SetDT"
+        number_of_elements="1"
+        default_values="10">
+      </IntVectorProperty>
+      
+      <DoubleVectorProperty
+        name="ScalingFactor"
+        command="SetScalingFactor"
+        number_of_elements="1"
+        default_values="15.0">
+      </DoubleVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="FTK"/>
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>

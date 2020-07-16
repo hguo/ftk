@@ -1,6 +1,6 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="filters">
-    <SourceProxy name="CriticalPoint2DTracker" class="vtkCriticalPoint2DTracker" label="CriticalPoint2DTracker">
+    <SourceProxy name="CriticalPointTracker2D" class="ftkCriticalPointTracker2D" label="CriticalPointTracker2D">
       <Documentation
          short_help="track critical points in 2D time-varying scalar field data"
          long_help="track critical points in 2D time-varying scalar field data">
@@ -18,6 +18,21 @@
         </DataTypeDomain>
       </InputProperty>
 
+      <StringVectorProperty 
+        name="InputVariable"
+        command="SetInputVariable"
+        number_of_elements="1"
+        animateable="1">
+        <ArrayListDomain name="array_list"
+          attribute_type="Scalars"
+          input_domain_name="inputs_array">
+          <RequiredProperties>
+            <Property name="Input"
+              function="Input" />
+          </RequiredProperties>
+        </ArrayListDomain>
+      </StringVectorProperty>
+
       <IntVectorProperty 
         name="UseGPU"
         command="SetUseGPU"
@@ -30,7 +45,8 @@
         name="GaussianKernelSize"
         command="SetGaussianKernelSize"
         number_of_elements="1"
-        default_values="2.0">
+        default_values="2.0"
+        animateable="0">
       </DoubleVectorProperty>
 
       <Hints>

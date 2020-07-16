@@ -73,9 +73,14 @@ struct ndarray {
   size_t shape(size_t i) const {return dim(i);}
   size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
   bool empty() const  {return p.empty();}
-  std::vector<size_t> shape() const {return dims;}
+  const std::vector<size_t> &shape() const {return dims;}
 
   lattice get_lattice() const;
+
+  void fill(const std::vector<T>& values); //! fill values with std::vector
+  void fill(const std::vector<std::vector<T>>& values); //! fill values
+
+  const std::vector<T>& std_vector() const {return p;}
 
   const T* data() const {return p.data();}
   T* data() {return p.data();}
@@ -85,6 +90,7 @@ struct ndarray {
   void reshape(const std::vector<size_t> &dims_);
   void reshape(const std::vector<size_t> &dims, T val);
   void reshape(size_t ndims, const size_t sizes[]);
+  template <typename T1> void reshape(const ndarray<T1>& array); //! copy shape from another array
 
   void reshape(size_t n0) {reshape(std::vector<size_t>({n0}));}
   void reshape(size_t n0, size_t n1) {reshape({n0, n1});}
@@ -102,6 +108,9 @@ struct ndarray {
 
   size_t index(const std::vector<size_t>& idx) const;
   size_t index(const std::vector<int>& idx) const;
+
+  template <typename uint=size_t>
+  std::vector<uint> from_index(uint i) const {return lattice().from_integer(i);}
 
   T& at(const std::vector<size_t>& idx) {return p[index(idx)];}
   const T& at(const std::vector<size_t>& idx) const {return p[index(idx)];}
@@ -145,6 +154,9 @@ struct ndarray {
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
 
+  friend std::ostream& operator<<(std::ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
+  friend bool operator==(const ndarray<T>& lhs, const ndarray<T>& rhs) {return lhs.dims == rhs.dims && lhs.p == rhs.p;}
+
   T& operator[](size_t i) {return p[i];}
   const T& operator[](size_t i) const {return p[i];}
 
@@ -182,14 +194,14 @@ struct ndarray {
   void from_bov(const std::string& filename);
   void to_bov(const std::string& filename) const;
 
-  void from_vtk_image_data_file(const std::string& filename);
+  void from_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
   void from_vtk_image_data_file_sequence(const std::string& pattern);
-  void to_scalar_vtk_image_data_file(const std::string& filename) const;
+  void to_vtk_image_data_file(const std::string& filename, bool multicomponent=false) const;
 #if FTK_HAVE_VTK
   static int vtk_data_type();
-  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d);
-  vtkSmartPointer<vtkImageData> to_scalar_vtk_image_data() const;
-  vtkSmartPointer<vtkDataArray> to_scalar_vtk_data_array() const;
+  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
+  vtkSmartPointer<vtkImageData> to_vtk_image_data(bool multicomponent=false) const;
+  vtkSmartPointer<vtkDataArray> to_vtk_data_array(bool multicomponent=false) const;
 #endif
 
   void from_h5(const std::string& filename, const std::string& name); 
@@ -217,14 +229,14 @@ struct ndarray {
 
   static std::vector<std::string> glob(const std::string &pattern);
 
-  // statistics
-  std::tuple<T, T> min_max() const;
-
 #if FTK_HAVE_MPI
   static MPI_Datatype mpi_datatype();
 #endif
 
   void copy_to_cuda_device();
+
+  // statistics
+  std::tuple<T, T> min_max() const;
 
 private:
   std::vector<size_t> dims, s;
@@ -241,6 +253,12 @@ template <typename T>
 lattice ndarray<T>::get_lattice() const {
   std::vector<size_t> st(nd(), 0), sz(dims);
   return lattice(st, sz);
+}
+
+template <typename T>
+void ndarray<T>::fill(const std::vector<T>& values)
+{
+  p = values;
 }
 
 template <typename T>
@@ -361,91 +379,85 @@ template<> inline int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
 template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
 
 template<typename T>
-inline void ndarray<T>::to_scalar_vtk_image_data_file(const std::string& filename) const 
+inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, bool multicomponent) const 
 {
   vtkSmartPointer<vtkXMLImageDataWriter> writer = vtkXMLImageDataWriter::New();
   writer->SetFileName(filename.c_str());
-  writer->SetInputData( to_scalar_vtk_image_data() );
+  writer->SetInputData( to_vtk_image_data(multicomponent) );
   writer->Write();
 }
 
 template<typename T>
-inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_scalar_vtk_data_array() const
+inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(bool multicomponent) const
 {
   vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
-  d->SetName("scalar");
-  d->SetNumberOfComponents(1);
-  d->SetNumberOfTuples(nelem());
+  if (multicomponent) d->SetName("vector");
+  else d->SetName("scalar");
+  if (multicomponent) {
+    d->SetNumberOfComponents(shape(0));
+    d->SetNumberOfTuples( std::accumulate(dims.begin()+1, dims.end(), 1, std::multiplies<size_t>()) );
+  }
+  else {
+    d->SetNumberOfComponents(1);
+    d->SetNumberOfTuples(nelem());
+  }
   memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * p.size()); // nelem());
   return d;
 }
 
 template<typename T>
-inline vtkSmartPointer<vtkImageData> ndarray<T>::to_scalar_vtk_image_data() const
+inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(bool multicomponent) const
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
-  if (nd() == 2) {
-    int extent[6] = {0, static_cast<int>(shape(0)), 0, static_cast<int>(shape(1)), 0, 0};
-    d->SetDimensions(shape(0), shape(1), 1);
-    // d->SetExtent(extent);
+  if (multicomponent) {
+    if (nd() == 3) d->SetDimensions(shape(1), shape(2), 1);
+    else d->SetDimensions(shape(1), shape(2), shape(3));
   } else {
-    int extent[6] = {0, static_cast<int>(shape(0)), 0, static_cast<int>(shape(1)), 0, static_cast<int>(shape(2))};
-    d->SetDimensions(shape(0), shape(1), shape(2));
-    // d->SetExtent(extent);
+    if (nd() == 2) d->SetDimensions(shape(0), shape(1), 1);
+    else d->SetDimensions(shape(0), shape(1), shape(2));
   }
-  d->GetPointData()->AddArray(to_scalar_vtk_data_array());
-  d->GetPointData()->SetScalars(to_scalar_vtk_data_array());
+  // d->GetPointData()->AddArray(to_vtk_data_array(multicomponent));
+  d->GetPointData()->SetScalars(to_vtk_data_array(multicomponent));
 
   return d;
 }
 
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data(vtkSmartPointer<vtkImageData> d)
+inline void ndarray<T>::from_vtk_image_data(
+    vtkSmartPointer<vtkImageData> d, 
+    const std::string array_name)
 {
+  vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
+  if (!da) da = d->GetPointData()->GetArray(0);
+  
   const int nd = d->GetDataDimension(), 
-            nc = d->GetNumberOfScalarComponents();
-  auto da = d->GetPointData()->GetScalars();
+            nc = da->GetNumberOfComponents();
 
-  // da->PrintSelf(std::cerr, vtkIndent(2));
-  // d->PrintSelf(std::cerr, vtkIndent(2));
   if (nd == 2) {
-    if (nc == 1) { // scalar field
-      reshape(d->GetDimensions()[0], d->GetDimensions()[1]);
-      for (auto i = 0; i < nelem(); i ++)
-        p[i] = da->GetTuple1(i);
-    } else { // TODO
-      for (int j = 0; j < d->GetDimensions()[1]; j ++)
-        for (int i = 0; i < d->GetDimensions()[0]; i ++)
-          for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
-            p.push_back(d->GetScalarComponentAsDouble(i, j, 0, c));
-      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1]);
-    }
+    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1]); // scalar field
+    else reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1]); // vector field
   } else if (nd == 3) {
-    if (nc == 1) { // scalar field
-      reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
-      for (auto i = 0; i < nelem(); i ++)
-        p[i] = da->GetTuple1(i);
-    } else { // TODO
-      for (int k = 0; k < d->GetDimensions()[2]; k ++)
-        for (int j = 0; j < d->GetDimensions()[1]; j ++)
-          for (int i = 0; i < d->GetDimensions()[0]; i ++)
-            for (int c = 0; c < d->GetNumberOfScalarComponents(); c ++)
-              p.push_back(d->GetScalarComponentAsDouble(i, j, k, c));
-      reshape(d->GetNumberOfScalarComponents(), d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
-    }
+    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]); // scalar field
+    else reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
   } else {
     fprintf(stderr, "[FTK] fatal error: unsupported data dimension %d.\n", nd);
     assert(false);
   }
+
+  for (auto i = 0; i < da->GetNumberOfTuples(); i ++) {
+    double *tuple = da->GetTuple(i);
+    for (auto j = 0; j < nc; j ++)
+      p[i*nc+j] = tuple[j];
+  }
 }
 
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename)
+inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename, const std::string array_name)
 {
   vtkNew<vtkXMLImageDataReader> reader;
   reader->SetFileName(filename.c_str());
   reader->Update();
-  from_vtk_image_data(reader->GetOutput());
+  from_vtk_image_data(reader->GetOutput(), array_name);
 }
 
 template<typename T>
@@ -467,7 +479,7 @@ inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pat
 }
 #else
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename)
+inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename, const std::string array_name)
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
   assert(false);
@@ -481,7 +493,7 @@ inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pat
 }
 
 template<typename T>
-inline void ndarray<T>::to_scalar_vtk_image_data_file(const std::string& filename) const 
+inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, bool) const 
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
   assert(false);
@@ -621,6 +633,13 @@ ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
     else s[i] = s[i-1]*dims[i-1];
 
   p.assign(a, a + s[nd()-1]);
+}
+
+template <typename T>
+template <typename T1>
+void ndarray<T>::reshape(const ndarray<T1>& array)
+{
+  reshape(array.shape());
 }
 
 template <typename T>
@@ -789,6 +808,25 @@ std::ostream& ndarray<T>::print(std::ostream& os) const
   for (size_t i = 0; i < dims.size(); i ++) 
     if (i < dims.size()-1) os << dims[i] << ", ";
     else os << dims[i] << "}";
+  os << std::endl;
+
+  if (nd() == 1) {
+    os << "[";
+    for (size_t i = 0; i < dims[0]; i ++)
+      if (i < dims[0]-1) os << at(i) << ", ";
+      else os << at(i) << "]";
+  } else if (nd() == 2) {
+    os << "[";
+    for (size_t j = 0; j < dims[1]; j ++) {
+      os << "[";
+      for (size_t i = 0; i < dims[0]; i ++)
+        if (i < dims[0]-1) os << at(i, j) << ", ";
+        else os << at(i, j) << "]";
+      if (j < dims[1]-1) os << "], ";
+      else os << "]";
+    }
+  }
+
   return os;
 }
 

@@ -5,7 +5,7 @@
 
 namespace ftk {
 
-template <typename I=long long/*long integer type*/, int factor=32768/*15bits*/>
+template <typename I=long long/*long integer type*/, int factor=FTK_FP_PRECISION>
 struct fixed_point {
   __device__ __host__ fixed_point() : num(0) {}
   __device__ __host__ fixed_point(const fixed_point& x) : num(x.num) {}

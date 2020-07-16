@@ -58,6 +58,9 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   critical_point_tracker_3d_regular(int argc, char **argv) 
     : critical_point_tracker_regular(argc, argv), m(4) {}
   virtual ~critical_point_tracker_3d_regular() {}
+  
+  void write_traced_critical_points_text(std::ostream& os) const;
+  void write_discrete_critical_points_text(std::ostream &os) const;
 
   void initialize();
   void finalize();
@@ -65,6 +68,7 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   void update_timestep();
   
   void push_scalar_field_snapshot(const ndarray<double>&);
+  void push_vector_field_snapshot(const ndarray<double>&);
   
 #if FTK_HAVE_VTK
   virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
@@ -74,8 +78,6 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
 protected:
   regular_simplex_mesh m;
   
-  unsigned int type_filter = 0xffffffff;
-
   typedef regular_simplex_mesh_element element_t;
   
   std::map<element_t, critical_point_3dt_t> discrete_critical_points;
@@ -148,6 +150,17 @@ inline void critical_point_tracker_3d_regular::push_scalar_field_snapshot(const 
     if (jacobian_field_source == SOURCE_DERIVED)
       snapshot.jacobian = jacobian3D(snapshot.vector);
   }
+
+  field_data_snapshots.emplace_back( snapshot );
+}
+
+inline void critical_point_tracker_3d_regular::push_vector_field_snapshot(const ndarray<double>& v)
+{
+  field_data_snapshot_t snapshot;
+ 
+  snapshot.vector = v;
+  if (jacobian_field_source == SOURCE_DERIVED)
+    snapshot.jacobian = jacobian3D(snapshot.vector);
 
   field_data_snapshots.emplace_back( snapshot );
 }
@@ -410,7 +423,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
   }
 
   cp.type = critical_point_type_3d(J, is_jacobian_field_symmetric);
-  if (cp.type & type_filter) return true;
+  if (filter_critical_point_type(cp)) return true; 
   else return false;
 } 
 
@@ -454,7 +467,7 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_traced_criti
   }
 
   // point data for types
-  if (type_filter) {
+  if (1) { // if (type_filter) {
     vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
     types->SetNumberOfValues(nv);
     size_t i = 0;
@@ -533,6 +546,30 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_discrete_cri
   return polyData;
 }
 #endif
+
+inline void critical_point_tracker_3d_regular::write_traced_critical_points_text(std::ostream& os) const
+{
+  os << "#trajectories=" << traced_critical_points.size() << std::endl;
+  for (int i = 0; i < traced_critical_points.size(); i ++) {
+    os << "--trajectory " << i << std::endl;
+    const auto &curve = traced_critical_points[i];
+    for (int k = 0; k < curve.size(); k ++) {
+      const auto &cp = curve[k];
+      os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
+         << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
+    }
+  }
+}
+
+inline void critical_point_tracker_3d_regular::write_discrete_critical_points_text(std::ostream& os) const
+{
+  for (const auto &kv : discrete_critical_points) {
+    const auto &cp = kv.second;
+    os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
+       << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
+  }
+}
+
 
 }
 

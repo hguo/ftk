@@ -1,0 +1,41 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="CriticalPointTracker2DSpacetime" class="ftkCriticalPointTracker2DSpacetime" label="CriticalPointTracker2DSpacetime">
+      <Documentation
+         short_help="track critical points in 2D time-varying scalar field data"
+         long_help="track critical points in 2D time-varying scalar field data">
+      </Documentation>
+      
+      <InputProperty
+        name="Input"
+        command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources"/>
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkImageData"/>
+        </DataTypeDomain>
+      </InputProperty>
+
+      <IntVectorProperty 
+        name="UseGPU"
+        command="SetUseGPU"
+        number_of_elements="1"
+        default_values="0">
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
+
+      <DoubleVectorProperty
+        name="GaussianKernelSize"
+        command="SetGaussianKernelSize"
+        number_of_elements="1"
+        default_values="2.0">
+      </DoubleVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="FTK"/>
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>

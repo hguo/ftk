@@ -32,6 +32,8 @@ public:
   const std::map<TimeIndexType, std::vector<Event<TimeIndexType, LabelIdType> > > &get_events() const {return events;}
 
   void detect_events();
+  void detect_events(TimeIndexType t0, TimeIndexType t1);
+
   void relabel();
 
   void generate_dot_file(const std::string& filename) const;
@@ -174,6 +176,36 @@ std::vector<TimeIndexType> tracking_graph<TimeIndexType, LabelIdType, GlobalLabe
 }
 
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
+void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detect_events(TimeIndexType t0, TimeIndexType t1)
+{
+  std::set<Node> intervalNodes;
+  for (auto n : nodes[t0]) intervalNodes.insert(n);
+  for (auto n : nodes[t1]) intervalNodes.insert(n);
+
+  auto intervalNeighbors = [this, t0](Node n) {
+    if (n.first == t0) return right_links[n];
+    else return left_links[n];
+  };
+
+  auto components = extract_connected_components<Node, std::set<Node> >(intervalNeighbors, intervalNodes);
+  // fprintf(stderr, "====%zu\n", components.size());
+  for (auto component : components) {
+    if (component.size() != 2) {
+      Event<TimeIndexType, LabelIdType> e;
+      e.interval = std::make_pair(t0, t1);
+      for (auto n : component) {
+        if (n.first == t0) e.lhs.insert(n.second);
+        else e.rhs.insert(n.second);
+      }
+      events[t0].push_back(e);
+      
+      // json j = e;
+      // fprintf(stderr, "%s\n", j.dump().c_str());
+    }
+  }
+}
+
+template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
 void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::detect_events()
 {
   const auto timesteps = get_timesteps();
@@ -182,32 +214,7 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
   // iterator over intervals
   for (size_t i = 0; i < timesteps.size() - 1; i ++) {
     TimeIndexType t0 = timesteps[i], t1 = timesteps[i + 1];
-
-    std::set<Node> intervalNodes;
-    for (auto n : nodes[t0]) intervalNodes.insert(n);
-    for (auto n : nodes[t1]) intervalNodes.insert(n);
-
-    auto intervalNeighbors = [this, t0](Node n) {
-      if (n.first == t0) return right_links[n];
-      else return left_links[n];
-    };
-
-    auto components = extract_connected_components<Node, std::set<Node> >(intervalNeighbors, intervalNodes);
-    // fprintf(stderr, "====%zu\n", components.size());
-    for (auto component : components) {
-      if (component.size() != 2) {
-        Event<TimeIndexType, LabelIdType> e;
-        e.interval = std::make_pair(t0, t1);
-        for (auto n : component) {
-          if (n.first == t0) e.lhs.insert(n.second);
-          else e.rhs.insert(n.second);
-        }
-        events[t0].push_back(e);
-        
-        // json j = e;
-        // fprintf(stderr, "%s\n", j.dump().c_str());
-      }
-    }
+    detect_events(t0, t1);
   }
 }
 

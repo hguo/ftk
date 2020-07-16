@@ -5,6 +5,7 @@ LIBRARY_NAME
 DEPENDS
   VTK::CommonExecutionModel
   VTK::IOLegacy
+  VTK::IOXML
 PRIVATE_DEPENDS
   VTK::CommonCore
   VTK::CommonDataModel

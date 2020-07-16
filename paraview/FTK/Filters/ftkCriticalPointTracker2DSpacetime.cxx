@@ -1,4 +1,4 @@
-#include "vtkCriticalPoint2DTracker.h"
+#include "ftkCriticalPointTracker2DSpacetime.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -8,6 +8,8 @@
 #include "vtkCellArray.h"
 #include "vtkImageData.h"
 #include "vtkSphereSource.h"
+#include "vtkTransform.h"
+#include "vtkTransformFilter.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
@@ -16,39 +18,29 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkCriticalPoint2DTracker);
+vtkStandardNewMacro(ftkCriticalPointTracker2DSpacetime);
 
-vtkCriticalPoint2DTracker::vtkCriticalPoint2DTracker()
+ftkCriticalPointTracker2DSpacetime::ftkCriticalPointTracker2DSpacetime()
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);
   
-  SetUseGPU(false);
-  SetGaussianKernelSize(2.0);
+  // SetUseGPU(false);
+  // SetGaussianKernelSize(2.0);
 }
 
-vtkCriticalPoint2DTracker::~vtkCriticalPoint2DTracker()
+ftkCriticalPointTracker2DSpacetime::~ftkCriticalPointTracker2DSpacetime()
 {
 }
 
-void vtkCriticalPoint2DTracker::SetUseGPU(bool b)
-{
-  bUseGPU = b;
-}
-
-void vtkCriticalPoint2DTracker::SetGaussianKernelSize(double t)
-{
-  dGaussianKernelSize = t;
-}
-
-int vtkCriticalPoint2DTracker::FillOutputPortInformation(int, vtkInformation *info)
+int ftkCriticalPointTracker2DSpacetime::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
   return 1;
 }
 
-int vtkCriticalPoint2DTracker::RequestData(
-    vtkInformation*, 
+int ftkCriticalPointTracker2DSpacetime::RequestData(
+    vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
 {
@@ -57,18 +49,21 @@ int vtkCriticalPoint2DTracker::RequestData(
 
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
-
-  auto rtn = TrackCriticalPoints2D(input, output);
+  
+  auto rtn = TrackCriticalPoints2DSpacetime(input, output);
   return rtn;
 }
 
-int vtkCriticalPoint2DTracker::TrackCriticalPoints2D(vtkImageData* imageData, vtkPolyData* polyData)
+int ftkCriticalPointTracker2DSpacetime::TrackCriticalPoints2DSpacetime(vtkImageData* imageData, vtkPolyData* polyData)
 {
   ftk::ndarray<double> scalar;
   scalar.from_vtk_image_data(imageData);
-  
+ 
+  imageData->PrintSelf(std::cerr, vtkIndent(2));
+
   const size_t DW = scalar.shape(0), DH = scalar.shape(1), DT = scalar.shape(2);
-  fprintf(stderr, "DW=%lu, DH=%lu, DT=%lu\n", DW, DH, DT);
+  // fprintf(stderr, "currentTimestep=%d, DW=%lu, DH=%lu, DT=%lu\n", 
+  //     currentTimestep, DW, DH, DT);
 
   ftk::critical_point_tracker_2d_regular tracker; 
   tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
@@ -87,7 +82,19 @@ int vtkCriticalPoint2DTracker::TrackCriticalPoints2D(vtkImageData* imageData, vt
   tracker.finalize();
   auto poly = tracker.get_traced_critical_points_vtk();
 
-  polyData->DeepCopy(poly);
+  // transform to match the bounds of the input image data
+  const double *bounds = imageData->GetBounds();
+  vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+  transform->Scale((bounds[1]-bounds[0])/(DW-1), (bounds[3]-bounds[2])/(DH-1), (bounds[5]-bounds[4])/(DT-1));
+  transform->Translate(bounds[0], bounds[2], bounds[4]);
+
+  vtkSmartPointer<vtkTransformFilter> transformFilter = vtkSmartPointer<vtkTransformFilter>::New();
+  transformFilter->SetInputData(poly);
+  transformFilter->SetTransform(transform);
+  transformFilter->Update();
+
+  // polyData->DeepCopy(poly);
+  polyData->DeepCopy(transformFilter->GetOutput());
 
   return 1;
 }

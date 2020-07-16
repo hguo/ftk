@@ -1,4 +1,4 @@
-#include "vtkSpiral2DSource.h"
+#include "ftkABCFlow3DSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -11,45 +11,48 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkSpiral2DSource);
+vtkStandardNewMacro(ftkABCFlow3DSource);
 
-vtkSpiral2DSource::vtkSpiral2DSource() : DW(32), DH(32), DT(10), scale(15.0)
+ftkABCFlow3DSource::ftkABCFlow3DSource() : 
+  DW(32), DH(32), DD(10), 
+  A(std::sqrt(3.0)), B(std::sqrt(2.0)), C(1.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }
 
-vtkSpiral2DSource::~vtkSpiral2DSource()
+ftkABCFlow3DSource::~ftkABCFlow3DSource()
 {
 }
 
-int vtkSpiral2DSource::FillOutputPortInformation(int, vtkInformation *info)
+int ftkABCFlow3DSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkSpiral2DSource::RequestInformation(
+int ftkABCFlow3DSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
 {
-  int extent[6] = {0, DW-1, 0, DH-1, 0, DT-1};
+  int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
 
   vtkInformation *outInfo = outVec->GetInformationObject(0);
   outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent, 6);
   outInfo->Set(vtkDataObject::SPACING(), cell_lengths, 3);
-  outInfo->Set(vtkDataObject::ORIGIN(), origins, 3);	
+  outInfo->Set(vtkDataObject::ORIGIN(), origins, 3);
+
+  return 1;
 }
 
-int vtkSpiral2DSource::RequestData(
+int ftkABCFlow3DSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -58,11 +61,11 @@ int vtkSpiral2DSource::RequestData(
   vtkImageData *imageData = 
     vtkImageData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
-  auto scalar = ftk::synthetic_woven_2Dt<float>(DW, DH, DT, scale);
-  auto imageData1 = scalar.to_scalar_vtk_image_data();
+  auto vector_field = ftk::synthetic_abc_flow<float>(DW, DH, DD, A, B, C);
+  auto imageData1 = vector_field.to_vtk_image_data(true);
   imageData->DeepCopy(imageData1);
   
-  int extent[6] = {0, DW-1, 0, DH-1, 0, DT-1};
+  int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
          origins[3] = {0.0, 0.0, 0.0};
 

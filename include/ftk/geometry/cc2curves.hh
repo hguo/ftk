@@ -64,10 +64,14 @@ std::vector<std::vector<NodeType>> connected_component_to_linear_components(
     if (seed_neighbors.size() == 0) break;
     for (int dir = 0; dir < 2; dir ++) {
       NodeType current = dir == 0 ? (*seed_neighbors.begin()) : (*seed_neighbors.rbegin());
+      bool first_iteration = true;
       // fprintf(stderr, "dir=%d\n", dir);
       while (1) {
-        if (dir == 0) trace.push_back(current);
-        else (trace.push_front(current));
+        if (first_iteration) first_iteration = false;
+        else {
+          if (dir == 0) trace.push_back(current);
+          else (trace.push_front(current));
+        }
 
         visited.insert(current);
         c.erase(current);
