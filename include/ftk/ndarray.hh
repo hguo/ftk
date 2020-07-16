@@ -55,6 +55,7 @@
 #include <vtkXMLImageDataReader.h>
 #include <vtkXMLImageDataWriter.h>
 #include <vtkDataReader.h>
+#include <vtkNew.h>
 #endif
 
 namespace ftk {
@@ -73,9 +74,14 @@ struct ndarray {
   size_t shape(size_t i) const {return dim(i);}
   size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
   bool empty() const  {return p.empty();}
-  std::vector<size_t> shape() const {return dims;}
+  const std::vector<size_t> &shape() const {return dims;}
 
   lattice get_lattice() const;
+
+  void fill(const std::vector<T>& values); //! fill values with std::vector
+  void fill(const std::vector<std::vector<T>>& values); //! fill values
+
+  const std::vector<T>& std_vector() const {return p;}
 
   const T* data() const {return p.data();}
   T* data() {return p.data();}
@@ -85,6 +91,7 @@ struct ndarray {
   void reshape(const std::vector<size_t> &dims_);
   void reshape(const std::vector<size_t> &dims, T val);
   void reshape(size_t ndims, const size_t sizes[]);
+  template <typename T1> void reshape(const ndarray<T1>& array); //! copy shape from another array
 
   void reshape(size_t n0) {reshape(std::vector<size_t>({n0}));}
   void reshape(size_t n0, size_t n1) {reshape({n0, n1});}
@@ -102,6 +109,9 @@ struct ndarray {
 
   size_t index(const std::vector<size_t>& idx) const;
   size_t index(const std::vector<int>& idx) const;
+
+  template <typename uint=size_t>
+  std::vector<uint> from_index(uint i) const {return lattice().from_integer(i);}
 
   T& at(const std::vector<size_t>& idx) {return p[index(idx)];}
   const T& at(const std::vector<size_t>& idx) const {return p[index(idx)];}
@@ -145,6 +155,24 @@ struct ndarray {
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
 
+  friend std::ostream& operator<<(std::ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
+  friend bool operator==(const ndarray<T>& lhs, const ndarray<T>& rhs) {return lhs.dims == rhs.dims && lhs.p == rhs.p;}
+
+  ndarray<T>& operator=(const ndarray<T>& x) {dims = x.dims; s = x.s; p = x.p; return *this;}
+  ndarray<T>& operator+=(const ndarray<T>& x);
+  ndarray<T>& operator-=(const ndarray<T>& x);
+  
+  template <typename T1> ndarray<T>& operator*=(const T1& x);
+  template <typename T1> ndarray<T>& operator/=(const T1& x);
+
+  friend ndarray<T> operator+(const ndarray<T>& lhs, const ndarray<T>& rhs);
+  friend ndarray<T> operator-(const ndarray<T>& lhs, const ndarray<T>& rhs);
+
+  // template <typename T1> friend ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs);
+  template <typename T1> friend ndarray<T> operator*(const T1& lhs, const ndarray<T>& rhs) {return rhs * lhs;}
+  template <typename T1> friend ndarray<T> operator/(const ndarray<T>& lhs, const T1& rhs);
+
+  // element access
   T& operator[](size_t i) {return p[i];}
   const T& operator[](size_t i) const {return p[i];}
 
@@ -217,14 +245,14 @@ struct ndarray {
 
   static std::vector<std::string> glob(const std::string &pattern);
 
-  // statistics
-  std::tuple<T, T> min_max() const;
-
 #if FTK_HAVE_MPI
   static MPI_Datatype mpi_datatype();
 #endif
 
   void copy_to_cuda_device();
+
+  // statistics
+  std::tuple<T, T> min_max() const;
 
 private:
   std::vector<size_t> dims, s;
@@ -237,10 +265,40 @@ private:
 #endif
 };
 
+//////////////////////////////////
+
+template <typename T>
+ndarray<T>& ndarray<T>::operator+=(const ndarray<T>& x)
+{
+  if (empty()) *this = x;
+  else {
+    assert(this->shape() == x.shape());
+    for (auto i = 0; i < p.size(); i ++)
+      p[i] += x.p[i];
+  }
+  return *this;
+}
+
+template <typename T, typename T1>
+ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs) 
+{
+  ndarray<T> array;
+  array.reshape(lhs);
+  for (auto i = 0; i < array.nelem(); i ++)
+    array[i] = lhs[i] * rhs;
+  return array;
+}
+
 template <typename T>
 lattice ndarray<T>::get_lattice() const {
   std::vector<size_t> st(nd(), 0), sz(dims);
   return lattice(st, sz);
+}
+
+template <typename T>
+void ndarray<T>::fill(const std::vector<T>& values)
+{
+  p = values;
 }
 
 template <typename T>
@@ -618,6 +676,13 @@ ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
 }
 
 template <typename T>
+template <typename T1>
+void ndarray<T>::reshape(const ndarray<T1>& array)
+{
+  reshape(array.shape());
+}
+
+template <typename T>
 void ndarray<T>::reshape(const std::vector<size_t> &dims_)
 {
   dims = dims_;
@@ -783,6 +848,25 @@ std::ostream& ndarray<T>::print(std::ostream& os) const
   for (size_t i = 0; i < dims.size(); i ++) 
     if (i < dims.size()-1) os << dims[i] << ", ";
     else os << dims[i] << "}";
+  os << std::endl;
+
+  if (nd() == 1) {
+    os << "[";
+    for (size_t i = 0; i < dims[0]; i ++)
+      if (i < dims[0]-1) os << at(i) << ", ";
+      else os << at(i) << "]";
+  } else if (nd() == 2) {
+    os << "[";
+    for (size_t j = 0; j < dims[1]; j ++) {
+      os << "[";
+      for (size_t i = 0; i < dims[0]; i ++)
+        if (i < dims[0]-1) os << at(i, j) << ", ";
+        else os << at(i, j) << "]";
+      if (j < dims[1]-1) os << "], ";
+      else os << "]";
+    }
+  }
+
   return os;
 }
 

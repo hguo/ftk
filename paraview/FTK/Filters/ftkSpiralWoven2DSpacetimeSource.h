@@ -1,40 +1,37 @@
-#ifndef __vtkSpiralWoven2DSource_h
-#define __vtkSpiralWoven2DSource_h
+#ifndef __ftkSpiralWoven2DSpacetimeSource_h
+#define __ftkSpiralWoven2DSpacetimeSource_h
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkDataSet;
 
-class vtkSpiralWoven2DSource : public vtkImageAlgorithm
+class ftkSpiralWoven2DSpacetimeSource : public vtkImageAlgorithm
 {
 public:
-  static vtkSpiralWoven2DSource *New();
-  vtkTypeMacro(vtkSpiralWoven2DSource, vtkImageAlgorithm);
-
+  static ftkSpiralWoven2DSpacetimeSource *New();
+  vtkTypeMacro(ftkSpiralWoven2DSpacetimeSource, vtkImageAlgorithm);
+  
   vtkSetMacro(DW, int);
   vtkSetMacro(DH, int);
   vtkSetMacro(DT, int);
   vtkSetMacro(ScalingFactor, double);
-  vtkSetMacro(StartTime, double);
-  vtkSetMacro(TimeScale, double);
 
 protected:
-  vtkSpiralWoven2DSource();
-  ~vtkSpiralWoven2DSource();
+  ftkSpiralWoven2DSpacetimeSource();
+  ~ftkSpiralWoven2DSpacetimeSource();
 
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
-  vtkSpiralWoven2DSource(const vtkSpiralWoven2DSource&);
-  void operator=(const vtkSpiralWoven2DSource&);
+  ftkSpiralWoven2DSpacetimeSource(const ftkSpiralWoven2DSpacetimeSource&);
+  void operator=(const ftkSpiralWoven2DSpacetimeSource&);
 
 private:
   int DW, DH, DT;
   double ScalingFactor;
-  double StartTime, TimeScale;
 };
 
 #endif

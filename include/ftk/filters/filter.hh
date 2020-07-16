@@ -4,6 +4,7 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/external/diy/mpi.hpp>
 #include <ftk/external/cxxopts.hpp>
+#include <thread>
 #include <mutex>
 
 namespace ftk {
@@ -55,6 +56,8 @@ struct filter {
     if (comm.size() > 1) return 1; // use 1 thread per proc for mpi runs
     else return std::thread::hardware_concurrency(); 
   }
+
+  void set_number_of_threads(int n) {nthreads = n;}
 
 protected:
   diy::mpi::communicator comm;

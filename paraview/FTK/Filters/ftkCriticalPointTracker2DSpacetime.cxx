@@ -1,4 +1,4 @@
-#include "vtkCriticalPointTracker2DSpacetime.h"
+#include "ftkCriticalPointTracker2DSpacetime.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -18,9 +18,9 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkCriticalPointTracker2DSpacetime);
+vtkStandardNewMacro(ftkCriticalPointTracker2DSpacetime);
 
-vtkCriticalPointTracker2DSpacetime::vtkCriticalPointTracker2DSpacetime()
+ftkCriticalPointTracker2DSpacetime::ftkCriticalPointTracker2DSpacetime()
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);
@@ -29,17 +29,17 @@ vtkCriticalPointTracker2DSpacetime::vtkCriticalPointTracker2DSpacetime()
   // SetGaussianKernelSize(2.0);
 }
 
-vtkCriticalPointTracker2DSpacetime::~vtkCriticalPointTracker2DSpacetime()
+ftkCriticalPointTracker2DSpacetime::~ftkCriticalPointTracker2DSpacetime()
 {
 }
 
-int vtkCriticalPointTracker2DSpacetime::FillOutputPortInformation(int, vtkInformation *info)
+int ftkCriticalPointTracker2DSpacetime::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
   return 1;
 }
 
-int vtkCriticalPointTracker2DSpacetime::RequestData(
+int ftkCriticalPointTracker2DSpacetime::RequestData(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -54,7 +54,7 @@ int vtkCriticalPointTracker2DSpacetime::RequestData(
   return rtn;
 }
 
-int vtkCriticalPointTracker2DSpacetime::TrackCriticalPoints2DSpacetime(vtkImageData* imageData, vtkPolyData* polyData)
+int ftkCriticalPointTracker2DSpacetime::TrackCriticalPoints2DSpacetime(vtkImageData* imageData, vtkPolyData* polyData)
 {
   ftk::ndarray<double> scalar;
   scalar.from_vtk_image_data(imageData);

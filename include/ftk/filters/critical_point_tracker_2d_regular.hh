@@ -26,6 +26,7 @@
 
 #if FTK_HAVE_VTK
 #include <vtkUnsignedIntArray.h>
+#include <vtkVertex.h>
 #endif
 
 #if FTK_HAVE_CUDA
@@ -82,8 +83,6 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
 protected:
   regular_simplex_mesh m;
   
-  unsigned int type_filter = 0xffffffff;
-
   typedef regular_simplex_mesh_element element_t;
   
   std::map<element_t, critical_point_2dt_t> discrete_critical_points;
@@ -507,16 +506,19 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
       vf[i][j] = v[i][j];
   int indices[3];
   simplex_indices(vertices, indices);
-  // bool succ = robust_critical_point_in_simplex2(vf, indices);
-  // if (!succ) return false;
+  bool succ = robust_critical_point_in_simplex2(vf, indices);
+  if (!succ) return false;
 
   double mu[3]; // check intersection
   bool succ2 = inverse_lerp_s2v2(v, mu);
-  if (!succ2) return false;
+  // if (!succ2) return false;
+  if (std::isnan(mu[0]) || std::isnan(mu[1]) || std::isnan(mu[2])) return false;
+  // fprintf(stderr, "mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
 
   double X[3][3]; // position
   simplex_coordinates(vertices, X);
   lerp_s2v3(X, mu, cp.x);
+  // fprintf(stderr, "x=%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
 
   if (scalar_field_source != SOURCE_NONE) {
     double values[3];
@@ -625,7 +627,8 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_trace
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
+  vtkSmartPointer<vtkCellArray> lines = vtkCellArray::New();
+  vtkSmartPointer<vtkCellArray> verts = vtkCellArray::New();
 
   for (const auto &curve : traced_critical_points)
     for (auto i = 0; i < curve.size(); i ++) {
@@ -635,20 +638,28 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_trace
 
   size_t nv = 0;
   for (const auto &curve : traced_critical_points) {
-    vtkSmartPointer<vtkPolyLine> polyLine = vtkPolyLine::New();
-    polyLine->GetPointIds()->SetNumberOfIds(curve.size());
-    for (int i = 0; i < curve.size(); i ++)
-      polyLine->GetPointIds()->SetId(i, i+nv);
-
-    cells->InsertNextCell(polyLine);
+    if (curve.size() < 2) { // isolated vertex
+      vtkSmartPointer<vtkVertex> obj = vtkVertex::New();
+      obj->GetPointIds()->SetNumberOfIds(curve.size());
+      for (int i = 0; i < curve.size(); i ++)
+        obj->GetPointIds()->SetId(i, i+nv);
+      verts->InsertNextCell(obj);
+    } else { // lines
+      vtkSmartPointer<vtkPolyLine> obj = vtkPolyLine::New();
+      obj->GetPointIds()->SetNumberOfIds(curve.size());
+      for (int i = 0; i < curve.size(); i ++)
+        obj->GetPointIds()->SetId(i, i+nv);
+      lines->InsertNextCell(obj);
+    }
     nv += curve.size();
   }
-  
+ 
   polyData->SetPoints(points);
-  polyData->SetLines(cells);
+  polyData->SetLines(lines);
+  polyData->SetVerts(verts);
 
   // point data for types
-  if (type_filter) {
+  if (1) { // if (type_filter) {
     vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
     types->SetNumberOfValues(nv);
     size_t i = 0;
@@ -750,7 +761,9 @@ inline void critical_point_tracker_2d_regular::write_traced_critical_points_text
     for (int k = 0; k < curve.size(); k ++) {
       const auto &cp = curve[k];
       os << "---x=(" << cp[0] << ", " << cp[1] << "), "
-         << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
+         << "t=" << cp[2] << ", " 
+         << "scalar=" << cp.scalar << ", "
+         << "type=" << cp.type << std::endl;
     }
   }
 }
@@ -760,7 +773,9 @@ inline void critical_point_tracker_2d_regular::write_discrete_critical_points_te
   for (const auto &kv : discrete_critical_points) {
     const auto &cp = kv.second;
     os << "x=(" << cp[0] << ", " << cp[1] << "), "
-       << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
+       << "t=" << cp[2] << ", "
+       << "scalar=" << cp.scalar << ", "
+       << "type=" << cp.type << std::endl;
   }
 }
 

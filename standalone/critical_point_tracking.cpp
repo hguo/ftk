@@ -6,7 +6,10 @@
 #include "ftk/ndarray/synthetic.hh"
 #include "ftk/filters/critical_point_tracker_2d_regular.hh"
 #include "ftk/filters/critical_point_tracker_3d_regular.hh"
+#include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
+#include "ftk/ndarray/conv.hh"
+#include "cli_constants.hh"
 
 #if FTK_HAVE_VTK
 #include <ftk/geometry/curve2vtk.hh>
@@ -18,32 +21,6 @@
 #include <vtkRenderWindowInteractor.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #endif
-
-static const std::string 
-        str_auto("auto"),
-        str_zero("0"),
-        str_two("2"),
-        str_three("3"),
-        str_float32("float32"),
-        str_float64("float64"),
-        str_netcdf("nc"),
-        str_hdf5("h5"),
-        str_vti("vti"),
-        str_vtp("vtp"),
-        str_scalar("scalar"),
-        str_vector("vector"),
-        str_text("text");
-
-static const std::string
-        str_ext_vti(".vti"), // vtkImageData
-        str_ext_vtp(".vtp"), // vtkPolyData
-        str_ext_netcdf(".nc"),
-        str_ext_hdf5(".h5");
-
-static const std::set<std::string>
-        set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti}),
-        set_valid_input_dimension({str_auto, str_two, str_three}),
-        set_valid_output_format({str_auto, str_text, str_vtp});
   
 // global variables
 std::string input_filename_pattern, 
@@ -56,8 +33,15 @@ std::string input_filename_pattern,
 std::string output_filename,
   output_format;
 std::vector<std::string> input_filenames; // assuming each file contains only one timestep, and all files have the exactly same structure
+std::string accelerator;
+std::string type_filter_str;
 size_t DW = 0, DH = 0, DD = 0, DT = 0;
+int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
+bool use_type_filter = false;
+unsigned int type_filter = 0;
+double spatial_smoothing = 0.0, temporal_smoothing = 0.0;
+int spatial_smoothing_kernel_size = 3, temporal_smoothing_kernel_size = 3;
 
 // determined later
 int nd, // dimensionality
@@ -75,6 +59,9 @@ size_t dimlens[4] = {0}; // Only for netcdf
 
 // tracker
 ftk::critical_point_tracker_regular* tracker = NULL;
+
+// constants
+static const std::set<std::string> set_valid_output_format({str_auto, str_text, str_vtp});
 
 
 ///////////////////////////////
@@ -167,12 +154,6 @@ ftk::ndarray<double> request_timestep(int k) // requesting k-th timestep
   }
 }
 
-inline bool ends_with(std::string const & value, std::string const & ending)
-{
-  if (ending.size() > value.size()) return false;
-  return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
-}
-
 int parse_arguments(int argc, char **argv)
 {
   cxxopts::Options options(argv[0]);
@@ -181,9 +162,9 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(input_filename_pattern))
     ("demo", "Use synthetic data for demo", cxxopts::value<bool>(demo))
     ("f,input-format", "Input file format (auto|float32|float64|nc|h5|vti)", 
-     cxxopts::value<std::string>(input_format)->default_value("auto"))
+     cxxopts::value<std::string>(input_format)->default_value(str_auto))
     ("dim", "Spatial dimensionality of data (auto|2|3)", 
-     cxxopts::value<std::string>(input_dimension)->default_value("auto"))
+     cxxopts::value<std::string>(input_dimension)->default_value(str_auto))
     ("nvar", "Number of variables",
      cxxopts::value<int>(nv)->default_value("0"))
     ("w,width", "Width", cxxopts::value<size_t>(DW))
@@ -200,8 +181,22 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(input_variable_name_w))
     ("o,output", "Output file", 
      cxxopts::value<std::string>(output_filename))
+    ("type-filter", "Type filter: ane single or a combination of critical point types, e.g. `min', `max', `saddle', `min|max'",
+     cxxopts::value<std::string>(type_filter_str))
     ("r,output-format", "Output format (auto|text|vtp)", 
-     cxxopts::value<std::string>(output_format)->default_value("auto"))
+     cxxopts::value<std::string>(output_format)->default_value(str_auto))
+    ("nthreads", "Number of threads", 
+     cxxopts::value<int>(nthreads))
+    ("a,accelerator", "Accelerator (none|cuda)",
+     cxxopts::value<std::string>(accelerator)->default_value(str_none))
+    ("spatial-smoothing", "Spatial smoothing bandwidth",
+     cxxopts::value<double>(spatial_smoothing))
+    ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size",
+     cxxopts::value<int>(spatial_smoothing_kernel_size))
+    ("temporal-smoothing", "Temporal smoothing bandwidth",
+     cxxopts::value<double>(temporal_smoothing))
+    ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", 
+     cxxopts::value<int>(temporal_smoothing_kernel_size))
     ("vtk", "Show visualization with vtk", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -227,6 +222,8 @@ int parse_arguments(int argc, char **argv)
     fatal("invalid '--input-format'");
   if (set_valid_output_format.find(output_format) == set_valid_output_format.end())
     fatal("invalid '--output-format'");
+  if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
+    fatal("invalid '--accelerator'");
  
   if (input_dimension == str_auto || input_dimension.size() == 0) nd = 0; // auto
   else if (input_dimension == str_two) nd = 2;
@@ -242,6 +239,17 @@ int parse_arguments(int argc, char **argv)
     fprintf(stderr, "input_variable_name_v=%s\n", input_variable_name_v.c_str());
     fprintf(stderr, "input_variable_name_w=%s\n", input_variable_name_w.c_str());
     fatal("Cannot specify both `--var' and `--var-w|--var-v|--var-w' simultanuously");
+  }
+
+  if (type_filter_str.size() > 0) {
+    if (type_filter_str.find(str_critical_point_type_min) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_MINIMUM;
+    if (type_filter_str.find(str_critical_point_type_max) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_MAXIMUM;
+    if (type_filter_str.find(str_critical_point_type_saddle) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_SADDLE;
+    if (!type_filter) fatal("Invalid type filter");
+    use_type_filter = true;
   }
 
   // processing output
@@ -492,14 +500,20 @@ int parse_arguments(int argc, char **argv)
   fprintf(stderr, "nd=%d\n", nd);
   fprintf(stderr, "ncdims=%d\n", ncdims);
   fprintf(stderr, "nv=%d\n", nv);
-  fprintf(stderr, "input_variable_name=%s\n", input_variable_name.c_str());
-  fprintf(stderr, "input_variable_name_u=%s\n", input_variable_name_u.c_str());
-  fprintf(stderr, "input_variable_name_v=%s\n", input_variable_name_v.c_str());
-  fprintf(stderr, "input_variable_name_w=%s\n", input_variable_name_w.c_str());
+  if (input_variable_name.size())
+    fprintf(stderr, "input_variable_name=%s\n", input_variable_name.c_str());
+  if (input_variable_name_u.size())
+    fprintf(stderr, "input_variable_name_u=%s\n", input_variable_name_u.c_str());
+  if (input_variable_name_v.size())
+    fprintf(stderr, "input_variable_name_v=%s\n", input_variable_name_v.c_str());
+  if (input_variable_name_w.size())
+    fprintf(stderr, "input_variable_name_w=%s\n", input_variable_name_w.c_str());
   fprintf(stderr, "DW=%zu\n", DW);
   fprintf(stderr, "DH=%zu\n", DH);
   fprintf(stderr, "DD=%zu\n", DD);
   fprintf(stderr, "DT=%zu\n", DT);
+  fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
+  fprintf(stderr, "nthreads=%d\n", nthreads);
   fprintf(stderr, "=============\n");
 
   assert(nd == 2 || nd == 3);
@@ -518,8 +532,13 @@ void track_critical_points()
     tracker = new ftk::critical_point_tracker_3d_regular;
     tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
+  
+  tracker->set_number_of_threads(nthreads);
       
   tracker->set_input_array_partial(false); // input data are not distributed
+
+  if (use_type_filter)
+    tracker->set_type_filter(type_filter);
   
   if (nv == 1) { // scalar field
     tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );
@@ -541,22 +560,52 @@ void track_critical_points()
     }
   }
   tracker->initialize();
-
-  int current_timestep = 0;
-  while (1) {
-    ftk::ndarray<double> field_data = request_timestep(current_timestep);
-    if (nv == 1) // scalar field
-      tracker->push_scalar_field_snapshot(field_data);
+    
+  auto push_timestep = [&](const ftk::ndarray<double>& field_data) {
+    if (nv == 1) { // scalar field
+      if (spatial_smoothing) {
+        ftk::ndarray<double> scalar = 
+          ftk::conv2D_gaussian(field_data, spatial_smoothing, 
+              spatial_smoothing_kernel_size, spatial_smoothing_kernel_size, 2);
+        tracker->push_scalar_field_snapshot(scalar);
+      } else 
+        tracker->push_scalar_field_snapshot(field_data);
+    }
     else // vector field
       tracker->push_vector_field_snapshot(field_data);
-     
-    if (current_timestep == DT - 1) {
-      tracker->update_timestep();
-      break;
+  };
+
+  int current_timestep = 0;
+  if (temporal_smoothing) {
+    ftk::streaming_filter<ftk::ndarray<double>, double> stream;
+    stream.set_gaussian_kernel(temporal_smoothing, temporal_smoothing_kernel_size);
+
+    bool first_time = true;
+    int counter = 0;
+    stream.set_callback([&](const ftk::ndarray<double>& field_data) {
+      // std::cerr << field_data << std::endl;
+      push_timestep(field_data);
+      if (first_time) first_time = !first_time;
+      else tracker->advance_timestep();
+    });
+
+    for (current_timestep = 0; current_timestep < DT; current_timestep ++) {
+      stream.push(request_timestep(current_timestep));
     }
-    else if (current_timestep != 0) // need to push two timestep before one can advance timestep
-      tracker->advance_timestep();
-    current_timestep ++;
+    stream.finish();
+  } else {
+    while (1) {
+      ftk::ndarray<double> field_data = request_timestep(current_timestep);
+      push_timestep(field_data);
+       
+      if (current_timestep == DT - 1) {
+        tracker->update_timestep();
+        break;
+      }
+      else if (current_timestep != 0) // need to push two timestep before one can advance timestep
+        tracker->advance_timestep();
+      current_timestep ++;
+    }
   }
 
   tracker->finalize();

@@ -1,16 +1,16 @@
-#ifndef __vtkABCFlow3DSource_h
-#define __vtkABCFlow3DSource_h
+#ifndef __ftkABCFlow3DSource_h
+#define __ftkABCFlow3DSource_h
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkDataSet;
 
-class vtkABCFlow3DSource : public vtkImageAlgorithm
+class ftkABCFlow3DSource : public vtkImageAlgorithm
 {
 public:
-  static vtkABCFlow3DSource *New();
-  vtkTypeMacro(vtkABCFlow3DSource, vtkImageAlgorithm);
+  static ftkABCFlow3DSource *New();
+  vtkTypeMacro(ftkABCFlow3DSource, vtkImageAlgorithm);
 
   vtkSetMacro(A, double);
   vtkSetMacro(B, double);
@@ -20,16 +20,16 @@ public:
   vtkSetMacro(DD, int);
 
 protected:
-  vtkABCFlow3DSource();
-  ~vtkABCFlow3DSource();
+  ftkABCFlow3DSource();
+  ~ftkABCFlow3DSource();
 
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
-  vtkABCFlow3DSource(const vtkABCFlow3DSource&);
-  void operator=(const vtkABCFlow3DSource&);
+  ftkABCFlow3DSource(const ftkABCFlow3DSource&);
+  void operator=(const ftkABCFlow3DSource&);
 
 private:
   double A, B, C;

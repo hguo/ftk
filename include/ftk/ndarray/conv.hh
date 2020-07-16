@@ -47,6 +47,31 @@ ndarray<T> conv2D(const ndarray<T> &data, const ndarray<T> &kernel,
 }
 
 template <typename T>
+std::vector<T> gaussian_kernel(T sigma, size_t size)
+{
+  std::vector<T> kernel(size);
+
+  double center = static_cast<double>(size - 1) * 0.5;
+  double r, s = 2. * sigma * sigma;
+  double sum = 0.;
+
+  for (auto i = 0; i < size; ++i) {
+    double x = static_cast<double>(i) - center;
+    r = x * x;
+    kernel[i] = std::exp(-r / s);
+    sum += kernel[i];
+  }
+
+  for (auto i = 0; i < size; i ++) 
+    kernel[i] /= sum;
+
+  // for (auto i = 0; i < size; i ++)
+  //   fprintf(stderr, "kernel[%d]=%f\n", i, kernel[i]);
+
+  return kernel;
+}
+
+template <typename T>
 ndarray<T> gaussian_kernel2D(T sigma, size_t ksizex, size_t ksizey)
 {
   ndarray<T> kernel({ksizex, ksizey});

@@ -1,4 +1,4 @@
-#include "vtkCriticalPointTracker2D.h"
+#include "ftkCriticalPointTracker2D.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -15,9 +15,9 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkCriticalPointTracker2D);
+vtkStandardNewMacro(ftkCriticalPointTracker2D);
 
-vtkCriticalPointTracker2D::vtkCriticalPointTracker2D()
+ftkCriticalPointTracker2D::ftkCriticalPointTracker2D()
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);
@@ -30,11 +30,11 @@ vtkCriticalPointTracker2D::vtkCriticalPointTracker2D()
   inputDataComponents = 0;
 }
 
-vtkCriticalPointTracker2D::~vtkCriticalPointTracker2D()
+ftkCriticalPointTracker2D::~ftkCriticalPointTracker2D()
 {
 }
 
-int vtkCriticalPointTracker2D::RequestInformation(
+int ftkCriticalPointTracker2D::RequestInformation(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -47,7 +47,7 @@ int vtkCriticalPointTracker2D::RequestInformation(
   return 1;
 }
 
-int vtkCriticalPointTracker2D::RequestUpdateExtent(
+int ftkCriticalPointTracker2D::RequestUpdateExtent(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -63,13 +63,13 @@ int vtkCriticalPointTracker2D::RequestUpdateExtent(
 }
 
 
-int vtkCriticalPointTracker2D::FillOutputPortInformation(int, vtkInformation *info)
+int ftkCriticalPointTracker2D::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
   return 1;
 }
 
-int vtkCriticalPointTracker2D::RequestData(
+int ftkCriticalPointTracker2D::RequestData(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)

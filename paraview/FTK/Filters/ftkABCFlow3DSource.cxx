@@ -1,4 +1,4 @@
-#include "vtkABCFlow3DSource.h"
+#include "ftkABCFlow3DSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -11,14 +11,13 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkABCFlow3DSource);
+vtkStandardNewMacro(ftkABCFlow3DSource);
 
-vtkABCFlow3DSource::vtkABCFlow3DSource() : 
+ftkABCFlow3DSource::ftkABCFlow3DSource() : 
   DW(32), DH(32), DD(10), 
   A(std::sqrt(3.0)), B(std::sqrt(2.0)), C(1.0)
 {
@@ -26,17 +25,17 @@ vtkABCFlow3DSource::vtkABCFlow3DSource() :
   SetNumberOfOutputPorts(1);
 }
 
-vtkABCFlow3DSource::~vtkABCFlow3DSource()
+ftkABCFlow3DSource::~ftkABCFlow3DSource()
 {
 }
 
-int vtkABCFlow3DSource::FillOutputPortInformation(int, vtkInformation *info)
+int ftkABCFlow3DSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkABCFlow3DSource::RequestInformation(
+int ftkABCFlow3DSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
@@ -53,7 +52,7 @@ int vtkABCFlow3DSource::RequestInformation(
   return 1;
 }
 
-int vtkABCFlow3DSource::RequestData(
+int ftkABCFlow3DSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)

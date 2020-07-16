@@ -1,4 +1,4 @@
-#include "vtkSpiralWoven2DSource.h"
+#include "ftkMerger2DSource.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -11,31 +11,31 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(vtkSpiralWoven2DSource);
+vtkStandardNewMacro(ftkMerger2DSource);
 
-vtkSpiralWoven2DSource::vtkSpiralWoven2DSource() 
-  : DW(32), DH(32), DT(10), ScalingFactor(15.0)
+ftkMerger2DSource::ftkMerger2DSource() : 
+  DW(32), DH(32), DT(10),
+  TimeScale(1.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }
 
-vtkSpiralWoven2DSource::~vtkSpiralWoven2DSource()
+ftkMerger2DSource::~ftkMerger2DSource()
 {
 }
 
-int vtkSpiralWoven2DSource::FillOutputPortInformation(int, vtkInformation *info)
+int ftkMerger2DSource::FillOutputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkImageData");
   return 1;
 }
 
-int vtkSpiralWoven2DSource::RequestInformation(
+int ftkMerger2DSource::RequestInformation(
     vtkInformation*, 
     vtkInformationVector**, 
     vtkInformationVector* outVec)
@@ -50,7 +50,7 @@ int vtkSpiralWoven2DSource::RequestInformation(
   double timeRange[2] = {0.0, DT - 1.0};
   std::vector<double> timeSteps;
   for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i) * TimeScale + StartTime);
+    timeSteps.push_back(static_cast<double>(i) * TimeScale);
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);
@@ -62,7 +62,7 @@ int vtkSpiralWoven2DSource::RequestInformation(
   return 1;
 }
 
-int vtkSpiralWoven2DSource::RequestData(
+int ftkMerger2DSource::RequestData(
     vtkInformation*, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -75,11 +75,12 @@ int vtkSpiralWoven2DSource::RequestData(
   if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()))
     currentTime = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
   else 
-    currentTime = StartTime;
+    currentTime = 0;
 
-  auto scalar = ftk::synthetic_woven_2D<float>(DW, DH, currentTime+1e-4, ScalingFactor);
-  auto imageData1 = scalar.to_vtk_image_data();
+  auto scalar_field = ftk::synthetic_merger_2D<float>(DW, DH, currentTime);
+  auto imageData1 = scalar_field.to_vtk_image_data();
   imageData->ShallowCopy(imageData1);
+  
   
   int extent[6] = {0, DW-1, 0, DH-1, 0, 0};
   double cell_lengths[3] = {1.0, 1.0, 1.0}, 
@@ -88,7 +89,7 @@ int vtkSpiralWoven2DSource::RequestData(
   double timeRange[2] = {0.0, DT - 1.0};
   std::vector<double> timeSteps;
   for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i) * TimeScale + StartTime);
+    timeSteps.push_back(static_cast<double>(i) * TimeScale);
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);
