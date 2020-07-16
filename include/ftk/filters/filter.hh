@@ -6,6 +6,8 @@
 #include <ftk/external/cxxopts.hpp>
 #include <thread>
 #include <mutex>
+#include <thread>
+#include <cassert>
 
 namespace ftk {
 

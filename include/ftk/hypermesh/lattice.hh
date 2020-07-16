@@ -6,6 +6,7 @@
 #include <tuple>
 #include <queue>
 #include <ostream>
+#include <limits>
 
 namespace ftk {
 

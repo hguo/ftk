@@ -17,6 +17,7 @@ endif ()
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set (LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
@@ -82,9 +83,9 @@ if (Qt5OpenGL_FOUND)
 endif ()
 
 if (FTK_USE_MPI STREQUAL AUTO)
-  find_package (MPI QUIET)
+  find_package (MPI QUIET COMPONENTS MPICXX CXX)
 elseif (FTK_USE_MPI)
-  find_package (MPI REQUIRED)
+  find_package (MPI REQUIRED COMPONENTS MPICXX CXX)
 endif ()
 if (MPI_FOUND)
   set (FTK_HAVE_MPI TRUE)
@@ -195,6 +196,7 @@ if (CUDA_FOUND)
   set (FTK_HAVE_CUDA TRUE)
   set (CUDA_PROPAGATE_HOST_FLAGS OFF)
   set (CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
+  include_directories(${CUDA_INCLUDE_DIRS})
 endif ()
 
 set (Boost_USE_STATIC_LIBS ON)
@@ -228,8 +230,10 @@ set (FTK_FP_PRECISION "32768" CACHE STRING "Fixed point precision")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
 
-install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ftk DESTINATION include)
-install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh DESTINATION include)
+install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ftk DESTINATION
+  ${CMAKE_INSTALL_INCLUDEDIR})
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ftk)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake)
@@ -244,7 +248,7 @@ configure_package_config_file(
   INSTALL_DESTINATION lib/cmake
   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
-  DESTINATION lib/cmake)
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FTK/)
 
 # If FTK_BUILD_TESTS is on, enable testing.
 if (FTK_BUILD_TESTS)
