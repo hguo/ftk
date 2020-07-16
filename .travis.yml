@@ -32,12 +32,11 @@ jobs:
       before_install:
         - sh tests/travis/install-cuda.sh
       env: 
-        - CMAKE_ARG="-DFTK_USE_CUDA=ON"
         - CUDA=10.1.105-1
         - CUDA_SHORT_VER=10-1
         - CUDA_SHORT=10.1
-        - CUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-${CUDA_SHORT}
         - UBUNTU_VERSION=ubuntu1804
+        - CMAKE_ARG="-DFTK_USE_CUDA=ON -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
 
     - name: build with netcdf (linux)
       os: linux
