@@ -41,7 +41,7 @@ bool verbose = false, demo = false, show_vtk = false, help = false;
 bool use_type_filter = false;
 unsigned int type_filter = 0;
 double spatial_smoothing = 0.0, temporal_smoothing = 0.0;
-int spatial_smoothing_kernel_size = 5, temporal_smoothing_kernel_size = 3;
+int spatial_smoothing_kernel_size = 3, temporal_smoothing_kernel_size = 3;
 
 // determined later
 int nd, // dimensionality
