@@ -53,7 +53,9 @@ elseif (FTK_USE_VTK)
 endif ()
 if (VTK_FOUND)
   set (FTK_HAVE_VTK TRUE)
-  include (${VTK_USE_FILE})
+  if (VTK_MAJOR_VERSION STRLESS 9)
+    include (${VTK_USE_FILE})
+  endif ()
 endif ()
 
 if (FTK_USE_Kokkos STREQUAL AUTO)
@@ -223,6 +225,7 @@ option (FTK_BUILD_TESTS "Build tests" OFF)
 option (FTK_BUILD_EXAMPLES "Build examples" ON)
 option (FTK_BUILD_EXPERIMENTS "Build experimental code" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
+option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
 set (FTK_FP_PRECISION "32768" CACHE STRING "Fixed point precision")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
