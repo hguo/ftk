@@ -269,5 +269,9 @@ if (FTK_BUILD_PARAVIEW)
   add_subdirectory (paraview)
 endif ()
 
+if (FTK_BUILD_PYFTK)
+  add_subdirectory (python)
+endif ()
+
 add_subdirectory (src)
 add_subdirectory (standalone)
