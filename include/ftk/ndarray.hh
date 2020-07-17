@@ -13,7 +13,7 @@
 #include <glob.h>
 
 #if FTK_HAVE_CUDA
-#include <cuda.h>
+// #include <cuda.h>
 #include <cuda_runtime.h>
 #endif
 

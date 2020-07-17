@@ -123,7 +123,6 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
-  allow_failures:
     - name: build with cuda10 (linux)
       os: linux
       dist: bionic
@@ -135,8 +134,8 @@ jobs:
         - CUDA_SHORT_VER=10-1
         - CUDA_SHORT=10.1
         - UBUNTU_VERSION=ubuntu1804
+        - CPATH=/usr/local/cuda-10.1/include
         - CMAKE_ARG="-DFTK_USE_CUDA=ON -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
-
 
 before_script:
   - mkdir build

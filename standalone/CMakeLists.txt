@@ -3,3 +3,5 @@ target_link_libraries (track_critical_points ftk)
 
 add_executable (track_levelsets track_levelsets.cpp)
 target_link_libraries (track_levelsets ftk)
+
+message (STATUS ${CUDA_INCLUDE_DIRS})
