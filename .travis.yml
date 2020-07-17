@@ -96,6 +96,8 @@ jobs:
       before_install:
         - sh tests/travis/install-mpich.sh
       osx_image: xcode11
+      env:
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
     - name: build with vtk (osx)
       env: 
