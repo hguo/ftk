@@ -94,7 +94,8 @@ jobs:
     - name: build with mpich (osx)
       os: osx
       before_install:
-        - brew install mpich
+        - sh tests/travis/install-mpich.sh
+        # - brew install mpich
       osx_image: xcode11
 
     - name: build with mpich (linux)
