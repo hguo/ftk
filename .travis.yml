@@ -95,7 +95,14 @@ jobs:
       os: osx
       before_install:
         - sh tests/travis/install-mpich.sh
-        # - brew install mpich
+      osx_image: xcode11
+
+    - name: build with vtk (osx)
+      env: 
+        - CMAKE_ARG="-DFTK_USE_VTK=ON"
+      os: osx
+      before_install:
+        - sh tests/travis/install-vtk.sh
       osx_image: xcode11
 
     - name: build with mpich (linux)
@@ -181,15 +188,6 @@ jobs:
         - UBUNTU_VERSION=ubuntu1804
         - CPATH=/usr/local/cuda-10.1/include
         - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DFTK_USE_CUDA=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
-
-  allow_failures:
-    - name: build with vtk (osx)
-      env: 
-        - CMAKE_ARG="-DFTK_USE_VTK=ON"
-      os: osx
-      before_install:
-        - brew install vtk
-      osx_image: xcode11
 
 before_script:
   - mkdir build
