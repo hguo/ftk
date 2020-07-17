@@ -255,6 +255,7 @@ install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
 if (FTK_BUILD_TESTS)
   # find_package (GTest REQUIRED)
   enable_testing ()
+  include (Catch)
   add_subdirectory (tests)
 endif ()
 
