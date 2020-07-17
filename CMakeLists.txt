@@ -197,6 +197,7 @@ if (CUDA_FOUND)
   set (FTK_HAVE_CUDA TRUE)
   set (CUDA_PROPAGATE_HOST_FLAGS OFF)
   set (CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
+  include_directories (${CUDA_INCLUDE_DIR})
 endif ()
 
 set (Boost_USE_STATIC_LIBS ON)
