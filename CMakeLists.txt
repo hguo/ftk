@@ -6,7 +6,6 @@ set (FTK_MINOR_VERSION 0)
 set (FTK_PATCH_VERSION 1)
 set (FTK_VERSION ${FTK_MAJOR_VERSION}.${FTK_MINOR_VERSION}.${FTK_PATCH_VERSION})
 
-include(GoogleTest)
 include(GNUInstallDirs)
 # include (ExternalProject)
 
