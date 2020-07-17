@@ -35,6 +35,16 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_NETCDF=ON"
 
+    - name: build with tbb (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libtbb-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_TBB=ON"
+
     - name: build with hdf5 (linux)
       os: linux
       dist: bionic
@@ -54,6 +64,15 @@ jobs:
             - libvtk7-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_VTK=ON"
+
+    - name: build with vtk (osx)
+      env: 
+        - CMAKE_ARG="-DFTK_USE_VTK=ON"
+      os: osx
+      sudo: required
+      before_install:
+        - brew install vtk
+      osx_image: xcode11
     
     - name: build with netcdf, hdf5, and vtk (linux)
       os: linux
@@ -107,6 +126,21 @@ jobs:
             - libopenmpi-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
+    - name: build with mpsolve, netcdf, hdf5, vtk, and mpich (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libnetcdf-dev
+            - libhdf5-dev
+            - libvtk7-dev
+            - libmpich-dev
+      before_install:
+        - sh tests/travis/install-mpsolve.sh
+      env: 
+        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
     - name: build with mpsolve, netcdf, hdf5, vtk, and openmpi (linux)
       os: linux
