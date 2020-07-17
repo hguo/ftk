@@ -3,12 +3,6 @@ add_subdirectory (gtest)
 include_directories (${CMAKE_CURRENT_SOURCE_DIR}/gtest/include)
 set (GTEST_BOTH_LIBRARIES gtest gtest_main)
 
-add_executable (test_matrix test_matrix.cpp)
-target_link_libraries (test_matrix ftk ${GTEST_BOTH_LIBRARIES})
-
-add_executable (test_inequality_solvers test_inequality_solvers.cpp)
-target_link_libraries (test_inequality_solvers ftk ${GTEST_BOTH_LIBRARIES})
-
 add_executable (test_inverse_interpolation test_inverse_interpolation.cpp)
 target_link_libraries (test_inverse_interpolation ftk ${GTEST_BOTH_LIBRARIES})
 
@@ -24,8 +18,6 @@ target_link_libraries (test_union_find ftk ${GTEST_BOTH_LIBRARIES})
 add_executable (test_regular_simplex_mesh test_regular_simplex_mesh.cpp)
 target_link_libraries (test_regular_simplex_mesh ftk ${GTEST_BOTH_LIBRARIES})
 
-gtest_discover_tests (test_matrix)
-gtest_discover_tests (test_inequality_solvers)
 gtest_discover_tests (test_inverse_interpolation)
 gtest_discover_tests (test_parallel_vectors)
 gtest_discover_tests (test_quadratic_interpolation)
@@ -38,10 +30,16 @@ catch_discover_tests (test_polynomial)
 
 add_executable (test_hoshen_kopelman test_hoshen_kopelman.cpp)
 target_link_libraries (test_hoshen_kopelman ftk)
-# add_test (NAME hoshen_kopelman COMMAND test_hoshen_kopelman)
 catch_discover_tests (test_hoshen_kopelman)
 
 add_executable (test_conv test_conv.cpp)
 target_link_libraries (test_conv ftk)
-# add_test (NAME conv COMMAND test_conv)
 catch_discover_tests (test_conv)
+
+add_executable (test_inequality_solvers test_inequality_solvers.cpp)
+target_link_libraries (test_inequality_solvers ftk)
+catch_discover_tests (test_inequality_solvers)
+
+add_executable (test_matrix test_matrix.cpp)
+target_link_libraries (test_matrix ftk)
+catch_discover_tests (test_matrix)

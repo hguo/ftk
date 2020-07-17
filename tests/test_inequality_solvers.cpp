@@ -1,15 +1,13 @@
-#include <gtest/gtest.h>
+#define CATCH_CONFIG_RUNNER
+#include "catch.hh"
 #include <ftk/numeric/rand.hh>
 #include <ftk/numeric/polynomial.hh>
 #include <ftk/numeric/linear_inequality_solver.hh>
 
-class inequality_test : public testing::Test {
-public:
-  const int nruns = 1; // 00000;
-  const double epsilon = 1e-9;
-};
+const int nruns = 1; // 00000;
+const double epsilon = 1e-9;
 
-TEST_F(inequality_test, linear_inequality_test) {
+TEST_CASE("linear_inequality_test") {
   double P[2];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand2(P);
@@ -17,11 +15,11 @@ TEST_F(inequality_test, linear_inequality_test) {
     auto x = I.sample();
     auto y = ftk::polynomial_evaluate(P, 1, x);
 
-    EXPECT_GE(y, 0.0);
+    REQUIRE(y >= 0.0);
   }
 }
 
-TEST_F(inequality_test, linear_inequality_test2) {
+TEST_CASE("linear_inequality_test2") {
   const int n = 2;
   double P[n][2];
   ftk::disjoint_intervals<double> I;
@@ -40,7 +38,13 @@ TEST_F(inequality_test, linear_inequality_test2) {
     auto x = I.sample();
     for (int i = 0; i < n; i ++) {
       auto y = ftk::polynomial_evaluate(P[i], 1, x);
-      EXPECT_GE(y, 0.0);
+      REQUIRE(y >= 0.0);
     }
   }
+}
+
+int main(int argc, char **argv)
+{
+  Catch::Session session;
+  return session.run(argc, argv);
 }
