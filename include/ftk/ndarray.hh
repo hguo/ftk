@@ -165,8 +165,8 @@ struct ndarray {
   template <typename T1> ndarray<T>& operator*=(const T1& x);
   template <typename T1> ndarray<T>& operator/=(const T1& x);
 
-  friend ndarray<T> operator+(const ndarray<T>& lhs, const ndarray<T>& rhs);
-  friend ndarray<T> operator-(const ndarray<T>& lhs, const ndarray<T>& rhs);
+  template <typename T1> friend ndarray<T1> operator+(const ndarray<T1>& lhs, const ndarray<T1>& rhs);
+  template <typename T1> friend ndarray<T1> operator-(const ndarray<T1>& lhs, const ndarray<T1>& rhs);
 
   // template <typename T1> friend ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs);
   template <typename T1> friend ndarray<T> operator*(const T1& lhs, const ndarray<T>& rhs) {return rhs * lhs;}
