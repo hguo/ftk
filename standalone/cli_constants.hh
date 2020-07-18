@@ -4,6 +4,22 @@
 #include <ftk/ndarray/stream.hh>
 #include <ftk/external/cxxopts.hpp>
 
+#define COMMON_OPTS_INPUTS() \
+    ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'", \
+     cxxopts::value<std::string>()) \
+    ("f,input-format", "Input file format (auto|float32|float64|nc|h5|vti)", cxxopts::value<std::string>()) \
+    ("synthetic", "Use a synthetic case (woven|double_gyre|merger) as inputs", cxxopts::value<std::string>()) \
+    ("dim", "Spatial dimensionality of data (auto|2|3)", cxxopts::value<std::string>()) \
+    ("w,width", "Width", cxxopts::value<size_t>()) \
+    ("h,height", "Height", cxxopts::value<size_t>()) \
+    ("d,depth", "Depth.  Valid only for 3D data", cxxopts::value<size_t>()) \
+    ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>()) \
+    ("var", "Variable name(s), e.g. `scalar', `u,v,w'.  Valid only for NetCDF, HDF5, and VTK.", cxxopts::value<std::string>()) \
+    ("temporal-smoothing-kernel", "Temporal smoothing kernel bandwidth", cxxopts::value<double>()) \
+    ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", cxxopts::value<size_t>()) \
+    ("spatial-smoothing-kernel", "Spatial smoothing kernel bandwidth", cxxopts::value<double>()) \
+    ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>())
+
 static const std::string 
         str_auto("auto"),
         str_none("none"),

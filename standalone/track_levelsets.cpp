@@ -35,22 +35,8 @@ ftk::ndarray_stream<> stream;
 int parse_arguments(int argc, char **argv)
 {
   cxxopts::Options options(argv[0]);
-  options.add_options()
-    ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'", 
-     cxxopts::value<std::string>())
-    ("f,input-format", "Input file format (auto|float32|float64|nc|h5|vti)", cxxopts::value<std::string>())
-    ("synthetic", "Use a synthetic case (woven|double_gyre|merger) as inputs", cxxopts::value<std::string>())
-    ("dim", "Spatial dimensionality of data (auto|2|3)", cxxopts::value<std::string>())
-    ("w,width", "Width", cxxopts::value<size_t>())
-    ("h,height", "Height", cxxopts::value<size_t>())
-    ("d,depth", "Depth", cxxopts::value<size_t>())
-    ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>())
-    ("var", "Variable name (only for NetCDF, HDF5, and VTK)", cxxopts::value<std::string>())
+  options.add_options()COMMON_OPTS_INPUTS()
     ("threshold", "Threshold for levelset tracking", cxxopts::value<double>(threshold))
-    ("temporal-smoothing-kernel", "Temporal smoothing kernel bandwidth", cxxopts::value<double>())
-    ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", cxxopts::value<size_t>())
-    ("spatial-smoothing-kernel", "Spatial smoothing kernel bandwidth", cxxopts::value<double>())
-    ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>())
     ("o,output", "Output file name pattern, e.g. 'out-%d.raw', 'out-%04d.vti'",
      cxxopts::value<std::string>(output_filename_pattern))
     ("output-format", "Output file format (auto|raw|nc|h5|vti)",
