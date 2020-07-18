@@ -47,6 +47,10 @@ int parse_arguments(int argc, char **argv)
     ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>())
     ("var", "Variable name (only for NetCDF, HDF5, and VTK)", cxxopts::value<std::string>())
     ("threshold", "Threshold for levelset tracking", cxxopts::value<double>(threshold))
+    ("temporal-smoothing-kernel", "Temporal smoothing kernel bandwidth", cxxopts::value<double>())
+    ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", cxxopts::value<size_t>())
+    ("spatial-smoothing-kernel", "Spatial smoothing kernel bandwidth", cxxopts::value<double>())
+    ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>())
     ("o,output", "Output file name pattern, e.g. 'out-%d.raw', 'out-%04d.vti'",
      cxxopts::value<std::string>(output_filename_pattern))
     ("output-format", "Output file format (auto|raw|nc|h5|vti)",
@@ -102,6 +106,11 @@ int parse_arguments(int argc, char **argv)
   if (results.count("timesteps")) j_input["n_timesteps"] = results["timesteps"].as<size_t>();
   if (results.count("var")) j_input["varible"] = results["var"].as<std::string>();
 
+  if (results.count("temporal-smoothing-kernel")) j_input["temporal-smoothing-kernel"] = results["temporal-smoothing-kernel"].as<double>();
+  if (results.count("temporal-smoothing-kernel-size")) j_input["temporal-smoothing-kernel-size"] = results["temporal-smoothing-kernel-size"].as<size_t>();
+  if (results.count("spatial-smoothing-kernel")) j_input["spatial-smoothing-kernel"] = results["spatial-smoothing-kernel"].as<double>();
+  if (results.count("spatial-smoothing-kernel-size")) j_input["spatial-smoothing-kernel-size"] = results["spatial-smoothing-kernel-size"].as<size_t>();
+
   stream.set_input_source_json(j_input);
 
   if (output_filename_pattern.empty())
@@ -120,7 +129,7 @@ int parse_arguments(int argc, char **argv)
   }
 
   fprintf(stderr, "SUMMARY\n=============\n");
-  std::cerr << stream.get_json() << std::endl;
+  std::cerr << "input=" << stream.get_json() << std::endl;
   fprintf(stderr, "output_filename_pattern=%s\n", output_filename_pattern.c_str());
   fprintf(stderr, "output_format=%s\n", output_format.c_str());
   fprintf(stderr, "threshold=%f\n", threshold);

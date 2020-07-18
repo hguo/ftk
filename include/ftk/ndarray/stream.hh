@@ -3,6 +3,7 @@
 
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/synthetic.hh>
+#include <ftk/filters/streaming_filter.hh>
 #include <ftk/external/json.hh>
 
 namespace ftk {
@@ -15,7 +16,7 @@ struct ndarray_stream {
   const json& get_json() const {return j;}
   
   void start();
-  void finish() {};
+  void finish();
 
   void set_callback(std::function<void(int, ndarray<T>&)> f) {callback = f;}
 
@@ -55,9 +56,9 @@ protected:
   json j; // configs, metadata, and everything
 
   int current_timestep = 0;
-  std::deque<ndarray<T>> staged_data;
-  
   std::function<void(int, ndarray<T>&)> callback;
+
+  streaming_filter<ndarray<T>, T> temporal_filter;
 
 private:
   static bool ends_with(std::string const & value, std::string const & ending)
@@ -255,7 +256,30 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
       } else fatal("missing filenames");
     } else fatal("invalid input type");
   } else fatal("missing `type'");
-  
+ 
+
+  if (j.contains("temporal-smoothing-kernel")) {
+    if (j["temporal-smoothing-kernel"].is_number()) {
+      if (j.contains("temporal-smoothing-kernel-size")) {
+        if (!j["temporal-smoothing-kernel-size"].is_number()) 
+          fatal("invalid temporal smoothing kernel size");
+      } else 
+        j["temporal-smoothing-kernel-size"] = 5; // default value
+    } else 
+      fatal("invalid temporal smoothing kernel");
+  }
+
+  if (j.contains("spatial-smoothing-kernel")) {
+    if (j["spatial-smoothing-kernel"].is_number()) {
+      if (j.contains("spatial-smoothing-kernel-size")) {
+        if (!j["spatial-smoothing-kernel-size"].is_number()) 
+          fatal("invalid spatial smoothing kernel size");
+      } else 
+        j["spatial-smoothing-kernel-size"] = 3; // default value
+    } else 
+      fatal("invalid spatial smoothing kernel");
+  }
+
   // std::cerr << std::endl 
   //           << j << std::endl;
 }
@@ -405,17 +429,33 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_double_gyre(int k)
 template <typename T>
 void ndarray_stream<T>::start()
 {
-  if (j["type"] == "synthetic") {
-    for (int i = 0; i < j["n_timesteps"]; i ++) {
-      ndarray<T> array = request_timestep_synthetic(i);
-      if (callback) callback(i, array);
-    }
-  } else if (j["type"] == "file") {
-    for (int i = 0; i < j["n_timesteps"]; i ++) {
-      ndarray<T> array = request_timestep_file(i);
-      if (callback) callback(i, array);
-    }
+  if (!callback) 
+    fatal("callback function not set");
+
+  auto my_callback = callback;
+  if (j.contains("temporal-smoothing-kernel")) {
+    temporal_filter.set_gaussian_kernel(j["temporal-smoothing-kernel"], j["temporal-smoothing-kernel-size"]);
+    temporal_filter.set_callback(callback);
+    my_callback = [&](int k, ndarray<T>& array) {
+      temporal_filter.push(array);
+    };
   }
+
+  for (int i = 0; i < j["n_timesteps"]; i ++) {
+    ndarray<T> array;
+    if (j["type"] == "synthetic") 
+      array = request_timestep_synthetic(i);
+    else if (j["type"] == "file")
+      ndarray<T> array = request_timestep_file(i);
+    my_callback(i, array);
+  }
+}
+ 
+template <typename T>
+void ndarray_stream<T>::finish() 
+{
+  if (j.contains("temporal-smoothing-kernel"))
+    temporal_filter.finish();
 }
 
 }
