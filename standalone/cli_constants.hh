@@ -1,6 +1,9 @@
 #ifndef _FTK_CLI_CONSTANTS_HH
 #define _FTK_CLI_CONSTANTS_HH
 
+#include <ftk/ndarray/stream.hh>
+#include <ftk/external/cxxopts.hpp>
+
 static const std::string 
         str_auto("auto"),
         str_none("none"),
@@ -38,6 +41,43 @@ static inline bool ends_with(std::string const & value, std::string const & endi
 {
   if (ending.size() > value.size()) return false;
   return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+// https://stackoverflow.com/questions/9435385/split-a-string-using-c11
+static inline std::vector<std::string> split(const std::string& input, const std::string& regex) {
+    // passing -1 as the submatch index parameter performs splitting
+    std::regex re(regex);
+    std::sregex_token_iterator
+        first{input.begin(), input.end(), re, -1},
+        last;
+    return {first, last};
+}
+
+static inline nlohmann::json parse_input_json(cxxopts::ParseResult& results)
+{
+  nlohmann::json j;
+
+  if (results.count("synthetic")) {
+    j["type"] = "synthetic";
+    j["name"] = results["synthetic"].as<std::string>();
+  } else 
+    j["type"] = "file";
+
+  if (results.count("input")) j["filenames"] = results["input"].as<std::string>();
+  if (results.count("input-format")) j["format"] = results["format"].as<std::string>();
+  if (results.count("dim")) j["nd"] = results["dim"].as<std::string>();
+  if (results.count("width")) j["width"] = results["width"].as<size_t>();
+  if (results.count("height")) j["height"] = results["height"].as<size_t>();
+  if (results.count("depth")) j["depth"] = results["depth"].as<size_t>();
+  if (results.count("timesteps")) j["n_timesteps"] = results["timesteps"].as<size_t>();
+  if (results.count("var")) j["varible"] = results["var"].as<std::string>();
+
+  if (results.count("temporal-smoothing-kernel")) j["temporal-smoothing-kernel"] = results["temporal-smoothing-kernel"].as<double>();
+  if (results.count("temporal-smoothing-kernel-size")) j["temporal-smoothing-kernel-size"] = results["temporal-smoothing-kernel-size"].as<size_t>();
+  if (results.count("spatial-smoothing-kernel")) j["spatial-smoothing-kernel"] = results["spatial-smoothing-kernel"].as<double>();
+  if (results.count("spatial-smoothing-kernel-size")) j["spatial-smoothing-kernel-size"] = results["spatial-smoothing-kernel-size"].as<size_t>();
+
+  return j;
 }
 
 #endif

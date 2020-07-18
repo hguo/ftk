@@ -89,28 +89,7 @@ int parse_arguments(int argc, char **argv)
     fatal("Missing threshold value.");
 
   // configure input stream
-  json j_input;
-
-  if (results.count("synthetic")) {
-    j_input["type"] = "synthetic";
-    j_input["name"] = results["synthetic"].as<std::string>();
-  } else 
-    j_input["type"] = "file";
-
-  if (results.count("input")) j_input["filenames"] = results["input"].as<std::string>();
-  if (results.count("input-format")) j_input["format"] = results["format"].as<std::string>();
-  if (results.count("dim")) j_input["nd"] = results["dim"].as<std::string>();
-  if (results.count("width")) j_input["width"] = results["width"].as<size_t>();
-  if (results.count("height")) j_input["height"] = results["height"].as<size_t>();
-  if (results.count("depth")) j_input["depth"] = results["depth"].as<size_t>();
-  if (results.count("timesteps")) j_input["n_timesteps"] = results["timesteps"].as<size_t>();
-  if (results.count("var")) j_input["varible"] = results["var"].as<std::string>();
-
-  if (results.count("temporal-smoothing-kernel")) j_input["temporal-smoothing-kernel"] = results["temporal-smoothing-kernel"].as<double>();
-  if (results.count("temporal-smoothing-kernel-size")) j_input["temporal-smoothing-kernel-size"] = results["temporal-smoothing-kernel-size"].as<size_t>();
-  if (results.count("spatial-smoothing-kernel")) j_input["spatial-smoothing-kernel"] = results["spatial-smoothing-kernel"].as<double>();
-  if (results.count("spatial-smoothing-kernel-size")) j_input["spatial-smoothing-kernel-size"] = results["spatial-smoothing-kernel-size"].as<size_t>();
-
+  json j_input = parse_input_json(results);
   stream.set_input_source_json(j_input);
 
   if (output_filename_pattern.empty())
@@ -146,7 +125,7 @@ void track_levelset()
 {
   tracker.set_threshold( threshold );
 
-  stream.set_callback([&](int k, ftk::ndarray<double>& field_data) {
+  stream.set_callback([&](int k, ftk::ndarray<double> field_data) {
     fprintf(stderr, "current_timestep=%d\n", k);
     tracker.push_scalar_field_data_snapshot(field_data);
     tracker.advance_timestep();

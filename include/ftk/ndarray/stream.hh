@@ -18,7 +18,7 @@ struct ndarray_stream {
   void start();
   void finish();
 
-  void set_callback(std::function<void(int, ndarray<T>&)> f) {callback = f;}
+  void set_callback(std::function<void(int, ndarray<T>)> f) {callback = f;}
 
   bool is_single_component() const { return j["variable"].is_string(); }
   bool is_multi_component() const { return j["variable"].is_array(); }
@@ -56,7 +56,7 @@ protected:
   json j; // configs, metadata, and everything
 
   int current_timestep = 0;
-  std::function<void(int, ndarray<T>&)> callback;
+  std::function<void(int, ndarray<T>)> callback;
 
   streaming_filter<ndarray<T>, T> temporal_filter;
 
@@ -338,9 +338,9 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][k];
 #if FTK_HAVE_VTK
-  if (is_single_component())
+  if (is_single_component()) {
     array.from_vtk_image_data_file(filename, j["variable"]);
-  else {
+  } else {
     const int nv = n_components();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
@@ -436,7 +436,7 @@ void ndarray_stream<T>::start()
   if (j.contains("temporal-smoothing-kernel")) {
     temporal_filter.set_gaussian_kernel(j["temporal-smoothing-kernel"], j["temporal-smoothing-kernel-size"]);
     temporal_filter.set_callback(callback);
-    my_callback = [&](int k, ndarray<T>& array) {
+    my_callback = [&](int k, ndarray<T> array) {
       temporal_filter.push(array);
     };
   }
@@ -446,7 +446,7 @@ void ndarray_stream<T>::start()
     if (j["type"] == "synthetic") 
       array = request_timestep_synthetic(i);
     else if (j["type"] == "file")
-      ndarray<T> array = request_timestep_file(i);
+      array = request_timestep_file(i);
     my_callback(i, array);
   }
 }

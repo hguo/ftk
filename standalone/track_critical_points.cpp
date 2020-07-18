@@ -582,7 +582,7 @@ void track_critical_points()
 
     bool first_time = true;
     int counter = 0;
-    stream.set_callback([&](int, ftk::ndarray<double>& field_data) {
+    stream.set_callback([&](int, ftk::ndarray<double> field_data) {
       // std::cerr << field_data << std::endl;
       push_timestep(field_data);
       if (first_time) first_time = !first_time;
