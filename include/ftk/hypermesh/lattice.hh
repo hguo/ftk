@@ -5,6 +5,7 @@
 #include <vector>
 #include <tuple>
 #include <queue>
+#include <limits>
 #include <ostream>
 
 namespace ftk {

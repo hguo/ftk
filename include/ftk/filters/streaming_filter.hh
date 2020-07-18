@@ -3,6 +3,7 @@
 
 #include <deque>
 #include <vector>
+#include <functional>
 #include <ftk/ndarray/conv.hh>
 
 namespace ftk {
