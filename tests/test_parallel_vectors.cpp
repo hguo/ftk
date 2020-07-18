@@ -1,16 +1,14 @@
-#include <gtest/gtest.h>
+#define CATCH_CONFIG_RUNNER
+#include "catch.hh"
 #include <ftk/numeric/parallel_vector_solver2.hh>
 #include <ftk/numeric/parallel_vector_solver3.hh>
 #include <ftk/numeric/rational_function.hh>
 #include <ftk/numeric/rand.hh>
 
-class parallel_vectors_test : public testing::Test {
-public:
-  const int nruns = 1; // 00000;
-  const double epsilon = 1e-4;
-};
+const int nruns = 1; // 00000;
+const double epsilon = 1e-4;
 
-TEST_F(parallel_vectors_test, solve_parallel_vector2_simplex1) {
+TEST_CASE("solve_parallel_vector2_simplex1") {
   double V[2][2], W[2][2], lambda[2], mu[2][2];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand2x2(V);
@@ -18,12 +16,12 @@ TEST_F(parallel_vectors_test, solve_parallel_vector2_simplex1) {
 
     int nroots = ftk::solve_pv_s1v2(V, W, lambda, mu);
     for (int i = 0; i < nroots; i ++) {
-      EXPECT_TRUE( ftk::verify_pv_s1v2(V, W, mu[i], epsilon) );
+      REQUIRE( ftk::verify_pv_s1v2(V, W, mu[i], epsilon) );
     }
   }
 }
 
-TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector2_simplex2_const_w) {
+TEST_CASE("characteristic_polynomials_parallel_vector2_simplex2_const_w") {
   double V[3][2], w[2], P[3][2];
   double lambda, mu[3], v[2];
   for (int run = 0; run < nruns; run ++) {
@@ -43,11 +41,11 @@ TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector2_simple
       fprintf(stderr, "w={%f, %f}\n", w[0], w[1]);
       fprintf(stderr, "lambda=%f, mu={%f, %f, %f}\n", lambda, mu[0], mu[1], mu[2]);
     }
-    EXPECT_TRUE(succ);
+    REQUIRE(succ);
   }
 }
 
-TEST_F(parallel_vectors_test, parallel_vector2_simplex2_inequality_const_w) {
+TEST_CASE("parallel_vector2_simplex2_inequality_const_w") {
   double V[3][2], w[2], P[3][2];
   double lambda, mu[3], v[2];
   for (int run = 0; run < nruns; run ++) {
@@ -73,12 +71,12 @@ TEST_F(parallel_vectors_test, parallel_vector2_simplex2_inequality_const_w) {
       }
 
       bool succ = ftk::verify_pv_s2v2(V, w, mu, epsilon);
-      EXPECT_TRUE(inside && succ);
+      REQUIRE((inside && succ));
     }
   }
 }
 
-TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector2_simplex2) {
+TEST_CASE("characteristic_polynomials_parallel_vector2_simplex2") {
   double V[3][2], W[3][2], Q[3], P[3][3];
   double lambda, mu[3];
   for (int run = 0; run < nruns; run ++) {
@@ -99,12 +97,12 @@ TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector2_simple
       fprintf(stderr, "Q=%f, %f, %f\n", Q[0], Q[1], Q[2]);
       fprintf(stderr, "mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
     }
-    EXPECT_TRUE(succ);
+    REQUIRE(succ);
   }
 }
 
 #if 0
-TEST_F(parallel_vectors_test, parallel_vector2_simplex2_inequality) {
+TEST_CASE("parallel_vector2_simplex2_inequality") {
   double V[3][2], W[3][2], Q[3], P[3][3];
   double lambda, mu[3], v[2], w[2];
   for (int run = 0; run < nruns; run ++) {
@@ -137,13 +135,13 @@ TEST_F(parallel_vectors_test, parallel_vector2_simplex2_inequality) {
       }
 
       bool succ = ftk::verify_pv_s2v2(V, W, mu, epsilon);
-      EXPECT_TRUE(inside && succ);
+      REQUIRE(inside && succ);
     }
   }
 }
 #endif
 
-TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector3_simplex2)
+TEST_CASE("characteristic_polynomials_parallel_vector3_simplex2")
 {
   double V[4][3], W[4][3], Q[4], P[4][4];
   double lambda, mu[4];
@@ -160,11 +158,11 @@ TEST_F(parallel_vectors_test, characteristic_polynomials_parallel_vector3_simple
     
     bool succ = ftk::verify_pv_s3v3(V, W, mu, epsilon);
 
-    EXPECT_TRUE(succ);
+    REQUIRE(succ);
   }
 }
 
-TEST_F(parallel_vectors_test, solve_parallel_vector3_simplex1) {
+TEST_CASE("solve_parallel_vector3_simplex1") {
   double V[2][3], W[2][3], lambda[2], mu[2][2];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand2x3(V);
@@ -172,12 +170,12 @@ TEST_F(parallel_vectors_test, solve_parallel_vector3_simplex1) {
 
     int nroots = ftk::solve_pv_s1v3(V, W, lambda, mu);
     for (int i = 0; i < nroots; i ++) {
-      EXPECT_TRUE( ftk::verify_pv_s1v3(V, W, mu[i], epsilon) );
+      REQUIRE( ftk::verify_pv_s1v3(V, W, mu[i], epsilon) );
     }
   }
 }
 
-TEST_F(parallel_vectors_test, solve_parallel_vector3_simplex2) {
+TEST_CASE("solve_parallel_vector3_simplex2") {
   double V[3][3], W[3][3], lambda[3], mu[3][3];
   for (int run = 0; run < nruns; run ++) {
     ftk::rand3x3(V);
@@ -185,7 +183,13 @@ TEST_F(parallel_vectors_test, solve_parallel_vector3_simplex2) {
 
     int nroots = ftk::solve_pv_s2v3(V, W, lambda, mu);
     for (int i = 0; i < nroots; i ++) {
-      EXPECT_TRUE( ftk::verify_pv_s2v3(V, W, mu[i], epsilon) );
+      REQUIRE( ftk::verify_pv_s2v3(V, W, mu[i], epsilon) );
     }
   }
+}
+
+int main(int argc, char **argv)
+{
+  Catch::Session session;
+  return session.run(argc, argv);
 }

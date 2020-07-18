@@ -921,7 +921,7 @@ inline void regular_simplex_mesh::element_for(
   Kokkos::parallel_for("element_for", ntasks, KOKKOS_LAMBDA(const int& j) {f(j);});
 #elif FTK_HAVE_TBB
   tbb::parallel_for(tbb::blocked_range<size_t>(0, ntasks),
-      [=](const blocked_range<size_t>& r) {
+      [=](const tbb::blocked_range<size_t>& r) {
         for (size_t i = r.begin(); i != r.end(); ++ i) 
           lambda(i);
       });
