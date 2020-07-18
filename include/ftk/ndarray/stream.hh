@@ -12,6 +12,7 @@ template <typename T=double>
 struct ndarray_stream {
   void set_input_source_json_file(const std::string& filename);
   void set_input_source_json(const json& j_);
+  const json& get_json() const {return j;}
   
   void start();
   void finish() {};
@@ -80,7 +81,7 @@ template <typename T>
 void ndarray_stream<T>::set_input_source_json(const json& j_)
 {
   j = j_;
-  std::cerr << j << std::endl;
+  // std::cerr << j << std::endl;
   
   if (j.contains("type")) {
     if (j["type"] == "synthetic") {
@@ -255,8 +256,8 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
     } else fatal("invalid input type");
   } else fatal("missing `type'");
   
-  std::cerr << std::endl 
-            << j << std::endl;
+  // std::cerr << std::endl 
+  //           << j << std::endl;
 }
 
 template <typename T>
