@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <numeric>
 #include <thread>
+#include <functional>
 #include <cassert>
 #include <iterator>
 #include <functional>
