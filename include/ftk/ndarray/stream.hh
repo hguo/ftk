@@ -311,7 +311,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
     return request_timestep_binary<double>(k);
   else if (j["format"] == "vti")
     return request_timestep_file_vti(k);
-  else if (j["format"] == "netcdf")
+  else if (j["format"] == "nc")
     return request_timestep_file_nc(k);
   else if (j["format"] == "h5")
     return request_timestep_file_h5(k);

@@ -55,7 +55,8 @@ static inline std::vector<std::string> split(const std::string& input, const std
 
 static inline nlohmann::json parse_input_json(cxxopts::ParseResult& results)
 {
-  nlohmann::json j;
+  using nlohmann::json;
+  json j;
 
   if (results.count("synthetic")) {
     j["type"] = "synthetic";
@@ -70,7 +71,17 @@ static inline nlohmann::json parse_input_json(cxxopts::ParseResult& results)
   if (results.count("height")) j["height"] = results["height"].as<size_t>();
   if (results.count("depth")) j["depth"] = results["depth"].as<size_t>();
   if (results.count("timesteps")) j["n_timesteps"] = results["timesteps"].as<size_t>();
-  if (results.count("var")) j["varible"] = results["var"].as<std::string>();
+  if (results.count("var")) {
+    const auto var = results["var"].as<std::string>();
+    const auto vars = split(var, ",");
+    if (var.size() == 1) j["variable"] = var;
+    else if (var.size() > 1) {
+      json jv;
+      for (int i = 0; i < vars.size(); i ++)
+        jv[i] = vars[i];
+      j["variable"] = jv;
+    }
+  }
 
   if (results.count("temporal-smoothing-kernel")) j["temporal-smoothing-kernel"] = results["temporal-smoothing-kernel"].as<double>();
   if (results.count("temporal-smoothing-kernel-size")) j["temporal-smoothing-kernel-size"] = results["temporal-smoothing-kernel-size"].as<size_t>();
