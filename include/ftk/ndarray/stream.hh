@@ -55,7 +55,6 @@ protected:
 protected:
   json j; // configs, metadata, and everything
 
-  int current_timestep = 0;
   std::function<void(int, ndarray<T>)> callback;
 
   streaming_filter<ndarray<T>, T> temporal_filter;

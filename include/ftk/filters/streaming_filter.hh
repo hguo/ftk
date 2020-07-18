@@ -60,8 +60,7 @@ void streaming_filter<T, KT>::push(const T& d)
 
   if (callback) 
     if (ready()) {
-      auto x = get();
-      callback(n_fetched_timesteps, x);
+      callback(n_fetched_timesteps, get());
     }
 }
 
@@ -96,8 +95,7 @@ void streaming_filter<T, KT>::finish()
   while (1) {
     data.pop_front();
     if (ready() && callback) {
-      auto x = get();
-      callback(n_fetched_timesteps, x);
+      callback(n_fetched_timesteps, get());
     }
     if (!ready()) break;
   }
