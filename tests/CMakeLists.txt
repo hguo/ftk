@@ -6,6 +6,9 @@ add_executable (test_regular_simplex_mesh test_regular_simplex_mesh.cpp)
 target_link_libraries (test_regular_simplex_mesh ftk)
 # catch_discover_tests (test_regular_simplex_mesh)
 
+add_executable (test_array_stream test_array_stream.cpp)
+target_link_libraries (test_array_stream ftk)
+
 add_executable (test_union_find test_union_find.cpp)
 target_link_libraries (test_union_find ftk)
 catch_discover_tests (test_union_find)
