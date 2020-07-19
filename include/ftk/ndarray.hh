@@ -204,6 +204,8 @@ struct ndarray {
   void to_binary_file(const std::string& filename);
   void to_binary_file(FILE *fp);
 
+  template <typename T1> void to_binary_file2(const std::string& f);
+
   void from_numpy(const std::string& filename);
   void to_numpy(const std::string& filename) const;
 
@@ -239,9 +241,8 @@ struct ndarray {
   void from_netcdf(const std::string& filename, const std::string& varname);
   void from_netcdf(int ncid, const std::string& varname);
   void from_netcdf(int ncid, int varid);
-  void to_netcdf(const std::string& filename, const std::string& varname);
-  void to_netcdf(int ncid, const std::string& varname);
-  void to_netcdf(int ncid, int varid);
+  // void to_netcdf(int ncid, const std::string& varname);
+  // void to_netcdf(int ncid, int varid);
 
   static std::vector<std::string> glob(const std::string &pattern);
 
@@ -373,6 +374,15 @@ template <typename T>
 void ndarray<T>::to_binary_file(FILE *fp)
 {
   fwrite(&p[0], sizeof(T), nelem(), fp);
+}
+
+template <typename T>
+template <typename T1>
+void ndarray<T>::to_binary_file2(const std::string& f)
+{
+  ndarray<T1> array; 
+  array.template from_array<T1>(*this);
+  array.to_binary_file(f);
 }
 
 template <typename T>

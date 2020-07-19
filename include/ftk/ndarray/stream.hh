@@ -1,6 +1,7 @@
 #ifndef _FTK_REGULAR_ARRAY_STREAM_HH
 #define _FTK_REGULAR_ARRAY_STREAM_HH
 
+#include <ftk/object.hh>
 #include <fstream>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/synthetic.hh>
@@ -11,8 +12,31 @@ namespace ftk {
 using nlohmann::json;
 
 template <typename T=double>
-struct ndarray_stream {
+struct ndarray_stream : public object {
   void configure(const json& j) {set_input_source_json(j);}
+  // JSON specifications:
+  // required fields: 
+  //  - type, string.  Must be one of "synthetic" and "file"
+  //  - name (required if type is synthetic), string.  Must be one of the follows: "woven", 
+  //    "double_gyre", "merger".
+  // optional fields:
+  //  - filenames (required if type is file), string.  The list of filenames will be 
+  //    determined by glob(3)
+  //  - format (required if type is file and format is float32/float64), string.  If not 
+  //    given, the format will be determined by the filename extension.  The value of this 
+  //    field must be one of the follows: vti, nc, h5, float32, float64.
+  //  - variable (required if format is nc, optional for vti), string or array of strings.
+  //    - if a string is given, the number of components is 1
+  //    - if an array of string is given, the number of components is the length of the array.
+  //    - if not given, the default variable will be used for vti
+  //  - width (required if format is float32/float64), integer
+  //  - height (required if format is float32/float64), integer
+  //  - depth (required if format is float32/float64), integer
+  //  - n_timesteps, integer.  The default is 32 for synthetic data; the number can be 
+  //    automatically derived from file; the number can be automatically derived from files
+  //
+
+
   void set_input_source_json_file(const std::string& filename);
   void set_input_source_json(const json& j_);
   const json& get_json() const {return j;}
@@ -42,22 +66,12 @@ protected:
   ndarray<T> request_timestep_file_nc(int k);
   ndarray<T> request_timestep_file_vti(int k);
   ndarray<T> request_timestep_file_h5(int k);
-  template <typename T1> ndarray<T> request_timestep_binary(int k);
+  template <typename T1> ndarray<T> request_timestep_file_binary(int k);
 
   ndarray<T> request_timestep_synthetic(int k);
   ndarray<T> request_timestep_synthetic_woven(int k);
   ndarray<T> request_timestep_synthetic_double_gyre(int k);
   ndarray<T> request_timestep_synthetic_merger(int k);
-
-protected:
-  static void fatal(const std::string& str) {
-    std::cerr << "FATAL: " << str << std::endl;
-    exit(1);
-  }
-
-  static void warn(const std::string& str) {
-    std::cerr << "WARN: " << str << std::endl;
-  }
 
 protected:
   json j; // configs, metadata, and everything
@@ -312,9 +326,9 @@ template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
 {
   if (j["format"] == "float32") 
-    return request_timestep_binary<float>(k);
+    return request_timestep_file_binary<float>(k);
   else if (j["format"] == "float64")
-    return request_timestep_binary<double>(k);
+    return request_timestep_file_binary<double>(k);
   else if (j["format"] == "vti")
     return request_timestep_file_vti(k);
   else if (j["format"] == "nc")
@@ -326,7 +340,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
 
 template <typename T>
 template <typename T1>
-ndarray<T> ndarray_stream<T>::request_timestep_binary(int k)
+ndarray<T> ndarray_stream<T>::request_timestep_file_binary(int k)
 {
   const std::string filename = j["filenames"][k];
   ftk::ndarray<T1> array1(shape());
