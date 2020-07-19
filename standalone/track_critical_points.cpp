@@ -6,6 +6,7 @@
 #include "ftk/ndarray/synthetic.hh"
 #include "ftk/filters/critical_point_tracker_2d_regular.hh"
 #include "ftk/filters/critical_point_tracker_3d_regular.hh"
+#include "ftk/filters/critical_point_tracker_wrapper.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
@@ -33,7 +34,8 @@ bool use_type_filter = false;
 unsigned int type_filter = 0;
 
 // tracker and input stream
-ftk::critical_point_tracker_regular* tracker = NULL;
+ftk::critical_point_tracker_wrapper wrapper;
+// ftk::critical_point_tracker_regular* tracker = NULL;
 ftk::ndarray_stream<> stream;
 
 // constants
@@ -136,79 +138,14 @@ int parse_arguments(int argc, char **argv)
 
 void track_critical_points()
 {
-  const auto j = stream.get_json();
-  const size_t nd = j["nd"], DW = j["width"], DH = j["height"], DD = (nd == 2 ? 0 : j["depth"].get<size_t>()), DT = j["n_timesteps"];
-  const size_t nv = stream.n_components();
-
-  if (j["nd"] == 2) {
-    tracker = new ftk::critical_point_tracker_2d_regular;
-    tracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
-  } else {
-    tracker = new ftk::critical_point_tracker_3d_regular;
-    tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
-  }
-  
-  tracker->set_number_of_threads(nthreads);
-      
-  tracker->set_input_array_partial(false); // input data are not distributed
-
-  if (use_type_filter)
-    tracker->set_type_filter(type_filter);
-  
-  if (nv == 1) { // scalar field
-    tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );
-    tracker->set_vector_field_source( ftk::SOURCE_DERIVED );
-    tracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
-    if (nd == 2) { // 2D
-      tracker->set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
-    } else { // 3D
-      tracker->set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
-    }
-  } else { // vector field
-    tracker->set_scalar_field_source( ftk::SOURCE_NONE );
-    tracker->set_vector_field_source( ftk::SOURCE_GIVEN );
-    tracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
-    if (nd == 2) { // 2D
-      tracker->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
-    } else {
-      tracker->set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2})); // the indentation is needed becase the jacoobian field will be automatically derived
-    }
-  }
-  tracker->initialize();
-   
-
-  auto push_timestep = [&](const ftk::ndarray<double>& field_data) {
-    if (nv == 1) { // scalar field
-#if 0
-      if (spatial_smoothing) {
-        ftk::ndarray<double> scalar = 
-          ftk::conv2D_gaussian(field_data, spatial_smoothing, 
-              spatial_smoothing_kernel_size, spatial_smoothing_kernel_size, 2);
-        tracker->push_scalar_field_snapshot(scalar);
-      } else 
-#endif
-        tracker->push_scalar_field_snapshot(field_data);
-    }
-    else // vector field
-      tracker->push_vector_field_snapshot(field_data);
-  };
-
-  stream.set_callback([&](int k, ftk::ndarray<double> field_data) {
-    push_timestep(field_data);
-    if (k != 0) tracker->advance_timestep();
-    if (k == DT-1) tracker->update_timestep();
-  });
-
-  stream.start();
-  stream.finish();
-  tracker->finalize();
-  // delete tracker;
+  wrapper.consume(stream);
 }
 
 void write_outputs()
 {
   if (output_filename.empty()) return;
 
+  auto tracker = wrapper.get_tracker();
   if (output_format == str_vtp) 
     tracker->write_traced_critical_points_vtk(output_filename);
   else if (output_format == str_text) 
@@ -217,6 +154,7 @@ void write_outputs()
 
 void start_vtk_window()
 {
+  auto tracker = wrapper.get_tracker();
 #if FTK_HAVE_VTK
   auto vtkcurves = tracker->get_traced_critical_points_vtk();
   vtkcurves->Print(std::cerr);
@@ -260,13 +198,13 @@ void start_vtk_window()
 int main(int argc, char **argv)
 {
   parse_arguments(argc, argv);
-  track_critical_points();
+
+  wrapper.consume(stream);
     
   write_outputs();
   
   if (show_vtk) 
     start_vtk_window();
 
-  delete tracker;
   return 0;
 }
