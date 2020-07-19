@@ -23,10 +23,15 @@ struct ndarray_stream {
 
   bool is_single_component() const { return j["variable"].is_string(); }
   bool is_multi_component() const { return j["variable"].is_array(); }
-  size_t n_components() const { 
-    if (j["variable"].is_string()) return 1;
-    else if (j["variable"].is_array()) return j["variable"].size();
-    else { fatal("invalid variable"); return 0;}
+  size_t n_components() const {
+    if (j.contains("variable")) {
+      if (j["variable"].is_string()) return 1;
+      else if (j["variable"].is_array()) return j["variable"].size();
+      else { 
+        fatal("invalid variable"); 
+        return 0;
+      }
+    } else return 1;
   }
 
   std::vector<size_t> shape() const;
