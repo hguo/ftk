@@ -1,6 +1,7 @@
 #ifndef _FTK_REGULAR_ARRAY_STREAM_HH
 #define _FTK_REGULAR_ARRAY_STREAM_HH
 
+#include <fstream>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/filters/streaming_filter.hh>
