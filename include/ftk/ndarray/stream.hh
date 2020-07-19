@@ -12,6 +12,7 @@ using nlohmann::json;
 
 template <typename T=double>
 struct ndarray_stream {
+  void configure(const json& j) {set_input_source_json(j);}
   void set_input_source_json_file(const std::string& filename);
   void set_input_source_json(const json& j_);
   const json& get_json() const {return j;}

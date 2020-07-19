@@ -40,3 +40,7 @@ catch_discover_tests (test_matrix)
 add_executable (test_inverse_interpolation test_inverse_interpolation.cpp)
 target_link_libraries (test_inverse_interpolation ftk)
 catch_discover_tests (test_inverse_interpolation)
+
+add_executable (test_critical_point_tracking test_critical_point_tracking)
+target_link_libraries (test_critical_point_tracking ftk)
+catch_discover_tests (test_critical_point_tracking)

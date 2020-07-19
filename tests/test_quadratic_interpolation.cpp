@@ -6,7 +6,7 @@
 const int nruns = 1; // 00000;
 const double epsilon = 1e-9;
 
-TEST_CASE("quadratic_interpolation_test") {
+TEST_CASE("quadratic_interpolation") {
   double x[6][2] = {{0, 0}, {1, 0}, {1, 1}, {0.5, 0}, {1, 0.5}, {0.5, 0.5}};
   double f[6] = {0};
   double Q[3][3] = {0};

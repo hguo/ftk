@@ -79,15 +79,18 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   
   void write_traced_critical_points_text(std::ostream& os) const;
   void write_discrete_critical_points_text(std::ostream &os) const;
-
+  
 protected:
   regular_simplex_mesh m;
-  
   typedef regular_simplex_mesh_element element_t;
   
   std::map<element_t, critical_point_2dt_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
   std::vector<std::vector<critical_point_2dt_t>> traced_critical_points;
+  
+public:
+  const std::map<element_t, critical_point_2dt_t>& get_discrete_critical_points() {return discrete_critical_points;}
+  const std::vector<std::vector<critical_point_2dt_t>>& get_traced_critical_points() {return traced_critical_points;}
 
 protected:
   bool check_simplex(const element_t& s, critical_point_2dt_t& cp);
