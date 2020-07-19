@@ -120,7 +120,7 @@ int parse_arguments(int argc, char **argv)
   }
 
   fprintf(stderr, "SUMMARY\n=============\n");
-  std::cerr << "input=" << j << std::endl;
+  std::cerr << "input=" << stream.get_json() << std::endl;
   fprintf(stderr, "output_filename=%s\n", output_filename.c_str());
   fprintf(stderr, "output_format=%s\n", output_format.c_str());
   fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
@@ -196,7 +196,7 @@ void track_critical_points()
   stream.set_callback([&](int k, ftk::ndarray<double> field_data) {
     push_timestep(field_data);
     if (k != 0) tracker->advance_timestep();
-    if (k == DT-1) {fprintf(stderr, "last!\n"); tracker->update_timestep();}
+    if (k == DT-1) tracker->update_timestep();
   });
 
   stream.start();
