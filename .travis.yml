@@ -82,11 +82,14 @@ jobs:
         apt:
           packages:
             - libvtk7-dev
+            - libhdf5-dev
+            - libnetcdf-dev
             - libmpich-dev
             - mpich
       before_install:
+        - update-alternatives --set mpirun /usr/bin/mpirun.mpich
+        - update-alternatives --set mpirun /usr/include/mpich
         - sh tests/travis/install-mpsolve.sh
-        - sh tests/travis/install-hdf5-netcdf.sh
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
@@ -97,7 +100,7 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-            - libhdf5-serial-dev
+            - libhdf5-dev
             - libvtk7-dev
             - libopenmpi-dev
             - openmpi-bin
@@ -126,12 +129,15 @@ jobs:
         apt:
           packages:
             - libvtk7-dev
+            - libhdf5-dev
+            - libnetcdf-dev
             - libmpich-dev
             - mpich
       before_install:
         - sh tests/travis/install-mpsolve.sh
         - sh tests/travis/install-cuda.sh
-        - sh tests/travis/install-hdf5-netcdf.sh
+        - update-alternatives --set mpirun /usr/bin/mpirun.mpich
+        - update-alternatives --set mpirun /usr/include/mpich
       env: 
         - CUDA=10.1.105-1
         - CUDA_SHORT_VER=10-1
@@ -155,7 +161,7 @@ jobs:
       addons:
         apt:
           packages:
-            - libhdf5-serial-dev
+            - libhdf5-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_HDF5=ON"
 
@@ -176,7 +182,7 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-            - libhdf5-serial-dev
+            - libhdf5-dev
             - libvtk7-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_NETCDF=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON"
@@ -188,7 +194,7 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-            - libhdf5-serial-dev
+            - libhdf5-dev
             - libvtk7-dev
       before_install:
         - sh tests/travis/install-mpsolve.sh
