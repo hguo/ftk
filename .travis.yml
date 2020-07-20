@@ -81,13 +81,12 @@ jobs:
       addons:
         apt:
           packages:
-            - libnetcdf-dev
-            - libhdf5-serial-dev
             - libvtk7-dev
             - libmpich-dev
             - mpich
       before_install:
         - sh tests/travis/install-mpsolve.sh
+        - sh tests/travis/install-hdf5-netcdf.sh
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
@@ -126,14 +125,13 @@ jobs:
       addons:
         apt:
           packages:
-            - libnetcdf-dev
-            - libhdf5-serial-dev
             - libvtk7-dev
             - libmpich-dev
             - mpich
       before_install:
         - sh tests/travis/install-mpsolve.sh
         - sh tests/travis/install-cuda.sh
+        - sh tests/travis/install-hdf5-netcdf.sh
       env: 
         - CUDA=10.1.105-1
         - CUDA_SHORT_VER=10-1
