@@ -25,16 +25,6 @@ jobs:
       env:
         - CMAKE_ARG="-DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
-    - name: build with netcdf (linux)
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          packages:
-            - libnetcdf-dev
-      env: 
-        - CMAKE_ARG="-DFTK_USE_NETCDF=ON"
-
     - name: build with tbb (linux)
       os: linux
       dist: bionic
@@ -44,16 +34,6 @@ jobs:
             - libtbb-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_TBB=ON"
-
-    - name: build with hdf5 (linux)
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          packages:
-            - libhdf5-dev
-      env: 
-        - CMAKE_ARG="-DFTK_USE_HDF5=ON"
 
     - name: build with vtk (linux)
       os: linux
@@ -65,32 +45,6 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_VTK=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
     
-    - name: build with netcdf, hdf5, and vtk (linux)
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          packages:
-            - libnetcdf-dev
-            - libhdf5-dev
-            - libvtk7-dev
-      env: 
-        - CMAKE_ARG="-DFTK_USE_NETCDF=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON"
-
-    - name: build with mpsolve, netcdf, hdf5, and vtk (linux)
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          packages:
-            - libnetcdf-dev
-            - libhdf5-dev
-            - libvtk7-dev
-      before_install:
-        - sh tests/travis/install-mpsolve.sh
-      env:
-        - CMAKE_ARG="-DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
-
     - name: build with mpich (osx)
       os: osx
       before_install:
@@ -106,6 +60,7 @@ jobs:
         apt:
           packages:
             - libmpich-dev
+            - mpich
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
@@ -130,6 +85,7 @@ jobs:
             - libhdf5-dev
             - libvtk7-dev
             - libmpich-dev
+            - mpich
       before_install:
         - sh tests/travis/install-mpsolve.sh
       env: 
@@ -174,6 +130,7 @@ jobs:
             - libhdf5-dev
             - libvtk7-dev
             - libmpich-dev
+            - mpich
       before_install:
         - sh tests/travis/install-mpsolve.sh
         - sh tests/travis/install-cuda.sh
@@ -193,6 +150,52 @@ jobs:
       before_install:
         - sh tests/travis/install-vtk.sh
       osx_image: xcode11
+
+    - name: build with hdf5 (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libhdf5-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_HDF5=ON"
+
+    - name: build with netcdf (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libnetcdf-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_NETCDF=ON"
+
+    - name: build with netcdf, hdf5, and vtk (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libnetcdf-dev
+            - libhdf5-dev
+            - libvtk7-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_NETCDF=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON"
+
+    - name: build with mpsolve, netcdf, hdf5, and vtk (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libnetcdf-dev
+            - libhdf5-dev
+            - libvtk7-dev
+      before_install:
+        - sh tests/travis/install-mpsolve.sh
+      env:
+        - CMAKE_ARG="-DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
 before_script:
   - mkdir build
