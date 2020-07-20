@@ -43,12 +43,13 @@ catch_discover_tests (test_inverse_interpolation)
 
 add_executable (test_critical_point_tracking test_critical_point_tracking)
 target_link_libraries (test_critical_point_tracking ftk)
-catch_discover_tests (test_critical_point_tracking)
 
-if (FTK_HAVE_MPI) 
+if (FTK_HAVE_MPI)
   set (maxp 4)
-  foreach (p RANGE 2 ${maxp})
+  foreach (p RANGE 1 ${maxp})
     add_test (NAME test_critical_point_tracking_all_p${p} 
       COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking>)
   endforeach (p)
+else () # serial only
+  catch_discover_tests (test_critical_point_tracking)
 endif ()
