@@ -109,6 +109,17 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
+    - name: build with openmpi (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libopenmpi-dev 
+            - openmpi-bin
+      env: 
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
     - name: build with mpsolve, netcdf, hdf5, vtk, and mpich (linux)
       os: linux
       dist: bionic
@@ -182,17 +193,6 @@ jobs:
       before_install:
         - sh tests/travis/install-vtk.sh
       osx_image: xcode11
-
-    - name: build with openmpi (linux)
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          packages:
-            - libopenmpi-dev 
-            - openmpi-bin
-      env: 
-        - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
 before_script:
   - mkdir build
