@@ -82,7 +82,7 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-            - libhdf5-mpich-dev
+            - libhdf5-serial-dev
             - libvtk7-dev
             - libmpich-dev
             - mpich
@@ -98,7 +98,7 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-            - libhdf5-dev
+            - libhdf5-serial-dev
             - libvtk7-dev
             - libopenmpi-dev
             - openmpi-bin
@@ -127,7 +127,7 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-            - libhdf5-mpich-dev
+            - libhdf5-serial-dev
             - libvtk7-dev
             - libmpich-dev
             - mpich
@@ -157,7 +157,7 @@ jobs:
       addons:
         apt:
           packages:
-            - libhdf5-mpich-dev
+            - libhdf5-serial-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_HDF5=ON"
 
@@ -178,7 +178,7 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-            - libhdf5-mpich-dev
+            - libhdf5-serial-dev
             - libvtk7-dev
       env: 
         - CMAKE_ARG="-DFTK_USE_NETCDF=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON"
@@ -190,7 +190,7 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-            - libhdf5-mpich-dev
+            - libhdf5-serial-dev
             - libvtk7-dev
       before_install:
         - sh tests/travis/install-mpsolve.sh
