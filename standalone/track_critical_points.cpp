@@ -197,6 +197,8 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
+  diy::mpi::environment env;
+  
   parse_arguments(argc, argv);
 
   wrapper.consume(stream);

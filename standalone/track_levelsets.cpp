@@ -132,6 +132,7 @@ void write_outputs()
 
 int main(int argc, char **argv)
 {
+  diy::mpi::environment env;
   parse_arguments(argc, argv);
   track_levelset();
   return 0;

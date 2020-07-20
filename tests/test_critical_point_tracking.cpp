@@ -26,6 +26,8 @@ TEST_CASE("critical_point_tracking_2d_woven") {
 
 int main(int argc, char **argv)
 {
+  diy::mpi::environment env;
+
   Catch::Session session;
   return session.run(argc, argv);
 }

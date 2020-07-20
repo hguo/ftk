@@ -16,7 +16,8 @@ struct ndarray_writer<T> : public object {
   //  - format (nc|vti|float32|float64)
   // format-specific fields: 
   //  - nc (NetCDF)
-  //    - variable (required), string or array of strings
+  //    - variable (required), string or array of strings.  Possible to use the same
+  //      specification in the input stream config.
   //      - string: write one single variable, assuming the data is single-component
   //      - array of strings: write one single variable, assuming the data is multi-
   //        component.  The size of the array should be the exact number of components
