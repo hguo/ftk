@@ -63,7 +63,7 @@ jobs:
           packages:
             - libvtk7-dev
       env: 
-        - CMAKE_ARG="-DFTK_USE_VTK=ON"
+        - CMAKE_ARG="-DFTK_USE_VTK=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
     
     - name: build with netcdf, hdf5, and vtk (linux)
       os: linux
@@ -115,7 +115,8 @@ jobs:
       addons:
         apt:
           packages:
-            - libopenmpi-dev
+            - libopenmpi-dev 
+            - openmpi-bin
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
@@ -144,6 +145,7 @@ jobs:
             - libhdf5-dev
             - libvtk7-dev
             - libopenmpi-dev
+            - openmpi-bin
       before_install:
         - sh tests/travis/install-mpsolve.sh
       env: 

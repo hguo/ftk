@@ -28,17 +28,17 @@ endfunction ()
 
 ftk_option (VTK "Use VTK" AUTO)
 ftk_option (Kokkos "Use Kokkos" FALSE) # experimental
-ftk_option (Qt5 "Use Qt5" AUTO)
-ftk_option (MPI "Use MPI" AUTO)
+ftk_option (Qt5 "Use Qt5" FALSE)
+ftk_option (MPI "Use MPI" FALSE)
 ftk_option (NETCDF "Use NetCDF" AUTO)
 ftk_option (HDF5 "Use HDF5" AUTO)
-ftk_option (PNETCDF "Use parallel-netcdf" AUTO)
-ftk_option (MPSolve "Use MPSolve" AUTO)
+ftk_option (PNETCDF "Use parallel-netcdf" FALSE)
+ftk_option (MPSolve "Use MPSolve" FALSE)
 ftk_option (GSL "Use GSL (GNU Scientific Library)" FALSE)
 ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # this feature is experimental
 ftk_option (PNG "Use PNG" AUTO)
-ftk_option (LevelDB "Use LevelDB" AUTO)
-ftk_option (RocksDB "Use RocksDB" AUTO)
+ftk_option (LevelDB "Use LevelDB" FALSE)
+ftk_option (RocksDB "Use RocksDB" FALSE)
 ftk_option (Boost "Use Boost" FALSE) # not used
 ftk_option (OpenMP "Use OpenMP" AUTO)
 ftk_option (CUDA "Use CUDA" FALSE) # experimental
