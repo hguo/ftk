@@ -4,6 +4,7 @@
 #include <ftk/filters/critical_point_tracker_wrapper.hh>
 
 using nlohmann::json;
+diy::mpi::communicator world;
 
 std::tuple<size_t, size_t> track2D(const json& jstream)
 {
@@ -13,7 +14,6 @@ std::tuple<size_t, size_t> track2D(const json& jstream)
   ftk::critical_point_tracker_wrapper consumer;
   consumer.consume(stream);
 
-  diy::mpi::communicator world;
   if (world.rank() == 0) {
     auto tracker = std::dynamic_pointer_cast<ftk::critical_point_tracker_2d_regular>( consumer.get_tracker() );
     auto trajs = tracker->get_traced_critical_points();
@@ -25,23 +25,27 @@ std::tuple<size_t, size_t> track2D(const json& jstream)
 
 TEST_CASE("critical_point_tracking_woven_synthetic") {
   auto result = track2D(js_woven_synthetic);
-  REQUIRE(std::get<0>(result) == 48);
-  // REQUIRE(std::get<1>(result) == 4194); // TODO: check out if this number varies over different platform
+  if (world.rank() == 0)
+    REQUIRE(std::get<0>(result) == 48);
+    // REQUIRE(std::get<1>(result) == 4194); // TODO: check out if this number varies over different platform
 }
 
 TEST_CASE("critical_point_tracking_woven_float64") {
   auto result = track2D(js_woven_float64);
-  REQUIRE(std::get<0>(result) == 48);
+  if (world.rank() == 0)
+    REQUIRE(std::get<0>(result) == 48);
 }
 
 TEST_CASE("critical_point_tracking_woven_nc") {
   auto result = track2D(js_woven_nc_unlimited_time);
-  REQUIRE(std::get<0>(result) == 48);
+  if (world.rank() == 0)
+    REQUIRE(std::get<0>(result) == 48);
 }
 
 TEST_CASE("critical_point_tracking_woven_nc_no_time") {
   auto result = track2D(js_woven_nc_no_time);
-  REQUIRE(std::get<0>(result) == 48);
+  if (world.rank() == 0)
+    REQUIRE(std::get<0>(result) == 48);
 }
 
 int main(int argc, char **argv)
