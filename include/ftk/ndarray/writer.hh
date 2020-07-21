@@ -2,13 +2,13 @@
 #define _FTK_NDARRAY_STREAM_WRITER_HH
 
 #include <ftk/object.hh>
-#include <ftk/ndarray/ndarray_stream.hh>
+#include <ftk/ndarray/stream.hh>
 
 namespace ftk {
 using nlohmann::json;
 
-template <typename T>
-struct ndarray_writer<T> : public object {
+template <typename T=double>
+struct ndarray_writer : public object {
   void configure(const json& j_);
   // JSON specificications:
   // required fields: 
@@ -36,12 +36,12 @@ struct ndarray_writer<T> : public object {
   //    - variable (required), see "variable" in NetCDF section above
   //    - separate_variables, see "separate_variables" in NetCDF section above
   
-  void consume(ndarray_stream&);
+  void consume(ndarray_stream<T>&);
 
 protected:
   void write(int k, const ndarray<T> &data);
   void write_netcdf(int k, const ndarray<T> &data);
-  void filename(int k);
+  std::string filename(int k) const;
 
 private:
   json j;
@@ -94,7 +94,7 @@ void ndarray_writer<T>::configure(const json& j_)
     } else fatal("invalid dimension_names");
   } else {
     if (j["nd"] == 2) j["dimension_names"] = {"x", "y"};
-    else j["dimension_names"] = {"x", "y", "z"};'
+    else j["dimension_names"] = {"x", "y", "z"};
   }
 
   if (j.contains("variable")) {
@@ -129,11 +129,11 @@ void ndarray_writer<T>::configure(const json& j_)
 }
 
 template <typename T>
-void ndarray_writer<T>::filename(int k) {
+std::string ndarray_writer<T>::filename(int k) const {
   const std::string pattern = j["filename"];
   ssize_t size = snprintf(NULL, 0, pattern.c_str(), k);
-  char *buf = malloc(size + 1);
-  sprintf(buf, size + 1, pattern.c_str(), k);
+  char *buf = (char*)malloc(size + 1);
+  snprintf(buf, size + 1, pattern.c_str(), k);
   const std::string filename(buf);
   free(buf);
   return filename;
@@ -142,10 +142,10 @@ void ndarray_writer<T>::filename(int k) {
 template <typename T>
 void ndarray_writer<T>::write(int k, const ndarray<T> &data)
 {
-  const std::string filename = this->filename(k);
+  const std::string f = this->filename(k);
   const std::string format = j["format"];
-  if (format == "float32") data.to_binary_file2<float>(filename);
-  else if (format == "float64") data.to_binary_file2<double>(filename);
+  if (format == "float32") data.template to_binary_file2<float>(f);
+  else if (format == "float64") data.template to_binary_file2<double>(f);
   else if (format == "nc") write_netcdf(k, data);
 }
 
@@ -176,11 +176,11 @@ void ndarray_writer<T>::write_netcdf(int k, const ndarray<T> &data)
 }
 
 template <typename T>
-void ndarray_writer<T>::consume(ndarray_stream& stream)
+void ndarray_writer<T>::consume(ndarray_stream<T>& stream)
 {
   stream.set_callback([&](int k, ndarray<T> data) {
-    write_data(k, data);
-  };
+    write(k, data);
+  });
 }
 
 }

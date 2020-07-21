@@ -44,6 +44,10 @@ catch_discover_tests (test_inverse_interpolation)
 add_executable (test_critical_point_tracking test_critical_point_tracking)
 target_link_libraries (test_critical_point_tracking ftk)
 
+add_executable (test_io test_io)
+target_link_libraries (test_io ftk)
+catch_discover_tests (test_io)
+
 if (FTK_HAVE_MPI)
   set (maxp 4)
   foreach (p RANGE 1 ${maxp})

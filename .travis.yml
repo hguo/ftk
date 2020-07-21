@@ -48,7 +48,8 @@ jobs:
     - name: build with mpich (osx)
       os: osx
       before_install:
-        - sh tests/travis/install-mpich.sh
+        - brew install mpich
+        #- sh tests/travis/install-mpich.sh
       osx_image: xcode11
       env:
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
@@ -88,7 +89,23 @@ jobs:
         - CPATH=/usr/local/cuda-10.1/include
         - CMAKE_ARG="-DFTK_USE_CUDA=ON -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
 
-    - name: build with mpsolve, netcdf, hdf5, vtk, cuda10, and mpich (linux)
+    - name: build with mpsolve, netcdf, hdf5, vtk, and openmpi (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libnetcdf-dev
+            - libhdf5-dev
+            - libvtk7-dev
+            - libopenmpi-dev
+            - openmpi-bin
+      before_install:
+        - sh tests/travis/install-mpsolve.sh
+      env: 
+        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
+
+    - name: build with mpsolve, netcdf, hdf5, vtk, cuda10, and openmpi (linux)
       os: linux
       dist: bionic
       addons:
@@ -97,8 +114,8 @@ jobs:
             - libvtk7-dev
             - libhdf5-dev
             - libnetcdf-dev
-            - libmpich-dev
-            - mpich
+            - libopenmpi-dev
+            - openmpi-bin
       before_install:
         - sh tests/travis/install-mpsolve.sh
         - sh tests/travis/install-cuda.sh
@@ -108,7 +125,10 @@ jobs:
         - CUDA_SHORT=10.1
         - UBUNTU_VERSION=ubuntu1804
         - CPATH=/usr/local/cuda-10.1/include
-        - CMAKE_ARG="-DCMAKE_C_COMPILER=/usr/bin/mpicc.mpich -DCMAKE_CXX_COMPILER=/usr/bin/mpicxx.mpich -DMPIEXEC_EXECUTABLE=/usr/bin/mpiexec.mpich -DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DFTK_USE_CUDA=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
+        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DFTK_USE_CUDA=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
+
+
+
 
   allow_failures:
     - name: build with vtk (osx)
@@ -181,21 +201,27 @@ jobs:
       env: 
         - CMAKE_ARG="-DCMAKE_C_COMPILER=/usr/bin/mpicc.mpich -DCMAKE_CXX_COMPILER=/usr/bin/mpicxx.mpich -DMPIEXEC_EXECUTABLE=/usr/bin/mpiexec.mpich -DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
-    - name: build with mpsolve, netcdf, hdf5, vtk, and openmpi (linux)
+    - name: build with mpsolve, netcdf, hdf5, vtk, cuda10, and mpich (linux)
       os: linux
       dist: bionic
       addons:
         apt:
           packages:
-            - libnetcdf-dev
-            - libhdf5-dev
             - libvtk7-dev
-            - libopenmpi-dev
-            - openmpi-bin
+            - libhdf5-dev
+            - libnetcdf-dev
+            - libmpich-dev
+            - mpich
       before_install:
         - sh tests/travis/install-mpsolve.sh
+        - sh tests/travis/install-cuda.sh
       env: 
-        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
+        - CUDA=10.1.105-1
+        - CUDA_SHORT_VER=10-1
+        - CUDA_SHORT=10.1
+        - UBUNTU_VERSION=ubuntu1804
+        - CPATH=/usr/local/cuda-10.1/include
+        - CMAKE_ARG="-DCMAKE_C_COMPILER=/usr/bin/mpicc.mpich -DCMAKE_CXX_COMPILER=/usr/bin/mpicxx.mpich -DMPIEXEC_EXECUTABLE=/usr/bin/mpiexec.mpich -DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DFTK_USE_CUDA=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
 
 before_script:
   - mkdir build

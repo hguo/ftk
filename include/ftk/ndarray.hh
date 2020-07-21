@@ -204,7 +204,7 @@ struct ndarray {
   void to_binary_file(const std::string& filename);
   void to_binary_file(FILE *fp);
 
-  template <typename T1> void to_binary_file2(const std::string& f);
+  template <typename T1> void to_binary_file2(const std::string& f) const;
 
   void from_numpy(const std::string& filename);
   void to_numpy(const std::string& filename) const;
@@ -378,10 +378,10 @@ void ndarray<T>::to_binary_file(FILE *fp)
 
 template <typename T>
 template <typename T1>
-void ndarray<T>::to_binary_file2(const std::string& f)
+void ndarray<T>::to_binary_file2(const std::string& f) const
 {
   ndarray<T1> array; 
-  array.template from_array<T1>(*this);
+  array.template from_array<T>(*this);
   array.to_binary_file(f);
 }
 
