@@ -5,18 +5,22 @@
 
 using nlohmann::json;
 
+const int woven_width = 31, woven_height = 37;
+
 // for streams
 const json js_woven_synthetic = {
   {"type", "synthetic"},
-  {"name", "woven"}
+  {"name", "woven"},
+  {"width", woven_width},
+  {"height", woven_height}
 };
 
 const json js_woven_float64 = {
   {"type", "file"},
   {"format", "float64"},
   {"filenames", "woven-*.bin"},
-  {"width", 32},
-  {"height", 32}
+  {"width", woven_width},
+  {"height", woven_height}
 };
 
 const json js_woven_nc_unlimited_time = {
@@ -32,6 +36,11 @@ const json js_woven_nc_no_time = {
   {"format", "nc"},
   {"filenames", "woven-no-time-*.nc"},
   {"variable", "scalar"}
+};
+
+const json js_woven_vti {
+  {"format", "vti"},
+  {"filenames", "woven-*.vti"}
 };
 
 // for writers
@@ -53,6 +62,13 @@ const json jw_woven_nc_no_time = {
   {"format", "nc"},
   {"unlimited_time", false},
   {"filename", "woven-no-time-%04d.nc"},
+  {"variable", "scalar"}
+};
+
+const json jw_woven_vti {
+  {"nd", 2},
+  {"format", "vti"},
+  {"filename", "woven-%04d.vti"},
   {"variable", "scalar"}
 };
 

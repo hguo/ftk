@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hh"
-#include "test_constants.hh"
+#include "constants.hh"
 #include <ftk/filters/critical_point_tracker_wrapper.hh>
 
 using nlohmann::json;
@@ -44,6 +44,15 @@ TEST_CASE("critical_point_tracking_woven_nc") {
 
 TEST_CASE("critical_point_tracking_woven_nc_no_time") {
   auto result = track2D(js_woven_nc_no_time);
+  diy::mpi::communicator world;
+  if (world.rank() == 0)
+    REQUIRE(std::get<0>(result) == 48);
+}
+#endif
+
+#if FTK_HAVE_VTK
+TEST_CASE("critical_point_tracking_woven_vti") {
+  auto result = track2D(js_woven_vti);
   diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == 48);

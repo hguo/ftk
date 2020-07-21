@@ -38,6 +38,7 @@ struct ndarray_writer : public object {
 protected:
   void write(int k, const ndarray<T> &data);
   void write_netcdf(int k, const ndarray<T> &data);
+  void write_vti(int k, const ndarray<T> &data);
   std::string filename(int k) const;
 
 private:
@@ -159,6 +160,16 @@ void ndarray_writer<T>::write(int k, const ndarray<T> &data)
   if (format == "float32") data.template to_binary_file2<float>(f);
   else if (format == "float64") data.template to_binary_file2<double>(f);
   else if (format == "nc") write_netcdf(k, data);
+  else if (format == "vti") write_vti(k, data);
+}
+
+template <typename T>
+void ndarray_writer<T>::write_vti(int k, const ndarray<T>& data)
+{
+  const std::string filename = this->filename(k);
+  const int nv = j["variable"].size();
+  const bool multicomponent = nv > 1;
+  data.to_vtk_image_data_file(filename, multicomponent);
 }
 
 template <typename T>
@@ -182,7 +193,7 @@ void ndarray_writer<T>::write_netcdf(int k, const ndarray<T> &data)
 
   for (int i = 0; i < nd; i ++) {
     const std::string dimname = j["dimensions"][nd-i-1];
-    NC_SAFE_CALL( nc_def_dim(ncid, dimname.c_str(), data.dim(i), &dimids[ncndims++]) );
+    NC_SAFE_CALL( nc_def_dim(ncid, dimname.c_str(), data.dim(nd-i-1), &dimids[ncndims++]) );
   }
 
   // variable(s)
@@ -195,8 +206,10 @@ void ndarray_writer<T>::write_netcdf(int k, const ndarray<T> &data)
 
   // write data
   for (int i = 0; i < nv; i ++)
-    if (unlimited_time) data.to_netcdf_unlimited_time(ncid, varids[i]);
-    else data.to_netcdf(ncid, varids[i]);
+    if (unlimited_time)
+      data.to_netcdf_unlimited_time(ncid, varids[i]);
+    else
+      data.to_netcdf(ncid, varids[i]);
 
   NC_SAFE_CALL( nc_close(ncid) );
 #else

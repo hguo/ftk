@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hh"
-#include "test_constants.hh"
+#include "constants.hh"
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 
@@ -30,6 +30,12 @@ TEST_CASE("io_write_nc_woven") {
 
 TEST_CASE("io_write_nc_no_time_woven") {
   CHECK(write(js_woven_synthetic, jw_woven_nc_no_time));
+}
+#endif
+
+#if FTK_HAVE_VTK
+TEST_CASE("io_write_vti_woven") {
+  CHECK(write(js_woven_synthetic, jw_woven_vti));
 }
 #endif
 

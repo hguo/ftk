@@ -16,7 +16,8 @@ struct ndarray_stream : public object {
   void configure(const json& j) {set_input_source_json(j);}
   // JSON specifications:
   // required fields: 
-  //  - type, string.  Must be one of "synthetic" and "file"
+  //  - type, string.  Must be one of "synthetic" and "file".  This field may be ommited
+  //    if `format' is given.
   //  - name (required if type is synthetic), string.  Must be one of the follows: "woven", 
   //    "double_gyre", "merger".
   // optional fields:
@@ -96,6 +97,9 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
   j = j_;
   // std::cerr << j << std::endl;
   
+  if (!j.contains("type") && j.contains("format"))
+    j["type"] = "file";
+
   if (j.contains("type")) {
     if (j["type"] == "synthetic") {
       if (j.contains("name")) {

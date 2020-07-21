@@ -608,7 +608,10 @@ inline void ndarray<T>::to_netcdf_unlimited_time(int ncid, int varid) const
   std::vector<size_t> starts(dims.size()+1, 0), sizes(dims);
   sizes.push_back(1);
   std::reverse(sizes.begin(), sizes.end());
-  
+ 
+  // fprintf(stderr, "starts={%zu, %zu, %zu}, sizes={%zu, %zu, %zu}\n", 
+  //     starts[0], starts[1], starts[2], sizes[0], sizes[1], sizes[2]);
+
   to_netcdf(ncid, varid, &starts[0], &sizes[0]);
 }
 
