@@ -19,10 +19,10 @@ const json js_woven_float64 = {
   {"height", 32}
 };
 
-const json js_woven_nc = {
+const json js_woven_nc_unlimited_time = {
   {"type", "file"},
   {"format", "nc"},
-  {"filenames", "woven-*.nc"},
+  {"filenames", "woven-unlimited-time*.nc"},
   {"variable", "scalar"},
   {"nd", 2}
 };
@@ -41,10 +41,10 @@ const json jw_woven_float64 = {
   {"filename", "woven-%04d.bin"}
 };
 
-const json jw_woven_nc = {
+const json jw_woven_nc_unlimited_time = {
   {"nd", 2},
   {"format", "nc"},
-  {"filename", "woven-%04d.nc"},
+  {"filename", "woven-unlimited-time-%04d.nc"},
   {"variable", "scalar"}
 };
 

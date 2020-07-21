@@ -34,17 +34,15 @@ TEST_CASE("critical_point_tracking_woven_float64") {
   REQUIRE(std::get<0>(result) == 48);
 }
 
-#if FTK_HAVE_NETCDF
-// TEST_CASE("critical_point_tracking_woven_nc") {
-//   auto result = track2D(js_woven_nc);
-//   REQUIRE(std::get<0>(result) == 48);
-// }
+TEST_CASE("critical_point_tracking_woven_nc") {
+  auto result = track2D(js_woven_nc_unlimited_time);
+  REQUIRE(std::get<0>(result) == 48);
+}
 
 TEST_CASE("critical_point_tracking_woven_nc_no_time") {
   auto result = track2D(js_woven_nc_no_time);
   REQUIRE(std::get<0>(result) == 48);
 }
-#endif
 
 int main(int argc, char **argv)
 {

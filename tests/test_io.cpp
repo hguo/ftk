@@ -25,7 +25,7 @@ TEST_CASE("io_write_float64_woven") {
 
 #if FTK_HAVE_NETCDF
 TEST_CASE("io_write_nc_woven") {
-  CHECK(write(js_woven_synthetic, jw_woven_nc));
+  CHECK(write(js_woven_synthetic, jw_woven_nc_unlimited_time));
 }
 
 TEST_CASE("io_write_nc_no_time_woven") {
