@@ -18,23 +18,20 @@ struct ndarray_writer : public object {
   // format-specific fields: 
   //  - nc (NetCDF)
   //    - variable (required), string or array of strings.  Possible to use the same
-  //      specification in the input stream config.
+  //      specification in the input stream config.  Will be converted to array of 
+  //      strings internally.  Will write one or multiple variables.
+  //    - dimensions (optional), array of strings; by default use ["x", "y"] and 
+  //      ["x", "y", "z"] for 2D and 3D data, respectively
+  //    - unlimited_time (optional, by default true), bool.  If true, include time 
+  //      in dimensions, e.g. (time,z,y,x), in netcdf.  
+  //  - vti (vtkImageData w/ vtkXMLImageDataWriter)
+  //    - variable (required), string or array of strings.  Possible to use the same
+  //      specification in the input stream config.  
   //      - string: write one single variable, assuming the data is single-component
   //      - array of strings: write one single variable, assuming the data is multi-
   //        component.  The size of the array should be the exact number of components
-  //    - dimension_names (required), e.g. use ["x", "y"] and ["x", "y", "z"] for 2D 
-  //      and 3D data, respectively
-  //    - time (optional, by default false), bool, number, or string
-  //      - bool: if yes, include time in timension_names, e.g. (time,z,y,x), in 
-  //        netcdf.  Use "time" as the dimension name, and use timestep as the time value
-  //      - number: include time in dimension_names in netcdf.  Use "time" as the 
-  //        dimension name, and use the designated value as the time value
-  //      - string: include time and use the designated name as the dimension name
   //    - separate_variables (optional, by default false), bool
   //      - write separate variables instead of one single variable
-  //  - vti (vtkImageData w/ vtkXMLImageDataWriter)
-  //    - variable (required), see "variable" in NetCDF section above
-  //    - separate_variables, see "separate_variables" in NetCDF section above
   
   void consume(ndarray_stream<T>&);
 
@@ -81,20 +78,32 @@ void ndarray_writer<T>::configure(const json& j_)
     } else fatal("invalid n_components");
   } else j["n_components"] = 1;
 
-  if (j.contains("dimension_names")) {
-    if (j["dimension_names"].is_array()) {
-      auto jd = j["dimension_names"];
+  if (j.contains("dimensions")) {
+    if (j["dimensions"].is_array()) {
+      auto jd = j["dimensions"];
       if (jd.size() < 2 || jd.size() > 3) 
-        fatal("invalid number of dimension_names");
+        fatal("invalid number of dimensions");
       for (int i = 0; i < jd.size(); i ++) {
         if (jd[i].is_string()) {
           // OK
-        } else fatal("invalid dimension_names");
+        } else fatal("invalid dimensions");
       }
-    } else fatal("invalid dimension_names");
+    } else fatal("invalid dimensions");
   } else {
-    if (j["nd"] == 2) j["dimension_names"] = {"x", "y"};
-    else j["dimension_names"] = {"x", "y", "z"};
+    if (j["nd"] == 2) j["dimensions"] = {"x", "y"};
+    else j["dimensions"] = {"x", "y", "z"};
+  }
+
+  if (j.contains("unlimited_time")) {
+    if (j["format"] != "nc") warn("ignoring unlimited_time");
+    else {
+      if (j["unlimited_time"].is_boolean()) {
+        // OK
+      } else 
+        fatal("invalid unlimited_time");
+    }
+  } else {
+    if (j["format"] == "nc") j["unlimited_time"] = true;
   }
 
   if (j.contains("variable")) {
@@ -102,7 +111,10 @@ void ndarray_writer<T>::configure(const json& j_)
       warn("variable ignored");
 
     if (j["variable"].is_string()) {
-      // OK
+      // convert to an array of one single string
+      std::vector<std::string> vars;
+      vars.push_back(j["variable"]);
+      j["variable"] = vars;
     } else if (j["variable"].is_array()) {
       for (int i = 0; i < j["variable"].size(); i ++) 
         if (j["variable"][i].is_string()) {
@@ -155,19 +167,36 @@ void ndarray_writer<T>::write_netcdf(int k, const ndarray<T> &data)
 #if FTK_HAVE_NETCDF
   const std::string filename = this->filename(k);
 
-  const int nd = j["dimension_names"];
-  int nv;
-  if (j["variable"].is_string()) nv = 1;
-  else if (j["variable"].is_array()) nv = j["variable"].size();
-  else fatal("missing netcdf variables");
+  const int nd = j["dimensions"].size();
+  const int nv = j["variable"].size();
 
-  int ncid, varids[nv], dimids[nd];
+  int ncid, varids[nv], dimids[4]; // max dim is 4
+  int ncndims = 0; // temp variable to index new dim ids
+  const bool unlimited_time = j["unlimited_time"];
+  
+  NC_SAFE_CALL( nc_create(filename.c_str(), NC_CLOBBER | NC_64BIT_OFFSET, &ncid) );
 
-  NC_SAFE_CALL( nc_create(filename.c_str(), NC_CLOBBER | NC_NETCDF4, &ncid) );
+  // dimensions
+  if (unlimited_time) 
+    NC_SAFE_CALL( nc_def_dim(ncid, "time", NC_UNLIMITED, &dimids[ncndims++]) );
+
   for (int i = 0; i < nd; i ++) {
-    const std::string dimname = j["dimension_names"][i];
-    NC_SAFE_CALL( nc_def_dim(ncid, dimname.c_str(), size, dimids[i]) );
+    const std::string dimname = j["dimensions"][nd-i-1];
+    NC_SAFE_CALL( nc_def_dim(ncid, dimname.c_str(), data.dim(i), &dimids[ncndims++]) );
   }
+
+  // variable(s)
+  for (int i = 0; i < nv; i ++) {
+    const std::string var_name = j["variable"][i];
+    NC_SAFE_CALL( nc_def_var(ncid, var_name.c_str(), data.nc_datatype(), ncndims, dimids, &varids[i]) );
+  }
+  
+  nc_enddef(ncid);
+
+  // write data
+  for (int i = 0; i < nv; i ++)
+    if (unlimited_time) data.to_netcdf_unlimited_time(ncid, varids[i]);
+    else data.to_netcdf(ncid, varids[i]);
 
   NC_SAFE_CALL( nc_close(ncid) );
 #else

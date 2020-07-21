@@ -1,39 +1,37 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hh"
+#include "test_constants.hh"
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 
-using nlohmann::json;
-
-const json js_woven = {
-  {"type", "synthetic"},
-  {"name", "woven"}
-};
-
-const json js_woven_bin = {
-  {"type", "file"},
-  {"format", "float64"},
-  {"filename", "woven-%04d.bin"}
-};
-
-const json jw_woven = {
-    {"nd", 2},
-    {"format", "float64"},
-    {"filename", "woven-%04d.bin"},
-    {"variable", "scalar"}
-  };
-
-TEST_CASE("io_write_float64_woven_read_float64_woven") {
+bool write(const json& jstream, const json& jwriter)
+{
   ftk::ndarray_stream<> stream;
-  stream.configure(js_woven);
+  stream.configure(jstream);
 
   ftk::ndarray_writer<> writer;
-  writer.configure(jw_woven);
+  writer.configure(jwriter);
   writer.consume(stream);
 
   stream.start();
   stream.finish();
+
+  return true; // TODO
 }
+
+TEST_CASE("io_write_float64_woven") {
+  CHECK(write(js_woven_synthetic, jw_woven_float64));
+}
+
+#if FTK_HAVE_NETCDF
+TEST_CASE("io_write_nc_woven") {
+  CHECK(write(js_woven_synthetic, jw_woven_nc));
+}
+
+TEST_CASE("io_write_nc_no_time_woven") {
+  CHECK(write(js_woven_synthetic, jw_woven_nc_no_time));
+}
+#endif
 
 int main(int argc, char **argv)
 {

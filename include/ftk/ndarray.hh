@@ -243,12 +243,16 @@ struct ndarray {
   void from_netcdf(int ncid, int varid);
   // void to_netcdf(int ncid, const std::string& varname);
   // void to_netcdf(int ncid, int varid);
+  void to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const;
+  void to_netcdf(int ncid, int varid) const;
+  void to_netcdf_unlimited_time(int ncid, int varid) const;
 
   static std::vector<std::string> glob(const std::string &pattern);
 
 #if FTK_HAVE_MPI
   static MPI_Datatype mpi_datatype();
 #endif
+  static int nc_datatype();
 
   void copy_to_cuda_device();
 
@@ -571,6 +575,43 @@ inline void ndarray<double>::from_netcdf(int ncid, int varid, int ndims, const s
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
 }
 
+template <>
+inline void ndarray<double>::to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const
+{
+  NC_SAFE_CALL( nc_put_vara_double(ncid, varid, starts, sizes, &p[0]) );
+}
+
+template <>
+inline void ndarray<float>::to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const
+{
+  NC_SAFE_CALL( nc_put_vara_float(ncid, varid, starts, sizes, &p[0]) );
+}
+
+template <>
+inline void ndarray<int>::to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const
+{
+  NC_SAFE_CALL( nc_put_vara_int(ncid, varid, starts, sizes, &p[0]) );
+}
+
+template <typename T>
+inline void ndarray<T>::to_netcdf(int ncid, int varid) const
+{
+  std::vector<size_t> starts(dims.size(), 0), sizes(dims);
+  std::reverse(sizes.begin(), sizes.end());
+
+  to_netcdf(ncid, varid, &starts[0], &sizes[0]);
+}
+
+template <typename T>
+inline void ndarray<T>::to_netcdf_unlimited_time(int ncid, int varid) const
+{
+  std::vector<size_t> starts(dims.size()+1, 0), sizes(dims);
+  sizes.push_back(1);
+  std::reverse(sizes.begin(), sizes.end());
+  
+  to_netcdf(ncid, varid, &starts[0], &sizes[0]);
+}
+
 template <typename T>
 inline void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
@@ -743,6 +784,12 @@ std::tuple<T, T> ndarray<T>::min_max() const {
 template <> inline MPI_Datatype ndarray<double>::mpi_datatype() { return MPI_DOUBLE; }
 template <> inline MPI_Datatype ndarray<float>::mpi_datatype() { return MPI_FLOAT; }
 template <> inline MPI_Datatype ndarray<int>::mpi_datatype() { return MPI_INT; }
+#endif
+
+#if FTK_HAVE_NETCDF
+template <> inline int ndarray<double>::nc_datatype() { return NC_DOUBLE; }
+template <> inline int ndarray<float>::nc_datatype() { return NC_FLOAT; }
+template <> inline int ndarray<int>::nc_datatype() { return NC_INT; }
 #endif
 
 template <typename T>
