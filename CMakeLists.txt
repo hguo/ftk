@@ -52,7 +52,7 @@ elseif (FTK_USE_VTK)
 endif ()
 if (VTK_FOUND)
   set (FTK_HAVE_VTK TRUE)
-  if (VTK_MAJOR_VERSION STRLESS 9)
+  if (VTK_MAJOR_VERSION STRLESS 9) # vtk8.9 does not require VTK_USE_FILE as well
     include (${VTK_USE_FILE})
   endif ()
 endif ()
@@ -276,7 +276,7 @@ if (FTK_BUILD_PYFTK)
 endif ()
 
 add_subdirectory (src)
-add_subdirectory (standalone)
+add_subdirectory (cli)
 
 ## summary
 message ("")

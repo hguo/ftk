@@ -10,7 +10,7 @@
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
-#include "cli_constants.hh"
+#include "constants.hh"
 
 #if FTK_HAVE_VTK
 #include <ftk/geometry/curve2vtk.hh>

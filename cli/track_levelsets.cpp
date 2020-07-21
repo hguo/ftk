@@ -11,7 +11,7 @@
 #include <ftk/ndarray/stream.hh>
 #include <ftk/algorithms/hoshen_kopelman.hh>
 #include <ftk/tracking_graph/tracking_graph.hh>
-#include "cli_constants.hh"
+#include "constants.hh"
 
 using nlohmann::json;
 
