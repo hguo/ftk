@@ -12,6 +12,7 @@ struct ndarray_writer<T> : public object {
   void configure(const json& j_);
   // JSON specificications:
   // required fields: 
+  //  - nd, number. dimensionality of the data
   //  - filename, string, e.g. "tornado-%04d.nc".  Should be able to expand to file names with sprintf(3)
   //  - format (nc|vti|float32|float64)
   // format-specific fields: 
@@ -34,8 +35,6 @@ struct ndarray_writer<T> : public object {
   //  - vti (vtkImageData w/ vtkXMLImageDataWriter)
   //    - variable (required), see "variable" in NetCDF section above
   //    - separate_variables, see "separate_variables" in NetCDF section above
-  // fields derived from the data stream (please **DON'T** specify the following fields):
-  //  - nd, number. dimensionality of the data
   
   void consume(ndarray_stream&);
 
@@ -55,6 +54,12 @@ void ndarray_writer<T>::configure(const json& j_)
   j = j_; 
 
   // sanity check
+  if (j.contains("nd")) {
+    if (j["nd"].is_number()) {
+      // OK
+    } else fatal("invalid nd");
+  } else fatal("missing nd");
+
   if (j.contains("filename")) {
     if (j["filename"].is_string()) {
       // TODO: check if the pattern can be expanded with sprintf
@@ -88,8 +93,8 @@ void ndarray_writer<T>::configure(const json& j_)
       }
     } else fatal("invalid dimension_names");
   } else {
-    if (j["format"] == "nc")
-      fatal("missing dimension_names");
+    if (j["nd"] == 2) j["dimension_names"] = {"x", "y"};
+    else j["dimension_names"] = {"x", "y", "z"};'
   }
 
   if (j.contains("variable")) {
