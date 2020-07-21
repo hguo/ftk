@@ -34,6 +34,7 @@ TEST_CASE("critical_point_tracking_woven_float64") {
     REQUIRE(std::get<0>(result) == 48);
 }
 
+#if FTK_HAVE_NETCDF
 TEST_CASE("critical_point_tracking_woven_nc") {
   auto result = track2D(js_woven_nc_unlimited_time);
   diy::mpi::communicator world;
@@ -47,6 +48,7 @@ TEST_CASE("critical_point_tracking_woven_nc_no_time") {
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == 48);
 }
+#endif
 
 int main(int argc, char **argv)
 {
