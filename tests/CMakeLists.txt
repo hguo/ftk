@@ -48,8 +48,8 @@ add_executable (test_io test_io)
 target_link_libraries (test_io ftk)
 catch_discover_tests (test_io)
    
-add_test (NAME test_critical_point_tracking_cli_woven
-  COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.vtp)
+#add_test (NAME test_critical_point_tracking_cli_woven
+#  COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.vtp)
 
 if (FTK_HAVE_MPI)
   set (maxp 4)

@@ -23,6 +23,10 @@ TEST_CASE("io_write_float64_woven") {
   CHECK(write(js_woven_synthetic, jw_woven_float64));
 }
 
+TEST_CASE("io_write_float32_tornado") {
+  CHECK(write(js_tornado_synthetic, jw_tornado_float32));
+}
+
 #if FTK_HAVE_NETCDF
 TEST_CASE("io_write_nc_woven") {
   CHECK(write(js_woven_synthetic, jw_woven_nc_unlimited_time));
@@ -31,6 +35,10 @@ TEST_CASE("io_write_nc_woven") {
 TEST_CASE("io_write_nc_no_time_woven") {
   CHECK(write(js_woven_synthetic, jw_woven_nc_no_time));
 }
+
+//TEST_CASE("io_write_nc_tornado") {
+//  CHECK(write(js_tornado_synthetic, jw_tornado_nc));
+//}
 #endif
 
 #if FTK_HAVE_VTK

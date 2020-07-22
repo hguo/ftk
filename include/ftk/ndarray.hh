@@ -245,7 +245,9 @@ struct ndarray {
   // void to_netcdf(int ncid, int varid);
   void to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const;
   void to_netcdf(int ncid, int varid) const;
+  void to_netcdf_multivariate(int ncid, int varids[]) const;
   void to_netcdf_unlimited_time(int ncid, int varid) const;
+  void to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const;
 
   static std::vector<std::string> glob(const std::string &pattern);
 
@@ -576,9 +578,11 @@ inline void ndarray<double>::from_netcdf(int ncid, int varid, int ndims, const s
 }
 
 template <>
-inline void ndarray<double>::to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const
+inline void ndarray<double>::to_netcdf(int ncid, int varid, const size_t st[], const size_t sz[]) const
 {
-  NC_SAFE_CALL( nc_put_vara_double(ncid, varid, starts, sizes, &p[0]) );
+  fprintf(stderr, "st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
+      st[0], st[1], st[2], st[3], sz[0], sz[1], sz[2], sz[3]);
+  NC_SAFE_CALL( nc_put_vara_double(ncid, varid, st, sz, &p[0]) );
 }
 
 template <>
@@ -603,6 +607,20 @@ inline void ndarray<T>::to_netcdf(int ncid, int varid) const
 }
 
 template <typename T>
+inline void ndarray<T>::to_netcdf_multivariate(int ncid, int varids[]) const
+{
+  const size_t nv = dims(0), ndims = nd()-1;
+  std::vector<size_t> d(dims.begin()+1, dims.end());
+
+  for (int i = 0; i < nv; i ++) {
+    ndarray<T> subarray(d);
+    for (size_t j = 0; j < subarray.nelem(); j ++) 
+      subarray[j] = p[j*nv + i];
+    subarray.to_netcdf(ncid, varids[i]);
+  }
+}
+
+template <typename T>
 inline void ndarray<T>::to_netcdf_unlimited_time(int ncid, int varid) const
 {
   std::vector<size_t> starts(dims.size()+1, 0), sizes(dims);
@@ -613,6 +631,20 @@ inline void ndarray<T>::to_netcdf_unlimited_time(int ncid, int varid) const
   //     starts[0], starts[1], starts[2], sizes[0], sizes[1], sizes[2]);
 
   to_netcdf(ncid, varid, &starts[0], &sizes[0]);
+}
+
+template <typename T>
+inline void ndarray<T>::to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const
+{
+  const size_t nv = dims(0), ndims = nd()-1;
+  std::vector<size_t> d(dims.begin()+1, dims.end());
+
+  for (int i = 0; i < nv; i ++) {
+    ndarray<T> subarray(d);
+    for (size_t j = 0; j < subarray.nelem(); j ++) 
+      subarray[j] = p[j*nv + i];
+    subarray.to_netcdf_unlimited_time(ncid, varids[i]);
+  }
 }
 
 template <typename T>

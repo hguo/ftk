@@ -65,6 +65,7 @@ protected:
   ndarray<T> request_timestep_synthetic_woven(int k);
   ndarray<T> request_timestep_synthetic_double_gyre(int k);
   ndarray<T> request_timestep_synthetic_merger(int k);
+  ndarray<T> request_timestep_synthetic_tornado(int k);
 
 protected:
   json j; // configs, metadata, and everything
@@ -111,6 +112,9 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           j["nd"] = 2;
         } else if (j["name"] == "merger") {
           j["nd"] = 2;
+        } else if (j["name"] == "tornado") {
+          j["nd"] = 3;
+          j["variable"] = {"u", "v", "w"};
         } else fatal("synthetic case not available.");
       } else fatal("synthetic case name not given.");
      
@@ -440,7 +444,9 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic(int k)
     return request_timestep_synthetic_double_gyre(k);
   else if (j["name"] == "merger")
     return request_timestep_synthetic_merger(k);
-  else return ndarray<T>();
+  else if (j["name"] == "tornado")
+    return request_timestep_synthetic_tornado(k);
+  return ndarray<T>();
 }
 
 template <typename T>
@@ -461,6 +467,13 @@ template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_synthetic_double_gyre(int k) 
 {
   return ndarray<T>(); // TODO
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_synthetic_tornado(int k) 
+{
+  const int w = j["width"], h = j["height"], d = j["depth"];
+  return ftk::synthetic_tornado<T>(w, h, d, k);
 }
 
 template <typename T>
