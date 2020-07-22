@@ -217,8 +217,9 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           if (j["nd"] == 3)
             j["depth"] = image->GetDimensions()[2];
 
+#if 0
           if (!j.contains("variable")) {
-            j["variable"] = image->GetPointData()->GetArrayName(0);
+            j["variable"] = {image->GetPointData()->GetArrayName(0)};
           } else if (j["variable"].is_string()) {
             int varid;
             image->GetPointData()->GetArray(j["variable"].template get<std::string>().c_str(), varid);
@@ -229,6 +230,11 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
               if (varid < 0) fatal("cannot find variable name");
             }
           } else fatal("invalid variable");
+#endif
+          if (missing_variables) {
+            const std::string var = image->GetPointData()->GetArrayName(0);
+            j["variable"] = {var};
+          }
           
           // determine number timesteps
           if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
@@ -378,11 +384,12 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 {
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][k];
+  // std::cerr << j << std::endl;
 #if FTK_HAVE_VTK
+  const int nv = n_components();
   if (is_single_component()) {
-    array.from_vtk_image_data_file(filename, j["variable"]);
+    array.from_vtk_image_data_file(filename, j["variable"][0]);
   } else {
-    const int nv = n_components();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
       arrays[i].from_vtk_image_data_file(filename, j["variable"][i]);
