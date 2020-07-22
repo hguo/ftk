@@ -609,7 +609,7 @@ inline void ndarray<T>::to_netcdf(int ncid, int varid) const
 template <typename T>
 inline void ndarray<T>::to_netcdf_multivariate(int ncid, int varids[]) const
 {
-  const size_t nv = dims(0), ndims = nd()-1;
+  const size_t nv = dims[0], ndims = nd()-1;
   std::vector<size_t> d(dims.begin()+1, dims.end());
 
   for (int i = 0; i < nv; i ++) {
@@ -636,7 +636,7 @@ inline void ndarray<T>::to_netcdf_unlimited_time(int ncid, int varid) const
 template <typename T>
 inline void ndarray<T>::to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const
 {
-  const size_t nv = dims(0), ndims = nd()-1;
+  const size_t nv = dims[0], ndims = nd()-1;
   std::vector<size_t> d(dims.begin()+1, dims.end());
 
   for (int i = 0; i < nv; i ++) {

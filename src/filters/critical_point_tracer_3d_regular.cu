@@ -187,7 +187,7 @@ static std::vector<cp4_t> extract_cp3dt(
   unsigned long long ncps = 0;
   cudaMemcpy(&ncps, dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpyDeviceToHost, dncps");
-  fprintf(stderr, "ncps=%lu\n", ncps);
+  fprintf(stderr, "ncps=%llu\n", ncps);
 
   std::vector<cp4_t> cps(ncps);
   cudaMemcpy(cps.data(), dcps, sizeof(cp4_t) * ncps, cudaMemcpyDeviceToHost);
@@ -204,7 +204,7 @@ static std::vector<cp4_t> extract_cp3dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
  
   cudaDeviceSynchronize();
-  fprintf(stderr, "exitting gpu kernel, ncps=%lu\n", ncps);
+  fprintf(stderr, "exitting gpu kernel, ncps=%llu\n", ncps);
 
   return cps;
 }
