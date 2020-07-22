@@ -5,6 +5,8 @@
 
 using nlohmann::json;
 
+const int woven_n_trajs = 64;
+
 std::tuple<size_t, size_t> track2D(const json& jstream)
 {
   ftk::ndarray_stream<> stream;
@@ -23,7 +25,7 @@ TEST_CASE("critical_point_tracking_woven_synthetic") {
   auto result = track2D(js_woven_synthetic);
   diy::mpi::communicator world;
   if (world.rank() == 0)
-    REQUIRE(std::get<0>(result) == 48);
+    REQUIRE(std::get<0>(result) == woven_n_trajs);
     // REQUIRE(std::get<1>(result) == 4194); // TODO: check out if this number varies over different platform
 }
 
@@ -31,7 +33,7 @@ TEST_CASE("critical_point_tracking_woven_float64") {
   auto result = track2D(js_woven_float64);
   diy::mpi::communicator world;
   if (world.rank() == 0)
-    REQUIRE(std::get<0>(result) == 48);
+    REQUIRE(std::get<0>(result) == woven_n_trajs);
 }
 
 #if FTK_HAVE_NETCDF
@@ -39,14 +41,14 @@ TEST_CASE("critical_point_tracking_woven_nc") {
   auto result = track2D(js_woven_nc_unlimited_time);
   diy::mpi::communicator world;
   if (world.rank() == 0)
-    REQUIRE(std::get<0>(result) == 48);
+    REQUIRE(std::get<0>(result) == woven_n_trajs);
 }
 
 TEST_CASE("critical_point_tracking_woven_nc_no_time") {
   auto result = track2D(js_woven_nc_no_time);
   diy::mpi::communicator world;
   if (world.rank() == 0)
-    REQUIRE(std::get<0>(result) == 48);
+    REQUIRE(std::get<0>(result) == woven_n_trajs);
 }
 #endif
 
@@ -55,7 +57,7 @@ TEST_CASE("critical_point_tracking_woven_vti") {
   auto result = track2D(js_woven_vti);
   diy::mpi::communicator world;
   if (world.rank() == 0)
-    REQUIRE(std::get<0>(result) == 48);
+    REQUIRE(std::get<0>(result) == woven_n_trajs);
 }
 #endif
 

@@ -170,7 +170,7 @@ inline void critical_point_tracker_2d_regular::push_scalar_field_snapshot(const 
   if (vector_field_source == SOURCE_DERIVED) {
     snapshot.vector = gradient2D(s);
     if (jacobian_field_source == SOURCE_DERIVED)
-      snapshot.jacobian = jacobian2D(snapshot.vector);
+      snapshot.jacobian = jacobian2D<double, true>(snapshot.vector);
   }
 
   field_data_snapshots.emplace_back( snapshot );
