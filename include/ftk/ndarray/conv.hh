@@ -107,8 +107,6 @@ ndarray<T> conv2D_gaussian(const ndarray<T> &data, T sigma,
   // make kernel
   const auto kernel = gaussian_kernel2D(sigma, ksizex, ksizey);
 
-  fprintf(stderr, "sigma=%f, kx=%zu, ky=%zu, padding=%zu\n", sigma, ksizex, ksizey, padding);
-  std::cerr << "kernel:" << kernel << std::endl;
   // convolution
   auto res = conv2D(data, kernel, padding);
 

@@ -23,8 +23,8 @@ ndarray<T> gradient2D(const ndarray<T>& scalar)
 #pragma omp parallel for collapse(2)
   for (int j = 0; j < DH; j ++) {
     for (int i = 0; i < DW; i ++) {
-      auto dfdx = grad(0, i, j) = (f(i+1, j) - f(i-1, j)); //  * 0.5*(DW-1);
-      auto dfdy = grad(1, i, j) = (f(i, j+1) - f(i, j-1)); //  * 0.5*(DH-1);
+      auto dfdx = grad(0, i, j) = (f(i+1, j) - f(i-1, j)) * (DW-1);
+      auto dfdy = grad(1, i, j) = (f(i, j+1) - f(i, j-1)) * (DH-1);
     }
   }
   return grad;
@@ -67,10 +67,10 @@ ndarray<T> jacobian2D(const ndarray<T>& vec)
 #pragma omp parallel for collapse(2)
   for (int j = 0; j < DH; j ++) {
     for (int i = 0; i < DW; i ++) {
-      const T H00 = f(0, i+1, j) - f(0, i-1, j),
-              H01 = f(0, i, j+1) - f(0, i, j-1),
-              H10 = f(1, i+1, j) - f(1, i-1, j), 
-              H11 = f(1, i, j+1) - f(1, i, j-1);
+      const T H00 = f(0, i+1, j) - f(0, i-1, j) * (DW-1),
+              H01 = f(0, i, j+1) - f(0, i, j-1) * (DH-1),
+              H10 = f(1, i+1, j) - f(1, i-1, j) * (DW-1), 
+              H11 = f(1, i, j+1) - f(1, i, j-1) * (DH-1);
 
       grad(0, 0, i, j) = H00;
       grad(1, 1, i, j) = H11;
