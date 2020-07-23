@@ -1,3 +1,5 @@
+unset (EXECUTABLE_OUTPUT_PATH)
+
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
 target_link_libraries (test_quadratic_interpolation ftk)
 catch_discover_tests (test_quadratic_interpolation)
