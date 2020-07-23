@@ -5,7 +5,7 @@
 
 using nlohmann::json;
 
-const int woven_n_trajs = 64;
+const int woven_n_trajs = 48;
 
 std::tuple<size_t, size_t> track2D(const json& jstream)
 {
