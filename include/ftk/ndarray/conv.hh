@@ -107,6 +107,8 @@ ndarray<T> conv2D_gaussian(const ndarray<T> &data, T sigma,
   // make kernel
   const auto kernel = gaussian_kernel2D(sigma, ksizex, ksizey);
 
+  fprintf(stderr, "sigma=%f, kx=%zu, ky=%zu, padding=%zu\n", sigma, ksizex, ksizey, padding);
+  std::cerr << "kernel:" << kernel << std::endl;
   // convolution
   auto res = conv2D(data, kernel, padding);
 
@@ -208,6 +210,16 @@ ndarray<T> conv3D_gaussian(
   auto res = conv3D(data, kernel, padding);
 
   return res;
+}
+
+template <typename T>
+ndarray<T> conv_gaussian(
+    const ndarray<T> &data, T sigma,
+    size_t ksize=5, size_t padding=0)
+{
+  if (data.nd() == 2) return conv2D_gaussian<T>(data, sigma, ksize, ksize, padding);
+  else if (data.nd() == 3) return conv3D_gaussian<T>(data, sigma, ksize, ksize, ksize, padding);
+  else return ndarray<T>();
 }
 
 }  // namespace ftk

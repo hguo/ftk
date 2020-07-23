@@ -46,7 +46,7 @@ struct ndarray_stream : public object {
   void start();
   void finish();
 
-  void set_callback(std::function<void(int, ndarray<T>)> f) {callback = f;}
+  void set_callback(std::function<void(int, const ndarray<T>&)> f) {callback = f;}
 
   bool is_single_component() const { return n_components() == 1; }
   bool is_multi_component() const { return n_components() > 1; }
@@ -67,10 +67,12 @@ protected:
   ndarray<T> request_timestep_synthetic_merger(int k);
   ndarray<T> request_timestep_synthetic_tornado(int k);
 
+  void modified_callback(int, const ndarray<T>&);
+
 protected:
   json j; // configs, metadata, and everything
 
-  std::function<void(int, ndarray<T>)> callback;
+  std::function<void(int, const ndarray<T>&)> callback;
 
   streaming_filter<ndarray<T>, T> temporal_filter;
 
@@ -484,18 +486,33 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_tornado(int k)
 }
 
 template <typename T>
+void ndarray_stream<T>::modified_callback(int k, const ndarray<T> &array)
+{
+  auto f = [&](const ndarray<T> &array) {
+    if (j.contains("temporal-smoothing-kernel"))
+      temporal_filter.push(array);
+    else
+      callback(k, array);
+  };
+
+  if (j.contains("spatial-smoothing-kernel")) {
+    const int ksize = j["spatial-smoothing-kernel-size"];
+    const T sigma = j["spatial-smoothing-kernel"];
+    ndarray<T> array1 = conv_gaussian(array, sigma, ksize, ksize/2);
+    f(array1);
+  } else
+    f(array);
+}
+
+template <typename T>
 void ndarray_stream<T>::start()
 {
   if (!callback) 
     fatal("callback function not set");
 
-  auto my_callback = callback;
   if (j.contains("temporal-smoothing-kernel")) {
     temporal_filter.set_gaussian_kernel(j["temporal-smoothing-kernel"], j["temporal-smoothing-kernel-size"]);
     temporal_filter.set_callback(callback);
-    my_callback = [&](int k, ndarray<T> array) {
-      temporal_filter.push(array);
-    };
   }
 
   for (int i = 0; i < j["n_timesteps"]; i ++) {
@@ -504,7 +521,7 @@ void ndarray_stream<T>::start()
       array = request_timestep_synthetic(i);
     else if (j["type"] == "file")
       array = request_timestep_file(i);
-    my_callback(i, array);
+    modified_callback(i, array);
   }
 }
  

@@ -45,18 +45,18 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream)
     tracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
     tracker->set_jacobian_symmetric( true );
     if (nd == 2) { // 2D
-      tracker->set_domain(ftk::lattice({0, 0}, {DW-1, DH-1})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+      tracker->set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
     } else { // 3D
-      tracker->set_domain(ftk::lattice({0, 0, 0}, {DW-1, DH-1, DD-1})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+      tracker->set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
     }
   } else { // vector field
     tracker->set_scalar_field_source( ftk::SOURCE_NONE );
     tracker->set_vector_field_source( ftk::SOURCE_GIVEN );
     tracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
     if (nd == 2) { // 2D
-      tracker->set_domain(ftk::lattice({1, 1}, {DW-1, DH-1})); // the indentation is needed becase the jacoobian field will be automatically derived
+      tracker->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
     } else {
-      tracker->set_domain(ftk::lattice({1, 1, 1}, {DW-1, DH-1, DD-1})); // the indentation is needed becase the jacoobian field will be automatically derived
+      tracker->set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2})); // the indentation is needed becase the jacoobian field will be automatically derived
     }
   }
   tracker->initialize();
@@ -78,7 +78,7 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream)
       tracker->push_vector_field_snapshot(field_data);
   };
 
-  stream.set_callback([&](int k, ftk::ndarray<double> field_data) {
+  stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     push_timestep(field_data);
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();

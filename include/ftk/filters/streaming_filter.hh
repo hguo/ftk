@@ -13,7 +13,7 @@ struct streaming_filter {
   streaming_filter() : cursor(0) {}
   ~streaming_filter() {};
 
-  void set_callback(std::function<void(int, T)> f) {callback = f;}
+  void set_callback(std::function<void(int, const T&)> f) {callback = f;}
 
   void set_gaussian_kernel(KT sigma, int size) {set_kernel(gaussian_kernel(sigma, size));}
   void set_kernel(const std::vector<KT>&);
@@ -35,7 +35,7 @@ private:
   mutable int cursor;
   bool finishing = false;
 
-  std::function<void(int, T)> callback;
+  std::function<void(int, const T&)> callback;
   mutable int n_fetched_timesteps = 0;
 };
 
