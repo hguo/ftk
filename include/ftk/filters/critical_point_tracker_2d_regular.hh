@@ -469,8 +469,8 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
     critical_point_2dt_t& cp)
 {
 #if FTK_HAVE_GMP
-  // typedef mpf_class fp_t;
-  typedef double fp_t;
+  typedef mpf_class fp_t;
+  // typedef double fp_t;
 #else
   typedef fixed_point<> fp_t;
 #endif

@@ -148,7 +148,8 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             } else 
               fatal("invalid dir");
           } else 
-            j["dir"] = {0.5, 0.5};
+            // j["dir"] = {0.5, 0.5};
+            j["dir"] = {0.1, 0.1};
         } else if (j["name"] == "double_gyre") {
           j["nd"] = 2;
         } else if (j["name"] == "merger") {
