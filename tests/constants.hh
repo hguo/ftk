@@ -16,6 +16,16 @@ const json js_woven_synthetic = {
   {"height", woven_height}
 };
 
+const json js_moving_extremum_2d_synthetic = {
+  {"type", "synthetic"},
+  {"name", "moving_extremum_2d"}
+};
+
+const json js_moving_extremum_2d_vti = {
+  {"format", "vti"},
+  {"filenames", "moving_extremum_2d-*.vti"},
+};
+
 const json js_tornado_synthetic = {
   {"type", "synthetic"},
   {"name", "tornado"},
@@ -91,6 +101,13 @@ const json jw_woven_vti {
   {"nd", 2},
   {"format", "vti"},
   {"filename", "woven-%04d.vti"},
+  {"variable", "scalar"}
+};
+
+const json jw_moving_extremum_2d_vti = {
+  {"nd", 2},
+  {"format", "vti"},
+  {"filename", "moving_extremum_2d-%04d.vti"},
   {"variable", "scalar"}
 };
 

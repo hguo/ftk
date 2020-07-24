@@ -63,6 +63,7 @@ protected:
 
   ndarray<T> request_timestep_synthetic(int k);
   ndarray<T> request_timestep_synthetic_woven(int k);
+  ndarray<T> request_timestep_synthetic_moving_extremum_2d(int k);
   ndarray<T> request_timestep_synthetic_double_gyre(int k);
   ndarray<T> request_timestep_synthetic_merger(int k);
   ndarray<T> request_timestep_synthetic_tornado(int k);
@@ -105,11 +106,49 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 
   if (j.contains("type")) {
     if (j["type"] == "synthetic") {
+      int default_dims[3] = {32, 32, 32};
+
       if (j.contains("name")) {
         if (j["name"] == "woven") {
           j["nd"] = 2;
           j["variable"] = {"scalar"};
-          if (!j.contains("scaling_factor")) j["scalaring_factor"] = 15.0;
+          if (!j.contains("x0")) j["scalaring_factor"] = 15.0;
+        } else if (j["name"] == "moving_extremum_2d") {
+          j["nd"] = 2;
+          j["variable"] = {"scalar"};
+          default_dims[0] = 21; 
+          default_dims[1] = 21;
+          default_dims[2] = 21;
+
+          if (j.contains("x0")) {
+            if (j["x0"].is_array()) {
+              if (j["x0"].size() == 2) {
+                for (int i = 0; i < 2; i ++)
+                  if (j["x0"][i].is_number()) {
+                    // OK
+                  } else 
+                    fatal("invalid x0 coordinates");
+              } else
+                fatal("invalid x0");
+            } else 
+              fatal("invalid x0");
+          } else 
+            j["x0"] = {0.5, 0.5};
+
+          if (j.contains("dir")) {
+            if (j["dir"].is_array()) {
+              if (j["dir"].size() == 2) {
+                for (int i = 0; i < 2; i ++)
+                  if (j["dir"][i].is_number()) {
+                    // OK
+                  } else 
+                    fatal("invalid dir");
+              } else
+                fatal("invalid dir");
+            } else 
+              fatal("invalid dir");
+          } else 
+            j["dir"] = {0.5, 0.5};
         } else if (j["name"] == "double_gyre") {
           j["nd"] = 2;
         } else if (j["name"] == "merger") {
@@ -122,14 +161,14 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
      
       // default dimensions
       if (j.contains("width")) assert(j["width"] != 0);
-      else j["width"] = 32;
+      else j["width"] = default_dims[0];
       
       if (j.contains("height")) assert(j["height"] != 0);
-      else j["height"] = 32;
+      else j["height"] = default_dims[1];
         
       if (j["nd"] == 3) {
         if (j.contains("depth")) assert(j["depth"] != 0);
-        else j["depth"] = 32;
+        else j["depth"] = default_dims[2];
       }
 
       // if (j.contains("n_timesteps")) assert(j["n_timesteps"] != 0);
@@ -449,6 +488,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic(int k)
 {
   if (j["name"] == "woven") 
     return request_timestep_synthetic_woven(k);
+  else if (j["name"] == "moving_extremum_2d")
+    return request_timestep_synthetic_moving_extremum_2d(k);
   else if (j["name"] == "double_gyre")
     return request_timestep_synthetic_double_gyre(k);
   else if (j["name"] == "merger")
@@ -464,6 +505,16 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_woven(int k)
   const int nt = j["n_timesteps"];
   const T t = nt == 1 ? 0.0 : double(k)/(nt-1);
   return ftk::synthetic_woven_2D<T>(j["width"], j["height"], t);
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_extremum_2d(int k) 
+{
+  const std::vector<size_t> shape({j["width"], j["height"]});
+  const T x0[2] = {j["x0"][0], j["x0"][1]}, 
+          dir[2] = {j["dir"][0], j["dir"][1]};
+
+  return ftk::synthetic_moving_extremum<T, 2>(shape, x0, dir, T(k));
 }
 
 template <typename T>

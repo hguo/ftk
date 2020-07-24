@@ -190,6 +190,29 @@ ndarray<T> synthetic_merger_2D(int DW, int DH, T t)
   return scalar;
 }
 
+template <typename T, int N>
+ndarray<T> synthetic_moving_extremum(const std::vector<size_t>& shape, const T x0[N], const T dir[N], T t)
+{
+  ndarray<T> scalar(shape);
+  const auto lattice = scalar.get_lattice();
+
+  T xc[N]; // center
+  for (int j = 0; j < N; j ++)
+    xc[j] = x0[j] + dir[j] * t;
+
+  for (auto i = 0; i < scalar.nelem(); i ++) {
+    std::vector<int> xi = lattice.from_integer(i);
+    T x[N];
+    T d = 0;
+    for (int j = 0; j < N; j ++) {
+      d += pow(xi[j] - xc[j], T(2.0));
+    }
+    scalar[i] = d;
+  }
+
+  return scalar;
+}
+
 /// modified from https://web.cse.ohio-state.edu/~crawfis.3/Data/Tornado/tornadoSrc.c
 // void gen_tornado( int xs, int ys, int zs, int time, float *tornado )
 /*

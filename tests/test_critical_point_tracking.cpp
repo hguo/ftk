@@ -59,6 +59,13 @@ TEST_CASE("critical_point_tracking_woven_vti") {
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == woven_n_trajs);
 }
+
+TEST_CASE("critical_point_tracking_moving_extremum_2d") {
+  auto result = track2D(js_moving_extremum_2d_vti);
+  diy::mpi::communicator world;
+  if (world.rank() == 0)
+    REQUIRE(std::get<0>(result) == 1);
+}
 #endif
 
 int main(int argc, char **argv)

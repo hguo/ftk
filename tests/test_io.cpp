@@ -45,6 +45,10 @@ TEST_CASE("io_write_nc_no_time_woven") {
 TEST_CASE("io_write_vti_woven") {
   CHECK(write(js_woven_synthetic, jw_woven_vti));
 }
+
+TEST_CASE("io_write_vti_moving_extremum_2d_synthetic") {
+  CHECK(write(js_moving_extremum_2d_synthetic, jw_moving_extremum_2d_vti));
+}
 #endif
 
 int main(int argc, char **argv)
