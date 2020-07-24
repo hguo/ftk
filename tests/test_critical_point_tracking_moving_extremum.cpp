@@ -5,12 +5,14 @@
 
 using nlohmann::json;
 
+#if FTK_HAVE_VTK
 TEST_CASE("critical_point_tracking_moving_extremum_2d") {
   auto result = track_cp2d(js_moving_extremum_2d_vti);
   diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == 1);
 }
+#endif
 
 TEST_CASE("critical_point_tracking_moving_extremum_2d_random_motion") {
   const int ncases = 10;
