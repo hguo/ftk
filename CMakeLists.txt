@@ -29,7 +29,7 @@ endfunction ()
 ftk_option (Boost "Use Boost" FALSE) # not used
 ftk_option (CUDA "Use CUDA" FALSE) # experimental
 ftk_option (GSL "Use GSL (GNU Scientific Library)" FALSE)
-ftk_option (GMP "Use GMP (GNU Multiple Precision Arithmetic Library)" AUTO)
+ftk_option (GMP "Use GMP (GNU Multiple Precision Arithmetic Library)" FALSE)
 ftk_option (HDF5 "Use HDF5" AUTO)
 ftk_option (Kokkos "Use Kokkos" FALSE) # experimental
 ftk_option (LevelDB "Use LevelDB" FALSE)

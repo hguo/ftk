@@ -23,8 +23,8 @@ ndarray<T> gradient2D(const ndarray<T>& scalar)
 #pragma omp parallel for collapse(2)
   for (int j = 0; j < DH; j ++) {
     for (int i = 0; i < DW; i ++) {
-      auto dfdx = grad(0, i, j) = (f(i+1, j) - f(i-1, j)) * (DW-1);
-      auto dfdy = grad(1, i, j) = (f(i, j+1) - f(i, j-1)) * (DH-1);
+      auto dfdx = grad(0, i, j) = (f(i+1, j) - f(i-1, j)); // * (DW-1);
+      auto dfdy = grad(1, i, j) = (f(i, j+1) - f(i, j-1)); // * (DH-1);
     }
   }
   return grad;

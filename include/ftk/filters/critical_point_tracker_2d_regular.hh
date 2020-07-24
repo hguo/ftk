@@ -24,6 +24,10 @@
 #include <ftk/hypermesh/regular_simplex_mesh.hh>
 #include <ftk/external/diy/serialization.hpp>
 
+#if FTK_HAVE_GMP
+#include <gmpxx.h>
+#endif
+
 #if FTK_HAVE_VTK
 #include <vtkUnsignedIntArray.h>
 #include <vtkVertex.h>
@@ -464,7 +468,12 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
     const regular_simplex_mesh_element& e,
     critical_point_2dt_t& cp)
 {
+#if FTK_HAVE_GMP
+  // typedef mpf_class fp_t;
+  typedef double fp_t;
+#else
   typedef fixed_point<> fp_t;
+#endif
   
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
