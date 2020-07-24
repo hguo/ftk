@@ -515,7 +515,11 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   fp_t vf[3][2];
   for (int i = 0; i < 3; i ++)
     for (int j = 0; j < 2; j ++)
-      vf[i][j] = v[i][j];
+      if (std::isnormal(v[i][j]))
+        vf[i][j] = v[i][j];
+      else 
+        return false;
+
   int indices[3];
   simplex_indices(vertices, indices);
   bool succ = robust_critical_point_in_simplex2(vf, indices);
