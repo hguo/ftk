@@ -80,7 +80,8 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
 
   void write_discrete_critical_points(const std::string& filename) const;
   void write_traced_critical_points(const std::string& filename) const;
-  
+ 
+  void write_traced_critical_points_text(const std::string& filename) const;
   void write_traced_critical_points_text(std::ostream& os) const;
   void write_discrete_critical_points_text(std::ostream &os) const;
   
@@ -147,6 +148,7 @@ inline void critical_point_tracker_2d_regular::initialize()
 
 inline void critical_point_tracker_2d_regular::finalize()
 {
+  // fprintf(stderr, "rank=%d, #cp=%zu\n", comm.rank(), discrete_critical_points.size());
   diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
 
   if (comm.rank() == 0) {
@@ -766,6 +768,13 @@ inline void critical_point_tracker_2d_regular::write_discrete_critical_points(co
 inline void critical_point_tracker_2d_regular::write_traced_critical_points(const std::string& filename) const 
 {
   diy::serializeToFile(traced_critical_points, filename);
+}
+  
+inline void critical_point_tracker_2d_regular::write_traced_critical_points_text(const std::string& filename) const
+{
+  std::ofstream ofs(filename);
+  write_traced_critical_points_text(ofs);
+  ofs.close();
 }
 
 inline void critical_point_tracker_2d_regular::write_traced_critical_points_text(std::ostream& os) const

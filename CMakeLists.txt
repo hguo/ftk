@@ -44,10 +44,6 @@ ftk_option (RocksDB "Use RocksDB" FALSE)
 ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # this feature is experimental
 ftk_option (VTK "Use VTK" AUTO)
 
-if (FTK_USE_MPSolve)
-  set (FTK_USE_GMP TRUE)
-endif ()
-
 find_package (Threads REQUIRED)
 
 if (FTK_USE_VTK STREQUAL AUTO)
@@ -126,14 +122,17 @@ elseif (FTK_USE_MPSolve)
   find_package (MPSolve REQUIRED)
 endif ()
 if (MPSolve_FOUND)
+  set (FTK_USE_GMP TRUE)
   set (FTK_HAVE_MPSOLVE TRUE)
   add_definitions ("-Wno-register")
   include_directories (${MPSolve_INCLUDE_DIR})
 endif ()
 
+message ("FTK_USE_GMP: ${FTK_USE_GMP}")
+
 if (FTK_USE_GMP STREQUAL AUTO)
   find_package (GMP QUIET)
-else (FTK_USE_GMP)
+elseif (FTK_USE_GMP)
   find_package (GMP REQUIRED)
 endif ()
 if (GMP_FOUND)
@@ -236,7 +235,7 @@ set (FTK_INCLUDE_DIR
 include_directories (${FTK_INCLUDE_DIR})
 
 option (FTK_BUILD_TESTS "Build tests" OFF)
-option (FTK_BUILD_EXAMPLES "Build examples" ON)
+option (FTK_BUILD_EXAMPLES "Build examples" OFF)
 option (FTK_BUILD_EXPERIMENTS "Build experimental code" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
 option (FTK_BUILD_PYFTK "Build Python bindings" OFF)

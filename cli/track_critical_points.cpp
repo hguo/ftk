@@ -201,12 +201,14 @@ void start_vtk_window()
 int main(int argc, char **argv)
 {
   diy::mpi::environment env;
+  diy::mpi::communicator world;
   
   parse_arguments(argc, argv);
 
   wrapper.consume(stream);
-    
-  write_outputs();
+ 
+  if (world.rank() == 0)
+    write_outputs();
   
   if (show_vtk) 
     start_vtk_window();
