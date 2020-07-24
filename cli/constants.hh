@@ -74,13 +74,25 @@ static inline nlohmann::json parse_input_json(cxxopts::ParseResult& results)
   using nlohmann::json;
   json j;
 
+  if (results.count("input")) {
+    const std::string input = results["input"].as<std::string>();
+    if (ends_with(input, ".json")) {
+      std::ifstream t(input);
+      std::string str((std::istreambuf_iterator<char>(t)),
+                       std::istreambuf_iterator<char>());
+      t.close();
+      return json::parse(str);
+    }
+    else 
+      j["filenames"] = results["input"].as<std::string>();
+  }
+
   if (results.count("synthetic")) {
     j["type"] = "synthetic";
     j["name"] = results["synthetic"].as<std::string>();
   } else 
     j["type"] = "file";
 
-  if (results.count("input")) j["filenames"] = results["input"].as<std::string>();
   if (results.count("input-format")) j["format"] = results["format"].as<std::string>();
   if (results.count("dim")) j["nd"] = results["dim"].as<std::string>();
   if (results.count("width")) j["width"] = results["width"].as<size_t>();

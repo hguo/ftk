@@ -93,6 +93,7 @@ void ndarray_stream<T>::set_input_source_json_file(const std::string& filename)
                    std::istreambuf_iterator<char>());
   json j = json::parse(str);
   set_input_source_json(j);
+  t.close();
 }
 
 template <typename T>
