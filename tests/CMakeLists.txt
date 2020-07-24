@@ -43,22 +43,30 @@ add_executable (test_inverse_interpolation test_inverse_interpolation.cpp)
 target_link_libraries (test_inverse_interpolation ftk)
 catch_discover_tests (test_inverse_interpolation)
 
-add_executable (test_critical_point_tracking test_critical_point_tracking)
-target_link_libraries (test_critical_point_tracking ftk)
-
 add_executable (test_io test_io)
 target_link_libraries (test_io ftk)
 catch_discover_tests (test_io)
-   
+
+add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
+target_link_libraries (test_critical_point_tracking_woven ftk)
+
+add_executable (test_critical_point_tracking_moving_extremum test_critical_point_tracking_moving_extremum)
+target_link_libraries (test_critical_point_tracking_moving_extremum ftk)
+
 #add_test (NAME test_critical_point_tracking_cli_woven
 #  COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.vtp)
 
 if (FTK_HAVE_MPI)
   set (maxp 4)
   foreach (p RANGE 1 ${maxp})
-    add_test (NAME test_critical_point_tracking_p${p} 
-      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking>)
+    add_test (NAME test_critical_point_tracking_woven_p${p} 
+      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_woven>)
+  endforeach (p)
+  foreach (p RANGE 1 ${maxp})
+    add_test (NAME test_critical_point_tracking_moving_extremum_p${p} 
+      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum>)
   endforeach (p)
 else () # serial only
-  catch_discover_tests (test_critical_point_tracking)
+  catch_discover_tests (test_critical_point_tracking_woven)
+  catch_discover_tests (test_critical_point_tracking_moving_extremum)
 endif ()
