@@ -2,6 +2,7 @@
 #define _HYPERMESH_ARRAY_HH
 
 #include <ftk/ftk_config.hh>
+#include <ftk/object.hh>
 #include <ftk/hypermesh/lattice.hh>
 #include <vector>
 #include <array>
@@ -61,7 +62,7 @@
 namespace ftk {
 
 template <typename T>
-struct ndarray {
+struct ndarray : object {
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshape(dims);}
   ndarray(const lattice& l) {reshape(l.sizes());}
@@ -876,6 +877,7 @@ inline void ndarray<T>::from_h5(hid_t did)
   std::vector<size_t> dims(h5ndims);
   for (auto i = 0; i < h5ndims; i ++)
     dims[i] = h5dims[i];
+  std::reverse(dims.begin(), dims.end());
   reshape(dims);
   
   H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());

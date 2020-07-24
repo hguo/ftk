@@ -11,20 +11,19 @@ int main(int argc, char **argv)
 #if 1 // load mesh & data from hdf5
   ftk::ndarray<int> triangles;
   triangles.from_h5(argv[1], "/cell_set[0]/node_connect_list");
-  // triangles.print(std::cerr) << std::endl;
+  // std::cerr << triangles << std::endl; 
 
   ftk::ndarray<double> coords;
   coords.from_h5(argv[1], "/coordinates/values");
-  // coords.print(std::cerr) << std::endl;
+  // std::cerr << coords << std::endl;
 
   ftk::ndarray<double> dpot;
   dpot.from_h5(argv[2], "/dpot");
   dpot = dpot.transpose();
-  // dpot.print(std::cerr) << std::endl;
+  std::cerr << dpot << std::endl;
 #endif
 
-  ftk::simplex_2d_mesh m(coords, triangles);
-
+  // ftk::simplex_2d_mesh m(coords, triangles);
 
 #if 0
   ftk::ndarray<double> nitrz0, rxy, zxy;
