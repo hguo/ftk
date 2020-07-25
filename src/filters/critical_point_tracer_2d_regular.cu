@@ -6,7 +6,7 @@
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
-#include <ftk/hypermesh/lattice.hh>
+#include <ftk/mesh/lattice.hh>
 #include <ftk/filters/critical_point.hh>
 #include "common.cuh"
 

@@ -5,7 +5,7 @@
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/critical_point_type.hh>
-#include <ftk/hypermesh/lattice.hh>
+#include <ftk/mesh/lattice.hh>
 #include <ftk/filters/critical_point.hh>
 #include "common.cuh"
 
