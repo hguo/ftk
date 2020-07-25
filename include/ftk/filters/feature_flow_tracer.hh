@@ -3,7 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/filters/filter.hh>
-#include <ftk/hypermesh/lattice.hh>
+#include <ftk/mesh/lattice.hh>
 
 namespace ftk {
 

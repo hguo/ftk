@@ -3,7 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/object.hh>
-#include <ftk/hypermesh/lattice.hh>
+#include <ftk/mesh/lattice.hh>
 #include <vector>
 #include <array>
 #include <numeric>

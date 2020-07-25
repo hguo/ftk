@@ -1,7 +1,7 @@
 #ifndef _FTK_LATTICE_PARTITIONER_HH
 #define _FTK_LATTICE_PARTITIONER_HH
 
-#include <ftk/hypermesh/lattice.hh>
+#include <ftk/mesh/lattice.hh>
 
 namespace ftk {
 

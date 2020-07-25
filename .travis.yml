@@ -3,6 +3,9 @@ language: cpp
 os: linux
 dist: bionic
 
+env:
+  - CMAKE_BUILD_TYPE=RELEASE
+
 jobs:
   include:
     - name: build without external dependencies (linux)

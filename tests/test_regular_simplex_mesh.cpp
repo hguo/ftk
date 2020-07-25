@@ -1,7 +1,7 @@
 #include <ftk/basic/distributed_union_find.hh>
 #include <ftk/basic/duf.hh>
-#include <ftk/hypermesh/regular_simplex_mesh.hh>
-#include <ftk/hypermesh/lattice_partitioner.hh>
+#include <ftk/mesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/lattice_partitioner.hh>
 #include <ftk/external/diy-ext/gather.hh>
 
 int main(int argc, char **argv)

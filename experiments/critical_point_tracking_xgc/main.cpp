@@ -1,5 +1,5 @@
 // #include <ftk/filters/critical_point_tracker_2d_regular.hh>
-#include <ftk/hypermesh/simplex_2d_mesh.hh>
+#include <ftk/mesh/simplex_2d_mesh.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>

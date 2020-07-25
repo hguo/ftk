@@ -6,7 +6,7 @@
 #include <string>
 
 #include <ftk/basic/union_find.hh>
-#include <ftk/hypermesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/regular_simplex_mesh.hh>
 
 namespace ftk {
 

@@ -16,7 +16,7 @@
 #include <ftk/geometry/curve2vtk.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
-#include <ftk/hypermesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/regular_simplex_mesh.hh>
 #include <ftk/filters/critical_point.hh>
 #include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/external/diy/serialization.hpp>

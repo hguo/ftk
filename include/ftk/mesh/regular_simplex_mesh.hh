@@ -15,7 +15,7 @@
 #include <cassert>
 #include <iterator>
 #include <functional>
-#include <ftk/hypermesh/lattice.hh>
+#include <ftk/mesh/lattice.hh>
 #include <ftk/external/diy/serialization.hpp>
 
 #if FTK_HAVE_KOKKOS
