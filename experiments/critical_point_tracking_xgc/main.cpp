@@ -20,10 +20,13 @@ int main(int argc, char **argv)
   ftk::ndarray<double> dpot;
   dpot.from_h5(argv[2], "/dpot");
   dpot = dpot.transpose();
-  std::cerr << dpot << std::endl;
+  // std::cerr << dpot << std::endl;
 #endif
 
-  // ftk::simplex_2d_mesh m(coords, triangles);
+  ftk::simplex_2d_mesh<> m(coords, triangles);
+  m.build_edges();
+  m.build_smoothing_kernel(0.04);
+  m.smooth_scalar_field(dpot);
 
 #if 0
   ftk::ndarray<double> nitrz0, rxy, zxy;

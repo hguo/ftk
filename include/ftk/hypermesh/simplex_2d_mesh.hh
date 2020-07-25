@@ -3,31 +3,25 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/ndarray.hh>
+#include <ftk/numeric/vector_norm.hh>
+#include <ftk/algorithms/bfs.hh>
 #include <set>
 #include <iostream>
 #include <vector>
 
 namespace ftk {
 
-struct simplex_2d_mesh;
-
-struct simplex_2d_mesh_element {
-
-};
-
+template <typename I=int, typename F=double>
 struct simplex_2d_mesh { // 2D triangular mesh
-  friend class simplex_2d_mesh_element;
-  typedef simplex_2d_mesh_element iterator;
-
   simplex_2d_mesh() {}
 
   simplex_2d_mesh(
-      const std::vector<double>& coords, // coordinates of vertices; the dimension of the array is 2 * n_vertices
-      const std::vector<int>& triangles); // vertex id of triangles; the dimension of the array is 3 * n_triangles
+      const std::vector<F>& coords, // coordinates of vertices; the dimension of the array is 2 * n_vertices
+      const std::vector<I>& triangles); // vertex id of triangles; the dimension of the array is 3 * n_triangles
 
   simplex_2d_mesh(
-      const ndarray<double>& coords_, // 2 * n_vertices
-      const ndarray<int>& triangles_) // 3 * n_triangles
+      const ndarray<F>& coords_, // 2 * n_vertices
+      const ndarray<I>& triangles_) // 3 * n_triangles
     : vertex_coords(coords_), triangles(triangles_) {}
 
   // dimensionality of the mesh
@@ -38,19 +32,30 @@ struct simplex_2d_mesh { // 2D triangular mesh
 
   void build_edges();
 
+  void build_smoothing_kernel(F sigma);
+  void smooth_scalar_field(const ndarray<F> &f);
+
+  std::set<I> sides(int d, I i);
+  std::set<I> side_of(int d, I i);
+
+private: // mesh connectivities
+  ndarray<F> vertex_coords; // 2 * n_vertices
+  std::vector<std::set<I>> vertex_side_of;
+
+  ndarray<I> edges; // 2 * n_edges
+  ndarray<I> edges_side_of; // 2 * n_edges
+
+  ndarray<I> triangles; // 3 * n_triangles
+  ndarray<I> triangle_sides; // 3 * n_triangles
+
 private:
-  ndarray<double> vertex_coords; // 2 * n_vertices
-  std::vector<std::vector<int>> vertex_side_of;
-
-  ndarray<int> triangles; // 3 * n_triangles
-
-  ndarray<int> edges; // 2 * n_edges
-  ndarray<int> edges_side_of; // 2 * n_edges
+  std::vector<std::vector<std::tuple<I/*vert*/, F/*weight*/>>> smoothing_kernel;
 };
 
 /////////
 
-simplex_2d_mesh::simplex_2d_mesh(const std::vector<double> &coords_, const std::vector<int> &triangles_)
+template <typename I, typename F>
+simplex_2d_mesh<I, F>::simplex_2d_mesh(const std::vector<F> &coords_, const std::vector<I> &triangles_)
 {
   vertex_coords.copy_vector(coords_);
   vertex_coords.reshape({2, coords_.size()/2});
@@ -59,7 +64,8 @@ simplex_2d_mesh::simplex_2d_mesh(const std::vector<double> &coords_, const std::
   triangles.reshape({3, triangles_.size()/3});
 }
 
-size_t simplex_2d_mesh::n(int d) const
+template <typename I, typename F>
+size_t simplex_2d_mesh<I, F>::n(int d) const
 {
   if (d == 0) return vertex_coords.dim(1);
   else if (d == 1) { // TODO FIXME
@@ -69,9 +75,10 @@ size_t simplex_2d_mesh::n(int d) const
   else return 0;
 }
 
-void simplex_2d_mesh::build_edges()
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::build_edges()
 {
-  typedef std::tuple<int, int> edge_t;
+  typedef std::tuple<I, I> edge_t;
   std::set<edge_t> unique_edges;
 
   auto convert_edge = [](edge_t e) {
@@ -87,13 +94,99 @@ void simplex_2d_mesh::build_edges()
   }
 
   edges.reshape(2, unique_edges.size());
+  vertex_side_of.resize(vertex_coords.dim(1));
+  // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dim(1));
 
   int i = 0;
   for (const auto e : unique_edges) {
-    edges(0, i) = std::get<0>(e);
-    edges(1, i) = std::get<1>(e);
+    auto v0 = edges(0, i) = std::get<0>(e);
+    auto v1 = edges(1, i) = std::get<1>(e);
+    vertex_side_of[v0].insert(i);
+    vertex_side_of[v1].insert(i);
     i ++;
   }
+}
+
+template <typename I, typename F>
+inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
+{
+  const F limit2 = std::pow(F(3) * sigma, F(2));
+
+  auto neighbors = [&](I i) {
+    std::set<I> results;
+    for (auto edge : side_of(0, i))
+      for (auto side : sides(1, edge))
+        results.insert(side);
+    return results;
+  };
+
+  smoothing_kernel.resize(n(0));
+
+  for (auto i = 0; i < n(0); i ++) {
+    std::set<I> set;
+    const F xi[2] = {vertex_coords(0, i), vertex_coords(1, i)};
+    // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
+    auto criteron = [&](I j) {
+      const F xj[2] = {vertex_coords(0, j), vertex_coords(1, j)};
+      if (vector_dist_2norm_2(xi, xj) < limit2)
+        return true;
+      else return false;
+    };
+
+    auto operation = [&set](I j) {set.insert(j);};
+    bfs<I, std::set<I>>(i, neighbors, operation, criteron);
+
+    auto &kernel = smoothing_kernel[i];
+    for (auto k : set) {
+      const F xk[2] = {vertex_coords(0, k), vertex_coords(1, k)};
+      const F d2 = vector_dist_2norm_2(xi, xk);
+      const F w = std::exp(-d2 / (sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
+      // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
+      kernel.push_back( std::make_tuple(k, w) );
+    }
+
+    // normalization
+    F sum = 0;
+    for (int k = 0; k < kernel.size(); k ++)
+      sum += std::get<1>(kernel[k]);
+    for (int k = 0; k < kernel.size(); k ++) {
+      std::get<1>(kernel[k]) /= sum;
+      // fprintf(stderr, "i=%d, k=%d, %f\n", i, k, std::get<1>(kernel[k]));// kernel.size());
+    }
+  }
+}
+
+template <typename I, typename F>
+inline void simplex_2d_mesh<I, F>::smooth_scalar_field(const ndarray<F>& f)
+{
+}
+
+template <typename I, typename F>
+std::set<I> simplex_2d_mesh<I, F>::sides(int d, I i)
+{
+  std::set<I> results;
+  if (d == 1) {
+    results.insert( edges(0, i) );
+    results.insert( edges(1, i) );
+  } else if (d == 2) {
+    results.insert( triangle_sides(0, i) );
+    results.insert( triangle_sides(1, i) );
+    results.insert( triangle_sides(2, i) );
+  }
+  return results;
+}
+
+template <typename I, typename F>
+std::set<I> simplex_2d_mesh<I, F>::side_of(int d, I i)
+{
+  std::set<I> results;
+  if (d == 0)
+    return vertex_side_of[i];
+  else if (d == 1) {
+    results.insert(edges_side_of(0, i));
+    results.insert(edges_side_of(1, i));
+  }
+  return results;
 }
 
 }
