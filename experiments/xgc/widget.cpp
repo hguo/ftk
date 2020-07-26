@@ -149,22 +149,15 @@ void CGLWidget::paintGL()
   glLoadIdentity(); 
   glLoadMatrixf(_mvmatrix.data()); 
 
-#if 0
   glScalef(0.5004, 1, 1);
   glRotatef(-90, 0, 0, 1);
   glTranslatef(-0.5, -0.5, 0);
   glColor4f(1, 1, 1, 1);
-  // glBindTexture(GL_TEXTURE_2D, tex);
-  glBindTexture(GL_TEXTURE_2D, texLabels);
-  glEnable(GL_TEXTURE_2D);
-  glBegin(GL_QUADS);
-  glVertex2f(0, 0); glTexCoord2f(0, 0);
-  glVertex2f(1, 0); glTexCoord2f(1, 0);
-  glVertex2f(1, 1); glTexCoord2f(1, 1);
-  glVertex2f(0, 1); glTexCoord2f(0, 1);
-  glEnd();
-  glDisable(GL_TEXTURE_2D);
-#endif
+
+  // render mesh
+  {
+
+  }
 
   CHECK_GLERROR();
 }

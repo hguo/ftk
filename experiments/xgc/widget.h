@@ -10,6 +10,7 @@
 #include <cmath>
 #include <set>
 #include <ftk/ndarray.hh>
+#include <ftk/mesh/simplex_2d_mesh.hh>
 #include "trackball.h"
 
 class QMouseEvent;
@@ -29,10 +30,10 @@ public:
   CGLWidget(const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
   ~CGLWidget(); 
 
+  void set_mesh(ftk::simplex_2d_mesh<>* m_) { m = m_; }
+
   // void loadData(const std::string& path);
   // void loadDataH5(const std::string& path);
-  void trackSuperLevelset();
-  void trackSuperLevelsetT();
 
 protected:
   void initializeGL(); 
@@ -66,6 +67,7 @@ private: // camera
   GLuint tex;
 
 private:
+  ftk::simplex_2d_mesh<> *m;
   ftk::ndarray<double> data;
   const int nt = 1; // for now
 }; 
