@@ -26,17 +26,18 @@ int main(int argc, char **argv)
   dpot.from_h5(argv[2], "/dpot");
   dpot = dpot.transpose();
   // dpot.reshape({dpot.dim(1)});
-  dpot.reshape(dpot.dim(1));
+  dpot.reshape(dpot.dim(0));
   // std::cerr << dpot << std::endl;
 
   ftk::simplex_2d_mesh<> m(coords, triangles);
   m.scalar_to_vtk_unstructured_grid_data_file("out.vtu", "dpot", dpot);
-#if 0
+#if 1
   m.build_edges();
-  m.build_smoothing_kernel(0.04);
-  m.smooth_scalar_field(dpot);
+  m.build_vertex_links();
+  m.build_smoothing_kernel(0.01);
+  auto dpot1 = m.smooth_scalar_field(dpot);
 #endif
-
+  m.scalar_to_vtk_unstructured_grid_data_file("out1.vtu", "dpot", dpot1);
 
 #if FTK_HAVE_QT5
   QApplication app(argc, argv);

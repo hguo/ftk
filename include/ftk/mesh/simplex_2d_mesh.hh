@@ -47,10 +47,11 @@ struct simplex_2d_mesh { // 2D triangular mesh
   // numer of d-dimensional elements
   size_t n(int d) const;
 
+  void build_vertex_links();
   void build_edges();
 
   void build_smoothing_kernel(F sigma);
-  void smooth_scalar_field(const ndarray<F> &f);
+  ndarray<F> smooth_scalar_field(const ndarray<F> &f);
 
 public: // io
   void scalar_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>& scalar) const;
@@ -65,6 +66,7 @@ public: // mesh access
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
   std::vector<std::set<I>> vertex_side_of;
+  std::vector<std::set<I>> vertex_edge_vertex;
 
   ndarray<I> edges; // 2 * n_edges
   ndarray<I> edges_side_of; // 2 * n_edges
@@ -92,11 +94,16 @@ template <typename I, typename F>
 size_t simplex_2d_mesh<I, F>::n(int d) const
 {
   if (d == 0) return vertex_coords.dim(1);
-  else if (d == 1) { // TODO FIXME
-    return 0;
+  else if (d == 1) {
+    return edges.dim(1);
   } else if (d == 2)
     return triangles.dim(1);
   else return 0;
+}
+
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::build_vertex_links()
+{
 }
 
 template <typename I, typename F>
@@ -122,26 +129,33 @@ void simplex_2d_mesh<I, F>::build_edges()
   // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dim(1));
 
   int i = 0;
+  vertex_edge_vertex.resize(n(0));
   for (const auto e : unique_edges) {
     auto v0 = edges(0, i) = std::get<0>(e);
     auto v1 = edges(1, i) = std::get<1>(e);
     vertex_side_of[v0].insert(i);
     vertex_side_of[v1].insert(i);
     i ++;
+  
+    vertex_edge_vertex[v0].insert(v1);
+    vertex_edge_vertex[v1].insert(v0);
   }
 }
 
 template <typename I, typename F>
 inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 {
-  const F limit2 = std::pow(F(3) * sigma, F(2));
+  const F limit = F(3) * sigma;
 
   auto neighbors = [&](I i) {
+    return vertex_edge_vertex[i];
+#if 0
     std::set<I> results;
     for (auto edge : side_of(0, i))
       for (auto side : sides(1, edge))
         results.insert(side);
     return results;
+#endif
   };
 
   smoothing_kernel.resize(n(0));
@@ -152,7 +166,7 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
     // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
     auto criteron = [&](I j) {
       const F xj[2] = {vertex_coords(0, j), vertex_coords(1, j)};
-      if (vector_dist_2norm_2(xi, xj) < limit2)
+      if (vector_dist_2norm_2(xi, xj) < limit)
         return true;
       else return false;
     };
@@ -163,8 +177,8 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
     auto &kernel = smoothing_kernel[i];
     for (auto k : set) {
       const F xk[2] = {vertex_coords(0, k), vertex_coords(1, k)};
-      const F d2 = vector_dist_2norm_2(xi, xk);
-      const F w = std::exp(-d2 / (sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
+      const F d = vector_dist_2norm_2(xi, xk);
+      const F w = std::exp(-(d*d) / (sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
       // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
       kernel.push_back( std::make_tuple(k, w) );
     }
@@ -175,14 +189,27 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
       sum += std::get<1>(kernel[k]);
     for (int k = 0; k < kernel.size(); k ++) {
       std::get<1>(kernel[k]) /= sum;
-      // fprintf(stderr, "i=%d, k=%d, %f\n", i, k, std::get<1>(kernel[k]));// kernel.size());
+      fprintf(stderr, "i=%d, k=%d, %f\n", i, k, std::get<1>(kernel[k]));// kernel.size());
     }
   }
 }
 
 template <typename I, typename F>
-inline void simplex_2d_mesh<I, F>::smooth_scalar_field(const ndarray<F>& f)
+ndarray<F> simplex_2d_mesh<I, F>::smooth_scalar_field(const ndarray<F>& f)
 {
+  ndarray<F> result;
+  result.reshape(f);
+
+  for (auto i = 0; i < smoothing_kernel.size(); i ++) {
+    for (auto j = 0; j < smoothing_kernel[i].size(); j ++) {
+      auto tuple = smoothing_kernel[i][j];
+      const auto k = std::get<0>(tuple);
+      const auto w = std::get<1>(tuple);
+      result[i] += f[k] * w;
+    }
+  }
+
+  return result;
 }
 
 template <typename I, typename F>
