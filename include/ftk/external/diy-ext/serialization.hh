@@ -61,13 +61,14 @@ namespace diy {
     diy::load(bb, obj);
   }
 
-  template <typename T> void unserializeFromFile(const std::string& filename, T& obj)
+  template <typename T> bool unserializeFromFile(const std::string& filename, T& obj)
   {
     FILE *fp = fopen(filename.c_str(), "rb");
-    assert(fp);
+    if (!fp) return false;
     diy::detail::FileBuffer bb(fp);
     diy::load(bb, obj);
     fclose(fp);
+    return true;
   }
 }
 

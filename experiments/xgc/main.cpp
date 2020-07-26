@@ -3,59 +3,65 @@
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
+#include <ftk/external/cxxopts.hpp>
 
-#if FTK_HAVE_QT5
-#include <QApplication>
-#include "widget.h"
-#endif
+std::string input_filename, 
+  mesh_filename, 
+  kernel_filename = "xgc.kernel";
+double sigma(0.01);
+
+void parse_arguments(int argc, char **argv)
+{
+  cxxopts::Options options(argv[0]);
+  options.add_options()
+    ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'",
+     cxxopts::value<std::string>(input_filename))
+    ("m,mesh", "Input mesh file", cxxopts::value<std::string>(mesh_filename))
+    ("k,kernel", "Input/output smoothing kernel file", cxxopts::value<std::string>(kernel_filename))
+    ("s,sigma", "Kernel bandwidth", cxxopts::value<double>(sigma));
+  auto results = options.parse(argc, argv);
+
+  if (!mesh_filename.length()) {
+    fprintf(stderr, "missing mesh filename.\n");
+    exit(1);
+  }
+}
 
 int main(int argc, char **argv)
 {
-  if (argc < 3) return 1; // mesh.h5, dpot.h5
+  parse_arguments(argc, argv);
 
   // load mesh & data from hdf5
   ftk::ndarray<int> triangles;
-  triangles.from_h5(argv[1], "/cell_set[0]/node_connect_list");
-  // std::cerr << triangles << std::endl; 
-
   ftk::ndarray<double> coords;
-  coords.from_h5(argv[1], "/coordinates/values");
-  // std::cerr << coords << std::endl;
-
-  ftk::ndarray<double> dpot;
-  dpot.from_h5(argv[2], "/dpot");
-  dpot = dpot.transpose();
-  // dpot.reshape({dpot.dim(1)});
-  dpot.reshape(dpot.dim(0));
-  // std::cerr << dpot << std::endl;
-
+  
+  triangles.from_h5(mesh_filename, "/cell_set[0]/node_connect_list");
+  coords.from_h5(mesh_filename, "/coordinates/values");
+ 
+  // build mesh
   ftk::simplex_2d_mesh<> m(coords, triangles);
-  m.scalar_to_vtk_unstructured_grid_data_file("out.vtu", "dpot", dpot);
-#if 1
   m.build_edges();
   m.build_vertex_links();
-  m.build_smoothing_kernel(0.01);
-  auto dpot1 = m.smooth_scalar_field(dpot);
-#endif
-  m.scalar_to_vtk_unstructured_grid_data_file("out1.vtu", "dpot", dpot1);
 
-#if FTK_HAVE_QT5
-  QApplication app(argc, argv);
-  QGLFormat fmt = QGLFormat::defaultFormat();
-  fmt.setSampleBuffers(true);
-  fmt.setSamples(16); 
-  QGLFormat::setDefaultFormat(fmt); 
-  
-  CGLWidget *widget = new CGLWidget;
-  widget->set_mesh(m);
-#if 0
-  widget->loadMeshFromJsonFile("xgc.mesh.json");
-  widget->loadBranchesFromJsonFile("xgc.branches.json");
-  widget->loadLabels("xgc.labels.bin"); // TODO: load labels from ADIOS
-#endif
-  widget->show();
-  return app.exec();
-#else
+  if (kernel_filename.length()) {
+    bool succ = m.read_smoothing_kernel(kernel_filename);
+    if (!succ) {
+      m.build_smoothing_kernel(sigma);
+      m.write_smoothing_kernel(kernel_filename);
+    }
+  }
+
+  fprintf(stderr, "mesh loaded.\n");
+
+  if (input_filename.length()) {
+    ftk::ndarray<double> dpot;
+    dpot.from_h5(input_filename, "/dpot");
+    dpot = dpot.transpose();
+    dpot.reshape(dpot.dim(0));
+
+    auto dpot1 = m.smooth_scalar_field(dpot);
+    m.scalar_to_vtk_unstructured_grid_data_file("out.vtu", "dpot", dpot1);
+  }
+
   return 0;
-#endif
 }

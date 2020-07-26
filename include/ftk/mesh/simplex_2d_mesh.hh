@@ -5,6 +5,7 @@
 #include <ftk/ndarray.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/algorithms/bfs.hh>
+#include <ftk/external/diy-ext/serialization.hh>
 #include <set>
 #include <iostream>
 #include <vector>
@@ -57,7 +58,11 @@ public: // io
   void scalar_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>& scalar) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> scalar_to_vtk_unstructured_grid_data(const std::string& varname, const ndarray<F>& scalar) const;
+  vtkSmartPointer<vtkUnstructuredGrid> scalars_to_vtk_unstructured_grid_data(
+      const std::vector<std::string>& varname, const std::vector<ndarray<F>>& scalar) const;
 #endif
+  void write_smoothing_kernel(const std::string& filename);
+  bool read_smoothing_kernel(const std::string& filename);
 
 public: // mesh access
   std::set<I> sides(int d, I i);
@@ -283,7 +288,26 @@ void simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
   writer->SetInputData( scalar_to_vtk_unstructured_grid_data(varname, scalar) );
   writer->Write();
 }
+#else
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
+    const std::string&, const std::string&, const ndarray<F>&) const
+{
+  fatal("FTK not compiled with VTK";
+}
 #endif
+
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::write_smoothing_kernel(const std::string& f)
+{
+  diy::serializeToFile(smoothing_kernel, f);
+}
+
+template <typename I, typename F>
+bool simplex_2d_mesh<I, F>::read_smoothing_kernel(const std::string& f)
+{
+  return diy::unserializeFromFile(f, smoothing_kernel);
+}
 
 }
 
