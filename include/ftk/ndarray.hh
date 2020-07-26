@@ -69,6 +69,7 @@ struct ndarray : object {
   ndarray(const T *a, const std::vector<size_t> &shape);
 
   std::ostream& print(std::ostream& os) const;
+  std::ostream& print_shape(std::ostream& os) const;
 
   size_t nd() const {return dims.size();}
   size_t dim(size_t i) const {return dims[i];}
@@ -936,13 +937,19 @@ inline std::vector<ndarray<T>> ndarray<T>::slice_time() const
 }
 
 template <typename T>
-std::ostream& ndarray<T>::print(std::ostream& os) const
+std::ostream& ndarray<T>::print_shape(std::ostream& os) const
 {
   os << "array_dims={";
   for (size_t i = 0; i < dims.size(); i ++) 
     if (i < dims.size()-1) os << dims[i] << ", ";
     else os << dims[i] << "}";
   os << std::endl;
+}
+
+template <typename T>
+std::ostream& ndarray<T>::print(std::ostream& os) const
+{
+  print_shape(os);
 
   if (nd() == 1) {
     os << "[";

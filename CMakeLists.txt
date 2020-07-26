@@ -72,15 +72,21 @@ if (FTK_USE_Qt5 STREQUAL AUTO)
   find_package (OpenGL QUIET)
   find_package (Qt5Widgets QUIET)
   find_package (Qt5OpenGL QUIET)
+  find_package (GLEW QUIET)
 elseif (FTK_USE_Qt5)
   find_package (OpenGL REQUIRED)
   find_package (Qt5Widgets REQUIRED)
   find_package (Qt5OpenGL REQUIRED)
+  find_package (GLEW REQUIRED)
 endif ()
 if (Qt5OpenGL_FOUND)
   set (FTK_HAVE_QT5 TRUE)
   set (FTK_HAVE_QT TRUE)
   add_definitions("-Wno-deprecated-declarations")
+  include_directories (
+    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5OpenGL_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIR})
 endif ()
 
 if (FTK_USE_MPI STREQUAL AUTO)
