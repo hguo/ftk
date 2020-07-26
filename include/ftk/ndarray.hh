@@ -944,6 +944,7 @@ std::ostream& ndarray<T>::print_shape(std::ostream& os) const
     if (i < dims.size()-1) os << dims[i] << ", ";
     else os << dims[i] << "}";
   os << std::endl;
+  return os;
 }
 
 template <typename T>

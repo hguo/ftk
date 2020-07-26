@@ -25,14 +25,18 @@ int main(int argc, char **argv)
   ftk::ndarray<double> dpot;
   dpot.from_h5(argv[2], "/dpot");
   dpot = dpot.transpose();
+  // dpot.reshape({dpot.dim(1)});
+  dpot.reshape(dpot.dim(1));
   // std::cerr << dpot << std::endl;
 
   ftk::simplex_2d_mesh<> m(coords, triangles);
+  m.scalar_to_vtk_unstructured_grid_data_file("out.vtu", "dpot", dpot);
 #if 0
   m.build_edges();
   m.build_smoothing_kernel(0.04);
   m.smooth_scalar_field(dpot);
 #endif
+
 
 #if FTK_HAVE_QT5
   QApplication app(argc, argv);
@@ -42,7 +46,7 @@ int main(int argc, char **argv)
   QGLFormat::setDefaultFormat(fmt); 
   
   CGLWidget *widget = new CGLWidget;
-  widget->set_mesh(&m);
+  widget->set_mesh(m);
 #if 0
   widget->loadMeshFromJsonFile("xgc.mesh.json");
   widget->loadBranchesFromJsonFile("xgc.branches.json");

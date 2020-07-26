@@ -28,6 +28,18 @@
   }\
 }
 
+template <typename T>
+static T clamp(T min, T max, T val)
+{
+  return std::max(min, std::min(max, val));
+}
+
+template <typename T>
+static T clamp_normalize(T min, T max, T val)
+{
+  return (clamp(min, max, val) - min) / (max - min);
+}
+
 CGLWidget::CGLWidget(const QGLFormat& fmt, QWidget *parent, QGLWidget *sharedWidget) :
   _fovy(30.f), _znear(0.1f), _zfar(10.f), 
   _eye(0, 0, 2.5), _center(0, 0, 0), _up(0, 1, 0)
@@ -60,6 +72,21 @@ int CGLWidget::advanceTimestep() {
 int CGLWidget::recedeTimestep() {
   if (currentTimestep > 0) currentTimestep --;
   return currentTimestep;
+}
+
+void CGLWidget::set_mesh(const ftk::simplex_2d_mesh<> &m)
+{
+  f_vertices.clear();
+
+  for (int i=0; i<m.n(2); i++) {
+    int i0 = m.conn[i*3], i1 = m.conn[i*3+1], i2 = m.conn[i*3+2];
+    f_vertices.push_back(m.coords[i0*2]);
+    f_vertices.push_back(m.coords[i0*2+1]);
+    f_vertices.push_back(m.coords[i1*2]);
+    f_vertices.push_back(m.coords[i1*2+1]);
+    f_vertices.push_back(m.coords[i2*2]);
+    f_vertices.push_back(m.coords[i2*2+1]);
+  }
 }
 
 void CGLWidget::mousePressEvent(QMouseEvent* e)
@@ -162,3 +189,47 @@ void CGLWidget::paintGL()
   CHECK_GLERROR();
 }
 
+void CGLWidget::renderSinglePlane()
+{
+  if (f_vertices.size() == 0) return;
+
+  glColor3f(0, 0, 0);
+
+  glTranslatef(-1.7, 0, 0);
+   
+#if 0
+  if (toggle_labels) {
+    glPointSize(5.f);
+    glBegin(GL_POINTS);
+    for (int i=0; i<m.nNodes; i++) {
+      int label = labels[i];
+      if (label != 0) {
+        QColor c = label_colors[label];
+        glColor3ub(c.red(), c.green(), c.blue());
+        glVertex2f(m.coords[i*2], m.coords[i*2+1]);
+      }
+    }
+    glEnd();
+  } else if (toggle_mesh) {
+#endif
+  if (1) {
+    if (toggle_wireframe) {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // render wireframe
+    }
+    else {
+      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
+
+    glVertexPointer(2, GL_FLOAT, 0, f_vertices.data());
+    glColorPointer(3, GL_FLOAT, 0, f_colors.data() );
+    glDrawArrays(GL_TRIANGLES, 0, f_vertices.size()/2);
+
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+  }
+
+  CHECK_GLERROR();
+}

@@ -30,7 +30,7 @@ public:
   CGLWidget(const QGLFormat& fmt=QGLFormat::defaultFormat(), QWidget *parent=NULL, QGLWidget *sharedWidget=NULL); 
   ~CGLWidget(); 
 
-  void set_mesh(ftk::simplex_2d_mesh<>* m_) { m = m_; }
+  void set_mesh(const ftk::simplex_2d_mesh<>& m);
 
   // void loadData(const std::string& path);
   // void loadDataH5(const std::string& path);
@@ -67,9 +67,10 @@ private: // camera
   GLuint tex;
 
 private:
-  ftk::simplex_2d_mesh<> *m;
-  ftk::ndarray<double> data;
   const int nt = 1; // for now
+  
+  std::vector<float> f_vertices;
+  std::vector<float> f_colors, f_label_colors;
 }; 
 
 #endif

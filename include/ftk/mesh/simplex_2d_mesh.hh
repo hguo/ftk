@@ -9,6 +9,23 @@
 #include <iostream>
 #include <vector>
 
+#if FTK_HAVE_VTK
+#include <vtkDataSet.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkDataArray.h>
+#include <vtkFloatArray.h>
+#include <vtkDoubleArray.h>
+#include <vtkIntArray.h>
+#include <vtkUnsignedIntArray.h>
+#include <vtkUnsignedLongArray.h>
+#include <vtkLongArray.h>
+#include <vtkGenericCell.h>
+#include <vtkDataSetWriter.h>
+#include <vtkXMLUnstructuredGridWriter.h>
+#include <vtkPointData.h>
+#include <vtkPoints2D.h>
+#endif
+
 namespace ftk {
 
 template <typename I=int, typename F=double>
@@ -35,6 +52,13 @@ struct simplex_2d_mesh { // 2D triangular mesh
   void build_smoothing_kernel(F sigma);
   void smooth_scalar_field(const ndarray<F> &f);
 
+public: // io
+  void scalar_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>& scalar) const;
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkUnstructuredGrid> scalar_to_vtk_unstructured_grid_data(const std::string& varname, const ndarray<F>& scalar) const;
+#endif
+
+public: // mesh access
   std::set<I> sides(int d, I i);
   std::set<I> side_of(int d, I i);
 
@@ -71,7 +95,7 @@ size_t simplex_2d_mesh<I, F>::n(int d) const
   else if (d == 1) { // TODO FIXME
     return 0;
   } else if (d == 2)
-    return triangles.dim(2);
+    return triangles.dim(1);
   else return 0;
 }
 
@@ -188,6 +212,51 @@ std::set<I> simplex_2d_mesh<I, F>::side_of(int d, I i)
   }
   return results;
 }
+
+#if FTK_HAVE_VTK
+template <typename I, typename F>
+vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data(
+    const std::string& varname, const ndarray<F>& scalar) const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
+  vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
+  pts->SetNumberOfPoints(n(0));
+
+  for (int i=0; i<n(0); i++)
+    pts->SetPoint(i, vertex_coords[i*2], vertex_coords[i*2+1], 0); 
+
+  for (int i=0; i<n(2); i ++) {
+    vtkIdType ids[3] = {triangles[i*3], triangles[i*3+1], triangles[i*3+2]};
+    grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
+  }
+
+  grid->SetPoints(pts);
+
+  vtkSmartPointer<vtkDataArray> array = vtkDoubleArray::New();
+  array->SetName(varname.c_str());
+  array->SetNumberOfComponents(1);
+  array->SetNumberOfTuples(n(0));
+  for (int i = 0; i<n(0); i ++)
+    array->SetTuple1(i, scalar[i]);
+
+  grid->GetPointData()->AddArray(array);
+  grid->GetPointData()->SetActiveScalars(varname.c_str());
+
+  return grid;
+}
+
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
+    const std::string& filename, 
+    const std::string& varname, 
+    const ndarray<F>& scalar) const
+{
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( scalar_to_vtk_unstructured_grid_data(varname, scalar) );
+  writer->Write();
+}
+#endif
 
 }
 
