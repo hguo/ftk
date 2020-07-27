@@ -277,6 +277,24 @@ private:
 //////////////////////////////////
 
 template <typename T>
+template <typename T1>
+ndarray<T>& ndarray<T>::operator*=(const T1& x)
+{
+  for (auto i = 0; i < p.size(); i ++)
+    p[i] *= x;
+  return *this;
+}
+
+template <typename T>
+template <typename T1>
+ndarray<T>& ndarray<T>::operator/=(const T1& x)
+{
+  for (auto i = 0; i < p.size(); i ++)
+    p[i] /= x;
+  return *this;
+}
+
+template <typename T>
 ndarray<T>& ndarray<T>::operator+=(const ndarray<T>& x)
 {
   if (empty()) *this = x;

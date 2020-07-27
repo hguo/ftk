@@ -53,20 +53,29 @@ struct simplex_2d_mesh { // 2D triangular mesh
 
   void build_smoothing_kernel(F sigma);
   ndarray<F> smooth_scalar_field(const ndarray<F> &f);
+  ndarray<F> smooth_gradient_field(const ndarray<F> &f);
 
 public: // io
-  void scalar_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>& scalar) const;
+  void scalar_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>&) const;
+  void vector_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>&) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> scalar_to_vtk_unstructured_grid_data(const std::string& varname, const ndarray<F>& scalar) const;
-  vtkSmartPointer<vtkUnstructuredGrid> scalars_to_vtk_unstructured_grid_data(
-      const std::vector<std::string>& varname, const std::vector<ndarray<F>>& scalar) const;
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
+  vtkSmartPointer<vtkUnstructuredGrid> scalar_to_vtk_unstructured_grid_data(const std::string& varname, const ndarray<F>&) const;
+  vtkSmartPointer<vtkUnstructuredGrid> vector_to_vtk_unstructured_grid_data(const std::string& varname, const ndarray<F>&) const;
+  // vtkSmartPointer<vtkUnstructuredGrid> scalars_to_vtk_unstructured_grid_data(
+  //     const std::vector<std::string>& varname, const std::vector<ndarray<F>>& scalar) const;
 #endif
   void write_smoothing_kernel(const std::string& filename);
   bool read_smoothing_kernel(const std::string& filename);
 
+public: // element iteration
+  void element_for(int d, std::function<void(I)> f);
+
 public: // mesh access
   std::set<I> sides(int d, I i);
   std::set<I> side_of(int d, I i);
+
+  void get_triangle(I i, I tri[]) const;
 
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
@@ -152,17 +161,7 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 {
   const F limit = F(3) * sigma;
 
-  auto neighbors = [&](I i) {
-    return vertex_edge_vertex[i];
-#if 0
-    std::set<I> results;
-    for (auto edge : side_of(0, i))
-      for (auto side : sides(1, edge))
-        results.insert(side);
-    return results;
-#endif
-  };
-
+  auto neighbors = [&](I i) { return vertex_edge_vertex[i]; };
   smoothing_kernel.resize(n(0));
 
   for (auto i = 0; i < n(0); i ++) {
@@ -183,12 +182,14 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
     for (auto k : set) {
       const F xk[2] = {vertex_coords(0, k), vertex_coords(1, k)};
       const F d = vector_dist_2norm_2(xi, xk);
-      const F w = std::exp(-(d*d) / (sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
+      const F w = std::exp(-(d*d) / (2*sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
       // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
       kernel.push_back( std::make_tuple(k, w) );
+      fprintf(stderr, "i=%d, k=%d, %f\n", i, k, w); 
     }
 
     // normalization
+#if 0
     F sum = 0;
     for (int k = 0; k < kernel.size(); k ++)
       sum += std::get<1>(kernel[k]);
@@ -196,6 +197,7 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
       std::get<1>(kernel[k]) /= sum;
       fprintf(stderr, "i=%d, k=%d, %f\n", i, k, std::get<1>(kernel[k]));// kernel.size());
     }
+#endif
   }
 }
 
@@ -211,6 +213,33 @@ ndarray<F> simplex_2d_mesh<I, F>::smooth_scalar_field(const ndarray<F>& f)
       const auto k = std::get<0>(tuple);
       const auto w = std::get<1>(tuple);
       result[i] += f[k] * w;
+    }
+  }
+
+  return result;
+}
+
+template <typename I, typename F>
+ndarray<F> simplex_2d_mesh<I, F>::smooth_gradient_field(const ndarray<F>& f)
+{
+  ndarray<F> result({2, n(0)});
+
+  for (auto i = 0; i < smoothing_kernel.size(); i ++) {
+    for (auto j = 0; j < smoothing_kernel[i].size(); j ++) {
+      auto tuple = smoothing_kernel[i][j];
+      const auto k = std::get<0>(tuple);
+      const auto w = std::get<1>(tuple);
+
+      if (i == k) continue; // the accumulation will be zero anyway
+      
+      // const F df = f[j] - f[i];
+      const F dx[2] = {vertex_coords[k*2] - vertex_coords[i*2], 
+                       vertex_coords[k*2+1] - vertex_coords[i*2+1]};
+      const F d = vector_2norm_2(dx);
+      // fprintf(stderr, "dx=%f, %f\n", dx[0], dx[1]);
+
+      result(0, i) += - f[k] * w * dx[0];
+      result(1, i) += - f[k] * w * dx[1];
     }
   }
 
@@ -247,8 +276,7 @@ std::set<I> simplex_2d_mesh<I, F>::side_of(int d, I i)
 
 #if FTK_HAVE_VTK
 template <typename I, typename F>
-vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data(
-    const std::string& varname, const ndarray<F>& scalar) const
+vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::to_vtk_unstructured_grid() const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
@@ -263,6 +291,14 @@ vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::scalar_to_vtk_unstru
   }
 
   grid->SetPoints(pts);
+  return grid;
+}
+
+template <typename I, typename F>
+vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data(
+    const std::string& varname, const ndarray<F>& scalar) const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtk_unstructured_grid();
 
   vtkSmartPointer<vtkDataArray> array = vtkDoubleArray::New();
   array->SetName(varname.c_str());
@@ -270,6 +306,26 @@ vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::scalar_to_vtk_unstru
   array->SetNumberOfTuples(n(0));
   for (int i = 0; i<n(0); i ++)
     array->SetTuple1(i, scalar[i]);
+
+  grid->GetPointData()->AddArray(array);
+  grid->GetPointData()->SetActiveScalars(varname.c_str());
+
+  return grid;
+}
+
+template <typename I, typename F>
+vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::vector_to_vtk_unstructured_grid_data(
+    const std::string& varname, const ndarray<F>& vector) const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtk_unstructured_grid();
+
+  vtkSmartPointer<vtkDataArray> array = vtkDoubleArray::New();
+  array->SetName(varname.c_str());
+  array->SetNumberOfComponents(3); // TODO
+  array->SetNumberOfTuples(n(0));
+  for (int i = 0; i<n(0); i ++) {
+    array->SetTuple3(i, vector(0, i), vector(1, i), 0);
+  }
 
   grid->GetPointData()->AddArray(array);
   grid->GetPointData()->SetActiveScalars(varname.c_str());
@@ -286,6 +342,18 @@ void simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(filename.c_str());
   writer->SetInputData( scalar_to_vtk_unstructured_grid_data(varname, scalar) );
+  writer->Write();
+}
+
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::vector_to_vtk_unstructured_grid_data_file(
+    const std::string& filename, 
+    const std::string& varname, 
+    const ndarray<F>& vector) const
+{
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( vector_to_vtk_unstructured_grid_data(varname, vector) );
   writer->Write();
 }
 #else
@@ -309,6 +377,20 @@ bool simplex_2d_mesh<I, F>::read_smoothing_kernel(const std::string& f)
   return diy::unserializeFromFile(f, smoothing_kernel);
 }
 
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f)
+{
+  for (auto i = 0; i < n(d); i ++)
+    f(i);
 }
 
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
+{
+  tri[0] = triangles(0, i);
+  tri[1] = triangles(1, i);
+  tri[2] = triangles(2, i);
+}
+
+}
 #endif
