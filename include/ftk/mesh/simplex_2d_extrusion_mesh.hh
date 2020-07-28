@@ -33,7 +33,7 @@ private:
                   tris, // {3, n(2)}
                   edges;// {2, n(1)}
 
-  ftk::ndarray<T> tets_sides, // {4, n(3)}
+  ftk::ndarray<I> tets_sides, // {4, n(3)}
                   tris_sides; // {3, n(2)}
 };
 
