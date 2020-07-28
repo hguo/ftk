@@ -68,13 +68,12 @@ int main(int argc, char **argv)
     dpot = dpot.transpose();
     dpot.reshape(dpot.dim(0));
 
-    auto dpot1 = m.smooth_scalar_field(dpot);
-    m.scalar_to_vtk_unstructured_grid_data_file("out.vtu", "dpot", dpot1);
-
-    auto grad = m.smooth_gradient_field(dpot);
-    grad *= (1.0/(sigma*sigma));
+    ftk::ndarray<double> f, grad, J;
+    m.smooth_scalar_gradient_jacobian(dpot, sigma, f, grad, J);
+    
+    m.scalar_to_vtk_unstructured_grid_data_file("out.vtu", "dpot", dpot);
+    m.scalar_to_vtk_unstructured_grid_data_file("out-scalar.vtu", "dpot", f);
     m.vector_to_vtk_unstructured_grid_data_file("out-grad.vtu", "ddpot", grad);
-    // std::cerr << grad << std::endl;
 
     std::vector<double> cps;
 

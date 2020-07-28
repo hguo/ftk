@@ -52,8 +52,13 @@ struct simplex_2d_mesh { // 2D triangular mesh
   void build_edges();
 
   void build_smoothing_kernel(F sigma);
-  ndarray<F> smooth_scalar_field(const ndarray<F> &f);
-  ndarray<F> smooth_gradient_field(const ndarray<F> &f);
+  void smooth_scalar_gradient_jacobian(
+      const ndarray<F>& f, 
+      const F sigma,
+      ndarray<F>& fs, // smoothed scalar field
+      ndarray<F>& g,  // smoothed gradient field
+      ndarray<F>& j   // smoothed jacobian field
+  ) const; 
 
 public: // io
   void scalar_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>&) const;
@@ -159,6 +164,7 @@ void simplex_2d_mesh<I, F>::build_edges()
 template <typename I, typename F>
 inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 {
+  const F sigma2 = sigma * sigma;
   const F limit = F(3) * sigma;
 
   auto neighbors = [&](I i) { return vertex_edge_vertex[i]; };
@@ -166,10 +172,10 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 
   for (auto i = 0; i < n(0); i ++) {
     std::set<I> set;
-    const F xi[2] = {vertex_coords(0, i), vertex_coords(1, i)};
+    const F xi[2] = {vertex_coords[i*2], vertex_coords[i*2+1]};
     // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
     auto criteron = [&](I j) {
-      const F xj[2] = {vertex_coords(0, j), vertex_coords(1, j)};
+      const F xj[2] = {vertex_coords[j*2], vertex_coords[j*2+1]};
       if (vector_dist_2norm_2(xi, xj) < limit)
         return true;
       else return false;
@@ -180,7 +186,7 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 
     auto &kernel = smoothing_kernel[i];
     for (auto k : set) {
-      const F xk[2] = {vertex_coords(0, k), vertex_coords(1, k)};
+      const F xk[2] = {vertex_coords[2*k], vertex_coords[2*k+1]};
       const F d = vector_dist_2norm_2(xi, xk);
       const F w = std::exp(-(d*d) / (2*sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
       // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
@@ -202,48 +208,44 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 }
 
 template <typename I, typename F>
-ndarray<F> simplex_2d_mesh<I, F>::smooth_scalar_field(const ndarray<F>& f)
+void simplex_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
+    const ndarray<F>& f, const F sigma, 
+    ndarray<F>& scalar, // smoothed scalar field
+    ndarray<F>& grad,  // smoothed gradient field
+    ndarray<F>& J) const // smoothed jacobian field
 {
-  ndarray<F> result;
-  result.reshape(f);
+  const F sigma2 = sigma * sigma, 
+          sigma4 = sigma2 * sigma2;
+
+  scalar.reshape({n(0)});
+  grad.reshape({2, n(0)});
+  J.reshape({2, 2, n(0)});
 
   for (auto i = 0; i < smoothing_kernel.size(); i ++) {
     for (auto j = 0; j < smoothing_kernel[i].size(); j ++) {
       auto tuple = smoothing_kernel[i][j];
       const auto k = std::get<0>(tuple);
       const auto w = std::get<1>(tuple);
-      result[i] += f[k] * w;
+    
+      const F d[2] = {vertex_coords[k*2] - vertex_coords[i*2], 
+                      vertex_coords[k*2+1] - vertex_coords[i*2+1]};
+      // const F r2 = d[0]*d[0] + d[1]*d[1];
+      // const F r = std::sqrt(r2);
+
+      // scalar
+      scalar[i] += f[k] * w;
+
+      // gradient
+      grad(0, i) += - f[k] * w * d[0] / sigma2;
+      grad(1, i) += - f[k] * w * d[1] / sigma2;
+
+      // jacobian
+      J(0, 0, i) += (d[0]*d[0] / sigma2 - 1) / sigma2 * f[k] * w;
+      J(0, 1, i) += d[0]*d[1] / sigma4 * f[k] * w;
+      J(1, 0, i) += d[0]*d[1] / sigma4 * f[k] * w;
+      J(1, 1, i) += (d[1]*d[1] / sigma2 - 1) / sigma2 * f[k] * w;
     }
   }
-
-  return result;
-}
-
-template <typename I, typename F>
-ndarray<F> simplex_2d_mesh<I, F>::smooth_gradient_field(const ndarray<F>& f)
-{
-  ndarray<F> result({2, n(0)});
-
-  for (auto i = 0; i < smoothing_kernel.size(); i ++) {
-    for (auto j = 0; j < smoothing_kernel[i].size(); j ++) {
-      auto tuple = smoothing_kernel[i][j];
-      const auto k = std::get<0>(tuple);
-      const auto w = std::get<1>(tuple);
-
-      if (i == k) continue; // the accumulation will be zero anyway
-      
-      // const F df = f[j] - f[i];
-      const F dx[2] = {vertex_coords[k*2] - vertex_coords[i*2], 
-                       vertex_coords[k*2+1] - vertex_coords[i*2+1]};
-      const F d = vector_2norm_2(dx);
-      // fprintf(stderr, "dx=%f, %f\n", dx[0], dx[1]);
-
-      result(0, i) += - f[k] * w * dx[0];
-      result(1, i) += - f[k] * w * dx[1];
-    }
-  }
-
-  return result;
 }
 
 template <typename I, typename F>
