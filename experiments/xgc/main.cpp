@@ -99,10 +99,19 @@ int main(int argc, char **argv)
       double mu[3], x[2];
       bool succ2 = ftk::inverse_lerp_s2v2(V, mu);
       // if (!succ2) return;
-  
       ftk::lerp_s2v2(X, mu, x);
-      fprintf(stderr, "mu=%f, %f, %f, x=%f, %f\n", 
-          mu[0], mu[1], mu[2], x[0], x[1]);
+
+      double Js[3][2][2], H[2][2];
+      for (int k = 0; k < 3; k ++)
+        for (int j = 0; j < 2; j ++)
+          for (int i = 0; i < 2; i ++)
+            Js[k][j][i] = J(i, j, tri[k]);
+      ftk::lerp_s2m2x2(Js, mu, H);
+      ftk::print2x2("H", H);
+      const int type = ftk::critical_point_type_2d(H, true);
+      
+      fprintf(stderr, "mu=%f, %f, %f, x=%f, %f, type=%d\n", 
+          mu[0], mu[1], mu[2], x[0], x[1], type);
       cps.push_back(x[0]);
       cps.push_back(x[1]);
     });
