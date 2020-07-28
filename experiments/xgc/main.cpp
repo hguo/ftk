@@ -76,6 +76,7 @@ int main(int argc, char **argv)
     m.vector_to_vtk_unstructured_grid_data_file("out-grad.vtu", "ddpot", grad);
 
     std::vector<double> cps;
+    std::vector<unsigned int> types;
 
     m.element_for(2, [&](int i) {
       int tri[3];
@@ -114,13 +115,23 @@ int main(int argc, char **argv)
           mu[0], mu[1], mu[2], x[0], x[1], type);
       cps.push_back(x[0]);
       cps.push_back(x[1]);
+      types.push_back(type);
     });
 
-    auto poly = ftk::points2vtk(cps, 2);
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
-    writer->SetFileName("out.vtp");
-    writer->SetInputData(poly);
-    writer->Write();
+    {
+      auto poly = ftk::points2vtk(cps, 2);
+      vtkSmartPointer<vtkUnsignedIntArray> vtypes = vtkUnsignedIntArray::New();
+      vtypes->SetNumberOfValues(types.size());
+      for (auto i = 0; i < types.size(); i ++)
+        vtypes->SetValue(i, types[i]);
+      vtypes->SetName("type");
+      poly->GetPointData()->AddArray(vtypes);
+
+      vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
+      writer->SetFileName("out.vtp");
+      writer->SetInputData(poly);
+      writer->Write();
+    }
   }
 
   return 0;
