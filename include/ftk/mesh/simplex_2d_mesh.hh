@@ -81,6 +81,7 @@ public: // mesh access
   std::set<I> side_of(int d, I i);
 
   void get_triangle(I i, I tri[]) const;
+  void get_edge(I i, I edge[]) const;
 
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
@@ -392,6 +393,13 @@ void simplex_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
   tri[0] = triangles(0, i);
   tri[1] = triangles(1, i);
   tri[2] = triangles(2, i);
+}
+
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::get_edge(I i, I v[]) const
+{
+  v[0] = edges(0, i);
+  v[1] = edges(1, i);
 }
 
 }
