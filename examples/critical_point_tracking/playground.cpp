@@ -85,7 +85,7 @@ const long long factor = 1000;
 typedef ftk::fixed_point<> fp_t;
 
 ftk::ndarray<double> Vf; // vector field
-ftk::regular_simplex_mesh m(2); // the 2D mesh
+ftk::simplicial_regular_mesh m(2); // the 2D mesh
 
 std::mutex mutex;
 
@@ -93,9 +93,9 @@ struct critical_point_t {
   double x[2]; // coordinates of the cp
 };
  
-std::map<ftk::regular_simplex_mesh_element, critical_point_t> critical_points;
+std::map<ftk::simplicial_regular_mesh_element, critical_point_t> critical_points;
 
-void check_simplex0(const ftk::regular_simplex_mesh_element& s)
+void check_simplex0(const ftk::simplicial_regular_mesh_element& s)
 {
   if (!s.valid(m)) return; 
   const auto &vertices = s.vertices(m);
@@ -112,7 +112,7 @@ void check_simplex0(const ftk::regular_simplex_mesh_element& s)
   }
 }
 
-void check_simplex1(const ftk::regular_simplex_mesh_element& s)
+void check_simplex1(const ftk::simplicial_regular_mesh_element& s)
 {
   if (!s.valid(m)) return; 
   const auto &vertices = s.vertices(m);
@@ -147,7 +147,7 @@ void check_simplex1(const ftk::regular_simplex_mesh_element& s)
   }
 }
 
-void check_simplex(const ftk::regular_simplex_mesh_element& s)
+void check_simplex(const ftk::simplicial_regular_mesh_element& s)
 {
   if (!s.valid(m)) return; // check if the 2-simplex is valid
 

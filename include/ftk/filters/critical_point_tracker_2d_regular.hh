@@ -21,7 +21,7 @@
 #include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
-#include <ftk/mesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/external/diy/serialization.hpp>
 
 #if FTK_HAVE_GMP
@@ -86,8 +86,8 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   void write_discrete_critical_points_text(std::ostream &os) const;
   
 protected:
-  regular_simplex_mesh m;
-  typedef regular_simplex_mesh_element element_t;
+  simplicial_regular_mesh m;
+  typedef simplicial_regular_mesh_element element_t;
   
   std::map<element_t, critical_point_2dt_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
@@ -352,7 +352,7 @@ inline void critical_point_tracker_2d_regular::trace_intersections()
   for (const auto &kv : discrete_critical_points) 
     uf.add(kv.first);
 
-  m.element_for(3, [&](const regular_simplex_mesh_element& f) {
+  m.element_for(3, [&](const simplicial_regular_mesh_element& f) {
     const auto sides = f.sides(m);
     std::set<element_t> intersected_sides;
 
@@ -467,7 +467,7 @@ inline void critical_point_tracker_2d_regular::simplex_jacobians(
 }
 
 inline bool critical_point_tracker_2d_regular::check_simplex(
-    const regular_simplex_mesh_element& e,
+    const simplicial_regular_mesh_element& e,
     critical_point_2dt_t& cp)
 {
 #if FTK_HAVE_GMP

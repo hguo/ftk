@@ -2,7 +2,7 @@
 #define _HYPERMESH_GRAD_HH
 
 #include <ftk/ndarray.hh>
-#include <ftk/mesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/simplicial_regular_mesh.hh>
 
 namespace ftk {
 
@@ -94,7 +94,7 @@ ndarray<T> jacobian2DPL(const ndarray<T>& V)
   ndarray<T> J;
   J.reshape(2, 2, 2/*upper & lower triangles*/, DW, DH);
 
-  regular_simplex_mesh m(2);
+  simplicial_regular_mesh m(2);
   m.set_lb_ub({0, 0}, {DW-1, DH-1});
   // WIP
   // m.element_for(2, 

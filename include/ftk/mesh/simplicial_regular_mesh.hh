@@ -1,5 +1,5 @@
-#ifndef _HYPERMESH_REGULAR_SIMPLEX_MESH_HH
-#define _HYPERMESH_REGULAR_SIMPLEX_MESH_HH
+#ifndef _HYPERMESH_simplicial_regular_MESH_HH
+#define _HYPERMESH_simplicial_regular_MESH_HH
 
 #include <ftk/ftk_config.hh>
 #include <iostream>
@@ -34,61 +34,61 @@ enum {
   ELEMENT_SCOPE_INTERVAL = 2
 };
 
-struct regular_simplex_mesh;
+struct simplicial_regular_mesh;
 
-struct regular_simplex_mesh_element {
-  friend class regular_simplex_mesh;
+struct simplicial_regular_mesh_element {
+  friend class simplicial_regular_mesh;
 
-  regular_simplex_mesh_element() : dim(0), type(0) {}
-  regular_simplex_mesh_element(const regular_simplex_mesh_element& e) : corner(e.corner), dim(e.dim), type(e.type) {}
-  regular_simplex_mesh_element(int nd, int d); 
-  regular_simplex_mesh_element(const std::vector<int>& corner, int d, int type); // nd is encoded in corner
-  // regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t index);
-  regular_simplex_mesh_element(const regular_simplex_mesh &m, int d, size_t work_index, 
+  simplicial_regular_mesh_element() : dim(0), type(0) {}
+  simplicial_regular_mesh_element(const simplicial_regular_mesh_element& e) : corner(e.corner), dim(e.dim), type(e.type) {}
+  simplicial_regular_mesh_element(int nd, int d); 
+  simplicial_regular_mesh_element(const std::vector<int>& corner, int d, int type); // nd is encoded in corner
+  // simplicial_regular_mesh_element(const simplicial_regular_mesh &m, int d, size_t index);
+  simplicial_regular_mesh_element(const simplicial_regular_mesh &m, int d, size_t work_index, 
       const lattice& l, int scope = ELEMENT_SCOPE_ALL);
-  regular_simplex_mesh_element(const std::string &i);
+  simplicial_regular_mesh_element(const std::string &i);
 
-  regular_simplex_mesh_element& operator=(const regular_simplex_mesh_element& e);
-  bool operator!=(const regular_simplex_mesh_element& e) const {return !(*this == e);}
-  bool operator<(const regular_simplex_mesh_element& e) const;
-  bool operator==(const regular_simplex_mesh_element& e) const;
-  // regular_simplex_mesh_element& operator++();
-  friend std::ostream& operator<<(std::ostream& os, const regular_simplex_mesh_element&);
-  void print(std::ostream& os, const regular_simplex_mesh& m) const;
+  simplicial_regular_mesh_element& operator=(const simplicial_regular_mesh_element& e);
+  bool operator!=(const simplicial_regular_mesh_element& e) const {return !(*this == e);}
+  bool operator<(const simplicial_regular_mesh_element& e) const;
+  bool operator==(const simplicial_regular_mesh_element& e) const;
+  // simplicial_regular_mesh_element& operator++();
+  friend std::ostream& operator<<(std::ostream& os, const simplicial_regular_mesh_element&);
+  void print(std::ostream& os, const simplicial_regular_mesh& m) const;
 
-  std::vector<std::vector<int> > vertices(const regular_simplex_mesh&) const;
+  std::vector<std::vector<int> > vertices(const simplicial_regular_mesh&) const;
 
   // void increase_corner(int d=0);
-  bool valid(const regular_simplex_mesh& m) const; // validate the element in the context of the given mesh
+  bool valid(const simplicial_regular_mesh& m) const; // validate the element in the context of the given mesh
 
   // template <int nd> std::tuple<std::array<int, nd>, int> to_index() const;
   // template <int nd> void from_index(const std::tuple<std::array<int, nd>, int>&);
 
-  size_t to_work_index(const regular_simplex_mesh& m, const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
-  void from_work_index(const regular_simplex_mesh& m, size_t, const lattice& l, int scope = ELEMENT_SCOPE_ALL);
+  size_t to_work_index(const simplicial_regular_mesh& m, const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
+  void from_work_index(const simplicial_regular_mesh& m, size_t, const lattice& l, int scope = ELEMENT_SCOPE_ALL);
 
-  template <typename uint = uint64_t> uint to_integer(const regular_simplex_mesh& m) const;
-  template <typename uint = uint64_t> void from_integer(const regular_simplex_mesh& m, uint i);
+  template <typename uint = uint64_t> uint to_integer(const simplicial_regular_mesh& m) const;
+  template <typename uint = uint64_t> void from_integer(const simplicial_regular_mesh& m, uint i);
 
   // std::string to_string() const;
   // void from_string(const std::string& index);
 
   template <typename Archive> void serialize(Archive &ar) {ar(dim, type, corner);}
 
-  std::vector<regular_simplex_mesh_element> sides(const regular_simplex_mesh& m) const;
-  std::vector<regular_simplex_mesh_element> side_of(const regular_simplex_mesh& m) const;
+  std::vector<simplicial_regular_mesh_element> sides(const simplicial_regular_mesh& m) const;
+  std::vector<simplicial_regular_mesh_element> side_of(const simplicial_regular_mesh& m) const;
 
-  // const regular_simplex_mesh &m; // avoid the ref to mesh to ease (de)serialization
+  // const simplicial_regular_mesh &m; // avoid the ref to mesh to ease (de)serialization
   std::vector<int> corner;
   int dim, type;
 };
 
 
-struct regular_simplex_mesh {
-  friend class regular_simplex_mesh_element;
-  typedef regular_simplex_mesh_element iterator;
+struct simplicial_regular_mesh {
+  friend class simplicial_regular_mesh_element;
+  typedef simplicial_regular_mesh_element iterator;
 
-  regular_simplex_mesh(int n) : nd_(n), lattice_(n) {
+  simplicial_regular_mesh(int n) : nd_(n), lattice_(n) {
     for (int i = 0; i < n; i ++) {
       lb_.push_back(0);
       ub_.push_back(0);
@@ -99,7 +99,7 @@ struct regular_simplex_mesh {
     lattice_.reshape(lb_, sizes()); 
   }
 
-  regular_simplex_mesh(int n, lattice& _lattice) : regular_simplex_mesh(n) {
+  simplicial_regular_mesh(int n, lattice& _lattice) : simplicial_regular_mesh(n) {
     std::vector<int> _lb, _ub;
 
     for (int i = 0; i < n; i ++) {
@@ -150,25 +150,25 @@ struct regular_simplex_mesh {
   // Iterate all d-simplices with the given f() function using the given number of threads.
   // There are three different modes: all, fixed time, and fixed interval.  Please
   // see the comments in the next two functions for more details.
-  void element_for(int d, std::function<void(regular_simplex_mesh_element)> f, 
+  void element_for(int d, std::function<void(simplicial_regular_mesh_element)> f, 
       int nthreads=std::thread::hardware_concurrency()); // , int scope = ELEMENT_SCOPE_ALL);
 
-  void element_for_ordinal(int d, int t, std::function<void(regular_simplex_mesh_element)> f,
+  void element_for_ordinal(int d, int t, std::function<void(simplicial_regular_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency());
 
-  void element_for_interval(int d, int t0, int t1, std::function<void(regular_simplex_mesh_element)> f,
+  void element_for_interval(int d, int t0, int t1, std::function<void(simplicial_regular_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency());
   
   void element_for(int d, const lattice& subdomain, int scope, 
-      std::function<void(regular_simplex_mesh_element)> f,
+      std::function<void(simplicial_regular_mesh_element)> f,
       int nthreads=std::thread::hardware_concurrency());
 
 #if 0
 public: // partitioning
-  void partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
-  void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
-  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
-  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions);  
+  void partition(int np, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions);  
+  void partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions);  
+  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions);  
+  void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions);  
 #endif
 
 public:
@@ -232,20 +232,20 @@ private:
 
 
 //////////////////////////////////
-inline regular_simplex_mesh_element::regular_simplex_mesh_element(int nd, int d_) 
+inline simplicial_regular_mesh_element::simplicial_regular_mesh_element(int nd, int d_) 
   : dim(d_), type(0) 
 {
   corner.resize(nd);
 }
 
-inline regular_simplex_mesh_element::regular_simplex_mesh_element(
+inline simplicial_regular_mesh_element::simplicial_regular_mesh_element(
     const std::vector<int>& corner_, int d_, int type_)
   : corner(corner_), dim(d_), type(type_)
 {
 }
 
-inline regular_simplex_mesh_element::regular_simplex_mesh_element(
-    const regular_simplex_mesh &m, int d_, size_t i, const lattice& l, int scope)
+inline simplicial_regular_mesh_element::simplicial_regular_mesh_element(
+    const simplicial_regular_mesh &m, int d_, size_t i, const lattice& l, int scope)
 {
   dim = d_;
   corner.resize(m.nd());
@@ -253,13 +253,13 @@ inline regular_simplex_mesh_element::regular_simplex_mesh_element(
 }
 
 #if 0
-inline regular_simplex_mesh_element::regular_simplex_mesh_element(const std::string &i)
+inline simplicial_regular_mesh_element::simplicial_regular_mesh_element(const std::string &i)
 {
   from_string(i);
 }
 #endif
 
-inline regular_simplex_mesh_element& regular_simplex_mesh_element::operator=(const regular_simplex_mesh_element& e)
+inline simplicial_regular_mesh_element& simplicial_regular_mesh_element::operator=(const simplicial_regular_mesh_element& e)
 {
   corner = e.corner;
   dim = e.dim;
@@ -267,19 +267,19 @@ inline regular_simplex_mesh_element& regular_simplex_mesh_element::operator=(con
   return *this;
 }
 
-inline bool regular_simplex_mesh_element::operator<(const regular_simplex_mesh_element& e) const
+inline bool simplicial_regular_mesh_element::operator<(const simplicial_regular_mesh_element& e) const
 {
   if (corner < e.corner) return true;
   else if (corner == e.corner) return type < e.type;
   else return false;
 }
 
-inline bool regular_simplex_mesh_element::operator==(const regular_simplex_mesh_element& e) const
+inline bool simplicial_regular_mesh_element::operator==(const simplicial_regular_mesh_element& e) const
 {
   return dim == e.dim && type == e.type && corner == e.corner;
 }
 
-inline bool regular_simplex_mesh_element::valid(const regular_simplex_mesh& m) const {
+inline bool simplicial_regular_mesh_element::valid(const simplicial_regular_mesh& m) const {
   if (type < 0 || type >= m.ntypes(dim)) return false;
   else {
     auto my_vertices = vertices(m);
@@ -296,7 +296,7 @@ inline bool regular_simplex_mesh_element::valid(const regular_simplex_mesh& m) c
   }
 }
 
-inline std::vector<std::vector<int> > regular_simplex_mesh_element::vertices(const regular_simplex_mesh& m) const
+inline std::vector<std::vector<int> > simplicial_regular_mesh_element::vertices(const simplicial_regular_mesh& m) const
 {
   std::vector<std::vector<int>> vertices;
 
@@ -311,7 +311,7 @@ inline std::vector<std::vector<int> > regular_simplex_mesh_element::vertices(con
   return vertices;
 }
  
-inline void regular_simplex_mesh_element::print(std::ostream& os, const regular_simplex_mesh& m) const
+inline void simplicial_regular_mesh_element::print(std::ostream& os, const simplicial_regular_mesh& m) const
 {
   const auto &e = *this;
 
@@ -344,7 +344,7 @@ inline void regular_simplex_mesh_element::print(std::ostream& os, const regular_
   os << "valid=" << e.valid(m);
 }
 
-inline std::ostream& operator<<(std::ostream& os, const regular_simplex_mesh_element& e)
+inline std::ostream& operator<<(std::ostream& os, const simplicial_regular_mesh_element& e)
 {
   os << "dim=" << e.dim << ",cornor={";
   for (size_t i = 0; i < e.corner.size(); i ++)
@@ -397,13 +397,13 @@ inline std::ostream& operator<<(std::ostream& os, const regular_simplex_mesh_ele
   return os;
 }
 
-inline size_t regular_simplex_mesh_element::to_work_index(const regular_simplex_mesh& m, const lattice& l, int scope) const
+inline size_t simplicial_regular_mesh_element::to_work_index(const simplicial_regular_mesh& m, const lattice& l, int scope) const
 {
   size_t idx = l.to_integer(corner);
   return idx * m.ntypes(dim, scope);
 }
 
-inline void regular_simplex_mesh_element::from_work_index(const regular_simplex_mesh& m, size_t i, const lattice& l, int scope)
+inline void simplicial_regular_mesh_element::from_work_index(const simplicial_regular_mesh& m, size_t i, const lattice& l, int scope)
 {
   const auto itype = i % m.ntypes(dim, scope);
   auto ii = i / m.ntypes(dim, scope);
@@ -419,7 +419,7 @@ inline void regular_simplex_mesh_element::from_work_index(const regular_simplex_
 }
 
 template <typename uint>
-uint regular_simplex_mesh_element::to_integer(const regular_simplex_mesh& m) const
+uint simplicial_regular_mesh_element::to_integer(const simplicial_regular_mesh& m) const
 {
   uint corner_index = 0;
   for (size_t i = 0; i < m.nd(); i ++)
@@ -428,7 +428,7 @@ uint regular_simplex_mesh_element::to_integer(const regular_simplex_mesh& m) con
 }
 
 template <typename uint>
-void regular_simplex_mesh_element::from_integer(const regular_simplex_mesh& m, uint index)
+void simplicial_regular_mesh_element::from_integer(const simplicial_regular_mesh& m, uint index)
 {
   type = index % m.ntypes(dim);
   uint corner_index = index / m.ntypes(dim); // m.dimprod_[m.nd()];
@@ -446,7 +446,7 @@ void regular_simplex_mesh_element::from_integer(const regular_simplex_mesh& m, u
 }
 
 #if 0
-inline std::string regular_simplex_mesh_element::to_string() const
+inline std::string simplicial_regular_mesh_element::to_string() const
 {
   std::stringstream res;
 
@@ -458,7 +458,7 @@ inline std::string regular_simplex_mesh_element::to_string() const
   return res_str; 
 }
 
-inline void regular_simplex_mesh_element::from_string(const std::string& index)
+inline void simplicial_regular_mesh_element::from_string(const std::string& index)
 {
   std::stringstream index_stream(index);
   std::vector<int> arr; 
@@ -478,7 +478,7 @@ inline void regular_simplex_mesh_element::from_string(const std::string& index)
 
 #if 0
 template <int nd> 
-std::tuple<std::array<int, nd>, int> regular_simplex_mesh_element::to_index() const
+std::tuple<std::array<int, nd>, int> simplicial_regular_mesh_element::to_index() const
 {
   std::array<int, nd> arr;
   std::copy_n(corner.begin(), nd, corner.end());
@@ -486,7 +486,7 @@ std::tuple<std::array<int, nd>, int> regular_simplex_mesh_element::to_index() co
 }
 
 template <int nd> 
-void regular_simplex_mesh_element::from_index(const std::tuple<std::array<int, nd>, int>& tuple)
+void simplicial_regular_mesh_element::from_index(const std::tuple<std::array<int, nd>, int>& tuple)
 {
   const std::array<int, nd> &arr = std::get<0>(tuple);
   corner = std::vector<int>(arr.begin(), arr.end());
@@ -494,13 +494,13 @@ void regular_simplex_mesh_element::from_index(const std::tuple<std::array<int, n
 }
 #endif
 
-inline std::vector<regular_simplex_mesh_element> regular_simplex_mesh_element::sides(const regular_simplex_mesh& m) const
+inline std::vector<simplicial_regular_mesh_element> simplicial_regular_mesh_element::sides(const simplicial_regular_mesh& m) const
 {
   const auto &unit_simplex_sides = m.unit_simplex_sides[dim][type];
-  std::vector<regular_simplex_mesh_element> sides;
+  std::vector<simplicial_regular_mesh_element> sides;
 
   for (auto s : unit_simplex_sides) {
-    regular_simplex_mesh_element side(corner, dim-1, std::get<0>(s));
+    simplicial_regular_mesh_element side(corner, dim-1, std::get<0>(s));
     const auto &offset = std::get<1>(s);
     for (int i = 0; i < m.nd(); i ++) 
       side.corner[i] += offset[i];
@@ -510,13 +510,13 @@ inline std::vector<regular_simplex_mesh_element> regular_simplex_mesh_element::s
   return sides;
 }
 
-inline std::vector<regular_simplex_mesh_element> regular_simplex_mesh_element::side_of(const regular_simplex_mesh& m) const
+inline std::vector<simplicial_regular_mesh_element> simplicial_regular_mesh_element::side_of(const simplicial_regular_mesh& m) const
 {
   const auto &unit_simplex_side_of = m.unit_simplex_side_of[dim][type];
-  std::vector<regular_simplex_mesh_element> side_of;
+  std::vector<simplicial_regular_mesh_element> side_of;
 
   for (auto s : unit_simplex_side_of) {
-    regular_simplex_mesh_element e(corner, dim+1, std::get<0>(s));
+    simplicial_regular_mesh_element e(corner, dim+1, std::get<0>(s));
     const auto &offset = std::get<1>(s);
     for (int i = 0; i < m.nd(); i ++)
       e.corner[i] += offset[i];
@@ -526,7 +526,7 @@ inline std::vector<regular_simplex_mesh_element> regular_simplex_mesh_element::s
   return side_of;
 }
 
-inline int regular_simplex_mesh::ntypes(int d, int scope) const 
+inline int simplicial_regular_mesh::ntypes(int d, int scope) const 
 {
   switch (scope) {
   case ELEMENT_SCOPE_ALL: return ntypes_.at(d);
@@ -536,7 +536,7 @@ inline int regular_simplex_mesh::ntypes(int d, int scope) const
   }
 }
 
-inline std::vector<std::vector<std::vector<int>>> regular_simplex_mesh::subdivide_unit_cube(int n)
+inline std::vector<std::vector<std::vector<int>>> simplicial_regular_mesh::subdivide_unit_cube(int n)
 {
   std::vector<std::vector<std::vector<int>>> results;
   if (n == 1) {
@@ -572,7 +572,7 @@ inline std::vector<std::vector<std::vector<int>>> regular_simplex_mesh::subdivid
 }
 
 inline std::tuple<std::vector<std::vector<int>>, std::vector<int>>
-regular_simplex_mesh::reduce_unit_simplex(const std::vector<std::vector<int>> &simplex_) const
+simplicial_regular_mesh::reduce_unit_simplex(const std::vector<std::vector<int>> &simplex_) const
 {
   auto simplex = simplex_;
   const size_t nvertices = simplex.size();
@@ -601,7 +601,7 @@ regular_simplex_mesh::reduce_unit_simplex(const std::vector<std::vector<int>> &s
   return std::make_tuple(simplex, offset);
 }
 
-inline std::vector<std::vector<std::vector<int>>> regular_simplex_mesh::enumerate_unit_simplices(int n, int k)
+inline std::vector<std::vector<std::vector<int>>> simplicial_regular_mesh::enumerate_unit_simplices(int n, int k)
 {
   std::set<std::vector<std::vector<int>>> results;
   if (n == k) {
@@ -633,7 +633,7 @@ inline std::vector<std::vector<std::vector<int>>> regular_simplex_mesh::enumerat
   return results1;
 }
 
-inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enumerate_unit_simplex_side_of(int k, int type)
+inline std::vector<std::tuple<int, std::vector<int>>> simplicial_regular_mesh::enumerate_unit_simplex_side_of(int k, int type)
 {
   std::vector<std::tuple<int, std::vector<int>>> side_of;
   if (k == nd()) return side_of;
@@ -641,13 +641,13 @@ inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enum
   std::set<std::tuple<int, std::vector<int>>> my_side_of;
 
   std::vector<int> zero_corner(nd(), 0);
-  const auto k_simplex = regular_simplex_mesh_element(zero_corner, k, type);
+  const auto k_simplex = simplicial_regular_mesh_element(zero_corner, k, type);
   const auto k_simplex_vertices = k_simplex.vertices(*this);
 
   int k_plus_one_simplex_type = 0;
   std::vector<int> corner(nd(), -1);
   while (1) {
-    const regular_simplex_mesh_element k_plus_one_simplex(corner, k+1, k_plus_one_simplex_type);
+    const simplicial_regular_mesh_element k_plus_one_simplex(corner, k+1, k_plus_one_simplex_type);
     const auto k_plus_one_simplex_vertices = k_plus_one_simplex.vertices(*this);
 
     // check if (k+1)-simplex contains the given k-simplex.
@@ -676,7 +676,7 @@ inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enum
   return side_of;
 }
 
-inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enumerate_unit_simplex_sides(int k, int type)
+inline std::vector<std::tuple<int, std::vector<int>>> simplicial_regular_mesh::enumerate_unit_simplex_sides(int k, int type)
 {
   std::vector<std::tuple<int, std::vector<int>>> sides;
   if (k == 0) return sides;
@@ -715,7 +715,7 @@ inline std::vector<std::tuple<int, std::vector<int>>> regular_simplex_mesh::enum
   return sides;
 }
 
-inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
+inline void simplicial_regular_mesh::derive_ordinal_and_interval_simplices()
 {
   for (int d = 0; d < nd()+1; d ++) {
     std::vector<int> ordinal_simplex_types, interval_simplex_types;
@@ -744,22 +744,22 @@ inline void regular_simplex_mesh::derive_ordinal_and_interval_simplices()
 }
 
 #if 0
-inline void regular_simplex_mesh::partition(int np, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+inline void simplicial_regular_mesh::partition(int np, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions) {
   std::vector<size_t> vector_zero = {0}; 
   partition(np, vector_zero, vector_zero, vector_zero, partitions); 
 }
 
-inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+inline void simplicial_regular_mesh::partition(int np, const std::vector<size_t> &given, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions) {
   std::vector<size_t> vector_zero = {0}; 
   partition(np, given, vector_zero, vector_zero, partitions); 
 }
 
-inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+inline void simplicial_regular_mesh::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions) {
   partition(np, given, ghost, ghost, partitions); 
 }
 
-inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, 
-    const std::vector<size_t> &ghost_high, std::vector<std::tuple<regular_simplex_mesh, regular_simplex_mesh>>& partitions) {
+inline void simplicial_regular_mesh::partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, 
+    const std::vector<size_t> &ghost_high, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions) {
   std::vector<std::tuple<lattice, lattice>> lattice_partitions;
   this->lattice_.partition(np, given, ghost_low, ghost_high, lattice_partitions); 
 
@@ -768,20 +768,20 @@ inline void regular_simplex_mesh::partition(int np, const std::vector<size_t> &g
     lattice& lattice_p = std::get<0>(lattice_pair); 
     lattice& lattice_ghost_p = std::get<1>(lattice_pair); 
 
-    regular_simplex_mesh p(this->nd(), lattice_p); 
-    regular_simplex_mesh ghost_p(this->nd(), lattice_ghost_p); 
+    simplicial_regular_mesh p(this->nd(), lattice_p); 
+    simplicial_regular_mesh ghost_p(this->nd(), lattice_ghost_p); 
 
     partitions.push_back(std::make_tuple(p, ghost_p)); 
   }
 }
 #endif
 
-inline void regular_simplex_mesh::print_unit_simplices(int nd, int d) const
+inline void simplicial_regular_mesh::print_unit_simplices(int nd, int d) const
 {
 
 }
 
-inline void regular_simplex_mesh::initialize_subdivision()
+inline void simplicial_regular_mesh::initialize_subdivision()
 {
   ntypes_.resize(nd() + 1);
   unit_simplices.resize(nd() + 1);
@@ -816,7 +816,7 @@ inline void regular_simplex_mesh::initialize_subdivision()
   derive_ordinal_and_interval_simplices();
 }
 
-inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std::vector<int>& u)
+inline void simplicial_regular_mesh::set_lb_ub(const std::vector<int>& l, const std::vector<int>& u)
 {
   lb_.resize(nd());
   ub_.resize(nd());
@@ -835,7 +835,7 @@ inline void regular_simplex_mesh::set_lb_ub(const std::vector<int>& l, const std
   }
 }
 
-inline void regular_simplex_mesh::set_lb_ub(const lattice& _lattice) {
+inline void simplicial_regular_mesh::set_lb_ub(const lattice& _lattice) {
   std::vector<size_t> _lattice_lb = _lattice.lower_bounds(); 
   std::vector<int> _lb(_lattice_lb.begin(), _lattice_lb.end());
 
@@ -845,7 +845,7 @@ inline void regular_simplex_mesh::set_lb_ub(const lattice& _lattice) {
   this->set_lb_ub(_lb, _ub);
 }
 
-inline std::vector<int> regular_simplex_mesh::sizes() {
+inline std::vector<int> simplicial_regular_mesh::sizes() {
   std::vector<int> sizes; 
   for(int i = 0; i < nd(); ++i) {
     sizes.push_back(ub_[i] - lb_[i] + 1); 
@@ -855,16 +855,16 @@ inline std::vector<int> regular_simplex_mesh::sizes() {
 }
 
 #if 0
-inline regular_simplex_mesh::iterator regular_simplex_mesh::element_begin(int d, int scope)
+inline simplicial_regular_mesh::iterator simplicial_regular_mesh::element_begin(int d, int scope)
 {
-  regular_simplex_mesh_element e(*this, d);
+  simplicial_regular_mesh_element e(*this, d);
   e.corner = lb();
   return e;
 }
 
-inline regular_simplex_mesh::iterator regular_simplex_mesh::element_end(int d, int scope)
+inline simplicial_regular_mesh::iterator simplicial_regular_mesh::element_end(int d, int scope)
 {
-  regular_simplex_mesh_element e(*this, d);
+  simplicial_regular_mesh_element e(*this, d);
   e.corner = ub();
   // e.type = ntypes(d) - 1;
   e.type = ntypes(d, scope); // the invalid type id combines with the ub corner encodes the end.
@@ -872,17 +872,17 @@ inline regular_simplex_mesh::iterator regular_simplex_mesh::element_end(int d, i
 }
 #endif
 
-inline size_t regular_simplex_mesh::n(int d, int scope) const
+inline size_t simplicial_regular_mesh::n(int d, int scope) const
 {
   return (size_t)ntypes(d, scope) * dimprod_[nd()];
 }
   
-inline void regular_simplex_mesh::element_for(int d, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
+inline void simplicial_regular_mesh::element_for(int d, std::function<void(simplicial_regular_mesh_element)> f, int nthreads)
 {
   element_for(d, lattice_, ELEMENT_SCOPE_ALL, f, nthreads);
 }
   
-inline void regular_simplex_mesh::element_for_ordinal(int d, int t, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
+inline void simplicial_regular_mesh::element_for_ordinal(int d, int t, std::function<void(simplicial_regular_mesh_element)> f, int nthreads)
 {
   auto st = lattice_.starts(), sz = lattice_.sizes();
   st[nd()-1] = t;
@@ -894,7 +894,7 @@ inline void regular_simplex_mesh::element_for_ordinal(int d, int t, std::functio
   element_for(d, my_lattice, ELEMENT_SCOPE_ORDINAL, f, nthreads);
 }
   
-inline void regular_simplex_mesh::element_for_interval(int d, int t0, int t1, std::function<void(regular_simplex_mesh_element)> f, int nthreads)
+inline void simplicial_regular_mesh::element_for_interval(int d, int t0, int t1, std::function<void(simplicial_regular_mesh_element)> f, int nthreads)
 {
   auto st = lattice_.starts(), sz = lattice_.sizes();
   st[nd()-1] = t0;
@@ -905,13 +905,13 @@ inline void regular_simplex_mesh::element_for_interval(int d, int t0, int t1, st
   element_for(d, my_lattice, ELEMENT_SCOPE_INTERVAL, f, nthreads);
 }
 
-inline void regular_simplex_mesh::element_for(
+inline void simplicial_regular_mesh::element_for(
     int d, const lattice& l, int scope, 
-    std::function<void(regular_simplex_mesh_element)> f,
+    std::function<void(simplicial_regular_mesh_element)> f,
     int nthreads)
 {
   auto lambda = [=](size_t j) {
-    regular_simplex_mesh_element e(*this, d, j, l, scope);
+    simplicial_regular_mesh_element e(*this, d, j, l, scope);
     f(e);
   };
 
@@ -945,14 +945,14 @@ inline void regular_simplex_mesh::element_for(
 
 
 namespace diy {
-  template <> struct Serialization<ftk::regular_simplex_mesh_element> {
-    static void save(diy::BinaryBuffer& bb, const ftk::regular_simplex_mesh_element &e) {
+  template <> struct Serialization<ftk::simplicial_regular_mesh_element> {
+    static void save(diy::BinaryBuffer& bb, const ftk::simplicial_regular_mesh_element &e) {
       diy::save(bb, e.corner);
       diy::save(bb, e.dim);
       diy::save(bb, e.type);
     }
 
-    static void load(diy::BinaryBuffer& bb, ftk::regular_simplex_mesh_element& e) {
+    static void load(diy::BinaryBuffer& bb, ftk::simplicial_regular_mesh_element& e) {
       diy::load(bb, e.corner); 
       diy::load(bb, e.dim);
       diy::load(bb, e.type);
