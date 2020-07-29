@@ -13,15 +13,15 @@ struct simplicial_unstructured_extruded_2d_mesh { // extruded from
   size_t n_ordinal(int d) const { return m.n(d); }
   size_t n_interval(int d) const;
 
-  I flat_vertex_id(I i) { return i % m.n(0); }
-  I flat_vertex_time(I i) { return i / m.n(0); }
+  I flat_vertex_id(I i) const { return i % m.n(0); }
+  I flat_vertex_time(I i) const { return i / m.n(0); }
 
   I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
 
 public: // element iteration
-  void element_for(int d, std::function<void(I)> f);
-  void element_for_ordinal(int d, int t, std::function<void(I)> f);
-  void element_for_interval(int d, int t, std::function<void(I)> f);
+  void element_for(int d, std::function<void(I)> f) const;
+  void element_for_ordinal(int d, int t, std::function<void(I)> f) const;
+  void element_for_interval(int d, int t, std::function<void(I)> f) const;
 
 public: // mesh access
   std::set<I> sides(int d, I i);
@@ -150,21 +150,21 @@ size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n_interval(int d) const
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f)
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f) const
 {
   for (auto i = 0; i < n(d); i ++)
     f(i);
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f)
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f) const
 {
   for (auto i = 0; i < n_ordinal(d); i ++)
     f(i + t * n(d));
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f)
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f) const
 {
   for (auto i = 0; i < n_interval(d); i ++)
     f(i + n_ordinal(d) + t * n(d));

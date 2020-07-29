@@ -1,4 +1,4 @@
-// #include <ftk/filters/critical_point_tracker_2d_regular.hh>
+#include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/numeric/print.hh>
@@ -64,83 +64,11 @@ int main(int argc, char **argv)
   fprintf(stderr, "mesh loaded.\n");
 
   // build extruded mesh
-  ftk::simplicial_unstructured_extruded_2d_mesh<> m1(m);
-  fprintf(stderr, "extrusion mesh built.\n");
+  // ftk::simplicial_unstructured_extruded_2d_mesh<> m1(m);
+  // fprintf(stderr, "extrusion mesh built.\n");
 
   // smoothing data; extract cps
   if (input_filename.length()) {
-#if 0 // extract spatial critical points from one single timestep
-    ftk::ndarray<double> dpot;
-    dpot.from_h5(input_filename, "/dpot");
-    dpot = dpot.transpose();
-    dpot.reshape(dpot.dim(0));
-
-    ftk::ndarray<double> f, grad, J;
-    m.smooth_scalar_gradient_jacobian(dpot, sigma, f, grad, J);
-    
-    m.scalar_to_vtk_unstructured_grid_data_file("out.vtu", "dpot", dpot);
-    m.scalar_to_vtk_unstructured_grid_data_file("out-scalar.vtu", "dpot", f);
-    m.vector_to_vtk_unstructured_grid_data_file("out-grad.vtu", "ddpot", grad);
-
-    std::vector<double> cps;
-    std::vector<unsigned int> types;
-
-    m.element_for(2, [&](int i) {
-      int tri[3];
-      m.get_triangle(i, tri);
-
-      // typedef ftk::fixed_point<> fp_t;
-      typedef mpf_class fp_t;
-      double V[3][2], X[3][2];
-      fp_t Vf[3][2];
-      for (int k = 0; k < 3; k ++)
-        for (int j = 0; j < 2; j ++) {
-          V[k][j] = grad(j, tri[k]);
-          Vf[k][j] = V[k][j];
-          X[k][j] = coords(j, tri[k]);
-        }
-
-      bool succ = ftk::robust_critical_point_in_simplex2(Vf, tri);
-      if (!succ) return;
-
-      // ftk::print3x2("V", V);
-      double mu[3], x[2];
-      bool succ2 = ftk::inverse_lerp_s2v2(V, mu);
-      // if (!succ2) return;
-      ftk::lerp_s2v2(X, mu, x);
-
-      double Js[3][2][2], H[2][2];
-      for (int k = 0; k < 3; k ++)
-        for (int j = 0; j < 2; j ++)
-          for (int i = 0; i < 2; i ++)
-            Js[k][j][i] = J(i, j, tri[k]);
-      ftk::lerp_s2m2x2(Js, mu, H);
-      ftk::print2x2("H", H);
-      const int type = ftk::critical_point_type_2d(H, true);
-      
-      fprintf(stderr, "mu=%f, %f, %f, x=%f, %f, type=%d\n", 
-          mu[0], mu[1], mu[2], x[0], x[1], type);
-      cps.push_back(x[0]);
-      cps.push_back(x[1]);
-      types.push_back(type);
-    });
-
-    {
-      auto poly = ftk::points2vtk(cps, 2);
-      vtkSmartPointer<vtkUnsignedIntArray> vtypes = vtkUnsignedIntArray::New();
-      vtypes->SetNumberOfValues(types.size());
-      for (auto i = 0; i < types.size(); i ++)
-        vtypes->SetValue(i, types[i]);
-      vtypes->SetName("type");
-      poly->GetPointData()->AddArray(vtypes);
-
-      vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
-      writer->SetFileName("out.vtp");
-      writer->SetInputData(poly);
-      writer->Write();
-    }
-#endif
-    
     ftk::ndarray<double> data;
     data.from_h5(input_filename, "/dpot");
     data = data.transpose();
@@ -155,7 +83,10 @@ int main(int argc, char **argv)
       m.smooth_scalar_gradient_jacobian(slice, sigma, scalar[i], grad[i], J[i]);
     }
     fprintf(stderr, "data preconditioned.");
+    
+    ftk::critical_point_tracker_2d_unstructured tracker(m);
 
+#if 0
     std::vector<double> cps;
     std::vector<unsigned int> types;
 
@@ -221,6 +152,7 @@ int main(int argc, char **argv)
       writer->SetInputData(poly);
       writer->Write();
     }
+#endif
   }
 
   return 0;

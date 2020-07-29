@@ -21,7 +21,8 @@
 #include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
-#include <ftk/mesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/simplicial_regular_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/external/diy/serialization.hpp>
 
 #if FTK_HAVE_GMP
@@ -39,21 +40,37 @@ typedef critical_point_t<3, double> critical_point_2dt_t;
 
 struct critical_point_tracker_2d_unstructured : public critical_point_tracker_regular
 {
-  critical_point_tracker_2d_unstructured(const simplicial_unstructured_extruded_2d_mesh<>& m) : m1(m) {}
+  // critical_point_tracker_2d_unstructured(const simplicial_unstructured_extruded_2d_mesh<>& m) : m(m) {}
+  // critical_point_tracker_2d_unstructured() {}
+  critical_point_tracker_2d_unstructured(const simplicial_unstructured_2d_mesh<>& m) : m(simplicial_unstructured_extruded_2d_mesh<>(m)) {}
 
-  virtual ~critical_point_tracker_2d_unstructured();
+  virtual ~critical_point_tracker_2d_unstructured() {};
 
-  void initialize();
-  void finalize();
-  void reset();
+  void initialize() {}
+  void finalize() {}
+  void reset() {}
 
   void update_timestep();
+
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const {} // TODO
+  vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const {} // TODO
+#endif
+
+  void write_traced_critical_points_text(std::ostream& os) const {} // TODO
+  void write_discrete_critical_points_text(std::ostream &os) const {} // TODO
+
+  void push_scalar_field_snapshot(const ndarray<double>&) {} // TODO
+  void push_vector_field_snapshot(const ndarray<double>&) {} // TODO
 
 protected:
   bool check_simplex(int, critical_point_2dt_t& cp);
 
+  template <typename T> void simplex_vectors(int n, int verts[], T v[][2]) const;
+  void simplex_coordinates(int n, int verts[], double x[][3]) const;
+
 protected:
-  const simplicial_unstructured_extruded_2d_mesh& m1;
+  const simplicial_unstructured_extruded_2d_mesh<> m;
   
   std::map<int, critical_point_2dt_t> discrete_critical_points;
 };
@@ -62,26 +79,25 @@ protected:
 
 template <typename T>
 inline void critical_point_tracker_2d_unstructured::simplex_vectors(
-    int n, int verts[], T v[][2])
+    int n, int verts[], T v[][2]) const
 {
   for (int i = 0; i < n; i ++) {
-    const int iv = m1.flat_vertex_time(vert[i]) == current_timestep ? 0 : 1;
-    const int k = m1.flat_vertex_id(vert[i]);
+    const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
+    const int k = m.flat_vertex_id(verts[i]);
     for (int j = 0; j < 2; j ++) {
-      v[i][j] = field_data_snapshots[iv].vector(j, vert[k]);
+      v[i][j] = field_data_snapshots[iv].vector(j, verts[k]);
     }
   }
 }
 
-template <typename T>
 inline void critical_point_tracker_2d_unstructured::simplex_coordinates(
-    int n, int verts[], T x[][3])
+    int n, int verts[], double x[][3]) const
 {
   for (int i = 0; i < n; i ++)
-    m1.get_coords(i, x[i]);
+    m.get_coords(verts[i], x[i]);
 }
 
-inline bool check_simplex(int, critical_point_2dt_t& cp)
+inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critical_point_2dt_t& cp)
 {
 #if FTK_HAVE_GMP
   typedef mpf_class fp_t;
@@ -90,7 +106,7 @@ inline bool check_simplex(int, critical_point_2dt_t& cp)
 #endif
   
   int tri[3];
-  m1.get_simplex(2, i, tri); 
+  m.get_simplex(2, i, tri); 
 
   double V[3][2], X[3][3];
   simplex_vectors<double>(3, tri, V);
@@ -98,11 +114,11 @@ inline bool check_simplex(int, critical_point_2dt_t& cp)
 
   fp_t Vf[3][2];
   for (int k = 0; k < 3; k ++) 
-    for (int j = 0; j < 2; j ++) {
+    for (int j = 0; j < 2; j ++)
       Vf[k][j] = V[k][j];
 
   bool succ = ftk::robust_critical_point_in_simplex2(Vf, tri);
-  if (!succ) return;
+  if (!succ) return false;
 
   // ftk::print3x2("V", V);
   double mu[3], x[3];
@@ -128,6 +144,8 @@ inline bool check_simplex(int, critical_point_2dt_t& cp)
 
   fprintf(stderr, "mu=%f, %f, %f, x=%f, %f, %f, type=%d\n", 
       mu[0], mu[1], mu[2], x[0], x[1], x[2], type);
+
+  return true;
   // cps.push_back(x[0]);
   // cps.push_back(x[1]);
   // cps.push_back(x[2]);
