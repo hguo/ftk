@@ -159,7 +159,7 @@ int main(int argc, char **argv)
     std::vector<double> cps;
     std::vector<unsigned int> types;
 
-    m1.element_for(2, [&](int i) {
+    m1.element_for_ordinal(2, 0, [&](int i) {
       int tri[3];
       m1.get_simplex(2, i, tri); 
 

@@ -14,18 +14,21 @@ struct simplex_2d_extrusion_mesh { // extruded from
   size_t n_interval(int d) const;
 
   I flat_vertex_id(I i) { return i % m.n(0); }
-  I extrude_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
+  I flat_vertex_time(I i) { return i / m.n(0); }
+
+  I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
 
 public: // element iteration
   void element_for(int d, std::function<void(I)> f);
-  void element_for_ordinal(int d, std::function<void(I)> f);
-  void element_for_interval(int d, std::function<void(I)> f);
+  void element_for_ordinal(int d, int t, std::function<void(I)> f);
+  void element_for_interval(int d, int t, std::function<void(I)> f);
 
 public: // mesh access
   std::set<I> sides(int d, I i);
   std::set<I> side_of(int d, I i);
 
   void get_simplex(int d, I i, I verts[]) const;
+  void get_coords(I i, F coords[]) const;
   
 protected:
   void extrude();
@@ -154,17 +157,17 @@ void simplex_2d_extrusion_mesh<I, F>::element_for(int d, std::function<void(I)> 
 }
 
 template <typename I, typename F>
-void simplex_2d_extrusion_mesh<I, F>::element_for_ordinal(int d, std::function<void(I)> f)
+void simplex_2d_extrusion_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f)
 {
   for (auto i = 0; i < n_ordinal(d); i ++)
-    f(i);
+    f(i + t * n(d));
 }
 
 template <typename I, typename F>
-void simplex_2d_extrusion_mesh<I, F>::element_for_interval(int d, std::function<void(I)> f)
+void simplex_2d_extrusion_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f)
 {
   for (auto i = 0; i < n_interval(d); i ++)
-    f(i + n_ordinal(d));
+    f(i + n_ordinal(d) + t * n(d));
 }
 
 template <typename I, typename F>
@@ -186,6 +189,15 @@ void simplex_2d_extrusion_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
     verts[3] = tets(3, i);
   }
   
+}
+
+template <typename I, typename F>
+void simplex_2d_extrusion_mesh<I, F>::get_coords(I i, F coords[]) const
+{
+  const I k = flat_vertex_id(i),
+          t = flat_vertex_time(i);
+  m.get_coords(k, coords);
+  coords[2] = F(t);
 }
 
 }

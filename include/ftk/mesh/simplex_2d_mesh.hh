@@ -82,6 +82,7 @@ public: // mesh access
 
   void get_triangle(I i, I tri[]) const;
   void get_edge(I i, I edge[]) const;
+  void get_coords(I i, F coords[]) const;
 
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
@@ -400,6 +401,13 @@ void simplex_2d_mesh<I, F>::get_edge(I i, I v[]) const
 {
   v[0] = edges(0, i);
   v[1] = edges(1, i);
+}
+
+template <typename I, typename F>
+void simplex_2d_mesh<I, F>::get_coords(I i, F coords[]) const
+{
+  coords[0] = vertex_coords(0, i);
+  coords[1] = vertex_coords(1, i);
 }
 
 }
