@@ -67,10 +67,9 @@ int main(int argc, char **argv)
   ftk::simplex_2d_extrusion_mesh<> m1(m);
   fprintf(stderr, "extrusion mesh built.\n");
 
-  return 0;
-
   // smoothing data; extract cps
   if (input_filename.length()) {
+#if 0 // extract spatial critical points from one single timestep
     ftk::ndarray<double> dpot;
     dpot.from_h5(input_filename, "/dpot");
     dpot = dpot.transpose();
@@ -128,6 +127,88 @@ int main(int argc, char **argv)
 
     {
       auto poly = ftk::points2vtk(cps, 2);
+      vtkSmartPointer<vtkUnsignedIntArray> vtypes = vtkUnsignedIntArray::New();
+      vtypes->SetNumberOfValues(types.size());
+      for (auto i = 0; i < types.size(); i ++)
+        vtypes->SetValue(i, types[i]);
+      vtypes->SetName("type");
+      poly->GetPointData()->AddArray(vtypes);
+
+      vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
+      writer->SetFileName("out.vtp");
+      writer->SetInputData(poly);
+      writer->Write();
+    }
+#endif
+    
+    ftk::ndarray<double> data;
+    data.from_h5(input_filename, "/dpot");
+    data = data.transpose();
+    // dpot.reshape(dpot.dim(0));
+
+    std::vector<ftk::ndarray<double>> scalar(data.dim(1)), grad(data.dim(1)), J(data.dim(1));
+    for (auto i = 0; i < data.dim(1); i ++) {
+      ftk::ndarray<double> slice;
+      slice.reshape(data.dim(0));
+      for (auto j = 0; j < data.dim(0); j ++)
+        slice[j] = data(j, i);
+      m.smooth_scalar_gradient_jacobian(slice, sigma, scalar[i], grad[i], J[i]);
+    }
+    fprintf(stderr, "data preconditioned.");
+
+    std::vector<double> cps;
+    std::vector<unsigned int> types;
+
+    m1.element_for(2, [&](int i) {
+      int tri[3];
+      m1.get_simplex(2, i, tri); 
+
+      // typedef ftk::fixed_point<> fp_t;
+      typedef mpf_class fp_t;
+      double V[3][2], X[3][3];
+      fp_t Vf[3][2];
+      for (int k = 0; k < 3; k ++) {
+        int t = tri[k] >= m.n(0) ? 1 : 0;
+        int v = tri[k] % m.n(0);
+        for (int j = 0; j < 2; j ++) {
+          V[k][j] = grad[t](j, v);
+          Vf[k][j] = V[k][j];
+          X[k][j] = coords(j, v);
+        }
+        X[k][2] = t;
+      }
+
+      bool succ = ftk::robust_critical_point_in_simplex2(Vf, tri);
+      if (!succ) return;
+
+      // ftk::print3x2("V", V);
+      double mu[3], x[3];
+      bool succ2 = ftk::inverse_lerp_s2v2(V, mu);
+      // if (!succ2) return;
+      ftk::lerp_s2v3(X, mu, x);
+
+      double Js[3][2][2], H[2][2];
+      for (int k = 0; k < 3; k ++) {
+        int t = tri[k] >= m.n(0) ? 1 : 0;
+        int v = tri[k] % m.n(0);
+        for (int j = 0; j < 2; j ++)
+          for (int i = 0; i < 2; i ++)
+            Js[k][j][i] = J[t](i, j, v); 
+      }
+      ftk::lerp_s2m2x2(Js, mu, H);
+      // ftk::print2x2("H", H);
+      const int type = ftk::critical_point_type_2d(H, true);
+
+      fprintf(stderr, "mu=%f, %f, %f, x=%f, %f, %f, type=%d\n", 
+          mu[0], mu[1], mu[2], x[0], x[1], x[2], type);
+      cps.push_back(x[0]);
+      cps.push_back(x[1]);
+      cps.push_back(x[2]);
+      types.push_back(type);
+    });
+
+    {
+      auto poly = ftk::points2vtk(cps, 3);
       vtkSmartPointer<vtkUnsignedIntArray> vtypes = vtkUnsignedIntArray::New();
       vtypes->SetNumberOfValues(types.size());
       for (auto i = 0; i < types.size(); i ++)

@@ -25,7 +25,7 @@ public: // mesh access
   std::set<I> sides(int d, I i);
   std::set<I> side_of(int d, I i);
 
-  void get_simplex(I i, I verts[]) const;
+  void get_simplex(int d, I i, I verts[]) const;
   
 protected:
   void extrude();
@@ -147,6 +147,13 @@ size_t simplex_2d_extrusion_mesh<I, F>::n_interval(int d) const
 }
 
 template <typename I, typename F>
+void simplex_2d_extrusion_mesh<I, F>::element_for(int d, std::function<void(I)> f)
+{
+  for (auto i = 0; i < n(d); i ++)
+    f(i);
+}
+
+template <typename I, typename F>
 void simplex_2d_extrusion_mesh<I, F>::element_for_ordinal(int d, std::function<void(I)> f)
 {
   for (auto i = 0; i < n_ordinal(d); i ++)
@@ -158,6 +165,27 @@ void simplex_2d_extrusion_mesh<I, F>::element_for_interval(int d, std::function<
 {
   for (auto i = 0; i < n_interval(d); i ++)
     f(i + n_ordinal(d));
+}
+
+template <typename I, typename F>
+void simplex_2d_extrusion_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
+{
+  if (d == 0) {
+    verts[0] = i;
+  } else if (d == 1) {
+    verts[0] = edges(0, i);
+    verts[1] = edges(1, i);
+  } else if (d == 2) {
+    verts[0] = tris(0, i);
+    verts[1] = tris(1, i);
+    verts[2] = tris(2, i);
+  } else if (d == 4) {
+    verts[0] = tets(0, i);
+    verts[1] = tets(1, i);
+    verts[2] = tets(2, i);
+    verts[3] = tets(3, i);
+  }
+  
 }
 
 }
