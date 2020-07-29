@@ -1,13 +1,13 @@
-#ifndef _HYPERMESH_SIMPLEX_2D_EXTRUSION_MESH_HH
-#define _HYPERMESH_SIMPLEX_2D_EXTRUSION_MESH_HH
+#ifndef _HYPERMESH_simplicial_unstructured_extruded_2d_mesh_HH
+#define _HYPERMESH_simplicial_unstructured_extruded_2d_mesh_HH
 
-#include <ftk/mesh/simplex_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 
 namespace ftk {
 
 template <typename I=int, typename F=double>
-struct simplex_2d_extrusion_mesh { // extruded from 
-  simplex_2d_extrusion_mesh(const simplex_2d_mesh<I, F>& m_) : m(m_) {extrude();}
+struct simplicial_unstructured_extruded_2d_mesh { // extruded from 
+  simplicial_unstructured_extruded_2d_mesh(const simplicial_unstructured_2d_mesh<I, F>& m_) : m(m_) {extrude();}
 
   size_t n(int d) const;
   size_t n_ordinal(int d) const { return m.n(d); }
@@ -34,7 +34,7 @@ protected:
   void extrude();
 
 private:
-  const simplex_2d_mesh<I, F>& m;
+  const simplicial_unstructured_2d_mesh<I, F>& m;
 
   ftk::ndarray<I> tets, // {4, n(3)}
                   tris, // {3, n(2)}
@@ -46,7 +46,7 @@ private:
 
 /////
 template <typename I, typename F>
-void simplex_2d_extrusion_mesh<I, F>::extrude() 
+void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude() 
 {
   tets.reshape({4, n(3)});
   
@@ -125,7 +125,7 @@ void simplex_2d_extrusion_mesh<I, F>::extrude()
 }
 
 template <typename I, typename F>
-size_t simplex_2d_extrusion_mesh<I, F>::n(int d) const
+size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n(int d) const
 {
   if (d == 0) {
     return m.n(0); // unique vertices in each interval
@@ -141,7 +141,7 @@ size_t simplex_2d_extrusion_mesh<I, F>::n(int d) const
 }
 
 template <typename I, typename F>
-size_t simplex_2d_extrusion_mesh<I, F>::n_interval(int d) const
+size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n_interval(int d) const
 {
   if (d == 1) return m.n(1)*2;
   else if (d == 2) return m.n(2)*2 + m.n(1)*2;
@@ -150,28 +150,28 @@ size_t simplex_2d_extrusion_mesh<I, F>::n_interval(int d) const
 }
 
 template <typename I, typename F>
-void simplex_2d_extrusion_mesh<I, F>::element_for(int d, std::function<void(I)> f)
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f)
 {
   for (auto i = 0; i < n(d); i ++)
     f(i);
 }
 
 template <typename I, typename F>
-void simplex_2d_extrusion_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f)
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f)
 {
   for (auto i = 0; i < n_ordinal(d); i ++)
     f(i + t * n(d));
 }
 
 template <typename I, typename F>
-void simplex_2d_extrusion_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f)
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f)
 {
   for (auto i = 0; i < n_interval(d); i ++)
     f(i + n_ordinal(d) + t * n(d));
 }
 
 template <typename I, typename F>
-void simplex_2d_extrusion_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
+void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
 {
   if (d == 0) {
     verts[0] = i;
@@ -192,7 +192,7 @@ void simplex_2d_extrusion_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
 }
 
 template <typename I, typename F>
-void simplex_2d_extrusion_mesh<I, F>::get_coords(I i, F coords[]) const
+void simplicial_unstructured_extruded_2d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
   const I k = flat_vertex_id(i),
           t = flat_vertex_time(i);

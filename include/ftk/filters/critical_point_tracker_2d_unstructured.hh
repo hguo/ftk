@@ -39,7 +39,7 @@ typedef critical_point_t<3, double> critical_point_2dt_t;
 
 struct critical_point_tracker_2d_unstructured : public critical_point_tracker_regular
 {
-  critical_point_tracker_2d_unstructured(const simplex_2d_extrusion_mesh<>& m) : m1(m) {}
+  critical_point_tracker_2d_unstructured(const simplicial_unstructured_extruded_2d_mesh<>& m) : m1(m) {}
 
   virtual ~critical_point_tracker_2d_unstructured();
 
@@ -53,7 +53,7 @@ protected:
   bool check_simplex(int, critical_point_2dt_t& cp);
 
 protected:
-  const simplex_2d_extrusion_mesh& m1;
+  const simplicial_unstructured_extruded_2d_mesh& m1;
   
   std::map<int, critical_point_2dt_t> discrete_critical_points;
 };

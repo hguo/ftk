@@ -1,6 +1,6 @@
 // #include <ftk/filters/critical_point_tracker_2d_regular.hh>
-#include <ftk/mesh/simplex_2d_mesh.hh>
-#include <ftk/mesh/simplex_2d_extrusion_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/ndarray/synthetic.hh>
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
   coords.from_h5(mesh_filename, "/coordinates/values");
  
   // build mesh
-  ftk::simplex_2d_mesh<> m(coords, triangles);
+  ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);
   m.build_edges();
   m.build_vertex_links();
 
@@ -64,7 +64,7 @@ int main(int argc, char **argv)
   fprintf(stderr, "mesh loaded.\n");
 
   // build extruded mesh
-  ftk::simplex_2d_extrusion_mesh<> m1(m);
+  ftk::simplicial_unstructured_extruded_2d_mesh<> m1(m);
   fprintf(stderr, "extrusion mesh built.\n");
 
   // smoothing data; extract cps

@@ -30,14 +30,14 @@
 namespace ftk {
 
 template <typename I=int, typename F=double>
-struct simplex_2d_mesh { // 2D triangular mesh
-  simplex_2d_mesh() {}
+struct simplicial_unstructured_2d_mesh { // 2D triangular mesh
+  simplicial_unstructured_2d_mesh() {}
 
-  simplex_2d_mesh(
+  simplicial_unstructured_2d_mesh(
       const std::vector<F>& coords, // coordinates of vertices; the dimension of the array is 2 * n_vertices
       const std::vector<I>& triangles); // vertex id of triangles; the dimension of the array is 3 * n_triangles
 
-  simplex_2d_mesh(
+  simplicial_unstructured_2d_mesh(
       const ndarray<F>& coords_, // 2 * n_vertices
       const ndarray<I>& triangles_) // 3 * n_triangles
     : vertex_coords(coords_), triangles(triangles_) {}
@@ -102,7 +102,7 @@ private:
 /////////
 
 template <typename I, typename F>
-simplex_2d_mesh<I, F>::simplex_2d_mesh(const std::vector<F> &coords_, const std::vector<I> &triangles_)
+simplicial_unstructured_2d_mesh<I, F>::simplicial_unstructured_2d_mesh(const std::vector<F> &coords_, const std::vector<I> &triangles_)
 {
   vertex_coords.copy_vector(coords_);
   vertex_coords.reshape({2, coords_.size()/2});
@@ -112,7 +112,7 @@ simplex_2d_mesh<I, F>::simplex_2d_mesh(const std::vector<F> &coords_, const std:
 }
 
 template <typename I, typename F>
-size_t simplex_2d_mesh<I, F>::n(int d) const
+size_t simplicial_unstructured_2d_mesh<I, F>::n(int d) const
 {
   if (d == 0) return vertex_coords.dim(1);
   else if (d == 1) {
@@ -123,12 +123,12 @@ size_t simplex_2d_mesh<I, F>::n(int d) const
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::build_vertex_links()
+void simplicial_unstructured_2d_mesh<I, F>::build_vertex_links()
 {
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::build_edges()
+void simplicial_unstructured_2d_mesh<I, F>::build_edges()
 {
   typedef std::tuple<I, I> edge_t;
   std::set<edge_t> unique_edges;
@@ -164,7 +164,7 @@ void simplex_2d_mesh<I, F>::build_edges()
 }
 
 template <typename I, typename F>
-inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
+inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 {
   const F sigma2 = sigma * sigma;
   const F limit = F(3) * sigma;
@@ -210,7 +210,7 @@ inline void simplex_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
+void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
     const ndarray<F>& f, const F sigma, 
     ndarray<F>& scalar, // smoothed scalar field
     ndarray<F>& grad,  // smoothed gradient field
@@ -251,7 +251,7 @@ void simplex_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
 }
 
 template <typename I, typename F>
-std::set<I> simplex_2d_mesh<I, F>::sides(int d, I i)
+std::set<I> simplicial_unstructured_2d_mesh<I, F>::sides(int d, I i)
 {
   std::set<I> results;
   if (d == 1) {
@@ -266,7 +266,7 @@ std::set<I> simplex_2d_mesh<I, F>::sides(int d, I i)
 }
 
 template <typename I, typename F>
-std::set<I> simplex_2d_mesh<I, F>::side_of(int d, I i)
+std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i)
 {
   std::set<I> results;
   if (d == 0)
@@ -280,7 +280,7 @@ std::set<I> simplex_2d_mesh<I, F>::side_of(int d, I i)
 
 #if FTK_HAVE_VTK
 template <typename I, typename F>
-vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::to_vtk_unstructured_grid() const
+vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_vtk_unstructured_grid() const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
@@ -299,7 +299,7 @@ vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::to_vtk_unstructured_
 }
 
 template <typename I, typename F>
-vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data(
+vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data(
     const std::string& varname, const ndarray<F>& scalar) const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtk_unstructured_grid();
@@ -318,7 +318,7 @@ vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::scalar_to_vtk_unstru
 }
 
 template <typename I, typename F>
-vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::vector_to_vtk_unstructured_grid_data(
+vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::vector_to_vtk_unstructured_grid_data(
     const std::string& varname, const ndarray<F>& vector) const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtk_unstructured_grid();
@@ -338,7 +338,7 @@ vtkSmartPointer<vtkUnstructuredGrid> simplex_2d_mesh<I, F>::vector_to_vtk_unstru
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
+void simplicial_unstructured_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
     const std::string& filename, 
     const std::string& varname, 
     const ndarray<F>& scalar) const
@@ -350,7 +350,7 @@ void simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::vector_to_vtk_unstructured_grid_data_file(
+void simplicial_unstructured_2d_mesh<I, F>::vector_to_vtk_unstructured_grid_data_file(
     const std::string& filename, 
     const std::string& varname, 
     const ndarray<F>& vector) const
@@ -362,7 +362,7 @@ void simplex_2d_mesh<I, F>::vector_to_vtk_unstructured_grid_data_file(
 }
 #else
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
+void simplicial_unstructured_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
     const std::string&, const std::string&, const ndarray<F>&) const
 {
   fatal("FTK not compiled with VTK";
@@ -370,26 +370,26 @@ void simplex_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
 #endif
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::write_smoothing_kernel(const std::string& f)
+void simplicial_unstructured_2d_mesh<I, F>::write_smoothing_kernel(const std::string& f)
 {
   diy::serializeToFile(smoothing_kernel, f);
 }
 
 template <typename I, typename F>
-bool simplex_2d_mesh<I, F>::read_smoothing_kernel(const std::string& f)
+bool simplicial_unstructured_2d_mesh<I, F>::read_smoothing_kernel(const std::string& f)
 {
   return diy::unserializeFromFile(f, smoothing_kernel);
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f)
+void simplicial_unstructured_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f)
 {
   for (auto i = 0; i < n(d); i ++)
     f(i);
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
+void simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
 {
   tri[0] = triangles(0, i);
   tri[1] = triangles(1, i);
@@ -397,14 +397,14 @@ void simplex_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::get_edge(I i, I v[]) const
+void simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[]) const
 {
   v[0] = edges(0, i);
   v[1] = edges(1, i);
 }
 
 template <typename I, typename F>
-void simplex_2d_mesh<I, F>::get_coords(I i, F coords[]) const
+void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
   coords[0] = vertex_coords(0, i);
   coords[1] = vertex_coords(1, i);
