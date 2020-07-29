@@ -54,7 +54,7 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker_re
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const {} // TODO
-  vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const {} // TODO
+  vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
 #endif
 
   void write_traced_critical_points_text(std::ostream& os) const {} // TODO
@@ -124,7 +124,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
   double mu[3], x[3];
   bool succ2 = ftk::inverse_lerp_s2v2(V, mu);
   // if (!succ2) return;
-  ftk::lerp_s2v3(X, mu, x);
+  ftk::lerp_s2v3(X, mu, cp.x);
 
 #if 0
   double Js[3][2][2], H[2][2];
@@ -138,13 +138,12 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
   ftk::lerp_s2m2x2(Js, mu, H);
   // ftk::print2x2("H", H);
   const int type = ftk::critical_point_type_2d(H, true);
-#else
-  const int type = 0;
 #endif
 
-  fprintf(stderr, "mu=%f, %f, %f, x=%f, %f, %f, type=%d\n", 
-      mu[0], mu[1], mu[2], x[0], x[1], x[2], type);
+  // fprintf(stderr, "mu=%f, %f, %f, x=%f, %f, %f, type=%d\n", 
+  //     mu[0], mu[1], mu[2], x[0], x[1], x[2], type);
 
+  cp.type = 0;
   return true;
   // cps.push_back(x[0]);
   // cps.push_back(x[1]);
@@ -168,6 +167,50 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
   if (field_data_snapshots.size() >= 2)
     m.element_for_interval(2, current_timestep, func);
 }
+
+#if FTK_HAVE_VTK
+inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_unstructured::get_discrete_critical_points_vtk() const
+{
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+  
+  vtkIdType pid[1];
+  for (const auto &kv : discrete_critical_points) {
+    const auto &cp = kv.second;
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  polyData->SetPoints(points);
+  polyData->SetVerts(vertices);
+
+#if 0
+  // point data for types
+  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
+  types->SetNumberOfValues(results.size());
+  for (auto i = 0; i < results.size(); i ++) {
+    types->SetValue(i, static_cast<double>(results[i].type));
+  }
+  types->SetName("type");
+  polyData->GetPointData()->AddArray(types);
+  
+  // point data for scalars
+  if (has_scalar_field) {
+    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
+    scalars->SetNumberOfValues(results.size());
+    for (auto i = 0; i < results.size(); i ++) {
+      scalars->SetValue(i, static_cast<double>(results[i].scalar));
+    }
+    scalars->SetName("scalar");
+    polyData->GetPointData()->AddArray(scalars);
+  }
+#endif
+  return polyData;
+
+}
+#endif
 
 }
 
