@@ -85,7 +85,7 @@ inline void critical_point_tracker_2d_unstructured::simplex_vectors(
     const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
     const int k = m.flat_vertex_id(verts[i]);
     for (int j = 0; j < 2; j ++) {
-      v[i][j] = field_data_snapshots[iv].vector(j, verts[k]);
+      v[i][j] = field_data_snapshots[iv].vector(j, k);
     }
   }
 }

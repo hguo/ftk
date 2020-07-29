@@ -132,9 +132,9 @@ size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n(int d) const
   } else if (d == 1) {
     return m.n(1) * 3; // unique edges in each interval
   } else if (d == 2) {
-    return m.n(2) // the triangle before extrusion
+    return m.n(2) // the bottom triangle of the prism
       + m.n(2) * 2 // two triangles inside prisms
-      + m.n(1) * 2;// unique triangles extruded from edges
+      + m.n(1) * 2;// unique triangles extruded from each edge
   } else if (d == 3) { 
     return 3 * m.n(2); // 3 tets per prism
   } else return 0;
@@ -171,24 +171,25 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d,
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
+void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I verts[]) const
 {
+  const I i = k % n(d), t = k / n(d);
+  const I offset = t * n(0);
   if (d == 0) {
-    verts[0] = i;
+    verts[0] = i + offset;
   } else if (d == 1) {
-    verts[0] = edges(0, i);
-    verts[1] = edges(1, i);
+    verts[0] = edges(0, i) + offset;
+    verts[1] = edges(1, i) + offset;
   } else if (d == 2) {
-    verts[0] = tris(0, i);
-    verts[1] = tris(1, i);
-    verts[2] = tris(2, i);
+    verts[0] = tris(0, i) + offset;
+    verts[1] = tris(1, i) + offset;
+    verts[2] = tris(2, i) + offset;
   } else if (d == 4) {
-    verts[0] = tets(0, i);
-    verts[1] = tets(1, i);
-    verts[2] = tets(2, i);
-    verts[3] = tets(3, i);
+    verts[0] = tets(0, i) + offset;
+    verts[1] = tets(1, i) + offset;
+    verts[2] = tets(2, i) + offset;
+    verts[3] = tets(3, i) + offset;
   }
-  
 }
 
 template <typename I, typename F>
@@ -197,7 +198,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_coords(I i, F coords[])
   const I k = flat_vertex_id(i),
           t = flat_vertex_time(i);
   m.get_coords(k, coords);
-  coords[2] = F(t);
+  coords[2] = t;
 }
 
 }

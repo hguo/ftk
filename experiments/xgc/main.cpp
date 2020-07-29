@@ -74,17 +74,24 @@ int main(int argc, char **argv)
     data = data.transpose();
     // dpot.reshape(dpot.dim(0));
 
-    std::vector<ftk::ndarray<double>> scalar(data.dim(1)), grad(data.dim(1)), J(data.dim(1));
-    for (auto i = 0; i < data.dim(1); i ++) {
+    ftk::critical_point_tracker_2d_unstructured tracker(m);
+
+    const int nt = data.dim(1);
+    for (int t = 0; t < nt; t ++) {
+      fprintf(stderr, "current timestep %d\n", t);
       ftk::ndarray<double> slice;
       slice.reshape(data.dim(0));
       for (auto j = 0; j < data.dim(0); j ++)
-        slice[j] = data(j, i);
-      m.smooth_scalar_gradient_jacobian(slice, sigma, scalar[i], grad[i], J[i]);
+        slice[j] = data(j, t);
+
+      ftk::ndarray<double> scalar, grad, J;
+      m.smooth_scalar_gradient_jacobian(slice, sigma, scalar, grad, J);
+   
+      tracker.push_field_data_snapshot(scalar, grad, J);
+
+      if (t != 0) tracker.advance_timestep();
+      else tracker.update_timestep();
     }
-    fprintf(stderr, "data preconditioned.");
-    
-    ftk::critical_point_tracker_2d_unstructured tracker(m);
 
 #if 0
     std::vector<double> cps;
