@@ -15,9 +15,10 @@
 #include <gmpxx.h>
 #include <vtkXMLPolyDataWriter.h>
 
-std::string input_filename, 
+std::string input_filename_pattern,
   mesh_filename, 
   kernel_filename = "xgc.kernel";
+std::vector<std::string> input_filenames;
 double sigma(0.02);
 
 void parse_arguments(int argc, char **argv)
@@ -25,7 +26,7 @@ void parse_arguments(int argc, char **argv)
   cxxopts::Options options(argv[0]);
   options.add_options()
     ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'",
-     cxxopts::value<std::string>(input_filename))
+     cxxopts::value<std::string>(input_filename_pattern))
     ("m,mesh", "Input mesh file", cxxopts::value<std::string>(mesh_filename))
     ("k,kernel", "Input/output smoothing kernel file", cxxopts::value<std::string>(kernel_filename))
     ("s,sigma", "Kernel bandwidth", cxxopts::value<double>(sigma));
@@ -63,31 +64,22 @@ int main(int argc, char **argv)
 
   fprintf(stderr, "mesh loaded.\n");
 
-  // smoothing data; extract cps
-  if (input_filename.length()) {
+  input_filenames = ftk::ndarray<double>::glob(input_filename_pattern);
+  
+  ftk::critical_point_tracker_2d_unstructured tracker(m);
+  for (int t = 0; t < input_filenames.size(); t ++) {
     ftk::ndarray<double> data;
-    data.from_h5(input_filename, "/dpot");
+    data.from_h5(input_filenames[t], "/dpot");
     data = data.transpose();
-    // dpot.reshape(dpot.dim(0));
+    data.reshape(data.dim(0)); // only use the first slice
 
-    ftk::critical_point_tracker_2d_unstructured tracker(m);
+    ftk::ndarray<double> scalar, grad, J;
+    m.smooth_scalar_gradient_jacobian(data, sigma, scalar, grad, J);
+ 
+    tracker.push_field_data_snapshot(scalar, grad, J);
 
-    const int nt = data.dim(1);
-    for (int t = 0; t < nt; t ++) {
-      fprintf(stderr, "current timestep %d\n", t);
-      ftk::ndarray<double> slice;
-      slice.reshape(data.dim(0));
-      for (auto j = 0; j < data.dim(0); j ++)
-        slice[j] = data(j, t);
-
-      ftk::ndarray<double> scalar, grad, J;
-      m.smooth_scalar_gradient_jacobian(slice, sigma, scalar, grad, J);
-   
-      tracker.push_field_data_snapshot(scalar, grad, J);
-
-      if (t != 0) tracker.advance_timestep();
-      else tracker.update_timestep();
-    }
+    if (t != 0) tracker.advance_timestep();
+    if (t == input_filenames.size()-1) tracker.update_timestep();
     
     auto poly = tracker.get_discrete_critical_points_vtk();
     vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
