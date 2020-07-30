@@ -117,7 +117,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
   for (int k = 0; k < 3; k ++) 
     for (int j = 0; j < 2; j ++)
       Vf[k][j] = V[k][j];
-
+   
   bool succ = ftk::robust_critical_point_in_simplex2(Vf, tri);
   if (!succ) return false;
 
@@ -180,7 +180,6 @@ inline void critical_point_tracker_2d_unstructured::finalize()
     for (const auto c : cells) {
       fprintf(stderr, "--cell=%d\n", c);
       const auto elements = m.sides(3, c);
-      // fprintf(stderr, "cell=%d\n", c);
       for (const auto f1 : elements) {
         fprintf(stderr, "----face=%d\n", f1);
         neighbors.insert(f1);

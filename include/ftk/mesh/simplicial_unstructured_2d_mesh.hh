@@ -176,23 +176,39 @@ void simplicial_unstructured_2d_mesh<I, F>::build_triangles()
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::build_edges()
 {
+  std::map<std::tuple<I, I>, std::set<I>> edge_side_of_map;
+
   int edge_count = 0;
-  auto add_edge = [&](I v0, I v1) {
+  auto add_edge = [&](I tid, I v0, I v1) {
     if (v0 > v1) std::swap(v0, v1);
     const auto edge = std::make_tuple(v0, v1);
     if (edge_id_map.find(edge) == edge_id_map.end()) {
       const auto id = edge_count ++;
       edge_id_map[edge] = id;
+      edge_side_of_map[edge].insert(tid);
     }
   };
 
   for (auto i = 0; i < n(2); i ++) {
-    add_edge(triangles(0, i), triangles(1, i));
-    add_edge(triangles(1, i), triangles(2, i));
-    add_edge(triangles(2, i), triangles(0, i));
+    add_edge(i, triangles(0, i), triangles(1, i));
+    add_edge(i, triangles(1, i), triangles(2, i));
+    add_edge(i, triangles(2, i), triangles(0, i));
   }
 
   edges.reshape(2, edge_id_map.size());
+  edges_side_of.reshape({2, edge_id_map.size()}, -1);
+  int i = 0;
+  for (const auto &kv : edge_id_map) {
+    edges(0, i) = std::get<0>(kv.first);
+    edges(1, i) = std::get<1>(kv.first);
+
+    int j = 0;
+    for (const auto tid : edge_side_of_map[kv.first])
+      edges_side_of(j++, i) = tid;
+
+    i ++;
+  }
+
   vertex_side_of.resize(vertex_coords.dim(1));
   // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dim(1));
 
@@ -317,8 +333,12 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i) const
   if (d == 0)
     return vertex_side_of[i];
   else if (d == 1) {
-    results.insert(edges_side_of(0, i));
-    results.insert(edges_side_of(1, i));
+    // fprintf(stderr, "you are never here...\n");
+    for (auto j = 0; j < 2; j ++) {
+      const auto s = edges_side_of(j, i);
+      if (s >= 0)
+        results.insert(s);
+    }
   }
   return results;
 }

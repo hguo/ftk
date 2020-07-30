@@ -15,8 +15,9 @@ struct simplicial_unstructured_extruded_2d_mesh { // extruded from
 
   I flat_vertex_id(I i) const { return mod(i, m.n(0)); }
   I flat_vertex_time(I i) const { return i / m.n(0); }
-
   I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
+
+  int face_type(I i) const;
 
 public: // element iteration
   void element_for(int d, std::function<void(I)> f) const;
@@ -176,14 +177,17 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, 
 template <typename I, typename F>
 void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f) const
 {
-  for (auto i = 0; i < n_interval(d); i ++)
-    f(i + n_ordinal(d) + t * n(d));
+  for (auto i = 0; i < n_interval(d); i ++) {
+    const auto id = i + n_ordinal(d) + t * n(d);
+    f(id);
+    // if (d == 2) side_of(2, id);
+  }
 }
 
 template <typename I, typename F>
 void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I verts[]) const
 {
-  const I i = mod(k, n(d)), t = k / n(d);
+  const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));
   const I offset = t * n(0);
   if (d == 0) {
     verts[0] = i + offset;
@@ -259,10 +263,6 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::sides(int d, I k) co
         const I ot[3] = {v[0], v[1], mod(v[3], m.n(0))}; // triangle in the orignal mesh
         I otid; // triangle id in the original mesh
         bool found = m.find_triangle(ot, otid);
-        if (!found) {
-          fprintf(stderr, "v=%d, %d, %d, %d, ot=%d, %d, %d\n",
-              v[0], v[1], v[2], v[3], ot[0], ot[1], ot[2]);
-        }
         assert(found);
 
         results.insert( otid + m.n(2) + t*n(2) );
@@ -329,7 +329,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
 
     // determine triangle type by id
     const I v0[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0))};
-    if (i < 3*m.n(2)) { 
+    if (i < 3*m.n(2)) {
       I otid; // triangle id in the original mesh
       bool found = m.find_triangle(v0, otid); 
       assert(found);
@@ -351,6 +351,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
         results.insert( otid + 2*m.n(2) + t*n(3) );
       }
     } else {
+      fprintf(stderr, "hey!\n");
       I oeid; // edge id in the original mesh
       bool found = m.find_edge(v0, oeid);
       assert(found);
@@ -366,12 +367,14 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
         // t:   n-0-1-1',  q0-q1-q2-q2',  type I tet
         // t:   0-1-1'-2'  q1-q2-q2'-q3', type II tet
         results.insert( tids[0] +          t*n(3) );
-        results.insert( tids[1] + m.n(2) + t*n(3) );
+        if (triangles.size() > 1)
+          results.insert( tids[1] + m.n(2) + t*n(3) );
       } else { // type V: edge upper triangle
         // t:   n-0-0'-1', q0-q1-q1'-q2', type II tet 
         // t:   0-0'-1'-2',q1-q1'-q1'-q3',type III tet
         results.insert( tids[0] + m.n(2)   + t*n(3) );
-        results.insert( tids[1] + 2*m.n(2) + t*n(3) );
+        if (triangles.size() > 1)
+          results.insert( tids[1] + 2*m.n(2) + t*n(3) );
       }
     }
   }
@@ -379,26 +382,19 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
   return results;
 }
 
+template <typename I, typename F>
+int simplicial_unstructured_extruded_2d_mesh<I, F>::face_type(I k) const
+{
+  const I i = mod(k, n(2));
+
+  if (i < m.n(2)) return 0;  // I
+  else if (i < 2*m.n(2)) return 1; // II
+  else if (i < 3*m.n(2)) return 2; // III 
+  else if (i < 3*m.n(2) + m.n(1)) return 3; // IV
+  else if (i < 3*m.n(2) + 2*m.n(1)) return 4; // V
+  else return -1;
 }
 
-#endif
+}
 
-
-#if 0
-    if (tet_type == 0) { // bottom tet: 0-1-2-2'
-      results.insert(find_triangle(v[0], v[1], v[2]));
-      results.insert(find_triangle(v[1], v[2], v[2]+n(0)));
-      results.insert(find_triangle(v[0], v[2], v[2]+n(0)));
-      results.insert(find_triangle(v[0], v[1], v[2]+n(0)));
-    } else if (tet_type == 1) { // center tet: 0-1-1'-2'
-      results.insert(find_triangle(v[0], v[1], v[2]+n(0)));
-      results.insert(find_triangle(v[0], v[1], v[1]+n(0)));
-      results.insert(find_triangle(v[1], v[1]+n(0), v[2]+n(0)));
-      results.insert(find_triangle(v[0], v[1]+n(0), v[2]+n(0)));
-    } else (tet_type == 2) { // top tet: 0-0'-1'-2
-      results.insert(find_triangle(v[0], v[0], v[1]+n(0)));
-      results.insert(find_triangle(v[0], v[0], v[2]+n(0)));
-      results.insert(find_triangle(v[0], v[1]+n(0), v[2]+n(0)));
-      results.insert(find_triangle(v[0]+n(0), v[1]+n(0), v[2]+n(0)));
-    }
 #endif

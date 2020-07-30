@@ -81,10 +81,10 @@ int main(int argc, char **argv)
     if (t != 0) tracker.advance_timestep();
     if (t == input_filenames.size()-1) tracker.update_timestep();
   }
-  tracker.finalize();
+  // tracker.finalize();
    
-  // auto poly = tracker.get_discrete_critical_points_vtk();
-  auto poly = tracker.get_traced_critical_points_vtk();
+  auto poly = tracker.get_discrete_critical_points_vtk();
+  // auto poly = tracker.get_traced_critical_points_vtk();
   vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
   writer->SetFileName("out.vtp");
   writer->SetInputData(poly);
