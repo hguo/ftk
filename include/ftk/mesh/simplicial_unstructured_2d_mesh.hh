@@ -40,7 +40,7 @@ struct simplicial_unstructured_2d_mesh { // 2D triangular mesh
   simplicial_unstructured_2d_mesh(
       const ndarray<F>& coords_, // 2 * n_vertices
       const ndarray<I>& triangles_) // 3 * n_triangles
-    : vertex_coords(coords_), triangles(triangles_) {}
+    : vertex_coords(coords_), triangles(triangles_) {build_triangles();}
 
   // dimensionality of the mesh
   int nd() const {return 2;}
@@ -50,6 +50,7 @@ struct simplicial_unstructured_2d_mesh { // 2D triangular mesh
 
   void build_vertex_links();
   void build_edges();
+  void build_triangles();
 
   void build_smoothing_kernel(F sigma);
   void smooth_scalar_gradient_jacobian(
@@ -77,12 +78,15 @@ public: // element iteration
   void element_for(int d, std::function<void(I)> f);
 
 public: // mesh access
-  std::set<I> sides(int d, I i);
-  std::set<I> side_of(int d, I i);
+  std::set<I> sides(int d, I i) const;
+  std::set<I> side_of(int d, I i) const;
 
   void get_triangle(I i, I tri[]) const;
   void get_edge(I i, I edge[]) const;
   void get_coords(I i, F coords[]) const;
+
+  bool find_edge(const I v[2], I& i) const;
+  bool find_triangle(const I v[3], I& i) const;
 
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
@@ -94,6 +98,10 @@ private: // mesh connectivities
 
   ndarray<I> triangles; // 3 * n_triangles
   ndarray<I> triangle_sides; // 3 * n_triangles
+
+public: // additional mesh info
+  std::map<std::tuple<I, I>, int> edge_id_map;
+  std::map<std::tuple<I, I, I>, int> triangle_id_map;
 
 private:
   std::vector<std::vector<std::tuple<I/*vert*/, F/*weight*/>>> smoothing_kernel;
@@ -109,6 +117,8 @@ simplicial_unstructured_2d_mesh<I, F>::simplicial_unstructured_2d_mesh(const std
   
   triangles.copy_vector(triangles_);
   triangles.reshape({3, triangles_.size()/3});
+
+  build_triangles();
 }
 
 template <typename I, typename F>
@@ -128,35 +138,70 @@ void simplicial_unstructured_2d_mesh<I, F>::build_vertex_links()
 }
 
 template <typename I, typename F>
+bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v[2], I &i) const
+{
+  const auto it = edge_id_map.find( std::make_tuple(v[0], v[1]) );
+  if (it == edge_id_map.end()) return false;
+  else {
+    i = it->second;
+    return true;
+  }
+}
+
+template <typename I, typename F>
+bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v[3], I &i) const
+{
+  const auto it = triangle_id_map.find( std::make_tuple(v[0], v[1], v[2]) );
+  if (it == triangle_id_map.end()) return false;
+  else {
+    i = it->second;
+    return true;
+  }
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::build_triangles()
+{
+  for (auto i = 0; i < n(2); i ++) {
+    I v[3];
+    get_triangle(i, v);
+    std::sort(v, v+3);
+    for (auto j = 0; j < 3; j ++)
+      triangles(j, i) = v[j];
+
+    triangle_id_map[ std::make_tuple(v[0], v[1], v[2]) ] = i;
+  }
+}
+
+template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::build_edges()
 {
-  typedef std::tuple<I, I> edge_t;
-  std::set<edge_t> unique_edges;
-
-  auto convert_edge = [](edge_t e) {
-    if (std::get<0>(e) > std::get<1>(e))
-      return std::make_tuple(std::get<1>(e), std::get<0>(e));
-    else return e;
+  int edge_count = 0;
+  auto add_edge = [&](I v0, I v1) {
+    if (v0 > v1) std::swap(v0, v1);
+    const auto edge = std::make_tuple(v0, v1);
+    if (edge_id_map.find(edge) == edge_id_map.end()) {
+      const auto id = edge_count ++;
+      edge_id_map[edge] = id;
+    }
   };
 
-  for (auto i = 0; i < triangles.dim(1); i ++) {
-    unique_edges.insert(std::make_tuple(triangles(0, i), triangles(1, i)));
-    unique_edges.insert(std::make_tuple(triangles(1, i), triangles(2, i)));
-    unique_edges.insert(std::make_tuple(triangles(2, i), triangles(3, i)));
+  for (auto i = 0; i < n(2); i ++) {
+    add_edge(triangles(0, i), triangles(1, i));
+    add_edge(triangles(1, i), triangles(2, i));
+    add_edge(triangles(2, i), triangles(0, i));
   }
 
-  edges.reshape(2, unique_edges.size());
+  edges.reshape(2, edge_id_map.size());
   vertex_side_of.resize(vertex_coords.dim(1));
   // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dim(1));
 
-  int i = 0;
   vertex_edge_vertex.resize(n(0));
-  for (const auto e : unique_edges) {
-    auto v0 = edges(0, i) = std::get<0>(e);
-    auto v1 = edges(1, i) = std::get<1>(e);
-    vertex_side_of[v0].insert(i);
-    vertex_side_of[v1].insert(i);
-    i ++;
+  for (const auto &kv : edge_id_map) {
+    const auto v0 = std::get<0>(kv.first),
+               v1 = std::get<1>(kv.first);
+    vertex_side_of[v0].insert(kv.second);
+    vertex_side_of[v1].insert(kv.second);
   
     vertex_edge_vertex[v0].insert(v1);
     vertex_edge_vertex[v1].insert(v0);
@@ -251,7 +296,7 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
 }
 
 template <typename I, typename F>
-std::set<I> simplicial_unstructured_2d_mesh<I, F>::sides(int d, I i)
+std::set<I> simplicial_unstructured_2d_mesh<I, F>::sides(int d, I i) const
 {
   std::set<I> results;
   if (d == 1) {
@@ -266,7 +311,7 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::sides(int d, I i)
 }
 
 template <typename I, typename F>
-std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i)
+std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i) const
 {
   std::set<I> results;
   if (d == 0)

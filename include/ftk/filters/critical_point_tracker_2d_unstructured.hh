@@ -47,13 +47,13 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker_re
   virtual ~critical_point_tracker_2d_unstructured() {};
 
   void initialize() {}
-  void finalize() {}
+  void finalize();
   void reset() {}
 
   void update_timestep();
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const {} // TODO
+  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
   vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
 #endif
 
@@ -73,6 +73,7 @@ protected:
   const simplicial_unstructured_extruded_2d_mesh<> m;
   
   std::map<int, critical_point_2dt_t> discrete_critical_points;
+  std::vector<std::vector<critical_point_2dt_t>> traced_critical_points;
 };
 
 ////////////////////////
@@ -168,6 +169,47 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
     m.element_for_interval(2, current_timestep, func);
 }
 
+inline void critical_point_tracker_2d_unstructured::finalize()
+{
+  fprintf(stderr, "finalizing...\n");
+  // Convert connected components to geometries
+  auto neighbors = [&](int f) {
+    std::set<int> neighbors;
+    const auto cells = m.side_of(2, f);
+    fprintf(stderr, "face=%d\n", f);
+    for (const auto c : cells) {
+      fprintf(stderr, "--cell=%d\n", c);
+      const auto elements = m.sides(3, c);
+      // fprintf(stderr, "cell=%d\n", c);
+      for (const auto f1 : elements) {
+        fprintf(stderr, "----face=%d\n", f1);
+        neighbors.insert(f1);
+      }
+    }
+    fprintf(stderr, "size_neighbors=%zu\n", neighbors.size());
+    return neighbors;
+  };
+
+  std::set<int> elements;
+  for (const auto &kv : discrete_critical_points)
+    elements.insert(kv.first);
+  auto connected_components = extract_connected_components<int, std::set<int>>(
+      neighbors, elements);
+
+  for (const auto &component : connected_components) {
+    std::vector<std::vector<double>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
+    fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      std::vector<critical_point_2dt_t> traj; 
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
+      traced_critical_points.emplace_back(traj);
+    }
+  }
+  fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), connected_components.size());
+}
+
 #if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_unstructured::get_discrete_critical_points_vtk() const
 {
@@ -185,30 +227,86 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_unstructured::get_
 
   polyData->SetPoints(points);
   polyData->SetVerts(vertices);
+  return polyData;
+}
 
-#if 0
-  // point data for types
-  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
-  types->SetNumberOfValues(results.size());
-  for (auto i = 0; i < results.size(); i ++) {
-    types->SetValue(i, static_cast<double>(results[i].type));
+inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_unstructured::get_traced_critical_points_vtk() const
+{
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> lines = vtkCellArray::New();
+  vtkSmartPointer<vtkCellArray> verts = vtkCellArray::New();
+
+  for (const auto &curve : traced_critical_points) {
+    fprintf(stderr, "size=%zu\n", curve.size());
+    for (auto i = 0; i < curve.size(); i ++) {
+      double p[3] = {curve[i][0], curve[i][1], curve[i][2]};
+      points->InsertNextPoint(p);
+    }
   }
-  types->SetName("type");
-  polyData->GetPointData()->AddArray(types);
-  
+
+  size_t nv = 0;
+  for (const auto &curve : traced_critical_points) {
+    if (curve.size() < 2) { // isolated vertex
+      vtkSmartPointer<vtkVertex> obj = vtkVertex::New();
+      obj->GetPointIds()->SetNumberOfIds(curve.size());
+      for (int i = 0; i < curve.size(); i ++)
+        obj->GetPointIds()->SetId(i, i+nv);
+      verts->InsertNextCell(obj);
+    } else { // lines
+      vtkSmartPointer<vtkPolyLine> obj = vtkPolyLine::New();
+      obj->GetPointIds()->SetNumberOfIds(curve.size());
+      for (int i = 0; i < curve.size(); i ++)
+        obj->GetPointIds()->SetId(i, i+nv);
+      lines->InsertNextCell(obj);
+    }
+    nv += curve.size();
+  }
+ 
+  polyData->SetPoints(points);
+  polyData->SetLines(lines);
+  polyData->SetVerts(verts);
+
+  // point data for types
+  if (1) { // if (type_filter) {
+    vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
+    types->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &curve : traced_critical_points) {
+      for (auto j = 0; j < curve.size(); j ++)
+        types->SetValue(i ++, curve[j].type);
+    }
+    types->SetName("type");
+    polyData->GetPointData()->AddArray(types);
+  }
+
+  if (1) { // ids
+    vtkSmartPointer<vtkUnsignedIntArray> ids = vtkSmartPointer<vtkUnsignedIntArray>::New();
+    ids->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (auto k = 0; k < traced_critical_points.size(); k ++)
+      for (auto j = 0; j < traced_critical_points[k].size(); j ++)
+        ids->SetValue(i ++, k);
+    ids->SetName("id");
+    polyData->GetPointData()->AddArray(ids);
+
+  }
+
   // point data for scalars
-  if (has_scalar_field) {
+  // if (has_scalar_field) {
+  if (1) { // scalar is 0 if no scalar field available
     vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-    scalars->SetNumberOfValues(results.size());
-    for (auto i = 0; i < results.size(); i ++) {
-      scalars->SetValue(i, static_cast<double>(results[i].scalar));
+    scalars->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &curve : traced_critical_points) {
+      for (auto j = 0; j < curve.size(); j ++)
+        scalars->SetValue(i ++, curve[j].scalar);
     }
     scalars->SetName("scalar");
     polyData->GetPointData()->AddArray(scalars);
   }
-#endif
-  return polyData;
 
+  return polyData;
 }
 #endif
 
