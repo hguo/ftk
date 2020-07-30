@@ -327,6 +327,8 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
     int v[3];
     get_simplex(2, i, v);
 
+    fprintf(stderr, "face=%d,%d type=%d\n", k, i, face_type(k));
+
     // determine triangle type by id
     const I v0[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0))};
     if (i < 3*m.n(2)) {
@@ -351,16 +353,21 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
         results.insert( otid + 2*m.n(2) + t*n(3) );
       }
     } else {
-      fprintf(stderr, "hey!\n");
       I oeid; // edge id in the original mesh
-      bool found = m.find_edge(v0, oeid);
+      I ve[2] = {v0[0], v0[2]};
+      bool found = m.find_edge(ve, oeid);
       assert(found);
 
       const auto triangles = m.side_of(1, oeid);
-      int tids[2]; // triangle ids in array
+      int tids[2] = {-1}; // triangle ids in array
       int j = 0;
-      for (auto tri : triangles)
+      for (auto tri : triangles) {
         tids[j++] = tri;
+
+        int vv[3];
+        m.get_triangle(tri, vv);
+        fprintf(stderr, "ve=%d, %d, vv=%d, %d, %d\n", ve[0], ve[1], vv[0], vv[1], vv[2]);
+      }
 
       if (i < 3*m.n(2) + m.n(1)) { // type IV: edge lower triangle
         // find the vertex that share the same edge of v0-v1, denote the triangle as vn-v0-v1

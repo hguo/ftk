@@ -186,6 +186,7 @@ inline void critical_point_tracker_2d_unstructured::finalize()
       }
     }
     fprintf(stderr, "size_neighbors=%zu\n", neighbors.size());
+    assert(neighbors.find(f) != neighbors.end());
     return neighbors;
   };
 
