@@ -176,25 +176,25 @@ inline void critical_point_tracker_2d_unstructured::finalize()
   auto neighbors = [&](int f) {
     std::set<int> neighbors;
     const auto cells = m.side_of(2, f);
-    fprintf(stderr, "face=%d\n", f);
-    int vf[3];
-    m.get_simplex(2, f, vf);
-    fprintf(stderr, "face.simplex=%d, %d, %d\n", vf[0], vf[1], vf[2]);
+    // fprintf(stderr, "face=%d\n", f);
+    // int vf[3];
+    // m.get_simplex(2, f, vf);
+    // fprintf(stderr, "face.simplex=%d, %d, %d\n", vf[0], vf[1], vf[2]);
 
     for (const auto c : cells) {
-      fprintf(stderr, "--cell=%d\n", c);
-      int vc[4];
-      m.get_simplex(3, c, vc);
-      fprintf(stderr, "--cell.simplex=%d, %d, %d, %d\n", vc[0], vc[1], vc[2], vc[3]);
+      // fprintf(stderr, "--cell=%d\n", c);
+      // int vc[4];
+      // m.get_simplex(3, c, vc);
+      // fprintf(stderr, "--cell.simplex=%d, %d, %d, %d\n", vc[0], vc[1], vc[2], vc[3]);
 
       const auto elements = m.sides(3, c);
       for (const auto f1 : elements) {
-        fprintf(stderr, "----face=%d\n", f1);
+        // fprintf(stderr, "----face=%d\n", f1);
         neighbors.insert(f1);
       }
     }
-    fprintf(stderr, "size_neighbors=%zu\n", neighbors.size());
-    assert(neighbors.find(f) != neighbors.end());
+    // fprintf(stderr, "size_neighbors=%zu\n", neighbors.size());
+    // assert(neighbors.find(f) != neighbors.end());
     return neighbors;
   };
 
