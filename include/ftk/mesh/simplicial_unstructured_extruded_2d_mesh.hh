@@ -226,6 +226,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::sides(int d, I k) co
 
   if (d == 3) {
     const int type = i / m.n(2);
+    fprintf(stderr, "tet_type=%d\n", type);
     if (type == 0) { // bottom 0-1-2-2'
       // 0-1-2, type I
       // 0-1-2', type II
@@ -364,9 +365,15 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
       for (auto tri : triangles) {
         tids[j++] = tri;
 
+        I ve1[2];
+        m.get_edge(oeid, ve1);
+
         int vv[3];
         m.get_triangle(tri, vv);
-        fprintf(stderr, "ve=%d, %d, vv=%d, %d, %d\n", ve[0], ve[1], vv[0], vv[1], vv[2]);
+        fprintf(stderr, "ve=%d, %d, oeid=%d, ve1=%d, %d, vv=%d, %d, %d, tri=%d\n", 
+            ve[0], ve[1], oeid, 
+            ve1[0], ve1[1], 
+            vv[0], vv[1], vv[2], tri);
       }
 
       if (i < 3*m.n(2) + m.n(1)) { // type IV: edge lower triangle
