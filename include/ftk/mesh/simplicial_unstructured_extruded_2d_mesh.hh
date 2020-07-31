@@ -441,7 +441,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
     if (fail) {
       auto tm = [&](I i, int d=0) { return I(std::floor(double(i)/n(d))); };
 
-      fprintf(stderr, "n(d)=%d, %d, %d, %d\n", n(0), n(1), n(2), n(3));
+      fprintf(stderr, "n(d)=%zu, %zu, %zu, %zu\n", n(0), n(1), n(2), n(3));
       fprintf(stderr, "face=%d(%d): %d(%d), %d(%d), %d(%d)\n", 
           k, tm(k, 2), v[0], tm(v[0]), v[1], tm(v[1]), v[2], tm(v[2]));
       for (const auto tet : results) {
