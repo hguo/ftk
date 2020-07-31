@@ -164,9 +164,9 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
     }
   };
 
-  m.element_for_ordinal(2, current_timestep, func);
+  m.element_for_ordinal(2, current_timestep, func, nthreads);
   if (field_data_snapshots.size() >= 2)
-    m.element_for_interval(2, current_timestep, func);
+    m.element_for_interval(2, current_timestep, func, nthreads);
 }
 
 inline void critical_point_tracker_2d_unstructured::finalize()

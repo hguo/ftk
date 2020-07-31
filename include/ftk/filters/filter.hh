@@ -2,7 +2,7 @@
 #define _FTK_FILTER_HH
 
 #include <ftk/ftk_config.hh>
-#include <ftk/external/diy/mpi.hpp>
+#include <ftk/object.hh>
 #include <ftk/external/cxxopts.hpp>
 #include <thread>
 #include <mutex>
@@ -18,7 +18,7 @@ enum {
   FTK_XL_KOKKOS_CUDA
 };
 
-struct filter {
+struct filter : public object {
   filter() {
     nthreads = default_nthreads();
   }

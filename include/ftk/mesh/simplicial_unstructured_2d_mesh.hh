@@ -2,6 +2,7 @@
 #define _HYPERMESH_SIMPLEX_2D_HH
 
 #include <ftk/ftk_config.hh>
+#include <ftk/object.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/algorithms/bfs.hh>
@@ -30,7 +31,7 @@
 namespace ftk {
 
 template <typename I=int, typename F=double>
-struct simplicial_unstructured_2d_mesh { // 2D triangular mesh
+struct simplicial_unstructured_2d_mesh : public object { // 2D triangular mesh
   simplicial_unstructured_2d_mesh() {}
 
   simplicial_unstructured_2d_mesh(
@@ -203,10 +204,10 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
     map_edges_side_of[id].insert(tid);
       
     // fprintf(stderr, "adding edge #%d (%d, %d) from triangle %d\n", id, v0, v1, tid);
-    if (v0 == 0 && v1 == 1) {
-      fprintf(stderr, "{0, 1}, tid=%d\n", tid);
+    // if (v0 == 0 && v1 == 1) {
+    //   fprintf(stderr, "{0, 1}, tid=%d\n", tid);
     //   exit(1);
-    }
+    // }
   };
 
   // fprintf(stderr, "triangles_88078=%d, %d, %d\n", triangles(0, 88078), triangles(1, 88078), triangles(2, 88078)); 
@@ -232,6 +233,7 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
   // for (auto i = 0; i < edges_side_of.dim(1); i ++)
   //   fprintf(stderr, "i=%d, tri0=%d, tri1=%d\n", i, edges_side_of(0, i), edges_side_of(1, i));
 
+#if 0
   {
     I v[2] = {0, 1};
     I e;
@@ -240,6 +242,7 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
     // auto s = edges_side_of[std::make_tuple(v[0], v[1])];
     fprintf(stderr, "%zu, %d\n", s.size(), *s.begin());
   }
+#endif
   // exit(1);
 
   vertex_side_of.resize(vertex_coords.dim(1));
@@ -317,7 +320,8 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
   grad.reshape({2, n(0)});
   J.reshape({2, 2, n(0)});
 
-  for (auto i = 0; i < smoothing_kernel.size(); i ++) {
+  // for (auto i = 0; i < smoothing_kernel.size(); i ++) {
+  parallel_for(smoothing_kernel.size(), std::thread::hardware_concurrency(), [&](int i) {
     for (auto j = 0; j < smoothing_kernel[i].size(); j ++) {
       auto tuple = smoothing_kernel[i][j];
       const auto k = std::get<0>(tuple);
@@ -341,7 +345,7 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
       J(1, 0, i) += d[0]*d[1] / sigma4 * f[k] * w;
       J(1, 1, i) += (d[1]*d[1] / sigma2 - 1) / sigma2 * f[k] * w;
     }
-  }
+  });
 }
 
 template <typename I, typename F>

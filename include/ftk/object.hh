@@ -7,6 +7,7 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
+#include <ftk/external/diy/mpi.hpp>
 
 namespace ftk {
 
@@ -24,14 +25,14 @@ struct object {
     nthreads = std::min(ntasks, nthreads);
 
     std::vector<std::thread> workers;
-    for (size_t i = 1; i < nthreads; i ++) {
-      workers.push_back(std::thread([&]() {
-        for (size_t j = i; j < ntasks; j += nthreads)
+    for (auto i = 1; i < nthreads; i ++) {
+      workers.push_back(std::thread([=]() {
+        for (auto j = i; j < ntasks; j += nthreads)
           f(j);
       }));
     }
 
-    for (size_t j = 0; j < ntasks; j += nthreads) // the main thread
+    for (auto j = 0; j < ntasks; j += nthreads) // the main thread
       f(j);
 
     std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
