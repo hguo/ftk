@@ -67,7 +67,8 @@ int main(int argc, char **argv)
   input_filenames = ftk::ndarray<double>::glob(input_filename_pattern);
   
   ftk::critical_point_tracker_2d_unstructured tracker(m);
-  for (int t = 0; t < std::min(3, (int)input_filenames.size()); t ++) {
+  // for (int t = 0; t < std::min(3, (int)input_filenames.size()); t ++) {
+  for (int t = 0; t < input_filenames.size(); t ++) {
     ftk::ndarray<double> data;
     data.from_h5(input_filenames[t], "/dpot");
     data = data.transpose();
