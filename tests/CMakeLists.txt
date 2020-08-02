@@ -56,6 +56,9 @@ target_link_libraries (test_critical_point_tracking_moving_extremum ftk)
 #add_test (NAME test_critical_point_tracking_cli_woven
 #  COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.vtp)
 
+add_executable(test_critical_point_tracking_double_gyre_unstructured test_critical_point_tracking_double_gyre_unstructured.cpp)
+target_link_libraries (test_critical_point_tracking_double_gyre_unstructured ftk)
+
 if (FTK_HAVE_MPI)
   set (maxp 4)
   foreach (p RANGE 1 ${maxp})

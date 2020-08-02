@@ -52,7 +52,6 @@ int main(int argc, char **argv)
   // build mesh
   ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);
   m.build_edges();
-  m.build_vertex_links();
 
   if (kernel_filename.length()) {
     bool succ = m.read_smoothing_kernel(kernel_filename);
@@ -62,7 +61,7 @@ int main(int argc, char **argv)
     }
   }
 
-  fprintf(stderr, "mesh loaded.\n");
+  fprintf(stderr, "mesh loaded., %zu, %zu, %zu\n", m.n(0), m.n(1), m.n(2));
 
   input_filenames = ftk::ndarray<double>::glob(input_filename_pattern);
   
