@@ -515,7 +515,7 @@ void simplicial_unstructured_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh::from_vtk_file(const std::string& filename)
+void simplicial_unstructured_2d_mesh<I, F>::from_vtk_file(const std::string& filename)
 {
   fatal("FTK not compiled with VTK");
 }
