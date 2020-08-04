@@ -26,18 +26,13 @@ struct ndarray_stream : public object {
   //  - format (required if type is file and format is float32/float64), string.  If not 
   //    given, the format will be determined by the filename extension.  The value of this 
   //    field must be one of the follows: vti, nc, h5, float32, float64.
-  //  - variable (required if format is nc, optional for vti), string or array of strings.
-  //    - if a string is given, the number of components is 1, and variable will be 
-  //      organized int an array
-  //    - if an array of string is given, the number of components is the length of the array.
-  //    - if not given, teh defaulat variable "scalar" will be in the variable array.
-  //  - width (required if format is float32/float64), integer
-  //  - height (required if format is float32/float64), integer
-  //  - depth (required if format is float32/float64), integer
+  //  - variables (required if format is nc, optional for vti), array of strings.
+  //    - the number of components is the length of the array.
+  //    - if not given, the defaulat value is ["scalar"]
+  //  - dimensions (required if format is floaot32/float64), array of integers, e.g.  
+  //    [width, height, depth]
   //  - n_timesteps, integer.  The default is 32 for synthetic data; the number can be 
   //    automatically derived from file; the number can be automatically derived from files
-  //
-
 
   void set_input_source_json_file(const std::string& filename);
   void set_input_source_json(const json& j_);
@@ -50,7 +45,12 @@ struct ndarray_stream : public object {
 
   bool is_single_component() const { return n_components() == 1; }
   bool is_multi_component() const { return n_components() > 1; }
-  size_t n_components() const { return j["variable"].size(); }
+  size_t n_components() const { return j["variables"].size(); }
+  size_t n_dimensions() const {
+    // if (j.contains("nc_has_unlimited_time_dimension")) return j["dimensions"].size() - 1;
+    // else return j["dimensions"].size(); 
+    return j["dimensions"].size(); 
+  }
 
   std::vector<size_t> shape() const;
 
@@ -105,18 +105,49 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
   if (!j.contains("type") && j.contains("format"))
     j["type"] = "file";
 
+  // check if missing dimensions
+  bool missing_dimensions = false;
+  if (j.contains("dimensions")) {
+    if (j["dimensions"].is_array()) {
+      for (int i = 0; i < j["dimensions"].size(); i ++) {
+        if (j["dimensions"][i].is_number()) {
+          // OK
+        } else
+          fatal("invalid array dimensions (1)");
+      }
+    } else 
+      fatal("invalid array dimensions (2)");
+  } else 
+    missing_dimensions = true;
+
+  // check if missing variables
+  bool missing_variables = false;
+  if (j.contains("variables")) { 
+    if (j["variables"].is_array()) { 
+      for (const auto &v : j["variables"]) {
+        if (v.is_string()) {
+          // OK
+        } else
+          fatal("invalid variable name");
+      }
+    }
+  } else missing_variables = true;
+
   if (j.contains("type")) {
     if (j["type"] == "synthetic") {
+      int default_nd;
       int default_dims[3] = {32, 32, 32};
 
       if (j.contains("name")) {
         if (j["name"] == "woven") {
-          j["nd"] = 2;
-          j["variable"] = {"scalar"};
+          if (missing_variables) 
+            j["variables"] = {"scalar"};
+          default_nd = 2;
           if (!j.contains("x0")) j["scalaring_factor"] = 15.0;
         } else if (j["name"] == "moving_extremum_2d") {
-          j["nd"] = 2;
-          j["variable"] = {"scalar"};
+          if (missing_variables) 
+            j["variables"] = {"scalar"};
+          default_nd = 2;
           default_dims[0] = 21; 
           default_dims[1] = 21;
           default_dims[2] = 21;
@@ -152,25 +183,20 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             // j["dir"] = {0.5, 0.5};
             j["dir"] = {0.1, 0.1};
         } else if (j["name"] == "double_gyre") {
-          j["nd"] = 2;
+          default_nd = 2;
         } else if (j["name"] == "merger") {
-          j["nd"] = 2;
+          default_nd = 2;
         } else if (j["name"] == "tornado") {
-          j["nd"] = 3;
-          j["variable"] = {"u", "v", "w"};
+          default_nd = 3;
+          j["variables"] = {"u", "v", "w"};
         } else fatal("synthetic case not available.");
       } else fatal("synthetic case name not given.");
      
-      // default dimensions
-      if (j.contains("width")) assert(j["width"] != 0);
-      else j["width"] = default_dims[0];
-      
-      if (j.contains("height")) assert(j["height"] != 0);
-      else j["height"] = default_dims[1];
-        
-      if (j["nd"] == 3) {
-        if (j.contains("depth")) assert(j["depth"] != 0);
-        else j["depth"] = default_dims[2];
+      if (missing_dimensions) {
+        std::vector<int> dims;
+        for (int i = 0; i < default_nd; i ++)
+          dims.push_back(default_dims[i]);
+        j["dimensions"] = dims;
       }
 
       // if (j.contains("n_timesteps")) assert(j["n_timesteps"] != 0);
@@ -194,46 +220,15 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           else fatal("unable to determine file format.");
         }
 
-        bool missing_variables = false;
-        if (j.contains("variable")) { 
-          if (j["variable"].is_array()) { // multicomponent
-            for (const auto &v : j["variable"]) {
-              if (!v.is_string()) fatal("invalid variable name");
-            }
-          } else if (j["variable"].is_string()) { // single-component
-            const std::string var = j["variable"];
-            const std::vector<std::string> vars = {var};
-            j["variable"] = vars;
-          } else fatal("invalid variable");
-        } else missing_variables = true;
-
         if (j["format"] == "float32" || j["format"] == "float64") {
-          if (j.contains("width")) {
-            if (j["width"].is_number()) {
-              // OK
-            } else fatal("invalid width");
-          }
-
-          if (j.contains("height")) {
-            if (j["height"].is_number()) {
-              // OK
-            } else fatal("invalid height");
-          }
-
-          if (j.contains("depth")) {
-            if (j["depth"].is_number()) {
-              j["nd"] = 3;
-            } else 
-              fatal("invalid depth");
-          } else 
-            j["nd"] = 2;
+          if (missing_dimensions) 
+            fatal("missing dimensions.");
         
           if (missing_variables) { // add one single component in the array
             const std::string var("scalar");
             const std::vector<std::string> vars = {var};
-            j["variable"] = vars;
+            j["variables"] = vars;
           }
-
         } else if (j["format"] == "vti") {
 #if FTK_HAVE_VTK
           vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
@@ -242,41 +237,17 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 
           vtkSmartPointer<vtkImageData> image = reader->GetOutput();
 
-          // determine dimensionality
+          if (j.contains("dimensions")) 
+            warn("ignorning dimensions");
           int imageNd = image->GetDataDimension();
-          if (j.contains("nd") && j["nd"].is_number()) {
-            if (j["nd"] != imageNd)
-              fatal("Data dimensionality and given dimensionality mismatch.");
-          } else {
-            j["nd"] = imageNd;
-            if (!(j["nd"] == 2 || j["nd"] == 3))
-              fatal("Unsupported VTI data dimensionality.");
-          }
-
-          if (j.contains("width") || j.contains("height") || j.contains("depth")) 
-            warn("Given data dimensions are ignored.");
-          j["width"] = image->GetDimensions()[0];
-          j["height"] = image->GetDimensions()[1];
-          if (j["nd"] == 3)
-            j["depth"] = image->GetDimensions()[2];
-
-#if 0
-          if (!j.contains("variable")) {
-            j["variable"] = {image->GetPointData()->GetArrayName(0)};
-          } else if (j["variable"].is_string()) {
-            int varid;
-            image->GetPointData()->GetArray(j["variable"].template get<std::string>().c_str(), varid);
-          } else if (j["variable"].is_array()) {
-            for (int i = 0; i < j["variable"].size(); i ++) {
-              int varid;
-              image->GetPointData()->GetArray(j["variable"][i].template get<std::string>().c_str(), varid);
-              if (varid < 0) fatal("cannot find variable name");
-            }
-          } else fatal("invalid variable");
-#endif
+          if (imageNd == 2)
+            j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1]};
+          else 
+            j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1], image->GetDimensions()[2]};
+          
           if (missing_variables) {
             const std::string var = image->GetPointData()->GetArrayName(0);
-            j["variable"] = {var};
+            j["variables"] = {var};
           }
           
           // determine number timesteps
@@ -292,12 +263,12 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           if (missing_variables) 
             fatal("missing nc variable");
 
-          const int nv = j["variable"].size();
+          const int nv = j["variables"].size();
           int ncid, ncdims, nd, varids[nv];
 
           NC_SAFE_CALL( nc_open(filename0.c_str(), NC_NOWRITE, &ncid) );
           for (int i = 0; i < nv; i ++) {
-            const std::string var = j["variable"][i];
+            const std::string var = j["variables"][i];
             NC_SAFE_CALL( nc_inq_varid(ncid, var.c_str(), &varids[i]) );
           }
           NC_SAFE_CALL( nc_inq_varndims(ncid, varids[0], &ncdims) ); // assuming all variables have the same dimensions
@@ -308,29 +279,30 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           NC_SAFE_CALL( nc_inq_vardimid(ncid, varids[0], dimids) );
           for (int i = 0; i < ncdims; i ++) 
             NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &dimlens[i]) );
-          nc_close(ncid);
+
+          int unlimited_recid;
+          NC_SAFE_CALL( nc_inq_unlimdim(ncid, &unlimited_recid) );
+          NC_SAFE_CALL( nc_close(ncid) );
+          if (unlimited_recid >= 0)
+            j["nc_has_unlimited_time_dimension"] = true;
+          
+          if (j.contains("dimensions"))
+            warn("ignorning dimensions");
 
           if (ncdims == 4) { // 3 spatial dims + 1 time dimension; nd not required
-            j["width"] = dimlens[3];
-            j["height"] = dimlens[2];
-            j["depth"] = dimlens[1];
-            j["nd"] = 3;
+            j["dimensions"] = {dimlens[3], dimlens[2], dimlens[1]};
           } else if (ncdims == 3) {
-            if (j.contains("nd") && j["nd"].is_number()) { // nd required
-              if (j["nd"] == 3) {
-                j["width"] = dimlens[2];
-                j["height"] = dimlens[1];
-                j["depth"] = dimlens[0];
-              } else if (j["nd"] == 2) {
-                j["width"] = dimlens[2];
-                j["height"] = dimlens[1];
-              }
-            } else fatal("missing/invalid nd");
-          } else if (ncdims == 2) { // nd not required
-            j["width"] = dimlens[1];
-            j["height"] = dimlens[0];
-            j["nd"] = 2;
-          } else fatal("unsupported netcdf variable dimensionality");
+            if (unlimited_recid >= 0)
+              j["dimensions"] = {dimlens[2], dimlens[1]};
+            else 
+              j["dimensions"] = {dimlens[2], dimlens[1], dimlens[0]};
+          } else if (ncdims == 2) {
+            if (unlimited_recid >= 0)
+              j["dimensions"] = {dimlens[1]};
+            else 
+              j["dimensions"] = {dimlens[1], dimlens[0]};
+          } else 
+            fatal("unsupported netcdf variable dimensionality");
 
           // determine number timesteps
           if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
@@ -377,18 +349,9 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 template <typename T>
 std::vector<size_t> ndarray_stream<T>::shape() const
 {
-  std::vector<size_t> shape;
-  if (j["nd"] == 2) {
-    if (is_single_component()) 
-      shape = std::vector<size_t>({j["width"], j["height"]});
-    else 
-      shape = std::vector<size_t>({n_components(), j["width"], j["height"]});
-  } else {
-    if (is_single_component()) 
-      shape = std::vector<size_t>({j["width"], j["height"], j["depth"]});
-    else 
-      shape = std::vector<size_t>({n_components(), j["width"], j["height"], j["depth"]});
-  }
+  std::vector<size_t> shape = j["dimensions"];
+  if (is_multi_component()) 
+    shape.insert(shape.begin(), n_components());
   return shape;
 }
 
@@ -431,11 +394,11 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 #if FTK_HAVE_VTK
   const int nv = n_components();
   if (is_single_component()) {
-    array.from_vtk_image_data_file(filename, j["variable"][0]);
+    array.from_vtk_image_data_file(filename, j["variables"][0]);
   } else {
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_vtk_image_data_file(filename, j["variable"][i]);
+      arrays[i].from_vtk_image_data_file(filename, j["variables"][i]);
 
     array.reshape(shape());
     for (int i = 0; i < arrays[0].nelem(); i ++) {
@@ -457,13 +420,13 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
   const std::string filename = j["filenames"][k];
 #if FTK_HAVE_NETCDF
   if (is_single_component()) { // all data in one single variable; channels are automatically handled in ndarray
-    array.from_netcdf(filename, j["variable"][0]);
+    array.from_netcdf(filename, j["variables"][0]);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
     const int nv = n_components();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_netcdf(filename, j["variable"][i]);
+      arrays[i].from_netcdf(filename, j["variables"][i]);
 
     array.reshape(shape());
     for (int i = 0; i < arrays[0].nelem(); i ++) {
@@ -506,13 +469,13 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_woven(int k)
 {
   const int nt = j["n_timesteps"];
   const T t = nt == 1 ? 0.0 : double(k)/(nt-1);
-  return ftk::synthetic_woven_2D<T>(j["width"], j["height"], t);
+  return ftk::synthetic_woven_2D<T>(j["dimensions"][0], j["dimensions"][1], t);
 }
 
 template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_extremum_2d(int k) 
 {
-  const std::vector<size_t> shape({j["width"], j["height"]});
+  const std::vector<size_t> shape({j["dimensions"][0], j["dimensions"][1]});
   const T x0[2] = {j["x0"][0], j["x0"][1]}, 
           dir[2] = {j["dir"][0], j["dir"][1]};
 
@@ -534,8 +497,11 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_double_gyre(int k)
 template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_synthetic_tornado(int k) 
 {
-  const int w = j["width"], h = j["height"], d = j["depth"];
-  return ftk::synthetic_tornado<T>(w, h, d, k);
+  return ftk::synthetic_tornado<T>(
+      j["dimensions"][0],
+      j["dimensions"][1],
+      j["dimensions"][2], 
+      k);
 }
 
 template <typename T>

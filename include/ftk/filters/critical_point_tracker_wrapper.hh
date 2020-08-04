@@ -22,10 +22,17 @@ private:
 void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream)
 {
   const auto j = stream.get_json();
-  const size_t nd = j["nd"], DW = j["width"], DH = j["height"], DD = (nd == 2 ? 0 : j["depth"].get<size_t>()), DT = j["n_timesteps"];
+  // std::cerr << j << std::endl;
+  const size_t nd = stream.n_dimensions(),
+               DW = j["dimensions"][0], 
+               DH = j["dimensions"][1],
+               DT = j["n_timesteps"];
+  size_t DD;
+  if (nd == 3) DD = j["dimensions"][2];
+  else DD = 0;
   const size_t nv = stream.n_components();
 
-  if (j["nd"] == 2) {
+  if (nd == 2) {
     tracker = std::shared_ptr<critical_point_tracker_regular>(new ftk::critical_point_tracker_2d_regular);
     tracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   } else {

@@ -13,8 +13,7 @@ const int tornado_width = 31, tornado_height = 29, tornado_depth = 37;
 const json js_woven_synthetic = {
   {"type", "synthetic"},
   {"name", "woven"},
-  {"width", woven_width},
-  {"height", woven_height}
+  {"dimensions", {woven_width, woven_height}}
 };
 
 const json js_moving_extremum_2d_synthetic = {
@@ -30,32 +29,28 @@ const json js_moving_extremum_2d_vti = {
 const json js_tornado_synthetic = {
   {"type", "synthetic"},
   {"name", "tornado"},
-  {"width", tornado_width},
-  {"height", tornado_height},
-  {"depth", tornado_depth}
+  {"dimensions", {tornado_width, tornado_height, tornado_depth}}
 };
 
 const json js_woven_float64 = {
   {"type", "file"},
   {"format", "float64"},
   {"filenames", "woven-*.bin"},
-  {"width", woven_width},
-  {"height", woven_height}
+  {"dimensions", {woven_width, woven_height}}
 };
 
 const json js_woven_nc_unlimited_time = {
   {"type", "file"},
   {"format", "nc"},
   {"filenames", "woven-unlimited-time*.nc"},
-  {"variable", "scalar"},
-  {"nd", 2}
+  {"variables", {"scalar"}},
 };
 
 const json js_woven_nc_no_time = {
   {"type", "file"},
   {"format", "nc"},
   {"filenames", "woven-no-time-*.nc"},
-  {"variable", "scalar"}
+  {"variables", {"scalar"}}
 };
 
 const json js_woven_vti {

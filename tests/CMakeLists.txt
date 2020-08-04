@@ -70,6 +70,6 @@ if (FTK_HAVE_MPI)
       COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum>)
   endforeach (p)
 else () # serial only
-  catch_discover_tests (test_critical_point_tracking_woven)
-  catch_discover_tests (test_critical_point_tracking_moving_extremum)
+  # catch_discover_tests (test_critical_point_tracking_woven)
+  # catch_discover_tests (test_critical_point_tracking_moving_extremum)
 endif ()
