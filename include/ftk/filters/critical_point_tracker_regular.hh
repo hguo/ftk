@@ -16,7 +16,6 @@ enum {
 
 struct critical_point_tracker_regular : public critical_point_tracker {
   critical_point_tracker_regular() {}
-  critical_point_tracker_regular(int argc, char **argv) : critical_point_tracker(argc, argv) {}
   virtual ~critical_point_tracker_regular() {}
 
   void set_domain(const lattice& l) {domain = l;} // spatial domain

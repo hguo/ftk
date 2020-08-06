@@ -10,7 +10,9 @@ namespace ftk {
 struct critical_point_tracker_wrapper {
   void configure(const json& j);
 
-  void consume(ndarray_stream<> &stream);
+  void consume(ndarray_stream<> &stream, 
+      diy::mpi::communicator comm = diy::mpi::communicator()/*MPI_COMM_WORLD*/);
+
   std::shared_ptr<critical_point_tracker_regular> get_tracker() {return tracker;};
   
 private:
@@ -19,7 +21,7 @@ private:
 };
 
 ///////////////
-void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream)
+void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
   const auto j = stream.get_json();
   // std::cerr << j << std::endl;
@@ -42,6 +44,7 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream)
   
   // tracker->set_number_of_threads(nthreads);
   tracker->set_input_array_partial(false); // input data are not distributed
+  tracker->set_communicator(comm);
 
   // if (use_type_filter)
   //   tracker->set_type_filter(type_filter);

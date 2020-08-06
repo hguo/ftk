@@ -9,7 +9,6 @@
 namespace ftk {
 
 struct critical_point_tracker : public filter {
-  critical_point_tracker(int argc, char **argv) : filter(argc, argv) {}
   critical_point_tracker() {}
 
   virtual void update() {}; // TODO

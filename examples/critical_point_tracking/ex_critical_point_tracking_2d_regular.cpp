@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 {
   diy::mpi::environment env;
 
-  ftk::critical_point_tracker_2d_regular tracker(argc, argv);
+  ftk::critical_point_tracker_2d_regular tracker;
   tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
   // tracker.set_domain(ftk::lattice({4, 4}, {DW-6, DH-6}));
   tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));

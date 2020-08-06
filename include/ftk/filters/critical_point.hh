@@ -13,6 +13,8 @@ struct critical_point_t {
   ValueType scalar = ValueType(0);
   unsigned int type = 0;
   IntegerType tag = 0;
+
+  constexpr size_t size() const noexcept { return sizeof(critical_point_t<N, ValueType, IntegerType>); }
 };
 
 }
