@@ -21,8 +21,12 @@
 #include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
-#include <ftk/hypermesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/external/diy/serialization.hpp>
+
+#if FTK_HAVE_GMP
+#include <gmpxx.h>
+#endif
 
 #if FTK_HAVE_VTK
 #include <vtkUnsignedIntArray.h>
@@ -76,18 +80,22 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
 
   void write_discrete_critical_points(const std::string& filename) const;
   void write_traced_critical_points(const std::string& filename) const;
-  
+ 
+  void write_traced_critical_points_text(const std::string& filename) const;
   void write_traced_critical_points_text(std::ostream& os) const;
   void write_discrete_critical_points_text(std::ostream &os) const;
-
-protected:
-  regular_simplex_mesh m;
   
-  typedef regular_simplex_mesh_element element_t;
+protected:
+  simplicial_regular_mesh m;
+  typedef simplicial_regular_mesh_element element_t;
   
   std::map<element_t, critical_point_2dt_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
   std::vector<std::vector<critical_point_2dt_t>> traced_critical_points;
+  
+public:
+  const std::map<element_t, critical_point_2dt_t>& get_discrete_critical_points() {return discrete_critical_points;}
+  const std::vector<std::vector<critical_point_2dt_t>>& get_traced_critical_points() {return traced_critical_points;}
 
 protected:
   bool check_simplex(const element_t& s, critical_point_2dt_t& cp);
@@ -140,6 +148,7 @@ inline void critical_point_tracker_2d_regular::initialize()
 
 inline void critical_point_tracker_2d_regular::finalize()
 {
+  // fprintf(stderr, "rank=%d, #cp=%zu\n", comm.rank(), discrete_critical_points.size());
   diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
 
   if (comm.rank() == 0) {
@@ -167,7 +176,7 @@ inline void critical_point_tracker_2d_regular::push_scalar_field_snapshot(const 
   if (vector_field_source == SOURCE_DERIVED) {
     snapshot.vector = gradient2D(s);
     if (jacobian_field_source == SOURCE_DERIVED)
-      snapshot.jacobian = jacobian2D(snapshot.vector);
+      snapshot.jacobian = jacobian2D<double, true>(snapshot.vector);
   }
 
   field_data_snapshots.emplace_back( snapshot );
@@ -343,7 +352,7 @@ inline void critical_point_tracker_2d_regular::trace_intersections()
   for (const auto &kv : discrete_critical_points) 
     uf.add(kv.first);
 
-  m.element_for(3, [&](const regular_simplex_mesh_element& f) {
+  m.element_for(3, [&](const simplicial_regular_mesh_element& f) {
     const auto sides = f.sides(m);
     std::set<element_t> intersected_sides;
 
@@ -458,10 +467,15 @@ inline void critical_point_tracker_2d_regular::simplex_jacobians(
 }
 
 inline bool critical_point_tracker_2d_regular::check_simplex(
-    const regular_simplex_mesh_element& e,
+    const simplicial_regular_mesh_element& e,
     critical_point_2dt_t& cp)
 {
+#if FTK_HAVE_GMP
+  typedef mpf_class fp_t;
+  // typedef double fp_t;
+#else
   typedef fixed_point<> fp_t;
+#endif
   
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
@@ -502,8 +516,12 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   // robust critical point test
   fp_t vf[3][2];
   for (int i = 0; i < 3; i ++)
-    for (int j = 0; j < 2; j ++)
-      vf[i][j] = v[i][j];
+    for (int j = 0; j < 2; j ++) {
+      const double x = v[i][j];
+      if (std::isnan(x) || std::isinf(x)) return false;
+      else vf[i][j] = v[i][j];
+    }
+
   int indices[3];
   simplex_indices(vertices, indices);
   bool succ = robust_critical_point_in_simplex2(vf, indices);
@@ -750,6 +768,13 @@ inline void critical_point_tracker_2d_regular::write_discrete_critical_points(co
 inline void critical_point_tracker_2d_regular::write_traced_critical_points(const std::string& filename) const 
 {
   diy::serializeToFile(traced_critical_points, filename);
+}
+  
+inline void critical_point_tracker_2d_regular::write_traced_critical_points_text(const std::string& filename) const
+{
+  std::ofstream ofs(filename);
+  write_traced_critical_points_text(ofs);
+  ofs.close();
 }
 
 inline void critical_point_tracker_2d_regular::write_traced_critical_points_text(std::ostream& os) const

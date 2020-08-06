@@ -2,7 +2,7 @@
 #define _HYPERMESH_GRAD_HH
 
 #include <ftk/ndarray.hh>
-#include <ftk/hypermesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/simplicial_regular_mesh.hh>
 
 namespace ftk {
 
@@ -14,12 +14,17 @@ ndarray<T> gradient2D(const ndarray<T>& scalar)
   ndarray<T> grad;
   grad.reshape(2, DW, DH); 
 
+  const auto f = [&](int i, int j) {
+    i = std::min(std::max(0, i), DW-1);
+    j = std::min(std::max(0, j), DH-1);
+    return scalar(i, j);
+  };
+
 #pragma omp parallel for collapse(2)
-  for (int j = 1; j < DH-1; j ++) {
-    for (int i = 1; i < DW-1; i ++) {
-      auto dfdx = grad(0, i, j) = 0.5 * (scalar(i+1, j) - scalar(i-1, j)) * (DW-1);
-      auto dfdy = grad(1, i, j) = 0.5 * (scalar(i, j+1) - scalar(i, j-1)) * (DH-1);
-      // fprintf(stderr, "s=%f, grad=%f, %f\n", scalar(i, j), dfdx, dfdy);
+  for (int j = 0; j < DH; j ++) {
+    for (int i = 0; i < DW; i ++) {
+      auto dfdx = grad(0, i, j) = (f(i+1, j) - f(i-1, j)) * (DW-1);
+      auto dfdy = grad(1, i, j) = (f(i, j+1) - f(i, j-1)) * (DH-1);
     }
   }
   return grad;
@@ -46,24 +51,35 @@ ndarray<T> gradient2Dt(const ndarray<T>& scalar)
 }
 
 // derive gradients for 2D vector field
-template <typename T>
+template <typename T, bool symmetric=false>
 ndarray<T> jacobian2D(const ndarray<T>& vec)
 {
   const int DW = vec.dim(1), DH = vec.dim(2);
   ndarray<T> grad;
   grad.reshape(2, 2, DW, DH);
+  
+  const auto f = [&](int c, int i, int j) {
+    i = std::min(std::max(0, i), DW-1);
+    j = std::min(std::max(0, j), DH-1);
+    return vec(c, i, j);
+  };
 
 #pragma omp parallel for collapse(2)
-  for (int j = 2; j < DH-2; j ++) {
-    for (int i = 2; i < DW-2; i ++) {
-      const T H00 = grad(0, 0, i, j) = // du/dx 
-        0.5 * (vec(0, i+1, j) - vec(0, i-1, j)) * (DW-1); 
-      const T H01 = grad(0, 1, i, j) = // du/dy
-        0.5 * (vec(0, i, j+1) - vec(0, i, j-1)) * (DH-1);
-      const T H10 = grad(1, 0, i, j) = // dv/dx
-        0.5 * (vec(1, i+1, j) - vec(1, i-1, j)) * (DW-1);
-      const T H11 = grad(1, 1, i, j) = // dv.dy
-        0.5 * (vec(1, i, j+1) - vec(1, i, j-1)) * (DH-1);
+  for (int j = 0; j < DH; j ++) {
+    for (int i = 0; i < DW; i ++) {
+      const T H00 = f(0, i+1, j) - f(0, i-1, j) * (DW-1),
+              H01 = f(0, i, j+1) - f(0, i, j-1) * (DH-1),
+              H10 = f(1, i+1, j) - f(1, i-1, j) * (DW-1), 
+              H11 = f(1, i, j+1) - f(1, i, j-1) * (DH-1);
+
+      grad(0, 0, i, j) = H00;
+      grad(1, 1, i, j) = H11;
+      if (symmetric)
+        grad(0, 1, i, j) = grad(1, 0, i, j) = (H01 + H10) * 0.5;
+      else {
+        grad(0, 1) = H01;
+        grad(1, 0) = H10;
+      }
     }
   }
   return grad;
@@ -78,7 +94,7 @@ ndarray<T> jacobian2DPL(const ndarray<T>& V)
   ndarray<T> J;
   J.reshape(2, 2, 2/*upper & lower triangles*/, DW, DH);
 
-  regular_simplex_mesh m(2);
+  simplicial_regular_mesh m(2);
   m.set_lb_ub({0, 0}, {DW-1, DH-1});
   // WIP
   // m.element_for(2, 

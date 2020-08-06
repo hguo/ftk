@@ -30,7 +30,11 @@ if (FTK_HAVE_HDF5)
 endif ()
 
 if (FTK_HAVE_MPSOLVE)
-  target_link_libraries (ftk ${MPSolve_LIBRARY} ${GMP_LIBRARIES})
+  target_link_libraries (ftk ${MPSolve_LIBRARY})
+endif ()
+
+if (FTK_HAVE_GMP)
+  target_link_libraries (ftk ${GMP_LIBRARIES})
 endif ()
 
 if (FTK_HAVE_GSL)

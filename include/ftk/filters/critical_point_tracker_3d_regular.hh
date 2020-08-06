@@ -16,7 +16,7 @@
 #include <ftk/geometry/curve2vtk.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
-#include <ftk/hypermesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/filters/critical_point.hh>
 #include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/external/diy/serialization.hpp>
@@ -76,9 +76,9 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
 #endif
 
 protected:
-  regular_simplex_mesh m;
+  simplicial_regular_mesh m;
   
-  typedef regular_simplex_mesh_element element_t;
+  typedef simplicial_regular_mesh_element element_t;
   
   std::map<element_t, critical_point_3dt_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
@@ -387,7 +387,7 @@ void critical_point_tracker_3d_regular::simplex_jacobians(
 
 
 bool critical_point_tracker_3d_regular::check_simplex(
-    const regular_simplex_mesh_element& e,
+    const simplicial_regular_mesh_element& e,
     critical_point_3dt_t& cp)
 {
   if (!e.valid(m)) return false; // check if the 2-simplex is valid

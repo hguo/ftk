@@ -1,16 +1,16 @@
 #include <ftk/basic/distributed_union_find.hh>
 #include <ftk/basic/duf.hh>
-#include <ftk/hypermesh/regular_simplex_mesh.hh>
-#include <ftk/hypermesh/lattice_partitioner.hh>
+#include <ftk/mesh/simplicial_regular_mesh.hh>
+#include <ftk/mesh/lattice_partitioner.hh>
 #include <ftk/external/diy-ext/gather.hh>
 
 int main(int argc, char **argv)
 {
   diy::mpi::environment env;
 
-  ftk::regular_simplex_mesh m(3);
+  ftk::simplicial_regular_mesh m(3);
   m.set_lb_ub({0, 0, 0}, {1, 1, 1});
-  m.element_for(2, [&](ftk::regular_simplex_mesh_element e) {
+  m.element_for(2, [&](ftk::simplicial_regular_mesh_element e) {
       e.print(std::cerr, m);
       std::cerr << std::endl;
     }, 1);
@@ -83,22 +83,22 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
-  ftk::regular_simplex_mesh m(3);
+  ftk::simplicial_regular_mesh m(3);
   m.set_lb_ub({0, 0, 0}, {3, 3, 3});
 
-  m.element_for(2, [=](ftk::regular_simplex_mesh_element e) {
+  m.element_for(2, [=](ftk::simplicial_regular_mesh_element e) {
       std::cerr << e << std::endl;
     }, 1);
 #endif
  
 #if 0
-  m.element_for_ordinal(2, 1, [=](ftk::regular_simplex_mesh_element e) {
+  m.element_for_ordinal(2, 1, [=](ftk::simplicial_regular_mesh_element e) {
       std::cerr << e << std::endl;
     }, 1);
 #endif
  
 #if 0
-  m.element_for_interval(2, 1, 2, [=](ftk::regular_simplex_mesh_element e) {
+  m.element_for_interval(2, 1, 2, [=](ftk::simplicial_regular_mesh_element e) {
       std::cerr << e << std::endl;
     }, 1);
 #endif
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 
 #if 0
   const int nd = 4;
-  ftk::regular_simplex_mesh m(nd);
+  ftk::simplicial_regular_mesh m(nd);
 
   for (int i = 0; i < nd+1; i ++)
     fprintf(stderr, "%d, %d, %d\n", 

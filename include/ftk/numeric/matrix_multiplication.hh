@@ -3,8 +3,8 @@
 
 namespace ftk {
 
-template <class T, int M, int N, /*m1=n0*/ int K>
-void matrix_matrix_multiplication(const T A[M][N], const T B[N][K], T C[M][K])
+template <class T, int M, int K, int N>
+void matrix_matrix_multiplication(const T A[M][K], const T B[K][N], T C[M][N])
 {
   for (int i=0; i<M; i++) {
     for (int j=0; j<N; j++) {
@@ -126,6 +126,12 @@ template <class T>
 inline void matrix3x4_matrix4x3_multiplication(const T A[3][4], const T B[4][3], T C[3][3])
 {
   matrix_matrix_multiplication<T, 3, 4, 3>(A, B, C);
+}
+
+template <class T>
+inline void matrix3x4_matrix4x2_multiplication(const T A[3][4], const T B[4][2], T C[2][2])
+{
+  matrix_matrix_multiplication<T, 3, 4, 2>(A, B, C);
 }
 
 }

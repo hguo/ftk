@@ -210,6 +210,16 @@ ndarray<T> conv3D_gaussian(
   return res;
 }
 
+template <typename T>
+ndarray<T> conv_gaussian(
+    const ndarray<T> &data, T sigma,
+    size_t ksize=5, size_t padding=0)
+{
+  if (data.nd() == 2) return conv2D_gaussian<T>(data, sigma, ksize, ksize, padding);
+  else if (data.nd() == 3) return conv3D_gaussian<T>(data, sigma, ksize, ksize, ksize, padding);
+  else return ndarray<T>();
+}
+
 }  // namespace ftk
 
 #endif  // _HYPERMESH_CONV_HH

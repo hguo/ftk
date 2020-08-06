@@ -2,7 +2,7 @@
 #define _HYPERMESH_SYNTHETIC_DATA_H
 
 #include <ftk/ndarray.hh>
-#include <ftk/hypermesh/lattice.hh>
+#include <ftk/mesh/lattice.hh>
 
 namespace ftk {
 
@@ -185,6 +185,29 @@ ndarray<T> synthetic_merger_2D(int DW, int DH, T t)
               y = ((T(j) / (DH-1)) - 0.5) * 4;
       scalar(i, j) = merger_function_2Dt(x, y, t);
     }
+  }
+
+  return scalar;
+}
+
+template <typename T, int N>
+ndarray<T> synthetic_moving_extremum(const std::vector<size_t>& shape, const T x0[N], const T dir[N], T t)
+{
+  ndarray<T> scalar(shape);
+  const auto lattice = scalar.get_lattice();
+
+  T xc[N]; // center
+  for (int j = 0; j < N; j ++)
+    xc[j] = x0[j] + dir[j] * t;
+
+  for (auto i = 0; i < scalar.nelem(); i ++) {
+    std::vector<int> xi = lattice.from_integer(i);
+    T x[N];
+    T d = 0;
+    for (int j = 0; j < N; j ++) {
+      d += pow(xi[j] - xc[j], T(2.0));
+    }
+    scalar[i] = d;
   }
 
   return scalar;

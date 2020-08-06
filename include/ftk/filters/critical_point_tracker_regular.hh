@@ -2,7 +2,7 @@
 #define _FTK_CRITICAL_POINT_TRACKER_REGULAR_HH
 
 #include <ftk/ndarray.hh>
-#include <ftk/hypermesh/lattice_partitioner.hh>
+#include <ftk/mesh/lattice_partitioner.hh>
 #include <ftk/filters/critical_point_tracker.hh>
 #include <ftk/external/diy-ext/gather.hh>
 

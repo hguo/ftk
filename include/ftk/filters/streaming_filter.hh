@@ -3,6 +3,7 @@
 
 #include <deque>
 #include <vector>
+#include <functional>
 #include <ftk/ndarray/conv.hh>
 
 namespace ftk {
@@ -12,7 +13,7 @@ struct streaming_filter {
   streaming_filter() : cursor(0) {}
   ~streaming_filter() {};
 
-  void set_callback(std::function<void(const T&)> f) {callback = f;}
+  void set_callback(std::function<void(int, const T&)> f) {callback = f;}
 
   void set_gaussian_kernel(KT sigma, int size) {set_kernel(gaussian_kernel(sigma, size));}
   void set_kernel(const std::vector<KT>&);
@@ -34,7 +35,8 @@ private:
   mutable int cursor;
   bool finishing = false;
 
-  std::function<void(const T&)> callback;
+  std::function<void(int, const T&)> callback;
+  mutable int n_fetched_timesteps = 0;
 };
 
 
@@ -58,8 +60,9 @@ void streaming_filter<T, KT>::push(const T& d)
   }
 
   if (callback) 
-    if (ready())
-      callback(get());
+    if (ready()) {
+      callback(n_fetched_timesteps, get());
+    }
 }
 
 template <typename T, typename KT>
@@ -82,6 +85,7 @@ T streaming_filter<T, KT>::get() const
   if (finishing) cursor --;
   else cursor ++;
 
+  n_fetched_timesteps ++;
   return result;
 }
 
@@ -91,8 +95,9 @@ void streaming_filter<T, KT>::finish()
   finishing = true;
   while (1) {
     data.pop_front();
-    if (ready() && callback)
-      callback(get());
+    if (ready() && callback) {
+      callback(n_fetched_timesteps, get());
+    }
     if (!ready()) break;
   }
 }

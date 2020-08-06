@@ -1,8 +1,10 @@
-language:
-  - cpp
+language: cpp
 
 os: linux
 dist: bionic
+
+env:
+  - CMAKE_BUILD_TYPE=RELEASE
 
 jobs:
   include:
@@ -26,15 +28,119 @@ jobs:
       env:
         - CMAKE_ARG="-DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
-    - name: build with netcdf (linux)
+    - name: build with tbb (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libtbb-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_TBB=ON"
+
+    - name: build with vtk (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libvtk7-dev
+      env: 
+        - CMAKE_ARG="-DFTK_USE_VTK=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
+    
+    - name: build with mpich (osx)
+      os: osx
+      before_install:
+        - brew install mpich
+        #- sh tests/travis/install-mpich.sh
+      osx_image: xcode11
+      env:
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
+    - name: build with mpich (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libmpich-dev
+            - mpich
+      env: 
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
+    - name: build with openmpi (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libopenmpi-dev 
+            - openmpi-bin
+      env: 
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
+    - name: build with cuda10 (linux)
+      os: linux
+      dist: bionic
+      before_install:
+        - sh tests/travis/install-cuda.sh
+      env: 
+        - CUDA=10.1.105-1
+        - CUDA_SHORT_VER=10-1
+        - CUDA_SHORT=10.1
+        - UBUNTU_VERSION=ubuntu1804
+        - CPATH=/usr/local/cuda-10.1/include
+        - CMAKE_ARG="-DFTK_USE_CUDA=ON -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
+
+    - name: build with mpsolve, netcdf, hdf5, vtk, and openmpi (linux)
       os: linux
       dist: bionic
       addons:
         apt:
           packages:
             - libnetcdf-dev
+            - libhdf5-dev
+            - libvtk7-dev
+            - libopenmpi-dev
+            - openmpi-bin
+      before_install:
+        - sh tests/travis/install-mpsolve.sh
       env: 
-        - CMAKE_ARG="-DFTK_USE_NETCDF=ON"
+        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
+
+    - name: build with mpsolve, netcdf, hdf5, vtk, cuda10, and openmpi (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libvtk7-dev
+            - libhdf5-dev
+            - libnetcdf-dev
+            - libopenmpi-dev
+            - openmpi-bin
+      before_install:
+        - sh tests/travis/install-mpsolve.sh
+        - sh tests/travis/install-cuda.sh
+      env: 
+        - CUDA=10.1.105-1
+        - CUDA_SHORT_VER=10-1
+        - CUDA_SHORT=10.1
+        - UBUNTU_VERSION=ubuntu1804
+        - CPATH=/usr/local/cuda-10.1/include
+        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DFTK_USE_CUDA=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
+
+
+
+
+  allow_failures:
+    - name: build with vtk (osx)
+      env: 
+        - CMAKE_ARG="-DFTK_USE_VTK=ON"
+      os: osx
+      before_install:
+        - sh tests/travis/install-vtk.sh
+      osx_image: xcode11
 
     - name: build with hdf5 (linux)
       os: linux
@@ -46,16 +152,16 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_HDF5=ON"
 
-    - name: build with vtk (linux)
+    - name: build with netcdf (linux)
       os: linux
       dist: bionic
       addons:
         apt:
           packages:
-            - libvtk7-dev
+            - libnetcdf-dev
       env: 
-        - CMAKE_ARG="-DFTK_USE_VTK=ON"
-    
+        - CMAKE_ARG="-DFTK_USE_NETCDF=ON"
+
     - name: build with netcdf, hdf5, and vtk (linux)
       os: linux
       dist: bionic
@@ -66,7 +172,7 @@ jobs:
             - libhdf5-dev
             - libvtk7-dev
       env: 
-        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON"
+        - CMAKE_ARG="-DFTK_USE_NETCDF=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON"
 
     - name: build with mpsolve, netcdf, hdf5, and vtk (linux)
       os: linux
@@ -80,32 +186,45 @@ jobs:
       before_install:
         - sh tests/travis/install-mpsolve.sh
       env:
-        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
+        - CMAKE_ARG="-DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
-    - name: build with mpi (linux)
+    - name: build with mpsolve, netcdf, hdf5, vtk, and mpich (linux)
       os: linux
       dist: bionic
       addons:
         apt:
           packages:
-            - libmpich-dev
-      env: 
-        - CMAKE_ARG="-DFTK_USE_MPI=ON"
-
-    - name: build with mpsolve, netcdf, hdf5, vtk, and mpi (linux)
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          packages:
-            - libnetcdf-dev
-            - libhdf5-dev
             - libvtk7-dev
+            - libhdf5-dev
+            - libnetcdf-dev
             - libmpich-dev
+            - mpich
       before_install:
         - sh tests/travis/install-mpsolve.sh
       env: 
-        - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
+        - CMAKE_ARG="-DCMAKE_C_COMPILER=/usr/bin/mpicc.mpich -DCMAKE_CXX_COMPILER=/usr/bin/mpicxx.mpich -DMPIEXEC_EXECUTABLE=/usr/bin/mpiexec.mpich -DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
+
+    - name: build with mpsolve, netcdf, hdf5, vtk, cuda10, and mpich (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libvtk7-dev
+            - libhdf5-dev
+            - libnetcdf-dev
+            - libmpich-dev
+            - mpich
+      before_install:
+        - sh tests/travis/install-mpsolve.sh
+        - sh tests/travis/install-cuda.sh
+      env: 
+        - CUDA=10.1.105-1
+        - CUDA_SHORT_VER=10-1
+        - CUDA_SHORT=10.1
+        - UBUNTU_VERSION=ubuntu1804
+        - CPATH=/usr/local/cuda-10.1/include
+        - CMAKE_ARG="-DCMAKE_C_COMPILER=/usr/bin/mpicc.mpich -DCMAKE_CXX_COMPILER=/usr/bin/mpicxx.mpich -DMPIEXEC_EXECUTABLE=/usr/bin/mpiexec.mpich -DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DFTK_USE_CUDA=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
 
 before_script:
   - mkdir build

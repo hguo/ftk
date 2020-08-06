@@ -2,7 +2,8 @@
 #define _HYPERMESH_ARRAY_HH
 
 #include <ftk/ftk_config.hh>
-#include <ftk/hypermesh/lattice.hh>
+#include <ftk/object.hh>
+#include <ftk/mesh/lattice.hh>
 #include <vector>
 #include <array>
 #include <numeric>
@@ -13,7 +14,7 @@
 #include <glob.h>
 
 #if FTK_HAVE_CUDA
-#include <cuda.h>
+// #include <cuda.h>
 #include <cuda_runtime.h>
 #endif
 
@@ -61,13 +62,14 @@
 namespace ftk {
 
 template <typename T>
-struct ndarray {
+struct ndarray : object {
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshape(dims);}
   ndarray(const lattice& l) {reshape(l.sizes());}
   ndarray(const T *a, const std::vector<size_t> &shape);
 
   std::ostream& print(std::ostream& os) const;
+  std::ostream& print_shape(std::ostream& os) const;
 
   size_t nd() const {return dims.size();}
   size_t dim(size_t i) const {return dims[i];}
@@ -165,8 +167,8 @@ struct ndarray {
   template <typename T1> ndarray<T>& operator*=(const T1& x);
   template <typename T1> ndarray<T>& operator/=(const T1& x);
 
-  friend ndarray<T> operator+(const ndarray<T>& lhs, const ndarray<T>& rhs);
-  friend ndarray<T> operator-(const ndarray<T>& lhs, const ndarray<T>& rhs);
+  template <typename T1> friend ndarray<T1> operator+(const ndarray<T1>& lhs, const ndarray<T1>& rhs);
+  template <typename T1> friend ndarray<T1> operator-(const ndarray<T1>& lhs, const ndarray<T1>& rhs);
 
   // template <typename T1> friend ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs);
   template <typename T1> friend ndarray<T> operator*(const T1& lhs, const ndarray<T>& rhs) {return rhs * lhs;}
@@ -204,6 +206,8 @@ struct ndarray {
   void to_binary_file(const std::string& filename);
   void to_binary_file(FILE *fp);
 
+  template <typename T1> void to_binary_file2(const std::string& f) const;
+
   void from_numpy(const std::string& filename);
   void to_numpy(const std::string& filename) const;
 
@@ -239,15 +243,20 @@ struct ndarray {
   void from_netcdf(const std::string& filename, const std::string& varname);
   void from_netcdf(int ncid, const std::string& varname);
   void from_netcdf(int ncid, int varid);
-  void to_netcdf(const std::string& filename, const std::string& varname);
-  void to_netcdf(int ncid, const std::string& varname);
-  void to_netcdf(int ncid, int varid);
+  // void to_netcdf(int ncid, const std::string& varname);
+  // void to_netcdf(int ncid, int varid);
+  void to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const;
+  void to_netcdf(int ncid, int varid) const;
+  void to_netcdf_multivariate(int ncid, int varids[]) const;
+  void to_netcdf_unlimited_time(int ncid, int varid) const;
+  void to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const;
 
   static std::vector<std::string> glob(const std::string &pattern);
 
 #if FTK_HAVE_MPI
   static MPI_Datatype mpi_datatype();
 #endif
+  static int nc_datatype();
 
   void copy_to_cuda_device();
 
@@ -266,6 +275,24 @@ private:
 };
 
 //////////////////////////////////
+
+template <typename T>
+template <typename T1>
+ndarray<T>& ndarray<T>::operator*=(const T1& x)
+{
+  for (auto i = 0; i < p.size(); i ++)
+    p[i] *= x;
+  return *this;
+}
+
+template <typename T>
+template <typename T1>
+ndarray<T>& ndarray<T>::operator/=(const T1& x)
+{
+  for (auto i = 0; i < p.size(); i ++)
+    p[i] /= x;
+  return *this;
+}
 
 template <typename T>
 ndarray<T>& ndarray<T>::operator+=(const ndarray<T>& x)
@@ -373,6 +400,15 @@ template <typename T>
 void ndarray<T>::to_binary_file(FILE *fp)
 {
   fwrite(&p[0], sizeof(T), nelem(), fp);
+}
+
+template <typename T>
+template <typename T1>
+void ndarray<T>::to_binary_file2(const std::string& f) const
+{
+  ndarray<T1> array; 
+  array.template from_array<T>(*this);
+  array.to_binary_file(f);
 }
 
 template <typename T>
@@ -561,6 +597,76 @@ inline void ndarray<double>::from_netcdf(int ncid, int varid, int ndims, const s
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
 }
 
+template <>
+inline void ndarray<double>::to_netcdf(int ncid, int varid, const size_t st[], const size_t sz[]) const
+{
+  fprintf(stderr, "st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
+      st[0], st[1], st[2], st[3], sz[0], sz[1], sz[2], sz[3]);
+  NC_SAFE_CALL( nc_put_vara_double(ncid, varid, st, sz, &p[0]) );
+}
+
+template <>
+inline void ndarray<float>::to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const
+{
+  NC_SAFE_CALL( nc_put_vara_float(ncid, varid, starts, sizes, &p[0]) );
+}
+
+template <>
+inline void ndarray<int>::to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const
+{
+  NC_SAFE_CALL( nc_put_vara_int(ncid, varid, starts, sizes, &p[0]) );
+}
+
+template <typename T>
+inline void ndarray<T>::to_netcdf(int ncid, int varid) const
+{
+  std::vector<size_t> starts(dims.size(), 0), sizes(dims);
+  std::reverse(sizes.begin(), sizes.end());
+
+  to_netcdf(ncid, varid, &starts[0], &sizes[0]);
+}
+
+template <typename T>
+inline void ndarray<T>::to_netcdf_multivariate(int ncid, int varids[]) const
+{
+  const size_t nv = dims[0], ndims = nd()-1;
+  std::vector<size_t> d(dims.begin()+1, dims.end());
+
+  for (int i = 0; i < nv; i ++) {
+    ndarray<T> subarray(d);
+    for (size_t j = 0; j < subarray.nelem(); j ++) 
+      subarray[j] = p[j*nv + i];
+    subarray.to_netcdf(ncid, varids[i]);
+  }
+}
+
+template <typename T>
+inline void ndarray<T>::to_netcdf_unlimited_time(int ncid, int varid) const
+{
+  std::vector<size_t> starts(dims.size()+1, 0), sizes(dims);
+  sizes.push_back(1);
+  std::reverse(sizes.begin(), sizes.end());
+ 
+  // fprintf(stderr, "starts={%zu, %zu, %zu}, sizes={%zu, %zu, %zu}\n", 
+  //     starts[0], starts[1], starts[2], sizes[0], sizes[1], sizes[2]);
+
+  to_netcdf(ncid, varid, &starts[0], &sizes[0]);
+}
+
+template <typename T>
+inline void ndarray<T>::to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const
+{
+  const size_t nv = dims[0], ndims = nd()-1;
+  std::vector<size_t> d(dims.begin()+1, dims.end());
+
+  for (int i = 0; i < nv; i ++) {
+    ndarray<T> subarray(d);
+    for (size_t j = 0; j < subarray.nelem(); j ++) 
+      subarray[j] = p[j*nv + i];
+    subarray.to_netcdf_unlimited_time(ncid, varids[i]);
+  }
+}
+
 template <typename T>
 inline void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
@@ -735,6 +841,12 @@ template <> inline MPI_Datatype ndarray<float>::mpi_datatype() { return MPI_FLOA
 template <> inline MPI_Datatype ndarray<int>::mpi_datatype() { return MPI_INT; }
 #endif
 
+#if FTK_HAVE_NETCDF
+template <> inline int ndarray<double>::nc_datatype() { return NC_DOUBLE; }
+template <> inline int ndarray<float>::nc_datatype() { return NC_FLOAT; }
+template <> inline int ndarray<int>::nc_datatype() { return NC_INT; }
+#endif
+
 template <typename T>
 inline void ndarray<T>::copy_to_cuda_device()
 {
@@ -784,6 +896,7 @@ inline void ndarray<T>::from_h5(hid_t did)
   std::vector<size_t> dims(h5ndims);
   for (auto i = 0; i < h5ndims; i ++)
     dims[i] = h5dims[i];
+  std::reverse(dims.begin(), dims.end());
   reshape(dims);
   
   H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
@@ -842,13 +955,20 @@ inline std::vector<ndarray<T>> ndarray<T>::slice_time() const
 }
 
 template <typename T>
-std::ostream& ndarray<T>::print(std::ostream& os) const
+std::ostream& ndarray<T>::print_shape(std::ostream& os) const
 {
   os << "array_dims={";
   for (size_t i = 0; i < dims.size(); i ++) 
     if (i < dims.size()-1) os << dims[i] << ", ";
     else os << dims[i] << "}";
   os << std::endl;
+  return os;
+}
+
+template <typename T>
+std::ostream& ndarray<T>::print(std::ostream& os) const
+{
+  print_shape(os);
 
   if (nd() == 1) {
     os << "[";

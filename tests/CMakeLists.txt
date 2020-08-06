@@ -1,44 +1,75 @@
-add_subdirectory (gtest)
-
-include_directories (${CMAKE_CURRENT_SOURCE_DIR}/gtest/include)
-set (GTEST_BOTH_LIBRARIES gtest gtest_main)
-
-add_executable (test_matrix test_matrix.cpp)
-target_link_libraries (test_matrix ftk ${GTEST_BOTH_LIBRARIES})
-
-add_executable (test_conv test_conv.cpp)
-target_link_libraries (test_conv ftk ${GTEST_BOTH_LIBRARIES})
-
-add_executable (test_inequality_solvers test_inequality_solvers.cpp)
-target_link_libraries (test_inequality_solvers ftk ${GTEST_BOTH_LIBRARIES})
-
-add_executable (test_polynomial test_polynomial.cpp)
-target_link_libraries (test_polynomial ftk ${GTEST_BOTH_LIBRARIES})
-
-add_executable (test_inverse_interpolation test_inverse_interpolation.cpp)
-target_link_libraries (test_inverse_interpolation ftk ${GTEST_BOTH_LIBRARIES})
-
-add_executable (test_parallel_vectors test_parallel_vectors.cpp)
-target_link_libraries (test_parallel_vectors ftk ${GTEST_BOTH_LIBRARIES})
+unset (EXECUTABLE_OUTPUT_PATH)
 
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
-target_link_libraries (test_quadratic_interpolation ftk ${GTEST_BOTH_LIBRARIES})
-
-add_executable (test_union_find test_union_find.cpp)
-target_link_libraries (test_union_find ftk ${GTEST_BOTH_LIBRARIES})
+target_link_libraries (test_quadratic_interpolation ftk)
+catch_discover_tests (test_quadratic_interpolation)
 
 add_executable (test_regular_simplex_mesh test_regular_simplex_mesh.cpp)
-target_link_libraries (test_regular_simplex_mesh ftk ${GTEST_BOTH_LIBRARIES})
+target_link_libraries (test_regular_simplex_mesh ftk)
+# catch_discover_tests (test_regular_simplex_mesh)
+
+add_executable (test_array_stream test_array_stream.cpp)
+target_link_libraries (test_array_stream ftk)
+
+add_executable (test_union_find test_union_find.cpp)
+target_link_libraries (test_union_find ftk)
+catch_discover_tests (test_union_find)
+
+add_executable (test_parallel_vectors test_parallel_vectors.cpp)
+target_link_libraries (test_parallel_vectors ftk)
+catch_discover_tests (test_parallel_vectors)
+
+add_executable (test_polynomial test_polynomial.cpp)
+target_link_libraries (test_polynomial ftk)
+catch_discover_tests (test_polynomial)
 
 add_executable (test_hoshen_kopelman test_hoshen_kopelman.cpp)
-target_link_libraries (test_hoshen_kopelman ftk ${GTEST_BOTH_LIBRARIES})
+target_link_libraries (test_hoshen_kopelman ftk)
+catch_discover_tests (test_hoshen_kopelman)
 
-gtest_discover_tests (test_matrix)
-gtest_discover_tests (test_conv)
-gtest_discover_tests (test_polynomial)
-gtest_discover_tests (test_inequality_solvers)
-gtest_discover_tests (test_inverse_interpolation)
-gtest_discover_tests (test_parallel_vectors)
-gtest_discover_tests (test_quadratic_interpolation)
-gtest_discover_tests (test_union_find)
-gtest_discover_tests (test_hoshen_kopelman)
+add_executable (test_conv test_conv.cpp)
+target_link_libraries (test_conv ftk)
+catch_discover_tests (test_conv)
+
+add_executable (test_inequality_solvers test_inequality_solvers.cpp)
+target_link_libraries (test_inequality_solvers ftk)
+catch_discover_tests (test_inequality_solvers)
+
+add_executable (test_matrix test_matrix.cpp)
+target_link_libraries (test_matrix ftk)
+catch_discover_tests (test_matrix)
+
+add_executable (test_inverse_interpolation test_inverse_interpolation.cpp)
+target_link_libraries (test_inverse_interpolation ftk)
+catch_discover_tests (test_inverse_interpolation)
+
+add_executable (test_io test_io)
+target_link_libraries (test_io ftk)
+catch_discover_tests (test_io)
+
+add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
+target_link_libraries (test_critical_point_tracking_woven ftk)
+
+add_executable (test_critical_point_tracking_moving_extremum test_critical_point_tracking_moving_extremum)
+target_link_libraries (test_critical_point_tracking_moving_extremum ftk)
+
+#add_test (NAME test_critical_point_tracking_cli_woven
+#  COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.vtp)
+
+add_executable(test_critical_point_tracking_double_gyre_unstructured test_critical_point_tracking_double_gyre_unstructured.cpp)
+target_link_libraries (test_critical_point_tracking_double_gyre_unstructured ftk)
+
+if (FTK_HAVE_MPI)
+  set (maxp 4)
+  foreach (p RANGE 1 ${maxp})
+    add_test (NAME test_critical_point_tracking_woven_p${p} 
+      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_woven>)
+  endforeach (p)
+  foreach (p RANGE 1 ${maxp})
+    add_test (NAME test_critical_point_tracking_moving_extremum_p${p} 
+      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum>)
+  endforeach (p)
+else () # serial only
+  # catch_discover_tests (test_critical_point_tracking_woven)
+  # catch_discover_tests (test_critical_point_tracking_moving_extremum)
+endif ()

@@ -6,7 +6,7 @@
 #include <string>
 
 #include <ftk/basic/union_find.hh>
-#include <ftk/hypermesh/regular_simplex_mesh.hh>
+#include <ftk/mesh/simplicial_regular_mesh.hh>
 
 namespace ftk {
 
@@ -14,7 +14,7 @@ namespace ftk {
 // Extract connected components by given mesh elements
 
 #if 0
-typedef regular_simplex_mesh_element EleType;
+typedef simplicial_regular_mesh_element EleType;
 template <class ContainerType>
 std::vector<std::set<EleType> > extract_connected_components_element(
     const std::function<ContainerType(EleType) >& neighbors,

@@ -22,6 +22,8 @@ struct data_stream {
   virtual void initialize();
   virtual void finalize() {};
 
+  void set_callback(std::function<void(int, data_group*)> f);
+
   virtual void advance_timestep() {};
 
   template <typename T> const ndarray<T>& get(const std::string& key, int offset=0) {

@@ -1,5 +1,5 @@
-#ifndef _FTK_NORM_H
-#define _FTK_NORM_H
+#ifndef _FTK_VECTOR_NORM_H
+#define _FTK_VECTOR_NORM_H
 
 #include <cmath>
 

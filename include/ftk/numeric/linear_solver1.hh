@@ -39,6 +39,7 @@ inline int number_roots_linear1(const T a, const T b) // ax=b, returns unique/in
   else return LINEAR_EQUATION_UNIQUE_SOLUTION;
 }
 
+#if 0
 template <typename T>
 inline int number_roots_linear1(int n, const T a[], const T b[]) // check if n ax=b equations have a unique common root
 {
@@ -55,6 +56,7 @@ inline int number_roots_linear1(int n, const T a[], const T b[]) // check if n a
   }
 #endif
 }
+#endif
 
 template <typename T>
 inline T solve_least_square2x1(const T a[2], const T b[2], T &x) // ax=b
