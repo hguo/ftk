@@ -20,7 +20,7 @@ bool check_simplex_cp3t(
     const double *V[2], // last and current timesteps
     const double *gradV[2], // jacobian of last and current timesteps
     const double *scalar[2],
-    cp4_t &cp)
+    cp_t &cp)
 {
   const int last_timestep = current_timestep - 1;
   if (scope == scope_interval && e.corner[3] != last_timestep)
@@ -70,7 +70,7 @@ bool check_simplex_cp3t(
         int t = unit_simplex_offset_3_2<scope>(e.type, i, 3);
         values[i] = scalar[t][ii];
       }
-      cp.scalar = ftk::lerp_s3(values, mu);
+      cp.scalar[0] = ftk::lerp_s3(values, mu);
     }
 
     double X[4][4];
@@ -96,7 +96,7 @@ void sweep_simplices(
     const double *Jl,
     const double *Sc, 
     const double *Sl,
-    unsigned long long &ncps, cp4_t *cps)
+    unsigned long long &ncps, cp_t *cps)
 {
   const double *V[2] = {Vl, Vc};
   const double *J[2] = {Jl, Jc};
@@ -105,7 +105,7 @@ void sweep_simplices(
   int tid = getGlobalIdx_3D_1D();
   const element43_t e = element43_from_index<scope>(core, tid);
 
-  cp4_t cp;
+  cp_t cp;
   bool succ = check_simplex_cp3t<scope>(
       current_timestep,
       domain, core, ext, e, V, J, S, cp);
@@ -118,7 +118,7 @@ void sweep_simplices(
 }
 
 template <int scope>
-static std::vector<cp4_t> extract_cp3dt(
+static std::vector<cp_t> extract_cp3dt(
     int current_timestep,
     const lattice4_t& domain,
     const lattice4_t& core, 
@@ -171,8 +171,8 @@ static std::vector<cp4_t> extract_cp3dt(
   cudaMalloc((void**)&dncps, sizeof(unsigned long long));
   cudaMemset(dncps, 0, sizeof(unsigned long long));
 
-  cp4_t *dcps;
-  cudaMalloc((void**)&dcps, sizeof(cp4_t) * core.n());
+  cp_t *dcps;
+  cudaMalloc((void**)&dcps, sizeof(cp_t) * core.n());
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
@@ -189,8 +189,8 @@ static std::vector<cp4_t> extract_cp3dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpyDeviceToHost, dncps");
   fprintf(stderr, "ncps=%llu\n", ncps);
 
-  std::vector<cp4_t> cps(ncps);
-  cudaMemcpy(cps.data(), dcps, sizeof(cp4_t) * ncps, cudaMemcpyDeviceToHost);
+  std::vector<cp_t> cps(ncps);
+  cudaMemcpy(cps.data(), dcps, sizeof(cp_t) * ncps, cudaMemcpyDeviceToHost);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpyDeviceToHost");
   
   cudaFree(dVc);
@@ -209,7 +209,7 @@ static std::vector<cp4_t> extract_cp3dt(
   return cps;
 }
 
-std::vector<cp4_t>
+std::vector<cp_t>
 extract_cp3dt_cuda(
     int scope, 
     int current_timestep, 
