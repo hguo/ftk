@@ -36,7 +36,7 @@
 
 namespace ftk {
 
-typedef critical_point_t<3, double> critical_point_2dt_t;
+// typedef critical_point_t<3, double> critical_point_t;
 
 struct critical_point_tracker_2d_unstructured : public critical_point_tracker_regular
 {
@@ -64,7 +64,7 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker_re
   void push_vector_field_snapshot(const ndarray<double>&) {} // TODO
 
 protected:
-  bool check_simplex(int, critical_point_2dt_t& cp);
+  bool check_simplex(int, critical_point_t& cp);
 
   template <int n, typename T> void simplex_values(
       const int verts[n], // vertices
@@ -77,8 +77,8 @@ protected:
 protected:
   const simplicial_unstructured_extruded_2d_mesh<> m;
   
-  std::map<int, critical_point_2dt_t> discrete_critical_points;
-  std::vector<std::vector<critical_point_2dt_t>> traced_critical_points;
+  std::map<int, critical_point_t> discrete_critical_points;
+  std::vector<std::vector<critical_point_t>> traced_critical_points;
 };
 
 ////////////////////////
@@ -101,7 +101,7 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
   }
 }
 
-inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critical_point_2dt_t& cp)
+inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critical_point_t& cp)
 {
 #if FTK_HAVE_GMP
   typedef mpf_class fp_t;
@@ -138,7 +138,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
     fprintf(stderr,  "mu'=%f, %f, %f\n", mu[0], mu[1], mu[2]);
   }
   ftk::lerp_s2v3(X, mu, cp.x);
-  cp.scalar = ftk::lerp_s2(f, mu);
+  cp.scalar[0] = ftk::lerp_s2(f, mu);
 
   double H[2][2];
   ftk::lerp_s2m2x2(Js, mu, H);
@@ -152,7 +152,7 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
   auto func = [&](int i) {
-    critical_point_2dt_t cp;
+    critical_point_t cp;
     if (check_simplex(i, cp)) {
       std::lock_guard<std::mutex> guard(mutex);
       discrete_critical_points[i] = cp;
@@ -204,7 +204,7 @@ inline void critical_point_tracker_2d_unstructured::finalize()
     auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
     fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_2dt_t> traj; 
+      std::vector<critical_point_t> traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.emplace_back(traj);
@@ -303,7 +303,7 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_unstructured::get_
     size_t i = 0;
     for (const auto &curve : traced_critical_points) {
       for (auto j = 0; j < curve.size(); j ++)
-        scalars->SetValue(i ++, curve[j].scalar);
+        scalars->SetValue(i ++, curve[j].scalar[0]);
     }
     scalars->SetName("scalar");
     polyData->GetPointData()->AddArray(scalars);

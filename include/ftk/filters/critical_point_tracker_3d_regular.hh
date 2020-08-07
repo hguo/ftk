@@ -34,7 +34,7 @@
 #endif
 
 #if FTK_HAVE_CUDA
-extern std::vector<ftk::critical_point_t<4, double>> 
+extern std::vector<ftk::critical_point_t> // <4, double>> 
 extract_cp3dt_cuda(
     int scope, int current_timestep, 
     const ftk::lattice& domain4,
@@ -50,8 +50,6 @@ extract_cp3dt_cuda(
 #endif
 
 namespace ftk {
-
-typedef critical_point_t<4, double> critical_point_3dt_t;
 
 struct critical_point_tracker_3d_regular : public critical_point_tracker_regular {
   critical_point_tracker_3d_regular() : m(4) {}
@@ -78,12 +76,12 @@ protected:
   
   typedef simplicial_regular_mesh_element element_t;
   
-  std::map<element_t, critical_point_3dt_t> discrete_critical_points;
+  std::map<element_t, critical_point_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
-  std::vector<std::vector<critical_point_3dt_t>> traced_critical_points;
+  std::vector<std::vector<critical_point_t>> traced_critical_points;
 
 protected:
-  bool check_simplex(const element_t& s, critical_point_3dt_t& cp);
+  bool check_simplex(const element_t& s, critical_point_t& cp);
   void trace_intersections();
   void trace_connected_components();
 
@@ -170,7 +168,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
   auto func3 = [=](element_t e) {
-      critical_point_3dt_t cp;
+      critical_point_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         discrete_critical_points[e] = cp;
@@ -325,7 +323,7 @@ void critical_point_tracker_3d_regular::trace_connected_components()
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_3dt_t> traj; 
+      std::vector<critical_point_t> traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.emplace_back(traj);
@@ -386,7 +384,7 @@ void critical_point_tracker_3d_regular::simplex_jacobians(
 
 bool critical_point_tracker_3d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
-    critical_point_3dt_t& cp)
+    critical_point_t& cp)
 {
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m);
@@ -408,7 +406,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
   if (scalar_field_source != SOURCE_NONE) {
     double values[3];
     simplex_scalars(vertices, values);
-    cp.scalar = lerp_s3(values, mu);
+    cp.scalar[0] = lerp_s3(values, mu);
   }
 
   double J[3][3] = {0}; // jacobian or hessian
@@ -495,7 +493,7 @@ vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_traced_criti
     size_t i = 0;
     for (const auto &curve : traced_critical_points)
       for (auto j = 0; j < curve.size(); j ++)
-        scalars->SetValue(i ++, curve[j].scalar);
+        scalars->SetValue(i ++, curve[j].scalar[0]);
     scalars->SetName("scalar");
     polyData->GetPointData()->AddArray(scalars);
   }

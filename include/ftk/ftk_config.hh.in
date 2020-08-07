@@ -20,6 +20,7 @@
 #cmakedefine FTK_HAVE_VTK 1
 
 #define FTK_FP_PRECISION ${FTK_FP_PRECISION}
+#define FTK_CP_MAX_NUM_VARS 2
 
 #ifdef __CUDACC__
 // #define FTK_NUMERIC_FUNC __device__ __host__

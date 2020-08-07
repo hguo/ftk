@@ -34,7 +34,7 @@
 #endif
 
 #if FTK_HAVE_CUDA
-extern std::vector<ftk::critical_point_t<3, double>> 
+extern std::vector<ftk::critical_point_t> // <3, double>> 
 extract_cp2dt_cuda(
     int scope, int current_timestep, 
     const ftk::lattice& domain, // 3D
@@ -53,7 +53,7 @@ extract_cp2dt_cuda(
 
 namespace ftk {
 
-typedef critical_point_t<3, double> critical_point_2dt_t;
+// typedef critical_point_t<3, double> critical_point_t;
 
 struct critical_point_tracker_2d_regular : public critical_point_tracker_regular {
   critical_point_tracker_2d_regular() : m(3) {}
@@ -87,16 +87,16 @@ protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
   
-  std::map<element_t, critical_point_2dt_t> discrete_critical_points;
+  std::map<element_t, critical_point_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
-  std::vector<std::vector<critical_point_2dt_t>> traced_critical_points;
+  std::vector<std::vector<critical_point_t>> traced_critical_points;
   
 public:
-  const std::map<element_t, critical_point_2dt_t>& get_discrete_critical_points() {return discrete_critical_points;}
-  const std::vector<std::vector<critical_point_2dt_t>>& get_traced_critical_points() {return traced_critical_points;}
+  const std::map<element_t, critical_point_t>& get_discrete_critical_points() {return discrete_critical_points;}
+  const std::vector<std::vector<critical_point_t>>& get_traced_critical_points() {return traced_critical_points;}
 
 protected:
-  bool check_simplex(const element_t& s, critical_point_2dt_t& cp);
+  bool check_simplex(const element_t& s, critical_point_t& cp);
   void trace_intersections();
   void trace_connected_components();
 
@@ -108,9 +108,9 @@ protected:
       double Js[][2][2]) const;
 
 protected: // working in progress
-  bool robust_check_simplex0(const element_t& s, critical_point_2dt_t &cp);
-  bool robust_check_simplex1(const element_t& s, critical_point_2dt_t &cp);
-  bool robust_check_simplex2(const element_t& s, critical_point_2dt_t &cp);
+  bool robust_check_simplex0(const element_t& s, critical_point_t &cp);
+  bool robust_check_simplex1(const element_t& s, critical_point_t &cp);
+  bool robust_check_simplex2(const element_t& s, critical_point_t &cp);
 };
 
 
@@ -196,7 +196,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
   auto func0 = [=](element_t e) {
-      critical_point_2dt_t cp;
+      critical_point_t cp;
       if (robust_check_simplex0(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp))
@@ -205,7 +205,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
     };
   
   auto func1 = [=](element_t e) {
-      critical_point_2dt_t cp;
+      critical_point_t cp;
       if (robust_check_simplex1(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp))
@@ -216,7 +216,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
   // scan 2-simplices
   // fprintf(stderr, "tracking 2D critical points...\n");
   auto func2 = [=](element_t e) {
-      critical_point_2dt_t cp;
+      critical_point_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp))
@@ -392,7 +392,7 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_2dt_t> traj; 
+      std::vector<critical_point_t> traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.emplace_back(traj);
@@ -466,7 +466,7 @@ inline void critical_point_tracker_2d_regular::simplex_jacobians(
 
 inline bool critical_point_tracker_2d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
-    critical_point_2dt_t& cp)
+    critical_point_t& cp)
 {
 #if FTK_HAVE_GMP
   typedef mpf_class fp_t;
@@ -539,7 +539,7 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   if (scalar_field_source != SOURCE_NONE) {
     double values[3];
     simplex_scalars(vertices, values);
-    cp.scalar = lerp_s2(values, mu);
+    cp.scalar[0] = lerp_s2(values, mu);
   }
 
   double J[2][2] = {0}; // jacobian
@@ -564,7 +564,7 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   return true;
 } 
 
-inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e, critical_point_2dt_t& cp)
+inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e, critical_point_t& cp)
 {
   typedef fixed_point<> fp_t;
 
@@ -588,7 +588,7 @@ inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const eleme
 #endif
 }
 
-inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const element_t& e, critical_point_2dt_t& cp)
+inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const element_t& e, critical_point_t& cp)
 {
   typedef fixed_point<> fp_t;
 
@@ -620,7 +620,7 @@ inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const eleme
 }
 
 #if 0
-void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s, critical_point_2dt_t& cp)
+void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s, critical_point_t& cp)
 {
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
@@ -707,7 +707,7 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_trace
     size_t i = 0;
     for (const auto &curve : traced_critical_points) {
       for (auto j = 0; j < curve.size(); j ++)
-        scalars->SetValue(i ++, curve[j].scalar);
+        scalars->SetValue(i ++, curve[j].scalar[0]);
     }
     scalars->SetName("scalar");
     polyData->GetPointData()->AddArray(scalars);
