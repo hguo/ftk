@@ -7,7 +7,7 @@
 
 namespace ftk {
 
-struct critical_point_tracker_wrapper {
+struct critical_point_tracker_wrapper : public object {
   // json options:
   // - accelerator, string, 
   void configure(const json& j);
@@ -23,16 +23,31 @@ private:
 };
 
 ///////////////
+void critical_point_tracker_wrapper::configure(const json& j0) 
+{
+  j = j0;
+  if (j.contains("root_proc")) {
+    if (j["root_proc"].is_number()) {
+      // OK
+    } else
+      fatal("invalid root_proc");
+  } else 
+    j["root_proc"] = 0; // default root proc
+}
+
 void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
-  const auto j = stream.get_json();
+  if (j.is_null())
+    configure(j); // make default options
+
+  const auto js = stream.get_json();
   // std::cerr << j << std::endl;
   const size_t nd = stream.n_dimensions(),
-               DW = j["dimensions"][0], 
-               DH = j["dimensions"][1],
-               DT = j["n_timesteps"];
+               DW = js["dimensions"][0], 
+               DH = js["dimensions"][1],
+               DT = js["n_timesteps"];
   size_t DD;
-  if (nd == 3) DD = j["dimensions"][2];
+  if (nd == 3) DD = js["dimensions"][2];
   else DD = 0;
   const size_t nv = stream.n_components();
 
@@ -43,6 +58,8 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
     tracker = std::shared_ptr<critical_point_tracker_regular>(new ftk::critical_point_tracker_3d_regular);
     tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
+
+  tracker->set_root_proc(j["root_proc"]);
   
   // tracker->set_number_of_threads(nthreads);
   tracker->set_input_array_partial(false); // input data are not distributed
