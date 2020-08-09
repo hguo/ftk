@@ -8,6 +8,8 @@
 namespace ftk {
 
 struct critical_point_tracker_wrapper {
+  // json options:
+  // - accelerator, string, 
   void configure(const json& j);
 
   void consume(ndarray_stream<> &stream, 

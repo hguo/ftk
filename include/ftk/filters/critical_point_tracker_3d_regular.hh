@@ -127,7 +127,7 @@ void critical_point_tracker_3d_regular::initialize()
 
 void critical_point_tracker_3d_regular::finalize()
 {
-  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
   if (comm.rank() == 0) {
     fprintf(stderr, "finalizing...\n");

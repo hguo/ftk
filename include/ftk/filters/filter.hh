@@ -40,13 +40,19 @@ struct filter : public object {
   }
 
   void set_communicator(const diy::mpi::communicator comm_) {comm = comm_;}
+  
   void set_number_of_threads(int n) {nthreads = n;}
+  int get_number_of_threads() const {return nthreads;}
+
+  void set_root_proc(int p) {root_proc = p;}
+  int get_root_proc() const {return root_proc;}
 
 protected:
   diy::mpi::communicator comm;
 
   int xl = FTK_XL_NONE;
   int nthreads = 1;
+  int root_proc = 0;
   std::mutex mutex;
 };
 

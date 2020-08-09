@@ -147,7 +147,7 @@ inline void critical_point_tracker_2d_regular::initialize()
 inline void critical_point_tracker_2d_regular::finalize()
 {
   // fprintf(stderr, "rank=%d, #cp=%zu\n", comm.rank(), discrete_critical_points.size());
-  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
   if (comm.rank() == 0) {
     fprintf(stderr, "finalizing...\n");
