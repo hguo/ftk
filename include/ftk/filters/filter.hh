@@ -47,12 +47,19 @@ struct filter : public object {
   void set_root_proc(int p) {root_proc = p;}
   int get_root_proc() const {return root_proc;}
 
+  void set_device_id(int d);
+  void set_device_ids(const std::vector<int>& ids) {device_ids = ids;}
+  const std::vector<int>& get_device_ids() const {return device_ids;}
+  int get_number_devices() const {return device_ids.size();}
+
 protected:
   diy::mpi::communicator comm;
 
   int xl = FTK_XL_NONE;
   int nthreads = 1;
   int root_proc = 0;
+  std::vector<int> device_ids;
+
   std::mutex mutex;
 };
 
