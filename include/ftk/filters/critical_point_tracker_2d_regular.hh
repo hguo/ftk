@@ -23,6 +23,7 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/external/diy/serialization.hpp>
+#include <ftk/external/diy-ext/gather.hh>
 
 #if FTK_HAVE_GMP
 #include <gmpxx.h>
@@ -63,19 +64,8 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   void push_scalar_field_snapshot(const ndarray<double>&);
   void push_vector_field_snapshot(const ndarray<double>&);
 
-#if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
-#endif
-
-  std::string get_traced_critical_points_text() const;
-  std::string get_discrete_critical_points_text() const;
-
-  void write_discrete_critical_points(const std::string& filename) const;
-  void write_traced_critical_points(const std::string& filename) const;
- 
-  void write_traced_critical_points_text(const std::string& filename) const;
-  void write_traced_critical_points_text(std::ostream& os) const;
-  void write_discrete_critical_points_text(std::ostream &os) const;
+  // void write_discrete_critical_points(const std::string& filename) const;
+  // void write_discrete_critical_points_text(std::ostream &os) const;
   
 protected:
   simplicial_regular_mesh m;
@@ -85,7 +75,8 @@ protected:
   std::vector<std::set<element_t>> connected_components;
   
 public:
-  const std::map<element_t, critical_point_t>& get_discrete_critical_points() {return discrete_critical_points;}
+  const std::map<element_t, critical_point_t>& get_discrete_critical_points() const {return discrete_critical_points;}
+  std::vector<critical_point_t> get_critical_points() const;
 
 protected:
   bool check_simplex(const element_t& s, critical_point_t& cp);
@@ -631,81 +622,10 @@ void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s
 }
 #endif
 
-#if FTK_HAVE_VTK
-
-inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_critical_points_vtk() const
-{
-  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
-  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
-  
-  vtkIdType pid[1];
-  for (const auto &kv : discrete_critical_points) {
-    const auto &cp = kv.second;
-    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
-    pid[0] = points->InsertNextPoint(p);
-    vertices->InsertNextCell(1, pid);
-  }
-
-  polyData->SetPoints(points);
-  polyData->SetVerts(vertices);
-
-#if 0
-  // point data for types
-  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
-  types->SetNumberOfValues(results.size());
-  for (auto i = 0; i < results.size(); i ++) {
-    types->SetValue(i, static_cast<double>(results[i].type));
-  }
-  types->SetName("type");
-  polyData->GetPointData()->AddArray(types);
-  
-  // point data for scalars
-  if (has_scalar_field) {
-    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-    scalars->SetNumberOfValues(results.size());
-    for (auto i = 0; i < results.size(); i ++) {
-      scalars->SetValue(i, static_cast<double>(results[i].scalar));
-    }
-    scalars->SetName("scalar");
-    polyData->GetPointData()->AddArray(scalars);
-  }
-#endif
-  return polyData;
-}
-#endif
-
+#if 0 // TODO: remove legacy code.
 inline void critical_point_tracker_2d_regular::write_discrete_critical_points(const std::string& filename) const
 {
   diy::serializeToFile(discrete_critical_points, filename);
-}
-
-inline void critical_point_tracker_2d_regular::write_traced_critical_points(const std::string& filename) const 
-{
-  diy::serializeToFile(traced_critical_points, filename);
-}
-  
-inline void critical_point_tracker_2d_regular::write_traced_critical_points_text(const std::string& filename) const
-{
-  std::ofstream ofs(filename);
-  write_traced_critical_points_text(ofs);
-  ofs.close();
-}
-
-inline void critical_point_tracker_2d_regular::write_traced_critical_points_text(std::ostream& os) const
-{
-  os << "#trajectories=" << traced_critical_points.size() << std::endl;
-  for (int i = 0; i < traced_critical_points.size(); i ++) {
-    os << "--trajectory " << i << std::endl;
-    const auto &curve = traced_critical_points[i];
-    for (int k = 0; k < curve.size(); k ++) {
-      const auto &cp = curve[k];
-      os << "---x=(" << cp[0] << ", " << cp[1] << "), "
-         << "t=" << cp[2] << ", " 
-         << "scalar=" << cp.scalar << ", "
-         << "type=" << cp.type << std::endl;
-    }
-  }
 }
 
 inline void critical_point_tracker_2d_regular::write_discrete_critical_points_text(std::ostream& os) const
@@ -717,6 +637,15 @@ inline void critical_point_tracker_2d_regular::write_discrete_critical_points_te
        << "scalar=" << cp.scalar << ", "
        << "type=" << cp.type << std::endl;
   }
+}
+#endif
+  
+inline std::vector<critical_point_t> critical_point_tracker_2d_regular::get_critical_points() const
+{
+  std::vector<critical_point_t> results;
+  for (const auto &kv : discrete_critical_points) 
+    results.push_back(kv.second);
+  return results;
 }
 
 }

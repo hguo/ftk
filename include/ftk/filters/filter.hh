@@ -46,6 +46,7 @@ struct filter : public object {
 
   void set_root_proc(int p) {root_proc = p;}
   int get_root_proc() const {return root_proc;}
+  bool is_root_proc() const {return root_proc == comm.rank();}
 
   void set_device_id(int d);
   void set_device_ids(const std::vector<int>& ids) {device_ids = ids;}

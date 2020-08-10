@@ -52,16 +52,10 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker_re
 
   void update_timestep();
 
-#if FTK_HAVE_VTK
-  // vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
-  vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
-#endif
-
-  void write_traced_critical_points_text(std::ostream& os) const {} // TODO
-  void write_discrete_critical_points_text(std::ostream &os) const {} // TODO
-
   void push_scalar_field_snapshot(const ndarray<double>&) {} // TODO
   void push_vector_field_snapshot(const ndarray<double>&) {} // TODO
+
+  std::vector<critical_point_t> get_critical_points() const;
 
 protected:
   bool check_simplex(int, critical_point_t& cp);
@@ -213,7 +207,15 @@ inline void critical_point_tracker_2d_unstructured::finalize()
   fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), connected_components.size());
 }
 
-#if FTK_HAVE_VTK
+inline std::vector<critical_point_t> critical_point_tracker_2d_unstructured::get_critical_points() const
+{
+  std::vector<critical_point_t> results;
+  for (const auto &kv : discrete_critical_points) 
+    results.push_back(kv.second);
+  return results;
+}
+
+#if 0 // TODO: remove legacy code below.
 inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_unstructured::get_discrete_critical_points_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();

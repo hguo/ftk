@@ -5,6 +5,8 @@
 #include <ftk/filters/filter.hh>
 #include <ftk/filters/critical_point.hh>
 #include <ftk/geometry/points2vtk.hh>
+#include <ftk/external/diy/serialization.hpp>
+#include <ftk/external/diy-ext/gather.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkUnsignedIntArray.h>
@@ -23,23 +25,27 @@ struct critical_point_tracker : public filter {
     traced_critical_points.clear();
   }
 
+public: // outputs
+  const std::vector<std::vector<critical_point_t>>& get_traced_critical_points() {return traced_critical_points;}
+  virtual std::vector<critical_point_t> get_critical_points() const = 0;
+
+  void write_traced_critical_points_binary(const std::string& filename) const;
+  void write_traced_critical_points_text(std::ostream& os) const;
+  void write_traced_critical_points_text(const std::string& filename) const;
+  void write_traced_critical_points_vtk(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
-  virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const = 0;
 #endif
-  void write_traced_critical_points_vtk(const std::string& filename);
-  void write_discrete_critical_points_vtk(const std::string& filename);
 
-  virtual void write_traced_critical_points_text(std::ostream& os) const = 0;
-  virtual void write_discrete_critical_points_text(std::ostream &os) const = 0;
+  void write_critical_points_binary(const std::string& filename) const;
+  void write_critical_points_text(std::ostream& os) const;
+  void write_critical_points_text(const std::string& filename) const;
+  void write_critical_points_vtk(const std::string& filename) const;
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_critical_points_vtk() const;
+#endif
 
-  void write_traced_critical_points_text(const std::string& filename);
-  void write_discrete_critical_points_text(const std::string& filename);
-
-  struct field_data_snapshot_t {
-    ndarray<double> scalar, vector, jacobian;
-  };
-
+public: // inputs
   bool pop_field_data_snapshot();
   virtual void push_field_data_snapshot(
       const ndarray<double> &scalar, 
@@ -53,9 +59,11 @@ struct critical_point_tracker : public filter {
       const ndarray<double> &jacobians);
   void push_scalar_field_spacetime(const ndarray<double>& scalars);
 
-  const std::vector<std::vector<critical_point_t>>& get_traced_critical_points() {return traced_critical_points;}
-
 protected:
+  struct field_data_snapshot_t {
+    ndarray<double> scalar, vector, jacobian;
+  };
+
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
   std::vector<std::vector<critical_point_t>> traced_critical_points;
@@ -115,7 +123,7 @@ inline bool critical_point_tracker::pop_field_data_snapshot()
 
 //////
 #if FTK_HAVE_VTK
-inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename)
+inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename) const
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_traced_critical_points_vtk();
@@ -123,46 +131,56 @@ inline void critical_point_tracker::write_traced_critical_points_vtk(const std::
   }
 }
 
-inline void critical_point_tracker::write_discrete_critical_points_vtk(const std::string& filename)
+inline void critical_point_tracker::write_critical_points_vtk(const std::string& filename) const
 {
   if (comm.rank() == get_root_proc()) {
-    auto poly = get_discrete_critical_points_vtk();
+    auto poly = get_critical_points_vtk();
     write_vtp(filename, poly);
   }
 }
-#else
-inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename)
-{
-  if (comm.rank() == get_root_proc())
-    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
-}
 
-inline void critical_point_tracker::write_discrete_critical_points_vtk(const std::string& filename)
+inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_critical_points_vtk() const
 {
-  if (comm.rank() == get_root_proc())
-    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
-}
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+  
+  vtkIdType pid[1];
+  
+  const auto critical_points = get_critical_points();
+  for (const auto &cp : get_critical_points()) {
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  polyData->SetPoints(points);
+  polyData->SetVerts(vertices);
+
+#if 0 // TODO
+  // point data for types
+  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
+  types->SetNumberOfValues(results.size());
+  for (auto i = 0; i < results.size(); i ++) {
+    types->SetValue(i, static_cast<double>(results[i].type));
+  }
+  types->SetName("type");
+  polyData->GetPointData()->AddArray(types);
+  
+  // point data for scalars
+  if (has_scalar_field) {
+    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
+    scalars->SetNumberOfValues(results.size());
+    for (auto i = 0; i < results.size(); i ++) {
+      scalars->SetValue(i, static_cast<double>(results[i].scalar));
+    }
+    scalars->SetName("scalar");
+    polyData->GetPointData()->AddArray(scalars);
+  }
 #endif
-
-inline void critical_point_tracker::write_traced_critical_points_text(const std::string& filename)
-{
-  if (comm.rank() == get_root_proc()) {
-    std::ofstream out(filename);
-    write_traced_critical_points_text(out);
-    out.close();
-  }
+  return polyData;
 }
 
-inline void critical_point_tracker::write_discrete_critical_points_text(const std::string& filename)
-{
-  if (comm.rank() == get_root_proc()) {
-    std::ofstream out(filename);
-    write_discrete_critical_points_text(out);
-    out.close();
-  }
-}
-
-#if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_traced_critical_points_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
@@ -239,7 +257,68 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_traced_critical_
 
   return polyData;
 }
+#else
+inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename) const
+{
+  if (is_root_proc())
+    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
+}
+
+inline void critical_point_tracker::write_critical_points_vtk(const std::string& filename) const
+{
+  if (is_root_proc())
+    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
+}
 #endif
+
+inline void critical_point_tracker::write_traced_critical_points_binary(const std::string& filename) const
+{
+  diy::serializeToFile(traced_critical_points, filename);
+}
+
+inline void critical_point_tracker::write_traced_critical_points_text(const std::string& filename) const
+{
+  if (is_root_proc()) {
+    std::ofstream out(filename);
+    write_traced_critical_points_text(out);
+    out.close();
+  }
+}
+
+inline void critical_point_tracker::write_traced_critical_points_text(std::ostream& os) const
+{
+  os << "#trajectories=" << traced_critical_points.size() << std::endl;
+  for (int i = 0; i < traced_critical_points.size(); i ++) {
+    os << "--trajectory " << i << std::endl;
+    const auto &curve = traced_critical_points[i];
+    for (int k = 0; k < curve.size(); k ++) {
+      const auto &cp = curve[k];
+      os << "---x=(" << cp[0] << ", " << cp[1] << "), " // TODO: determine if the domain is 2D or 3D
+         << "t=" << cp[2] << ", " 
+         << "scalar=" << cp.scalar << ", "
+         << "type=" << cp.type << std::endl;
+    }
+  }
+}
+
+inline void critical_point_tracker::write_critical_points_text(const std::string& filename) const
+{
+  if (is_root_proc()) {
+    std::ofstream out(filename);
+    write_critical_points_text(out);
+    out.close();
+  }
+}
+
+inline void critical_point_tracker::write_critical_points_text(std::ostream& os) const
+{
+  for (const auto &cp : get_critical_points()) {
+    os << "x=(" << cp[0] << ", " << cp[1] << "), " // TODO: determine dimensionality
+       << "t=" << cp[2] << ", "
+       << "scalar=" << cp.scalar << ", "
+       << "type=" << cp.type << std::endl;
+  }
+}
 
 }
 

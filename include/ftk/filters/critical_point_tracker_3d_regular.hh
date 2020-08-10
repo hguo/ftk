@@ -54,9 +54,6 @@ namespace ftk {
 struct critical_point_tracker_3d_regular : public critical_point_tracker_regular {
   critical_point_tracker_3d_regular() : m(4) {}
   virtual ~critical_point_tracker_3d_regular() {}
-  
-  void write_traced_critical_points_text(std::ostream& os) const;
-  void write_discrete_critical_points_text(std::ostream &os) const;
 
   void initialize();
   void finalize();
@@ -65,12 +62,9 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   
   void push_scalar_field_snapshot(const ndarray<double>&);
   void push_vector_field_snapshot(const ndarray<double>&);
-  
-#if FTK_HAVE_VTK
-  // virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
-  virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
-#endif
 
+  std::vector<critical_point_t> get_critical_points() const;
+  
 protected:
   simplicial_regular_mesh m;
   
@@ -423,49 +417,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
   else return false;
 } 
 
-#if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_discrete_critical_points_vtk() const
-{
-  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
-  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
-  
-  vtkIdType pid[1];
-  for (const auto &kv : discrete_critical_points) {
-    const auto &cp = kv.second;
-    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
-    pid[0] = points->InsertNextPoint(p);
-    vertices->InsertNextCell(1, pid);
-  }
-
-  polyData->SetPoints(points);
-  polyData->SetVerts(vertices);
-
-#if 0
-  // point data for types
-  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
-  types->SetNumberOfValues(results.size());
-  for (auto i = 0; i < results.size(); i ++) {
-    types->SetValue(i, static_cast<double>(results[i].type));
-  }
-  types->SetName("type");
-  polyData->GetPointData()->AddArray(types);
-  
-  // point data for scalars
-  if (has_scalar_field) {
-    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-    scalars->SetNumberOfValues(results.size());
-    for (auto i = 0; i < results.size(); i ++) {
-      scalars->SetValue(i, static_cast<double>(results[i].scalar));
-    }
-    scalars->SetName("scalar");
-    polyData->GetPointData()->AddArray(scalars);
-  }
-#endif
-  return polyData;
-}
-#endif
-
+#if 0 // TODO: remove the following legacy code.  All output function are in the tracker base class 
 inline void critical_point_tracker_3d_regular::write_traced_critical_points_text(std::ostream& os) const
 {
   os << "#trajectories=" << traced_critical_points.size() << std::endl;
@@ -488,7 +440,15 @@ inline void critical_point_tracker_3d_regular::write_discrete_critical_points_te
        << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
   }
 }
+#endif
 
+inline std::vector<critical_point_t> critical_point_tracker_3d_regular::get_critical_points() const
+{
+  std::vector<critical_point_t> results;
+  for (const auto &kv : discrete_critical_points) 
+    results.push_back(kv.second);
+  return results;
+}
 
 }
 
