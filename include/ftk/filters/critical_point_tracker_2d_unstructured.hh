@@ -43,8 +43,9 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker_re
   // critical_point_tracker_2d_unstructured(const simplicial_unstructured_extruded_2d_mesh<>& m) : m(m) {}
   // critical_point_tracker_2d_unstructured() {}
   critical_point_tracker_2d_unstructured(const simplicial_unstructured_2d_mesh<>& m) : m(simplicial_unstructured_extruded_2d_mesh<>(m)) {}
-
   virtual ~critical_point_tracker_2d_unstructured() {};
+  
+  int cpdims() const { return 3; }
 
   void initialize() {}
   void finalize();
@@ -214,27 +215,6 @@ inline std::vector<critical_point_t> critical_point_tracker_2d_unstructured::get
     results.push_back(kv.second);
   return results;
 }
-
-#if 0 // TODO: remove legacy code below.
-inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_unstructured::get_discrete_critical_points_vtk() const
-{
-  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
-  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
-  
-  vtkIdType pid[1];
-  for (const auto &kv : discrete_critical_points) {
-    const auto &cp = kv.second;
-    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
-    pid[0] = points->InsertNextPoint(p);
-    vertices->InsertNextCell(1, pid);
-  }
-
-  polyData->SetPoints(points);
-  polyData->SetVerts(vertices);
-  return polyData;
-}
-#endif
 
 }
 

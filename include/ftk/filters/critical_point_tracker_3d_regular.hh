@@ -54,6 +54,8 @@ namespace ftk {
 struct critical_point_tracker_3d_regular : public critical_point_tracker_regular {
   critical_point_tracker_3d_regular() : m(4) {}
   virtual ~critical_point_tracker_3d_regular() {}
+  
+  int cpdims() const { return 3; }
 
   void initialize();
   void finalize();
@@ -416,31 +418,6 @@ bool critical_point_tracker_3d_regular::check_simplex(
   if (filter_critical_point_type(cp)) return true; 
   else return false;
 } 
-
-#if 0 // TODO: remove the following legacy code.  All output function are in the tracker base class 
-inline void critical_point_tracker_3d_regular::write_traced_critical_points_text(std::ostream& os) const
-{
-  os << "#trajectories=" << traced_critical_points.size() << std::endl;
-  for (int i = 0; i < traced_critical_points.size(); i ++) {
-    os << "--trajectory " << i << std::endl;
-    const auto &curve = traced_critical_points[i];
-    for (int k = 0; k < curve.size(); k ++) {
-      const auto &cp = curve[k];
-      os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
-         << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
-    }
-  }
-}
-
-inline void critical_point_tracker_3d_regular::write_discrete_critical_points_text(std::ostream& os) const
-{
-  for (const auto &kv : discrete_critical_points) {
-    const auto &cp = kv.second;
-    os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
-       << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
-  }
-}
-#endif
 
 inline std::vector<critical_point_t> critical_point_tracker_3d_regular::get_critical_points() const
 {

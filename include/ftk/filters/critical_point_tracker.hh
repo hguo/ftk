@@ -24,6 +24,8 @@ struct critical_point_tracker : public filter {
     field_data_snapshots.clear();
     traced_critical_points.clear();
   }
+  
+  virtual int cpdims() const = 0;
 
 public: // outputs
   const std::vector<std::vector<critical_point_t>>& get_traced_critical_points() {return traced_critical_points;}
@@ -294,9 +296,14 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
     const auto &curve = traced_critical_points[i];
     for (int k = 0; k < curve.size(); k ++) {
       const auto &cp = curve[k];
-      os << "---x=(" << cp[0] << ", " << cp[1] << "), " // TODO: determine if the domain is 2D or 3D
-         << "t=" << cp[2] << ", " 
-         << "scalar=" << cp.scalar[0] << ", "
+      if (cpdims() == 2) {
+        os << "---x=(" << cp[0] << ", " << cp[1] << "), "
+           << "t=" << cp[2] << ", ";
+      } else {
+        os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), " 
+           << "t=" << cp[3] << ", ";
+      }
+      os << "scalar=" << cp.scalar[0] << ", "
          << "type=" << cp.type << std::endl;
     }
   }
@@ -314,9 +321,14 @@ inline void critical_point_tracker::write_critical_points_text(const std::string
 inline void critical_point_tracker::write_critical_points_text(std::ostream& os) const
 {
   for (const auto &cp : get_critical_points()) {
-    os << "x=(" << cp[0] << ", " << cp[1] << "), " // TODO: determine dimensionality
-       << "t=" << cp[2] << ", "
-       << "scalar=" << cp.scalar << ", "
+    if (cpdims() == 2) {
+      os << "---x=(" << cp[0] << ", " << cp[1] << "), "
+         << "t=" << cp[2] << ", ";
+    } else {
+      os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), " 
+         << "t=" << cp[3] << ", ";
+    }
+    os << "scalar=" << cp.scalar[0] << ", "
        << "type=" << cp.type << std::endl;
   }
 }

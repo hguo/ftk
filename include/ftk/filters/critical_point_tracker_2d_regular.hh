@@ -55,6 +55,8 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   critical_point_tracker_2d_regular() : m(3) {}
   virtual ~critical_point_tracker_2d_regular() {}
 
+  int cpdims() const { return 2; }
+
   void initialize();
   void finalize();
   void reset();
