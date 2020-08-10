@@ -273,7 +273,8 @@ inline void critical_point_tracker::write_critical_points_vtk(const std::string&
 
 inline void critical_point_tracker::write_traced_critical_points_binary(const std::string& filename) const
 {
-  diy::serializeToFile(traced_critical_points, filename);
+  if (is_root_proc())
+  	diy::serializeToFile(traced_critical_points, filename);
 }
 
 inline void critical_point_tracker::write_traced_critical_points_text(const std::string& filename) const
@@ -295,7 +296,7 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
       const auto &cp = curve[k];
       os << "---x=(" << cp[0] << ", " << cp[1] << "), " // TODO: determine if the domain is 2D or 3D
          << "t=" << cp[2] << ", " 
-         << "scalar=" << cp.scalar << ", "
+         << "scalar=" << cp.scalar[0] << ", "
          << "type=" << cp.type << std::endl;
     }
   }
