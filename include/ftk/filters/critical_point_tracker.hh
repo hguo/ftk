@@ -9,6 +9,7 @@
 #if FTK_HAVE_VTK
 #include <vtkUnsignedIntArray.h>
 #include <vtkVertex.h>
+#include <vtkSmartPointer.h>
 #endif
 
 namespace ftk {
@@ -23,7 +24,7 @@ struct critical_point_tracker : public filter {
   }
 
 #if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
+  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
   virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const = 0;
 #endif
   void write_traced_critical_points_vtk(const std::string& filename);
@@ -161,6 +162,7 @@ inline void critical_point_tracker::write_discrete_critical_points_text(const st
   }
 }
 
+#if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_traced_critical_points_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
@@ -237,6 +239,7 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_traced_critical_
 
   return polyData;
 }
+#endif
 
 }
 
