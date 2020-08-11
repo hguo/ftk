@@ -240,6 +240,16 @@ struct ndarray : object {
   void from_pnetcdf_all(int ncid, int varid, const MPI_Offset *st, const MPI_Offset *sz);
 #endif
 
+public: // adios2
+#if FTK_HAVE_ADIOS2
+  void from_adios2(
+      adios2::IO &io, 
+      adios2::Engine& reader, 
+      const std::string &varname, 
+      int step_start = 0);
+#endif
+
+public: // netcdf
   void from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
   void from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[]);
@@ -849,6 +859,20 @@ template <> inline MPI_Datatype ndarray<int>::mpi_datatype() { return MPI_INT; }
 template <> inline int ndarray<double>::nc_datatype() { return NC_DOUBLE; }
 template <> inline int ndarray<float>::nc_datatype() { return NC_FLOAT; }
 template <> inline int ndarray<int>::nc_datatype() { return NC_INT; }
+#endif
+
+#if FTK_HAVE_ADIOS2
+template <typename T>
+inline void ndarray<T>::from_adios2(adios2::IO &io, adios2::Engine &reader, const std::string &varname, int step_start)
+{
+  auto var = io.template InquireVariable<T>(varname);
+  if (var) {
+    var.SetStepSelection({step_start, 1});
+    reshape(var.Shape());
+    // var.SetSelection({{0, 0}, {var.Shape()[0], var.Shape()[1]}});
+    reader.Get<T>(var, p);
+  }
+}
 #endif
 
 template <typename T>
