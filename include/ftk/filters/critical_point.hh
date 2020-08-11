@@ -8,9 +8,9 @@ namespace ftk {
 // template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
 struct critical_point_t {
   double operator[](size_t i) const {return x[i];}
-  double x[4]; // coordinates in (spacetime) cartisian grid
-  double rx[4]; // coordinates in transformed (e.g. curvilinear) grid, if eligible
-  double scalar[FTK_CP_MAX_NUM_VARS];
+  double x[4] = {0}; // coordinates in (spacetime) cartisian grid
+  double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
+  double scalar[FTK_CP_MAX_NUM_VARS] = {0};
   unsigned int type = 0;
   unsigned long long tag = 0;
 
