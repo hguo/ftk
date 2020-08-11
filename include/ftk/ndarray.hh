@@ -13,6 +13,10 @@
 #include <cassert>
 #include <glob.h>
 
+#if FTK_HAVE_ADIOS2
+#include <adios2.h>
+#endif
+
 #if FTK_HAVE_CUDA
 // #include <cuda.h>
 #include <cuda_runtime.h>

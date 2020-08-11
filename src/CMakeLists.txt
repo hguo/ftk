@@ -3,6 +3,10 @@ add_library (ftk SHARED ${ftk_sources} ${ftk_cuda_sources})
 
 target_link_libraries (ftk ${CMAKE_THREAD_LIBS_INIT})
 
+if (FTK_HAVE_ADIOS2)
+  target_link_libraries (ftk ${ADIOS2_LIBRARIES})
+endif ()
+
 if (FTK_HAVE_CUDA)
   file (GLOB_RECURSE ftk_cuda_sources *.cu)
   cuda_add_library (ftk_cuda ${ftk_cuda_sources})

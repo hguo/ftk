@@ -26,6 +26,7 @@ function (ftk_option name description default)
   set_property (CACHE FTK_USE_${name} PROPERTY STRINGS "TRUE;AUTO;FALSE")
 endfunction ()
 
+ftk_option (ADIOS2 "Use ADIOS2" FALSE)
 ftk_option (Boost "Use Boost" FALSE) # not used
 ftk_option (CUDA "Use CUDA" FALSE) # experimental
 ftk_option (GSL "Use GSL (GNU Scientific Library)" FALSE)
@@ -45,6 +46,20 @@ ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # this feature i
 ftk_option (VTK "Use VTK" AUTO)
 
 find_package (Threads REQUIRED)
+
+if (FTK_USE_ADIOS2 STREQUAL AUTO)
+  find_package (ADIOS2 QUIET)
+elseif (FTK_USE_ADIOS2)
+  find_package (ADIOS2 REQUIRED)
+endif ()
+if (ADIOS2_FOUND)
+  if (ADIOS2_HAVE_MPI)
+    set (FTK_USE_MPI ON)
+  endif ()
+  set (FTK_HAVE_ADIOS2 ON)
+  # set (ADIOS2_INCLUDE_DIRS ${ADIOS2_DIR}/include)
+  include_directories (${ADIOS2_INCLUDE_DIRS})
+endif ()
 
 if (FTK_USE_VTK STREQUAL AUTO)
   find_package (VTK QUIET)
@@ -134,8 +149,6 @@ if (MPSolve_FOUND)
   include_directories (${MPSolve_INCLUDE_DIR})
 endif ()
 
-message ("FTK_USE_GMP: ${FTK_USE_GMP}")
-
 if (FTK_USE_GMP STREQUAL AUTO)
   find_package (GMP QUIET)
 elseif (FTK_USE_GMP)
@@ -217,7 +230,7 @@ if (CUDA_FOUND)
   include_directories (${CUDA_INCLUDE_DIRS})
   # include_directories (${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 endif ()
-
+  
 set (Boost_USE_STATIC_LIBS ON)
 set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME OFF)
@@ -316,6 +329,11 @@ message("    ParaView:     ${FTK_BUILD_PARAVIEW}")
 message("    PyFTK*:       ${FTK_BUILD_PYFTK}")
 message ("")
 message("  Dependencies:")
+message("    ADIOS2       ${FTK_USE_ADIOS2} ${ADIOS2_FOUND}")
+if (${FTK_HAVE_ADIOS2})
+  message("      Include path:    ${ADIOS2_INCLUDES}")
+  message("      Libraries:       ${ADIOS2_LIBRARIES}")
+endif ()
 message("    Boost:       ${FTK_USE_Boost} ${Boost_FOUND}")
 if (${FTK_HAVE_BOOST})
   message("      Version:         ${Boost_VERSION_STRING}")
