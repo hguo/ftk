@@ -50,8 +50,11 @@ catch_discover_tests (test_io)
 add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
 target_link_libraries (test_critical_point_tracking_woven ftk)
 
-add_executable (test_critical_point_tracking_moving_extremum test_critical_point_tracking_moving_extremum)
-target_link_libraries (test_critical_point_tracking_moving_extremum ftk)
+add_executable (test_critical_point_tracking_moving_extremum_2d test_critical_point_tracking_moving_extremum_2d)
+target_link_libraries (test_critical_point_tracking_moving_extremum_2d ftk)
+
+add_executable (test_critical_point_tracking_moving_extremum_3d test_critical_point_tracking_moving_extremum_3d)
+target_link_libraries (test_critical_point_tracking_moving_extremum_3d ftk)
 
 add_executable(test_critical_point_tracking_double_gyre_unstructured test_critical_point_tracking_double_gyre_unstructured.cpp)
 target_link_libraries (test_critical_point_tracking_double_gyre_unstructured ftk)
@@ -69,10 +72,15 @@ if (FTK_HAVE_MPI)
       COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_woven>)
   endforeach (p)
   foreach (p RANGE 1 ${maxp})
-    add_test (NAME test_critical_point_tracking_moving_extremum_p${p} 
-      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum>)
+    add_test (NAME test_critical_point_tracking_moving_extremum_2d_p${p} 
+      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum_2d>)
+  endforeach (p)
+  foreach (p RANGE 1 ${maxp})
+    add_test (NAME test_critical_point_tracking_moving_extremum_3d_p${p} 
+      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum_3d>)
   endforeach (p)
 else () # serial only
   catch_discover_tests (test_critical_point_tracking_woven)
-  catch_discover_tests (test_critical_point_tracking_moving_extremum)
+  catch_discover_tests (test_critical_point_tracking_moving_extremum_2d)
+  catch_discover_tests (test_critical_point_tracking_moving_extremum_3d)
 endif ()
