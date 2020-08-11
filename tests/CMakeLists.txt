@@ -75,10 +75,10 @@ if (FTK_HAVE_MPI)
     add_test (NAME test_critical_point_tracking_moving_extremum_2d_p${p} 
       COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum_2d>)
   endforeach (p)
-  foreach (p RANGE 1 ${maxp})
-    add_test (NAME test_critical_point_tracking_moving_extremum_3d_p${p} 
-      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum_3d>)
-  endforeach (p)
+  #foreach (p RANGE 1 ${maxp})
+  #  add_test (NAME test_critical_point_tracking_moving_extremum_3d_p${p} 
+  #    COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum_3d>)
+  #endforeach (p)
 else () # serial only
   catch_discover_tests (test_critical_point_tracking_woven)
   catch_discover_tests (test_critical_point_tracking_moving_extremum_2d)

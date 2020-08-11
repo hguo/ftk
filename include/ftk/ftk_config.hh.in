@@ -23,6 +23,11 @@
 #define FTK_FP_PRECISION ${FTK_FP_PRECISION}
 #define FTK_CP_MAX_NUM_VARS 2
 
+#if FTK_HAVE_MPI
+#else
+  #define DIY_NO_MPI
+#endif
+
 #ifdef __CUDACC__
 // #define FTK_NUMERIC_FUNC __device__ __host__
 #else

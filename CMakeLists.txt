@@ -114,7 +114,7 @@ if (MPI_FOUND)
   set (CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
   include_directories (${MPI_C_INCLUDE_DIRS})
 else ()
-  add_definitions (-DDIY_NO_MPI)
+  # add_definitions (-DDIY_NO_MPI)
 endif ()
 
 if (FTK_USE_HDF5 STREQUAL AUTO)
