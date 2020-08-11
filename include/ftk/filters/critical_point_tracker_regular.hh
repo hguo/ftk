@@ -16,7 +16,6 @@ enum {
 
 struct critical_point_tracker_regular : public critical_point_tracker {
   critical_point_tracker_regular() {}
-  critical_point_tracker_regular(int argc, char **argv) : critical_point_tracker(argc, argv) {}
   virtual ~critical_point_tracker_regular() {}
 
   void set_domain(const lattice& l) {domain = l;} // spatial domain
@@ -63,8 +62,7 @@ struct critical_point_tracker_regular : public critical_point_tracker {
 #endif
 
 protected:
-  template <int N, typename T=double>
-  bool filter_critical_point_type(const critical_point_t<N, T>& cp);
+  bool filter_critical_point_type(const critical_point_t& cp);
 
 protected: // config
   lattice domain, array_domain, 
@@ -107,9 +105,8 @@ inline void critical_point_tracker_regular::set_type_filter(unsigned int f)
   type_filter = f;
 }
   
-template <int N, typename T>
 inline bool critical_point_tracker_regular::filter_critical_point_type(
-    const critical_point_t<N, T>& cp)
+    const critical_point_t& cp)
 {
   // fprintf(stderr, "typefilter=%lu, type=%lu\n", 
   //     type_filter, cp.type);

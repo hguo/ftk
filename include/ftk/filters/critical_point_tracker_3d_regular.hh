@@ -34,7 +34,7 @@
 #endif
 
 #if FTK_HAVE_CUDA
-extern std::vector<ftk::critical_point_t<4, double>> 
+extern std::vector<ftk::critical_point_t> // <4, double>> 
 extract_cp3dt_cuda(
     int scope, int current_timestep, 
     const ftk::lattice& domain4,
@@ -51,16 +51,11 @@ extract_cp3dt_cuda(
 
 namespace ftk {
 
-typedef critical_point_t<4, double> critical_point_3dt_t;
-
 struct critical_point_tracker_3d_regular : public critical_point_tracker_regular {
   critical_point_tracker_3d_regular() : m(4) {}
-  critical_point_tracker_3d_regular(int argc, char **argv) 
-    : critical_point_tracker_regular(argc, argv), m(4) {}
   virtual ~critical_point_tracker_3d_regular() {}
   
-  void write_traced_critical_points_text(std::ostream& os) const;
-  void write_discrete_critical_points_text(std::ostream &os) const;
+  int cpdims() const { return 3; }
 
   void initialize();
   void finalize();
@@ -69,23 +64,20 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   
   void push_scalar_field_snapshot(const ndarray<double>&);
   void push_vector_field_snapshot(const ndarray<double>&);
-  
-#if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
-  virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
-#endif
 
+  std::vector<critical_point_t> get_critical_points() const;
+  
 protected:
   simplicial_regular_mesh m;
   
   typedef simplicial_regular_mesh_element element_t;
   
-  std::map<element_t, critical_point_3dt_t> discrete_critical_points;
+  std::map<element_t, critical_point_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
-  std::vector<std::vector<critical_point_3dt_t>> traced_critical_points;
+  // std::vector<std::vector<critical_point_t>> traced_critical_points;
 
 protected:
-  bool check_simplex(const element_t& s, critical_point_3dt_t& cp);
+  bool check_simplex(const element_t& s, critical_point_t& cp);
   void trace_intersections();
   void trace_connected_components();
 
@@ -131,7 +123,7 @@ void critical_point_tracker_3d_regular::initialize()
 
 void critical_point_tracker_3d_regular::finalize()
 {
-  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
   if (comm.rank() == 0) {
     fprintf(stderr, "finalizing...\n");
@@ -172,7 +164,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
   auto func3 = [=](element_t e) {
-      critical_point_3dt_t cp;
+      critical_point_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         discrete_critical_points[e] = cp;
@@ -327,7 +319,7 @@ void critical_point_tracker_3d_regular::trace_connected_components()
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_3dt_t> traj; 
+      std::vector<critical_point_t> traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.emplace_back(traj);
@@ -388,7 +380,7 @@ void critical_point_tracker_3d_regular::simplex_jacobians(
 
 bool critical_point_tracker_3d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
-    critical_point_3dt_t& cp)
+    critical_point_t& cp)
 {
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m);
@@ -410,7 +402,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
   if (scalar_field_source != SOURCE_NONE) {
     double values[3];
     simplex_scalars(vertices, values);
-    cp.scalar = lerp_s3(values, mu);
+    cp.scalar[0] = lerp_s3(values, mu);
   }
 
   double J[3][3] = {0}; // jacobian or hessian
@@ -427,149 +419,13 @@ bool critical_point_tracker_3d_regular::check_simplex(
   else return false;
 } 
 
-#if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_traced_critical_points_vtk() const
+inline std::vector<critical_point_t> critical_point_tracker_3d_regular::get_critical_points() const
 {
-  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
-  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
-
-  for (const auto &curve : traced_critical_points)
-    for (auto i = 0; i < curve.size(); i ++) {
-      double p[3] = {curve[i][0], curve[i][1], curve[i][2]};
-      points->InsertNextPoint(p);
-    }
-
-  size_t nv = 0;
-  for (const auto &curve : traced_critical_points) {
-    vtkSmartPointer<vtkPolyLine> polyLine = vtkPolyLine::New();
-    polyLine->GetPointIds()->SetNumberOfIds(curve.size());
-    for (int i = 0; i < curve.size(); i ++)
-      polyLine->GetPointIds()->SetId(i, i+nv);
-
-    cells->InsertNextCell(polyLine);
-    nv += curve.size();
-  }
-  
-  polyData->SetPoints(points);
-  polyData->SetLines(cells);
-
-  // point data for time
-  if (1) {
-    vtkSmartPointer<vtkDoubleArray> time = vtkSmartPointer<vtkDoubleArray>::New();
-    time->SetNumberOfValues(nv);
-    size_t i = 0;
-    for (const auto &curve : traced_critical_points)
-      for (auto j = 0; j < curve.size(); j ++)
-        time->SetValue(i ++, curve[j][3]);
-    time->SetName("time");
-    polyData->GetPointData()->AddArray(time);
-  }
-
-  // point data for types
-  if (1) { // if (type_filter) {
-    vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
-    types->SetNumberOfValues(nv);
-    size_t i = 0;
-    for (const auto &curve : traced_critical_points)
-      for (auto j = 0; j < curve.size(); j ++)
-        types->SetValue(i ++, curve[j].type);
-    types->SetName("type");
-    polyData->GetPointData()->AddArray(types);
-  }
-
-  if (1) { // ids
-    vtkSmartPointer<vtkUnsignedIntArray> ids = vtkSmartPointer<vtkUnsignedIntArray>::New();
-    ids->SetNumberOfValues(nv);
-    size_t i = 0;
-    for (auto k = 0; k < traced_critical_points.size(); k ++)
-      for (auto j = 0; j < traced_critical_points[k].size(); j ++)
-        ids->SetValue(i ++, k);
-    ids->SetName("id");
-    polyData->GetPointData()->AddArray(ids);
-  }
-
-  // point data for scalars
-  // if (has_scalar_field) {
-  if (1) { // scalar is 0 if no scalar field available
-    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-    scalars->SetNumberOfValues(nv);
-    size_t i = 0;
-    for (const auto &curve : traced_critical_points)
-      for (auto j = 0; j < curve.size(); j ++)
-        scalars->SetValue(i ++, curve[j].scalar);
-    scalars->SetName("scalar");
-    polyData->GetPointData()->AddArray(scalars);
-  }
-
-  return polyData;
+  std::vector<critical_point_t> results;
+  for (const auto &kv : discrete_critical_points) 
+    results.push_back(kv.second);
+  return results;
 }
-
-vtkSmartPointer<vtkPolyData> critical_point_tracker_3d_regular::get_discrete_critical_points_vtk() const
-{
-  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
-  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
-  
-  vtkIdType pid[1];
-  for (const auto &kv : discrete_critical_points) {
-    const auto &cp = kv.second;
-    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
-    pid[0] = points->InsertNextPoint(p);
-    vertices->InsertNextCell(1, pid);
-  }
-
-  polyData->SetPoints(points);
-  polyData->SetVerts(vertices);
-
-#if 0
-  // point data for types
-  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
-  types->SetNumberOfValues(results.size());
-  for (auto i = 0; i < results.size(); i ++) {
-    types->SetValue(i, static_cast<double>(results[i].type));
-  }
-  types->SetName("type");
-  polyData->GetPointData()->AddArray(types);
-  
-  // point data for scalars
-  if (has_scalar_field) {
-    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-    scalars->SetNumberOfValues(results.size());
-    for (auto i = 0; i < results.size(); i ++) {
-      scalars->SetValue(i, static_cast<double>(results[i].scalar));
-    }
-    scalars->SetName("scalar");
-    polyData->GetPointData()->AddArray(scalars);
-  }
-#endif
-  return polyData;
-}
-#endif
-
-inline void critical_point_tracker_3d_regular::write_traced_critical_points_text(std::ostream& os) const
-{
-  os << "#trajectories=" << traced_critical_points.size() << std::endl;
-  for (int i = 0; i < traced_critical_points.size(); i ++) {
-    os << "--trajectory " << i << std::endl;
-    const auto &curve = traced_critical_points[i];
-    for (int k = 0; k < curve.size(); k ++) {
-      const auto &cp = curve[k];
-      os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
-         << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
-    }
-  }
-}
-
-inline void critical_point_tracker_3d_regular::write_discrete_critical_points_text(std::ostream& os) const
-{
-  for (const auto &kv : discrete_critical_points) {
-    const auto &cp = kv.second;
-    os << "---x=(" << cp[0] << ", " << cp[1] << "," << cp[2] << "), "
-       << "t=" << cp[2] << ", scalar=" << cp.scalar << std::endl;
-  }
-}
-
 
 }
 

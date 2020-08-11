@@ -8,6 +8,7 @@
 #include <utility>
 #include <iostream>
 
+#include <ftk/ftk_config.hh>
 #include <ftk/external/diy/mpi.hpp>
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy/assigner.hpp>

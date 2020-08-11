@@ -24,7 +24,7 @@ bool check_simplex_cp2t(
     const double *scalar[2], // scalars
     bool use_explicit_coords,
     const double *coords, // coordinates of vertices
-    cp3_t &cp)
+    cp_t &cp)
 {
   typedef ftk::fixed_point<> fp_t;
 
@@ -91,7 +91,7 @@ bool check_simplex_cp2t(
         const int t = unit_simplex_offset_3_2<scope>(e.type, i, 2);
         values[i] = scalar[t][ii];
       }
-      cp.scalar = ftk::lerp_s2(values, mu);
+      cp.scalar[0] = ftk::lerp_s2(values, mu);
       // if (abs(cp.scalar) < 0.02) return false; // threshold
     }
     
@@ -132,7 +132,7 @@ void sweep_simplices(
     const double *Sn,
     bool use_explicit_coords,
     const double *coords, // coordinates of vertices
-    unsigned long long &ncps, cp3_t *cps)
+    unsigned long long &ncps, cp_t *cps)
 {
   const double *V[2] = {Vc, Vn};
   const double *J[2] = {Jc, Jn};
@@ -141,7 +141,7 @@ void sweep_simplices(
   int tid = getGlobalIdx_3D_1D();
   const element32_t e = element32_from_index<scope>(core, tid);
 
-  cp3_t cp;
+  cp_t cp;
   bool succ = check_simplex_cp2t<scope>(
       current_timestep, 
       domain, core, ext, e, V, J, S, 
@@ -156,7 +156,7 @@ void sweep_simplices(
 }
 
 template<int scope>
-static std::vector<cp3_t> extract_cp2dt(
+static std::vector<cp_t> extract_cp2dt(
     int current_timestep,
     const lattice3_t& domain,
     const lattice3_t& core, 
@@ -221,9 +221,9 @@ static std::vector<cp3_t> extract_cp2dt(
   cudaMalloc((void**)&dncps, sizeof(unsigned long long));
   cudaMemset(dncps, 0, sizeof(unsigned long long));
 
-  cp3_t *dcps;
-  // cudaMalloc((void**)&dcps, sizeof(cp3_t) * ext.n() * 2);
-  cudaMalloc((void**)&dcps, 1024*1024*64); // sizeof(cp3_t) * ext.n() * 2);
+  cp_t *dcps;
+  // cudaMalloc((void**)&dcps, sizeof(cp_t) * ext.n() * 2);
+  cudaMalloc((void**)&dcps, 1024*1024*64); // sizeof(cp_t) * ext.n() * 2);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMalloc/cudaMemcpy");
 
   fprintf(stderr, "calling kernel func...\n");
@@ -240,8 +240,8 @@ static std::vector<cp3_t> extract_cp2dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpy, ncps");
   fprintf(stderr, "ncps=%llu\n", ncps);
 
-  std::vector<cp3_t> cps(ncps);
-  cudaMemcpy(cps.data(), dcps, sizeof(cp3_t) * ncps, cudaMemcpyDeviceToHost);
+  std::vector<cp_t> cps(ncps);
+  cudaMemcpy(cps.data(), dcps, sizeof(cp_t) * ncps, cudaMemcpyDeviceToHost);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpy, dcps");
  
   if (dcoords) cudaFree(dcoords);
@@ -261,7 +261,7 @@ static std::vector<cp3_t> extract_cp2dt(
   return cps;
 }
 
-std::vector<cp3_t>
+std::vector<cp_t>
 extract_cp2dt_cuda(
     int scope, 
     int current_timestep,

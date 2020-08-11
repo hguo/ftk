@@ -90,11 +90,12 @@ typedef lite_lattice_t<2> lattice2_t;
 
 typedef lite_lattice_t<3> lattice3_t;
 typedef lite_element_t<3> element32_t;
-typedef ftk::critical_point_t<3, double> cp3_t;
+// typedef ftk::critical_point_t<3, double> cp3_t;
 
 typedef lite_lattice_t<4> lattice4_t;
 typedef lite_element_t<4> element43_t;
-typedef ftk::critical_point_t<4, double> cp4_t;
+// typedef ftk::critical_point_t<4, double> cp4_t;
+typedef ftk::critical_point_t cp_t;
   
 template <int scope>
 __device__ __host__ inline int ntypes_3_2();

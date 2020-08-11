@@ -21,6 +21,11 @@ const json js_moving_extremum_2d_synthetic = {
   {"name", "moving_extremum_2d"}
 };
 
+const json js_moving_extremum_3d_synthetic = {
+  {"type", "synthetic"},
+  {"name", "moving_extremum_3d"}
+};
+
 const json js_moving_extremum_2d_vti = {
   {"format", "vti"},
   {"filenames", "moving_extremum_2d-*.vti"},

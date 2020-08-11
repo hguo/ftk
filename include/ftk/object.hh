@@ -7,6 +7,7 @@
 #include <vector>
 #include <functional>
 #include <algorithm>
+#include <ftk/ftk_config.hh>
 #include <ftk/external/diy/mpi.hpp>
 
 namespace ftk {

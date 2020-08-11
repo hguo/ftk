@@ -10,7 +10,7 @@ int main(int argc, char **argv)
 {
   diy::mpi::environment env(argc, argv);
 
-  ftk::critical_point_tracker_3d_regular tracker(argc, argv);
+  ftk::critical_point_tracker_3d_regular tracker;
   // tracker.set_domain(ftk::lattice({32, 32, 32}, {64, 64, 64}));
   // tracker.set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3}));
   tracker.set_domain(ftk::lattice({4, 4, 4}, {DW-5, DH-5, DD-5})); // the lattice is based on gaussian & gradient kernels

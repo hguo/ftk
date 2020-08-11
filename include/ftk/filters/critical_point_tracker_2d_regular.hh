@@ -23,18 +23,14 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/external/diy/serialization.hpp>
+#include <ftk/external/diy-ext/gather.hh>
 
 #if FTK_HAVE_GMP
 #include <gmpxx.h>
 #endif
 
-#if FTK_HAVE_VTK
-#include <vtkUnsignedIntArray.h>
-#include <vtkVertex.h>
-#endif
-
 #if FTK_HAVE_CUDA
-extern std::vector<ftk::critical_point_t<3, double>> 
+extern std::vector<ftk::critical_point_t> // <3, double>> 
 extract_cp2dt_cuda(
     int scope, int current_timestep, 
     const ftk::lattice& domain, // 3D
@@ -53,13 +49,13 @@ extract_cp2dt_cuda(
 
 namespace ftk {
 
-typedef critical_point_t<3, double> critical_point_2dt_t;
+// typedef critical_point_t<3, double> critical_point_t;
 
 struct critical_point_tracker_2d_regular : public critical_point_tracker_regular {
   critical_point_tracker_2d_regular() : m(3) {}
-  critical_point_tracker_2d_regular(int argc, char **argv) 
-    : critical_point_tracker_regular(argc, argv), m(3) {}
   virtual ~critical_point_tracker_2d_regular() {}
+
+  int cpdims() const { return 2; }
 
   void initialize();
   void finalize();
@@ -70,35 +66,22 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   void push_scalar_field_snapshot(const ndarray<double>&);
   void push_vector_field_snapshot(const ndarray<double>&);
 
-#if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
-  virtual vtkSmartPointer<vtkPolyData> get_discrete_critical_points_vtk() const;
-#endif
-
-  std::string get_traced_critical_points_text() const;
-  std::string get_discrete_critical_points_text() const;
-
-  void write_discrete_critical_points(const std::string& filename) const;
-  void write_traced_critical_points(const std::string& filename) const;
- 
-  void write_traced_critical_points_text(const std::string& filename) const;
-  void write_traced_critical_points_text(std::ostream& os) const;
-  void write_discrete_critical_points_text(std::ostream &os) const;
+  // void write_discrete_critical_points(const std::string& filename) const;
+  // void write_discrete_critical_points_text(std::ostream &os) const;
   
 protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
   
-  std::map<element_t, critical_point_2dt_t> discrete_critical_points;
+  std::map<element_t, critical_point_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
-  std::vector<std::vector<critical_point_2dt_t>> traced_critical_points;
   
 public:
-  const std::map<element_t, critical_point_2dt_t>& get_discrete_critical_points() {return discrete_critical_points;}
-  const std::vector<std::vector<critical_point_2dt_t>>& get_traced_critical_points() {return traced_critical_points;}
+  const std::map<element_t, critical_point_t>& get_discrete_critical_points() const {return discrete_critical_points;}
+  std::vector<critical_point_t> get_critical_points() const;
 
 protected:
-  bool check_simplex(const element_t& s, critical_point_2dt_t& cp);
+  bool check_simplex(const element_t& s, critical_point_t& cp);
   void trace_intersections();
   void trace_connected_components();
 
@@ -110,9 +93,9 @@ protected:
       double Js[][2][2]) const;
 
 protected: // working in progress
-  bool robust_check_simplex0(const element_t& s, critical_point_2dt_t &cp);
-  bool robust_check_simplex1(const element_t& s, critical_point_2dt_t &cp);
-  bool robust_check_simplex2(const element_t& s, critical_point_2dt_t &cp);
+  bool robust_check_simplex0(const element_t& s, critical_point_t &cp);
+  bool robust_check_simplex1(const element_t& s, critical_point_t &cp);
+  bool robust_check_simplex2(const element_t& s, critical_point_t &cp);
 };
 
 
@@ -148,10 +131,10 @@ inline void critical_point_tracker_2d_regular::initialize()
 
 inline void critical_point_tracker_2d_regular::finalize()
 {
-  // fprintf(stderr, "rank=%d, #cp=%zu\n", comm.rank(), discrete_critical_points.size());
-  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, 0);
+  // fprintf(stderr, "rank=%d, root=%d, #cp=%zu\n", comm.rank(), get_root_proc(), discrete_critical_points.size());
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
-  if (comm.rank() == 0) {
+  if (comm.rank() == get_root_proc()) {
     fprintf(stderr, "finalizing...\n");
     // trace_intersections();
     trace_connected_components();
@@ -165,7 +148,8 @@ inline void critical_point_tracker_2d_regular::reset()
   field_data_snapshots.clear();
   discrete_critical_points.clear();
   traced_critical_points.clear();
-  connected_components.clear();
+
+  critical_point_tracker::reset();
 }
 
 inline void critical_point_tracker_2d_regular::push_scalar_field_snapshot(const ndarray<double>& s)
@@ -198,7 +182,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
   auto func0 = [=](element_t e) {
-      critical_point_2dt_t cp;
+      critical_point_t cp;
       if (robust_check_simplex0(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp))
@@ -207,7 +191,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
     };
   
   auto func1 = [=](element_t e) {
-      critical_point_2dt_t cp;
+      critical_point_t cp;
       if (robust_check_simplex1(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp))
@@ -218,7 +202,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
   // scan 2-simplices
   // fprintf(stderr, "tracking 2D critical points...\n");
   auto func2 = [=](element_t e) {
-      critical_point_2dt_t cp;
+      critical_point_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp))
@@ -394,7 +378,7 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_2dt_t> traj; 
+      std::vector<critical_point_t> traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.emplace_back(traj);
@@ -468,7 +452,7 @@ inline void critical_point_tracker_2d_regular::simplex_jacobians(
 
 inline bool critical_point_tracker_2d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
-    critical_point_2dt_t& cp)
+    critical_point_t& cp)
 {
 #if FTK_HAVE_GMP
   typedef mpf_class fp_t;
@@ -541,7 +525,7 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   if (scalar_field_source != SOURCE_NONE) {
     double values[3];
     simplex_scalars(vertices, values);
-    cp.scalar = lerp_s2(values, mu);
+    cp.scalar[0] = lerp_s2(values, mu);
   }
 
   double J[2][2] = {0}; // jacobian
@@ -566,7 +550,7 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   return true;
 } 
 
-inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e, critical_point_2dt_t& cp)
+inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e, critical_point_t& cp)
 {
   typedef fixed_point<> fp_t;
 
@@ -590,7 +574,7 @@ inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const eleme
 #endif
 }
 
-inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const element_t& e, critical_point_2dt_t& cp)
+inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const element_t& e, critical_point_t& cp)
 {
   typedef fixed_point<> fp_t;
 
@@ -622,7 +606,7 @@ inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const eleme
 }
 
 #if 0
-void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s, critical_point_2dt_t& cp)
+void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s, critical_point_t& cp)
 {
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
@@ -640,157 +624,10 @@ void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s
 }
 #endif
 
-#if FTK_HAVE_VTK
-inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_traced_critical_points_vtk() const
-{
-  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
-  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> lines = vtkCellArray::New();
-  vtkSmartPointer<vtkCellArray> verts = vtkCellArray::New();
-
-  for (const auto &curve : traced_critical_points)
-    for (auto i = 0; i < curve.size(); i ++) {
-      double p[3] = {curve[i][0], curve[i][1], curve[i][2]};
-      points->InsertNextPoint(p);
-    }
-
-  size_t nv = 0;
-  for (const auto &curve : traced_critical_points) {
-    if (curve.size() < 2) { // isolated vertex
-      vtkSmartPointer<vtkVertex> obj = vtkVertex::New();
-      obj->GetPointIds()->SetNumberOfIds(curve.size());
-      for (int i = 0; i < curve.size(); i ++)
-        obj->GetPointIds()->SetId(i, i+nv);
-      verts->InsertNextCell(obj);
-    } else { // lines
-      vtkSmartPointer<vtkPolyLine> obj = vtkPolyLine::New();
-      obj->GetPointIds()->SetNumberOfIds(curve.size());
-      for (int i = 0; i < curve.size(); i ++)
-        obj->GetPointIds()->SetId(i, i+nv);
-      lines->InsertNextCell(obj);
-    }
-    nv += curve.size();
-  }
- 
-  polyData->SetPoints(points);
-  polyData->SetLines(lines);
-  polyData->SetVerts(verts);
-
-  // point data for types
-  if (1) { // if (type_filter) {
-    vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
-    types->SetNumberOfValues(nv);
-    size_t i = 0;
-    for (const auto &curve : traced_critical_points) {
-      for (auto j = 0; j < curve.size(); j ++)
-        types->SetValue(i ++, curve[j].type);
-    }
-    types->SetName("type");
-    polyData->GetPointData()->AddArray(types);
-  }
-
-  if (1) { // ids
-    vtkSmartPointer<vtkUnsignedIntArray> ids = vtkSmartPointer<vtkUnsignedIntArray>::New();
-    ids->SetNumberOfValues(nv);
-    size_t i = 0;
-    for (auto k = 0; k < traced_critical_points.size(); k ++)
-      for (auto j = 0; j < traced_critical_points[k].size(); j ++)
-        ids->SetValue(i ++, k);
-    ids->SetName("id");
-    polyData->GetPointData()->AddArray(ids);
-
-  }
-
-  // point data for scalars
-  // if (has_scalar_field) {
-  if (1) { // scalar is 0 if no scalar field available
-    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-    scalars->SetNumberOfValues(nv);
-    size_t i = 0;
-    for (const auto &curve : traced_critical_points) {
-      for (auto j = 0; j < curve.size(); j ++)
-        scalars->SetValue(i ++, curve[j].scalar);
-    }
-    scalars->SetName("scalar");
-    polyData->GetPointData()->AddArray(scalars);
-  }
-
-  return polyData;
-}
-
-inline vtkSmartPointer<vtkPolyData> critical_point_tracker_2d_regular::get_discrete_critical_points_vtk() const
-{
-  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
-  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
-  
-  vtkIdType pid[1];
-  for (const auto &kv : discrete_critical_points) {
-    const auto &cp = kv.second;
-    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
-    pid[0] = points->InsertNextPoint(p);
-    vertices->InsertNextCell(1, pid);
-  }
-
-  polyData->SetPoints(points);
-  polyData->SetVerts(vertices);
-
-#if 0
-  // point data for types
-  vtkSmartPointer<vtkDoubleArray> types = vtkSmartPointer<vtkDoubleArray>::New();
-  types->SetNumberOfValues(results.size());
-  for (auto i = 0; i < results.size(); i ++) {
-    types->SetValue(i, static_cast<double>(results[i].type));
-  }
-  types->SetName("type");
-  polyData->GetPointData()->AddArray(types);
-  
-  // point data for scalars
-  if (has_scalar_field) {
-    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-    scalars->SetNumberOfValues(results.size());
-    for (auto i = 0; i < results.size(); i ++) {
-      scalars->SetValue(i, static_cast<double>(results[i].scalar));
-    }
-    scalars->SetName("scalar");
-    polyData->GetPointData()->AddArray(scalars);
-  }
-#endif
-  return polyData;
-}
-#endif
-
+#if 0 // TODO: remove legacy code.
 inline void critical_point_tracker_2d_regular::write_discrete_critical_points(const std::string& filename) const
 {
   diy::serializeToFile(discrete_critical_points, filename);
-}
-
-inline void critical_point_tracker_2d_regular::write_traced_critical_points(const std::string& filename) const 
-{
-  diy::serializeToFile(traced_critical_points, filename);
-}
-  
-inline void critical_point_tracker_2d_regular::write_traced_critical_points_text(const std::string& filename) const
-{
-  std::ofstream ofs(filename);
-  write_traced_critical_points_text(ofs);
-  ofs.close();
-}
-
-inline void critical_point_tracker_2d_regular::write_traced_critical_points_text(std::ostream& os) const
-{
-  os << "#trajectories=" << traced_critical_points.size() << std::endl;
-  for (int i = 0; i < traced_critical_points.size(); i ++) {
-    os << "--trajectory " << i << std::endl;
-    const auto &curve = traced_critical_points[i];
-    for (int k = 0; k < curve.size(); k ++) {
-      const auto &cp = curve[k];
-      os << "---x=(" << cp[0] << ", " << cp[1] << "), "
-         << "t=" << cp[2] << ", " 
-         << "scalar=" << cp.scalar << ", "
-         << "type=" << cp.type << std::endl;
-    }
-  }
 }
 
 inline void critical_point_tracker_2d_regular::write_discrete_critical_points_text(std::ostream& os) const
@@ -802,6 +639,15 @@ inline void critical_point_tracker_2d_regular::write_discrete_critical_points_te
        << "scalar=" << cp.scalar << ", "
        << "type=" << cp.type << std::endl;
   }
+}
+#endif
+  
+inline std::vector<critical_point_t> critical_point_tracker_2d_regular::get_critical_points() const
+{
+  std::vector<critical_point_t> results;
+  for (const auto &kv : discrete_critical_points) 
+    results.push_back(kv.second);
+  return results;
 }
 
 }
