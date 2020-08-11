@@ -3,6 +3,12 @@
 #include "constants.hh"
 #include <ftk/filters/critical_point_tracker_wrapper.hh>
 
+#if FTK_HAVE_VTK
+#include <vtkXMLPolyDataReader.h>
+#include <vtkPolyData.h>
+#include <vtkSmartPointer.h>
+#endif
+
 using nlohmann::json;
 
 // #if FTK_HAVE_VTK
@@ -59,7 +65,18 @@ TEST_CASE("critical_point_tracking_moving_extremum_2d_random_motion") {
      
       std::cerr << js << std::endl;
       // std::string f("out.txt");
+      
+#if FTK_HAVE_VTK 
       // tracker->write_traced_critical_points_text(f);
+      std::string filename_vtk = "moving_extremum_2d-" + std::to_string(k) + ".vtp";
+      tracker->write_traced_critical_points_vtk(filename_vtk);
+
+      vtkSmartPointer<vtkXMLPolyDataReader> reader = vtkXMLPolyDataReader::New();
+      reader->SetFileName(filename_vtk.c_str());
+      reader->Update();
+      vtkSmartPointer<vtkPolyData> poly = reader->GetOutput();
+      REQUIRE(poly->GetNumberOfCells() == 1);
+#endif
 
       REQUIRE(trajs.size() == 1);
       
