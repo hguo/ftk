@@ -29,6 +29,9 @@ struct critical_point_tracker : public filter {
 
   void set_type_filter(unsigned int);
 
+  void set_num_scalar_components(int);
+  int get_num_scalar_components() const {return num_scalar_components;}
+
 public: // outputs
   const std::vector<std::vector<critical_point_t>>& get_traced_critical_points() {return traced_critical_points;}
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
@@ -75,6 +78,9 @@ protected:
   // type filter
   bool use_type_filter = false;
   unsigned int type_filter = 0;
+
+  // scalar components
+  int num_scalar_components = 1;
 };
 
 ///////
@@ -343,6 +349,12 @@ inline void critical_point_tracker::set_type_filter(unsigned int f)
 {
   use_type_filter = true;
   type_filter = f;
+}
+
+inline void critical_point_tracker::set_num_scalar_components(int n)
+{
+  assert(n <= FTK_CP_MAX_NUM_VARS);
+  num_scalar_components = n;
 }
 
 }

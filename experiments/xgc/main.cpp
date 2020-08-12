@@ -44,11 +44,12 @@ int main(int argc, char **argv)
 
   // load mesh & data from hdf5
   ftk::ndarray<int> triangles;
-  ftk::ndarray<double> coords;
+  ftk::ndarray<double> coords, psi;
   
   triangles.from_h5(mesh_filename, "/cell_set[0]/node_connect_list");
   coords.from_h5(mesh_filename, "/coordinates/values");
- 
+  psi.from_h5(mesh_filename, "psi");
+
   // build mesh
   ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);
   m.build_edges();
