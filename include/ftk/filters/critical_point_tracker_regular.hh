@@ -36,8 +36,6 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void push_scalar_field_snapshot(const ndarray<double>&) = 0;
   virtual void push_vector_field_snapshot(const ndarray<double>&) = 0;
 
-  void set_type_filter(unsigned int);
-
   virtual void initialize() = 0;
   virtual void finalize() = 0;
 
@@ -80,8 +78,6 @@ protected: // config
       jacobian_field_source = SOURCE_NONE;
   bool use_explicit_coords = false;
   bool is_jacobian_field_symmetric = false;
-  bool use_type_filter = false;
-  unsigned int type_filter = 0;
 
 protected:
   ndarray<double> coords;
@@ -97,12 +93,6 @@ inline bool critical_point_tracker_regular::advance_timestep()
 
   current_timestep ++;
   return field_data_snapshots.size() > 0;
-}
-
-inline void critical_point_tracker_regular::set_type_filter(unsigned int f)
-{
-  use_type_filter = true;
-  type_filter = f;
 }
   
 inline bool critical_point_tracker_regular::filter_critical_point_type(
