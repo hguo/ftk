@@ -84,6 +84,28 @@ PYBIND11_MODULE(pyftk, m) {
       tracker.finalize();
       // tracker.write_traced_critical_points_text(std::cerr);
 
+      const auto traces = tracker.get_traced_critical_points();
+      py::list result;
+
+      for (auto i = 0; i < traces.size(); i ++) {
+        py::dict traj;
+        py::list trace;
+        for (auto j = 0; j < traces[i].size(); j ++) {
+          const auto &cp = traces[i][j];
+          py::dict pcp;
+          pcp["x"] = cp.x[0];
+          pcp["y"] = cp.x[1];
+          pcp["t"] = cp.x[2];
+          pcp["type"] = cp.type;
+          pcp["scalar"] = cp.scalar[0];
+          trace.append(pcp);
+        }
+        traj["length"] = traces[i].size();
+        traj["trace"] = trace;
+        result.append(traj);
+      }
+
+      return result;
     }, R"pbdoc(Track 2D critical points)pbdoc");
 
 #ifdef VERSION_INFO
