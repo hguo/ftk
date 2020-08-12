@@ -197,6 +197,8 @@ struct ndarray : object {
   template <typename T1>
   void from_array(const ndarray<T1>& array1);
 
+  void from_array(const T* p, const std::vector<size_t>& shape);
+
   void from_vector(const std::vector<T> &array);
   void copy_vector(const std::vector<T> &array);
 
@@ -354,6 +356,13 @@ void ndarray<T>::from_array(const ndarray<T1>& array1)
   reshape(array1.shape());
   for (auto i = 0; i < p.size(); i ++)
     p[i] = static_cast<T>(array1[i]);
+}
+
+template <typename T>
+void ndarray<T>::from_array(const T *x, const std::vector<size_t>& shape)
+{
+  reshape(shape);
+  memcpy(&p[0], x, nelem() * sizeof(T));
 }
 
 template <typename T>
