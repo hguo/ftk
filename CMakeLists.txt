@@ -13,6 +13,10 @@ if (FTK_BUILD_PARAVIEW)
   find_package (ParaView REQUIRED)
 endif ()
 
+if (FTK_BUILD_PYFTK)
+  set (FTK_HAVE_PYBIND11 TRUE)
+endif()
+
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -283,6 +287,12 @@ configure_package_config_file(
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FTK/)
 
+if (FTK_BUILD_PYFTK)
+  include_directories (${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11/include
+    ${PYTHON_INCLUDE_DIRS})
+  add_subdirectory (python)
+endif ()
+
 # If FTK_BUILD_TESTS is on, enable testing.
 if (FTK_BUILD_TESTS)
   # find_package (GTest REQUIRED)
@@ -302,10 +312,6 @@ endif ()
 
 if (FTK_BUILD_PARAVIEW)
   add_subdirectory (paraview)
-endif ()
-
-if (FTK_BUILD_PYFTK)
-  add_subdirectory (python)
 endif ()
 
 add_subdirectory (src)

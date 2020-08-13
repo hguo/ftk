@@ -63,6 +63,10 @@
 #include <vtkNew.h>
 #endif
 
+#if FTK_HAVE_PYBIND11
+#include <pybind11/numpy.h>
+#endif
+
 namespace ftk {
 
 template <typename T>
@@ -218,9 +222,6 @@ struct ndarray : object {
 
   template <typename T1> void to_binary_file2(const std::string& f) const;
 
-  void from_numpy(const std::string& filename);
-  void to_numpy(const std::string& filename) const;
-
   void from_bov(const std::string& filename);
   void to_bov(const std::string& filename) const;
 
@@ -254,6 +255,15 @@ public: // adios2
       const std::string &varname, 
       int step_start = 0);
 #endif
+
+public: // pybind11
+#if FTK_HAVE_PYBIND11
+  ndarray(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &numpy_array);
+  void from_numpy(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &numpy_array);
+  pybind11::array_t<T, pybind11::array::c_style> to_numpy() const;
+#endif
+  void from_numpy(const std::string& filename);
+  void to_numpy(const std::string& filename) const;
 
 public: // netcdf
   void from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
@@ -1077,6 +1087,39 @@ ndarray<T> ndarray<T>::stack(const std::vector<ndarray<T>>& arrays)
 
   return result;
 }
+
+#if FTK_HAVE_PYBIND11
+template <typename T>
+ndarray<T>::ndarray(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &numpy_array)
+{
+  from_numpy(numpy_array);
+}
+ 
+template <typename T>
+void ndarray<T>::from_numpy(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &array)
+{
+  pybind11::buffer_info buf = array.request();
+  std::vector<size_t> shape;
+  for (auto i = 0; i < buf.ndim; i ++)
+    shape.push_back(array.shape(i));
+  reshape(shape);
+
+  from_array((T*)buf.ptr, shape);
+}
+
+template <typename T>
+pybind11::array_t<T, pybind11::array::c_style> ndarray<T>::to_numpy() const
+{
+  auto result = pybind11::array_t<T>(nelem());
+  result.resize(shape());
+  pybind11::buffer_info buf = result.request();
+
+  T *ptr = (T*)buf.ptr;
+  memcpy(ptr, data(), sizeof(T) * nelem());
+
+  return result;
+}
+#endif
 
 }
 

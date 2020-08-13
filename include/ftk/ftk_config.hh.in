@@ -14,6 +14,7 @@
 #cmakedefine FTK_HAVE_OPENMP 1
 #cmakedefine FTK_HAVE_PNETCDF 1
 #cmakedefine FTK_HAVE_PNG 1
+#cmakedefine FTK_HAVE_PYBIND11 1
 #cmakedefine FTK_HAVE_ROCKSDB 1
 #cmakedefine FTK_HAVE_QT5 1
 #cmakedefine FTK_HAVE_QT 1
