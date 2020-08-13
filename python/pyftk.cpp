@@ -131,7 +131,7 @@ PYBIND11_MODULE(pyftk, m) {
   }, R"pbdoc(Generate spiral woven data)pbdoc");
 
   synth.def("moving_extremum", [](int DW, int DH, int DT, double x0, double y0, double dir_x, double dir_y) {
-      fprintf(stderr, "%f, %f, %f,  %f\n", x0, y0, dir_x, dir_y);
+    // fprintf(stderr, "%f, %f, %f,  %f\n", x0, y0, dir_x, dir_y);
     const double xc[2] = {x0, y0}, dir[2] = {dir_x, dir_y};
     std::vector<ftk::ndarray<double>> arrays;
     std::vector<size_t> shape = {(size_t)DW, (size_t)DH};
