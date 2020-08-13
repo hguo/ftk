@@ -27,6 +27,11 @@ struct critical_point_tracker : public filter {
   
   virtual int cpdims() const = 0;
 
+  void set_type_filter(unsigned int);
+
+  void set_num_scalar_components(int);
+  int get_num_scalar_components() const {return num_scalar_components;}
+
 public: // outputs
   const std::vector<std::vector<critical_point_t>>& get_traced_critical_points() {return traced_critical_points;}
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
@@ -69,6 +74,13 @@ protected:
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
   std::vector<std::vector<critical_point_t>> traced_critical_points;
+
+  // type filter
+  bool use_type_filter = false;
+  unsigned int type_filter = 0;
+
+  // scalar components
+  int num_scalar_components = 1;
 };
 
 ///////
@@ -331,6 +343,18 @@ inline void critical_point_tracker::write_critical_points_text(std::ostream& os)
     os << "scalar=" << cp.scalar[0] << ", "
        << "type=" << cp.type << std::endl;
   }
+}
+
+inline void critical_point_tracker::set_type_filter(unsigned int f)
+{
+  use_type_filter = true;
+  type_filter = f;
+}
+
+inline void critical_point_tracker::set_num_scalar_components(int n)
+{
+  assert(n <= FTK_CP_MAX_NUM_VARS);
+  num_scalar_components = n;
 }
 
 }

@@ -44,11 +44,12 @@ int main(int argc, char **argv)
 
   // load mesh & data from hdf5
   ftk::ndarray<int> triangles;
-  ftk::ndarray<double> coords;
+  ftk::ndarray<double> coords, psi;
   
   triangles.from_h5(mesh_filename, "/cell_set[0]/node_connect_list");
   coords.from_h5(mesh_filename, "/coordinates/values");
- 
+  psi.from_h5(mesh_filename, "psi");
+
   // build mesh
   ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);
   m.build_edges();
@@ -64,22 +65,39 @@ int main(int argc, char **argv)
   fprintf(stderr, "mesh loaded., %zu, %zu, %zu\n", m.n(0), m.n(1), m.n(2));
 
   input_filenames = ftk::ndarray<double>::glob(input_filename_pattern);
-  
-  ftk::critical_point_tracker_2d_unstructured tracker(m);
-  // for (int t = 0; t < std::min(3, (int)input_filenames.size()); t ++) {
-  for (int t = 0; t < input_filenames.size(); t ++) {
-    ftk::ndarray<double> data;
-    data.from_h5(input_filenames[t], "/dpot");
-    data = data.transpose();
-    data.reshape(data.dim(0)); // only use the first slice
-
-    ftk::ndarray<double> scalar, grad, J;
-    m.smooth_scalar_gradient_jacobian(data, sigma, scalar, grad, J);
  
-    tracker.push_field_data_snapshot(scalar, grad, J);
+  ftk::critical_point_tracker_2d_unstructured tracker(m);
+  tracker.set_type_filter( ftk::CRITICAL_POINT_2D_MAXIMUM );
 
-    if (t != 0) tracker.advance_timestep();
-    if (t == input_filenames.size()-1) tracker.update_timestep();
+  if (input_filenames.size() > 1) { // track over time
+    for (int t = 0; t < input_filenames.size(); t ++) {
+      ftk::ndarray<double> dpot;
+      dpot.from_h5(input_filenames[t], "/dpot");
+      dpot = dpot.transpose();
+      dpot.reshape(dpot.dim(0)); // only use the first slice
+
+      ftk::ndarray<double> scalar, grad, J;
+      m.smooth_scalar_gradient_jacobian(dpot, sigma, scalar, grad, J);
+   
+      tracker.push_field_data_snapshot(scalar, grad, J);
+
+      if (t != 0) tracker.advance_timestep();
+      if (t == input_filenames.size()-1) tracker.update_timestep();
+    }
+  } else { // track over poloidal planes
+    ftk::ndarray<double> dpot;
+    dpot.from_h5(input_filenames[0], "/dpot");
+    dpot = dpot.transpose();
+
+    for (int k = 0; k < dpot.dim(1); k ++) {
+      ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
+      m.smooth_scalar_gradient_jacobian(dpot_slice, sigma, scalar, grad, J);
+   
+      tracker.push_field_data_snapshot(scalar, grad, J);
+
+      if (k != 0) tracker.advance_timestep();
+      if (k == dpot.dim(1)-1) tracker.update_timestep();
+    }
   }
   tracker.finalize();
    

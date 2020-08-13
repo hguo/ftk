@@ -113,6 +113,10 @@ struct ndarray : object {
   ndarray<T> slice_time(size_t t) const; // assuming the last dimension is time, return an (n-1)-dimensional slice
   std::vector<ndarray<T>> slice_time() const; // slice_time for all timesteps
 
+  // merge multiple arrays into a multicomponent array
+  static ndarray<T> concat(const std::vector<ndarray<T>>& arrays);
+  static ndarray<T> stack(const std::vector<ndarray<T>>& arrays);
+
   size_t index(const std::vector<size_t>& idx) const;
   size_t index(const std::vector<int>& idx) const;
 
@@ -196,6 +200,8 @@ struct ndarray : object {
 
   template <typename T1>
   void from_array(const ndarray<T1>& array1);
+
+  void from_array(const T* p, const std::vector<size_t>& shape);
 
   void from_vector(const std::vector<T> &array);
   void copy_vector(const std::vector<T> &array);
@@ -354,6 +360,13 @@ void ndarray<T>::from_array(const ndarray<T1>& array1)
   reshape(array1.shape());
   for (auto i = 0; i < p.size(); i ++)
     p[i] = static_cast<T>(array1[i]);
+}
+
+template <typename T>
+void ndarray<T>::from_array(const T *x, const std::vector<size_t>& shape)
+{
+  reshape(shape);
+  memcpy(&p[0], x, nelem() * sizeof(T));
 }
 
 template <typename T>
@@ -1027,6 +1040,42 @@ ndarray<T> ndarray<T>::transpose() const
     for (auto j = 0; j < dim(1); j ++)
       a(j, i) = at(i, j);
   return a;
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::concat(const std::vector<ndarray<T>>& arrays)
+{
+  ndarray<T> result;
+  std::vector<size_t> result_shape = arrays[0].shape();
+  result_shape.insert(result_shape.begin(), 1);
+  result.reshape(result_shape);
+
+  const auto n = arrays[0].nelem();
+  const auto n1 = arrays.size();
+
+  for (auto i = 0; i < n; i ++)
+    for (auto j = 0 ; j < n1; j ++)
+      result[i*n1 + j] = arrays[j][i];
+
+  return result;
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::stack(const std::vector<ndarray<T>>& arrays)
+{
+  ndarray<T> result;
+  std::vector<size_t> result_shape = arrays[0].shape();
+  result_shape.push_back(arrays.size());
+  result.reshape(result_shape);
+
+  const auto n = arrays[0].nelem();
+  const auto n1 = arrays.size();
+
+  for (auto j = 0 ; j < n1; j ++)
+    for (auto i = 0; i < n; i ++)
+      result[i + j*n] = arrays[j][i];
+
+  return result;
 }
 
 }
