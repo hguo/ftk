@@ -1065,7 +1065,7 @@ ndarray<T> ndarray<T>::stack(const std::vector<ndarray<T>>& arrays)
 {
   ndarray<T> result;
   std::vector<size_t> result_shape = arrays[0].shape();
-  result_shape.push_back(1);
+  result_shape.push_back(arrays.size());
   result.reshape(result_shape);
 
   const auto n = arrays[0].nelem();

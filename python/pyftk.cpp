@@ -13,7 +13,7 @@ static ftk::ndarray<T> numpy_array_to_ndarray(const py::array_t<T, I> &array)
   std::vector<size_t> shape;
   for (auto i = 0; i < buf.ndim; i ++)
     shape.push_back(array.shape(i));
-  //std::reverse(std::begin(shape), std::end(shape));
+  // std::reverse(std::begin(shape), std::end(shape));
 
   ftk::ndarray<T> array1;
   array1.from_array((double*)buf.ptr, shape);
@@ -26,7 +26,7 @@ static py::array_t<T, py::array::c_style> ndarray_to_numpy_array(const ftk::ndar
 {
   auto result = py::array_t<T>(data.nelem());
   auto shape = data.shape();
-  //std::reverse(std::begin(shape), std::end(shape));
+  // std::reverse(std::begin(shape), std::end(shape));
   result.resize(data.shape());
   py::buffer_info buf = result.request();
 
@@ -87,6 +87,7 @@ PYBIND11_MODULE(pyftk, m) {
     tracker.set_jacobian_field_source( ftk::SOURCE_DERIVED );
     tracker.set_jacobian_symmetric( true );
     tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
+    tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
     tracker.initialize();
 
     for (int k = 0; k < DT; k ++) {
@@ -128,6 +129,17 @@ PYBIND11_MODULE(pyftk, m) {
     return ndarray_to_numpy_array( 
         ftk::synthetic_woven_2Dt<double>(DW, DH, DT));
   }, R"pbdoc(Generate spiral woven data)pbdoc");
+
+  synth.def("moving_extremum", [](int DW, int DH, int DT, double x0, double y0, double dir_x, double dir_y) {
+      fprintf(stderr, "%f, %f, %f,  %f\n", x0, y0, dir_x, dir_y);
+    const double xc[2] = {x0, y0}, dir[2] = {dir_x, dir_y};
+    std::vector<ftk::ndarray<double>> arrays;
+    std::vector<size_t> shape = {(size_t)DW, (size_t)DH};
+    for (int k = 0; k < DT; k ++)
+      arrays.push_back( ftk::synthetic_moving_extremum<double, 2>(shape, xc, dir, (double)k) );
+    return ndarray_to_numpy_array(
+        ftk::ndarray<double>::stack(arrays));
+  }, R"pbdoc(Generate moving extremum data)pbdoc");
 
 #ifdef VERSION_INFO
   m.attr("__version__") = VERSION_INFO;
