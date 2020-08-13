@@ -38,6 +38,8 @@ ftk::critical_point_tracker_wrapper wrapper;
 // ftk::critical_point_tracker_regular* tracker = NULL;
 ftk::ndarray_stream<> stream;
 
+nlohmann::json j_tracker;
+
 // constants
 static const std::set<std::string> set_valid_output_format({str_auto, str_text, str_vtp});
 
@@ -62,15 +64,6 @@ int parse_arguments(int argc, char **argv)
     ("help", "Print usage", cxxopts::value<bool>(help));
   auto results = options.parse(argc, argv);
 
-  auto fatal = [&](const std::string& str) {
-    std::cerr << "FATAL: " << str << std::endl
-              << options.help() << std::endl;
-    exit(1);
-  };
-  auto warn = [&](const std::string& str) {
-    std::cerr << "WARN: " << str << std::endl;
-  };
-  
   if (help) {
     std::cerr << options.help() << std::endl;
     exit(0); // return 0;
@@ -78,23 +71,22 @@ int parse_arguments(int argc, char **argv)
 
   auto j = parse_input_json(results);
   stream.set_input_source_json(j);
- 
+
+  auto fatal = [&](const std::string& str) {
+	  std::cerr << "FATAL: " << str << std::endl
+	            << options.help() << std::endl;
+	  exit(1);
+	};
+
+	auto warn = [&](const std::string& str) {
+	  std::cerr << "WARN: " << str << std::endl;
+	};
+
   // sanity check of arguments
   if (set_valid_output_format.find(output_format) == set_valid_output_format.end())
     fatal("invalid '--output-format'");
   if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
     fatal("invalid '--accelerator'");
-
-  if (type_filter_str.size() > 0) {
-    if (type_filter_str.find(str_critical_point_type_min) != std::string::npos)
-      type_filter |= ftk::CRITICAL_POINT_2D_MINIMUM;
-    if (type_filter_str.find(str_critical_point_type_max) != std::string::npos)
-      type_filter |= ftk::CRITICAL_POINT_2D_MAXIMUM;
-    if (type_filter_str.find(str_critical_point_type_saddle) != std::string::npos)
-      type_filter |= ftk::CRITICAL_POINT_2D_SADDLE;
-    if (!type_filter) fatal("Invalid type filter");
-    use_type_filter = true;
-  }
 
   // processing output
   if (show_vtk) {
@@ -141,6 +133,24 @@ int parse_arguments(int argc, char **argv)
 
 void track_critical_points()
 {
+  if (type_filter_str.size() > 0) {
+    if (type_filter_str.find(str_critical_point_type_min) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_MINIMUM;
+    if (type_filter_str.find(str_critical_point_type_max) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_MAXIMUM;
+    if (type_filter_str.find(str_critical_point_type_saddle) != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_SADDLE;
+    if (type_filter) use_type_filter = true;
+    else {
+    	use_type_filter = false;
+    	// fatal("Invalid type filter");
+    }
+  }
+
+  auto tracker = wrapper.get_tracker();
+  if (use_type_filter)
+    tracker->set_type_filter(type_filter);
+
   wrapper.consume(stream);
 }
 

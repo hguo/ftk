@@ -1,6 +1,3 @@
-add_executable (playground playground.cpp)
-target_link_libraries (playground ftk)
-
 add_executable (ex_critical_point_tracking_2d_regular ex_critical_point_tracking_2d_regular.cpp)
 target_link_libraries (ex_critical_point_tracking_2d_regular ftk)
 
