@@ -5,4 +5,4 @@ build*/
 docs/html
 
 dist/
-pyftk.egg-info/
+*.egg-info/
