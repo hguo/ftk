@@ -92,7 +92,7 @@ unsigned int critical_point_type_3d(T J[3][3], bool symmetric)
   }
 }
 
-std::string critical_point_type_to_string_2d(const int i, bool scalar=true)
+inline std::string critical_point_type_to_string_2d(const int i, bool scalar=true)
 {
   if (i == CRITICAL_POINT_2D_UNKNOWN) return "unknown";
   else if (i == CRITICAL_POINT_2D_DEGENERATE) return "degenerate";
