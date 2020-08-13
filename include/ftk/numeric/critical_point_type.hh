@@ -92,6 +92,19 @@ unsigned int critical_point_type_3d(T J[3][3], bool symmetric)
   }
 }
 
+std::string critical_point_type_to_string_2d(const int i, bool scalar=true)
+{
+  if (i == CRITICAL_POINT_2D_UNKNOWN) return "unknown";
+  else if (i == CRITICAL_POINT_2D_DEGENERATE) return "degenerate";
+  else if (i == CRITICAL_POINT_2D_ATTRACTING) return scalar ? "max" : "attracting";
+  else if (i == CRITICAL_POINT_2D_REPELLING) return scalar ? "min" : "repelling";
+  else if (i == CRITICAL_POINT_2D_SADDLE) return "saddle";
+  else if (i == CRITICAL_POINT_2D_ATTRACTING_FOCUS) return "attracting_focus";
+  else if (i == CRITICAL_POINT_2D_REPELLING_FOCUS) return "repelling_focus";
+  else if (i == CRITICAL_POINT_2D_CENTER) return "center";
+  else return ""; // TODO: throw error
+}
+
 }
 
 #endif
