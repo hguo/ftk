@@ -67,7 +67,7 @@ int main(int argc, char **argv)
   input_filenames = ftk::ndarray<double>::glob(input_filename_pattern);
  
   ftk::critical_point_tracker_2d_unstructured tracker(m);
-  tracker.set_type_filter( ftk::CRITICAL_POINT_2D_MAXIMUM );
+  // tracker.set_type_filter( ftk::CRITICAL_POINT_2D_MAXIMUM );
 
   if (input_filenames.size() > 1) { // track over time
     for (int t = 0; t < input_filenames.size(); t ++) {
