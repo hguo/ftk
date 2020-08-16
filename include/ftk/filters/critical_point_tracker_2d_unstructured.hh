@@ -69,16 +69,11 @@ protected:
       T J[n][2][2] // jacobians
   ) const;
 
-  void update_intermediate_trajectories();
-
 protected:
   const simplicial_unstructured_extruded_2d_mesh<> m;
   
   std::map<int, critical_point_t> discrete_critical_points;
   // std::vector<std::vector<critical_point_t>> traced_critical_points;
-
-  std::vector<std::vector<critical_point_t>> intermediate_trajectories;
-  // std::map<int, int> inverse_endpoints; // end, start
 };
 
 ////////////////////////
@@ -165,14 +160,24 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
   if (field_data_snapshots.size() >= 2)
     m.element_for_interval(2, current_timestep, func, nthreads);
 
-  update_intermediate_trajectories();
+  // grow trajectories
+  grow_trajectories<int>(
+      traced_critical_points, 
+      discrete_critical_points,
+      [&](int f) {
+        std::set<int> neighbors;
+        const auto cells = m.side_of(2, f);
+        for (const auto c : cells)
+          for (const auto f1 : m.sides(3, c))
+            neighbors.insert(f1);
+        return neighbors;
+      }
+  );
 }
 
 inline void critical_point_tracker_2d_unstructured::finalize()
 {
   fprintf(stderr, "finalizing...\n");
-
-  traced_critical_points = intermediate_trajectories;
 
   return;
   // Convert connected components to geometries
@@ -227,66 +232,6 @@ inline std::vector<critical_point_t> critical_point_tracker_2d_unstructured::get
   for (const auto &kv : discrete_critical_points) 
     results.push_back(kv.second);
   return results;
-}
-
-inline void critical_point_tracker_2d_unstructured::update_intermediate_trajectories()
-{
-  auto neighbors = [&](int f) {
-    std::set<int> neighbors;
-    const auto cells = m.side_of(2, f);
-    for (const auto c : cells)
-      for (const auto f1 : m.sides(3, c))
-        neighbors.insert(f1);
-    return neighbors;
-  };
-
-  // 1. continue existing trajectories
-  for (auto &traj : intermediate_trajectories) {
-    const auto &terminal = traj.back();
-    auto current = terminal.tag;
-
-    while (1) {
-      bool has_next = false;
-      for (auto i : neighbors(current)) {
-        if (discrete_critical_points.find(i) != discrete_critical_points.end()) 
-        {
-          current = i;
-          traj.push_back(discrete_critical_points[current]);
-          discrete_critical_points.erase(current);
-          has_next = true;
-          break;
-        }
-      }
-      // fprintf(stderr, "continued.\n");
-      if (!has_next)
-        break;
-    }
-  }
-
-  // 2. generate new trajectories for the rest of discrete critical points
-  std::set<int> elements;
-  for (const auto &kv : discrete_critical_points)
-    elements.insert(kv.first);
-  auto connected_components = extract_connected_components<int, std::set<int>>(
-      neighbors, elements);
-
-  for (const auto &component : connected_components) 
-  {
-    std::vector<std::vector<double>> mycurves;
-    auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
-    assert(linear_graphs.size() == 1);
-    // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
-    for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_t> traj; 
-      for (int k = 0; k < linear_graphs[j].size(); k ++)
-        traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
-      if (traj.front().x[2] > traj.back().x[2]) // TODO FIXME
-        std::reverse(std::begin(traj), std::end(traj));
-      intermediate_trajectories.push_back(traj);
-      // fprintf(stderr, "birth.\n");
-    }
-  }
-  discrete_critical_points.clear();
 }
 
 }

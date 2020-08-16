@@ -67,6 +67,13 @@ public: // inputs
   void push_scalar_field_spacetime(const ndarray<double>& scalars);
 
 protected:
+  template <typename I> // mesh element ID type
+  void grow_trajectories(
+      std::vector<std::vector<critical_point_t>> &trajectories,
+      std::map<I, critical_point_t> &discrete_critical_poionts, // critical point tag needs to index mesh element ID.  Discrete critical points will be cleared after tracing
+      std::function<std::set<I>(I)> neighbors);
+
+protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
   };
@@ -355,6 +362,63 @@ inline void critical_point_tracker::set_num_scalar_components(int n)
 {
   assert(n <= FTK_CP_MAX_NUM_VARS);
   num_scalar_components = n;
+}
+  
+template <typename I>
+void critical_point_tracker::grow_trajectories(
+      std::vector<std::vector<critical_point_t>> &trajectories,
+      std::map<I, critical_point_t> &discrete_critical_points, // will be cleared after tracing
+      std::function<std::set<I>(I)> neighbors)
+{
+  // 1. continue existing trajectories
+  for (auto &traj : trajectories) {
+    const auto &terminal = traj.back();
+    auto current = terminal.tag;
+
+    while (1) {
+      bool has_next = false;
+      for (auto i : neighbors(current)) {
+        if (discrete_critical_points.find(i) != discrete_critical_points.end()) 
+        {
+          current = i;
+          traj.push_back(discrete_critical_points[current]);
+          discrete_critical_points.erase(current);
+          has_next = true;
+          break;
+        }
+      }
+      // fprintf(stderr, "continued.\n");
+      if (!has_next)
+        break;
+    }
+  }
+
+  // 2. generate new trajectories for the rest of discrete critical points
+  std::set<int> elements;
+  for (const auto &kv : discrete_critical_points)
+    elements.insert(kv.first);
+  auto connected_components = extract_connected_components<int, std::set<int>>(
+      neighbors, elements);
+
+  for (const auto &component : connected_components) 
+  {
+    std::vector<std::vector<double>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
+    assert(linear_graphs.size() == 1);
+    // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      std::vector<critical_point_t> traj; 
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
+      // if (traj.front().x[2] > traj.back().x[2]) // TODO FIXME
+      //   std::reverse(std::begin(traj), std::end(traj));
+      trajectories.push_back(traj);
+      // fprintf(stderr, "birth.\n");
+    }
+  }
+
+  // 3. clear discrete critical points
+  discrete_critical_points.clear();
 }
 
 }
