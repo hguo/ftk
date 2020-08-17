@@ -133,7 +133,7 @@ int parse_arguments(int argc, char **argv)
 
   nlohmann::json jt;
   if (enable_streaming_trajectories) 
-    j["enable_streaming_trajectories"] = true;
+    jt["enable_streaming_trajectories"] = true;
 
   // auto tracker = wrapper.get_tracker();
   // if (use_type_filter)
