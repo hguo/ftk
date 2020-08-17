@@ -27,6 +27,8 @@ struct critical_point_tracker : public filter {
   
   virtual int cpdims() const = 0;
 
+  void set_streaming_trajectories(bool);
+
   void set_type_filter(unsigned int);
 
   void set_num_scalar_components(int);
@@ -88,6 +90,9 @@ protected:
 
   // scalar components
   int num_scalar_components = 1;
+
+  // streaming traj
+  bool streaming_trajectories = false;
 };
 
 ///////

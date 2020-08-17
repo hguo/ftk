@@ -160,70 +160,76 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
   if (field_data_snapshots.size() >= 2)
     m.element_for_interval(2, current_timestep, func, nthreads);
 
-  // grow trajectories
-  grow_trajectories<int>(
-      traced_critical_points, 
-      discrete_critical_points,
-      [&](int f) {
-        std::set<int> neighbors;
-        const auto cells = m.side_of(2, f);
-        for (const auto c : cells)
-          for (const auto f1 : m.sides(3, c))
-            neighbors.insert(f1);
-        return neighbors;
-      }
-  );
+  if (streaming_trajectories) {
+    // grow trajectories
+    grow_trajectories<int>(
+        traced_critical_points, 
+        discrete_critical_points,
+        [&](int f) {
+          std::set<int> neighbors;
+          const auto cells = m.side_of(2, f);
+          for (const auto c : cells)
+            for (const auto f1 : m.sides(3, c))
+              neighbors.insert(f1);
+          return neighbors;
+        }
+    );
+  }
 }
 
 inline void critical_point_tracker_2d_unstructured::finalize()
 {
   fprintf(stderr, "finalizing...\n");
 
-  return;
-  // Convert connected components to geometries
-  auto neighbors = [&](int f) {
-    std::set<int> neighbors;
-    const auto cells = m.side_of(2, f);
-    // fprintf(stderr, "face=%d\n", f);
-    // int vf[3];
-    // m.get_simplex(2, f, vf);
-    // fprintf(stderr, "face.simplex=%d, %d, %d\n", vf[0], vf[1], vf[2]);
+  if (streaming_trajectories)  {
+    // already done
 
-    for (const auto c : cells) {
-      // fprintf(stderr, "--cell=%d\n", c);
-      // int vc[4];
-      // m.get_simplex(3, c, vc);
-      // fprintf(stderr, "--cell.simplex=%d, %d, %d, %d\n", vc[0], vc[1], vc[2], vc[3]);
+  } else {
+    // Convert connected components to geometries
+    auto neighbors = [&](int f) {
+      std::set<int> neighbors;
+      const auto cells = m.side_of(2, f);
+      // fprintf(stderr, "face=%d\n", f);
+      // int vf[3];
+      // m.get_simplex(2, f, vf);
+      // fprintf(stderr, "face.simplex=%d, %d, %d\n", vf[0], vf[1], vf[2]);
 
-      const auto elements = m.sides(3, c);
-      for (const auto f1 : elements) {
-        // fprintf(stderr, "----face=%d\n", f1);
-        neighbors.insert(f1);
+      for (const auto c : cells) {
+        // fprintf(stderr, "--cell=%d\n", c);
+        // int vc[4];
+        // m.get_simplex(3, c, vc);
+        // fprintf(stderr, "--cell.simplex=%d, %d, %d, %d\n", vc[0], vc[1], vc[2], vc[3]);
+
+        const auto elements = m.sides(3, c);
+        for (const auto f1 : elements) {
+          // fprintf(stderr, "----face=%d\n", f1);
+          neighbors.insert(f1);
+        }
+      }
+      // fprintf(stderr, "size_neighbors=%zu\n", neighbors.size());
+      // assert(neighbors.find(f) != neighbors.end());
+      return neighbors;
+    };
+
+    std::set<int> elements;
+    for (const auto &kv : discrete_critical_points)
+      elements.insert(kv.first);
+    auto connected_components = extract_connected_components<int, std::set<int>>(
+        neighbors, elements);
+
+    for (const auto &component : connected_components) {
+      std::vector<std::vector<double>> mycurves;
+      auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
+      // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
+      for (int j = 0; j < linear_graphs.size(); j ++) {
+        std::vector<critical_point_t> traj; 
+        for (int k = 0; k < linear_graphs[j].size(); k ++)
+          traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
+        traced_critical_points.push_back(traj);
       }
     }
-    // fprintf(stderr, "size_neighbors=%zu\n", neighbors.size());
-    // assert(neighbors.find(f) != neighbors.end());
-    return neighbors;
-  };
-
-  std::set<int> elements;
-  for (const auto &kv : discrete_critical_points)
-    elements.insert(kv.first);
-  auto connected_components = extract_connected_components<int, std::set<int>>(
-      neighbors, elements);
-
-  for (const auto &component : connected_components) {
-    std::vector<std::vector<double>> mycurves;
-    auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
-    // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
-    for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_t> traj; 
-      for (int k = 0; k < linear_graphs[j].size(); k ++)
-        traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
-      traced_critical_points.push_back(traj);
-    }
+    fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), connected_components.size());
   }
-  fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), connected_components.size());
 }
 
 inline std::vector<critical_point_t> critical_point_tracker_2d_unstructured::get_critical_points() const
