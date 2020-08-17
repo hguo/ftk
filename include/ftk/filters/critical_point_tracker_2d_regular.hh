@@ -131,13 +131,17 @@ inline void critical_point_tracker_2d_regular::initialize()
 
 inline void critical_point_tracker_2d_regular::finalize()
 {
-  // fprintf(stderr, "rank=%d, root=%d, #cp=%zu\n", comm.rank(), get_root_proc(), discrete_critical_points.size());
-  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
+  if (enable_streaming_trajectories) {
+    // done
+  } else {
+    // fprintf(stderr, "rank=%d, root=%d, #cp=%zu\n", comm.rank(), get_root_proc(), discrete_critical_points.size());
+    diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
-  if (comm.rank() == get_root_proc()) {
-    fprintf(stderr, "finalizing...\n");
-    // trace_intersections();
-    trace_connected_components();
+    if (comm.rank() == get_root_proc()) {
+      fprintf(stderr, "finalizing...\n");
+      // trace_intersections();
+      trace_connected_components();
+    }
   }
 }
 
@@ -327,6 +331,26 @@ inline void critical_point_tracker_2d_regular::update_timestep()
 #else
     assert(false);
 #endif
+  }
+
+  if (enable_streaming_trajectories) {
+    fprintf(stderr, "growing trajectories...\n");
+    grow_trajectories<element_t>(
+        traced_critical_points, 
+        discrete_critical_points, 
+        [&](element_t f) {
+          std::set<element_t> neighbors;
+          const auto cells = f.side_of(m);
+          for (const auto c : cells) {
+            const auto elements = c.sides(m);
+            for (const auto f1 : elements)
+              neighbors.insert(f1);
+          }
+          return neighbors;
+        }, 
+        [&](unsigned long long tag) {
+          return element_t(2, tag);
+        });
   }
 }
 

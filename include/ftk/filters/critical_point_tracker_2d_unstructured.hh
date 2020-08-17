@@ -160,7 +160,7 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
   if (field_data_snapshots.size() >= 2)
     m.element_for_interval(2, current_timestep, func, nthreads);
 
-  if (streaming_trajectories) {
+  if (enable_streaming_trajectories) {
     // grow trajectories
     grow_trajectories<int>(
         traced_critical_points, 
@@ -172,7 +172,8 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
             for (const auto f1 : m.sides(3, c))
               neighbors.insert(f1);
           return neighbors;
-        }
+        },
+        [](unsigned long long i) {return  i;}
     );
   }
 }
@@ -181,9 +182,8 @@ inline void critical_point_tracker_2d_unstructured::finalize()
 {
   fprintf(stderr, "finalizing...\n");
 
-  if (streaming_trajectories)  {
+  if (enable_streaming_trajectories)  {
     // already done
-
   } else {
     // Convert connected components to geometries
     auto neighbors = [&](int f) {

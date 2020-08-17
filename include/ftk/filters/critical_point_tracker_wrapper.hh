@@ -16,7 +16,9 @@ struct critical_point_tracker_wrapper : public object {
       diy::mpi::communicator comm = diy::mpi::communicator()/*MPI_COMM_WORLD*/);
 
   std::shared_ptr<critical_point_tracker_regular> get_tracker() {return tracker;};
-  
+
+  json get_json() const {return j;}
+
 private:
   std::shared_ptr<critical_point_tracker_regular> tracker;
   json j; // config
@@ -33,15 +35,23 @@ void critical_point_tracker_wrapper::configure(const json& j0)
       fatal("invalid root_proc");
   } else 
     j["root_proc"] = 0; // default root proc
+
+  if (j.contains("enable_streaming_trajectories")) {
+    if (j["enable_streaming_trajectories"].is_boolean()) {
+      // OK
+    } else 
+      fatal("invalid enable_streaming_trajectories");
+  } else 
+    j["enable_streaming_trajectories"] = false;
 }
 
 void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
   if (j.is_null())
     configure(j); // make default options
+  // std::cerr << j << std::endl;
 
   const auto js = stream.get_json();
-  // std::cerr << j << std::endl;
   const size_t nd = stream.n_dimensions(),
                DW = js["dimensions"][0], 
                DH = js["dimensions"][1],
@@ -67,7 +77,11 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
 
   // if (use_type_filter)
   //   tracker->set_type_filter(type_filter);
-  
+ 
+  if (j["enable_streaming_trajectories"] == true) {
+    tracker->set_enable_streaming_trajectories(true);
+  }
+
   if (nv == 1) { // scalar field
     tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );
     tracker->set_vector_field_source( ftk::SOURCE_DERIVED );

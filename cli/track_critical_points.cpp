@@ -32,6 +32,7 @@ int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 bool use_type_filter = false;
 unsigned int type_filter = 0;
+bool enable_streaming_trajectories = false;
 
 // tracker and input stream
 ftk::critical_point_tracker_wrapper wrapper;
@@ -58,6 +59,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<int>(nthreads))
     ("a,accelerator", "Accelerator (none|cuda)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
+    ("stream",  "Stream trajectories (experimental)",
+     cxxopts::value<bool>(enable_streaming_trajectories))
     ("vtk", "Show visualization with vtk", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -112,27 +115,8 @@ int parse_arguments(int argc, char **argv)
     else 
       output_format = str_text;
   }
-
-  diy::mpi::communicator world;
-  if (world.rank() == 0) {
-    fprintf(stderr, "SUMMARY\n=============\n");
-    std::cerr << "input=" << stream.get_json() << std::endl;
-    fprintf(stderr, "output_filename=%s\n", output_filename.c_str());
-    fprintf(stderr, "output_format=%s\n", output_format.c_str());
-    fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
-    fprintf(stderr, "nthreads=%d\n", nthreads);
-    fprintf(stderr, "=============\n");
-  }
-
-  // assert(nd == 2 || nd == 3);
-  // assert(nv == 1 || nv == 2 || nv == 3);
-  // assert(DT > 0);
-
-  return 0;
-}
-
-void track_critical_points()
-{
+  
+  // configure tracker
   if (type_filter_str.size() > 0) {
     if (type_filter_str.find(str_critical_point_type_min) != std::string::npos)
       type_filter |= ftk::CRITICAL_POINT_2D_MINIMUM;
@@ -147,12 +131,36 @@ void track_critical_points()
     }
   }
 
-  auto tracker = wrapper.get_tracker();
-  if (use_type_filter)
-    tracker->set_type_filter(type_filter);
+  nlohmann::json jt;
+  if (enable_streaming_trajectories) 
+    j["enable_streaming_trajectories"] = true;
 
-  wrapper.consume(stream);
+  // auto tracker = wrapper.get_tracker();
+  // if (use_type_filter)
+  //   tracker->set_type_filter(type_filter);
+  // tracker->set_enable_streaming_trajectories( enable_streaming_trajectories );
+
+  wrapper.configure(jt);
+
+  diy::mpi::communicator world;
+  if (world.rank() == 0) {
+    fprintf(stderr, "SUMMARY\n=============\n");
+    std::cerr << "input=" << stream.get_json() << std::endl;
+    std::cerr << "config=" << wrapper.get_json() << std::endl;
+    fprintf(stderr, "output_filename=%s\n", output_filename.c_str());
+    fprintf(stderr, "output_format=%s\n", output_format.c_str());
+    fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
+    fprintf(stderr, "nthreads=%d\n", nthreads);
+    fprintf(stderr, "=============\n");
+  }
+
+  // assert(nd == 2 || nd == 3);
+  // assert(nv == 1 || nv == 2 || nv == 3);
+  // assert(DT > 0);
+
+  return 0;
 }
+
 
 void write_outputs()
 {
@@ -214,7 +222,6 @@ int main(int argc, char **argv)
   diy::mpi::communicator world;
   
   parse_arguments(argc, argv);
-
   wrapper.consume(stream);
  
   if (world.rank() == 0)

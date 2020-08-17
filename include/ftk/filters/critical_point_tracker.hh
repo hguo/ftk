@@ -27,7 +27,7 @@ struct critical_point_tracker : public filter {
   
   virtual int cpdims() const = 0;
 
-  void set_streaming_trajectories(bool);
+  void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
 
   void set_type_filter(unsigned int);
 
@@ -73,7 +73,9 @@ protected:
   void grow_trajectories(
       std::vector<std::vector<critical_point_t>> &trajectories,
       std::map<I, critical_point_t> &discrete_critical_poionts, // critical point tag needs to index mesh element ID.  Discrete critical points will be cleared after tracing
-      std::function<std::set<I>(I)> neighbors);
+      std::function<std::set<I>(I)> neighbors, 
+      std::function<I(unsigned long long)> tag_to_element
+  );
 
 protected:
   struct field_data_snapshot_t {
@@ -92,7 +94,7 @@ protected:
   int num_scalar_components = 1;
 
   // streaming traj
-  bool streaming_trajectories = false;
+  bool enable_streaming_trajectories = false;
 };
 
 ///////
@@ -373,12 +375,13 @@ template <typename I>
 void critical_point_tracker::grow_trajectories(
       std::vector<std::vector<critical_point_t>> &trajectories,
       std::map<I, critical_point_t> &discrete_critical_points, // will be cleared after tracing
-      std::function<std::set<I>(I)> neighbors)
+      std::function<std::set<I>(I)> neighbors,
+      std::function<I(unsigned long long)> tag_to_element)
 {
   // 1. continue existing trajectories
   for (auto &traj : trajectories) {
     const auto &terminal = traj.back();
-    auto current = terminal.tag;
+    auto current = tag_to_element(terminal.tag);
 
     while (1) {
       bool has_next = false;
@@ -392,23 +395,23 @@ void critical_point_tracker::grow_trajectories(
           break;
         }
       }
-      // fprintf(stderr, "continued.\n");
+      //fprintf(stderr, "continued.\n");
       if (!has_next)
         break;
     }
   }
 
   // 2. generate new trajectories for the rest of discrete critical points
-  std::set<int> elements;
+  std::set<I> elements;
   for (const auto &kv : discrete_critical_points)
     elements.insert(kv.first);
-  auto connected_components = extract_connected_components<int, std::set<int>>(
+  auto connected_components = extract_connected_components<I, std::set<I>>(
       neighbors, elements);
 
   for (const auto &component : connected_components) 
   {
     std::vector<std::vector<double>> mycurves;
-    auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
+    auto linear_graphs = ftk::connected_component_to_linear_components<I>(component, neighbors);
     assert(linear_graphs.size() == 1);
     // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
     for (int j = 0; j < linear_graphs.size(); j ++) {
