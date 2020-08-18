@@ -374,6 +374,7 @@ inline void critical_point_tracker::set_num_scalar_components(int n)
 template <typename I>
 void critical_point_tracker::grow_trajectories(
       std::vector<std::vector<critical_point_t>> &trajectories,
+      // std::vector<bool> &alive,
       std::map<I, critical_point_t> &discrete_critical_points, // will be cleared after tracing
       std::function<std::set<I>(I)> neighbors,
       std::function<I(unsigned long long)> tag_to_element)
@@ -398,8 +399,9 @@ void critical_point_tracker::grow_trajectories(
         }
       }
       //fprintf(stderr, "continued.\n");
-      if (!has_next)
+      if (!has_next) {
         break;
+      }
     }
   }
 
@@ -412,7 +414,6 @@ void critical_point_tracker::grow_trajectories(
 
   for (const auto &component : connected_components) 
   {
-    std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<I>(component, neighbors);
     assert(linear_graphs.size() == 1);
     // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());

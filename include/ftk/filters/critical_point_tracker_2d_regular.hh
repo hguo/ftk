@@ -220,6 +220,25 @@ inline void critical_point_tracker_2d_regular::update_timestep()
       }
     };
 
+  auto grow = [&]() {
+    grow_trajectories<element_t>(
+        traced_critical_points, 
+        discrete_critical_points, 
+        [&](element_t f) {
+          std::set<element_t> neighbors;
+          const auto cells = f.side_of(m);
+          for (const auto c : cells) {
+            const auto elements = c.sides(m);
+            for (const auto f1 : elements)
+              neighbors.insert(f1);
+          }
+          return neighbors;
+        }, 
+        [&](unsigned long long tag) {
+          return element_t(m, 2, tag);
+        });
+  };
+
   if (xl == FTK_XL_NONE) {
     if (field_data_snapshots.size() >= 2) { // interval
       // m.element_for_interval(2, current_timestep-1, current_timestep, func2);
@@ -235,6 +254,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           }),
           ftk::ELEMENT_SCOPE_INTERVAL, 
           func2, nthreads);
+      if (enable_streaming_trajectories)
+        grow();
     }
     
     // m.element_for_ordinal(2, current_timestep, func2);
@@ -249,6 +270,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         }), 
         ftk::ELEMENT_SCOPE_ORDINAL, 
         func2, nthreads);
+    if (enable_streaming_trajectories)
+      grow();
     
   } else if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
@@ -339,25 +362,10 @@ inline void critical_point_tracker_2d_regular::update_timestep()
 #endif
   }
 
-  if (enable_streaming_trajectories) {
-    fprintf(stderr, "growing trajectories...\n");
-    grow_trajectories<element_t>(
-        traced_critical_points, 
-        discrete_critical_points, 
-        [&](element_t f) {
-          std::set<element_t> neighbors;
-          const auto cells = f.side_of(m);
-          for (const auto c : cells) {
-            const auto elements = c.sides(m);
-            for (const auto f1 : elements)
-              neighbors.insert(f1);
-          }
-          return neighbors;
-        }, 
-        [&](unsigned long long tag) {
-          return element_t(m, 2, tag);
-        });
-  }
+#if 0
+  if (enable_streaming_trajectories)
+    grow();
+#endif
 }
 
 inline void critical_point_tracker_2d_regular::trace_intersections()
