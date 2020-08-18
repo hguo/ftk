@@ -386,6 +386,7 @@ void critical_point_tracker::grow_trajectories(
     // fprintf(stderr, "terminal.tag=%lld\n", terminal.tag);
     // fprintf(stderr, "front.tag=%lld\n", traj.front().tag);
 
+    bool continued = false;
     while (1) {
       bool has_next = false;
       for (auto i : neighbors(current)) {
@@ -395,10 +396,10 @@ void critical_point_tracker::grow_trajectories(
           traj.push_back(discrete_critical_points[current]);
           discrete_critical_points.erase(current);
           has_next = true;
+          continued = true;
           break;
         }
       }
-      //fprintf(stderr, "continued.\n");
       if (!has_next) {
         break;
       }
