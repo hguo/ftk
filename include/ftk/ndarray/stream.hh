@@ -19,7 +19,7 @@ struct ndarray_stream : public object {
   //  - type, string.  Must be one of "synthetic" and "file".  This field may be ommited
   //    if `format' is given.
   //  - name (required if type is synthetic), string.  Must be one of the follows: "woven", 
-  //    "double_gyre", "merger".
+  //    "double_gyre", "merger_2d".
   // optional fields:
   //  - filenames (required if type is file), string.  The list of filenames will be 
   //    determined by glob(3)
@@ -66,7 +66,7 @@ protected:
   ndarray<T> request_timestep_synthetic_moving_extremum_2d(int k);
   ndarray<T> request_timestep_synthetic_moving_extremum_3d(int k);
   ndarray<T> request_timestep_synthetic_double_gyre(int k);
-  ndarray<T> request_timestep_synthetic_merger(int k);
+  ndarray<T> request_timestep_synthetic_merger_2d(int k);
   ndarray<T> request_timestep_synthetic_tornado(int k);
 
   void modified_callback(int, const ndarray<T>&);
@@ -138,6 +138,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
     if (j["type"] == "synthetic") {
       int default_nd;
       int default_dims[3] = {32, 32, 32};
+      int default_n_timesteps = 32;
 
       if (j.contains("name")) {
         if (j["name"] == "woven") {
@@ -223,8 +224,12 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           
         } else if (j["name"] == "double_gyre") {
           default_nd = 2;
-        } else if (j["name"] == "merger") {
+        } else if (j["name"] == "merger_2d") {
+          j["variables"] = {"scalar"};
           default_nd = 2;
+          default_dims[0] = 32; 
+          default_dims[1] = 32;
+          default_n_timesteps = 100;
         } else if (j["name"] == "tornado") {
           default_nd = 3;
           j["variables"] = {"u", "v", "w"};
@@ -240,7 +245,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 
       // if (j.contains("n_timesteps")) assert(j["n_timesteps"] != 0);
       if (!j.contains("n_timesteps"))
-        j["n_timesteps"] = 32;
+        j["n_timesteps"] = default_n_timesteps;
     } else if (j["type"] == "file") {
       if (j.contains("filenames")) {
         if (!j["filenames"].is_array()) {
@@ -498,8 +503,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic(int k)
     return request_timestep_synthetic_moving_extremum_3d(k);
   else if (j["name"] == "double_gyre")
     return request_timestep_synthetic_double_gyre(k);
-  else if (j["name"] == "merger")
-    return request_timestep_synthetic_merger(k);
+  else if (j["name"] == "merger_2d")
+    return request_timestep_synthetic_merger_2d(k);
   else if (j["name"] == "tornado")
     return request_timestep_synthetic_tornado(k);
   return ndarray<T>();
@@ -534,9 +539,9 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_extremum_3d(int 
 }
 
 template <typename T>
-ndarray<T> ndarray_stream<T>::request_timestep_synthetic_merger(int k) 
+ndarray<T> ndarray_stream<T>::request_timestep_synthetic_merger_2d(int k) 
 {
-  return ndarray<T>(); // TODO
+  return synthetic_merger_2D(j["dimensions"][0], j["dimensions"][1], T(k)*0.1);
 }
 
 template <typename T>
