@@ -185,6 +185,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
+#if 0
   auto func0 = [=](element_t e) {
       critical_point_t cp;
       if (robust_check_simplex0(e, cp)) {
@@ -202,6 +203,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           discrete_critical_points[e] = cp;
       }
     };
+#endif
 
   // scan 2-simplices
   // fprintf(stderr, "tracking 2D critical points...\n");
@@ -209,8 +211,12 @@ inline void critical_point_tracker_2d_regular::update_timestep()
       critical_point_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
-        if (filter_critical_point_type(cp))
+        if (filter_critical_point_type(cp)) {
+          cp.tag = e.to_integer(m);
           discrete_critical_points[e] = cp;
+          // std::cerr << "tag=" << cp.tag << ", " << e << "\t" << element_t(m, 2, cp.tag) << std::endl;
+          // assert(element_t(m, 2, cp.tag) == e);
+        }
       }
     };
 
@@ -349,7 +355,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           return neighbors;
         }, 
         [&](unsigned long long tag) {
-          return element_t(2, tag);
+          return element_t(m, 2, tag);
         });
   }
 }

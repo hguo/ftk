@@ -382,6 +382,8 @@ void critical_point_tracker::grow_trajectories(
   for (auto &traj : trajectories) {
     const auto &terminal = traj.back();
     auto current = tag_to_element(terminal.tag);
+    // fprintf(stderr, "terminal.tag=%lld\n", terminal.tag);
+    // fprintf(stderr, "front.tag=%lld\n", traj.front().tag);
 
     while (1) {
       bool has_next = false;

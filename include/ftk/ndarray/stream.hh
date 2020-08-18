@@ -166,7 +166,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             } else 
               fatal("invalid x0");
           } else 
-            j["x0"] = {0.5, 0.5};
+            j["x0"] = {10.0, 10.0};
 
           if (j.contains("dir")) {
             if (j["dir"].is_array()) {

@@ -41,11 +41,12 @@ struct simplicial_regular_mesh_element {
 
   simplicial_regular_mesh_element() : dim(0), type(0) {}
   simplicial_regular_mesh_element(const simplicial_regular_mesh_element& e) : corner(e.corner), dim(e.dim), type(e.type) {}
-  simplicial_regular_mesh_element(int nd, int d); 
+  simplicial_regular_mesh_element(int nd, int d);
   simplicial_regular_mesh_element(const std::vector<int>& corner, int d, int type); // nd is encoded in corner
   // simplicial_regular_mesh_element(const simplicial_regular_mesh &m, int d, size_t index);
   simplicial_regular_mesh_element(const simplicial_regular_mesh &m, int d, size_t work_index, 
       const lattice& l, int scope = ELEMENT_SCOPE_ALL);
+  template <typename uint=uint64_t> simplicial_regular_mesh_element(const simplicial_regular_mesh& m, int d, uint i);
   simplicial_regular_mesh_element(const std::string &i);
 
   simplicial_regular_mesh_element& operator=(const simplicial_regular_mesh_element& e);
@@ -242,6 +243,12 @@ inline simplicial_regular_mesh_element::simplicial_regular_mesh_element(
     const std::vector<int>& corner_, int d_, int type_)
   : corner(corner_), dim(d_), type(type_)
 {
+}
+
+template <typename uint>
+inline simplicial_regular_mesh_element::simplicial_regular_mesh_element(const simplicial_regular_mesh& m, int d, uint i)
+{
+  corner.resize(m.nd()); dim = d; from_integer(m, i);
 }
 
 inline simplicial_regular_mesh_element::simplicial_regular_mesh_element(
