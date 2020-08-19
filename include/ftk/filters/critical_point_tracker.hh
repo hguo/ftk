@@ -38,6 +38,8 @@ public: // outputs
   const std::vector<std::vector<critical_point_t>>& get_traced_critical_points() {return traced_critical_points;}
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
 
+  const std::vector<std::vector<critical_point_t>>& intercept_traced_critical_points(double t0, double t1);
+
   void write_traced_critical_points_binary(const std::string& filename) const;
   void write_traced_critical_points_text(std::ostream& os) const;
   void write_traced_critical_points_text(const std::string& filename) const;
@@ -379,6 +381,10 @@ void critical_point_tracker::grow_trajectories(
       std::function<std::set<I>(I)> neighbors,
       std::function<I(unsigned long long)> tag_to_element)
 {
+  // 0. gather discrete trajectories
+  diy::mpi::gather(comm, discrete_critical_points, get_root_proc());
+  if (!is_root_proc()) return;
+
   // 1. continue existing trajectories
   for (auto &traj : trajectories) {
     const auto &terminal = traj.back();

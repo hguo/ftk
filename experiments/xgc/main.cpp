@@ -72,7 +72,7 @@ int main(int argc, char **argv)
   if (input_filenames.size() > 1) { // track over time
     for (int t = 0; t < input_filenames.size(); t ++) {
       ftk::ndarray<double> dpot;
-      dpot.from_h5(input_filenames[t], "/dpot");
+      dpot.from_h5(input_filenames[t], "/dneOverne0");
       dpot = dpot.transpose();
       dpot.reshape(dpot.dim(0)); // only use the first slice
 
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     }
   } else { // track over poloidal planes
     ftk::ndarray<double> dpot;
-    dpot.from_h5(input_filenames[0], "/dpot");
+    dpot.from_h5(input_filenames[0], "/dneOverne0");
     dpot = dpot.transpose();
 
     for (int k = 0; k < dpot.dim(1); k ++) {
