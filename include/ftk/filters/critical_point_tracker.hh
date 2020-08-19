@@ -382,7 +382,7 @@ void critical_point_tracker::grow_trajectories(
       std::function<I(unsigned long long)> tag_to_element)
 {
   // 0. gather discrete trajectories
-  diy::mpi::gather(comm, discrete_critical_points, get_root_proc());
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
   if (!is_root_proc()) return;
 
   // 1. continue existing trajectories

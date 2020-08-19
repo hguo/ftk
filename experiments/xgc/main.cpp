@@ -19,6 +19,7 @@ std::string input_filename_pattern,
   mesh_filename, 
   kernel_filename = "xgc.kernel";
 std::vector<std::string> input_filenames;
+bool enable_streaming_trajectories = false;
 double sigma(0.02);
 
 void parse_arguments(int argc, char **argv)
@@ -29,6 +30,7 @@ void parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(input_filename_pattern))
     ("m,mesh", "Input mesh file", cxxopts::value<std::string>(mesh_filename))
     ("k,kernel", "Input/output smoothing kernel file", cxxopts::value<std::string>(kernel_filename))
+    ("stream", "Streaming trajectories", cxxopts::value<bool>(enable_streaming_trajectories))
     ("s,sigma", "Kernel bandwidth", cxxopts::value<double>(sigma));
   auto results = options.parse(argc, argv);
 
@@ -68,6 +70,9 @@ int main(int argc, char **argv)
  
   ftk::critical_point_tracker_2d_unstructured tracker(m);
   // tracker.set_type_filter( ftk::CRITICAL_POINT_2D_MAXIMUM );
+
+  if (enable_streaming_trajectories)
+    tracker.set_enable_streaming_trajectories(true);
 
   if (input_filenames.size() > 1) { // track over time
     for (int t = 0; t < input_filenames.size(); t ++) {
