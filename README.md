@@ -61,11 +61,11 @@ The output PyFTK binary will be in the `lib` directory.
 PyFTK provides synthetic data generators and critical point trackers.  The following is an example of tracking critical points in a synthetic spiral woven data:
 
 ```python
-import pyftk
+>>> import pyftk
 
-data = pyftk.synth.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (10, 10, 20)
-result = pyftk.track_critical_points_2d_scalar(data) # track critical points in a scalar field
-print(result)
+>>> data = pyftk.synth.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (10, 10, 20)
+>>> result = pyftk.track_critical_points_2d_scalar(data) # track critical points in a scalar field
+>>> print(result)
 ```
 
 The results are trajectories organized in a list: 
@@ -266,7 +266,7 @@ When you configure your build, please specify FTK_DIR with CMake:
 $ cmake -DFTK_DIR=$FTK_INSTALL_DIR/lib/cmake
 ```
 
-### Major components in FTK library
+### FTK library components
 
 * Hypermesh: data structures for high-dimensional meshes and mesh elements including *n*-simplices, *n*-cubes, and *n*-prisms; utilities to generalize given 2D/3D structured/unstructured meshes into 3D/4D spacetime meshes
 
