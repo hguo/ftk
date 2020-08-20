@@ -7,6 +7,7 @@ set(classes
   ftkSpiralWoven2DSource
   ftkDoubleGyre2DSource
   ftkMerger2DSource
+  ftkMovingExtremum2DSource
   ftkABCFlow3DSource
   ftkTornadoFlow3DSource
 )
@@ -24,6 +25,7 @@ paraview_add_server_manager_xmls(XMLS
   SpiralWoven2DSpacetimeSource.xml
   SpiralWoven2DSource.xml
   Merger2DSource.xml
+  MovingExtremum2DSource.xml
   ABCFlow3DSource.xml
   TornadoFlow3DSource.xml
   DoubleGyre2DSource.xml
