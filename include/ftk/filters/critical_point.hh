@@ -18,6 +18,16 @@ struct critical_point_t {
   constexpr size_t size() const noexcept { return sizeof(critical_point_t); }
 };
 
+struct critical_point_traj_t : public std::vector<critical_point_t>
+{
+  void update_statistics();
+
+  bool complete = false;
+  std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
+  std::array<double, 4> bounding_box;
+  unsigned int consistent_type = 0; // 0 if no consistent type
+};
+
 }
 
 // serialization
@@ -46,6 +56,26 @@ namespace diy {
       diy::load(bb, cp.scalar[i]);
     diy::load(bb, cp.type);
     diy::save(bb, cp.tag);
+  }
+  
+  static void save(diy::BinaryBuffer& bb, const ftk::critical_point_traj_t &t) {
+    diy::save(bb, t.complete);
+    diy::save(bb, t.max);
+    diy::save(bb, t.min);
+    diy::save(bb, t.persistence);
+    diy::save(bb, t.bounding_box);
+    diy::save(bb, t.consistent_type);
+    diy::save<std::vector<ftk::critical_point_t>>(bb, t);
+  }
+  
+  static void load(diy::BinaryBuffer& bb, ftk::critical_point_traj_t &t) {
+    diy::load(bb, t.complete);
+    diy::load(bb, t.max);
+    diy::load(bb, t.min);
+    diy::load(bb, t.persistence);
+    diy::load(bb, t.bounding_box);
+    diy::load(bb, t.consistent_type);
+    diy::load<std::vector<ftk::critical_point_t>>(bb, t);
   }
 }
 

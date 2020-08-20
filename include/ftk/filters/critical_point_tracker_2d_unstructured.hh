@@ -222,7 +222,7 @@ inline void critical_point_tracker_2d_unstructured::finalize()
       auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
       // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
       for (int j = 0; j < linear_graphs.size(); j ++) {
-        std::vector<critical_point_t> traj; 
+        critical_point_traj_t traj; 
         for (int k = 0; k < linear_graphs[j].size(); k ++)
           traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
         traced_critical_points.push_back(traj);

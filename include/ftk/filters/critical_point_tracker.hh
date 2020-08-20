@@ -35,7 +35,7 @@ struct critical_point_tracker : public filter {
   int get_num_scalar_components() const {return num_scalar_components;}
 
 public: // outputs
-  const std::vector<std::vector<critical_point_t>>& get_traced_critical_points() {return traced_critical_points;}
+  const std::vector<critical_point_traj_t>& get_traced_critical_points() {return traced_critical_points;}
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
 
   const std::vector<std::vector<critical_point_t>>& intercept_traced_critical_points(double t0, double t1);
@@ -73,7 +73,7 @@ public: // inputs
 protected:
   template <typename I> // mesh element ID type
   void grow_trajectories(
-      std::vector<std::vector<critical_point_t>> &trajectories,
+      std::vector<critical_point_traj_t> &trajectories,
       std::map<I, critical_point_t> &discrete_critical_poionts, // critical point tag needs to index mesh element ID.  Discrete critical points will be cleared after tracing
       std::function<std::set<I>(I)> neighbors, 
       std::function<I(unsigned long long)> tag_to_element
@@ -86,7 +86,8 @@ protected:
 
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
-  std::vector<std::vector<critical_point_t>> traced_critical_points;
+  // std::vector<std::vector<critical_point_t>> traced_critical_points;
+  std::vector<critical_point_traj_t> traced_critical_points;
 
   // type filter
   bool use_type_filter = false;
@@ -375,7 +376,7 @@ inline void critical_point_tracker::set_num_scalar_components(int n)
   
 template <typename I>
 void critical_point_tracker::grow_trajectories(
-      std::vector<std::vector<critical_point_t>> &trajectories,
+      std::vector<critical_point_traj_t> &trajectories,
       // std::vector<bool> &alive,
       std::map<I, critical_point_t> &discrete_critical_points, // will be cleared after tracing
       std::function<std::set<I>(I)> neighbors,
@@ -425,7 +426,7 @@ void critical_point_tracker::grow_trajectories(
     assert(linear_graphs.size() == 1);
     // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_t> traj; 
+      critical_point_traj_t traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       // if (traj.front().x[2] > traj.back().x[2]) // TODO FIXME

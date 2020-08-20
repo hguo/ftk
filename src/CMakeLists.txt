@@ -17,6 +17,10 @@ if (FTK_HAVE_BOOST)
   target_link_libraries (ftk ${Boost_LIBRARIES})
 endif ()
 
+if (FTK_HAVE_GMP)
+  target_link_libraries (ftk ${GMP_LIBRARIES})
+endif ()
+
 if (FTK_HAVE_VTK)
   target_link_libraries (ftk ${VTK_LIBRARIES})
 endif ()
@@ -35,10 +39,6 @@ endif ()
 
 if (FTK_HAVE_MPSOLVE)
   target_link_libraries (ftk ${MPSolve_LIBRARY})
-endif ()
-
-if (FTK_HAVE_GMP)
-  target_link_libraries (ftk ${GMP_LIBRARIES})
 endif ()
 
 if (FTK_HAVE_GSL)

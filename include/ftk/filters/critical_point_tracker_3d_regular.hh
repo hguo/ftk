@@ -319,7 +319,7 @@ void critical_point_tracker_3d_regular::trace_connected_components()
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      std::vector<critical_point_t> traj; 
+      critical_point_traj_t traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.emplace_back(traj);

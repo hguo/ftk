@@ -12,7 +12,6 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/external/cxxopts.hpp>
-#include <gmpxx.h>
 #include <vtkXMLPolyDataWriter.h>
 
 std::string input_filename_pattern,
