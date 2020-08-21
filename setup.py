@@ -8,6 +8,13 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
+def get_ftk_version():
+    try:
+        content = load("CMakeLists.txt")
+        version = re.search(b"set\(FTK_VERSION (.*)\)", content).group(1)
+        return version.strip()
+    except Exception as e:
+        return None
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
@@ -63,7 +70,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='pyftk-wordlist',
-    version='0.0.2',
+    version=get_ftk_version(),
     author='Hanqi Guo',
     author_email='guohanqi@gmail.com',
     description='FTK: A Feature Tracking Kit',
