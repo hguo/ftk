@@ -21,12 +21,31 @@ struct critical_point_t {
 
 struct critical_point_traj_t : public std::vector<critical_point_t>
 {
-  void update_statistics();
-
   bool complete = false;
   std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
-  std::array<double, 4> bounding_box;
+  std::array<double, 4> bbmin, bbmax; // bounding box
   unsigned int consistent_type = 0; // 0 if no consistent type
+  
+  void update_statistics() {
+    max.fill( std::numeric_limits<double>::lowest() );
+    min.fill( std::numeric_limits<double>::max() );
+    bbmax.fill( std::numeric_limits<double>::lowest() );
+    bbmin.fill( std::numeric_limits<double>::max() );
+
+    for (auto i = 0; i < size(); i ++) {
+      for (int k = 0; k < FTK_CP_MAX_NUM_VARS; k ++) {
+        max[k] = std::max(max[k], at(i).scalar[k]);
+        min[k] = std::min(min[k], at(i).scalar[k]);
+      }
+      for (int k = 0; k < 4; k ++) {
+        bbmax[k] = std::max(bbmax[k], at(i).x[k]);
+        bbmin[k] = std::min(bbmin[k], at(i).x[k]);
+      }
+    }
+
+    for (int k = 0; k < FTK_CP_MAX_NUM_VARS; k ++)
+      persistence[k] = max[k] - min[k];
+  }
 };
 
 }
@@ -64,7 +83,8 @@ namespace diy {
     diy::save(bb, t.max);
     diy::save(bb, t.min);
     diy::save(bb, t.persistence);
-    diy::save(bb, t.bounding_box);
+    diy::save(bb, t.bbmin);
+    diy::save(bb, t.bbmax);
     diy::save(bb, t.consistent_type);
     diy::save<std::vector<ftk::critical_point_t>>(bb, t);
   }
@@ -74,7 +94,8 @@ namespace diy {
     diy::load(bb, t.max);
     diy::load(bb, t.min);
     diy::load(bb, t.persistence);
-    diy::load(bb, t.bounding_box);
+    diy::load(bb, t.bbmin);
+    diy::load(bb, t.bbmax);
     diy::load(bb, t.consistent_type);
     diy::load<std::vector<ftk::critical_point_t>>(bb, t);
   }

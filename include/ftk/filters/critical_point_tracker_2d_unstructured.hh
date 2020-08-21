@@ -189,6 +189,7 @@ inline void critical_point_tracker_2d_unstructured::finalize()
 
   if (enable_streaming_trajectories)  {
     // already done
+    update_traj_statistics();
   } else {
     // Convert connected components to geometries
     auto neighbors = [&](int f) {
@@ -234,6 +235,7 @@ inline void critical_point_tracker_2d_unstructured::finalize()
       }
     }
     fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), connected_components.size());
+    update_traj_statistics();
   }
 }
 

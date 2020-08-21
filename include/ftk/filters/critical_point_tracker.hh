@@ -34,6 +34,8 @@ struct critical_point_tracker : public filter {
   void set_scalar_components(const std::vector<std::string>& c);
   int get_num_scalar_components() const {return scalar_components.size();}
 
+  void update_traj_statistics();
+
 public: // outputs
   const std::vector<critical_point_traj_t>& get_traced_critical_points() {return traced_critical_points;}
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
@@ -321,8 +323,39 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
 {
   os << "#trajectories=" << traced_critical_points.size() << std::endl;
   for (int i = 0; i < traced_critical_points.size(); i ++) {
-    os << "--trajectory " << i << std::endl;
     const auto &curve = traced_critical_points[i];
+    os << "--trajectory " << i << ", ";
+   
+    if (scalar_components.size() > 0) {
+      os << "min=(";
+      for (int k = 0; k < scalar_components.size(); k ++)
+        if (k < scalar_components.size()-1) os << curve.min[k] << ", ";
+        else os << curve.min[k] << "), ";
+      
+      os << "max=(";
+      for (int k = 0; k < scalar_components.size(); k ++)
+        if (k < scalar_components.size()-1) os << curve.max[k] << ", ";
+        else os << curve.max[k] << "), ";
+      
+      os << "persistence=(";
+      for (int k = 0; k < scalar_components.size(); k ++)
+        if (k < scalar_components.size()-1) os << curve.persistence[k] << ", ";
+        else os << curve.persistence[k] << "), ";
+    }
+    
+    os << "bbmin=(";
+    for (int k = 0; k < cpdims()+1; k ++)
+      if (k < cpdims()) os << curve.bbmin[k] << ", ";
+      else os << curve.bbmin[k] << "), ";
+    
+    os << "bbmax=(";
+    for (int k = 0; k < cpdims()+1; k ++)
+      if (k < cpdims()) os << curve.bbmax[k] << ", ";
+      else os << curve.bbmax[k] << "), ";
+
+    os << "consistent_type=" << critical_point_type_to_string(cpdims(), curve.consistent_type, scalar_components.size());
+    os << std::endl;
+
     for (int k = 0; k < curve.size(); k ++) {
       const auto &cp = curve[k];
       if (cpdims() == 2) {
@@ -444,6 +477,12 @@ void critical_point_tracker::grow_trajectories(
 
   // 3. clear discrete critical points
   discrete_critical_points.clear();
+}
+
+inline void critical_point_tracker::update_traj_statistics()
+{
+  for (auto &traj : traced_critical_points)
+    traj.update_statistics();
 }
 
 }
