@@ -48,16 +48,6 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_VTK=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
     
-    - name: build with paraview (linux)
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          packages:
-            - paraview-dev
-      env: 
-        - CMAKE_ARG="-DFTK_BUILD_PARAVIEW=ON -DFTK_USE_VTK=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
-
     - name: build with mpich (osx)
       os: osx
       before_install:
@@ -151,6 +141,16 @@ jobs:
       before_install:
         - sh tests/travis/install-vtk.sh
       osx_image: xcode11
+
+    - name: build with paraview (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - paraview-dev
+      env: 
+        - CMAKE_ARG="-DFTK_BUILD_PARAVIEW=ON -DFTK_USE_VTK=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
 
     - name: build with hdf5 (linux)
       os: linux
