@@ -13,25 +13,39 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/external/cxxopts.hpp>
 #include <vtkXMLPolyDataWriter.h>
+#include "../../cli/constants.hh"
 
 std::string input_filename_pattern,
   mesh_filename, 
-  kernel_filename = "xgc.kernel";
+  kernel_filename = "xgc.kernel",
+  output_filename;
 std::vector<std::string> input_filenames;
 bool enable_streaming_trajectories = false;
 double sigma(0.02);
 
 void parse_arguments(int argc, char **argv)
 {
+  const int argc0 = argc; 
   cxxopts::Options options(argv[0]);
   options.add_options()
     ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'",
      cxxopts::value<std::string>(input_filename_pattern))
+    ("o,output", "Output file", cxxopts::value<std::string>(output_filename))
     ("m,mesh", "Input mesh file", cxxopts::value<std::string>(mesh_filename))
     ("k,kernel", "Input/output smoothing kernel file", cxxopts::value<std::string>(kernel_filename))
     ("stream", "Streaming trajectories", cxxopts::value<bool>(enable_streaming_trajectories))
     ("s,sigma", "Kernel bandwidth", cxxopts::value<double>(sigma));
   auto results = options.parse(argc, argv);
+
+  if (argc0 < 2) {
+    std::cerr << options.help() << std::endl;
+    exit(1);
+  }
+
+  if (!output_filename.length()) {
+    fprintf(stderr, "missing output filename.\n");
+    exit(1);
+  }
 
   if (!mesh_filename.length()) {
     fprintf(stderr, "missing mesh filename.\n");
@@ -108,13 +122,17 @@ int main(int argc, char **argv)
     }
   }
   tracker.finalize();
-   
-  // auto poly = tracker.get_discrete_critical_points_vtk();
-  auto poly = tracker.get_traced_critical_points_vtk();
-  vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
-  writer->SetFileName("out.vtp");
-  writer->SetInputData(poly);
-  writer->Write();
+  
+  if (ends_with(output_filename, str_vtp)) {
+    // auto poly = tracker.get_discrete_critical_points_vtk();
+    auto poly = tracker.get_traced_critical_points_vtk();
+    vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
+    writer->SetFileName(output_filename.c_str());
+    writer->SetInputData(poly);
+    writer->Write();
+  } else {
+    tracker.write_traced_critical_points_text(output_filename);
+  }
 
   return 0;
 }

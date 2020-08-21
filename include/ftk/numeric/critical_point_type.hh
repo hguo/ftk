@@ -92,17 +92,29 @@ unsigned int critical_point_type_3d(T J[3][3], bool symmetric)
   }
 }
 
-inline std::string critical_point_type_to_string_2d(const int i, bool scalar=true)
+inline std::string critical_point_type_to_string(const int n, const int i, bool scalar=true)
 {
-  if (i == CRITICAL_POINT_2D_UNKNOWN) return "unknown";
-  else if (i == CRITICAL_POINT_2D_DEGENERATE) return "degenerate";
-  else if (i == CRITICAL_POINT_2D_ATTRACTING) return scalar ? "max" : "attracting";
-  else if (i == CRITICAL_POINT_2D_REPELLING) return scalar ? "min" : "repelling";
-  else if (i == CRITICAL_POINT_2D_SADDLE) return "saddle";
-  else if (i == CRITICAL_POINT_2D_ATTRACTING_FOCUS) return "attracting_focus";
-  else if (i == CRITICAL_POINT_2D_REPELLING_FOCUS) return "repelling_focus";
-  else if (i == CRITICAL_POINT_2D_CENTER) return "center";
-  else return ""; // TODO: throw error
+  if (n == 2) {
+    if (i == CRITICAL_POINT_2D_UNKNOWN) return "unknown";
+    else if (i == CRITICAL_POINT_2D_DEGENERATE) return "degenerate";
+    else if (i == CRITICAL_POINT_2D_ATTRACTING) return scalar ? "max" : "attracting";
+    else if (i == CRITICAL_POINT_2D_REPELLING) return scalar ? "min" : "repelling";
+    else if (i == CRITICAL_POINT_2D_SADDLE) return "saddle";
+    else if (i == CRITICAL_POINT_2D_ATTRACTING_FOCUS) return "attracting_focus";
+    else if (i == CRITICAL_POINT_2D_REPELLING_FOCUS) return "repelling_focus";
+    else if (i == CRITICAL_POINT_2D_CENTER) return "center";
+    else return ""; // TODO: throw error
+  } else if (n == 3) {
+    if (i == CRITICAL_POINT_3D_UNKNOWN) return "unknown";
+    else if (i == CRITICAL_POINT_3D_DEGENERATE) return "degenerate";
+    else if (i == CRITICAL_POINT_3D_ATTRACTING) return scalar ? "max" : "attracting";
+    else if (i == CRITICAL_POINT_3D_REPELLING) return scalar ? "min" : "repelling";
+    else if (i == CRITICAL_POINT_3D_SADDLE) return "saddle";
+    else if (i == CRITICAL_POINT_3D_UNSTABLE_ATTRACTING) return "unstable_attracting";
+    else if (i == CRITICAL_POINT_3D_UNSTABLE_REPELLING) return "unstable_repelling";
+    else if (i == CRITICAL_POINT_3D_UNSTABLE_SADDLE) return "unstable_saddle";
+    else return ""; 
+  } else return "";
 }
 
 }
