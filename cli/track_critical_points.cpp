@@ -47,6 +47,8 @@ static const std::set<std::string> set_valid_output_format({str_auto, str_text, 
 ///////////////////////////////
 int parse_arguments(int argc, char **argv)
 {
+  const int argc0 = argc;
+
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
     ("o,output", "Output file", 
@@ -67,9 +69,9 @@ int parse_arguments(int argc, char **argv)
     ("help", "Print usage", cxxopts::value<bool>(help));
   auto results = options.parse(argc, argv);
 
-  if (help) {
+  if ((argc0 < 2) || help) {
     std::cerr << options.help() << std::endl;
-    exit(0); // return 0;
+    return 0;
   }
 
   auto j = parse_input_json(results);

@@ -254,9 +254,9 @@ set (FTK_INCLUDE_DIR
 )
 include_directories (${FTK_INCLUDE_DIR})
 
+option (FTK_BUILD_EXECUTABLES "Build executables" ON)
 option (FTK_BUILD_TESTS "Build tests" OFF)
-option (FTK_BUILD_EXAMPLES "Build examples" OFF)
-option (FTK_BUILD_EXPERIMENTS "Build experimental code" OFF)
+option (FTK_BUILD_APPLICATIONS "Build applications" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
 option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
 set (FTK_FP_PRECISION "32768" CACHE STRING "Fixed point precision")
@@ -284,6 +284,8 @@ configure_package_config_file(
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FTK/)
 
+add_subdirectory (src)
+
 if (FTK_BUILD_PYFTK)
   include_directories (${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11/include
     ${PYTHON_INCLUDE_DIRS})
@@ -299,20 +301,21 @@ if (FTK_BUILD_TESTS)
 endif ()
 
 # If FTK_BUILD_EXAMPLES is on, add the examples subdirectory to the build.
-if (FTK_BUILD_EXAMPLES)
-  add_subdirectory (examples)
-endif ()
+# if (FTK_BUILD_EXAMPLES)
+#   add_subdirectory (examples)
+# endif ()
 
-if (FTK_BUILD_EXPERIMENTS)
-  add_subdirectory (experiments)
+if (FTK_BUILD_APPLICATIONS)
+  add_subdirectory (apps)
 endif ()
 
 if (FTK_BUILD_PARAVIEW)
   add_subdirectory (paraview)
 endif ()
 
-add_subdirectory (src)
-add_subdirectory (cli)
+if (FTK_BUILD_EXECUTABLES)
+  add_subdirectory (cli)
+endif ()
 
 ## summary
 message ("")
@@ -328,10 +331,11 @@ message("      cmake: ${CMAKE_INSTALL_CMAKEDIR}")
 message ("")
 message("  Features:")
 message("    Build Type:   ${CMAKE_BUILD_TYPE}")
+message("    Executables:  ${FTK_BUILD_EXECUTABLES}")
+message("    Applications: ${FTK_BUILD_APPLICATIONS}")
 message("    Testing:      ${FTK_BUILD_TESTS}")
-message("    Examples:     ${FTK_BUILD_EXAMPLES}")
 message("    ParaView:     ${FTK_BUILD_PARAVIEW}")
-message("    PyFTK*:       ${FTK_BUILD_PYFTK}")
+message("    PyFTK:        ${FTK_BUILD_PYFTK}")
 if (${FTK_BUILD_PYFTK})
   message("        Python executable:          ${PYTHON_EXECUTABLE}")
   message("        Python include directories: ${PYTHON_INCLUDE_DIRS}")

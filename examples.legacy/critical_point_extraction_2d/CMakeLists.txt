@@ -1,5 +1,0 @@
-add_executable (ex_critical_point_extraction_2d ex_critical_point_extraction_2d.cpp)
-target_link_libraries (ex_critical_point_extraction_2d ftk)
-
-add_executable (ex_extract_critical_point_2d_regular_serial main.cpp)
-target_link_libraries (ex_extract_critical_point_2d_regular_serial ftk)

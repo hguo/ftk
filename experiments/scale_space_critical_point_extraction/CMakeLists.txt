@@ -1,2 +1,0 @@
-add_executable (scale_space_critical_point_extraction main.cpp)
-target_link_libraries (scale_space_critical_point_extraction ftk)
