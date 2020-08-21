@@ -260,6 +260,7 @@ option (FTK_BUILD_APPLICATIONS "Build applications" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
 option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
 set (FTK_FP_PRECISION "32768" CACHE STRING "Fixed point precision")
+set (FTK_CP_MAX_NUM_VARS "2" CACHE STRING "Max number of scalar properties for critical points")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)

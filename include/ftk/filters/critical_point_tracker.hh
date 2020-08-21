@@ -19,7 +19,7 @@ namespace ftk {
 struct critical_point_tracker : public filter {
   critical_point_tracker() {}
 
-  virtual void update() {}; // TODO
+  virtual void update() {}; 
   void reset() {
     field_data_snapshots.clear();
     traced_critical_points.clear();
@@ -388,6 +388,8 @@ void critical_point_tracker::grow_trajectories(
 
   // 1. continue existing trajectories
   for (auto &traj : trajectories) {
+    if (traj.complete) continue;
+
     const auto &terminal = traj.back();
     auto current = tag_to_element(terminal.tag);
     // fprintf(stderr, "terminal.tag=%lld\n", terminal.tag);
@@ -411,6 +413,8 @@ void critical_point_tracker::grow_trajectories(
         break;
       }
     }
+
+    if (!continued) traj.complete = false;
   }
 
   // 2. generate new trajectories for the rest of discrete critical points

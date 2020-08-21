@@ -96,6 +96,7 @@ bool check_simplex_cp2t(
     }
     
     double X[3][3];
+#if 0 // TODO: use explicit coords
     if (use_explicit_coords) {
       for (int i = 0; i < 3; i ++) {
         for (int j = 0; j < 2; j ++) {
@@ -104,7 +105,8 @@ bool check_simplex_cp2t(
         X[i][2] = vertices[i][2]; // unit_simplex_offset_3_2<scope>(e.type, i, 2);
       }
       ftk::lerp_s2v3(X, mu, cp.rx);
-    } 
+    }
+#endif
     
     // implicit coordinates
     for (int i = 0; i < 3; i ++)

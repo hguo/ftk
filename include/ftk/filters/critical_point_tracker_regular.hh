@@ -44,20 +44,6 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void update_timestep() = 0;
 
   void set_coordinates(const ndarray<double>& coords_) {coords = coords_; use_explicit_coords = true;}
-#if 0
-  virtual void push_snapshot_scalar_field(const ndarray<double>& scalar0) {scalar.push_back(scalar0);}
-  virtual void push_snapshot_vector_field(const ndarray<double>& V0) {V.push_back(V0);}
-  virtual void push_snapshot_jacobian_field(const ndarray<double>& gradV0) {
-    std::cerr << "pushing jacobian field snapshot: ";
-    gradV0.print(std::cerr) << std::endl;
-    gradV.push_back(gradV0);
-  }
-
-  // pushing 3D/4D spacetime volume directly
-  void push_spacetime_scalar_field(const ndarray<double>& scalar0);
-  void push_spacetime_vector_field(const ndarray<double>& V0);
-  void push_spacetime_jacobian_field(const ndarray<double>& gradV0);
-#endif
 
 protected:
   bool filter_critical_point_type(const critical_point_t& cp);

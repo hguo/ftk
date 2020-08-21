@@ -45,6 +45,13 @@ inline T lerp_s2(const T v[3], const T mu[3])
   return v[0] * mu[0] + v[1] * mu[1] + v[2] * mu[2];
 }
 
+template <typename T, int n>
+inline void lerp_s2v(const T V[3][n], const T mu[3], T v[n])
+{
+  for (int i = 0; i < n; i ++)
+    v[i] = V[0][i] * mu[0] + V[1][i] * mu[1] + V[2][i] * mu[2];
+}
+
 template <typename T>
 inline void lerp_s2v2(const T V[3][2], const T mu[3], T v[2])
 {

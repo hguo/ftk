@@ -64,7 +64,7 @@ protected:
   template <int n, typename T> void simplex_values(
       const int verts[n], // vertices
       T X[n][3], // coordinates
-      T f[n], // scalars
+      T f[n][FTK_CP_MAX_NUM_VARS], // scalars
       T v[n][2], // vectors
       T J[n][2][2] // jacobians
   ) const;
@@ -80,14 +80,17 @@ protected:
 
 template <int n, typename T>
 inline void critical_point_tracker_2d_unstructured::simplex_values(
-    const int verts[n], T X[n][3], T f[n], T v[n][2], T J[n][2][2]) const
+    const int verts[n], T X[n][3], T f[n][FTK_CP_MAX_NUM_VARS], T v[n][2], T J[n][2][2]) const
 {
   for (int i = 0; i < n; i ++) {
     const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
     const int k = m.flat_vertex_id(verts[i]);
     const auto &data = field_data_snapshots[iv];
     m.get_coords(verts[i], X[i]);
-    if (!data.scalar.empty()) f[i] = data.scalar(i);
+    if (!data.scalar.empty()) {
+      for (int j = 0; j < get_num_scalar_components(); j ++)
+        f[i][j] = data.scalar(j, k);
+    }
     for (int j = 0; j < 2; j ++) {
       v[i][j] = data.vector(j, k);
       for (int j1 = 0; j1 < 2; j1 ++)
@@ -107,7 +110,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
   int tri[3];
   m.get_simplex(2, i, tri); 
 
-  double X[3][3], f[3], V[3][2], Js[3][2][2];
+  double X[3][3], f[3][FTK_CP_MAX_NUM_VARS], V[3][2], Js[3][2][2];
   simplex_values<3, double>(tri, X, f, V, Js);
 
   fp_t Vf[3][2];
@@ -133,7 +136,9 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
     fprintf(stderr,  "mu'=%f, %f, %f\n", mu[0], mu[1], mu[2]);
   }
   ftk::lerp_s2v3(X, mu, cp.x);
-  cp.scalar[0] = ftk::lerp_s2(f, mu);
+ 
+  for (int k = 0; k < get_num_scalar_components(); k ++)
+    cp.scalar[k] = f[0][k] * mu[0] + f[1][k] * mu[1] + f[2][k] * mu[2];
 
   double H[2][2];
   ftk::lerp_s2m2x2(Js, mu, H);

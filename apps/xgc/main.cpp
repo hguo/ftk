@@ -73,6 +73,8 @@ int main(int argc, char **argv)
   if (enable_streaming_trajectories)
     tracker.set_enable_streaming_trajectories(true);
 
+  tracker.set_num_scalar_components(2); // dpot and psi
+
   if (input_filenames.size() > 1) { // track over time
     for (int t = 0; t < input_filenames.size(); t ++) {
       ftk::ndarray<double> dpot;
@@ -82,8 +84,9 @@ int main(int argc, char **argv)
 
       ftk::ndarray<double> scalar, grad, J;
       m.smooth_scalar_gradient_jacobian(dpot, sigma, scalar, grad, J);
-   
-      tracker.push_field_data_snapshot(scalar, grad, J);
+  
+      ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
+      tracker.push_field_data_snapshot(scalars, grad, J);
 
       if (t != 0) tracker.advance_timestep();
       if (t == input_filenames.size()-1) tracker.update_timestep();
@@ -97,7 +100,8 @@ int main(int argc, char **argv)
       ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
       m.smooth_scalar_gradient_jacobian(dpot_slice, sigma, scalar, grad, J);
    
-      tracker.push_field_data_snapshot(scalar, grad, J);
+      ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
+      tracker.push_field_data_snapshot(scalars, grad, J);
 
       if (k != 0) tracker.advance_timestep();
       if (k == dpot.dim(1)-1) tracker.update_timestep();
