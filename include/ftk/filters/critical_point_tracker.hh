@@ -35,6 +35,7 @@ struct critical_point_tracker : public filter {
   int get_num_scalar_components() const {return scalar_components.size();}
 
   void update_traj_statistics();
+  void select_traj(std::function<bool(const critical_point_traj_t& traj)>);
 
 public: // outputs
   const std::vector<critical_point_traj_t>& get_traced_critical_points() {return traced_critical_points;}
@@ -483,6 +484,15 @@ inline void critical_point_tracker::update_traj_statistics()
 {
   for (auto &traj : traced_critical_points)
     traj.update_statistics();
+}
+
+inline void critical_point_tracker::select_traj(std::function<bool(const critical_point_traj_t& traj)> f)
+{
+  std::vector<critical_point_traj_t> selected_traj;
+  for (const auto &traj : traced_critical_points) 
+    if (f(traj))
+      selected_traj.push_back(traj);
+  traced_critical_points = selected_traj;
 }
 
 }

@@ -122,7 +122,14 @@ int main(int argc, char **argv)
     }
   }
   tracker.finalize();
-  
+
+  tracker.select_traj([](const ftk::critical_point_traj_t& traj) {
+    if (traj.max[1] /*max of psi*/ < 0.2) return false;
+    if (traj.min[1] /*min of psi*/ > 0.27) return false;
+    if (traj.size() < 4) return false;
+    return true;
+  });
+
   if (ends_with(output_filename, str_vtp)) {
     // auto poly = tracker.get_discrete_critical_points_vtk();
     auto poly = tracker.get_traced_critical_points_vtk();
