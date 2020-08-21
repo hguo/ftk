@@ -31,8 +31,8 @@ struct critical_point_tracker : public filter {
 
   void set_type_filter(unsigned int);
 
-  void set_num_scalar_components(int);
-  int get_num_scalar_components() const {return num_scalar_components;}
+  void set_scalar_components(const std::vector<std::string>& c);
+  int get_num_scalar_components() const {return scalar_components.size();}
 
 public: // outputs
   const std::vector<critical_point_traj_t>& get_traced_critical_points() {return traced_critical_points;}
@@ -94,7 +94,7 @@ protected:
   unsigned int type_filter = 0;
 
   // scalar components
-  int num_scalar_components = 1;
+  std::vector<std::string> scalar_components = {"scalar"};
 
   // streaming traj
   bool enable_streaming_trajectories = false;
@@ -274,16 +274,16 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_traced_critical_
 
   // point data for scalars
   // if (has_scalar_field) {
-  if (1) { // scalar is 0 if no scalar field available
-    vtkSmartPointer<vtkDoubleArray> scalars = vtkSmartPointer<vtkDoubleArray>::New();
-    scalars->SetNumberOfValues(nv);
+  for (auto k = 0; k < scalar_components.size(); k ++) {
+    vtkSmartPointer<vtkDoubleArray> scalar = vtkSmartPointer<vtkDoubleArray>::New();
+    scalar->SetNumberOfValues(nv);
     size_t i = 0;
     for (const auto &curve : traced_critical_points) {
       for (auto j = 0; j < curve.size(); j ++)
-        scalars->SetValue(i ++, curve[j].scalar[0]);
+        scalar->SetValue(i ++, curve[j].scalar[k]);
     }
-    scalars->SetName("scalar");
-    polyData->GetPointData()->AddArray(scalars);
+    scalar->SetName(scalar_components[k].c_str());
+    polyData->GetPointData()->AddArray(scalar);
   }
 
   return polyData;
@@ -368,12 +368,12 @@ inline void critical_point_tracker::set_type_filter(unsigned int f)
   type_filter = f;
 }
 
-inline void critical_point_tracker::set_num_scalar_components(int n)
+inline void critical_point_tracker::set_scalar_components(const std::vector<std::string>& c) 
 {
-  assert(n <= FTK_CP_MAX_NUM_VARS);
-  num_scalar_components = n;
+  assert(c.size() <= FTK_CP_MAX_NUM_VARS);
+  scalar_components = c;
 }
-  
+
 template <typename I>
 void critical_point_tracker::grow_trajectories(
       std::vector<critical_point_traj_t> &trajectories,
