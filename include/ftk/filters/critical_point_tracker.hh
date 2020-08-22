@@ -369,7 +369,8 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
       for (int k = 0; k < scalar_components.size(); k ++)
         os << scalar_components[k] << "=" << cp.scalar[k] << ", ";
       
-      os << "type=" << critical_point_type_to_string(cpdims(), cp.type, scalar_components.size()) << std::endl;
+      os << "type=" << critical_point_type_to_string(cpdims(), cp.type, scalar_components.size()) << ", "; 
+      os << "tag=" << cp.tag << std::endl;
     }
   }
 }
@@ -425,13 +426,11 @@ void critical_point_tracker::grow_trajectories(
   // 1. continue existing trajectories
   for (auto &traj : trajectories) {
     if (traj.complete) continue;
-
-    const auto &terminal = traj.back();
-    auto current = tag_to_element(terminal.tag);
-    // fprintf(stderr, "terminal.tag=%lld\n", terminal.tag);
-    // fprintf(stderr, "front.tag=%lld\n", traj.front().tag);
-
     bool continued = false;
+
+    // forward direction
+    auto terminal = traj.back();
+    auto current = tag_to_element(terminal.tag);
     while (1) {
       bool has_next = false;
       for (auto i : neighbors(current)) {
@@ -445,12 +444,32 @@ void critical_point_tracker::grow_trajectories(
           break;
         }
       }
-      if (!has_next) {
+      if (!has_next)
         break;
-      }
     }
 
-    if (!continued) traj.complete = false;
+    // backward direction
+    terminal = traj.front();
+    current = tag_to_element(terminal.tag);
+    while (1) {
+      bool has_next = false;
+      for (auto i : neighbors(current)) {
+        if (discrete_critical_points.find(i) != discrete_critical_points.end()) 
+        {
+          // fprintf(stderr, "tracing backwards!!\n");
+          current = i;
+          traj.insert(traj.begin(), discrete_critical_points[current]); // TODO: improve performance by using list instead of vector
+          discrete_critical_points.erase(current);
+          has_next = true;
+          continued = true;
+          break;
+        }
+      }
+      if (!has_next)
+        break;
+    }
+
+    if (!continued) traj.complete = true;
   }
 
   // 2. generate new trajectories for the rest of discrete critical points

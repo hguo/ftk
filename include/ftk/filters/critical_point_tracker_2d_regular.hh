@@ -255,8 +255,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         }), 
         ftk::ELEMENT_SCOPE_ORDINAL, 
         func2, nthreads);
-    if (enable_streaming_trajectories)
-      grow();
+    // if (enable_streaming_trajectories)
+    //   grow();
 
     if (field_data_snapshots.size() >= 2) { // interval
       // m.element_for_interval(2, current_timestep-1, current_timestep, func2);

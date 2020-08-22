@@ -45,6 +45,13 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
 
     for (int k = 0; k < FTK_CP_MAX_NUM_VARS; k ++)
       persistence[k] = max[k] - min[k];
+
+    consistent_type = at(0).type;
+    for (auto i = 0; i < size(); i ++)
+      if (consistent_type != at(i).type) {
+        consistent_type = 0;
+        break;
+      }
   }
 };
 

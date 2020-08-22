@@ -87,7 +87,7 @@ int main(int argc, char **argv)
   if (enable_streaming_trajectories)
     tracker.set_enable_streaming_trajectories(true);
 
-  tracker.set_scalar_components({"dpot", "psi"}); // dpot and psi
+  tracker.set_scalar_components({"dneOverne0", "psi"}); // dpot and psi
 
   if (input_filenames.size() > 1) { // track over time
     for (int t = 0; t < input_filenames.size(); t ++) {
