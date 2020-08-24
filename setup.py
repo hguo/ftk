@@ -10,9 +10,8 @@ from distutils.version import LooseVersion
 
 def get_ftk_version():
     try:
-        content = load("CMakeLists.txt")
-        version = re.search(b"set\(FTK_VERSION (.*)\)", content).group(1)
-        return version.strip()
+        with open('version.txt', 'r') as file:
+            return file.read()
     except Exception as e:
         return None
 

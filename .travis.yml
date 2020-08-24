@@ -38,19 +38,6 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_TBB=ON"
 
-    - name: build with python3 (linux)
-      os: linux
-      dist: bionic
-      python: "3.8"
-      before_install:
-        - pyenv local 3.8.1
-      addons:
-        apt:
-          packages:
-            - python-dev
-      env:
-        - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON"
-
     - name: build with vtk (linux)
       os: linux
       dist: bionic
@@ -154,6 +141,19 @@ jobs:
       before_install:
         - sh tests/travis/install-vtk.sh
       osx_image: xcode11
+
+    - name: build with python3 (linux)
+      os: linux
+      dist: bionic
+      python: "3.8"
+      before_install:
+        - pyenv local 3.8.1
+      addons:
+        apt:
+          packages:
+            - python-dev
+      env:
+        - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON"
 
     - name: build with paraview (linux)
       os: linux

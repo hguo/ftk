@@ -1,6 +1,8 @@
 #ifndef _FTK_CONFIG_HH
 #define _FTK_CONFIG_HH
 
+#define FTK_VERSION "${FTK_VERSION}"
+
 #cmakedefine FTK_HAVE_ADIOS2 1
 #cmakedefine FTK_HAVE_BOOST 1
 #cmakedefine FTK_HAVE_CUDA 1

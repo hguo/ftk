@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 3.10)
 project (ftk)
 
-set (FTK_VERSION 0.0.2)
+file(READ "version.txt" FTK_VERSION)
 
 include(GNUInstallDirs)
 # include (ExternalProject)
@@ -321,6 +321,8 @@ endif ()
 ## summary
 message ("")
 message ("FTK build configuration:")
+message ("  FTK Version:  ${FTK_VERSION}")
+message ("")
 message ("  C++ compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} ${CMAKE_CXX_COMPILER_WRAPPER}")
 message ("                ${CMAKE_CXX_COMPILER}")
 message ("")
