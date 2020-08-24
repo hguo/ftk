@@ -41,9 +41,15 @@ jobs:
     - name: build with python3 (linux)
       os: linux
       dist: bionic
-      python: 3.8
-      before_install:
-        - pyenv local 3.8.1
+      python: 
+        - "3.8"
+        - "pypy"
+      #before_install:
+      #  - pyenv local 3.8.1
+      addons:
+        apt:
+          packages:
+            - pypy-dev
       env:
         - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON"
 
