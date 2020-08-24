@@ -84,3 +84,13 @@ else () # serial only
   catch_discover_tests (test_critical_point_tracking_moving_extremum_2d)
   catch_discover_tests (test_critical_point_tracking_moving_extremum_3d)
 endif ()
+
+# for pyftk
+if (FTK_BUILD_PYFTK)
+  add_test (NAME test_critical_point_tracking_py
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_critical_point_tracking.py)
+
+  set_tests_properties (test_critical_point_tracking_py 
+    PROPERTIES 
+    ENVIRONMENT "PYTHONPATH=${LIBRARY_OUTPUT_PATH}")
+endif ()

@@ -46,7 +46,7 @@ jobs:
           packages:
             - python3-dev
       env:
-        - CMAKE_ARG="-FTK_BUILD_PYFTK=ON"
+        - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON"
 
     - name: build with vtk (linux)
       os: linux
