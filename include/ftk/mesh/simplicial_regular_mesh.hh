@@ -78,6 +78,8 @@ struct simplicial_regular_mesh_element {
 
   std::vector<simplicial_regular_mesh_element> sides(const simplicial_regular_mesh& m) const;
   std::vector<simplicial_regular_mesh_element> side_of(const simplicial_regular_mesh& m) const;
+  
+  bool is_ordinal(const simplicial_regular_mesh& m) const;
 
   // const simplicial_regular_mesh &m; // avoid the ref to mesh to ease (de)serialization
   std::vector<int> corner;
@@ -130,9 +132,6 @@ struct simplicial_regular_mesh {
 
   // Returns d+1 vertices that build up the d-dimensional simplex of the given type
   std::vector<std::vector<int>> unit_simplex(int d, int t) const {return unit_simplices[d][t];}
-
-  // Check if the unit simplex type is fixed-time
-  // bool is_fixed_time(int d, int type) const {return is_unit_simpleces_fixed_time[d][type];}
 
   void get_lb_ub(std::vector<int>& lb, std::vector<int>& ub) {lb = lb_; ub = ub_;}
   void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub);
@@ -223,8 +222,8 @@ private:
   std::vector<std::vector<int>> unit_ordinal_simplex_types, 
                                 unit_interval_simplex_types;
   
-  // std::vector<std::vector<bool>> is_unit_simpleces_fixed_time;
-
+  std::vector<std::vector<bool>> is_unit_simplex_type_ordinal;
+  
   // (dim,type) --> vector of (type,offset)
   std::vector<std::vector<std::vector<std::tuple<int, std::vector<int>>>>> unit_simplex_sides;
   std::vector<std::vector<std::vector<std::tuple<int, std::vector<int>>>>> unit_simplex_side_of;
@@ -533,6 +532,13 @@ inline std::vector<simplicial_regular_mesh_element> simplicial_regular_mesh_elem
   return side_of;
 }
 
+inline bool simplicial_regular_mesh_element::is_ordinal(const simplicial_regular_mesh& m) const
+{
+  return m.is_unit_simplex_type_ordinal[dim][type];
+}
+
+/////
+
 inline int simplicial_regular_mesh::ntypes(int d, int scope) const 
 {
   switch (scope) {
@@ -726,9 +732,11 @@ inline void simplicial_regular_mesh::derive_ordinal_and_interval_simplices()
 {
   for (int d = 0; d < nd()+1; d ++) {
     std::vector<int> ordinal_simplex_types, interval_simplex_types;
+    std::vector<bool> is_type_ordinal;
     
     if (d == 0) {
       ordinal_simplex_types.push_back(0);
+      is_type_ordinal.push_back(true);
     } else {
       for (int t = 0; t < ntypes(d); t ++) {
         const auto simplex = unit_simplices[d][t];
@@ -736,10 +744,13 @@ inline void simplicial_regular_mesh::derive_ordinal_and_interval_simplices()
         for (int i = 0; i < simplex.size(); i ++) {
           time = time + simplex[i][nd()-1];
         }
-        if (time == 0)
+        if (time == 0) {
           ordinal_simplex_types.push_back(t);
-        else
+          is_type_ordinal.push_back(true);
+        } else {
           interval_simplex_types.push_back(t);
+          is_type_ordinal.push_back(false);
+        }
       }
     }
 
@@ -747,6 +758,7 @@ inline void simplicial_regular_mesh::derive_ordinal_and_interval_simplices()
     unit_interval_simplex_types.push_back(interval_simplex_types);
     ntypes_ordinal_.push_back(ordinal_simplex_types.size());
     ntypes_interval_.push_back(interval_simplex_types.size());
+    is_unit_simplex_type_ordinal.push_back(is_type_ordinal);
   }
 }
 

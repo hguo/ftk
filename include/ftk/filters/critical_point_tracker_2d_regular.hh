@@ -227,6 +227,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp)) {
           cp.tag = e.to_integer(m);
+          cp.ordinal = e.is_ordinal(m);
           discrete_critical_points[e] = cp;
           // std::cerr << "tag=" << cp.tag << ", " << e << "\t" << element_t(m, 2, cp.tag) << std::endl;
           // assert(element_t(m, 2, cp.tag) == e);

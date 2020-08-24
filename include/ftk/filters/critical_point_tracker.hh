@@ -385,6 +385,7 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
         os << scalar_components[k] << "=" << cp.scalar[k] << ", ";
       
       os << "type=" << critical_point_type_to_string(cpdims(), cp.type, scalar_components.size()) << ", "; 
+      os << "ordinal=" << cp.ordinal << ", ";
       os << "tag=" << cp.tag << std::endl;
     }
   }

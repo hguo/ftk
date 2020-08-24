@@ -13,6 +13,8 @@ struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded fr
   size_t n_ordinal(int d) const { return m.n(d); }
   size_t n_interval(int d) const;
 
+  bool is_ordinal(int d, I i) const { const auto type = mod(i, n(d)); return type < m.n(d); }
+
   I flat_vertex_id(I i) const { return mod(i, m.n(0)); }
   I flat_vertex_time(I i) const { return i / m.n(0); }
   I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
