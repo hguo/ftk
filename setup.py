@@ -45,7 +45,12 @@ class CMakeBuild(build_ext):
 
         cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir,
                       '-DPYTHON_EXECUTABLE=' + sys.executable,
-                      '-DFTK_BUILD_PYFTK=ON']
+                      '-DFTK_BUILD_PYFTK=ON',
+                      '-DFTK_BUILD_EXECUTABLES=OFF',
+                      '-DFTK_USE_VTK=OFF',
+                      '-DFTK_USE_PNG=OFF',
+                      '-DFTK_USE_NETCDF=OFF',
+                      '-DFTK_USE_HDF5=OFF']
 
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
@@ -57,7 +62,7 @@ class CMakeBuild(build_ext):
             build_args += ['--', '/m']
         else:
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-            build_args += ['--', '-j2']
+            # build_args += ['--', '-j2']
 
         env = os.environ.copy()
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),

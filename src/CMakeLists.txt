@@ -68,3 +68,7 @@ endif ()
 if (FTK_HAVE_CUDA)
   target_link_libraries (ftk ${CUDA_LIBRARIES})
 endif ()
+
+if (FTK_HAVE_PYBIND11)
+  target_link_libraries (ftk ${PYTHON_LIBRARY})
+endif ()

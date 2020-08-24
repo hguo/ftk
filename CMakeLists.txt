@@ -285,12 +285,24 @@ configure_package_config_file(
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/install/FTKConfig.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FTK/)
 
-add_subdirectory (src)
-
 if (FTK_BUILD_PYFTK)
   include_directories (${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11/include
     ${PYTHON_INCLUDE_DIRS})
   add_subdirectory (python)
+endif ()
+
+add_subdirectory (src)
+
+if (FTK_BUILD_EXECUTABLES)
+  add_subdirectory (cli)
+endif ()
+
+if (FTK_BUILD_APPLICATIONS)
+  add_subdirectory (apps)
+endif ()
+
+if (FTK_BUILD_PARAVIEW)
+  add_subdirectory (paraview)
 endif ()
 
 # If FTK_BUILD_TESTS is on, enable testing.
@@ -305,18 +317,6 @@ endif ()
 # if (FTK_BUILD_EXAMPLES)
 #   add_subdirectory (examples)
 # endif ()
-
-if (FTK_BUILD_APPLICATIONS)
-  add_subdirectory (apps)
-endif ()
-
-if (FTK_BUILD_PARAVIEW)
-  add_subdirectory (paraview)
-endif ()
-
-if (FTK_BUILD_EXECUTABLES)
-  add_subdirectory (cli)
-endif ()
 
 ## summary
 message ("")
