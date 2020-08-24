@@ -1,5 +1,10 @@
 unset (EXECUTABLE_OUTPUT_PATH)
 
+if (FTK_BUILD_PYFTK)
+  include_directories (${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11/include
+    ${PYTHON_INCLUDE_DIRS})
+endif ()
+
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
 target_link_libraries (test_quadratic_interpolation ftk)
 catch_discover_tests (test_quadratic_interpolation)
