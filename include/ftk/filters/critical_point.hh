@@ -25,7 +25,7 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
   std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
   std::array<double, 4> bbmin, bbmax; // bounding box
   unsigned int consistent_type = 0; // 0 if no consistent type
-  
+
   void update_statistics() {
     max.fill( std::numeric_limits<double>::lowest() );
     min.fill( std::numeric_limits<double>::max() );
@@ -52,6 +52,27 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
         consistent_type = 0;
         break;
       }
+  }
+ 
+  std::vector<critical_point_traj_t> to_consistent_sub_traj() const {
+    std::vector<critical_point_traj_t> results;
+    critical_point_traj_t subtraj;
+    unsigned int current_type;
+
+    for (auto i = 0; i < size(); i ++) {
+      if (subtraj.empty())
+        current_type = at(i).type;
+
+      if (at(i).type == current_type)
+        subtraj.push_back(at(i));
+      else {
+        subtraj.update_statistics();
+        results.push_back(subtraj);
+        subtraj.clear();
+      }
+    }
+
+    return results;
   }
 };
 

@@ -419,6 +419,8 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.emplace_back(traj);
+      // const auto subtrajs = traj.to_consistent_sub_traj();
+      // traced_critical_points.insert(traced_critical_points.end(), subtrajs.begin(), subtrajs.end());
     }
   }
 }
