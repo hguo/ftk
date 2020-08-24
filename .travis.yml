@@ -15,6 +15,19 @@ jobs:
     - name: build without external dependencies (osx)
       os: osx
       osx_image: xcode11
+    
+    - name: build with python3 (linux)
+      os: linux
+      dist: bionic
+      python: "3.8"
+      before_install:
+        - pyenv local 3.8.1
+      addons:
+        apt:
+          packages:
+            - python-dev
+      env:
+        - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON -DFTK_BUILD_EXECUTABLES=OFF"
 
     - name: build with mpsolve (linux)
       os: linux
@@ -141,19 +154,6 @@ jobs:
       before_install:
         - sh tests/travis/install-vtk.sh
       osx_image: xcode11
-
-    - name: build with python3 (linux)
-      os: linux
-      dist: bionic
-      python: "3.8"
-      before_install:
-        - pyenv local 3.8.1
-      addons:
-        apt:
-          packages:
-            - python-dev
-      env:
-        - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON -DFTK_BUILD_EXECUTABLES=OFF"
 
     - name: build with paraview (linux)
       os: linux
