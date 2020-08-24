@@ -41,10 +41,7 @@ jobs:
     - name: build with python3 (linux)
       os: linux
       dist: bionic
-      addons:
-        apt:
-          packages:
-            - python3-dev
+      python: 3.8
       env:
         - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON"
 
