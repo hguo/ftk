@@ -74,13 +74,18 @@ public: // inputs
   void push_scalar_field_spacetime(const ndarray<double>& scalars);
 
 protected:
-  template <typename I> // mesh element ID type
+  template <typename I> // mesh element type
   void grow_trajectories(
       std::vector<critical_point_traj_t> &trajectories,
       std::map<I, critical_point_t> &discrete_critical_poionts, // critical point tag needs to index mesh element ID.  Discrete critical points will be cleared after tracing
       std::function<std::set<I>(I)> neighbors, 
       std::function<I(unsigned long long)> tag_to_element
   );
+
+	template <typename I> // mesh element type
+	std::vector<critical_point_traj_t> trace_critical_points_offline(
+		const std::map<I, critical_point_t> &discrete_critical_points,
+		std::function<std::set<I>(I)> neighbors);
 
 protected:
   struct field_data_snapshot_t {
@@ -512,6 +517,33 @@ inline void critical_point_tracker::select_traj(std::function<bool(const critica
     if (f(traj))
       selected_traj.push_back(traj);
   traced_critical_points = selected_traj;
+}
+
+template <typename element_t>
+std::vector<critical_point_traj_t> critical_point_tracker::trace_critical_points_offline(
+	const std::map<element_t, critical_point_t> &discrete_critical_points,
+	std::function<std::set<element_t>(element_t)> neighbors)
+{
+  std::vector<critical_point_traj_t> traced_critical_points;
+
+  std::set<element_t> elements;
+  for (const auto &kv : discrete_critical_points)
+    elements.insert(kv.first);
+  auto connected_components = extract_connected_components<element_t, std::set<element_t>>(
+      neighbors, elements);
+
+  for (const auto &component : connected_components) {
+    std::vector<std::vector<double>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      critical_point_traj_t traj; 
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        traj.push_back(discrete_critical_points.at(linear_graphs[j][k]));
+      traced_critical_points.emplace_back(traj);
+    }
+  }
+
+  return traced_critical_points;
 }
 
 }

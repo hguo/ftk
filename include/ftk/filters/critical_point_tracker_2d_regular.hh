@@ -140,8 +140,20 @@ inline void critical_point_tracker_2d_regular::finalize()
 
     if (comm.rank() == get_root_proc()) {
       fprintf(stderr, "finalizing...\n");
+      traced_critical_points = trace_critical_points_offline<element_t>(discrete_critical_points, 
+          [&](element_t f) {
+            std::set<element_t> neighbors;
+            const auto cells = f.side_of(m);
+            for (const auto c : cells) {
+              const auto elements = c.sides(m);
+              for (const auto f1 : elements)
+                neighbors.insert(f1);
+            }
+            return neighbors;
+      });
+
       // trace_intersections();
-      trace_connected_components();
+      // trace_connected_components();
       update_traj_statistics();
     }
   }
