@@ -43,7 +43,7 @@ jobs:
       dist: bionic
       python: 3.8
       before_install:
-        - pyenv local 3.8.0
+        - pyenv local 3.8.1
       env:
         - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON"
 
