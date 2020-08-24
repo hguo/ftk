@@ -38,6 +38,16 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_TBB=ON"
 
+    - name: build with python3 (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - python3-dev
+      env:
+        - CMAKE_ARG="-FTK_BUILD_PYFTK=ON"
+
     - name: build with vtk (linux)
       os: linux
       dist: bionic
