@@ -58,11 +58,10 @@ The output PyFTK binary will be in the `lib` directory.
 
 ### Use PyFTK
 
-PyFTK provides synthetic data generators and critical point trackers.  The following is an example of tracking critical points in a synthetic spiral woven data:
+PyFTK provides synthetic data generators (`pyftk.synthesizers`), feature extractors (`pyftk.extractors`), and feature trackers (`pyftk.trackers`).  Currently, PyFTK only supports critical points.  The following is an example of tracking critical points in a synthetic spiral woven data:
 
 ```python
 >>> import pyftk
-
 >>> data = pyftk.synthesizers.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (10, 10, 20)
 >>> result = pyftk.trackers.track_critical_points_2d_scalar(data) # track critical points in a scalar field
 >>> print(result)
