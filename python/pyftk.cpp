@@ -8,8 +8,9 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(pyftk, m) {
   m.doc() = R"pbdoc(FTK Python bindings)pbdoc";
-  
-  m.def("extract_critical_points_2d_scalar", [](py::array_t<double, py::array::c_style | py::array::forcecast> array) {
+ 
+  py::module extractors = m.def_submodule("extractors", "Feature extraction algorithms");
+  extractors.def("extract_critical_points_2d_scalar", [](py::array_t<double, py::array::c_style | py::array::forcecast> array) {
     if (array.ndim() != 2)
       throw std::runtime_error("Number of dimensions must be 2");
 
@@ -44,7 +45,8 @@ PYBIND11_MODULE(pyftk, m) {
     return result;
   }, R"pbdoc(Extract 2D critical points)pbdoc");
 
-  m.def("track_critical_points_2d_scalar", [](py::array_t<double, py::array::c_style | py::array::forcecast> array) {
+  py::module trackers = m.def_submodule("trackers", "Feature tracking algorithms");
+  trackers.def("track_critical_points_2d_scalar", [](py::array_t<double, py::array::c_style | py::array::forcecast> array) {
     if (array.ndim() != 3)
       throw std::runtime_error("Number of dimensions must be 3");
 
@@ -82,7 +84,7 @@ PYBIND11_MODULE(pyftk, m) {
         pcp["x"] = cp.x[0];
         pcp["y"] = cp.x[1];
         pcp["t"] = cp.x[2];
-        pcp["type"] = ftk::critical_point_type_to_string_2d(cp.type, true);
+        pcp["type"] = ftk::critical_point_type_to_string(2, cp.type, true);
         pcp["scalar"] = cp.scalar[0];
         trace.append(pcp);
       }
@@ -94,7 +96,7 @@ PYBIND11_MODULE(pyftk, m) {
     return result;
   }, R"pbdoc(Track 2D critical points)pbdoc");
 
-  py::module synth = m.def_submodule("synth", "Synthetic data generator");
+  py::module synth = m.def_submodule("synthesizers", "Synthetic data generator");
   synth.def("spiral_woven", [](int DW, int DH, int DT) {
     return ftk::synthetic_woven_2Dt<double>(DW, DH, DT).to_numpy();
   }, R"pbdoc(Generate spiral woven data)pbdoc");

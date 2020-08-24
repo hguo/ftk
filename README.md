@@ -63,8 +63,8 @@ PyFTK provides synthetic data generators and critical point trackers.  The follo
 ```python
 >>> import pyftk
 
->>> data = pyftk.synth.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (10, 10, 20)
->>> result = pyftk.track_critical_points_2d_scalar(data) # track critical points in a scalar field
+>>> data = pyftk.synthesizers.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (10, 10, 20)
+>>> result = pyftk.trackers.track_critical_points_2d_scalar(data) # track critical points in a scalar field
 >>> print(result)
 ```
 
