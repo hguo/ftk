@@ -217,24 +217,10 @@ inline void critical_point_tracker_2d_unstructured::finalize()
       return neighbors;
     };
 
-    std::set<int> elements;
-    for (const auto &kv : discrete_critical_points)
-      elements.insert(kv.first);
-    auto connected_components = extract_connected_components<int, std::set<int>>(
-        neighbors, elements);
-
-    for (const auto &component : connected_components) {
-      std::vector<std::vector<double>> mycurves;
-      auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
-      // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
-      for (int j = 0; j < linear_graphs.size(); j ++) {
-        critical_point_traj_t traj; 
-        for (int k = 0; k < linear_graphs[j].size(); k ++)
-          traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
-        traced_critical_points.push_back(traj);
-      }
-    }
-    fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), connected_components.size());
+    traced_critical_points = trace_critical_points_offline<int>(
+        discrete_critical_points, neighbors);
+    
+    fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), traced_critical_points.size());
     update_traj_statistics();
   }
 }
