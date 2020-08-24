@@ -45,7 +45,7 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker_re
   critical_point_tracker_2d_unstructured(const simplicial_unstructured_2d_mesh<>& m) : m(simplicial_unstructured_extruded_2d_mesh<>(m)) {}
   virtual ~critical_point_tracker_2d_unstructured() {};
   
-  int cpdims() const { return 3; }
+  int cpdims() const { return 2; }
 
   void initialize() {}
   void finalize();
@@ -135,7 +135,10 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
     }
     fprintf(stderr,  "mu'=%f, %f, %f\n", mu[0], mu[1], mu[2]);
   }
-  ftk::lerp_s2v3(X, mu, cp.x);
+  ftk::lerp_s2v3(X, mu, x);
+  cp.x[0] = x[0];
+  cp.x[1] = x[1];
+  cp.t = x[2];
  
   for (int k = 0; k < get_num_scalar_components(); k ++)
     cp.scalar[k] = f[0][k] * mu[0] + f[1][k] * mu[1] + f[2][k] * mu[2];

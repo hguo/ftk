@@ -73,11 +73,15 @@ bool check_simplex_cp3t(
       cp.scalar[0] = ftk::lerp_s3(values, mu);
     }
 
-    double X[4][4];
+    double X[4][4], x[4];
     for (int i = 0; i < 4; i ++)
       for (int j = 0; j < 4; j ++)
         X[i][j] = vertices[i][j];
-    ftk::lerp_s3v4(X, mu, cp.x);
+    ftk::lerp_s3v4(X, mu, x);
+    cp.x[0] = x[0];
+    cp.x[1] = x[1];
+    cp.x[2] = x[2];
+    cp.t = x[3];
     return true;
   } else 
     return false;

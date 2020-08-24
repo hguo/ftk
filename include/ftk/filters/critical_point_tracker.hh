@@ -188,7 +188,7 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_critical_points_
   
   const auto critical_points = get_critical_points();
   for (const auto &cp : get_critical_points()) {
-    double p[3] = {cp.x[0], cp.x[1], cp.x[2]};
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; // TODO: time
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
   }
@@ -227,11 +227,19 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_traced_critical_
   vtkSmartPointer<vtkCellArray> lines = vtkCellArray::New();
   vtkSmartPointer<vtkCellArray> verts = vtkCellArray::New();
 
-  for (const auto &curve : traced_critical_points)
-    for (auto i = 0; i < curve.size(); i ++) {
-      double p[3] = {curve[i][0], curve[i][1], curve[i][2]};
-      points->InsertNextPoint(p);
-    }
+  if (cpdims() == 2) {
+    for (const auto &curve : traced_critical_points)
+      for (auto i = 0; i < curve.size(); i ++) {
+        double p[3] = {curve[i][0], curve[i][1], curve[i].t};
+        points->InsertNextPoint(p);
+      }
+  } else { // cpdims == 3
+    for (const auto &curve : traced_critical_points)
+      for (auto i = 0; i < curve.size(); i ++) {
+        double p[3] = {curve[i][0], curve[i][1], curve[i][2]};
+        points->InsertNextPoint(p);
+      }
+  }
 
   size_t nv = 0;
   for (const auto &curve : traced_critical_points) {
@@ -348,16 +356,18 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
         if (k < scalar_components.size()-1) os << curve.persistence[k] << ", ";
         else os << curve.persistence[k] << "), ";
     }
-    
+
     os << "bbmin=(";
-    for (int k = 0; k < cpdims()+1; k ++)
+    for (int k = 0; k < cpdims(); k ++)
       if (k < cpdims()) os << curve.bbmin[k] << ", ";
       else os << curve.bbmin[k] << "), ";
     
     os << "bbmax=(";
-    for (int k = 0; k < cpdims()+1; k ++)
+    for (int k = 0; k < cpdims(); k ++)
       if (k < cpdims()) os << curve.bbmax[k] << ", ";
       else os << curve.bbmax[k] << "), ";
+    
+    os << "tmin=" << curve.tmin << ", tmax=" << curve.tmax << ", ";
 
     os << "consistent_type=" << critical_point_type_to_string(cpdims(), curve.consistent_type, scalar_components.size());
     os << std::endl;
@@ -366,10 +376,10 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
       const auto &cp = curve[k];
       if (cpdims() == 2) {
         os << "---x=(" << cp[0] << ", " << cp[1] << "), "
-           << "t=" << cp[2] << ", ";
+           << "t=" << cp.t << ", ";
       } else {
         os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), " 
-           << "t=" << cp[3] << ", ";
+           << "t=" << cp.t << ", ";
       }
       for (int k = 0; k < scalar_components.size(); k ++)
         os << scalar_components[k] << "=" << cp.scalar[k] << ", ";
@@ -400,7 +410,8 @@ inline void critical_point_tracker::write_critical_points_text(std::ostream& os)
          << "t=" << cp[3] << ", ";
     }
     os << "scalar=" << cp.scalar[0] << ", "
-       << "type=" << cp.type << std::endl;
+       << "type=" << cp.type 
+       << "ordinal" << cp.ordinal << std::endl;
   }
 }
 
@@ -493,8 +504,6 @@ void critical_point_tracker::grow_trajectories(
       critical_point_traj_t traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
-      // if (traj.front().x[2] > traj.back().x[2]) // TODO FIXME
-      //   std::reverse(std::begin(traj), std::end(traj));
       trajectories.push_back(traj);
       // fprintf(stderr, "birth.\n");
     }

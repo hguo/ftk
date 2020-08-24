@@ -8,7 +8,8 @@ namespace ftk {
 // template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
 struct critical_point_t {
   double operator[](size_t i) const {return x[i];}
-  double x[4] = {0}; // coordinates in (spacetime) cartisian grid
+  double x[3] = {0}; // coordinates 
+  double t = 0.0; // time
   // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
   double scalar[FTK_CP_MAX_NUM_VARS] = {0};
   unsigned int type = 0;
@@ -23,7 +24,8 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
 {
   bool complete = false;
   std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
-  std::array<double, 4> bbmin, bbmax; // bounding box
+  std::array<double, 3> bbmin, bbmax; // bounding box
+  double tmin, tmax; // time bounding box
   unsigned int consistent_type = 0; // 0 if no consistent type
 
   void update_statistics() {
@@ -31,16 +33,20 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
     min.fill( std::numeric_limits<double>::max() );
     bbmax.fill( std::numeric_limits<double>::lowest() );
     bbmin.fill( std::numeric_limits<double>::max() );
+    tmax = std::numeric_limits<double>::lowest();
+    tmin = std::numeric_limits<double>::max();
 
     for (auto i = 0; i < size(); i ++) {
       for (int k = 0; k < FTK_CP_MAX_NUM_VARS; k ++) {
         max[k] = std::max(max[k], at(i).scalar[k]);
         min[k] = std::min(min[k], at(i).scalar[k]);
       }
-      for (int k = 0; k < 4; k ++) {
+      for (int k = 0; k < 3; k ++) {
         bbmax[k] = std::max(bbmax[k], at(i).x[k]);
         bbmin[k] = std::min(bbmin[k], at(i).x[k]);
       }
+      tmax = std::max(tmax, at(i).t);
+      tmin = std::max(tmin, at(i).t);
     }
 
     for (int k = 0; k < FTK_CP_MAX_NUM_VARS; k ++)
@@ -83,27 +89,27 @@ namespace diy {
   // template <int N, typename V, typename I> 
   // static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t<N, V, I> &cp) {
   static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t &cp) {
-    for (int i = 0; i < 4; i ++) {
+    for (int i = 0; i < 3; i ++)
       diy::save(bb, cp.x[i]);
-      // diy::save(bb, cp.rx[i]);
-    }
+    diy::save(bb, cp.t);
     for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
       diy::save(bb, cp.scalar[i]);
     diy::save(bb, cp.type);
     diy::save(bb, cp.tag);
+    diy::save(bb, cp.ordinal);
   }
 
   // template <int N, typename V, typename I> 
   // static void load(diy::BinaryBuffer& bb, ftk::critical_point_t<N, V, I> &cp) {
   static void load(diy::BinaryBuffer& bb, ftk::critical_point_t &cp) {
-    for (int i = 0; i < 4; i ++) {
+    for (int i = 0; i < 4; i ++) 
       diy::load(bb, cp.x[i]);
-      // diy::load(bb, cp.rx[i]);
-    }
+    diy::save(bb, cp.t);
     for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
       diy::load(bb, cp.scalar[i]);
     diy::load(bb, cp.type);
-    diy::save(bb, cp.tag);
+    diy::load(bb, cp.tag);
+    diy::load(bb, cp.ordinal);
   }
   
   static void save(diy::BinaryBuffer& bb, const ftk::critical_point_traj_t &t) {

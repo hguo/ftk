@@ -393,9 +393,13 @@ bool critical_point_tracker_3d_regular::check_simplex(
   bool succ = ftk::inverse_lerp_s3v3(v, mu);
   if (!succ) return false;
   
-  double X[4][4]; // position
+  double X[4][4], x[4]; // position
   simplex_positions(vertices, X);
-  lerp_s3v4(X, mu, cp.x);
+  lerp_s3v4(X, mu, x);
+  cp.x[0] = x[0];
+  cp.x[1] = x[1];
+  cp.x[2] = x[2];
+  cp.t = x[3];
 
   return true; // TODO
  

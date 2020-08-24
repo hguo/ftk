@@ -83,7 +83,7 @@ PYBIND11_MODULE(pyftk, m) {
         py::dict pcp;
         pcp["x"] = cp.x[0];
         pcp["y"] = cp.x[1];
-        pcp["t"] = cp.x[2];
+        pcp["t"] = cp.t;
         pcp["type"] = ftk::critical_point_type_to_string(2, cp.type, true);
         pcp["scalar"] = cp.scalar[0];
         trace.append(pcp);

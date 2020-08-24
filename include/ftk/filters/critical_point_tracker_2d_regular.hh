@@ -568,9 +568,12 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   if (std::isnan(mu[0]) || std::isnan(mu[1]) || std::isnan(mu[2])) return false;
   // fprintf(stderr, "mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
 
-  double X[3][3]; // position
+  double X[3][3], x[3]; // position
   simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, cp.x);
+  lerp_s2v3(X, mu, x);
+  cp.x[0] = x[0];
+  cp.x[1] = x[1];
+  cp.t = x[2];
   // fprintf(stderr, "x=%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
 
   if (scalar_field_source != SOURCE_NONE) {

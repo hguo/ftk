@@ -95,7 +95,7 @@ bool check_simplex_cp2t(
       // if (abs(cp.scalar) < 0.02) return false; // threshold
     }
     
-    double X[3][3];
+    double X[3][3], x[3];
 #if 0 // TODO: use explicit coords
     if (use_explicit_coords) {
       for (int i = 0; i < 3; i ++) {
@@ -112,9 +112,12 @@ bool check_simplex_cp2t(
     for (int i = 0; i < 3; i ++)
       for (int j = 0; j < 3; j ++)
         X[i][j] = vertices[i][j];
-    ftk::lerp_s2v3(X, mu, cp.x);
+    ftk::lerp_s2v3(X, mu, x);
+    cp.x[0] = x[0];
+    cp.x[1] = x[1];
+    cp.t = x[2];
     
-      return true;
+    return true;
   } else 
     return false;
 }
