@@ -28,6 +28,7 @@ struct critical_point_tracker : public filter {
   virtual int cpdims() const = 0;
 
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
+  void set_enable_discarding_interval_points(bool b) { enable_discarding_interval_points = b; }
 
   void set_type_filter(unsigned int);
 
@@ -106,6 +107,9 @@ protected:
 
   // streaming traj
   bool enable_streaming_trajectories = false;
+
+  // interval cp
+  bool enable_discarding_interval_points = false;
 };
 
 ///////

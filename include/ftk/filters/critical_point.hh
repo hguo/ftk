@@ -28,7 +28,19 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
   double tmin, tmax; // time bounding box
   unsigned int consistent_type = 0; // 0 if no consistent type
 
+  void discard_interval_points() {
+    critical_point_traj_t traj;
+    for (auto i = 0; i < size(); i ++) {
+      if (at(i).ordinal) 
+        traj.push_back(at(i));
+    }
+    traj.update_statistics();
+    *this = traj;
+  }
+
   void update_statistics() {
+    if (empty()) return; // nothing to do
+
     max.fill( std::numeric_limits<double>::lowest() );
     min.fill( std::numeric_limits<double>::max() );
     bbmax.fill( std::numeric_limits<double>::lowest() );

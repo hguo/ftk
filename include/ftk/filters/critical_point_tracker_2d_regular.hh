@@ -133,7 +133,6 @@ inline void critical_point_tracker_2d_regular::finalize()
 {
   if (enable_streaming_trajectories) {
     // done
-    update_traj_statistics();
   } else {
     // fprintf(stderr, "rank=%d, root=%d, #cp=%zu\n", comm.rank(), get_root_proc(), discrete_critical_points.size());
     diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
@@ -154,9 +153,14 @@ inline void critical_point_tracker_2d_regular::finalize()
 
       // trace_intersections();
       // trace_connected_components();
-      update_traj_statistics();
     }
   }
+     
+  if (enable_discarding_interval_points)
+    for (auto& traj : traced_critical_points)
+      traj.discard_interval_points();
+
+  update_traj_statistics();
 }
 
 inline void critical_point_tracker_2d_regular::reset()

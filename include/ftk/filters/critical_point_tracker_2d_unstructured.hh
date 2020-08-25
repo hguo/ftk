@@ -195,7 +195,6 @@ inline void critical_point_tracker_2d_unstructured::finalize()
 
   if (enable_streaming_trajectories)  {
     // already done
-    update_traj_statistics();
   } else {
     // Convert connected components to geometries
     auto neighbors = [&](int f) {
@@ -227,8 +226,13 @@ inline void critical_point_tracker_2d_unstructured::finalize()
         discrete_critical_points, neighbors);
     
     fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), traced_critical_points.size());
-    update_traj_statistics();
   }
+  
+  if (enable_discarding_interval_points)
+    for (auto& traj : traced_critical_points)
+      traj.discard_interval_points();
+    
+  update_traj_statistics();
 }
 
 inline std::vector<critical_point_t> critical_point_tracker_2d_unstructured::get_critical_points() const
