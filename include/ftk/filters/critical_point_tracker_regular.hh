@@ -39,7 +39,6 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   virtual void initialize() = 0;
   virtual void finalize() = 0;
 
-  virtual void set_current_timestep(int t) {current_timestep = t;}
   virtual bool advance_timestep();
   virtual void update_timestep() = 0;
 
@@ -68,7 +67,6 @@ protected: // config
 protected:
   ndarray<double> coords;
   // std::deque<ndarray<double>> scalar, V, gradV;
-  int current_timestep = 0;
 };
 
 /////

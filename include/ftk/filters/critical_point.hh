@@ -19,6 +19,21 @@ struct critical_point_t {
 
   // constexpr size_t size() const noexcept { return sizeof(critical_point_t<N, ValueType, IntegerType>); }
   constexpr size_t size() const noexcept { return sizeof(critical_point_t); }
+
+  std::ostream& print(std::ostream& os, const int cpdims, const std::vector<std::string>& scalar_components) const {
+    if (cpdims == 2) os << "x=(" << x[0] << ", " << x[1] << "), ";
+    else os << "x=(" << x[0] << ", " << x[1] << ", " << x[2] << "), ";
+    os << "t=" << t << ", ";
+
+    for (int k = 0; k < scalar_components.size(); k ++)
+      os << scalar_components[k] << "=" << scalar[k] << ", ";
+    
+    os << "type=" << critical_point_type_to_string(cpdims, type, scalar_components.size()) << ", "; 
+    os << "timestep=" << timestep << ", ";
+    os << "ordinal=" << ordinal << ", ";
+    os << "tag=" << tag; // << std::endl;
+    return os;
+  }
 };
 
 struct critical_point_traj_t : public std::vector<critical_point_t>

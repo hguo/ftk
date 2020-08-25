@@ -313,10 +313,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           }),
           ftk::ELEMENT_SCOPE_INTERVAL, 
           func2, nthreads);
-      if (enable_streaming_trajectories) {
+
+      if (enable_streaming_trajectories)
         grow();
-        write_sliced_critical_points_text(current_timestep, std::cerr);
-      }
     }
     
   } else if (xl == FTK_XL_CUDA) {
@@ -712,24 +711,6 @@ void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s
 }
 #endif
 
-#if 0 // TODO: remove legacy code.
-inline void critical_point_tracker_2d_regular::write_discrete_critical_points(const std::string& filename) const
-{
-  diy::serializeToFile(discrete_critical_points, filename);
-}
-
-inline void critical_point_tracker_2d_regular::write_discrete_critical_points_text(std::ostream& os) const
-{
-  for (const auto &kv : discrete_critical_points) {
-    const auto &cp = kv.second;
-    os << "x=(" << cp[0] << ", " << cp[1] << "), "
-       << "t=" << cp[2] << ", "
-       << "scalar=" << cp.scalar << ", "
-       << "type=" << cp.type << std::endl;
-  }
-}
-#endif
-  
 inline std::vector<critical_point_t> critical_point_tracker_2d_regular::get_critical_points() const
 {
   std::vector<critical_point_t> results;

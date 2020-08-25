@@ -80,6 +80,8 @@ public: // inputs
       const ndarray<double> &vectors,
       const ndarray<double> &jacobians);
   void push_scalar_field_spacetime(const ndarray<double>& scalars);
+  
+  virtual void set_current_timestep(int t) {current_timestep = t;}
 
 protected:
   template <typename I> // mesh element type
@@ -99,6 +101,8 @@ protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
   };
+  
+  int current_timestep = 0;
 
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
@@ -385,21 +389,8 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
     os << std::endl;
 
     for (int k = 0; k < curve.size(); k ++) {
-      const auto &cp = curve[k];
-      if (cpdims() == 2)
-        os << "---x=(" << cp[0] << ", " << cp[1] << "), ";
-      else
-        os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), ";
-
-      os << "t=" << cp.t << ", ";
-
-      for (int k = 0; k < scalar_components.size(); k ++)
-        os << scalar_components[k] << "=" << cp.scalar[k] << ", ";
-      
-      os << "type=" << critical_point_type_to_string(cpdims(), cp.type, scalar_components.size()) << ", "; 
-      os << "timestep=" << cp.timestep << ", ";
-      os << "ordinal=" << cp.ordinal << ", ";
-      os << "tag=" << cp.tag << std::endl;
+      os << "---";
+      curve[k].print(os, cpdims(), scalar_components) << std::endl;
     }
   }
 }
@@ -415,17 +406,8 @@ inline void critical_point_tracker::write_critical_points_text(const std::string
 
 inline void critical_point_tracker::write_critical_points_text(std::ostream& os) const
 {
-  for (const auto &cp : get_critical_points()) {
-    if (cpdims() == 2)
-      os << "---x=(" << cp[0] << ", " << cp[1] << "), ";
-    else
-      os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), ";
-
-    os << "t=" << cp.t << ", ";
-    os << "scalar=" << cp.scalar[0] << ", "
-       << "type=" << cp.type 
-       << "ordinal" << cp.ordinal << std::endl;
-  }
+  for (const auto &cp : get_critical_points())
+    cp.print(os, cpdims(), scalar_components) << std::endl;
 }
 
 inline void critical_point_tracker::write_sliced_critical_points_text(int t, std::ostream& os) const
@@ -438,10 +420,7 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int t, std
     const int id = std::get<1>(lcp);
    
     os << "id=" << id << ", ";
-    if (cpdims() == 2)
-      os << "x=(" << cp[0] << ", " << cp[1] << "), ";
-    else
-      os << "x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), ";
+    cp.print(os, cpdims(), scalar_components);
     os << endl;
   }
 }
@@ -557,6 +536,8 @@ void critical_point_tracker::grow_trajectories(
 
   // 3. clear discrete critical points
   discrete_critical_points.clear();
+
+  write_sliced_critical_points_text(current_timestep, std::cerr);
 }
 
 inline void critical_point_tracker::update_traj_statistics()
