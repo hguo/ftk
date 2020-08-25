@@ -32,7 +32,8 @@ int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 bool use_type_filter = false;
 unsigned int type_filter = 0;
-bool enable_streaming_trajectories = false;
+bool enable_streaming_trajectories = false, 
+     enable_discarding_interval_points = false;
 
 // tracker and input stream
 ftk::critical_point_tracker_wrapper wrapper;
@@ -63,6 +64,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
     ("stream",  "Stream trajectories (experimental)",
      cxxopts::value<bool>(enable_streaming_trajectories))
+    ("discard-interval-points", "Discard interval critical points", 
+     cxxopts::value<bool>(enable_discarding_interval_points))
     ("vtk", "Show visualization with vtk", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -136,6 +139,9 @@ int parse_arguments(int argc, char **argv)
   nlohmann::json jt;
   if (enable_streaming_trajectories) 
     jt["enable_streaming_trajectories"] = true;
+
+  if (enable_discarding_interval_points)
+    jt["enable_discarding_interval_points"] = true;
 
   // auto tracker = wrapper.get_tracker();
   // if (use_type_filter)
