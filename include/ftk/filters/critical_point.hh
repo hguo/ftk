@@ -10,6 +10,7 @@ struct critical_point_t {
   double operator[](size_t i) const {return x[i];}
   double x[3] = {0}; // coordinates 
   double t = 0.0; // time
+  int timestep = 0; 
   // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
   double scalar[FTK_CP_MAX_NUM_VARS] = {0};
   unsigned int type = 0;

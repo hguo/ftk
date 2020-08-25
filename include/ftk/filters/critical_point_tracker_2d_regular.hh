@@ -244,14 +244,12 @@ inline void critical_point_tracker_2d_regular::update_timestep()
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp)) {
-          cp.tag = e.to_integer(m);
-          cp.ordinal = e.is_ordinal(m);
           discrete_critical_points[e] = cp;
           // std::cerr << "tag=" << cp.tag << ", " << e << "\t" << element_t(m, 2, cp.tag) << std::endl;
           // assert(element_t(m, 2, cp.tag) == e);
         }
       }
-    };
+  };
 
   auto grow = [&]() {
     grow_trajectories<element_t>(
@@ -631,6 +629,9 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   ftk::make_symmetric2x2(J); // TODO
 #endif
   cp.type = critical_point_type_2d(J, is_jacobian_field_symmetric);
+  cp.tag = e.to_integer(m);
+  cp.ordinal = e.is_ordinal(m);
+  cp.timestep = current_timestep;
 
   return true;
 } 

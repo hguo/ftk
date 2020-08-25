@@ -381,17 +381,18 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
 
     for (int k = 0; k < curve.size(); k ++) {
       const auto &cp = curve[k];
-      if (cpdims() == 2) {
-        os << "---x=(" << cp[0] << ", " << cp[1] << "), "
-           << "t=" << cp.t << ", ";
-      } else {
-        os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), " 
-           << "t=" << cp.t << ", ";
-      }
+      if (cpdims() == 2)
+        os << "---x=(" << cp[0] << ", " << cp[1] << "), ";
+      else
+        os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), ";
+
+      os << "t=" << cp.t << ", ";
+
       for (int k = 0; k < scalar_components.size(); k ++)
         os << scalar_components[k] << "=" << cp.scalar[k] << ", ";
       
       os << "type=" << critical_point_type_to_string(cpdims(), cp.type, scalar_components.size()) << ", "; 
+      os << "timestep=" << cp.timestep << ", ";
       os << "ordinal=" << cp.ordinal << ", ";
       os << "tag=" << cp.tag << std::endl;
     }

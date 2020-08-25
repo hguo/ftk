@@ -143,10 +143,13 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
   for (int k = 0; k < get_num_scalar_components(); k ++)
     cp.scalar[k] = f[0][k] * mu[0] + f[1][k] * mu[1] + f[2][k] * mu[2];
 
-  double H[2][2];
+  double H[2][2]; // hessian or jacobian
   ftk::lerp_s2m2x2(Js, mu, H);
+
   cp.type = ftk::critical_point_type_2d(H, true);
   cp.tag = i;
+  cp.ordinal = m.is_ordinal(2, i);
+  cp.timestep = current_timestep;
 
   return true;
 }
@@ -165,7 +168,6 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
       }
 
       if (filter_critical_point_type(cp)) {
-        cp.ordinal = m.is_ordinal(2, i);
         discrete_critical_points[i] = cp;
         // cp.ordinal = e.is_ordinal(m);
       }
