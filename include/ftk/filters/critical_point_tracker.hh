@@ -52,9 +52,12 @@ public: // outputs
   void write_traced_critical_points_text(const std::string& filename) const;
   void write_traced_critical_points_vtk(const std::string& filename) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_current_active_critical_points_vtk() const;
+  // vtkSmartPointer<vtkPolyData> get_current_active_critical_points_vtk() const;
   vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
 #endif
+
+  void write_sliced_critical_points_text(int t, std::ostream& os) const;
+  void write_sliced_critical_points_text(int t, const std::string& filename) const;
 
   void write_critical_points_binary(const std::string& filename) const;
   void write_critical_points_text(std::ostream& os) const;
@@ -413,16 +416,33 @@ inline void critical_point_tracker::write_critical_points_text(const std::string
 inline void critical_point_tracker::write_critical_points_text(std::ostream& os) const
 {
   for (const auto &cp : get_critical_points()) {
-    if (cpdims() == 2) {
-      os << "---x=(" << cp[0] << ", " << cp[1] << "), "
-         << "t=" << cp[2] << ", ";
-    } else {
-      os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), " 
-         << "t=" << cp[3] << ", ";
-    }
+    if (cpdims() == 2)
+      os << "---x=(" << cp[0] << ", " << cp[1] << "), ";
+    else
+      os << "---x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), ";
+
+    os << "t=" << cp.t << ", ";
     os << "scalar=" << cp.scalar[0] << ", "
        << "type=" << cp.type 
        << "ordinal" << cp.ordinal << std::endl;
+  }
+}
+
+inline void critical_point_tracker::write_sliced_critical_points_text(int t, std::ostream& os) const
+{
+  if (sliced_critical_points.find(t) == sliced_critical_points.end()) return;
+  const auto &lcps = sliced_critical_points.at(t);
+
+  for (const auto &lcp : lcps) {
+    const auto &cp = std::get<0>(lcp);
+    const int id = std::get<1>(lcp);
+   
+    os << "id=" << id << ", ";
+    if (cpdims() == 2)
+      os << "x=(" << cp[0] << ", " << cp[1] << "), ";
+    else
+      os << "x=(" << cp[0] << ", " << cp[1] << ", " << cp[2] << "), ";
+    os << endl;
   }
 }
 

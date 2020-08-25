@@ -313,8 +313,10 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           }),
           ftk::ELEMENT_SCOPE_INTERVAL, 
           func2, nthreads);
-      if (enable_streaming_trajectories)
+      if (enable_streaming_trajectories) {
         grow();
+        write_sliced_critical_points_text(current_timestep, std::cerr);
+      }
     }
     
   } else if (xl == FTK_XL_CUDA) {
