@@ -36,18 +36,19 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   } else 
     j["root_proc"] = 0; // default root proc
 
-  auto add_boolean_option = [&](const std::string& key) {
+  auto add_boolean_option = [&](const std::string& key, bool default_value) {
     if (j.contains(key)) {
       if (j[key].is_boolean()) {
         // OK
       } else 
         fatal("invalid " + key);
     } else 
-      j[key] = false;
+      j[key] = default_value;
   };
 
-  add_boolean_option("enable_streaming_trajectories");
-  add_boolean_option("enable_discarding_interval_points");
+  add_boolean_option("enable_streaming_trajectories", false);
+  add_boolean_option("enable_discarding_interval_points", false);
+  add_boolean_option("enable_discarding_degenerate_points", false);
 }
 
 void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi::communicator comm)
@@ -88,6 +89,9 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
 
   if (j["enable_discarding_interval_points"] == true)
     tracker->set_enable_discarding_interval_points(true);
+
+  if (j["enable_discarding_degenerate_points"] == true)
+    tracker->set_enable_discarding_degenerate_points(true);
 
   if (nv == 1) { // scalar field
     tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );

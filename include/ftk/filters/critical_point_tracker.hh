@@ -29,6 +29,7 @@ struct critical_point_tracker : public filter {
 
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
   void set_enable_discarding_interval_points(bool b) { enable_discarding_interval_points = b; }
+  void set_enable_discarding_degenerate_points(bool b) { enable_discarding_degenerate_points = b; }
 
   void set_type_filter(unsigned int);
 
@@ -105,11 +106,9 @@ protected:
   // scalar components
   std::vector<std::string> scalar_components = {"scalar"};
 
-  // streaming traj
   bool enable_streaming_trajectories = false;
-
-  // interval cp
   bool enable_discarding_interval_points = false;
+  bool enable_discarding_degenerate_points = false;
 };
 
 ///////

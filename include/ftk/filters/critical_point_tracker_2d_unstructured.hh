@@ -231,6 +231,10 @@ inline void critical_point_tracker_2d_unstructured::finalize()
   if (enable_discarding_interval_points)
     for (auto& traj : traced_critical_points)
       traj.discard_interval_points();
+
+  if (enable_discarding_degenerate_points)
+    for (auto& traj : traced_critical_points)
+      traj.discard_degenerate_points();
     
   update_traj_statistics();
 }

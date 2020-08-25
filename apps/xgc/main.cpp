@@ -21,7 +21,8 @@ std::string input_filename_pattern,
   output_filename;
 std::vector<std::string> input_filenames;
 bool enable_streaming_trajectories = false,
-     enable_discarding_interval_points = false;
+     enable_discarding_interval_points = false,
+     enable_discarding_degenerate_points = false;
 double sigma(0.02);
 
 void parse_arguments(int argc, char **argv)
@@ -36,6 +37,7 @@ void parse_arguments(int argc, char **argv)
     ("k,kernel", "Input/output smoothing kernel file", cxxopts::value<std::string>(kernel_filename))
     ("stream", "Streaming trajectories", cxxopts::value<bool>(enable_streaming_trajectories))
     ("discard-interval-points", "Discard interval critical points", cxxopts::value<bool>(enable_discarding_interval_points))
+    ("discard-degenerate-points", "Discard degenerate critical points", cxxopts::value<bool>(enable_discarding_degenerate_points))
     ("s,sigma", "Kernel bandwidth", cxxopts::value<double>(sigma));
   auto results = options.parse(argc, argv);
 
@@ -129,7 +131,7 @@ int main(int argc, char **argv)
   tracker.finalize();
 
   tracker.select_traj([](const ftk::critical_point_traj_t& traj) {
-    if (traj.size() < 2) return false;
+    if (traj.size() <= 2) return false;
     if (traj.max[1] /*max of psi*/ < 0.2) return false;
     if (traj.min[1] /*min of psi*/ > 0.28) return false;
     // if (traj.max[0] /*max of dpot*/ < 0.0) return false;

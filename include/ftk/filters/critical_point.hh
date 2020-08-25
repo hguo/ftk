@@ -31,8 +31,22 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
 
   void discard_interval_points() {
     critical_point_traj_t traj;
+    traj.identifier = identifier;
+    traj.loop = loop;
     for (auto i = 0; i < size(); i ++) {
       if (at(i).ordinal) 
+        traj.push_back(at(i));
+    }
+    traj.update_statistics();
+    *this = traj;
+  }
+  
+  void discard_degenerate_points() {
+    critical_point_traj_t traj;
+    traj.identifier = identifier;
+    traj.loop = loop;
+    for (auto i = 0; i < size(); i ++) {
+      if (at(i).type != 1 && at(i).type != 0) // degenerate or unknown
         traj.push_back(at(i));
     }
     traj.update_statistics();
