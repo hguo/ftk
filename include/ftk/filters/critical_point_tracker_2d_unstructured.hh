@@ -159,6 +159,11 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
     critical_point_t cp;
     if (check_simplex(i, cp)) {
       std::lock_guard<std::mutex> guard(mutex);
+
+      if (enable_ignoring_degenerate_points) {
+        if (cp.type == 0 || cp.type == 1) return;
+      }
+
       if (filter_critical_point_type(cp)) {
         cp.ordinal = m.is_ordinal(2, i);
         discrete_critical_points[i] = cp;

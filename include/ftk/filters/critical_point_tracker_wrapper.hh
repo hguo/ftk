@@ -49,6 +49,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   add_boolean_option("enable_streaming_trajectories", false);
   add_boolean_option("enable_discarding_interval_points", false);
   add_boolean_option("enable_discarding_degenerate_points", false);
+  add_boolean_option("enable_ignoring_degenerate_points", false);
 }
 
 void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi::communicator comm)
@@ -92,6 +93,9 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
 
   if (j["enable_discarding_degenerate_points"] == true)
     tracker->set_enable_discarding_degenerate_points(true);
+
+  if (j["enable_ignoring_degenerate_points"] == true)
+    tracker->set_enable_ignoring_degenerate_points(true);
 
   if (nv == 1) { // scalar field
     tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );

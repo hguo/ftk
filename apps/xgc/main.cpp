@@ -22,7 +22,8 @@ std::string input_filename_pattern,
 std::vector<std::string> input_filenames;
 bool enable_streaming_trajectories = false,
      enable_discarding_interval_points = false,
-     enable_discarding_degenerate_points = false;
+     enable_discarding_degenerate_points = false, 
+     enable_ignorning_degenerate_points = false;
 double sigma(0.02);
 
 void parse_arguments(int argc, char **argv)
@@ -38,6 +39,7 @@ void parse_arguments(int argc, char **argv)
     ("stream", "Streaming trajectories", cxxopts::value<bool>(enable_streaming_trajectories))
     ("discard-interval-points", "Discard interval critical points", cxxopts::value<bool>(enable_discarding_interval_points))
     ("discard-degenerate-points", "Discard degenerate critical points", cxxopts::value<bool>(enable_discarding_degenerate_points))
+    ("ignore-degenerate-points", "Ignore degenerate critical points", cxxopts::value<bool>(enable_ignorning_degenerate_points))
     ("s,sigma", "Kernel bandwidth", cxxopts::value<double>(sigma));
   auto results = options.parse(argc, argv);
 
