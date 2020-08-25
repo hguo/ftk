@@ -373,7 +373,8 @@ inline void critical_point_tracker::write_traced_critical_points_text(std::ostre
     
     os << "tmin=" << curve.tmin << ", tmax=" << curve.tmax << ", ";
 
-    os << "consistent_type=" << critical_point_type_to_string(cpdims(), curve.consistent_type, scalar_components.size());
+    os << "consistent_type=" << critical_point_type_to_string(cpdims(), curve.consistent_type, scalar_components.size()) << ", ";
+    os << "loop=" << curve.loop;
     os << std::endl;
 
     for (int k = 0; k < curve.size(); k ++) {
@@ -506,7 +507,8 @@ void critical_point_tracker::grow_trajectories(
     assert(linear_graphs.size() == 1);
     // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      critical_point_traj_t traj; 
+      critical_point_traj_t traj;
+      traj.loop = is_loop(linear_graphs[j], neighbors);
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       trajectories.push_back(traj);

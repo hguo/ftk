@@ -22,6 +22,7 @@ struct critical_point_t {
 
 struct critical_point_traj_t : public std::vector<critical_point_t>
 {
+  unsigned long long identifier;
   bool complete = false, loop = false;
   std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
   std::array<double, 3> bbmin, bbmax; // bounding box
