@@ -51,6 +51,7 @@ public: // outputs
   void write_traced_critical_points_text(const std::string& filename) const;
   void write_traced_critical_points_vtk(const std::string& filename) const;
 #if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_current_active_critical_points_vtk() const;
   vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
 #endif
 

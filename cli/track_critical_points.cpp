@@ -30,8 +30,6 @@ std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
-bool use_type_filter = false;
-unsigned int type_filter = 0;
 bool enable_streaming_trajectories = false, 
      enable_discarding_interval_points = false;
 
@@ -121,21 +119,6 @@ int parse_arguments(int argc, char **argv)
       output_format = str_text;
   }
   
-  // configure tracker
-  if (type_filter_str.size() > 0) {
-    if (type_filter_str.find(str_critical_point_type_min) != std::string::npos)
-      type_filter |= ftk::CRITICAL_POINT_2D_MINIMUM;
-    if (type_filter_str.find(str_critical_point_type_max) != std::string::npos)
-      type_filter |= ftk::CRITICAL_POINT_2D_MAXIMUM;
-    if (type_filter_str.find(str_critical_point_type_saddle) != std::string::npos)
-      type_filter |= ftk::CRITICAL_POINT_2D_SADDLE;
-    if (type_filter) use_type_filter = true;
-    else {
-    	use_type_filter = false;
-    	// fatal("Invalid type filter");
-    }
-  }
-
   nlohmann::json jt;
   if (enable_streaming_trajectories) 
     jt["enable_streaming_trajectories"] = true;
@@ -143,10 +126,7 @@ int parse_arguments(int argc, char **argv)
   if (enable_discarding_interval_points)
     jt["enable_discarding_interval_points"] = true;
 
-  // auto tracker = wrapper.get_tracker();
-  // if (use_type_filter)
-  //   tracker->set_type_filter(type_filter);
-  // tracker->set_enable_streaming_trajectories( enable_streaming_trajectories );
+  jt["type_filter"] = type_filter_str;
 
   wrapper.configure(jt);
 
@@ -157,7 +137,7 @@ int parse_arguments(int argc, char **argv)
     std::cerr << "config=" << wrapper.get_json() << std::endl;
     fprintf(stderr, "output_filename=%s\n", output_filename.c_str());
     fprintf(stderr, "output_format=%s\n", output_format.c_str());
-    fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
+    // fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
     fprintf(stderr, "=============\n");
   }

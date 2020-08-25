@@ -149,6 +149,20 @@ inline void critical_point_tracker_2d_regular::finalize()
                 neighbors.insert(f1);
             }
             return neighbors;
+#if 0
+            std::set<element_t> strict_neighbors;
+            if (discrete_critical_points.find(f) != discrete_critical_points.end()) {
+              for (const auto neighbor : neighbors) {
+                if (discrete_critical_points.find(neighbor) != discrete_critical_points.end()) {
+                  if (discrete_critical_points.at(neighbor).type == discrete_critical_points.at(f).type)
+                    strict_neighbors.insert(neighbor);
+                }
+              }
+            }
+
+            fprintf(stderr, "size_strict_neighbors=%ld\n", strict_neighbors.size());
+            return strict_neighbors;
+#endif
       });
 
       // trace_intersections();
@@ -252,6 +266,20 @@ inline void critical_point_tracker_2d_regular::update_timestep()
               neighbors.insert(f1);
           }
           return neighbors;
+#if 0
+          std::set<element_t> strict_neighbors;
+          if (discrete_critical_points.find(f) != discrete_critical_points.end()) {
+            for (const auto neighbor : neighbors) {
+              if (discrete_critical_points.find(neighbor) != discrete_critical_points.end()) {
+                if (discrete_critical_points.at(neighbor).type == discrete_critical_points.at(f).type)
+                  strict_neighbors.insert(neighbor);
+              }
+            }
+          }
+
+          fprintf(stderr, "size_strict_neighbors=%ld\n", strict_neighbors.size());
+          return strict_neighbors;
+#endif
         }, 
         [&](unsigned long long tag) {
           return element_t(m, 2, tag);
@@ -272,8 +300,6 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         }), 
         ftk::ELEMENT_SCOPE_ORDINAL, 
         func2, nthreads);
-    // if (enable_streaming_trajectories)
-    //   grow();
 
     if (field_data_snapshots.size() >= 2) { // interval
       // m.element_for_interval(2, current_timestep-1, current_timestep, func2);

@@ -36,6 +36,13 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   } else 
     j["root_proc"] = 0; // default root proc
 
+  if (j.contains("type_filter")) {
+    if (j["type_filter"].is_string()) {
+      // OK
+    } else 
+      fatal("invalid type_filter");
+  }
+
   auto add_boolean_option = [&](const std::string& key, bool default_value) {
     if (j.contains(key)) {
       if (j[key].is_boolean()) {
@@ -96,6 +103,20 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
 
   if (j["enable_ignoring_degenerate_points"] == true)
     tracker->set_enable_ignoring_degenerate_points(true);
+
+  if (j.contains("type_filter")) {
+    const std::string str = j["type_filter"];
+    unsigned int type_filter = 0;
+    if (str.find("min") != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_MINIMUM;
+    if (str.find("max") != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_MAXIMUM;
+    if (str.find("saddle") != std::string::npos)
+      type_filter |= ftk::CRITICAL_POINT_2D_SADDLE;
+
+    if (type_filter)
+      tracker->set_type_filter(type_filter);
+  }
 
   if (nv == 1) { // scalar field
     tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );
