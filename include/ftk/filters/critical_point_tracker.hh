@@ -553,6 +553,7 @@ std::vector<critical_point_traj_t> critical_point_tracker::trace_critical_points
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
       critical_point_traj_t traj; 
+      traj.loop = is_loop(linear_graphs[j], neighbors);
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points.at(linear_graphs[j][k]));
       traced_critical_points.emplace_back(traj);
