@@ -41,10 +41,11 @@ struct critical_point_tracker : public filter {
   void select_traj(std::function<bool(const critical_point_traj_t& traj)>);
 
 public: // outputs
-  const std::vector<critical_point_traj_t>& get_traced_critical_points() {return traced_critical_points;}
+  const std::vector<critical_point_traj_t>& get_traced_critical_points() const {return traced_critical_points;}
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
 
-  const std::vector<std::vector<critical_point_t>>& intercept_traced_critical_points(double t0, double t1);
+  void slice_latest_traced_critical_points() const;
+  // const std::vector<std::tuple<critical_point_t, int>> slice_traced_critical_points(int t) const;
 
   void write_traced_critical_points_binary(const std::string& filename) const;
   void write_traced_critical_points_text(std::ostream& os) const;
@@ -100,6 +101,7 @@ protected:
   
   // std::vector<std::vector<critical_point_t>> traced_critical_points;
   std::vector<critical_point_traj_t> traced_critical_points;
+  std::map<int/*time*/, std::vector<std::tuple<critical_point_t, int/*id*/>>> sliced_critical_points;
 
   // type filter
   bool use_type_filter = false;
@@ -449,7 +451,8 @@ void critical_point_tracker::grow_trajectories(
   if (!is_root_proc()) return;
 
   // 1. continue existing trajectories
-  for (auto &traj : trajectories) {
+  for (auto k = 0; k < trajectories.size(); k ++) {
+    auto &traj = trajectories[k];
     if (traj.complete) continue;
     bool continued = false;
 
@@ -462,7 +465,10 @@ void critical_point_tracker::grow_trajectories(
         if (discrete_critical_points.find(i) != discrete_critical_points.end()) 
         {
           current = i;
-          traj.push_back(discrete_critical_points[current]);
+          const auto cp = discrete_critical_points[current];
+          if (cp.ordinal)
+            sliced_critical_points[cp.timestep].push_back(std::make_tuple(cp, k));
+          traj.push_back(cp);
           discrete_critical_points.erase(current);
           has_next = true;
           continued = true;
@@ -483,7 +489,10 @@ void critical_point_tracker::grow_trajectories(
         {
           // fprintf(stderr, "tracing backwards!!\n");
           current = i;
-          traj.insert(traj.begin(), discrete_critical_points[current]); // TODO: improve performance by using list instead of vector
+          const auto cp = discrete_critical_points[current];
+          if (cp.ordinal)
+            sliced_critical_points[cp.timestep].push_back(std::make_tuple(cp, k));
+          traj.insert(traj.begin(), cp); // TODO: improve performance by using list instead of vector
           discrete_critical_points.erase(current);
           has_next = true;
           continued = true;
@@ -510,10 +519,17 @@ void critical_point_tracker::grow_trajectories(
     assert(linear_graphs.size() == 1);
     // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
     for (int j = 0; j < linear_graphs.size(); j ++) {
+      const auto &linear_graph = linear_graphs[j];
       critical_point_traj_t traj;
-      traj.loop = is_loop(linear_graphs[j], neighbors);
-      for (int k = 0; k < linear_graphs[j].size(); k ++)
-        traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
+      traj.loop = is_loop(linear_graph, neighbors);
+
+      const int new_id = trajectories.size();
+      for (int k = 0; k < linear_graph.size(); k ++) {
+        const auto &cp = discrete_critical_points[linear_graph[k]];
+        traj.push_back(cp);
+        if (cp.ordinal)
+          sliced_critical_points[cp.timestep].push_back(std::make_tuple(cp, new_id));
+      }
       trajectories.push_back(traj);
       // fprintf(stderr, "birth.\n");
     }
