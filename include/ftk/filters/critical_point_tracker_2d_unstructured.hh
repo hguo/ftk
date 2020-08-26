@@ -8,7 +8,7 @@
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/bilinear_interpolation.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
-#include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
+// #include <ftk/numeric/inverse_bilinear_interpolation_solver.hh>
 #include <ftk/numeric/gradient.hh>
 #include <ftk/numeric/adjugate.hh>
 #include <ftk/numeric/symmetric_matrix.hh>

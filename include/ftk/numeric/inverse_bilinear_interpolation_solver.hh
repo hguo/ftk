@@ -70,6 +70,6 @@ bool inserve_barycentric3_linear_interpolation3(T v[3][3], T w[3][3], T lambda[4
   return false;
 }
 
-}
+} // namespace ftk
 
 #endif

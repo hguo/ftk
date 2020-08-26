@@ -3,6 +3,9 @@
 
 #include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <ftk/filters/critical_point_tracker_3d_regular.hh>
+#include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
+#include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 
@@ -19,6 +22,13 @@ struct critical_point_tracker_wrapper : public object {
   std::shared_ptr<critical_point_tracker_regular> get_tracker() {return tracker;};
 
   json get_json() const {return j;}
+
+private:
+  void configure_tracker_general(diy::mpi::communicator comm);
+  void consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm);
+  void consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm);
+
+  void write_sliced_results(int k);
 
 private:
   std::shared_ptr<critical_point_tracker_regular> tracker;
@@ -116,37 +126,74 @@ void critical_point_tracker_wrapper::configure(const json& j0)
       else j["output_format"] = "text";
     }
   }
-}
 
-void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi::communicator comm)
-{
-  if (j.is_null())
-    configure(j); // make default options
-  // std::cerr << j << std::endl;
+  if (j.contains("mesh")) { // TODO
+    static const std::set<std::string> valid_mesh_file_formats = {"vtu", "hdf5", "netcdf"};
+    // filename (required)
+    // format (optional if format can be derived)
+    // connectivity (not required for vtu)
+    // coordinates (not requried for vtu)
+    auto jm = j["mesh"];  
+    if (jm.is_object()) {
+      if (jm.contains("filename")) {
+        if (jm.is_string()) {
+          // OK
+        } else
+          fatal("missing mesh filename");
+      }
 
-  const auto js = stream.get_json();
-  const size_t nd = stream.n_dimensions(),
-               DW = js["dimensions"][0], 
-               DH = js["dimensions"][1],
-               DT = js["n_timesteps"];
-  size_t DD;
-  if (nd == 3) DD = js["dimensions"][2];
-  else DD = 0;
-  const size_t nv = stream.n_components();
+      if (jm.contains("format")) {
+        if (jm["format"].is_string()) {
+          if (valid_mesh_file_formats.find(jm["format"]) != valid_mesh_file_formats.end()) {
+            // OK
+          } else fatal("mesh format not supported");
+        } else fatal("invalid mesh format");
+      } else { // determine mesh format
+        const std::string f = jm["filename"];
+        if (ends_with(f, "vtu")) jm["format"] = "vtu";
+        else if (ends_with(f, "h5")) jm["format"] = "hdf5";
+        else if (ends_with(f, "nc")) jm["format"] = "netcdf";
+        else fatal("unable to determin mesh format");
+      }
 
-  if (nd == 2) {
-    tracker = std::shared_ptr<critical_point_tracker_regular>(new ftk::critical_point_tracker_2d_regular);
-    tracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
-  } else {
-    tracker = std::shared_ptr<critical_point_tracker_regular>(new ftk::critical_point_tracker_3d_regular);
-    tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+      if (jm.contains("connectivity")) {
+        if (jm["connectivity"].is_string()) {
+          // OK
+        } else fatal("invalid connectivity");
+      } else {
+        if (jm["format"] == "vtu") {
+          // OK
+        } else fatal("missing connectivity");
+      }
+      
+      if (jm.contains("coordinates")) {
+        if (jm["coordinates"].is_string()) {
+          // OK
+        } else fatal("invalid coordinates");
+      } else {
+        if (jm["format"] == "vtu") {
+          // OK
+        } else fatal("missing coordinates");
+      }
+    } else
+      fatal("invalid mesh spec");
   }
 
+  /// application specific
+  if (j.contains("xgc")) {
+    // mesh_filename
+    // smoothing_kernel_filename
+    // smoothing_kernel_size
+  }
+}
+
+void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communicator comm)
+{
+  tracker->set_communicator(comm);
   tracker->set_root_proc(j["root_proc"]);
   
   // tracker->set_number_of_threads(nthreads);
   tracker->set_input_array_partial(false); // input data are not distributed
-  tracker->set_communicator(comm);
 
   // if (use_type_filter)
   //   tracker->set_type_filter(type_filter);
@@ -176,6 +223,115 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
     if (type_filter)
       tracker->set_type_filter(type_filter);
   }
+}
+
+void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi::communicator comm)
+{
+  if (j.is_null())
+    configure(j); // make default options
+  // std::cerr << j << std::endl;
+
+  if (j.contains("xgc"))
+    consume_xgc(stream, comm);
+  else 
+    consume_regular(stream, comm);
+
+  if (j.contains("output")) {
+    if (j["output_type"] == "traced") {
+      if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
+      else tracker->write_traced_critical_points_text(j["output"]);
+    }
+  }
+}
+
+void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm)
+{
+  const auto js = stream.get_json();
+  const size_t DT = js["n_timesteps"];
+
+  const std::string mesh_filename = j["mesh"]["filename"];
+  const std::string smoothing_kernel_filename = j["xgc"]["smoothing_kernel_filename"];
+  const int smoothing_kernel_size = j["xgc"]["smoothing_kernel_size"];
+
+  // load mesh & data from hdf5
+  ftk::ndarray<int> triangles;
+  ftk::ndarray<double> coords, psi;
+
+  triangles.from_h5(mesh_filename, "/cell_set[0]/node_connect_list");
+  coords.from_h5(mesh_filename, "/coordinates/values");
+  psi.from_h5(mesh_filename, "psi");
+  
+  // build mesh
+  ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);
+  m.build_edges();
+
+  bool succ = m.read_smoothing_kernel(smoothing_kernel_filename);
+  if (!succ) {
+    m.build_smoothing_kernel(smoothing_kernel_size);
+    m.write_smoothing_kernel(smoothing_kernel_filename);
+  }
+  fprintf(stderr, "mesh loaded., %zu, %zu, %zu\n", m.n(0), m.n(1), m.n(2));
+
+  // tracker set up
+  tracker = std::shared_ptr<critical_point_tracker_2d_unstructured>(
+      new ftk::critical_point_tracker_2d_unstructured(m));
+  configure_tracker_general(comm);
+
+  auto push_timestep = [&](const ftk::ndarray<double>& data) {
+    auto dpot = data.transpose();
+    dpot.reshape(dpot.dim(0));
+
+    ftk::ndarray<double> scalar, grad, J;
+    m.smooth_scalar_gradient_jacobian(dpot, smoothing_kernel_size, scalar, grad, J);
+  
+    ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
+    tracker->push_field_data_snapshot(scalars, grad, J);
+  };
+  
+  stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+    push_timestep(field_data);
+    if (k != 0) tracker->advance_timestep();
+    if (k == DT-1) tracker->update_timestep();
+
+    write_sliced_results(k);
+  });
+
+  tracker->finalize();
+}
+
+void critical_point_tracker_wrapper::write_sliced_results(int k)
+{
+  if (j.contains("output")) {
+    if (k > 0 && j["output_type"] == "sliced") {
+      const std::string pattern = j["output"];
+      const std::string filename = ndarray_writer<double>::filename(pattern, k-1);
+      if (j["output_format"] == "vtp")
+        tracker->write_sliced_critical_points_vtk(k-1, filename);
+      else 
+        tracker->write_sliced_critical_points_text(k-1, filename);
+    }
+  }
+}
+
+void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm)
+{
+  const auto js = stream.get_json();
+  const size_t nd = stream.n_dimensions(),
+               DW = js["dimensions"][0], 
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0,
+               DT = js["n_timesteps"];
+  const size_t nv = stream.n_components();
+
+  if (nd == 2) {
+    tracker = std::shared_ptr<critical_point_tracker_regular>(new ftk::critical_point_tracker_2d_regular);
+    tracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+  } else {
+    tracker = std::shared_ptr<critical_point_tracker_regular>(new ftk::critical_point_tracker_3d_regular);
+    tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+  }
+
+  configure_tracker_general(comm);
 
   if (nv == 1) { // scalar field
     tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );
@@ -220,30 +376,14 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
     push_timestep(field_data);
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
-
-    if (j.contains("output")) {
-      if (k > 0 && j["output_type"] == "sliced") {
-        const std::string pattern = j["output"];
-        const std::string filename = ndarray_writer<double>::filename(pattern, k-1);
-        if (j["output_format"] == "vtp")
-          tracker->write_sliced_critical_points_vtk(k-1, filename);
-        else 
-          tracker->write_sliced_critical_points_text(k-1, filename);
-      }
-    }
+    
+    write_sliced_results(k);
   });
 
   stream.start();
   stream.finish();
   tracker->finalize();
   // delete tracker;
-
-  if (j.contains("output")) {
-    if (j["output_type"] == "traced") {
-      if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
-      else tracker->write_traced_critical_points_text(j["output"]);
-    }
-  }
 }
 
 }
