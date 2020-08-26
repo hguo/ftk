@@ -6,6 +6,7 @@
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
+#include <ftk/ndarray/writer.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -19,7 +20,7 @@ std::string input_filename_pattern,
   mesh_filename, 
   kernel_filename = "xgc.kernel",
   output_filename;
-std::string output_type = "traced", output_format = "vtp";
+std::string output_type = "traced", output_format = "auto";
 std::vector<std::string> input_filenames;
 bool enable_streaming_trajectories = false,
      enable_discarding_interval_points = false,
@@ -62,6 +63,11 @@ void parse_arguments(int argc, char **argv)
     fprintf(stderr, "missing mesh filename.\n");
     exit(1);
   }
+ 
+  if (output_format == "auto") {
+    if (ends_with(output_filename, str_vtp)) output_format = str_vtp;
+    else output_format = str_text;
+  }
 }
 
 int main(int argc, char **argv)
@@ -95,6 +101,9 @@ int main(int argc, char **argv)
   ftk::critical_point_tracker_2d_unstructured tracker(m);
   // tracker.set_type_filter( ftk::CRITICAL_POINT_2D_MAXIMUM );
 
+  if (output_type == "sliced") 
+    enable_streaming_trajectories = true;
+
   if (enable_streaming_trajectories)
     tracker.set_enable_streaming_trajectories(true);
 
@@ -112,6 +121,12 @@ int main(int argc, char **argv)
 
       if (t != 0) tracker.advance_timestep();
       if (t == nt-1) tracker.update_timestep();
+
+      if (t != 0 && output_type == "sliced") {
+        const auto filename = ftk::ndarray_writer<double>::filename(output_filename, t-1);
+        if (output_format == str_vtp) tracker.write_sliced_critical_points_vtk(t-1, filename);
+        else tracker.write_sliced_critical_points_text(t-1, filename);
+      }
   };
 
   if (input_filenames.size() > 1) { // track over time
@@ -144,15 +159,17 @@ int main(int argc, char **argv)
     return true;
   });
 
-  if (ends_with(output_filename, str_vtp)) {
-    // auto poly = tracker.get_discrete_critical_points_vtk();
-    auto poly = tracker.get_traced_critical_points_vtk();
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
-    writer->SetFileName(output_filename.c_str());
-    writer->SetInputData(poly);
-    writer->Write();
-  } else {
-    tracker.write_traced_critical_points_text(output_filename);
+  if (output_type == "traced") {
+    if (ends_with(output_filename, str_vtp)) {
+      // auto poly = tracker.get_discrete_critical_points_vtk();
+      auto poly = tracker.get_traced_critical_points_vtk();
+      vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
+      writer->SetFileName(output_filename.c_str());
+      writer->SetInputData(poly);
+      writer->Write();
+    } else {
+      tracker.write_traced_critical_points_text(output_filename);
+    }
   }
 
   return 0;
