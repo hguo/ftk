@@ -345,7 +345,7 @@ inline void critical_point_tracker::write_critical_points_vtk(const std::string&
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
 }
 
-inline void critical_point_tracker::write_sliced_critical_points_vtk(const std::string& filename) const 
+inline void critical_point_tracker::write_sliced_critical_points_vtk(int, const std::string&) const 
 {
   if (is_root_proc())
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
@@ -503,7 +503,7 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int t, std
    
     os << "id=" << id << ", ";
     cp.print(os, cpdims(), scalar_components);
-    os << endl;
+    os << std::endl;
   }
 }
 
