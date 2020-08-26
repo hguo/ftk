@@ -19,6 +19,7 @@ std::string input_filename_pattern,
   mesh_filename, 
   kernel_filename = "xgc.kernel",
   output_filename;
+std::string output_type = "traced", output_format = "vtp";
 std::vector<std::string> input_filenames;
 bool enable_streaming_trajectories = false,
      enable_discarding_interval_points = false,
@@ -31,9 +32,13 @@ void parse_arguments(int argc, char **argv)
   const int argc0 = argc; 
   cxxopts::Options options(argv[0]);
   options.add_options()
-    ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'",
+    ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'xgc.3d.00060.h5', 'xgc.3d.000*.h5'",
      cxxopts::value<std::string>(input_filename_pattern))
-    ("o,output", "Output file", cxxopts::value<std::string>(output_filename))
+    ("o,output", "Output file name pattern: a single file or a series of file, e.g. 'out.vtp', 'out-%03d.vtp'", cxxopts::value<std::string>(output_filename))
+    ("output-type", "Output type {discrete|traced|sliced}, by default traced", 
+     cxxopts::value<std::string>(output_type)->default_value("traced"))
+    ("output-format", "Output format {auto|text|vtp}, by default auto", 
+     cxxopts::value<std::string>(output_format)->default_value(str_auto))
     ("m,mesh", "Input mesh file", cxxopts::value<std::string>(mesh_filename))
     ("k,kernel", "Input/output smoothing kernel file", cxxopts::value<std::string>(kernel_filename))
     ("stream", "Streaming trajectories", cxxopts::value<bool>(enable_streaming_trajectories))
@@ -98,13 +103,7 @@ int main(int argc, char **argv)
 
   tracker.set_scalar_components({"dneOverne0", "psi"}); // dpot and psi
 
-  if (input_filenames.size() > 1) { // track over time
-    for (int t = 0; t < input_filenames.size(); t ++) {
-      ftk::ndarray<double> dpot;
-      dpot.from_h5(input_filenames[t], "/dneOverne0");
-      dpot = dpot.transpose();
-      dpot.reshape(dpot.dim(0)); // only use the first slice
-
+  auto process = [&](int t, int nt, const ftk::ndarray<double>& dpot) {
       ftk::ndarray<double> scalar, grad, J;
       m.smooth_scalar_gradient_jacobian(dpot, sigma, scalar, grad, J);
   
@@ -112,7 +111,17 @@ int main(int argc, char **argv)
       tracker.push_field_data_snapshot(scalars, grad, J);
 
       if (t != 0) tracker.advance_timestep();
-      if (t == input_filenames.size()-1) tracker.update_timestep();
+      if (t == nt-1) tracker.update_timestep();
+  };
+
+  if (input_filenames.size() > 1) { // track over time
+    for (int t = 0; t < input_filenames.size(); t ++) {
+      ftk::ndarray<double> dpot;
+      dpot.from_h5(input_filenames[t], "/dneOverne0");
+      dpot = dpot.transpose();
+      dpot.reshape(dpot.dim(0)); // only use the first slice
+
+      process(t, input_filenames.size(), dpot);
     }
   } else { // track over poloidal planes
     ftk::ndarray<double> dpot;
@@ -121,13 +130,7 @@ int main(int argc, char **argv)
 
     for (int k = 0; k < dpot.dim(1); k ++) {
       ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
-      m.smooth_scalar_gradient_jacobian(dpot_slice, sigma, scalar, grad, J);
-   
-      ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
-      tracker.push_field_data_snapshot(scalars, grad, J);
-
-      if (k != 0) tracker.advance_timestep();
-      if (k == dpot.dim(1)-1) tracker.update_timestep();
+      process(k, dpot.dim(1), dpot_slice);
     }
   }
   tracker.finalize();
