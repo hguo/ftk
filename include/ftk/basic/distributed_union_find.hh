@@ -144,8 +144,8 @@ private:
 struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), temporary_root_2_gids(), nonlocal_temporary_roots_2_grandparents(), ele2gid(), distributed_union_find() { 
     #if TRACK_PEAK_MEMORY
-      this->peak_memory = sizeof(*this); 
-      this->cur_memory = sizeof(*this);
+      this->cur_memory = sizeof(*this) - sizeof(int) - sizeof(double) * 2; // reduce the size of nrounds, peak_memory, and cur_memory
+      this->peak_memory = this->cur_memory; 
     #endif
   }
 
