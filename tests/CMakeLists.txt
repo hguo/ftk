@@ -67,9 +67,18 @@ target_link_libraries (test_critical_point_tracking_double_gyre_unstructured ftk
 add_executable(test_adios2 test_adios2.cpp)
 target_link_libraries (test_adios2 ftk)
 
-add_test (NAME test_critical_point_tracking_cli_woven
-  COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.txt)
+# cli test
+if (FTK_BUILD_EXECUTABLES)
+  if (FTK_HAVE_MPI)
+    add_test (NAME test_critical_point_tracking_cli_woven
+      COMMAND ${MPIEXEC} -np 1 $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.txt)
+  else ()
+    add_test (NAME test_critical_point_tracking_cli_woven
+      COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.txt)
+  endif ()
+endif ()
 
+# mpi test
 if (FTK_HAVE_MPI)
   set (maxp 4)
   foreach (p RANGE 1 ${maxp})
@@ -90,7 +99,7 @@ else () # serial only
   catch_discover_tests (test_critical_point_tracking_moving_extremum_3d)
 endif ()
 
-# for pyftk
+# pyftk
 if (FTK_BUILD_PYFTK)
   add_test (NAME test_critical_point_tracking_py
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_critical_point_tracking.py)
