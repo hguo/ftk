@@ -192,12 +192,22 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
 
   void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results);
+  
+  void update_peak_memory() {
+    int _memory = sizeof(*this); 
+
+    if(_memory > this->peak_memory) {
+      this->peak_memory = _memory;   
+    }
+  }
 
 public: 
 
   std::map<std::string, int> ele2gid; 
 
   int nchanges = 0; // # of processed unions per round = valid unions (united unions) + passing unions
+  int nrounds = 0; // # of rounds
+  int peak_memory = 0;  // # peak used memory
 
   #if OUTPUT_TIME_EACH_ROUND
     double time = 0; // time for measure duration of each round;
@@ -379,6 +389,8 @@ void import_data(std::vector<Block_Union_Find*>& blocks, diy::Master& master, di
 }
 
 void query_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
+  b->update_peak_memory();
+
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
 
@@ -780,6 +792,9 @@ void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   cp.all_reduce(b->nchanges, std::plus<int>()); 
   b->nchanges = 0;
 
+  b->nrounds += 1;
+  b->update_peak_memory(); 
+
   #if OUTPUT_TIME_EACH_ROUND
     b->time = MPI_Wtime();
   #endif
@@ -818,7 +833,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
   // Only supports exchange
   bool all_done = false;
 
-  master.foreach(&query_gid);
+  master.foreach(&query_gid); // will also update peak memory
   master.exchange();
 
   #if OUTPUT_TIME_EACH_ROUND

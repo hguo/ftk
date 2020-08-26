@@ -62,7 +62,9 @@
 #define MULTITHREAD false
 
 #define PRINT_FEATURE_DENSITY false
-#define PRINT_ELE_COUNT false
+#define PRINT_ELE_COUNT true
+
+#define PRINT_ROUND_COUNT_AND_PEAK_MEMORY true
 
 #define ALL_CRITICAL_POINT 0
 #define MAXIMUM_POINT      1
@@ -306,7 +308,23 @@ void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy
       if(world.rank() == 0) {
         std::cout << "UF: Unions of Disjoint Sets: " << end - start << " seconds. " << std::endl;
       }
-      start = end; 
+      start = MPI_Wtime(); 
+    #endif
+
+    #if PRINT_ROUND_COUNT_AND_PEAK_MEMORY
+      int total_rount_cnt = 0; 
+      MPI_Reduce(&b->nrounds, &total_rount_cnt, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); 
+
+      int total_peak_memory = 0; 
+      MPI_Reduce(&b->peak_memory, &total_peak_memory, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); 
+
+      if(world.rank() == 0) {
+        std::cout << "\t Number of Iterations per Process: " << total_rount_cnt / (double) world.size() << std::endl;
+        std::cout << "\t Peak Memory per Process: " << total_peak_memory / (double) world.size() << std::endl;
+      }
+
+      MPI_Barrier(world);
+      start = MPI_Wtime();
     #endif
   #endif
 
@@ -848,7 +866,7 @@ int main(int argc, char **argv)
 
     #if PRINT_ELE_COUNT
       if (world.rank() == 0) {
-        std::cout<<"Feature Element Count is " << feature_ele_cnt << std::endl; 
+        std::cout<<"\t Feature Element Count is " << feature_ele_cnt << std::endl; 
       }
     #endif
 
