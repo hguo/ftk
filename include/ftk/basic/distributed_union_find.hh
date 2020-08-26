@@ -122,9 +122,9 @@ public:
 
   // Statistics
   int nrounds = 0; // # of rounds
-  double peak_memory = 0;  // # peak used memory
+  int64_t peak_memory = 0;  // # peak used memory
   #if TRACK_PEAK_MEMORY
-    double cur_memory = 0;  // # current used memory
+    int64_t cur_memory = 0;  // # current used memory
   #endif
 
 private:
