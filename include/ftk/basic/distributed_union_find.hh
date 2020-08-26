@@ -122,9 +122,9 @@ public:
 
   // Statistics
   int nrounds = 0; // # of rounds
-  int peak_memory = 0;  // # peak used memory
+  double peak_memory = 0;  // # peak used memory
   #if TRACK_PEAK_MEMORY
-    int cur_memory = 0;  // # current used memory
+    double cur_memory = 0;  // # current used memory
   #endif
 
 private:
@@ -169,11 +169,13 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   void erase_element(std::string ele) {
     this->nchanges += 1;
 
-    this->eles.erase(ele);
-
     #if TRACK_PEAK_MEMORY
-      this->cur_memory -= ele.length() * sizeof(char); 
+      if(this->eles.find(ele) != this->eles.end()) {
+        this->cur_memory -= ele.length() * sizeof(char); 
+      }
     #endif
+
+    this->eles.erase(ele);
   }
 
   bool has_related_element(std::string ele, std::string related_ele) {
@@ -237,7 +239,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     assert(this->has(ele)); 
 
     #if TRACK_PEAK_MEMORY
-      this->cur_memory -= related_element.length() * sizeof(char); 
+      if(this->related_elements[ele].find(related_element) != this->related_elements[ele].end()) {
+        this->cur_memory -= related_element.length() * sizeof(char); 
+      }
     #endif
       
     this->related_elements[ele].erase(related_element); 

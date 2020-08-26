@@ -243,8 +243,8 @@ void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy
       int total_rount_cnt = 0; 
       MPI_Reduce(&b->nrounds, &total_rount_cnt, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); 
 
-      int total_peak_memory = 0; 
-      MPI_Reduce(&b->peak_memory, &total_peak_memory, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); 
+      double total_peak_memory = 0; 
+      MPI_Reduce(&b->peak_memory, &total_peak_memory, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); 
 
       if(world.rank() == 0) {
         std::cout << "\t Number of Iterations per Process: " << total_rount_cnt / (double) world.size() << std::endl;
