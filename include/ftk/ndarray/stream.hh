@@ -26,7 +26,7 @@ struct ndarray_stream : public object {
   //  - format (required if type is file and format is float32/float64), string.  If not 
   //    given, the format will be determined by the filename extension.  The value of this 
   //    field must be one of the follows: vti, nc, h5, float32, float64.
-  //  - variables (required if format is nc, optional for vti), array of strings.
+  //  - variables (required if format is nc/h5, optional for vti), array of strings.
   //    - the number of components is the length of the array.
   //    - if not given, the defaulat value is ["scalar"]
   //  - dimensions (required if format is floaot32/float64), array of integers, e.g.  
@@ -131,7 +131,8 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
         } else
           fatal("invalid variable name");
       }
-    }
+    } else 
+      fatal("invalid variable list");
   } else missing_variables = true;
 
   if (j.contains("type")) {
@@ -282,7 +283,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           vtkSmartPointer<vtkImageData> image = reader->GetOutput();
 
           if (j.contains("dimensions")) 
-            warn("ignorning dimensions");
+            warn("ignoring dimensions");
           int imageNd = image->GetDataDimension();
           if (imageNd == 2)
             j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1]};
@@ -357,7 +358,32 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           fatal("FTK not compiled with NetCDF.");
 #endif
         } else if (j["format"] == "h5") {
-          fatal("array stream w/ h5 not implemented yet");
+#if FTK_HAVE_HDF5
+          if (missing_variables)
+            fatal("missing variables for h5");
+
+          const std::string varname0 = j["variables"][0];
+          auto fid = H5Fopen(filename0.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+          auto did = H5Dopen2(fid, varname0.c_str(), H5P_DEFAULT);
+          auto sid = H5Dget_space(did);
+          const int h5ndims = H5Sget_simple_extent_ndims(sid);
+          hsize_t h5dims[h5ndims];
+          H5Sget_simple_extent_dims(sid, h5dims, NULL);
+
+          std::vector<size_t> dims(h5ndims);
+          for (auto i = 0; i < h5ndims; i ++)
+            dims[i] = h5dims[i];
+          std::reverse(dims.begin(), dims.end()); // in h5, the last listed dimension is the fastest-changing dimension
+          
+          if (j.contains("dimensions"))
+            warn("ignoring dimensions");
+          j["dimensions"] = dims;
+
+          H5Fclose(fid);
+#else
+          fatal("FTK not compiled with HDF5.");
+          // fatal("array stream w/ h5 not implemented yet");
+#endif
         }
       } else fatal("missing filenames");
     } else fatal("invalid input type");
@@ -488,7 +514,23 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
 template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_file_h5(int k)
 {
-  fatal("h5 not yet implemented");
+  ftk::ndarray<T> array;
+  const std::string filename = j["filenames"][k];
+#if FTK_HAVE_HDF5
+  if (is_single_component()) { // all data in one single variable; channels are automatically handled in ndarray
+    array.from_h5(filename, j["variables"][0]);
+    array.reshape(shape()); // ncdims may not be equal to nd
+  } else { // u, v, w in separate variables
+    const int nv = n_components();
+    std::vector<ftk::ndarray<T>> arrays(nv);
+    for (int i = 0; i < nv; i ++)
+      arrays[i].from_h5(filename, j["variables"][i]);
+
+    array = ndarray<T>::concat(arrays);
+  }
+#else
+  fatal("FTK not compiled with HDF5");
+#endif
   return ndarray<T>();
 }
 
