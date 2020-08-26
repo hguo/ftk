@@ -23,6 +23,7 @@
 
 #define ISDEBUG   0
 #define OUTPUT_TIME_EACH_ROUND false
+#define TRACK_PEAK_MEMORY true
 
 namespace ftk {
 template <class IdType=std::string>
@@ -37,6 +38,10 @@ struct distributed_union_find
   void add(IdType i) {
     eles.insert(i); 
     id2parent.insert(std::make_pair(i, i)); 
+
+    #if TRACK_PEAK_MEMORY
+      this->cur_memory += i.length() * sizeof(char) * 3; 
+    #endif
   }
 
   // Operations
@@ -75,6 +80,13 @@ struct distributed_union_find
 public:
   std::set<IdType> eles; 
 
+  // Statistics
+  int nrounds = 0; // # of rounds
+  int peak_memory = 0;  // # peak used memory
+  #if TRACK_PEAK_MEMORY
+    int cur_memory = 0;  // # current used memory
+  #endif
+
 private:
   // Use HashMap to support sparse union-find
   std::map<IdType, IdType> id2parent;
@@ -98,6 +110,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
       distributed_union_find::add(ele); 
       this->related_elements.insert(std::make_pair(ele, std::set<std::string>())); 
       this->has_sent_gparent_query[ele] = false;
+
+      #if TRACK_PEAK_MEMORY
+        this->cur_memory += ele.length() * sizeof(char) * 2 + sizeof(std::set<std::string>) + sizeof(bool); 
+      #endif
     }
   }
 
@@ -105,6 +121,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     this->nchanges += 1;
 
     this->eles.erase(ele);
+
+    #if TRACK_PEAK_MEMORY
+      this->cur_memory -= ele.length() * sizeof(char); 
+    #endif
   }
 
   bool has_related_element(std::string ele, std::string related_ele) {
@@ -129,6 +149,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
       if(this->all_related_elements[ele].find(related_ele) == this->all_related_elements[ele].end()) {
         this->related_elements[ele].insert(related_ele); 
         this->all_related_elements[ele].insert(related_ele); 
+
+        #if TRACK_PEAK_MEMORY
+          this->cur_memory += related_ele.length() * sizeof(char) * 2; 
+        #endif
       }
 
     } else {
@@ -149,6 +173,12 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
     assert(this->has(ele)); 
 
+    #if TRACK_PEAK_MEMORY
+      for(auto& related_ele : this->related_elements[ele]) {
+        this->cur_memory -= related_ele.length() * sizeof(char);   
+      }
+    #endif
+
     this->related_elements[ele].clear(); 
   }
 
@@ -156,6 +186,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     this->nchanges += 1;
 
     assert(this->has(ele)); 
+
+    #if TRACK_PEAK_MEMORY
+      this->cur_memory -= related_element.length() * sizeof(char); 
+    #endif
       
     this->related_elements[ele].erase(related_element); 
   }
@@ -174,6 +208,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
       if(gid >= 0) {
         this->ele2gid[ele] = gid; 
+
+        #if TRACK_PEAK_MEMORY
+          this->cur_memory += ele.length() * sizeof(char) + sizeof(int); 
+        #endif
       }
     }
   }
@@ -194,11 +232,11 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results);
   
   void update_peak_memory() {
-    int _memory = sizeof(*this); 
-
-    if(_memory > this->peak_memory) {
-      this->peak_memory = _memory;   
-    }
+    #if TRACK_PEAK_MEMORY
+      if(this->cur_memory > this->peak_memory) {
+        this->peak_memory = this->cur_memory;   
+      }
+    #endif
   }
 
 public: 
@@ -206,8 +244,6 @@ public:
   std::map<std::string, int> ele2gid; 
 
   int nchanges = 0; // # of processed unions per round = valid unions (united unions) + passing unions
-  int nrounds = 0; // # of rounds
-  int peak_memory = 0;  // # peak used memory
 
   #if OUTPUT_TIME_EACH_ROUND
     double time = 0; // time for measure duration of each round;

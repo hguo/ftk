@@ -1,5 +1,11 @@
-#include <ftk/basic/distributed_union_find.hh>
-// #include <ftk/basic/distributed_union_find_Iverson.hh>
+
+#define USING_OUR_METHOD true // true -> our method, false -> baseline Iverson et al.'s method
+
+  #if USING_OUR_METHOD
+    #include <ftk/basic/distributed_union_find.hh>
+  #else
+    #include <ftk/basic/distributed_union_find_Iverson.hh>
+  #endif
 
 #include "feature.hpp"
 #include <hypermesh/regular_simplex_mesh.hh>

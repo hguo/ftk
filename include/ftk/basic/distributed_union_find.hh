@@ -23,12 +23,14 @@
 
 #define ISDEBUG   0
 #define OUTPUT_TIME_EACH_ROUND false
+#define TRACK_PEAK_MEMORY true
 
 namespace ftk {
 template <class IdType=std::string>
 struct distributed_union_find
 {
-  distributed_union_find() : eles(), id2parent(), parent2oldchildren(), nonlocal_temporary_roots(), not_nonlocal_temporary_roots() {
+  // , parent2oldchildren()
+  distributed_union_find() : eles(), id2parent(), nonlocal_temporary_roots(), not_nonlocal_temporary_roots() {
 
   }
 
@@ -37,6 +39,10 @@ struct distributed_union_find
   void add(IdType i) {
     eles.insert(i); 
     id2parent.insert(std::make_pair(i, i)); 
+
+    #if TRACK_PEAK_MEMORY
+      this->cur_memory += i.length() * sizeof(char) * 3; 
+    #endif
   }
 
   // Operations
@@ -57,10 +63,24 @@ struct distributed_union_find
   void add_nonlocal_temporary_root(IdType temporary_root) {
     if(not_nonlocal_temporary_roots.find(temporary_root) == not_nonlocal_temporary_roots.end()) {
       nonlocal_temporary_roots.insert(temporary_root); 
+
+      #if TRACK_PEAK_MEMORY
+        this->cur_memory += temporary_root.length() * sizeof(char); 
+      #endif
     }
   }
 
   void erase_nonlocal_temporary_root(IdType temporary_root) {
+    #if TRACK_PEAK_MEMORY
+      if(nonlocal_temporary_roots.find(temporary_root) != nonlocal_temporary_roots.end()) {
+        this->cur_memory -= temporary_root.length() * sizeof(char); 
+      }
+
+      if(not_nonlocal_temporary_roots.find(temporary_root) == not_nonlocal_temporary_roots.end()) {
+        this->cur_memory += temporary_root.length() * sizeof(char); 
+      }
+    #endif
+
     nonlocal_temporary_roots.erase(temporary_root); 
     not_nonlocal_temporary_roots.insert(temporary_root); 
   }
@@ -77,11 +97,11 @@ struct distributed_union_find
     return id2parent[i]; 
   }
 
-  const std::vector<IdType>& old_children(IdType i) {
-    assert(has(i));
+  // const std::vector<IdType>& old_children(IdType i) {
+  //   assert(has(i));
 
-    return parent2oldchildren[i]; 
-  }
+  //   return parent2oldchildren[i]; 
+  // }
 
   bool is_nonlocal_temporary_root(IdType i) {
     if(this->nonlocal_temporary_roots.find(i) != this->nonlocal_temporary_roots.end()) {
@@ -100,10 +120,17 @@ struct distributed_union_find
 public:
   std::set<IdType> eles; 
 
+  // Statistics
+  int nrounds = 0; // # of rounds
+  int peak_memory = 0;  // # peak used memory
+  #if TRACK_PEAK_MEMORY
+    int cur_memory = 0;  // # current used memory
+  #endif
+
 private:
   // Use HashMap to support sparse union-find
   std::map<IdType, IdType> id2parent;
-  std::map<IdType, std::vector<IdType>> parent2oldchildren; 
+  // std::map<IdType, std::vector<IdType>> parent2oldchildren; 
 
   std::set<IdType> nonlocal_temporary_roots;
 
@@ -116,7 +143,10 @@ private:
 // DIY Block for distributed union-find
 struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), temporary_root_2_gids(), nonlocal_temporary_roots_2_grandparents(), ele2gid(), distributed_union_find() { 
-    
+    #if TRACK_PEAK_MEMORY
+      this->peak_memory = sizeof(*this); 
+      this->cur_memory = sizeof(*this);
+    #endif
   }
 
   // add an element
@@ -129,6 +159,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
       distributed_union_find::add(ele); 
       this->related_elements.insert(std::make_pair(ele, std::set<std::string>())); 
       this->has_sent_gparent_query[ele] = false;
+
+      #if TRACK_PEAK_MEMORY
+        this->cur_memory += ele.length() * sizeof(char) * 2 + sizeof(std::set<std::string>) + sizeof(bool); 
+      #endif
     }
   }
 
@@ -136,6 +170,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     this->nchanges += 1;
 
     this->eles.erase(ele);
+
+    #if TRACK_PEAK_MEMORY
+      this->cur_memory -= ele.length() * sizeof(char); 
+    #endif
   }
 
   bool has_related_element(std::string ele, std::string related_ele) {
@@ -160,6 +198,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
       if(this->all_related_elements[ele].find(related_ele) == this->all_related_elements[ele].end()) {
         this->related_elements[ele].insert(related_ele); 
         this->all_related_elements[ele].insert(related_ele); 
+
+        #if TRACK_PEAK_MEMORY
+          this->cur_memory += related_ele.length() * sizeof(char) * 2; 
+        #endif
       }
 
     } else {
@@ -180,6 +222,12 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
     assert(this->has(ele)); 
 
+    #if TRACK_PEAK_MEMORY
+      for(auto& related_ele : this->related_elements[ele]) {
+        this->cur_memory -= related_ele.length() * sizeof(char);   
+      }
+    #endif
+
     this->related_elements[ele].clear(); 
   }
 
@@ -187,6 +235,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
     this->nchanges += 1;
 
     assert(this->has(ele)); 
+
+    #if TRACK_PEAK_MEMORY
+      this->cur_memory -= related_element.length() * sizeof(char); 
+    #endif
       
     this->related_elements[ele].erase(related_element); 
   }
@@ -205,6 +257,10 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
       if(gid >= 0) {
         this->ele2gid[ele] = gid; 
+
+        #if TRACK_PEAK_MEMORY
+          this->cur_memory += ele.length() * sizeof(char) + sizeof(int); 
+        #endif
       }
     }
   }
@@ -252,20 +308,18 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results);
 
   void update_peak_memory() {
-    int _memory = sizeof(*this); 
-
-    if(_memory > this->peak_memory) {
-      this->peak_memory = _memory;   
-    }
+    #if TRACK_PEAK_MEMORY
+      if(this->cur_memory > this->peak_memory) {
+        this->peak_memory = this->cur_memory;   
+      }
+    #endif
   }
-
+  
 public: 
 
   std::map<std::string, int> ele2gid; 
 
   int nchanges = 0; // # of processed unions per round = valid unions (united unions) + passing unions
-  int nrounds = 0; // # of rounds
-  int peak_memory = 0;  // # peak used memory
 
   #if OUTPUT_TIME_EACH_ROUND
     double time = 0; // time for measure duration of each round;
@@ -574,10 +628,27 @@ void send_erase_temporary_root_to_all_processes(Block_Union_Find* b, const diy::
         cp.enqueue(l->target(l->find(gid)), send_msg); 
 
         if(is_known) {
+          #if TRACK_PEAK_MEMORY
+            if(b->temporary_root_2_gids.find(grandparent) == b->temporary_root_2_gids.end()) {
+              b->cur_memory += grandparent.length() * sizeof(char) + sizeof(std::set<int>); 
+              b->cur_memory += sizeof(int); 
+            } else {
+              if(b->temporary_root_2_gids[grandparent].find(gid) == b->temporary_root_2_gids[grandparent].end()) {
+                b->cur_memory += sizeof(int); 
+              }
+            }
+          #endif
+
           b->temporary_root_2_gids[grandparent].insert(gid); 
         }
 
       }
+
+      #if TRACK_PEAK_MEMORY
+        b->cur_memory -= sizeof(int) * b->temporary_root_2_gids[parent].size(); 
+        b->cur_memory -= parent.length() * sizeof(char) + sizeof(std::set<int>); 
+      #endif
+
       b->temporary_root_2_gids.erase(parent); 
     }
 
@@ -674,6 +745,14 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
         }
       }
     }
+
+    #if TRACK_PEAK_MEMORY
+      for(auto& _tmp : b->nonlocal_temporary_roots_2_grandparents) {
+        b->cur_memory -= _tmp.first.length() * sizeof(char); 
+        b->cur_memory -= _tmp.second.length() * sizeof(char); 
+      }
+    #endif
+
     b->nonlocal_temporary_roots_2_grandparents.clear();
   }
 
@@ -773,6 +852,17 @@ void distributed_answer_gparent_query(Block_Union_Find* b, const diy::Master::Pr
   bool is_known = b->is_temporary_root(grandparent); 
 
   if(is_known) {
+    #if TRACK_PEAK_MEMORY
+      if(b->temporary_root_2_gids.find(grandparent) == b->temporary_root_2_gids.end()) {
+        b->cur_memory += grandparent.length() * sizeof(char) + sizeof(std::set<int>); 
+        b->cur_memory += sizeof(int); 
+      } else {
+        if(b->temporary_root_2_gids[grandparent].find(gid_child) == b->temporary_root_2_gids[grandparent].end()) {
+          b->cur_memory += sizeof(int); 
+        }
+      }
+    #endif
+
     b->temporary_root_2_gids[grandparent].insert(gid_child);
   }
 
@@ -796,6 +886,14 @@ void distributed_erase_temporary_root (Block_Union_Find* b, const diy::Master::P
   msg.rec_erase_temporary_root(parent, grandparent, gid_grandparent, is_known); // Erase an temporary root, and if some elements' parents are this temporary root before, we replace with the grandparent
 
   b->set_gid(grandparent, gid_grandparent); 
+
+
+  #if TRACK_PEAK_MEMORY
+    if(b->nonlocal_temporary_roots_2_grandparents.find(parent) == b->nonlocal_temporary_roots_2_grandparents.end()) {
+      b->cur_memory += parent.length() * sizeof(char) + grandparent.length() * sizeof(char);
+    }        
+  #endif
+
   b->nonlocal_temporary_roots_2_grandparents[parent] = grandparent;
   b->erase_nonlocal_temporary_root(parent); 
 
