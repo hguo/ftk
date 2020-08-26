@@ -16,6 +16,20 @@ jobs:
       os: osx
       osx_image: xcode11
     
+    - name: build with python3 (linux)
+      os: linux
+      dist: bionic
+      python: "3.8"
+      before_install:
+        - pyenv local 3.8.1
+        - pip3 install numpy
+      addons:
+        apt:
+          packages:
+            - python-dev
+      env:
+        - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON -DFTK_BUILD_EXECUTABLES=OFF"
+
     - name: build with mpsolve (linux)
       os: linux
       dist: bionic
@@ -129,19 +143,6 @@ jobs:
         - UBUNTU_VERSION=ubuntu1804
         - CPATH=/usr/local/cuda-10.1/include
         - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DFTK_USE_CUDA=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-10.1"
-
-    - name: build with python3 (linux)
-      os: linux
-      dist: bionic
-      python: "3.8"
-      before_install:
-        - pyenv local 3.8.1
-      addons:
-        apt:
-          packages:
-            - python-dev
-      env:
-        - CMAKE_ARG="-DFTK_BUILD_PYFTK=ON -DFTK_BUILD_EXECUTABLES=OFF"
 
 
   allow_failures:
