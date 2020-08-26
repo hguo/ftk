@@ -24,8 +24,7 @@
 #endif
   
 // global variables
-std::string output_filename,
-  output_format;
+std::string output_filename, output_type, output_format;
 std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
@@ -50,21 +49,23 @@ int parse_arguments(int argc, char **argv)
 
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
-    ("o,output", "Output file", 
+    ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_filename))
+    ("output-type", "Output type {discrete|traced|sliced}, by default traced", 
+     cxxopts::value<std::string>(output_type)->default_value("traced"))
+    ("output-format", "Output format {auto|text|vtp}, by default auto", 
+     cxxopts::value<std::string>(output_format)->default_value(str_auto))
     ("type-filter", "Type filter: ane single or a combination of critical point types, e.g. `min', `max', `saddle', `min|max'",
      cxxopts::value<std::string>(type_filter_str))
-    ("r,output-format", "Output format (auto|text|vtp)", 
-     cxxopts::value<std::string>(output_format)->default_value(str_auto))
     ("nthreads", "Number of threads", 
      cxxopts::value<int>(nthreads))
-    ("a,accelerator", "Accelerator (none|cuda)",
+    ("a,accelerator", "Accelerator {none|cuda} (experimental)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
     ("stream",  "Stream trajectories (experimental)",
      cxxopts::value<bool>(enable_streaming_trajectories))
-    ("discard-interval-points", "Discard interval critical points", 
+    ("discard-interval-points", "Discard interval critical points (experimental)", 
      cxxopts::value<bool>(enable_discarding_interval_points))
-    ("vtk", "Show visualization with vtk", 
+    ("vtk", "Show visualization with vtk (legacy)", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
     ("help", "Print usage", cxxopts::value<bool>(help));
@@ -102,10 +103,8 @@ int parse_arguments(int argc, char **argv)
 #endif
   }
   
-  if (!show_vtk) { // output is optional if results are visualized with vtk
-    if (output_filename.empty())
-      fatal("Missing '--output'.");
-  }
+  if (output_filename.empty())
+    fatal("Missing '--output'.");
 
   if (output_format == str_auto) {
     if (ends_with(output_filename, str_ext_vtp)) {
@@ -120,6 +119,10 @@ int parse_arguments(int argc, char **argv)
   }
   
   nlohmann::json jt;
+  jt["output"] = output_filename;
+  jt["output_type"] = output_type;
+  jt["output_format"] = output_format;
+  
   if (enable_streaming_trajectories) 
     jt["enable_streaming_trajectories"] = true;
 
@@ -135,8 +138,8 @@ int parse_arguments(int argc, char **argv)
     fprintf(stderr, "SUMMARY\n=============\n");
     std::cerr << "input=" << stream.get_json() << std::endl;
     std::cerr << "config=" << wrapper.get_json() << std::endl;
-    fprintf(stderr, "output_filename=%s\n", output_filename.c_str());
-    fprintf(stderr, "output_format=%s\n", output_format.c_str());
+    // fprintf(stderr, "output_filename=%s\n", output_filename.c_str());
+    // fprintf(stderr, "output_format=%s\n", output_format.c_str());
     // fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
     fprintf(stderr, "=============\n");
@@ -147,18 +150,6 @@ int parse_arguments(int argc, char **argv)
   // assert(DT > 0);
 
   return 0;
-}
-
-
-void write_outputs()
-{
-  if (output_filename.empty()) return;
-
-  auto tracker = wrapper.get_tracker();
-  if (output_format == str_vtp) 
-    tracker->write_traced_critical_points_vtk(output_filename);
-  else if (output_format == str_text) 
-    tracker->write_traced_critical_points_text(output_filename);
 }
 
 void start_vtk_window()
@@ -212,10 +203,7 @@ int main(int argc, char **argv)
   parse_arguments(argc, argv);
   wrapper.consume(stream);
  
-  if (world.rank() == 0)
-    write_outputs();
-  
-  if (show_vtk) 
+  if (world.rank() == 0 && show_vtk) 
     start_vtk_window();
 
   return 0;

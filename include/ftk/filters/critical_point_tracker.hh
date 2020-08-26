@@ -58,6 +58,10 @@ public: // outputs
 
   void write_sliced_critical_points_text(int t, std::ostream& os) const;
   void write_sliced_critical_points_text(int t, const std::string& filename) const;
+  void write_sliced_critical_points_vtk(int t, const std::string& filename) const;
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_sliced_critical_points_vtk(int t) const;
+#endif
 
   void write_critical_points_binary(const std::string& filename) const;
   void write_critical_points_text(std::ostream& os) const;
@@ -82,6 +86,7 @@ public: // inputs
   void push_scalar_field_spacetime(const ndarray<double>& scalars);
   
   virtual void set_current_timestep(int t) {current_timestep = t;}
+  int get_current_timestep() const {return current_timestep;}
 
 protected:
   template <typename I> // mesh element type
@@ -181,6 +186,14 @@ inline void critical_point_tracker::write_traced_critical_points_vtk(const std::
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_traced_critical_points_vtk();
+    write_vtp(filename, poly);
+  }
+}
+
+inline void critical_point_tracker::write_sliced_critical_points_vtk(int k, const std::string& filename) const
+{
+  if (comm.rank() == get_root_proc()) {
+    auto poly = get_sliced_critical_points_vtk(k);
     write_vtp(filename, poly);
   }
 }
@@ -331,6 +344,12 @@ inline void critical_point_tracker::write_critical_points_vtk(const std::string&
   if (is_root_proc())
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
 }
+
+inline void critical_point_tracker::write_sliced_critical_points_vtk(const std::string& filename) const 
+{
+  if (is_root_proc())
+    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
+}
 #endif
 
 inline void critical_point_tracker::write_traced_critical_points_binary(const std::string& filename) const
@@ -404,11 +423,74 @@ inline void critical_point_tracker::write_critical_points_text(const std::string
   }
 }
 
+inline void critical_point_tracker::write_sliced_critical_points_text(int k, const std::string& filename) const
+{
+  if (is_root_proc()) {
+    std::ofstream out(filename);
+    write_sliced_critical_points_text(k, out);
+    out.close();
+  }
+}
+
 inline void critical_point_tracker::write_critical_points_text(std::ostream& os) const
 {
   for (const auto &cp : get_critical_points())
     cp.print(os, cpdims(), scalar_components) << std::endl;
 }
+
+#if FTK_HAVE_VTK
+inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_sliced_critical_points_vtk(int t) const
+{
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+
+  if (sliced_critical_points.find(t) == sliced_critical_points.end()) 
+    return polyData;
+  const auto &lcps = sliced_critical_points.at(t);
+  fprintf(stderr, "converting %d to vtk, n=%zu\n", t, lcps.size());
+  
+  vtkIdType pid[1];
+  for (const auto &lcp : lcps) {
+    const auto &cp = std::get<0>(lcp);
+    double p[3] = {cp[0], cp[1], cp[2]};
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  polyData->SetPoints(points);
+  polyData->SetVerts(vertices);
+  
+  // types & ids
+  vtkSmartPointer<vtkIntArray> ids = vtkSmartPointer<vtkIntArray>::New();
+  ids->SetName("id");
+  ids->SetNumberOfValues(lcps.size());
+  
+  vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
+  types->SetName("type");
+  types->SetNumberOfValues(lcps.size());
+
+  for (auto i = 0; i < lcps.size(); i ++) {
+    ids->SetValue(i, std::get<1>(lcps[i]));
+    types->SetValue(i, std::get<0>(lcps[i]).type);
+  }
+
+  polyData->GetPointData()->AddArray(ids);
+  polyData->GetPointData()->AddArray(types);
+  polyData->GetPointData()->SetActiveScalars("id");
+  
+  for (auto k = 0; k < scalar_components.size(); k ++) {
+    vtkSmartPointer<vtkDoubleArray> scalar = vtkSmartPointer<vtkDoubleArray>::New();
+    scalar->SetNumberOfValues(lcps.size());
+    for (auto i = 0; i < lcps.size(); i ++)
+      scalar->SetValue(i, std::get<0>(lcps[i]).scalar[k]);
+    scalar->SetName(scalar_components[k].c_str());
+    polyData->GetPointData()->AddArray(scalar);
+  }
+
+  return polyData;
+}
+#endif
 
 inline void critical_point_tracker::write_sliced_critical_points_text(int t, std::ostream& os) const
 {
@@ -537,7 +619,7 @@ void critical_point_tracker::grow_trajectories(
   // 3. clear discrete critical points
   discrete_critical_points.clear();
 
-  write_sliced_critical_points_text(current_timestep, std::cerr);
+  // write_sliced_critical_points_text(current_timestep, std::cerr);
 }
 
 inline void critical_point_tracker::update_traj_statistics()
