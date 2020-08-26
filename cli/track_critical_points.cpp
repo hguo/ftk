@@ -35,7 +35,8 @@ bool enable_streaming_trajectories = false,
 // xgc specific
 bool xgc = false;
 std::string xgc_mesh_filename, 
-  xgc_smoothing_kernel_filename = "xgc.kernel";
+  xgc_smoothing_kernel_filename = "xgc.kernel",
+  xgc_write_back_filename;
 double xgc_smoothing_kernel_size = 0.03;
 
 // tracker and input stream
@@ -55,10 +56,10 @@ int parse_arguments(int argc, char **argv)
 
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
-    ("xgc", "XGC (experimental)", cxxopts::value<bool>(xgc))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
     ("xgc-smoothing-kernel-file", "XGC smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
+    ("xgc-write-back", "XGC write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_filename))
     ("output-type", "Output type {discrete|traced|sliced}, by default traced", 
@@ -141,11 +142,13 @@ int parse_arguments(int argc, char **argv)
 
   jt["type_filter"] = type_filter_str;
 
-  if (xgc) {
+  if (xgc_mesh_filename.size() > 0) {
     nlohmann::json jx;
     jx["mesh_filename"] = xgc_mesh_filename;
     jx["smoothing_kernel_filename"] = xgc_smoothing_kernel_filename;
     jx["smoothing_kernel_size"] = xgc_smoothing_kernel_size;
+    if (xgc_write_back_filename.size() > 0)
+      jx["write_back_filename"] = xgc_write_back_filename;
     jt["xgc"] = jx;
   }
 

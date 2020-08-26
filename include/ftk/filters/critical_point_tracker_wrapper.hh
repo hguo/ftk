@@ -299,7 +299,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
   tracker->set_scalar_components({"dneOverne0", "psi"});
 
-  auto push_timestep = [&](const ftk::ndarray<double>& data) {
+  auto push_timestep = [&](int k, const ftk::ndarray<double>& data) {
     auto dpot = data.transpose();
     dpot.reshape(dpot.dim(0));
 
@@ -309,10 +309,16 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
     ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
 
     tracker->push_field_data_snapshot(scalars, grad, J);
+
+    if (j["xgc"].contains("write_back_filename")) { // write data back to vtu files
+      const std::string pattern = j["xgc"]["write_back_filename"];
+      const std::string filename = ndarray_writer<double>::filename(pattern, k);
+      m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
+    }
   };
   
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
-    push_timestep(field_data);
+    push_timestep(k, field_data);
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
 
@@ -326,15 +332,13 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
 void critical_point_tracker_wrapper::write_sliced_results(int k)
 {
-  if (j.contains("output")) {
-    if (k > 0 && j["output_type"] == "sliced") {
-      const std::string pattern = j["output"];
-      const std::string filename = ndarray_writer<double>::filename(pattern, k-1);
-      if (j["output_format"] == "vtp")
-        tracker->write_sliced_critical_points_vtk(k-1, filename);
-      else 
-        tracker->write_sliced_critical_points_text(k-1, filename);
-    }
+  if (k>0 && j.contains("output") && j["output_type"] == "sliced") {
+    const std::string pattern = j["output"];
+    const std::string filename = ndarray_writer<double>::filename(pattern, k-1);
+    if (j["output_format"] == "vtp")
+      tracker->write_sliced_critical_points_vtk(k-1, filename);
+    else 
+      tracker->write_sliced_critical_points_text(k-1, filename);
   }
 }
 
