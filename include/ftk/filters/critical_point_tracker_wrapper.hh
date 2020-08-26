@@ -72,8 +72,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
       // OK
     } else 
       fatal("invalid output");
-  } else 
-    fatal("empty output");
+  } // else warn("empty output");
 
   // output type
   static const std::set<std::string> valid_output_types = {
@@ -112,8 +111,10 @@ void critical_point_tracker_wrapper::configure(const json& j0)
     output_format_determined = false;
 
   if (!output_format_determined) {
-    if (ends_with(j["output"], "vtp")) j["output_format"] = "vtp";
-    else j["output_format"] = "text";
+    if (j.contains("output")) {
+      if (ends_with(j["output"], "vtp")) j["output_format"] = "vtp";
+      else j["output_format"] = "text";
+    }
   }
 }
 
@@ -220,13 +221,15 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
 
-    if (k > 0 && j["output_type"] == "sliced") {
-      const std::string pattern = j["output"];
-      const std::string filename = ndarray_writer<double>::filename(pattern, k-1);
-      if (j["output_format"] == "vtp")
-        tracker->write_sliced_critical_points_vtk(k-1, filename);
-      else 
-        tracker->write_sliced_critical_points_text(k-1, filename);
+    if (j.contains("output")) {
+      if (k > 0 && j["output_type"] == "sliced") {
+        const std::string pattern = j["output"];
+        const std::string filename = ndarray_writer<double>::filename(pattern, k-1);
+        if (j["output_format"] == "vtp")
+          tracker->write_sliced_critical_points_vtk(k-1, filename);
+        else 
+          tracker->write_sliced_critical_points_text(k-1, filename);
+      }
     }
   });
 
@@ -235,9 +238,11 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
   tracker->finalize();
   // delete tracker;
 
-  if (j["output_type"] == "traced") {
-    if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
-    else tracker->write_traced_critical_points_text(j["output"]);
+  if (j.contains("output")) {
+    if (j["output_type"] == "traced") {
+      if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
+      else tracker->write_traced_critical_points_text(j["output"]);
+    }
   }
 }
 
