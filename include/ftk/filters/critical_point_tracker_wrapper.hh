@@ -56,12 +56,39 @@ void critical_point_tracker_wrapper::configure(const json& j0)
       j[key] = default_value;
   };
 
+  auto add_string_option = [&](json &j, const std::string& key, bool required=true) {
+    if (j.contains(key)) {
+      if (j[key].is_string()) { // OK
+      } else 
+        fatal("invalid " + key);
+    } else if (required) 
+      fatal("missing " + key);
+  };
+
   add_boolean_option("enable_streaming_trajectories", false);
   add_boolean_option("enable_discarding_interval_points", false);
   add_boolean_option("enable_discarding_degenerate_points", false);
   add_boolean_option("enable_ignoring_degenerate_points", false);
 
-  //// 
+  /// application specific
+  if (j.contains("xgc")) {
+    // mesh_filename
+    // smoothing_kernel_filename
+    // smoothing_kernel_size
+    auto jx = j["xgc"];
+    if (jx.is_object()) {
+      add_string_option(jx, "mesh_filename");
+      add_string_option(jx, "smoothing_kernel_filename");
+      if (jx.contains("smoothing_kernel_size")) {
+        if (jx["smoothing_kernel_size"].is_number()) { // OK
+        } else 
+          fatal("missing xgc smoothing_kernel_size");
+      }
+    } else 
+      fatal("invalid xgc configuration");
+  }
+
+  /// general options
   if (j.contains("root_proc")) {
     if (j["root_proc"].is_number()) {
       // OK
@@ -178,13 +205,6 @@ void critical_point_tracker_wrapper::configure(const json& j0)
     } else
       fatal("invalid mesh spec");
   }
-
-  /// application specific
-  if (j.contains("xgc")) {
-    // mesh_filename
-    // smoothing_kernel_filename
-    // smoothing_kernel_size
-  }
 }
 
 void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communicator comm)
@@ -249,9 +269,9 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
   const auto js = stream.get_json();
   const size_t DT = js["n_timesteps"];
 
-  const std::string mesh_filename = j["mesh"]["filename"];
+  const std::string mesh_filename = j["xgc"]["mesh_filename"];
   const std::string smoothing_kernel_filename = j["xgc"]["smoothing_kernel_filename"];
-  const int smoothing_kernel_size = j["xgc"]["smoothing_kernel_size"];
+  const double smoothing_kernel_size = j["xgc"]["smoothing_kernel_size"];
 
   // load mesh & data from hdf5
   ftk::ndarray<int> triangles;
@@ -277,6 +297,8 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
       new ftk::critical_point_tracker_2d_unstructured(m));
   configure_tracker_general(comm);
 
+  tracker->set_scalar_components({"dneOverne0", "psi"});
+
   auto push_timestep = [&](const ftk::ndarray<double>& data) {
     auto dpot = data.transpose();
     dpot.reshape(dpot.dim(0));
@@ -285,6 +307,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
     m.smooth_scalar_gradient_jacobian(dpot, smoothing_kernel_size, scalar, grad, J);
   
     ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
+
     tracker->push_field_data_snapshot(scalars, grad, J);
   };
   
@@ -296,6 +319,8 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
     write_sliced_results(k);
   });
 
+  stream.start();
+  stream.finish();
   tracker->finalize();
 }
 

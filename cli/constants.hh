@@ -103,8 +103,9 @@ static inline nlohmann::json parse_input_json(cxxopts::ParseResult& results)
   if (results.count("var")) {
     const auto var = results["var"].as<std::string>();
     const auto vars = split(var, ",");
-    if (vars.size() == 1) j["variable"] = var;
-    else if (var.size() > 1) j["variable"] = vars; 
+    // if (vars.size() == 1) j["variable"] = var;
+    // else if (var.size() > 1) j["variable"] = vars; 
+    j["variables"] = vars;
   }
 
   if (results.count("temporal-smoothing-kernel")) j["temporal-smoothing-kernel"] = results["temporal-smoothing-kernel"].as<double>();

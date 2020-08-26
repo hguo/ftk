@@ -117,6 +117,8 @@ int main(int argc, char **argv)
       m.smooth_scalar_gradient_jacobian(dpot, sigma, scalar, grad, J);
   
       ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
+      // scalars.print_shape(std::cerr) << std::endl;
+
       tracker.push_field_data_snapshot(scalars, grad, J);
 
       if (t != 0) tracker.advance_timestep();

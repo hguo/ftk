@@ -121,7 +121,6 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
   bool succ = ftk::robust_critical_point_in_simplex2(Vf, tri);
   if (!succ) return false;
 
-  // ftk::print3x2("V", V);
   double mu[3], x[3];
   bool succ2 = ftk::inverse_lerp_s2v2(V, mu);
   if (!succ2) { // clamp to normal range

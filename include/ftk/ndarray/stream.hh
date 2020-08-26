@@ -531,7 +531,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_h5(int k)
 #else
   fatal("FTK not compiled with HDF5");
 #endif
-  return ndarray<T>();
+  return array;
 }
 
 template <typename T>
