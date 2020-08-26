@@ -68,7 +68,7 @@ add_executable(test_adios2 test_adios2.cpp)
 target_link_libraries (test_adios2 ftk)
 
 add_test (NAME test_critical_point_tracking_cli_woven
-  COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.vtp)
+  COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.txt)
 
 if (FTK_HAVE_MPI)
   set (maxp 4)
