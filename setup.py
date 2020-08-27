@@ -73,14 +73,17 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 setup(
-    name='pyftk-wordlist',
+    name='pyftk',
     version=get_ftk_version(),
     author='Hanqi Guo',
     author_email='guohanqi@gmail.com',
     description='FTK: A Feature Tracking Kit',
     url='https://github.com/hguo/ftk',
-    long_description='',
+    license='MIT',
+    long_description=open('README.md', 'r').read(),
+    long_description_content_type='text/markdown',
     ext_modules=[CMakeExtension('pyftk')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
+    install_requires=['numpy']
 )
