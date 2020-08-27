@@ -33,7 +33,6 @@ bool enable_streaming_trajectories = false,
      enable_discarding_interval_points = false;
 
 // xgc specific
-bool xgc = false;
 std::string xgc_mesh_filename, 
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_write_back_filename;
@@ -216,6 +215,20 @@ void start_vtk_window()
 #endif
 }
 
+void xgc_post_process()
+{
+  fprintf(stderr, "post processing for xgc...\n");
+  auto tracker = wrapper.get_tracker();
+  tracker->select_traj([](const ftk::critical_point_traj_t& traj) {
+    // if (traj.size() <= 2) return false;
+    if (traj.max[1] /*max of psi*/ < 0.2) return false;
+    if (traj.min[1] /*min of psi*/ > 0.28) return false;
+    // if (traj.max[0] /*max of dpot*/ < 0.0) return false;
+    if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
+    return true;
+  });
+}
+
 int main(int argc, char **argv)
 {
   diy::mpi::environment env;
@@ -223,6 +236,7 @@ int main(int argc, char **argv)
   
   parse_arguments(argc, argv);
   wrapper.consume(stream);
+  if (xgc_mesh_filename.size()>0) xgc_post_process();
   wrapper.post_process();
  
   if (world.rank() == 0 && show_vtk) 

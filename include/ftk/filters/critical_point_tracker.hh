@@ -40,7 +40,7 @@ struct critical_point_tracker : public filter {
   void update_traj_statistics();
   void select_traj(std::function<bool(const critical_point_traj_t& traj)>);
 
-  void slice_traced_critical_points(); // slice traces after finalization
+  void slice_traced_critical_points(unsigned int type_filter); // slice traces after finalization
 
 public: // outputs
   const std::vector<critical_point_traj_t>& get_traced_critical_points() const {return traced_critical_points;}
@@ -665,13 +665,13 @@ std::vector<critical_point_traj_t> critical_point_tracker::trace_critical_points
   return traced_critical_points;
 }
 
-void critical_point_tracker::slice_traced_critical_points()
+void critical_point_tracker::slice_traced_critical_points(unsigned int type_filter = 0xffffffff)
 {
   for (auto i = 0; i < traced_critical_points.size(); i ++) {
     const auto &traj = traced_critical_points[i];
     for (auto j = 0; j < traj.size(); j ++) {
       const auto &cp = traj[j];
-      if (cp.ordinal)
+      if (cp.ordinal && (cp.type & type_filter)) //  && cp.type == CRITICAL_POINT_2D_MAXIMUM)
         sliced_critical_points[cp.timestep].push_back(
             std::make_tuple(cp, i));
     }
