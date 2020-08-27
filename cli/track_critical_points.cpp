@@ -223,6 +223,7 @@ int main(int argc, char **argv)
   
   parse_arguments(argc, argv);
   wrapper.consume(stream);
+  wrapper.post_process();
  
   if (world.rank() == 0 && show_vtk) 
     start_vtk_window();

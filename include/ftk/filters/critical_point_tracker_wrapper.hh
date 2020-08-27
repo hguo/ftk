@@ -19,6 +19,8 @@ struct critical_point_tracker_wrapper : public object {
   void consume(ndarray_stream<> &stream, 
       diy::mpi::communicator comm = diy::mpi::communicator()/*MPI_COMM_WORLD*/);
 
+  void post_process();
+
   std::shared_ptr<critical_point_tracker_regular> get_tracker() {return tracker;};
 
   json get_json() const {return j;}
@@ -129,8 +131,8 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   } else 
     j["output_type"] = "traced";
 
-  if (j["output_type"] == "sliced")
-    j["enable_streaming_trajectories"] = true;
+  // if (j["output_type"] == "sliced")
+  //   j["enable_streaming_trajectories"] = true;
 
   // output format
   static const std::set<std::string> valid_output_formats = {"text", "vtp"};
@@ -255,13 +257,6 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
     consume_xgc(stream, comm);
   else 
     consume_regular(stream, comm);
-
-  if (j.contains("output")) {
-    if (j["output_type"] == "traced") {
-      if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
-      else tracker->write_traced_critical_points_text(j["output"]);
-    }
-  }
 }
 
 void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm)
@@ -313,7 +308,8 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
     if (j["xgc"].contains("write_back_filename")) { // write data back to vtu files
       const std::string pattern = j["xgc"]["write_back_filename"];
       const std::string filename = ndarray_writer<double>::filename(pattern, k);
-      m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
+      // m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
+      m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", scalar);
     }
   };
   
@@ -322,7 +318,8 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
 
-    write_sliced_results(k);
+    if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+      write_sliced_results(k-1);
   });
 
   stream.start();
@@ -332,14 +329,12 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
 void critical_point_tracker_wrapper::write_sliced_results(int k)
 {
-  if (k>0 && j.contains("output") && j["output_type"] == "sliced") {
-    const std::string pattern = j["output"];
-    const std::string filename = ndarray_writer<double>::filename(pattern, k-1);
-    if (j["output_format"] == "vtp")
-      tracker->write_sliced_critical_points_vtk(k-1, filename);
-    else 
-      tracker->write_sliced_critical_points_text(k-1, filename);
-  }
+  const std::string pattern = j["output"];
+  const std::string filename = ndarray_writer<double>::filename(pattern, k);
+  if (j["output_format"] == "vtp")
+    tracker->write_sliced_critical_points_vtk(k, filename);
+  else 
+    tracker->write_sliced_critical_points_text(k, filename);
 }
 
 void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm)
@@ -406,13 +401,32 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
     
-    write_sliced_results(k);
+    if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+      write_sliced_results(k-1);
   });
 
   stream.start();
   stream.finish();
   tracker->finalize();
   // delete tracker;
+}
+
+void critical_point_tracker_wrapper::post_process()
+{
+  if (j.contains("output")) {
+    if (j["output_type"] == "sliced") {
+      fprintf(stderr, "slicing and writing..\n");
+      tracker->slice_traced_critical_points();
+      for (const auto &kv : tracker->get_sliced_critical_points()) 
+        write_sliced_results(kv.first);
+    } 
+    else if (j["output_type"] == "traced") 
+    {
+      fprintf(stderr, "writing traced critical points..\n");
+      if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
+      else tracker->write_traced_critical_points_text(j["output"]);
+    }
+  }
 }
 
 }

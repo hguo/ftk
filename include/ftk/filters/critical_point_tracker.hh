@@ -40,12 +40,12 @@ struct critical_point_tracker : public filter {
   void update_traj_statistics();
   void select_traj(std::function<bool(const critical_point_traj_t& traj)>);
 
+  void slice_traced_critical_points(); // slice traces after finalization
+
 public: // outputs
   const std::vector<critical_point_traj_t>& get_traced_critical_points() const {return traced_critical_points;}
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
-
-  void slice_latest_traced_critical_points() const;
-  // const std::vector<std::tuple<critical_point_t, int>> slice_traced_critical_points(int t) const;
+  const std::map<int, std::vector<std::tuple<critical_point_t, int>>>& get_sliced_critical_points() const {return sliced_critical_points;}
 
   void write_traced_critical_points_binary(const std::string& filename) const;
   void write_traced_critical_points_text(std::ostream& os) const;
@@ -448,7 +448,7 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_sliced_critical_
   if (sliced_critical_points.find(t) == sliced_critical_points.end()) 
     return polyData;
   const auto &lcps = sliced_critical_points.at(t);
-  fprintf(stderr, "converting %d to vtk, n=%zu\n", t, lcps.size());
+  // fprintf(stderr, "converting %d to vtk, n=%zu\n", t, lcps.size());
   
   vtkIdType pid[1];
   for (const auto &lcp : lcps) {
@@ -663,6 +663,19 @@ std::vector<critical_point_traj_t> critical_point_tracker::trace_critical_points
   }
 
   return traced_critical_points;
+}
+
+void critical_point_tracker::slice_traced_critical_points()
+{
+  for (auto i = 0; i < traced_critical_points.size(); i ++) {
+    const auto &traj = traced_critical_points[i];
+    for (auto j = 0; j < traj.size(); j ++) {
+      const auto &cp = traj[j];
+      if (cp.ordinal)
+        sliced_critical_points[cp.timestep].push_back(
+            std::make_tuple(cp, i));
+    }
+  }
 }
 
 }
