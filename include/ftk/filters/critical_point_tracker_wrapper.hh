@@ -416,7 +416,8 @@ void critical_point_tracker_wrapper::post_process()
   if (j.contains("output")) {
     if (j["output_type"] == "sliced") {
       fprintf(stderr, "slicing and writing..\n");
-      tracker->slice_traced_critical_points();
+      if (tracker->get_sliced_critical_points().empty())
+        tracker->slice_traced_critical_points();
       for (const auto &kv : tracker->get_sliced_critical_points()) 
         write_sliced_results(kv.first);
     } 

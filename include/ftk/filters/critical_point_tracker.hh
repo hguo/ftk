@@ -38,14 +38,16 @@ struct critical_point_tracker : public filter {
   int get_num_scalar_components() const {return scalar_components.size();}
 
   void update_traj_statistics();
-  void select_traj(std::function<bool(const critical_point_traj_t& traj)>);
 
-  void slice_traced_critical_points(unsigned int type_filter); // slice traces after finalization
+  void select_trajectories(std::function<bool(const critical_point_traj_t& traj)>);
+  void select_sliced_critical_points(std::function<bool(const critical_point_t& cp)>);
+
+  void slice_traced_critical_points(); // slice traces after finalization
 
 public: // outputs
   const std::vector<critical_point_traj_t>& get_traced_critical_points() const {return traced_critical_points;}
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
-  const std::map<int, std::vector<std::tuple<critical_point_t, int>>>& get_sliced_critical_points() const {return sliced_critical_points;}
+  const std::map<int, std::map<int, critical_point_t>>& get_sliced_critical_points() const {return sliced_critical_points;}
 
   void write_traced_critical_points_binary(const std::string& filename) const;
   void write_traced_critical_points_text(std::ostream& os) const;
@@ -113,7 +115,7 @@ protected:
   
   // std::vector<std::vector<critical_point_t>> traced_critical_points;
   std::vector<critical_point_traj_t> traced_critical_points;
-  std::map<int/*time*/, std::vector<std::tuple<critical_point_t, int/*id*/>>> sliced_critical_points;
+  std::map<int/*time*/, std::map<int/*id*/, critical_point_t>> sliced_critical_points;
 
   // type filter
   bool use_type_filter = false;
@@ -452,7 +454,7 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_sliced_critical_
   
   vtkIdType pid[1];
   for (const auto &lcp : lcps) {
-    const auto &cp = std::get<0>(lcp);
+    const auto &cp = lcp.second;
     double p[3] = {cp[0], cp[1], cp[2]};
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
@@ -470,9 +472,11 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_sliced_critical_
   types->SetName("type");
   types->SetNumberOfValues(lcps.size());
 
-  for (auto i = 0; i < lcps.size(); i ++) {
-    ids->SetValue(i, std::get<1>(lcps[i]));
-    types->SetValue(i, std::get<0>(lcps[i]).type);
+  int i = 0;
+  for (const auto &kv : lcps) {
+    ids->SetValue(i, kv.first);
+    types->SetValue(i, kv.second.type);
+    i ++;
   }
 
   polyData->GetPointData()->AddArray(ids);
@@ -482,8 +486,9 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_sliced_critical_
   for (auto k = 0; k < scalar_components.size(); k ++) {
     vtkSmartPointer<vtkDoubleArray> scalar = vtkSmartPointer<vtkDoubleArray>::New();
     scalar->SetNumberOfValues(lcps.size());
-    for (auto i = 0; i < lcps.size(); i ++)
-      scalar->SetValue(i, std::get<0>(lcps[i]).scalar[k]);
+    int i = 0;
+    for (const auto &kv : lcps)
+      scalar->SetValue(i ++, kv.second.scalar[k]);
     scalar->SetName(scalar_components[k].c_str());
     polyData->GetPointData()->AddArray(scalar);
   }
@@ -497,12 +502,9 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int t, std
   if (sliced_critical_points.find(t) == sliced_critical_points.end()) return;
   const auto &lcps = sliced_critical_points.at(t);
 
-  for (const auto &lcp : lcps) {
-    const auto &cp = std::get<0>(lcp);
-    const int id = std::get<1>(lcp);
-   
-    os << "id=" << id << ", ";
-    cp.print(os, cpdims(), scalar_components);
+  for (const auto &kv: lcps) {
+    os << "id=" << kv.first << ", ";
+    kv.second.print(os, cpdims(), scalar_components);
     os << std::endl;
   }
 }
@@ -548,7 +550,7 @@ void critical_point_tracker::grow_trajectories(
           current = i;
           const auto cp = discrete_critical_points[current];
           if (cp.ordinal)
-            sliced_critical_points[cp.timestep].push_back(std::make_tuple(cp, k));
+            sliced_critical_points[cp.timestep][k] = cp;
           traj.push_back(cp);
           discrete_critical_points.erase(current);
           has_next = true;
@@ -572,7 +574,7 @@ void critical_point_tracker::grow_trajectories(
           current = i;
           const auto cp = discrete_critical_points[current];
           if (cp.ordinal)
-            sliced_critical_points[cp.timestep].push_back(std::make_tuple(cp, k));
+            sliced_critical_points[cp.timestep][k] = cp;
           traj.insert(traj.begin(), cp); // TODO: improve performance by using list instead of vector
           discrete_critical_points.erase(current);
           has_next = true;
@@ -609,7 +611,7 @@ void critical_point_tracker::grow_trajectories(
         const auto &cp = discrete_critical_points[linear_graph[k]];
         traj.push_back(cp);
         if (cp.ordinal)
-          sliced_critical_points[cp.timestep].push_back(std::make_tuple(cp, new_id));
+          sliced_critical_points[cp.timestep][new_id] = cp;
       }
       trajectories.push_back(traj);
       // fprintf(stderr, "birth.\n");
@@ -628,13 +630,25 @@ inline void critical_point_tracker::update_traj_statistics()
     traj.update_statistics();
 }
 
-inline void critical_point_tracker::select_traj(std::function<bool(const critical_point_traj_t& traj)> f)
+inline void critical_point_tracker::select_trajectories(std::function<bool(const critical_point_traj_t& traj)> f)
 {
   std::vector<critical_point_traj_t> selected_traj;
   for (const auto &traj : traced_critical_points) 
     if (f(traj))
       selected_traj.push_back(traj);
   traced_critical_points = selected_traj;
+}
+
+inline void critical_point_tracker::select_sliced_critical_points(std::function<bool(const critical_point_t& cp)> f)
+{
+  for (auto &kv : sliced_critical_points) {
+    auto &map = kv.second;
+    for (auto it = map.begin(); it != map.end(); ) 
+      if (f(it->second)) 
+        ++ it;
+      else
+        map.erase(it ++);
+  }
 }
 
 template <typename element_t>
@@ -665,15 +679,14 @@ std::vector<critical_point_traj_t> critical_point_tracker::trace_critical_points
   return traced_critical_points;
 }
 
-void critical_point_tracker::slice_traced_critical_points(unsigned int type_filter = 0xffffffff)
+inline void critical_point_tracker::slice_traced_critical_points()
 {
   for (auto i = 0; i < traced_critical_points.size(); i ++) {
     const auto &traj = traced_critical_points[i];
     for (auto j = 0; j < traj.size(); j ++) {
       const auto &cp = traj[j];
-      if (cp.ordinal && (cp.type & type_filter)) //  && cp.type == CRITICAL_POINT_2D_MAXIMUM)
-        sliced_critical_points[cp.timestep].push_back(
-            std::make_tuple(cp, i));
+      if (cp.ordinal)
+        sliced_critical_points[cp.timestep][i] = cp;
     }
   }
 }
