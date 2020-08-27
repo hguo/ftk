@@ -79,6 +79,7 @@ setup(
     author_email='guohanqi@gmail.com',
     description='FTK: A Feature Tracking Kit',
     url='https://github.com/hguo/ftk',
+    include_package_data=True,
     license='MIT',
     long_description=open('README.md', 'r').read(),
     long_description_content_type='text/markdown',

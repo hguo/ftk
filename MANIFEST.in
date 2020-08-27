@@ -1,0 +1,6 @@
+recursive-include cmake *
+recursive-include include *
+recursive-include python *
+recursive-include src *
+recursive-include tests *
+include CMakeLists.txt version.txt
