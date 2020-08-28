@@ -46,9 +46,6 @@ ftk::ndarray_stream<> stream;
 
 nlohmann::json j_tracker;
 
-// constants
-static const std::set<std::string> set_valid_output_format({str_auto, str_text, str_vtp});
-
 ///////////////////////////////
 int parse_arguments(int argc, char **argv)
 {
@@ -99,8 +96,6 @@ int parse_arguments(int argc, char **argv)
 	};
 
   // sanity check of arguments
-  if (set_valid_output_format.find(output_format) == set_valid_output_format.end())
-    fatal("invalid '--output-format'");
   if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
     fatal("invalid '--accelerator'");
 
@@ -115,18 +110,6 @@ int parse_arguments(int argc, char **argv)
   if (output_filename.empty())
     fatal("Missing '--output'.");
 
-  if (output_format == str_auto) {
-    if (ends_with(output_filename, str_ext_vtp)) {
-#if FTK_HAVE_VTK
-      output_format = str_vtp;
-#else
-      fatal("FTK not compiled with VTK.");
-#endif
-    }
-    else 
-      output_format = str_text;
-  }
-  
   nlohmann::json j_input = args_to_json(results), 
                  j_tracker;
   

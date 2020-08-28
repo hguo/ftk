@@ -106,6 +106,11 @@ void critical_point_tracker_wrapper::configure(const json& j0)
       fatal("invalid type_filter");
   }
 
+  if (j.contains("archived_discrete_critical_points_filename")) {
+    if (j["archived_discrete_critical_points_filename"].is_string()) { // OK
+    } else fatal("invalid archived_discrete_critical_points_filename");
+  }
+
   if (j.contains("output")) {
     if (j["output"].is_string()) {
       // OK
@@ -135,7 +140,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   //   j["enable_streaming_trajectories"] = true;
 
   // output format
-  static const std::set<std::string> valid_output_formats = {"text", "vtp"};
+  static const std::set<std::string> valid_output_formats = {"text", "vtp", "binary"};
   bool output_format_determined = false;
   
   if (j.contains("output_format")) {
@@ -152,7 +157,8 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   if (!output_format_determined) {
     if (j.contains("output")) {
       if (ends_with(j["output"], "vtp")) j["output_format"] = "vtp";
-      else j["output_format"] = "text";
+      else if (ends_with(j["output"], "txt")) j["output_format"] = "text";
+      else j["output_format"] = "binary";
     }
   }
 
@@ -294,6 +300,12 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
   tracker->set_scalar_components({"dneOverne0", "psi"});
 
+  if (j.contains("archived_discrete_critical_points_filename")) {
+    tracker->read_critical_points_binary(j["archived_discrete_critical_points_filename"]);
+    tracker->finalize();
+    return;
+  }
+
   auto push_timestep = [&](int k, const ftk::ndarray<double>& data) {
     auto dpot = data.transpose();
     dpot.reshape(dpot.dim(0));
@@ -376,10 +388,16 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
       rtracker->set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2})); // the indentation is needed becase the jacoobian field will be automatically derived
     }
   }
-  rtracker->initialize();
-
   tracker = rtracker;
+  
+  tracker->initialize();
   configure_tracker_general(comm);
+  
+  if (j.contains("archived_discrete_critical_points_filename")) {
+    tracker->read_critical_points_binary(j["archived_discrete_critical_points_filename"]);
+    tracker->finalize();
+    return;
+  }
 
   auto push_timestep = [&](const ftk::ndarray<double>& field_data) {
     if (nv == 1) { // scalar field
@@ -421,12 +439,15 @@ void critical_point_tracker_wrapper::post_process()
         tracker->slice_traced_critical_points();
       for (const auto &kv : tracker->get_sliced_critical_points()) 
         write_sliced_results(kv.first);
-    } 
-    else if (j["output_type"] == "traced") 
-    {
+    } else if (j["output_type"] == "traced") {
       fprintf(stderr, "writing traced critical points..\n");
       if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
       else tracker->write_traced_critical_points_text(j["output"]);
+    } else if (j["output_type"] == "discrete") {
+      fprintf(stderr, "writing discrete critical points..\n");
+      if (j["output_format"] == "vtp") tracker->write_critical_points_vtk(j["output"]);
+      else if (j["output_format"] == "text") tracker->write_critical_points_text(j["output"]);
+      else tracker->write_critical_points_binary(j["output"]);
     }
   }
 }
