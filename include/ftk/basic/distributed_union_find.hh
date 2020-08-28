@@ -23,7 +23,7 @@
 
 #define ISDEBUG   0
 #define OUTPUT_TIME_EACH_ROUND false
-#define TRACK_PEAK_MEMORY false
+#define TRACK_PEAK_MEMORY true
 
 namespace ftk {
 template <class IdType=std::string>
