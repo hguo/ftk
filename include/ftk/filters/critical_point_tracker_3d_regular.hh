@@ -52,7 +52,7 @@ extract_cp3dt_cuda(
 namespace ftk {
 
 struct critical_point_tracker_3d_regular : public critical_point_tracker_regular {
-  critical_point_tracker_3d_regular() : m(4) {}
+  critical_point_tracker_3d_regular() : critical_point_tracker_regular(3) {}
   virtual ~critical_point_tracker_3d_regular() {}
   
   int cpdims() const { return 3; }
@@ -64,17 +64,9 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   
   void push_scalar_field_snapshot(const ndarray<double>&);
   void push_vector_field_snapshot(const ndarray<double>&);
-
-  std::vector<critical_point_t> get_critical_points() const;
   
 protected:
-  simplicial_regular_mesh m;
-  
   typedef simplicial_regular_mesh_element element_t;
-  
-  std::map<element_t, critical_point_t> discrete_critical_points;
-  std::vector<std::set<element_t>> connected_components;
-  // std::vector<std::vector<critical_point_t>> traced_critical_points;
 
 protected:
   bool check_simplex(const element_t& s, critical_point_t& cp);
@@ -422,14 +414,6 @@ bool critical_point_tracker_3d_regular::check_simplex(
   if (filter_critical_point_type(cp)) return true; 
   else return false;
 } 
-
-inline std::vector<critical_point_t> critical_point_tracker_3d_regular::get_critical_points() const
-{
-  std::vector<critical_point_t> results;
-  for (const auto &kv : discrete_critical_points) 
-    results.push_back(kv.second);
-  return results;
-}
 
 }
 

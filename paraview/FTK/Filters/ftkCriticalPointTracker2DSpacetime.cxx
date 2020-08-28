@@ -76,7 +76,10 @@ int ftkCriticalPointTracker2DSpacetime::TrackCriticalPoints2DSpacetime(vtkImageD
   // tracker.set_type_filter(ftk::CRITICAL_POINT_2D_MAXIMUM);
   tracker.initialize();
 
-  tracker.push_scalar_field_spacetime(scalar);
+  for (auto t = 0; t < scalar.shape(scalar.nd()-1); t ++) 
+    tracker.push_scalar_field_snapshot(scalar.slice_time(t));
+
+  // tracker.push_scalar_field_spacetime(scalar);
   while (tracker.advance_timestep()) {}
 
   tracker.finalize();

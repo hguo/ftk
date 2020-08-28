@@ -14,8 +14,9 @@ enum {
   SOURCE_DERIVED // implicit
 };
 
+// this is an abstract class, not for users
 struct critical_point_tracker_regular : public critical_point_tracker {
-  critical_point_tracker_regular() {}
+  critical_point_tracker_regular(int nd/*2 or 3*/) : m(nd+1) {}
   virtual ~critical_point_tracker_regular() {}
 
   void set_domain(const lattice& l) {domain = l;} // spatial domain
@@ -23,8 +24,6 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   void set_start_timestep(int);
   void set_end_timestep(int);
 
-  void set_use_default_domain_partition(bool b) {use_default_domain_partition = true;}
-  void set_input_array_partial(bool b) {is_input_array_partial = b;}
   void set_local_domain(const lattice&); // rank-specific "core" region of the block
   void set_local_array_domain(const lattice&); // rank-specific "ext" region of the block
 
@@ -33,27 +32,25 @@ struct critical_point_tracker_regular : public critical_point_tracker {
   void set_jacobian_field_source(int s) {jacobian_field_source = s;}
   void set_jacobian_symmetric(bool s) {is_jacobian_field_symmetric = s;}
 
-  virtual void push_scalar_field_snapshot(const ndarray<double>&) = 0;
-  virtual void push_vector_field_snapshot(const ndarray<double>&) = 0;
-
-  virtual void initialize() = 0;
-  virtual void finalize() = 0;
-
-  virtual bool advance_timestep();
-  virtual void update_timestep() = 0;
-
   void set_coordinates(const ndarray<double>& coords_) {coords = coords_; use_explicit_coords = true;}
 
 protected:
-  bool filter_critical_point_type(const critical_point_t& cp);
+  simplicial_regular_mesh m;
+  typedef simplicial_regular_mesh_element element_t;
+  
+  std::map<element_t, critical_point_t> discrete_critical_points;
+  std::vector<std::set<element_t>> connected_components;
+
+public: // cp io
+  const std::map<element_t, critical_point_t>& get_discrete_critical_points() const {return discrete_critical_points;}
+
+  std::vector<critical_point_t> get_critical_points() const;
+  void put_critical_points(const std::vector<critical_point_t>&);
 
 protected: // config
   lattice domain, array_domain, 
           local_domain, local_array_domain;
   // lattice_partitioner partitioner;
-
-  bool use_default_domain_partition = true;
-  bool is_input_array_partial = false;
 
   int start_timestep = 0, 
       end_timestep = std::numeric_limits<int>::max();
@@ -70,26 +67,23 @@ protected:
 };
 
 /////
-inline bool critical_point_tracker_regular::advance_timestep()
+////
+inline std::vector<critical_point_t> critical_point_tracker_regular::get_critical_points() const
 {
-  update_timestep();
-  pop_field_data_snapshot();
+  std::vector<critical_point_t> results;
+  for (const auto &kv : discrete_critical_points) 
+    results.push_back(kv.second);
+  return results;
+}
 
-  current_timestep ++;
-  return field_data_snapshots.size() > 0;
-}
-  
-inline bool critical_point_tracker_regular::filter_critical_point_type(
-    const critical_point_t& cp)
+inline void critical_point_tracker_regular::put_critical_points(const std::vector<critical_point_t>& data) 
 {
-  // fprintf(stderr, "typefilter=%lu, type=%lu\n", 
-  //     type_filter, cp.type);
-  if (use_type_filter) {
-    if (type_filter & cp.type) return true;
-    else return false;
+  for (const auto& cp : data) {
+    element_t e(m, cpdims(), cp.tag);
+    discrete_critical_points[e] = cp;
   }
-  else return true;
 }
+
 
 }
 

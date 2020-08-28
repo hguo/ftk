@@ -52,7 +52,7 @@ namespace ftk {
 // typedef critical_point_t<3, double> critical_point_t;
 
 struct critical_point_tracker_2d_regular : public critical_point_tracker_regular {
-  critical_point_tracker_2d_regular() : m(3) {}
+  critical_point_tracker_2d_regular() : critical_point_tracker_regular(2) {}
   virtual ~critical_point_tracker_2d_regular() {}
 
   int cpdims() const { return 2; }
@@ -66,20 +66,9 @@ struct critical_point_tracker_2d_regular : public critical_point_tracker_regular
   void push_scalar_field_snapshot(const ndarray<double>&);
   void push_vector_field_snapshot(const ndarray<double>&);
 
-  // void write_discrete_critical_points(const std::string& filename) const;
-  // void write_discrete_critical_points_text(std::ostream &os) const;
-  
 protected:
-  simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
   
-  std::map<element_t, critical_point_t> discrete_critical_points;
-  std::vector<std::set<element_t>> connected_components;
-  
-public:
-  const std::map<element_t, critical_point_t>& get_discrete_critical_points() const {return discrete_critical_points;}
-  std::vector<critical_point_t> get_critical_points() const;
-
 protected:
   bool check_simplex(const element_t& s, critical_point_t& cp);
   void trace_intersections();
@@ -710,14 +699,6 @@ void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s
   lerp_s2v3(X, mu, cp.x);
 }
 #endif
-
-inline std::vector<critical_point_t> critical_point_tracker_2d_regular::get_critical_points() const
-{
-  std::vector<critical_point_t> results;
-  for (const auto &kv : discrete_critical_points) 
-    results.push_back(kv.second);
-  return results;
-}
 
 }
 

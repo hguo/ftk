@@ -1008,11 +1008,17 @@ inline std::vector<ndarray<T>> ndarray<T>::slice_time() const
 template <typename T>
 std::ostream& ndarray<T>::print_shape(std::ostream& os) const
 {
-  os << "array_dims={";
+  os << "nd=" << nd() << ", array_dims={";
   for (size_t i = 0; i < dims.size(); i ++) 
     if (i < dims.size()-1) os << dims[i] << ", ";
-    else os << dims[i] << "}";
-  os << std::endl;
+    else os << dims[i] << "}, ";
+  
+  os << "prod={";
+  for (size_t i = 0; i < s.size(); i ++) 
+    if (i < s.size()-1) os << s[i] << ", ";
+    else os << s[i] << "}, ";
+  
+  os << "size=" << p.size(); // << std::endl;
   return os;
 }
 
@@ -1034,6 +1040,20 @@ std::ostream& ndarray<T>::print(std::ostream& os) const
         if (i < dims[0]-1) os << at(i, j) << ", ";
         else os << at(i, j) << "]";
       if (j < dims[1]-1) os << "], ";
+      else os << "]";
+    }
+  } else if (nd() == 3) {
+    os << "[";
+    for (size_t k = 0; k < dims[2]; k ++) {
+      for (size_t j = 0; j < dims[1]; j ++) {
+        os << "[";
+        for (size_t i = 0; i < dims[0]; i ++)
+          if (i < dims[0]-1) os << at(i, j) << ", ";
+          else os << at(i, j) << "]";
+        if (j < dims[1]-1) os << "], ";
+        else os << "]";
+      }
+      if (k < dims[2]-1) os << "], ";
       else os << "]";
     }
   }

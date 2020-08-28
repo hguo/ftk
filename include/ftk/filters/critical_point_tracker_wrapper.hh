@@ -21,7 +21,7 @@ struct critical_point_tracker_wrapper : public object {
 
   void post_process();
 
-  std::shared_ptr<critical_point_tracker_regular> get_tracker() {return tracker;};
+  std::shared_ptr<critical_point_tracker> get_tracker() {return tracker;};
 
   json get_json() const {return j;}
 
@@ -33,7 +33,7 @@ private:
   void write_sliced_results(int k);
 
 private:
-  std::shared_ptr<critical_point_tracker_regular> tracker;
+  std::shared_ptr<critical_point_tracker> tracker;
   json j; // config
 
   static bool ends_with(std::string const & value, std::string const & ending) {
@@ -347,38 +347,39 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
                DT = js["n_timesteps"];
   const size_t nv = stream.n_components();
 
+  std::shared_ptr<critical_point_tracker_regular> rtracker;
   if (nd == 2) {
-    tracker = std::shared_ptr<critical_point_tracker_regular>(new ftk::critical_point_tracker_2d_regular);
-    tracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+    rtracker.reset(new ftk::critical_point_tracker_2d_regular);
+    rtracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   } else {
-    tracker = std::shared_ptr<critical_point_tracker_regular>(new ftk::critical_point_tracker_3d_regular);
-    tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+    rtracker.reset(new ftk::critical_point_tracker_3d_regular);
+    rtracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
-
-  configure_tracker_general(comm);
 
   if (nv == 1) { // scalar field
-    tracker->set_scalar_field_source( ftk::SOURCE_GIVEN );
-    tracker->set_vector_field_source( ftk::SOURCE_DERIVED );
-    tracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
-    tracker->set_jacobian_symmetric( true );
+    rtracker->set_scalar_field_source( ftk::SOURCE_GIVEN );
+    rtracker->set_vector_field_source( ftk::SOURCE_DERIVED );
+    rtracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
+    rtracker->set_jacobian_symmetric( true );
     if (nd == 2) { // 2D
-      tracker->set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+      rtracker->set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
     } else { // 3D
-      tracker->set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+      rtracker->set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
     }
   } else { // vector field
-    tracker->set_scalar_field_source( ftk::SOURCE_NONE );
-    tracker->set_vector_field_source( ftk::SOURCE_GIVEN );
-    tracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
+    rtracker->set_scalar_field_source( ftk::SOURCE_NONE );
+    rtracker->set_vector_field_source( ftk::SOURCE_GIVEN );
+    rtracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
     if (nd == 2) { // 2D
-      tracker->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
+      rtracker->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
     } else {
-      tracker->set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2})); // the indentation is needed becase the jacoobian field will be automatically derived
+      rtracker->set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2})); // the indentation is needed becase the jacoobian field will be automatically derived
     }
   }
-  tracker->initialize();
-   
+  rtracker->initialize();
+
+  tracker = rtracker;
+  configure_tracker_general(comm);
 
   auto push_timestep = [&](const ftk::ndarray<double>& field_data) {
     if (nv == 1) { // scalar field

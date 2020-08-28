@@ -38,7 +38,7 @@ namespace ftk {
 
 // typedef critical_point_t<3, double> critical_point_t;
 
-struct critical_point_tracker_2d_unstructured : public critical_point_tracker_regular
+struct critical_point_tracker_2d_unstructured : public critical_point_tracker
 {
   // critical_point_tracker_2d_unstructured(const simplicial_unstructured_extruded_2d_mesh<>& m) : m(m) {}
   // critical_point_tracker_2d_unstructured() {}
@@ -56,7 +56,9 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker_re
   void push_scalar_field_snapshot(const ndarray<double>&) {} // TODO
   void push_vector_field_snapshot(const ndarray<double>&) {} // TODO
 
+public:
   std::vector<critical_point_t> get_critical_points() const;
+  void put_critical_points(const std::vector<critical_point_t>&);
 
 protected:
   bool check_simplex(int, critical_point_t& cp);
@@ -251,6 +253,12 @@ inline std::vector<critical_point_t> critical_point_tracker_2d_unstructured::get
   for (const auto &kv : discrete_critical_points) 
     results.push_back(kv.second);
   return results;
+}
+
+inline void critical_point_tracker_2d_unstructured::put_critical_points(const std::vector<critical_point_t>& data)
+{
+  for (const auto& cp : data)
+    discrete_critical_points[cp.tag] = cp;
 }
 
 }

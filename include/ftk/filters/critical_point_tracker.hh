@@ -26,6 +26,9 @@ struct critical_point_tracker : public filter {
   }
   
   virtual int cpdims() const = 0;
+  
+  void set_input_array_partial(bool b) {is_input_array_partial = b;}
+  void set_use_default_domain_partition(bool b) {use_default_domain_partition = true;}
 
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
   void set_enable_discarding_interval_points(bool b) { enable_discarding_interval_points = b; }
@@ -43,12 +46,16 @@ struct critical_point_tracker : public filter {
   void select_sliced_critical_points(std::function<bool(const critical_point_t& cp)>);
 
   void slice_traced_critical_points(); // slice traces after finalization
+  
+public:
+  virtual void initialize() = 0;
+  virtual void finalize() = 0;
 
-public: // outputs
+  virtual bool advance_timestep();
+  virtual void update_timestep() = 0;
+
+public: // i/o for traced critical points (trajectories)
   const std::vector<critical_point_traj_t>& get_traced_critical_points() const {return traced_critical_points;}
-  virtual std::vector<critical_point_t> get_critical_points() const = 0;
-  const std::map<int, std::map<int, critical_point_t>>& get_sliced_critical_points() const {return sliced_critical_points;}
-
   void write_traced_critical_points_binary(const std::string& filename) const;
   void write_traced_critical_points_text(std::ostream& os) const;
   void write_traced_critical_points_text(const std::string& filename) const;
@@ -58,6 +65,8 @@ public: // outputs
   vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const;
 #endif
 
+public: // i/o for sliced critical points
+  const std::map<int, std::map<int, critical_point_t>>& get_sliced_critical_points() const {return sliced_critical_points;}
   void write_sliced_critical_points_text(int t, std::ostream& os) const;
   void write_sliced_critical_points_text(int t, const std::string& filename) const;
   void write_sliced_critical_points_vtk(int t, const std::string& filename) const;
@@ -65,6 +74,10 @@ public: // outputs
   vtkSmartPointer<vtkPolyData> get_sliced_critical_points_vtk(int t) const;
 #endif
 
+public: // i/o for discrete (untraced) critical points
+  virtual std::vector<critical_point_t> get_critical_points() const = 0;
+  virtual void put_critical_points(const std::vector<critical_point_t>&) = 0;
+  void read_critical_points_binary(const std::string& filename) const;
   void write_critical_points_binary(const std::string& filename) const;
   void write_critical_points_text(std::ostream& os) const;
   void write_critical_points_text(const std::string& filename) const;
@@ -79,16 +92,14 @@ public: // inputs
       const ndarray<double> &scalar, 
       const ndarray<double> &vector,
       const ndarray<double> &jacobian);
-  virtual void push_scalar_field_snapshot(const ndarray<double> &scalar); // push scalar only
+  virtual void push_scalar_field_snapshot(const ndarray<double> &scalar);
+  virtual void push_vector_field_snapshot(const ndarray<double> &vector);
 
-  virtual void push_field_data_spacetime(
-      const ndarray<double> &scalars, 
-      const ndarray<double> &vectors,
-      const ndarray<double> &jacobians);
-  void push_scalar_field_spacetime(const ndarray<double>& scalars);
-  
   virtual void set_current_timestep(int t) {current_timestep = t;}
   int get_current_timestep() const {return current_timestep;}
+
+protected:
+  bool filter_critical_point_type(const critical_point_t& cp);
 
 protected:
   template <typename I> // mesh element type
@@ -128,9 +139,24 @@ protected:
   bool enable_discarding_interval_points = false;
   bool enable_discarding_degenerate_points = false;
   bool enable_ignoring_degenerate_points = false;
+  
+  bool is_input_array_partial = false;
+  bool use_default_domain_partition = true;
 };
 
 ///////
+
+inline bool critical_point_tracker::filter_critical_point_type(
+    const critical_point_t& cp)
+{
+  // fprintf(stderr, "typefilter=%lu, type=%lu\n", 
+  //     type_filter, cp.type);
+  if (use_type_filter) {
+    if (type_filter & cp.type) return true;
+    else return false;
+  }
+  else return true;
+}
 
 inline void critical_point_tracker::push_field_data_snapshot(
     const ndarray<double>& scalar,
@@ -153,26 +179,13 @@ inline void critical_point_tracker::push_scalar_field_snapshot(const ndarray<dou
   field_data_snapshots.emplace_back(snapshot);
 }
 
-inline void critical_point_tracker::push_field_data_spacetime(
-    const ndarray<double>& scalars,
-    const ndarray<double>& vectors,
-    const ndarray<double>& jacobians)
+inline void critical_point_tracker::push_vector_field_snapshot(const ndarray<double>& vector)
 {
-  for (size_t t = 0; t < scalars.shape(scalars.nd()-1); t ++) {
-    auto scalar = scalars.slice_time(t);
-    auto vector = vectors.slice_time(t);
-    auto jacobian = jacobians.slice_time(t);
+  field_data_snapshot_t snapshot;
+  snapshot.vector = vector;
 
-    push_field_data_snapshot(scalar, vector, jacobian);
-  }
+  field_data_snapshots.emplace_back(snapshot);
 }
-
-inline void critical_point_tracker::push_scalar_field_spacetime(const ndarray<double>& scalars)
-{
-  for (size_t t = 0; t < scalars.shape(scalars.nd()-1); t ++)
-    push_scalar_field_snapshot( scalars.slice_time(t) );
-}
-
 
 inline bool critical_point_tracker::pop_field_data_snapshot()
 {
@@ -216,7 +229,7 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_critical_points_
   
   vtkIdType pid[1];
   
-  const auto critical_points = get_critical_points();
+  // const auto critical_points = get_critical_points();
   for (const auto &cp : get_critical_points()) {
     double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; // TODO: time
     pid[0] = points->InsertNextPoint(p);
@@ -353,6 +366,12 @@ inline void critical_point_tracker::write_sliced_critical_points_vtk(int, const 
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
 }
 #endif
+
+inline void critical_point_tracker::write_critical_points_binary(const std::string& filename) const 
+{
+  if (is_root_proc())
+    diy::serializeToFile(get_critical_points(), filename);
+}
 
 inline void critical_point_tracker::write_traced_critical_points_binary(const std::string& filename) const
 {
@@ -690,6 +709,16 @@ inline void critical_point_tracker::slice_traced_critical_points()
     }
   }
 }
+
+inline bool critical_point_tracker::advance_timestep()
+{
+  update_timestep();
+  pop_field_data_snapshot();
+
+  current_timestep ++;
+  return field_data_snapshots.size() > 0;
+}
+  
 
 }
 
