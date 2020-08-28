@@ -8,13 +8,6 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
-def get_ftk_version():
-    try:
-        with open('version.txt', 'r') as file:
-            return file.read()
-    except Exception as e:
-        return None
-
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
         Extension.__init__(self, name, sources=[])
@@ -74,7 +67,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='pyftk',
-    version=get_ftk_version(),
+    version=('version.txt', 'r').read(),
     author='Hanqi Guo',
     author_email='guohanqi@gmail.com',
     description='FTK: A Feature Tracking Kit',

@@ -91,7 +91,7 @@ public: // i/o for sliced critical points
 public: // i/o for discrete (untraced) critical points
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
   virtual void put_critical_points(const std::vector<critical_point_t>&) = 0;
-  void read_critical_points_binary(const std::string& filename) const;
+  void read_critical_points_binary(const std::string& filename);
   void write_critical_points_binary(const std::string& filename) const;
   void write_critical_points_text(std::ostream& os) const;
   void write_critical_points_text(const std::string& filename) const;
@@ -393,6 +393,15 @@ inline void critical_point_tracker::write_critical_points_binary(const std::stri
 {
   if (is_root_proc())
     diy::serializeToFile(get_critical_points(), filename);
+}
+
+inline void critical_point_tracker::read_critical_points_binary(const std::string& filename)
+{
+  if (is_root_proc()) {
+    std::vector<critical_point_t> cps;
+    diy::unserializeFromFile(filename, cps);
+    put_critical_points(cps);
+  }
 }
 
 inline void critical_point_tracker::write_traced_critical_points_binary(const std::string& filename) const

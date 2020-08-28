@@ -75,7 +75,7 @@ int parse_arguments(int argc, char **argv)
     fatal("Missing threshold value.");
 
   // configure input stream
-  json j_input = parse_input_json(results);
+  json j_input = args_to_json(results);
   stream.set_input_source_json(j_input);
 
   if (output_filename_pattern.empty())

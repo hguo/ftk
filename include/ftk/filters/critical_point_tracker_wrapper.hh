@@ -71,7 +71,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   add_boolean_option("enable_discarding_interval_points", false);
   add_boolean_option("enable_discarding_degenerate_points", false);
   add_boolean_option("enable_ignoring_degenerate_points", false);
-
+  
   /// application specific
   if (j.contains("xgc")) {
     // mesh_filename

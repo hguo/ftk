@@ -25,6 +25,7 @@
   
 // global variables
 std::string output_filename, output_type, output_format;
+std::string archived_discrete_critical_points_filename;
 std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
@@ -55,6 +56,7 @@ int parse_arguments(int argc, char **argv)
 
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
+    ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
     ("xgc-smoothing-kernel-file", "XGC smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
@@ -86,9 +88,6 @@ int parse_arguments(int argc, char **argv)
     return 0;
   }
 
-  auto j = parse_input_json(results);
-  stream.set_input_source_json(j);
-
   auto fatal = [&](const std::string& str) {
 	  std::cerr << "FATAL: " << str << std::endl
 	            << options.help() << std::endl;
@@ -112,7 +111,7 @@ int parse_arguments(int argc, char **argv)
     fatal("FTK not compiled with VTK.");
 #endif
   }
-  
+
   if (output_filename.empty())
     fatal("Missing '--output'.");
 
@@ -128,18 +127,25 @@ int parse_arguments(int argc, char **argv)
       output_format = str_text;
   }
   
-  nlohmann::json jt;
-  jt["output"] = output_filename;
-  jt["output_type"] = output_type;
-  jt["output_format"] = output_format;
+  nlohmann::json j_input = args_to_json(results), 
+                 j_tracker;
+  
+  stream.set_input_source_json(j_input);
+  
+  j_tracker["output"] = output_filename;
+  j_tracker["output_type"] = output_type;
+  j_tracker["output_format"] = output_format;
+
+  if (archived_discrete_critical_points_filename.size() > 0)
+    j_tracker["archived_discrete_critical_points_filename"] = archived_discrete_critical_points_filename;
   
   if (enable_streaming_trajectories) 
-    jt["enable_streaming_trajectories"] = true;
+    j_tracker["enable_streaming_trajectories"] = true;
 
   if (enable_discarding_interval_points)
-    jt["enable_discarding_interval_points"] = true;
+    j_tracker["enable_discarding_interval_points"] = true;
 
-  jt["type_filter"] = type_filter_str;
+  j_tracker["type_filter"] = type_filter_str;
 
   if (xgc_mesh_filename.size() > 0) {
     nlohmann::json jx;
@@ -148,10 +154,10 @@ int parse_arguments(int argc, char **argv)
     jx["smoothing_kernel_size"] = xgc_smoothing_kernel_size;
     if (xgc_write_back_filename.size() > 0)
       jx["write_back_filename"] = xgc_write_back_filename;
-    jt["xgc"] = jx;
+    j_tracker["xgc"] = jx;
   }
 
-  wrapper.configure(jt);
+  wrapper.configure(j_tracker);
 
   diy::mpi::communicator world;
   if (world.rank() == 0) {

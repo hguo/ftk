@@ -70,7 +70,7 @@ static inline std::vector<std::string> split(const std::string& input, const std
     return {first, last};
 }
 
-static inline nlohmann::json parse_input_json(cxxopts::ParseResult& results)
+static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
 {
   using nlohmann::json;
   json j;
