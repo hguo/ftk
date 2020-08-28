@@ -1,5 +1,5 @@
 
-#define USING_OUR_METHOD true // true -> our method, false -> baseline Iverson et al.'s method
+#define USING_OUR_METHOD false // true -> our method, false -> baseline Iverson et al.'s method
 
   #if USING_OUR_METHOD
     #include <ftk/basic/distributed_union_find.hh>
