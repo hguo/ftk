@@ -8,12 +8,6 @@
 
 namespace ftk {
 
-enum {
-  SOURCE_NONE, 
-  SOURCE_GIVEN, // explicit
-  SOURCE_DERIVED // implicit
-};
-
 // this is an abstract class, not for users
 struct critical_point_tracker_regular : public critical_point_tracker {
   critical_point_tracker_regular(int nd/*2 or 3*/) : m(nd+1) {}
@@ -21,16 +15,9 @@ struct critical_point_tracker_regular : public critical_point_tracker {
 
   void set_domain(const lattice& l) {domain = l;} // spatial domain
   void set_array_domain(const lattice& l) {array_domain = l;}
-  void set_start_timestep(int);
-  void set_end_timestep(int);
 
   void set_local_domain(const lattice&); // rank-specific "core" region of the block
   void set_local_array_domain(const lattice&); // rank-specific "ext" region of the block
-
-  void set_scalar_field_source(int s) {scalar_field_source = s;}
-  void set_vector_field_source(int s) {vector_field_source = s;}
-  void set_jacobian_field_source(int s) {jacobian_field_source = s;}
-  void set_jacobian_symmetric(bool s) {is_jacobian_field_symmetric = s;}
 
   void set_coordinates(const ndarray<double>& coords_) {coords = coords_; use_explicit_coords = true;}
 
@@ -52,14 +39,7 @@ protected: // config
           local_domain, local_array_domain;
   // lattice_partitioner partitioner;
 
-  int start_timestep = 0, 
-      end_timestep = std::numeric_limits<int>::max();
-
-  int scalar_field_source = SOURCE_NONE, 
-      vector_field_source = SOURCE_NONE,
-      jacobian_field_source = SOURCE_NONE;
   bool use_explicit_coords = false;
-  bool is_jacobian_field_symmetric = false;
 
 protected:
   ndarray<double> coords;

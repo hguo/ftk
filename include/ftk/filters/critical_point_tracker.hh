@@ -16,6 +16,12 @@
 
 namespace ftk {
 
+enum {
+  SOURCE_NONE, 
+  SOURCE_GIVEN, // explicit
+  SOURCE_DERIVED // implicit
+};
+
 struct critical_point_tracker : public filter {
   critical_point_tracker() {}
 
@@ -36,6 +42,14 @@ struct critical_point_tracker : public filter {
   void set_enable_ignoring_degenerate_points(bool b) { enable_ignoring_degenerate_points = b; }
 
   void set_type_filter(unsigned int);
+  
+  // void set_start_timestep(int);
+  // void set_end_timestep(int);
+  
+  void set_scalar_field_source(int s) {scalar_field_source = s;}
+  void set_vector_field_source(int s) {vector_field_source = s;}
+  void set_jacobian_field_source(int s) {jacobian_field_source = s;}
+  void set_jacobian_symmetric(bool s) {is_jacobian_field_symmetric = s;}
 
   void set_scalar_components(const std::vector<std::string>& c);
   int get_num_scalar_components() const {return scalar_components.size();}
@@ -131,6 +145,14 @@ protected:
   // type filter
   bool use_type_filter = false;
   unsigned int type_filter = 0;
+  
+  int start_timestep = 0, 
+      end_timestep = std::numeric_limits<int>::max();
+
+  int scalar_field_source = SOURCE_NONE, 
+      vector_field_source = SOURCE_NONE,
+      jacobian_field_source = SOURCE_NONE;
+  bool is_jacobian_field_symmetric = false;
 
   // scalar components
   std::vector<std::string> scalar_components = {"scalar"};

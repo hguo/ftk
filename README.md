@@ -12,7 +12,7 @@ FTK requires CMake to build the libraries and executables.  Optional dependencie
 
 ## FTK for ParaView
 
-### Build ParaView plugins
+### Building ParaView plugins
 
 FTK provides ParaView plugins to allow users track critical points (maxima, minima, and saddles) in scalar field data.  In order to build the plugins, we recommend to build and use 
 
@@ -25,7 +25,7 @@ $ make
 
 If built successfully, you will see the plugins binary as `lib/paraview-5.8/plugins/FTK/FTK.so`.  Open the "Plugin Manager" in ParaView, and load this binary with "Load New..." button, and then select and load FTK in the list.  
 
-### Use ParaView plugins
+### Using ParaView plugins
 
 We demo the use the 2D critical point tracking filter (`vtkCriticalPoint2DTracker`) with a dataset.  The input of this filter must be a 3D volumetric data that stacks 2D time-varying scalar fields in the Z direction.  In this demo, we first add a synthetic 3D volume data by using Sources / FTK / Spiral2DSource.  We then track the trajectories of 2D critical points with Filters / FTK / CriticalPoint2DTracker.  The output trajectires can be visualized as tubes and color-coded by their types, scalar values, or IDs.  In this demo, the time-varying scalar field is defined in closed form: 
 
@@ -35,7 +35,15 @@ where $x$ and $y$ are 2D coordinates and $t$ is time.  We discretize the $x,y$ d
 
 ## FTK for Python (PyFTK)
 
-### Build PyFTK
+### Installing from PyPI
+
+You can install PyFTK with `pip`.  The only dependency in the current release is `numpy`.
+
+```bash
+$ pip3 install pyftk
+```
+
+### Building PyFTK from source
 
 FTK Python bindings is based on [pybind11](https://github.com/pybind/pybind11).  You may build PyFTK with `setuptools` or CMake.  Notice that CMake is required to build PyFTK.  Advanced build options is currently not possible to configure with `setuptools`.  
 
@@ -56,7 +64,7 @@ $ make
 
 The output PyFTK binary will be in the `lib` directory.
 
-### Use PyFTK
+### Using PyFTK
 
 PyFTK provides synthetic data generators (`pyftk.synthesizers`), feature extractors (`pyftk.extractors`), and feature trackers (`pyftk.trackers`).  Currently, PyFTK only supports critical points.  The following is an example of tracking critical points in a synthetic spiral woven data:
 
@@ -77,7 +85,7 @@ The results are trajectories organized in a list:
 
 FTK provides two executables: `track_critical_points` and `track_levelsets`.
 
-### Build FTK executables
+### Building FTK executables
 
 FTK executables are built by default with CMake:
 
@@ -88,19 +96,19 @@ $ cmake .. && make
 
 The executables can be found in the `bin` directory.  You may build FTK with NetCDF, HDF5, VTK, GMP, MPI, and CUDA to enable more features.  
 
-#### Build with VTK
+#### Building with VTK
 
 ```bash
 $ cmake -DFTK_USE_VTK=ON -DCMAKE_PREFIX_PATH="$your_vtk_path/lib/cmake"
 ```
 
-#### Build with NetCDF
+#### Building with NetCDF
 
 ```bash
 $ cmake -DFTK_USE_NETCDF=ON -DNETCDF_DIR=${your_netcdf_path}
 ```
 
-#### Build with MPI
+#### Building with MPI
 
 You may use MPI to accelerate feature tracking with both distributed-parallelism.  To build FTK with MPI, you need to use MPI C/C++ compilers: 
 
@@ -114,7 +122,7 @@ Use  `mpiexec` to run the executable
 $ mpiexec -n $NUM_PROCS track_critical_points
 ```
 
-#### Build with CUDA
+#### Building with CUDA
 
 In order to build FTK with CUDA, you need to specify the path to the CUDA installation:
 
@@ -122,7 +130,7 @@ In order to build FTK with CUDA, you need to specify the path to the CUDA instal
 $ cmake -DFTK_USE_CUDA=ON -DCUDA_TOOLKIT_ROOT_DIR=$YOUR_CUDA_TOOLKIT_DIR
 ```
 
-#### Build with Qt5
+#### Building with Qt5
 
 ```bash
 $ cmake -FTK_USE_Qt5=ON -DCMAKE_PREFIX_PATH="$your_qt5_path/lib/cmake"
@@ -137,7 +145,7 @@ Follow the help information below to track critical points:
 ```bash
 $ track_critical_points --help
 Usage:
-  track_critical_points [OPTION...]
+  ./bin/track_critical_points [OPTION...]
 
   -i, --input arg               Input file name pattern: a single file or a
                                 series of file, e.g. 'scalar.raw',
@@ -163,14 +171,29 @@ Usage:
                                 Spatial smoothing kernel bandwidth
       --spatial-smoothing-kernel-size arg
                                 Spatial smoothing kernel size
-  -o, --output arg              Output file
+      --xgc-mesh arg            XGC mesh file
+      --xgc-smoothing-kernel-file arg
+                                XGC smoothing kernel file
+      --xgc-smoothing-kernel-size arg
+                                XGC smoothing kernel size
+      --xgc-write-back arg      XGC write original back into vtu files
+  -o, --output arg              Output file, either one single file (e.g.
+                                out.vtp) or a pattern (e.g. out-%05d.vtp)
+      --output-type arg         Output type {discrete|traced|sliced}, by
+                                default traced (default: traced)
+      --output-format arg       Output format {auto|text|vtp}, by default
+                                auto (default: auto)
       --type-filter arg         Type filter: ane single or a combination of
                                 critical point types, e.g. `min', `max',
                                 `saddle', `min|max'
-  -r, --output-format arg       Output format (auto|text|vtp) (default: auto)
       --nthreads arg            Number of threads
-  -a, --accelerator arg         Accelerator (none|cuda) (default: none)
-      --vtk                     Show visualization with vtk
+  -a, --accelerator arg         Accelerator {none|cuda} (experimental)
+                                (default: none)
+      --stream                  Stream trajectories (experimental)
+      --discard-interval-points
+                                Discard interval critical points
+                                (experimental)
+      --vtk                     Show visualization with vtk (legacy)
   -v, --verbose                 Verbose outputs
       --help                    Print usage
 ```
@@ -250,7 +273,7 @@ $ tree $FTK_INSTALL_DIR
         └── FTKConfig.cmake
 ```
 
-#### Include FTK in your CMake project
+#### Including FTK in your CMake project
 
 You may use the FTK installation in your own CMakeLists.txt file:
 
