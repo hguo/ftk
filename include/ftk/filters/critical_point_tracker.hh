@@ -71,6 +71,7 @@ public:
 public: // i/o for traced critical points (trajectories)
   const std::vector<critical_point_traj_t>& get_traced_critical_points() const {return traced_critical_points;}
   void write_traced_critical_points_binary(const std::string& filename) const;
+  void read_traced_critical_points_binary(const std::string& filename);
   void write_traced_critical_points_text(std::ostream& os) const;
   void write_traced_critical_points_text(const std::string& filename) const;
   void write_traced_critical_points_vtk(const std::string& filename) const;
@@ -138,7 +139,6 @@ protected:
 
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
-  // std::vector<std::vector<critical_point_t>> traced_critical_points;
   std::vector<critical_point_traj_t> traced_critical_points;
   std::map<int/*time*/, std::vector<critical_point_t>> sliced_critical_points;
 
@@ -408,6 +408,12 @@ inline void critical_point_tracker::write_traced_critical_points_binary(const st
 {
   if (is_root_proc())
   	diy::serializeToFile(traced_critical_points, filename);
+}
+
+inline void critical_point_tracker::read_traced_critical_points_binary(const std::string& filename)
+{
+  if (is_root_proc())
+    diy::unserializeFromFile(filename, traced_critical_points);
 }
 
 inline void critical_point_tracker::write_traced_critical_points_text(const std::string& filename) const
@@ -688,17 +694,15 @@ inline void critical_point_tracker::select_trajectories(std::function<bool(const
 
 inline void critical_point_tracker::select_sliced_critical_points(std::function<bool(const critical_point_t& cp)> f)
 {
-  assert(false);
-#if 0 // FIXME
   for (auto &kv : sliced_critical_points) {
-    auto &map = kv.second;
-    for (auto it = map.begin(); it != map.end(); ) 
-      if (f(it->second)) 
-        ++ it;
-      else
-        map.erase(it ++);
+    auto &cps = kv.second;
+    std::vector<critical_point_t> filtered_cps;
+    for (auto i = 0; i < cps.size(); i ++) 
+      if (f(cps[i]))
+        filtered_cps.push_back(cps[i]);
+    
+    cps = filtered_cps;
   }
-#endif
 }
 
 template <typename element_t>

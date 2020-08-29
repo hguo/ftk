@@ -106,17 +106,10 @@ void critical_point_tracker_wrapper::configure(const json& j0)
       fatal("invalid type_filter");
   }
 
-  if (j.contains("archived_discrete_critical_points_filename")) {
-    if (j["archived_discrete_critical_points_filename"].is_string()) { // OK
-    } else fatal("invalid archived_discrete_critical_points_filename");
-  }
+  add_string_option(j, "archived_discrete_critical_points_filename",  false);
+  add_string_option(j, "archived_traced_critical_points_filename", false);
 
-  if (j.contains("output")) {
-    if (j["output"].is_string()) {
-      // OK
-    } else 
-      fatal("invalid output");
-  } // else warn("empty output");
+  add_string_option(j, "output", false);
 
   // output type
   static const std::set<std::string> valid_output_types = {
@@ -286,13 +279,6 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
   ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);
   m.build_edges();
 
-  bool succ = m.read_smoothing_kernel(smoothing_kernel_filename);
-  if (!succ) {
-    m.build_smoothing_kernel(smoothing_kernel_size);
-    m.write_smoothing_kernel(smoothing_kernel_filename);
-  }
-  fprintf(stderr, "mesh loaded., %zu, %zu, %zu\n", m.n(0), m.n(1), m.n(2));
-
   // tracker set up
   tracker = std::shared_ptr<critical_point_tracker_2d_unstructured>(
       new ftk::critical_point_tracker_2d_unstructured(m));
@@ -300,11 +286,22 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
   tracker->set_scalar_components({"dneOverne0", "psi"});
 
-  if (j.contains("archived_discrete_critical_points_filename")) {
+  if (j.contains("archived_traced_critical_points_filename")) {
+    tracker->read_traced_critical_points_binary(j["archived_traced_critical_points_filename"]);
+    return;
+  } else if (j.contains("archived_discrete_critical_points_filename")) {
     tracker->read_critical_points_binary(j["archived_discrete_critical_points_filename"]);
     tracker->finalize();
     return;
   }
+
+  // load smoothing kernel
+  bool succ = m.read_smoothing_kernel(smoothing_kernel_filename);
+  if (!succ) {
+    m.build_smoothing_kernel(smoothing_kernel_size);
+    m.write_smoothing_kernel(smoothing_kernel_filename);
+  }
+  // fprintf(stderr, "mesh loaded., %zu, %zu, %zu\n", m.n(0), m.n(1), m.n(2));
 
   auto push_timestep = [&](int k, const ftk::ndarray<double>& data) {
     auto dpot = data.transpose();
@@ -442,7 +439,8 @@ void critical_point_tracker_wrapper::post_process()
     } else if (j["output_type"] == "traced") {
       fprintf(stderr, "writing traced critical points..\n");
       if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
-      else tracker->write_traced_critical_points_text(j["output"]);
+      else if (j["output_format"] == "text") tracker->write_traced_critical_points_text(j["output"]);
+      else tracker->write_traced_critical_points_binary(j["output"]);
     } else if (j["output_type"] == "discrete") {
       fprintf(stderr, "writing discrete critical points..\n");
       if (j["output_format"] == "vtp") tracker->write_critical_points_vtk(j["output"]);

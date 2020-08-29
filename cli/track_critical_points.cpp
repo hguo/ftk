@@ -25,7 +25,8 @@
   
 // global variables
 std::string output_filename, output_type, output_format;
-std::string archived_discrete_critical_points_filename;
+std::string archived_discrete_critical_points_filename,
+  archived_traced_critical_points_filename;
 std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
@@ -54,6 +55,7 @@ int parse_arguments(int argc, char **argv)
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
     ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
+    ("archived-traced-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_traced_critical_points_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
     ("xgc-smoothing-kernel-file", "XGC smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
