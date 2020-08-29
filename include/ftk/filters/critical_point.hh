@@ -14,8 +14,8 @@ struct critical_point_t {
   // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
   double scalar[FTK_CP_MAX_NUM_VARS] = {0};
   unsigned int type = 0;
-  unsigned long long tag = 0;
   bool ordinal = false;
+  unsigned long long tag = 0, id = 0;
 
   // constexpr size_t size() const noexcept { return sizeof(critical_point_t<N, ValueType, IntegerType>); }
   constexpr size_t size() const noexcept { return sizeof(critical_point_t); }
@@ -31,7 +31,8 @@ struct critical_point_t {
     os << "type=" << critical_point_type_to_string(cpdims, type, scalar_components.size()) << ", "; 
     os << "timestep=" << timestep << ", ";
     os << "ordinal=" << ordinal << ", ";
-    os << "tag=" << tag; // << std::endl;
+    os << "tag=" << tag << ", "; 
+    os << "id=" << id;  // << std::endl;
     return os;
   }
 };
@@ -138,8 +139,9 @@ namespace diy {
     for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
       diy::save(bb, cp.scalar[i]);
     diy::save(bb, cp.type);
-    diy::save(bb, cp.tag);
     diy::save(bb, cp.ordinal);
+    diy::save(bb, cp.tag);
+    diy::save(bb, cp.id);
   }
 
   // template <int N, typename V, typename I> 
@@ -151,8 +153,9 @@ namespace diy {
     for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
       diy::load(bb, cp.scalar[i]);
     diy::load(bb, cp.type);
-    diy::load(bb, cp.tag);
     diy::load(bb, cp.ordinal);
+    diy::load(bb, cp.tag);
+    diy::load(bb, cp.id);
   }
   
   static void save(diy::BinaryBuffer& bb, const ftk::critical_point_traj_t &t) {
@@ -162,6 +165,8 @@ namespace diy {
     diy::save(bb, t.persistence);
     diy::save(bb, t.bbmin);
     diy::save(bb, t.bbmax);
+    diy::save(bb, t.tmin);
+    diy::save(bb, t.tmax);
     diy::save(bb, t.consistent_type);
     diy::save<std::vector<ftk::critical_point_t>>(bb, t);
   }
@@ -173,6 +178,8 @@ namespace diy {
     diy::load(bb, t.persistence);
     diy::load(bb, t.bbmin);
     diy::load(bb, t.bbmax);
+    diy::load(bb, t.tmin);
+    diy::load(bb, t.tmax);
     diy::load(bb, t.consistent_type);
     diy::load<std::vector<ftk::critical_point_t>>(bb, t);
   }
