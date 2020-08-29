@@ -13,7 +13,10 @@ struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded fr
   size_t n_ordinal(int d) const { return m.n(d); }
   size_t n_interval(int d) const;
 
-  bool is_ordinal(int d, I i) const { const auto type = mod(i, n(d)); return type < m.n(d); }
+  bool is_ordinal(int d, I i) const {
+    I k = mod(i, n(2));
+    return k < n_ordinal(d);
+  }
 
   I flat_vertex_id(I i) const { return mod(i, m.n(0)); }
   I flat_vertex_time(I i) const { return i / m.n(0); }
@@ -113,7 +116,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude()
   for (auto i = 0; i < m.n(1); i ++) { // per edge 
     I v[2];
     m.get_edge(i, v);
-    if (v[0] > v[1]) std::swap(v[0], v[1]);
+    if (v[0] > v[1]) std::swap(v[0], v[1]); // sorted
 
     tris(0, i + m.n(2)*3) = v[0]; // type IV: edge lower triangle
     tris(1, i + m.n(2)*3) = v[1];

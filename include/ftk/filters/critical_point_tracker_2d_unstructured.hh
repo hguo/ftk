@@ -168,10 +168,8 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
         if (cp.type == 0 || cp.type == 1) return;
       }
 
-      if (filter_critical_point_type(cp)) {
+      if (filter_critical_point_type(cp))
         discrete_critical_points[i] = cp;
-        // cp.ordinal = e.is_ordinal(m);
-      }
     }
   };
 
