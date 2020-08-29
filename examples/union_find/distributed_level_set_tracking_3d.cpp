@@ -211,9 +211,13 @@ void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy
       int64_t total_peak_memory = 0; 
       MPI_Reduce(&b->peak_memory, &total_peak_memory, 1, MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD); 
 
+      int64_t total_accumulative_memory = 0; 
+      MPI_Reduce(&b->accumulative_memory, &total_accumulative_memory, 1, MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD); 
+
       if(world.rank() == 0) {
         std::cout << "\t Number of Iterations per Process: " << total_rount_cnt / (double) world.size() << std::endl;
         std::cout << "\t Peak Memory per Process: " << total_peak_memory / (double) world.size() << std::endl;
+        std::cout << "\t Accumulative Memory per Process: " << total_accumulative_memory / (double) world.size() << std::endl;
       }
 
       MPI_Barrier(world);

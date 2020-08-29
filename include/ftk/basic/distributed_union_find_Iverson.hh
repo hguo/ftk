@@ -40,7 +40,10 @@ struct distributed_union_find
     id2parent.insert(std::make_pair(i, i)); 
 
     #if TRACK_PEAK_MEMORY
-      this->cur_memory += i.length() * sizeof(char) * 3; 
+      int64_t _memory_residule = i.length() * sizeof(char) * 3; 
+
+      this->cur_memory += _memory_residule; 
+      this->accumulative_memory += _memory_residule; 
     #endif
   }
 
@@ -83,6 +86,7 @@ public:
   // Statistics
   int nrounds = 0; // # of rounds
   int64_t peak_memory = 0;  // # peak used memory
+  int64_t accumulative_memory = 0; // # accumulative used memory
   #if TRACK_PEAK_MEMORY
     int64_t cur_memory = 0;  // # current used memory
   #endif
@@ -99,6 +103,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), ele2gid(), distributed_union_find() { 
     #if TRACK_PEAK_MEMORY
       this->cur_memory = sizeof(*this) - sizeof(int) - sizeof(double) * 2; // reduce the size of nrounds, peak_memory, and cur_memory
+      this->accumulative_memory = this->cur_memory; 
       this->peak_memory = this->cur_memory; 
     #endif
   }
@@ -115,7 +120,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
       this->has_sent_gparent_query[ele] = false;
 
       #if TRACK_PEAK_MEMORY
-        this->cur_memory += ele.length() * sizeof(char) * 2 + sizeof(std::set<std::string>) + sizeof(bool); 
+        int64_t  _memory_residule = ele.length() * sizeof(char) * 2 + sizeof(std::set<std::string>) + sizeof(bool); 
+        this->cur_memory += _memory_residule; 
+        this->accumulative_memory += _memory_residule; 
       #endif
     }
   }
@@ -156,7 +163,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
         this->all_related_elements[ele].insert(related_ele); 
 
         #if TRACK_PEAK_MEMORY
-          this->cur_memory += related_ele.length() * sizeof(char) * 2; 
+          int64_t _memory_residule = related_ele.length() * sizeof(char) * 2; 
+          this->cur_memory += _memory_residule; 
+          this->accumulative_memory += _memory_residule; 
         #endif
       }
 
@@ -217,7 +226,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
         this->ele2gid[ele] = gid; 
 
         #if TRACK_PEAK_MEMORY
-          this->cur_memory += ele.length() * sizeof(char) + sizeof(int); 
+          int64_t _memory_residule = ele.length() * sizeof(char) + sizeof(int); 
+          this->cur_memory += _memory_residule; 
+          this->accumulative_memory += _memory_residule; 
         #endif
       }
     }

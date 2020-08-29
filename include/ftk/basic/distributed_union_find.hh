@@ -41,7 +41,10 @@ struct distributed_union_find
     id2parent.insert(std::make_pair(i, i)); 
 
     #if TRACK_PEAK_MEMORY
-      this->cur_memory += i.length() * sizeof(char) * 3; 
+      int64_t _memory_residule = i.length() * sizeof(char) * 3; 
+
+      this->cur_memory += _memory_residule; 
+      this->accumulative_memory += _memory_residule; 
     #endif
   }
 
@@ -65,7 +68,10 @@ struct distributed_union_find
       nonlocal_temporary_roots.insert(temporary_root); 
 
       #if TRACK_PEAK_MEMORY
-        this->cur_memory += temporary_root.length() * sizeof(char); 
+        int64_t _memory_residule = temporary_root.length() * sizeof(char); 
+
+        this->cur_memory += _memory_residule; 
+        this->accumulative_memory += _memory_residule; 
       #endif
     }
   }
@@ -77,7 +83,10 @@ struct distributed_union_find
       }
 
       if(not_nonlocal_temporary_roots.find(temporary_root) == not_nonlocal_temporary_roots.end()) {
-        this->cur_memory += temporary_root.length() * sizeof(char); 
+        int64_t _memory_residule = temporary_root.length() * sizeof(char); 
+
+        this->cur_memory += _memory_residule; 
+        this->accumulative_memory += _memory_residule; 
       }
     #endif
 
@@ -123,6 +132,7 @@ public:
   // Statistics
   int nrounds = 0; // # of rounds
   int64_t peak_memory = 0;  // # peak used memory
+  int64_t accumulative_memory = 0; // # accumulative used memory
   #if TRACK_PEAK_MEMORY
     int64_t cur_memory = 0;  // # current used memory
   #endif
@@ -145,6 +155,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), temporary_root_2_gids(), nonlocal_temporary_roots_2_grandparents(), ele2gid(), distributed_union_find() { 
     #if TRACK_PEAK_MEMORY
       this->cur_memory = sizeof(*this) - sizeof(int) - sizeof(double) * 2; // reduce the size of nrounds, peak_memory, and cur_memory
+      this->accumulative_memory = this->cur_memory; 
       this->peak_memory = this->cur_memory; 
     #endif
   }
@@ -161,7 +172,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
       this->has_sent_gparent_query[ele] = false;
 
       #if TRACK_PEAK_MEMORY
-        this->cur_memory += ele.length() * sizeof(char) * 2 + sizeof(std::set<std::string>) + sizeof(bool); 
+        int64_t  _memory_residule = ele.length() * sizeof(char) * 2 + sizeof(std::set<std::string>) + sizeof(bool); 
+        this->cur_memory += _memory_residule; 
+        this->accumulative_memory += _memory_residule; 
       #endif
     }
   }
@@ -202,7 +215,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
         this->all_related_elements[ele].insert(related_ele); 
 
         #if TRACK_PEAK_MEMORY
-          this->cur_memory += related_ele.length() * sizeof(char) * 2; 
+          int64_t _memory_residule = related_ele.length() * sizeof(char) * 2; 
+          this->cur_memory += _memory_residule; 
+          this->accumulative_memory += _memory_residule; 
         #endif
       }
 
@@ -263,7 +278,9 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
         this->ele2gid[ele] = gid; 
 
         #if TRACK_PEAK_MEMORY
-          this->cur_memory += ele.length() * sizeof(char) + sizeof(int); 
+          int64_t _memory_residule = ele.length() * sizeof(char) + sizeof(int); 
+          this->cur_memory += _memory_residule; 
+          this->accumulative_memory += _memory_residule; 
         #endif
       }
     }
@@ -634,11 +651,17 @@ void send_erase_temporary_root_to_all_processes(Block_Union_Find* b, const diy::
         if(is_known) {
           #if TRACK_PEAK_MEMORY
             if(b->temporary_root_2_gids.find(grandparent) == b->temporary_root_2_gids.end()) {
-              b->cur_memory += grandparent.length() * sizeof(char) + sizeof(std::set<int>); 
-              b->cur_memory += sizeof(int); 
+              int64_t _memory_residule = grandparent.length() * sizeof(char) + sizeof(std::set<int>); 
+              _memory_residule += sizeof(int); 
+              
+              b->cur_memory += _memory_residule; 
+              b->accumulative_memory += _memory_residule; 
             } else {
               if(b->temporary_root_2_gids[grandparent].find(gid) == b->temporary_root_2_gids[grandparent].end()) {
-                b->cur_memory += sizeof(int); 
+                int64_t _memory_residule = sizeof(int); 
+
+                b->cur_memory += _memory_residule; 
+                b->accumulative_memory += _memory_residule; 
               }
             }
           #endif
@@ -858,11 +881,17 @@ void distributed_answer_gparent_query(Block_Union_Find* b, const diy::Master::Pr
   if(is_known) {
     #if TRACK_PEAK_MEMORY
       if(b->temporary_root_2_gids.find(grandparent) == b->temporary_root_2_gids.end()) {
-        b->cur_memory += grandparent.length() * sizeof(char) + sizeof(std::set<int>); 
-        b->cur_memory += sizeof(int); 
+        int64_t _memory_residule = grandparent.length() * sizeof(char) + sizeof(std::set<int>); 
+        _memory_residule += sizeof(int); 
+
+        b->cur_memory += _memory_residule; 
+        b->accumulative_memory += _memory_residule; 
       } else {
         if(b->temporary_root_2_gids[grandparent].find(gid_child) == b->temporary_root_2_gids[grandparent].end()) {
-          b->cur_memory += sizeof(int); 
+          int64_t _memory_residule = sizeof(int); 
+
+          b->cur_memory += _memory_residule; 
+          b->accumulative_memory += _memory_residule;
         }
       }
     #endif
@@ -894,7 +923,10 @@ void distributed_erase_temporary_root (Block_Union_Find* b, const diy::Master::P
 
   #if TRACK_PEAK_MEMORY
     if(b->nonlocal_temporary_roots_2_grandparents.find(parent) == b->nonlocal_temporary_roots_2_grandparents.end()) {
-      b->cur_memory += parent.length() * sizeof(char) + grandparent.length() * sizeof(char);
+      int64_t _memory_residule = parent.length() * sizeof(char) + grandparent.length() * sizeof(char); 
+
+      b->cur_memory += _memory_residule;
+      b->accumulative_memory += _memory_residule; 
     }        
   #endif
 
