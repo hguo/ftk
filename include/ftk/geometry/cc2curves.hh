@@ -48,33 +48,40 @@ std::vector<std::vector<NodeType>> connected_component_to_linear_components(
     std::list<NodeType> trace;
     std::set<NodeType> visited;
 
+    const size_t cs = c.size();
+
     auto seed = *c.begin();
     visited.insert(seed);
     trace.push_back(seed);
-    c.erase(c.begin());
+    // c.erase(c.begin());
 
     // fprintf(stderr, "#node=%lu\n", c.size());
     // std::cerr << "seed: " << seed << std::endl;
 
     std::set<NodeType> seed_neighbors; 
     for (auto my_neighbor : neighbors(seed))
-      if (ordinary_nodes.find(my_neighbor) != ordinary_nodes.end())
+      if (my_neighbor != seed && ordinary_nodes.find(my_neighbor) != ordinary_nodes.end())
         seed_neighbors.insert(my_neighbor);
+    // if (seed_neighbors.size() > 2) 
+    //   fprintf(stderr, "ERROR: #sn=%zu\n", seed_neighbors.size());
 
-    if (seed_neighbors.size() == 0) break;
     for (int dir = 0; dir < 2; dir ++) {
+      if (seed_neighbors.size() == 0) break;
+
       NodeType current = dir == 0 ? (*seed_neighbors.begin()) : (*seed_neighbors.rbegin());
-      bool first_iteration = true;
+      // bool first_iteration = true;
       // fprintf(stderr, "dir=%d\n", dir);
       while (1) {
-        if (first_iteration) first_iteration = false;
-        else {
+        // if (first_iteration) first_iteration = false;
+        // else {
+        // }
+       
+        if (visited.find(current) == visited.end()) {
           if (dir == 0) trace.push_back(current);
           else (trace.push_front(current));
+          visited.insert(current);
         }
-
-        visited.insert(current);
-        c.erase(current);
+        // c.erase(current);
 
         bool found_next = false;
         for (auto my_neighbor : neighbors(current)) {
@@ -95,6 +102,8 @@ std::vector<std::vector<NodeType>> connected_component_to_linear_components(
     }
     // fprintf(stderr, "trace.size=%lu\n", trace.size());
 
+    if (trace.size() != c.size())
+       fprintf(stderr, "ERROR: trace.size=%zu, c.size=%zu\n", trace.size(), cs);
     linear_components.push_back(std::vector<NodeType>({trace.begin(), trace.end()}));
   }
   

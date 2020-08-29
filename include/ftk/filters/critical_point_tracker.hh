@@ -714,31 +714,52 @@ std::vector<critical_point_traj_t> critical_point_tracker::trace_critical_points
   auto connected_components = extract_connected_components<element_t, std::set<element_t>>(
       neighbors, elements);
 
+  fprintf(stderr, "#cc=%zu\n", connected_components.size());
+  int sum = 0;
+  for (auto c : connected_components)
+    sum += c.size();
+  fprintf(stderr, "#sum=%d, #dcp=%zu\n", sum, discrete_critical_points.size());
+
+  int sum1 = 0;
   for (const auto &component : connected_components) {
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
       critical_point_traj_t traj; 
       traj.loop = is_loop(linear_graphs[j], neighbors);
-      for (int k = 0; k < linear_graphs[j].size(); k ++)
+      for (int k = 0; k < linear_graphs[j].size(); k ++) {
         traj.push_back(discrete_critical_points.at(linear_graphs[j][k]));
+        sum1 ++;
+      }
       traced_critical_points.emplace_back(traj);
     }
   }
+
+  fprintf(stderr, "#sum1=%d\n", sum1);
 
   return traced_critical_points;
 }
 
 inline void critical_point_tracker::slice_traced_critical_points()
 {
+  int sum0 = 0;
   for (auto i = 0; i < traced_critical_points.size(); i ++) {
     const auto &traj = traced_critical_points[i];
     for (auto j = 0; j < traj.size(); j ++) {
       const auto &cp = traj[j];
-      if (cp.ordinal)
+      if (cp.ordinal) {
         sliced_critical_points[cp.timestep][i] = cp;
+        sum0 ++;
+      }
     }
   }
+
+  int sum = 0;
+  for (const auto &kv : sliced_critical_points) {
+    fprintf(stderr, "timestep=%d, n=%zu\n", kv.first, kv.second.size());
+    sum += kv.second.size();
+  }
+  fprintf(stderr, "#sum_sliced=%d, %d\n", sum, sum0);
 }
 
 inline bool critical_point_tracker::advance_timestep()

@@ -168,14 +168,19 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
         if (cp.type == 0 || cp.type == 1) return;
       }
 
-      if (filter_critical_point_type(cp))
+      if (filter_critical_point_type(cp)) {
+        // if (discrete_critical_points.find(i) != discrete_critical_points.end())
+        //   fprintf(stderr, "FATAL: overwritting cp!!\n");
         discrete_critical_points[i] = cp;
+      }
     }
   };
 
   m.element_for_ordinal(2, current_timestep, func, nthreads);
+  // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
   if (field_data_snapshots.size() >= 2)
     m.element_for_interval(2, current_timestep, func, nthreads);
+  // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
 
   if (enable_streaming_trajectories) {
     // grow trajectories
