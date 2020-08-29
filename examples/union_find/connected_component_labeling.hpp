@@ -1,5 +1,6 @@
 
 #define USING_OUR_METHOD false // true -> our method, false -> baseline Iverson et al.'s method
+#define IS_GETTING_SETS_ON_ROOTS true
 
   #if USING_OUR_METHOD
     #include <ftk/basic/distributed_union_find.hh>
@@ -13,6 +14,8 @@
 #ifndef DIM
   #define DIM 3
 #endif
+
+
 
 
 
@@ -192,8 +195,12 @@ inline void Block_Feature::get_sets(diy::mpi::communicator& world, diy::Master& 
   std::vector<std::string> eles_to_send ;
   std::vector<int> target_gids;
 
-  // get_sets_on_p0(this, world, master, assigner, eles_to_send, target_gids); 
-  get_sets_on_roots(this, world, master, assigner, eles_to_send, target_gids); 
+  #if IS_GETTING_SETS_ON_ROOTS
+    get_sets_on_roots(this, world, master, assigner, eles_to_send, target_gids); 
+  #else
+    get_sets_on_p0(this, world, master, assigner, eles_to_send, target_gids); 
+  #endif
+
   // get_sets_redistributed(this, world, master, assigner, eles_to_send, target_gids); 
 
 
