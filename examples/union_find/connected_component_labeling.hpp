@@ -1,5 +1,5 @@
 
-#define USING_OUR_METHOD false // true -> our method, false -> baseline Iverson et al.'s method
+#define USING_OUR_METHOD true // true -> our method, false -> baseline Iverson et al.'s method
 #define IS_GETTING_SETS_ON_ROOTS true
 
   #if USING_OUR_METHOD
