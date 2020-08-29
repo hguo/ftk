@@ -41,7 +41,7 @@ struct distributed_union_find
     id2parent.insert(std::make_pair(i, i)); 
 
     #if TRACK_PEAK_MEMORY
-      int64_t _memory_residule = i.length() * sizeof(char) * 3; 
+      int64_t _memory_residule = i.length() * sizeof(char) * 3 + sizeof(std::string) * 3; 
 
       this->cur_memory += _memory_residule; 
       this->accumulative_memory += _memory_residule; 
@@ -68,7 +68,7 @@ struct distributed_union_find
       nonlocal_temporary_roots.insert(temporary_root); 
 
       #if TRACK_PEAK_MEMORY
-        int64_t _memory_residule = temporary_root.length() * sizeof(char); 
+        int64_t _memory_residule = temporary_root.length() * sizeof(char) + sizeof(std::string); 
 
         this->cur_memory += _memory_residule; 
         this->accumulative_memory += _memory_residule; 
@@ -79,11 +79,11 @@ struct distributed_union_find
   void erase_nonlocal_temporary_root(IdType temporary_root) {
     #if TRACK_PEAK_MEMORY
       if(nonlocal_temporary_roots.find(temporary_root) != nonlocal_temporary_roots.end()) {
-        this->cur_memory -= temporary_root.length() * sizeof(char); 
+        this->cur_memory -= temporary_root.length() * sizeof(char) + sizeof(std::string); 
       }
 
       if(not_nonlocal_temporary_roots.find(temporary_root) == not_nonlocal_temporary_roots.end()) {
-        int64_t _memory_residule = temporary_root.length() * sizeof(char); 
+        int64_t _memory_residule = temporary_root.length() * sizeof(char) + sizeof(std::string); 
 
         this->cur_memory += _memory_residule; 
         this->accumulative_memory += _memory_residule; 
@@ -154,7 +154,7 @@ private:
 struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
   Block_Union_Find(): nchanges(0), related_elements(), all_related_elements(), temporary_root_2_gids(), nonlocal_temporary_roots_2_grandparents(), ele2gid(), distributed_union_find() { 
     #if TRACK_PEAK_MEMORY
-      this->cur_memory = sizeof(*this) - sizeof(int) - sizeof(double) * 2; // reduce the size of nrounds, peak_memory, and cur_memory
+      this->cur_memory = sizeof(*this) - sizeof(int) - sizeof(int64_t) * 3; // reduce the size of nrounds, peak_memory, accumulative_memory, and cur_memory
       this->accumulative_memory = this->cur_memory; 
       this->peak_memory = this->cur_memory; 
     #endif
@@ -172,7 +172,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
       this->has_sent_gparent_query[ele] = false;
 
       #if TRACK_PEAK_MEMORY
-        int64_t  _memory_residule = ele.length() * sizeof(char) * 2 + sizeof(std::set<std::string>) + sizeof(bool); 
+        int64_t  _memory_residule = ele.length() * sizeof(char) * 2 + sizeof(std::string) * 2 + sizeof(std::set<std::string>) + sizeof(bool); 
         this->cur_memory += _memory_residule; 
         this->accumulative_memory += _memory_residule; 
       #endif
@@ -184,7 +184,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
     #if TRACK_PEAK_MEMORY
       if(this->eles.find(ele) != this->eles.end()) {
-        this->cur_memory -= ele.length() * sizeof(char); 
+        this->cur_memory -= ele.length() * sizeof(char) + sizeof(std::string); 
       }
     #endif
 
@@ -215,7 +215,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
         this->all_related_elements[ele].insert(related_ele); 
 
         #if TRACK_PEAK_MEMORY
-          int64_t _memory_residule = related_ele.length() * sizeof(char) * 2; 
+          int64_t _memory_residule = related_ele.length() * sizeof(char) * 2 + sizeof(std::string) * 2; 
           this->cur_memory += _memory_residule; 
           this->accumulative_memory += _memory_residule; 
         #endif
@@ -241,7 +241,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
     #if TRACK_PEAK_MEMORY
       for(auto& related_ele : this->related_elements[ele]) {
-        this->cur_memory -= related_ele.length() * sizeof(char);   
+        this->cur_memory -= related_ele.length() * sizeof(char) + sizeof(std::string);   
       }
     #endif
 
@@ -255,7 +255,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
     #if TRACK_PEAK_MEMORY
       if(this->related_elements[ele].find(related_element) != this->related_elements[ele].end()) {
-        this->cur_memory -= related_element.length() * sizeof(char); 
+        this->cur_memory -= related_element.length() * sizeof(char) + sizeof(std::string); 
       }
     #endif
       
@@ -278,7 +278,7 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
         this->ele2gid[ele] = gid; 
 
         #if TRACK_PEAK_MEMORY
-          int64_t _memory_residule = ele.length() * sizeof(char) + sizeof(int); 
+          int64_t _memory_residule = ele.length() * sizeof(char) + sizeof(std::string) + sizeof(int); 
           this->cur_memory += _memory_residule; 
           this->accumulative_memory += _memory_residule; 
         #endif
@@ -651,7 +651,7 @@ void send_erase_temporary_root_to_all_processes(Block_Union_Find* b, const diy::
         if(is_known) {
           #if TRACK_PEAK_MEMORY
             if(b->temporary_root_2_gids.find(grandparent) == b->temporary_root_2_gids.end()) {
-              int64_t _memory_residule = grandparent.length() * sizeof(char) + sizeof(std::set<int>); 
+              int64_t _memory_residule = grandparent.length() * sizeof(char) + sizeof(std::string) + sizeof(std::set<int>); 
               _memory_residule += sizeof(int); 
               
               b->cur_memory += _memory_residule; 
@@ -673,7 +673,7 @@ void send_erase_temporary_root_to_all_processes(Block_Union_Find* b, const diy::
 
       #if TRACK_PEAK_MEMORY
         b->cur_memory -= sizeof(int) * b->temporary_root_2_gids[parent].size(); 
-        b->cur_memory -= parent.length() * sizeof(char) + sizeof(std::set<int>); 
+        b->cur_memory -= parent.length() * sizeof(char) + sizeof(std::string) + sizeof(std::set<int>); 
       #endif
 
       b->temporary_root_2_gids.erase(parent); 
@@ -775,8 +775,8 @@ void compress_path(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 
     #if TRACK_PEAK_MEMORY
       for(auto& _tmp : b->nonlocal_temporary_roots_2_grandparents) {
-        b->cur_memory -= _tmp.first.length() * sizeof(char); 
-        b->cur_memory -= _tmp.second.length() * sizeof(char); 
+        b->cur_memory -= _tmp.first.length() * sizeof(char) + sizeof(std::string); 
+        b->cur_memory -= _tmp.second.length() * sizeof(char) + sizeof(std::string); 
       }
     #endif
 
@@ -881,7 +881,7 @@ void distributed_answer_gparent_query(Block_Union_Find* b, const diy::Master::Pr
   if(is_known) {
     #if TRACK_PEAK_MEMORY
       if(b->temporary_root_2_gids.find(grandparent) == b->temporary_root_2_gids.end()) {
-        int64_t _memory_residule = grandparent.length() * sizeof(char) + sizeof(std::set<int>); 
+        int64_t _memory_residule = grandparent.length() * sizeof(char) + sizeof(std::string) + sizeof(std::set<int>); 
         _memory_residule += sizeof(int); 
 
         b->cur_memory += _memory_residule; 
@@ -923,7 +923,7 @@ void distributed_erase_temporary_root (Block_Union_Find* b, const diy::Master::P
 
   #if TRACK_PEAK_MEMORY
     if(b->nonlocal_temporary_roots_2_grandparents.find(parent) == b->nonlocal_temporary_roots_2_grandparents.end()) {
-      int64_t _memory_residule = parent.length() * sizeof(char) + grandparent.length() * sizeof(char); 
+      int64_t _memory_residule = parent.length() * sizeof(char) + sizeof(std::string) + grandparent.length() * sizeof(char) + sizeof(std::string); 
 
       b->cur_memory += _memory_residule;
       b->accumulative_memory += _memory_residule; 
