@@ -332,7 +332,7 @@ void unite_disjoint_sets(diy::mpi::communicator& world, diy::Master& master, diy
   // std::cout<<"Start Distributed Union-Find: "<<world.rank()<<std::endl; 
 
   // get_connected_components
-  bool is_iexchange = true; // true false
+  bool is_iexchange = false; // true false
   exec_distributed_union_find(world, master, assigner, local_blocks, is_iexchange, filename_time_uf_w); 
 
   #ifdef FTK_HAVE_MPI
