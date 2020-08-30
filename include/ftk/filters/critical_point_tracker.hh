@@ -71,8 +71,8 @@ public:
 public: // i/o for traced critical points (trajectories)
   const std::vector<critical_point_traj_t>& get_traced_critical_points() const {return traced_critical_points;}
   json get_traced_critical_points_json() const {return json(traced_critical_points);}
-  void write_traced_critical_points_json(const std::string& filename, int indent=2) const {std::ofstream f(filename); f << std::setw(indent) << get_traced_critical_points_json(); f.close();}
-  void read_traced_critical_points_json(const std::string& filename) {std::ifstream f(filename); json j; f >> j; f.close(); traced_critical_points = j.get<std::vector<critical_point_traj_t>>();}
+  void write_traced_critical_points_json(const std::string& filename, int indent=0) const;
+  void read_traced_critical_points_json(const std::string& filename);
   void write_traced_critical_points_binary(const std::string& filename) const;
   void read_traced_critical_points_binary(const std::string& filename);
   void write_traced_critical_points_text(std::ostream& os) const;
@@ -579,6 +579,23 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int t, std
     cp.print(os, cpdims(), scalar_components);
     os << std::endl;
   }
+}
+
+inline void critical_point_tracker::write_traced_critical_points_json(const std::string& filename, int indent) const 
+{
+  std::ofstream f(filename); 
+  f << std::setw(indent) 
+    << get_traced_critical_points_json(); 
+  f.close();
+}
+
+inline void critical_point_tracker::read_traced_critical_points_json(const std::string& filename) 
+{
+  std::ifstream f(filename); 
+  json j; 
+  f >> j; 
+  f.close(); 
+  traced_critical_points = j.get<std::vector<critical_point_traj_t>>();
 }
 
 inline void critical_point_tracker::set_type_filter(unsigned int f)
