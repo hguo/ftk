@@ -58,6 +58,7 @@
 
 #define LOAD_BALANCING false
 #define IS_IEXCHANGE true
+#define DEPRECATE_DATA_WHEN_NECESSARY true
 
 #define TIME_OF_STEPS true
 #define MULTITHREAD false
@@ -922,6 +923,13 @@ int main(int argc, char **argv)
 
       // std::cout<<"Finish scanning: "<<world.rank()<<std::endl; 
     }
+
+    #if DEPRECATE_DATA_WHEN_NECESSARY
+      scalar.reshape(0, 0, 0);
+      grad.reshape(0, 0, 0);
+      hess.reshape(0, 0, 0);
+    #endif
+
 
     add_related_elements_to_intersections(intersections, m, block_m, FEATURE_DIM); 
 
