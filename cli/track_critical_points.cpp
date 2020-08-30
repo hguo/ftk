@@ -211,19 +211,19 @@ void xgc_post_process()
   fprintf(stderr, "post processing for xgc...\n");
   auto tracker = wrapper.get_tracker();
 
-#if 0
+#if 1
   tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
     if (traj.max[1] /*max of psi*/ < 0.2) return false;
-    if (traj.min[1] /*min of psi*/ > 0.27) return false;
+    if (traj.min[1] /*min of psi*/ > 0.3) return false;
     //// if (traj.max[0] /*max of dpot*/ < 0.0) return false;
     if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
     return true;
   });
 #endif
-#if 0
+#if 1
   tracker->slice_traced_critical_points();
   tracker->select_sliced_critical_points([](const ftk::critical_point_t& cp) {
-    // if (cp.scalar[1] < 0.2 || cp.scalar[1] > 0.3) return false;
+    if (cp.scalar[1] < 0.2 || cp.scalar[1] > 0.3) return false;
     if (cp.type != ftk::CRITICAL_POINT_2D_MAXIMUM) return false;
     return true;
   });

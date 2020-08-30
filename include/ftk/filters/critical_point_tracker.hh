@@ -70,6 +70,9 @@ public:
 
 public: // i/o for traced critical points (trajectories)
   const std::vector<critical_point_traj_t>& get_traced_critical_points() const {return traced_critical_points;}
+  json get_traced_critical_points_json() const {return json(traced_critical_points);}
+  void write_traced_critical_points_json(const std::string& filename, int indent=2) const {std::ofstream f(filename); f << std::setw(indent) << get_traced_critical_points_json(); f.close();}
+  void read_traced_critical_points_json(const std::string& filename) {std::ifstream f(filename); json j; f >> j; f.close(); traced_critical_points = j.get<std::vector<critical_point_traj_t>>();}
   void write_traced_critical_points_binary(const std::string& filename) const;
   void read_traced_critical_points_binary(const std::string& filename);
   void write_traced_critical_points_text(std::ostream& os) const;
@@ -82,6 +85,9 @@ public: // i/o for traced critical points (trajectories)
 
 public: // i/o for sliced critical points
   const std::map<int, std::vector<critical_point_t>>& get_sliced_critical_points() const {return sliced_critical_points;}
+  json get_sliced_critical_points_json() const {return json(sliced_critical_points);}
+  void write_sliced_critical_points_json(const std::string& filename) const {std::ofstream f(filename); f << get_sliced_critical_points_json(); f.close();}
+  void read_sliced_critical_points_json(const std::string& filename) {std::ifstream f(filename); json j; f >> j; f.close(); sliced_critical_points = j.get<std::map<int, std::vector<critical_point_t>>>();}
   void write_sliced_critical_points_text(int t, std::ostream& os) const;
   void write_sliced_critical_points_text(int t, const std::string& filename) const;
   void write_sliced_critical_points_vtk(int t, const std::string& filename) const;
@@ -91,9 +97,12 @@ public: // i/o for sliced critical points
 
 public: // i/o for discrete (untraced) critical points
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
+  json get_critical_points_json() const {return json(get_critical_points());}
   virtual void put_critical_points(const std::vector<critical_point_t>&) = 0;
-  void read_critical_points_binary(const std::string& filename);
+  void write_critical_points_json(const std::string& filename) const {std::ofstream f(filename); f << get_critical_points_json(); f.close();}
+  void read_critical_points_json(const std::string& filename) {std::ifstream f(filename); json j; f >> j; fprintf(stderr, "#cps=%zu\n", j.size()); f.close(); put_critical_points(j.get<std::vector<critical_point_t>>());}
   void write_critical_points_binary(const std::string& filename) const;
+  void read_critical_points_binary(const std::string& filename);
   void write_critical_points_text(std::ostream& os) const;
   void write_critical_points_text(const std::string& filename) const;
   void write_critical_points_vtk(const std::string& filename) const;

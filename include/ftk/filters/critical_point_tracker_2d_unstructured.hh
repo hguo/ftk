@@ -233,6 +233,8 @@ inline void critical_point_tracker_2d_unstructured::finalize()
       return neighbors;
     };
 
+    fprintf(stderr, "##dcp=%zu\n", discrete_critical_points.size());
+
     traced_critical_points = trace_critical_points_offline<int>(
         discrete_critical_points, neighbors);
     
@@ -260,6 +262,7 @@ inline std::vector<critical_point_t> critical_point_tracker_2d_unstructured::get
 
 inline void critical_point_tracker_2d_unstructured::put_critical_points(const std::vector<critical_point_t>& data)
 {
+  fprintf(stderr, "##cps=%zu\n", data.size());
   for (const auto& cp : data)
     discrete_critical_points[cp.tag] = cp;
 }

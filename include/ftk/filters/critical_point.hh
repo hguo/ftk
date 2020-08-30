@@ -1,9 +1,13 @@
 #ifndef _FTK_CRITICAL_POINT_T_HH
 #define _FTK_CRITICAL_POINT_T_HH
 
+#include <ftk/ftk_config.hh>
 #include <ftk/external/diy/serialization.hpp>
+#include <ftk/external/json.hh>
 
 namespace ftk {
+
+using nlohmann::json;
 
 // template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
 struct critical_point_t {
@@ -127,6 +131,74 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
 };
 
 }
+
+// serialization w/ json
+namespace nlohmann
+{
+  using namespace ftk;
+
+  template <>
+  struct adl_serializer<critical_point_t> {
+    static void to_json(json &j, const critical_point_t& cp) {
+      j["x"] = {cp.x[0], cp.x[1], cp.x[2]};
+      j["t"] = cp.t;
+      j["timestep"] = cp.timestep;
+      j["scalar"] = std::vector<double>(cp.scalar, cp.scalar+FTK_CP_MAX_NUM_VARS);
+      j["type"] = cp.type;
+      j["ordinal"] = cp.ordinal;
+      j["tag"] = cp.tag;
+      j["id"] = cp.id;
+    }
+
+    static void from_json(const json& j,critical_point_t& cp) {
+      for (int i = 0; i < 3; i ++)
+        cp.x[i] = j["x"][i];
+      cp.t = j["t"];
+      cp.timestep = j["timestep"];
+      for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
+        cp.scalar[i] = j["scalar"][i];
+      cp.type = j["type"];
+      cp.ordinal = j["ordinal"];
+      cp.tag = j["tag"];
+      cp.id = j["id"];
+    }
+  };
+  
+  template <>
+  struct adl_serializer<critical_point_traj_t> {
+    static void to_json(json &j, const critical_point_traj_t& t) {
+      j = {
+        {"id", t.identifier},
+        {"max", t.max},
+        {"min", t.min},
+        {"persistence", t.persistence},
+        {"bbmin", t.bbmin},
+        {"bbmax", t.bbmax},
+        {"tmin", t.tmin},
+        {"tmax", t.tmax},
+        {"consistent_type", t.consistent_type},
+        {"traj", static_cast<std::vector<critical_point_t>>(t)}
+      };
+    }
+
+    static void from_json(const json&j, critical_point_traj_t& t) {
+      t.identifier = j["id"];
+      t.max = j["max"];
+      t.min = j["min"];
+      t.persistence = j["persistence"];
+      t.bbmin = j["bbmin"];
+      t.bbmax = j["bbmax"];
+      t.tmin = j["tmin"];
+      t.tmax = j["tmax"];
+      t.consistent_type = j["consistent_type"];
+      std::vector<critical_point_t> traj = j["traj"];
+      t.clear();
+      t.insert(t.begin(), traj.begin(), traj.end());
+    }
+  };
+}
+
+
 
 // serialization
 namespace diy {
