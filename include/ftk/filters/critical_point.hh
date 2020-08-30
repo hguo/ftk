@@ -107,7 +107,7 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
         break;
       }
   }
- 
+
   std::vector<critical_point_traj_t> to_consistent_sub_traj() const {
     std::vector<critical_point_traj_t> results;
     critical_point_traj_t subtraj;
@@ -127,6 +127,63 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
     }
 
     return results;
+  }
+
+  std::vector<int/*idx in orignal traj*/> to_ordinals() const {
+    std::vector<int> result;
+    for (auto i = 0; i < size(); i ++)
+      if (at(i).ordinal)
+        result.push_back(i);
+    return result;
+  }
+
+  void smooth_ordinal_types(const int half_window_size=2) {
+    auto ordinals = to_ordinals();
+    if (ordinals.size() < half_window_size*2+1) return;
+
+    // 1. smooth ordinal types
+    std::map<int/*idx in orginal traj*/, unsigned int/*target type*/> pending_changes;
+    
+    for (int i = half_window_size; i < ordinals.size() - half_window_size; i ++) {
+      unsigned int local_consistent_type = at(ordinals[i - half_window_size]).type;
+      for (int j = i - half_window_size; j <= i + half_window_size; j ++)  {
+        if (j == i) continue;
+        else if (local_consistent_type != at(ordinals[j]).type) {
+          local_consistent_type = 0; // type is inconsistent within the window
+          break;
+        }
+      }
+        
+      if (local_consistent_type != 0 && at(ordinals[i]).type != local_consistent_type)
+        pending_changes[ordinals[i]] = local_consistent_type;
+    }
+
+    for (const auto &kv : pending_changes)
+      at(kv.first).type = kv.second;
+  }
+
+  void smooth_interval_types() {
+    const auto ordinals = to_ordinals();
+    if (ordinals.empty()) return;
+
+    // front terminal
+    const unsigned int front_terminal_type = at(ordinals[0]).type;
+    for (int i = 0; i < ordinals[0]; i ++) 
+      at(i).type = front_terminal_type;
+
+    // back terminal
+    const unsigned int back_terminal_type = at(ordinals[ordinals.size()-1]).type;
+    for (int i = ordinals[ordinals.size()-1]; i < size(); i ++)
+      at(i).type = back_terminal_type;
+
+    // intervals
+    for (int i = 0; i < ordinals.size()-1; i ++) {
+      if (at(ordinals[i]).type == at(ordinals[i+1]).type) {
+        const unsigned int interval_type = at(ordinals[i]).type;
+        for (int j  = ordinals[i]; j < ordinals[i+1]; j ++)
+          at(j).type = interval_type;
+      }
+    }
   }
 };
 

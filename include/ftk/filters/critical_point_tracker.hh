@@ -60,7 +60,7 @@ struct critical_point_tracker : public filter {
   void select_sliced_critical_points(std::function<bool(const critical_point_t& cp)>);
 
   void slice_traced_critical_points(); // slice traces after finalization
-  
+
 public:
   virtual void initialize() = 0;
   virtual void finalize() = 0;
@@ -116,6 +116,9 @@ public: // i/o for discrete (untraced) critical points
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_critical_points_vtk() const;
 #endif
+
+public: // post-processing and simplification
+  void foreach_trajectory(std::function<void(critical_point_traj_t&)> f);
 
 public: // inputs
   bool pop_field_data_snapshot();
