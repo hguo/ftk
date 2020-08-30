@@ -124,6 +124,9 @@ int parse_arguments(int argc, char **argv)
   if (archived_discrete_critical_points_filename.size() > 0)
     j_tracker["archived_discrete_critical_points_filename"] = archived_discrete_critical_points_filename;
   
+  if (archived_traced_critical_points_filename.size() > 0)
+    j_tracker["archived_traced_critical_points_filename"] = archived_traced_critical_points_filename;
+  
   if (enable_streaming_trajectories) 
     j_tracker["enable_streaming_trajectories"] = true;
 
@@ -211,7 +214,10 @@ void xgc_post_process()
   fprintf(stderr, "post processing for xgc...\n");
   auto tracker = wrapper.get_tracker();
 
-#if 1
+  // TODO: 1) drop interval points
+  //       2) split trajectories by type
+
+#if 0
   tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
     if (traj.max[1] /*max of psi*/ < 0.2) return false;
     if (traj.min[1] /*min of psi*/ > 0.3) return false;
@@ -223,7 +229,8 @@ void xgc_post_process()
 #if 1
   tracker->slice_traced_critical_points();
   tracker->select_sliced_critical_points([](const ftk::critical_point_t& cp) {
-    if (cp.scalar[1] < 0.2 || cp.scalar[1] > 0.3) return false;
+    // if (cp.scalar[1] < 0.18 || cp.scalar[1] > 0.3) return false;
+    if (cp.scalar[0] < 5.0) return false;
     if (cp.type != ftk::CRITICAL_POINT_2D_MAXIMUM) return false;
     return true;
   });

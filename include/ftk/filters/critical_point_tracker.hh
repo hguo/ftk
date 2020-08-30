@@ -100,7 +100,14 @@ public: // i/o for discrete (untraced) critical points
   json get_critical_points_json() const {return json(get_critical_points());}
   virtual void put_critical_points(const std::vector<critical_point_t>&) = 0;
   void write_critical_points_json(const std::string& filename) const {std::ofstream f(filename); f << get_critical_points_json(); f.close();}
-  void read_critical_points_json(const std::string& filename) {std::ifstream f(filename); json j; f >> j; fprintf(stderr, "#cps=%zu\n", j.size()); f.close(); put_critical_points(j.get<std::vector<critical_point_t>>());}
+  void read_critical_points_json(const std::string& filename) {
+    std::ifstream f(filename); 
+    json j; 
+    f >> j; 
+    // fprintf(stderr, "#cps=%zu\n", j.size()); 
+    f.close(); 
+    put_critical_points(j.get<std::vector<critical_point_t>>());
+  }
   void write_critical_points_binary(const std::string& filename) const;
   void read_critical_points_binary(const std::string& filename);
   void write_critical_points_text(std::ostream& os) const;
@@ -612,7 +619,8 @@ void critical_point_tracker::grow_trajectories(
           current = i;
           const auto cp = discrete_critical_points[current];
           if (cp.ordinal)
-            sliced_critical_points[cp.timestep][k] = cp;
+            // sliced_critical_points[cp.timestep][k] = cp;
+            sliced_critical_points[cp.timestep].push_back(cp);
           traj.push_back(cp);
           discrete_critical_points.erase(current);
           has_next = true;
@@ -636,7 +644,8 @@ void critical_point_tracker::grow_trajectories(
           current = i;
           const auto cp = discrete_critical_points[current];
           if (cp.ordinal)
-            sliced_critical_points[cp.timestep][k] = cp;
+            // sliced_critical_points[cp.timestep][k] = cp;
+            sliced_critical_points[cp.timestep].push_back(cp);
           traj.insert(traj.begin(), cp); // TODO: improve performance by using list instead of vector
           discrete_critical_points.erase(current);
           has_next = true;
@@ -673,7 +682,8 @@ void critical_point_tracker::grow_trajectories(
         const auto &cp = discrete_critical_points[linear_graph[k]];
         traj.push_back(cp);
         if (cp.ordinal)
-          sliced_critical_points[cp.timestep][new_id] = cp;
+          sliced_critical_points[cp.timestep].push_back(cp);
+          // sliced_critical_points[cp.timestep][new_id] = cp;
       }
       trajectories.push_back(traj);
       // fprintf(stderr, "birth.\n");

@@ -287,7 +287,9 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
   tracker->set_scalar_components({"dneOverne0", "psi"});
 
   if (j.contains("archived_traced_critical_points_filename")) {
+    fprintf(stderr, "reading archived traced critical points...\n");
     tracker->read_traced_critical_points_json(j["archived_traced_critical_points_filename"]);
+    fprintf(stderr, "done reading.\n");
     return;
   } else if (j.contains("archived_discrete_critical_points_filename")) {
     tracker->read_critical_points_json(j["archived_discrete_critical_points_filename"]);
