@@ -441,8 +441,9 @@ void critical_point_tracker_wrapper::post_process()
   tracker->split_trajectories();
   tracker->foreach_trajectory([](int k, ftk::critical_point_traj_t& t) {
     t.reorder();
+    t.adjust_time();
+    t.relabel(k);
     t.update_statistics();
-    t.identifier = k;
   });
 
   if (j.contains("output")) {

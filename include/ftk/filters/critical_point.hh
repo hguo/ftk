@@ -63,6 +63,12 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
   double tmin, tmax; // time bounding box
   unsigned int consistent_type = 0; // 0 if no consistent type
 
+  void relabel(unsigned long long i) {
+    identifier = i;
+    for (i = 0; i < size(); i ++)
+      at(i).id = i;
+  }
+
   void discard_interval_points() {
     critical_point_traj_t traj;
     traj.identifier = identifier;
@@ -178,6 +184,19 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
       std::reverse(std::begin(*this), std::end(*this));
   }
 
+  void adjust_time() { // assuming traj has only one single branch and is organized in ascending order
+    // ascending loop
+    for (auto i = 0; i < size(); i ++) {
+      if (i == 0 || at(i).ordinal) continue;
+      at(i).t = std::max(at(i-1).t, at(i).t);
+    }
+    // descending loop
+    for (auto i = size(); i -- > 0; ) {
+      if (i == size() - 1 || at(i).ordinal) continue;
+      at(i).t = std::min(at(i+1).t, at(i).t);
+    }
+  }
+
   void smooth_ordinal_types(const int half_window_size=2) {
     auto ordinals = to_ordinals();
     if (ordinals.size() < half_window_size*2+1) return;
@@ -232,6 +251,20 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
           at(j).type = rtype;
       }
     }
+  }
+  
+  int locate(double t, bool cap=false/*lower (false) or higher (true) cap*/) const { // locate interval id of given t; assuming the traj is already reordered
+    return 0; // TODO; WIP
+  }
+
+  critical_point_traj_t intercept(int t0, int t1) // assuming the traj is already reordered
+  {
+    critical_point_traj_t result;
+    if (t0 > back().t || t1 < front().t) return result;
+    return result;
+
+    int i0, i1;
+    // for (i0 = 0; i0 < size(); i ++)
   }
 };
 
