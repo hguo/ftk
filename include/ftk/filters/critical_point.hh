@@ -25,11 +25,11 @@ struct critical_point_t {
   }
 
   double operator[](size_t i) const {return x[i];}
-  double x[3] = {0}; // coordinates 
+  std::array<double, 3> x; // double x[3] = {0}; // coordinates 
   double t = 0.0; // time
   int timestep = 0; 
   // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
-  double scalar[FTK_CP_MAX_NUM_VARS] = {0};
+  std::array<double, FTK_CP_MAX_NUM_VARS> scalar; // double scalar[FTK_CP_MAX_NUM_VARS] = {0};
   unsigned int type = 0;
   bool ordinal = false;
   unsigned long long tag = 0, id = 0;
@@ -245,10 +245,10 @@ namespace nlohmann
   template <>
   struct adl_serializer<critical_point_t> {
     static void to_json(json &j, const critical_point_t& cp) {
-      j["x"] = {cp.x[0], cp.x[1], cp.x[2]};
+      j["x"] = cp.x; // {cp.x[0], cp.x[1], cp.x[2]};
       j["t"] = cp.t;
       j["timestep"] = cp.timestep;
-      j["scalar"] = std::vector<double>(cp.scalar, cp.scalar+FTK_CP_MAX_NUM_VARS);
+      j["scalar"] = cp.scalar; // std::vector<double>(cp.scalar, cp.scalar+FTK_CP_MAX_NUM_VARS);
       j["type"] = cp.type;
       j["ordinal"] = cp.ordinal;
       j["tag"] = cp.tag;
@@ -256,12 +256,10 @@ namespace nlohmann
     }
 
     static void from_json(const json& j,critical_point_t& cp) {
-      for (int i = 0; i < 3; i ++)
-        cp.x[i] = j["x"][i];
+      cp.x = j["x"];  // for (int i = 0; i < 3; i ++) cp.x[i] = j["x"][i];
       cp.t = j["t"];
       cp.timestep = j["timestep"];
-      for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
-        cp.scalar[i] = j["scalar"][i];
+      cp.scalar = j["scalar"];  // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) cp.scalar[i] = j["scalar"][i];
       cp.type = j["type"];
       cp.ordinal = j["ordinal"];
       cp.tag = j["tag"];
@@ -310,11 +308,9 @@ namespace diy {
   // template <int N, typename V, typename I> 
   // static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t<N, V, I> &cp) {
   static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t &cp) {
-    for (int i = 0; i < 3; i ++)
-      diy::save(bb, cp.x[i]);
+    diy::save(bb, cp.x); // for (int i = 0; i < 3; i ++) diy::save(bb, cp.x[i]);
     diy::save(bb, cp.t);
-    for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
-      diy::save(bb, cp.scalar[i]);
+    diy::save(bb, cp.scalar); // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) diy::save(bb, cp.scalar[i]);
     diy::save(bb, cp.type);
     diy::save(bb, cp.ordinal);
     diy::save(bb, cp.tag);
@@ -324,11 +320,9 @@ namespace diy {
   // template <int N, typename V, typename I> 
   // static void load(diy::BinaryBuffer& bb, ftk::critical_point_t<N, V, I> &cp) {
   static void load(diy::BinaryBuffer& bb, ftk::critical_point_t &cp) {
-    for (int i = 0; i < 4; i ++) 
-      diy::load(bb, cp.x[i]);
-    diy::save(bb, cp.t);
-    for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
-      diy::load(bb, cp.scalar[i]);
+    diy::load(bb, cp.x); // for (int i = 0; i < 4; i ++) diy::load(bb, cp.x[i]);
+    diy::load(bb, cp.t);  
+    diy::load(bb, cp.scalar); // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) diy::load(bb, cp.scalar[i]);
     diy::load(bb, cp.type);
     diy::load(bb, cp.ordinal);
     diy::load(bb, cp.tag);
