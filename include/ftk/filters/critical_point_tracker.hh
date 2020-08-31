@@ -9,6 +9,7 @@
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/diy-ext/gather.hh>
+#include <iomanip>
 
 #if FTK_HAVE_VTK
 #include <vtkUnsignedIntArray.h>
