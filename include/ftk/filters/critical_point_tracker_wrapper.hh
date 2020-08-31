@@ -431,6 +431,20 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
 
 void critical_point_tracker_wrapper::post_process()
 {
+  tracker->foreach_trajectory([](int, ftk::critical_point_traj_t& t) {
+    t.smooth_ordinal_types();
+    t.smooth_interval_types();
+    t.rotate();
+    // t.discard_interval_points();
+    t.update_statistics();
+  });
+  tracker->split_trajectories();
+  tracker->foreach_trajectory([](int k, ftk::critical_point_traj_t& t) {
+    t.reorder();
+    t.update_statistics();
+    t.identifier = k;
+  });
+
   if (j.contains("output")) {
     if (j["output_type"] == "sliced") {
       fprintf(stderr, "slicing and writing..\n");

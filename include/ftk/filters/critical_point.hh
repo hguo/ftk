@@ -119,11 +119,14 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
 
       if (at(i).type == current_type)
         subtraj.push_back(at(i));
-      else {
-        subtraj.update_statistics();
-        results.push_back(subtraj);
-        subtraj.clear();
-      }
+
+      if (at(i).type != current_type || i == size() - 1) {
+        if (subtraj.size() > 0) {
+          subtraj.update_statistics();
+          results.push_back(subtraj);
+          subtraj.clear();
+        }
+      } 
     }
 
     return results;
@@ -135,6 +138,31 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
       if (at(i).ordinal)
         result.push_back(i);
     return result;
+  }
+
+  void rotate() { // if the traj is a loop and the type is inconsistent, rotate the traj before splitting
+    if (!loop) return;
+    if (front().type != back().type) return;
+    int i;
+    for (i = 0; i < size(); i ++)
+      if (front().type != at(i).type) break;
+    if (i < size()) {
+      // fprintf(stderr, "rotating, i=%d, size=%zu\n", i, size());
+      std::rotate(begin(), begin()+i, end());
+    }
+  }
+
+  void reorder() { // reorder by timestep
+    if (loop) return;
+    bool reverse = false;
+    if (front().timestep == back().timestep) {
+      if (front().t > back().t) reverse = true;
+    } else {
+      if (front().timestep > back().timestep)
+        reverse = true;
+    }
+    if (reverse)
+      std::reverse(std::begin(*this), std::end(*this));
   }
 
   void smooth_ordinal_types(const int half_window_size=2) {
@@ -176,12 +204,19 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
     for (int i = ordinals[ordinals.size()-1]; i < size(); i ++)
       at(i).type = back_terminal_type;
 
-    // intervals
+    // intervals; preventing type oscilation within intervals
     for (int i = 0; i < ordinals.size()-1; i ++) {
       if (at(ordinals[i]).type == at(ordinals[i+1]).type) {
         const unsigned int interval_type = at(ordinals[i]).type;
         for (int j  = ordinals[i]; j < ordinals[i+1]; j ++)
           at(j).type = interval_type;
+      } else { // find the first point that changes type, and then smooth the rest in the interval
+        const unsigned int ltype = at(ordinals[i]).type, rtype = at(ordinals[i+1]).type;
+        int j;
+        for (j = ordinals[i] ; j < ordinals[i+1]; j ++)
+          if (at(j).type != ltype) break;
+        for (; j < ordinals[i+1]; j ++)
+          at(j).type = rtype;
       }
     }
   }

@@ -217,10 +217,12 @@ void xgc_post_process()
   // TODO: 1) drop interval points
   //       2) split trajectories by type
 
-#if 0
+#if 1
   tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
-    if (traj.max[1] /*max of psi*/ < 0.2) return false;
-    if (traj.min[1] /*min of psi*/ > 0.3) return false;
+    if (traj.max[0] < 5.0) return false;
+    if (traj.consistent_type != ftk::CRITICAL_POINT_2D_MAXIMUM) return false;
+    // if (traj.max[1] /*max of psi*/ < 0.2) return false;
+    // if (traj.min[1] /*min of psi*/ > 0.3) return false;
     //// if (traj.max[0] /*max of dpot*/ < 0.0) return false;
     if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
     return true;
@@ -244,6 +246,7 @@ int main(int argc, char **argv)
   
   parse_arguments(argc, argv);
   wrapper.consume(stream);
+  
   if (xgc_mesh_filename.size()>0) xgc_post_process();
   wrapper.post_process();
  

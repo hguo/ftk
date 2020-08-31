@@ -118,7 +118,8 @@ public: // i/o for discrete (untraced) critical points
 #endif
 
 public: // post-processing and simplification
-  void foreach_trajectory(std::function<void(critical_point_traj_t&)> f);
+  void foreach_trajectory(std::function<void(int, critical_point_traj_t&)> f) {for (int i = 0; i < traced_critical_points.size(); i ++) f(i, traced_critical_points[i]);}
+  void split_trajectories();
 
 public: // inputs
   bool pop_field_data_snapshot();
@@ -818,7 +819,18 @@ inline bool critical_point_tracker::advance_timestep()
   current_timestep ++;
   return field_data_snapshots.size() > 0;
 }
-  
+
+inline void critical_point_tracker::split_trajectories()
+{
+  // TODO: prune small loops
+
+  std::vector<critical_point_traj_t> result;
+  for (const auto &cp : traced_critical_points) {
+    auto subtrajs = cp.to_consistent_sub_traj();
+    result.insert(result.end(), subtrajs.begin(), subtrajs.end());
+  }
+  traced_critical_points = result;
+}
 
 }
 
