@@ -2,6 +2,7 @@
 #define _FTK_CRITICAL_POINT_T_HH
 
 #include <ftk/ftk_config.hh>
+#include <ftk/filters/critical_point_lite.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/json.hh>
@@ -12,6 +13,17 @@ using nlohmann::json;
 
 // template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
 struct critical_point_t {
+  critical_point_t() {}
+  critical_point_t(const critical_point_lite_t& cp) {
+    for (int i = 0; i < 3; i ++)
+      x[i] = cp.x[i];
+    t = cp.t;
+    for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
+      scalar[i] = cp.scalar[i];
+    type = cp.type;
+    tag = cp.tag;
+  }
+
   double operator[](size_t i) const {return x[i];}
   double x[3] = {0}; // coordinates 
   double t = 0.0; // time

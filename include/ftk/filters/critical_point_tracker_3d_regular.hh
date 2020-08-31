@@ -34,7 +34,7 @@
 #endif
 
 #if FTK_HAVE_CUDA
-extern std::vector<ftk::critical_point_t> // <4, double>> 
+extern std::vector<ftk::critical_point_lite_t> // <4, double>> 
 extract_cp3dt_cuda(
     int scope, int current_timestep, 
     const ftk::lattice& domain4,

@@ -6,7 +6,7 @@
 #include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/mesh/lattice.hh>
-#include <ftk/filters/critical_point.hh>
+// #include <ftk/filters/critical_point_lite.hh>
 #include "common.cuh"
 
 template <int scope>

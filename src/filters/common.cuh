@@ -3,6 +3,7 @@
 
 #include "threadIdx.cuh"
 #include "utils.cuh"
+#include <ftk/filters/critical_point_lite.hh>
 
 enum {
   scope_all = 0, 
@@ -95,7 +96,7 @@ typedef lite_element_t<3> element32_t;
 typedef lite_lattice_t<4> lattice4_t;
 typedef lite_element_t<4> element43_t;
 // typedef ftk::critical_point_t<4, double> cp4_t;
-typedef ftk::critical_point_t cp_t;
+typedef ftk::critical_point_lite_t cp_t;
   
 template <int scope>
 __device__ __host__ inline int ntypes_3_2();
