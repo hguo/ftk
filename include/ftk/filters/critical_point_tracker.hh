@@ -100,19 +100,14 @@ public: // i/o for discrete (untraced) critical points
   json get_critical_points_json() const {return json(get_critical_points());}
   virtual void put_critical_points(const std::vector<critical_point_t>&) = 0;
   void write_critical_points_json(const std::string& filename) const {std::ofstream f(filename); f << get_critical_points_json(); f.close();}
-  void read_critical_points_json(const std::string& filename) {
-    std::ifstream f(filename); 
-    json j; 
-    f >> j; 
-    // fprintf(stderr, "#cps=%zu\n", j.size()); 
-    f.close(); 
-    put_critical_points(j.get<std::vector<critical_point_t>>());
-  }
+  void read_critical_points_json(const std::string& filename);
   void write_critical_points_binary(const std::string& filename) const;
   void read_critical_points_binary(const std::string& filename);
   void write_critical_points_text(std::ostream& os) const;
   void write_critical_points_text(const std::string& filename) const;
   void write_critical_points_vtk(const std::string& filename) const;
+  void write_critical_points(const std::string& filename) const; // automatically determine format
+  void read_critical_points(const std::string& filename);
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_critical_points_vtk() const;
 #endif
@@ -457,20 +452,36 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int t, std
 
 inline void critical_point_tracker::write_traced_critical_points_json(const std::string& filename, int indent) const 
 {
-  std::ofstream f(filename); 
-  f << std::setw(indent) 
-    << get_traced_critical_points_json(); 
-  f.close();
+  if (is_root_proc()) {
+    std::ofstream f(filename); 
+    f << std::setw(indent) 
+      << get_traced_critical_points_json(); 
+    f.close();
+  }
 }
 
 inline void critical_point_tracker::read_traced_critical_points_json(const std::string& filename) 
 {
-  std::ifstream f(filename); 
-  json j; 
-  f >> j; 
-  f.close(); 
-  // traced_critical_points = j.get<std::map<int, critical_point_traj_t>>();
-  traced_critical_points = j.get<critical_point_traj_set_t>();
+  if (is_root_proc()) {
+    std::ifstream f(filename); 
+    json j; 
+    f >> j; 
+    f.close(); 
+    // traced_critical_points = j.get<std::map<int, critical_point_traj_t>>();
+    traced_critical_points = j.get<critical_point_traj_set_t>();
+  }
+}
+
+inline void critical_point_tracker::read_critical_points_json(const std::string& filename)
+{
+  if (is_root_proc()) {
+    std::ifstream f(filename); 
+    json j; 
+    f >> j; 
+    // fprintf(stderr, "#cps=%zu\n", j.size()); 
+    f.close(); 
+    put_critical_points(j.get<std::vector<critical_point_t>>());
+  }
 }
 
 inline void critical_point_tracker::set_type_filter(unsigned int f)

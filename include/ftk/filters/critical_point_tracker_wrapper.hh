@@ -151,7 +151,8 @@ void critical_point_tracker_wrapper::configure(const json& j0)
     if (j.contains("output")) {
       if (ends_with(j["output"], "vtp")) j["output_format"] = "vtp";
       else if (ends_with(j["output"], "txt")) j["output_format"] = "text";
-      else j["output_format"] = "json";
+      else if (ends_with(j["output"], "json")) j["output_format"] = "json";
+      else j["output_format"] = "binary";
     }
   }
 
@@ -288,11 +289,15 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
   if (j.contains("archived_traced_critical_points_filename")) {
     fprintf(stderr, "reading archived traced critical points...\n");
-    tracker->read_traced_critical_points_json(j["archived_traced_critical_points_filename"]);
-    fprintf(stderr, "done reading.\n");
+    const std::string filename = j["archived_traced_critical_points_filename"];
+    if (ends_with(filename, "json")) tracker->read_traced_critical_points_json(filename);
+    else tracker->read_traced_critical_points_binary(filename);
+    // fprintf(stderr, "done reading.\n");
     return;
   } else if (j.contains("archived_discrete_critical_points_filename")) {
-    tracker->read_critical_points_json(j["archived_discrete_critical_points_filename"]);
+    const std::string filename = j["archived_discrete_critical_points_filename"];
+    if (ends_with(filename, "json")) tracker->read_critical_points_json(filename);
+    else tracker->read_critical_points_binary(filename);
     tracker->finalize();
     return;
   }
@@ -392,8 +397,17 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
   tracker->initialize();
   configure_tracker_general(comm);
   
-  if (j.contains("archived_discrete_critical_points_filename")) {
-    tracker->read_critical_points_json(j["archived_discrete_critical_points_filename"]);
+  if (j.contains("archived_traced_critical_points_filename")) {
+    fprintf(stderr, "reading archived traced critical points...\n");
+    const std::string filename = j["archived_traced_critical_points_filename"];
+    if (ends_with(filename, "json")) tracker->read_traced_critical_points_json(filename);
+    else tracker->read_traced_critical_points_binary(filename);
+    // fprintf(stderr, "done reading.\n");
+    return;
+  } else if (j.contains("archived_discrete_critical_points_filename")) {
+    const std::string filename = j["archived_discrete_critical_points_filename"];
+    if (ends_with(filename, "json")) tracker->read_critical_points_json(filename);
+    else tracker->read_critical_points_binary(filename);
     tracker->finalize();
     return;
   }
@@ -464,7 +478,8 @@ void critical_point_tracker_wrapper::post_process()
       fprintf(stderr, "writing discrete critical points..\n");
       if (j["output_format"] == "vtp") tracker->write_critical_points_vtk(j["output"]);
       else if (j["output_format"] == "text") tracker->write_critical_points_text(j["output"]);
-      else tracker->write_critical_points_json(j["output"]);
+      else if (j["output_format"] == "json") tracker->write_critical_points_json(j["output"]);
+      else tracker->write_critical_points_binary(j["output"]);
     }
   }
 }
