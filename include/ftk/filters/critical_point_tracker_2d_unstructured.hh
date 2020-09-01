@@ -184,7 +184,7 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
 
   if (enable_streaming_trajectories) {
     // grow trajectories
-    grow_trajectories<int>(
+    trace_critical_points_online<int>(
         traced_critical_points, 
         discrete_critical_points,
         [&](int f) {
@@ -235,19 +235,21 @@ inline void critical_point_tracker_2d_unstructured::finalize()
 
     fprintf(stderr, "##dcp=%zu\n", discrete_critical_points.size());
 
-    traced_critical_points = trace_critical_points_offline<int>(
-        discrete_critical_points, neighbors);
+    traced_critical_points.add(trace_critical_points_offline<int>(
+        discrete_critical_points, neighbors));
     
     fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), traced_critical_points.size());
   }
   
   if (enable_discarding_interval_points)
-    for (auto& traj : traced_critical_points)
+    traced_critical_points.foreach([](critical_point_traj_t& traj) {
       traj.discard_interval_points();
+    });
 
   if (enable_discarding_degenerate_points)
-    for (auto& traj : traced_critical_points)
+    traced_critical_points.foreach([](critical_point_traj_t& traj) {
       traj.discard_degenerate_points();
+    });
     
   update_traj_statistics();
 }

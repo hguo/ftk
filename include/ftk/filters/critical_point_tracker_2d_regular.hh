@@ -128,7 +128,7 @@ inline void critical_point_tracker_2d_regular::finalize()
 
     if (comm.rank() == get_root_proc()) {
       fprintf(stderr, "finalizing...\n");
-      traced_critical_points = trace_critical_points_offline<element_t>(discrete_critical_points, 
+      traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 
           [&](element_t f) {
             std::set<element_t> neighbors;
             const auto cells = f.side_of(m);
@@ -152,16 +152,17 @@ inline void critical_point_tracker_2d_regular::finalize()
             fprintf(stderr, "size_strict_neighbors=%ld\n", strict_neighbors.size());
             return strict_neighbors;
 #endif
-      });
+      }));
 
       // trace_intersections();
       // trace_connected_components();
     }
   }
-     
+  
   if (enable_discarding_interval_points)
-    for (auto& traj : traced_critical_points)
+    traced_critical_points.foreach([](critical_point_traj_t& traj) {
       traj.discard_interval_points();
+    });
 
   update_traj_statistics();
 }
@@ -241,7 +242,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
   };
 
   auto grow = [&]() {
-    grow_trajectories<element_t>(
+    trace_critical_points_online<element_t>(
         traced_critical_points, 
         discrete_critical_points, 
         [&](element_t f) {
@@ -449,7 +450,7 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
       critical_point_traj_t traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
-      traced_critical_points.emplace_back(traj);
+      traced_critical_points.add(traj);
       // const auto subtrajs = traj.to_consistent_sub_traj();
       // traced_critical_points.insert(traced_critical_points.end(), subtrajs.begin(), subtrajs.end());
     }

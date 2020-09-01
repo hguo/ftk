@@ -314,7 +314,7 @@ void critical_point_tracker_3d_regular::trace_connected_components()
       critical_point_traj_t traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
-      traced_critical_points.emplace_back(traj);
+      traced_critical_points.add(traj);
     }
   }
 }
