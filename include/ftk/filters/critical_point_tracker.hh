@@ -337,14 +337,14 @@ inline void critical_point_tracker::read_critical_points_binary(const std::strin
 
 inline void critical_point_tracker::write_traced_critical_points_binary(const std::string& filename) const
 {
-  // if (is_root_proc()) // TODO FIXME
-  //   diy::serializeToFile(traced_critical_points, filename);
+  if (is_root_proc()) 
+    diy::serializeToFile(traced_critical_points, filename);
 }
 
 inline void critical_point_tracker::read_traced_critical_points_binary(const std::string& filename)
 {
-  // if (is_root_proc()) // TODO FIXME
-  //   diy::unserializeFromFile(filename, traced_critical_points);
+  if (is_root_proc()) 
+    diy::unserializeFromFile(filename, traced_critical_points);
 }
 
 inline void critical_point_tracker::write_traced_critical_points_text(const std::string& filename) const

@@ -60,7 +60,7 @@ namespace nlohmann
   template <>
   struct adl_serializer<critical_point_traj_set_t> {
     static void to_json(json& j, const critical_point_traj_set_t& s) {
-      j = {"trajs", static_cast<std::map<int, critical_point_traj_t>>(s)};
+      j = {{"trajs", static_cast<std::map<int, critical_point_traj_t>>(s)}};
     }
    
     static void from_json(const json&j, critical_point_traj_set_t& s) {
@@ -93,6 +93,8 @@ namespace diy {
       
       ftk::critical_point_traj_t traj;
       diy::load(bb, traj);
+
+      s[id] = traj;
     }
   }
 } // namespace diy

@@ -7,6 +7,7 @@
 using nlohmann::json;
 
 const int woven_width = 31, woven_height = 37;
+const int merger_width = 31, merger_height = 37;
 const int tornado_width = 31, tornado_height = 29, tornado_depth = 37;
 
 // for streams
@@ -14,6 +15,11 @@ const json js_woven_synthetic = {
   {"type", "synthetic"},
   {"name", "woven"},
   {"dimensions", {woven_width, woven_height}}
+};
+
+const json js_merger_2d_synthetic = {
+  {"type", "synthetic"},
+  {"name", "merger_2d"}
 };
 
 const json js_moving_extremum_2d_synthetic = {
@@ -112,13 +118,15 @@ const json jw_moving_extremum_2d_vti = {
   {"variable", "scalar"}
 };
 
-static std::tuple<size_t, size_t> track_cp2d(const json& jstream)
+static std::tuple<size_t, size_t> track_cp2d(const json jstream, const json jconfig = json())
 {
   ftk::ndarray_stream<> stream;
   stream.configure(jstream);
 
   ftk::critical_point_tracker_wrapper consumer;
+  consumer.configure(jconfig);
   consumer.consume(stream);
+  consumer.post_process();
     
   auto tracker = std::dynamic_pointer_cast<ftk::critical_point_tracker_2d_regular>( consumer.get_tracker() );
   auto trajs = tracker->get_traced_critical_points();

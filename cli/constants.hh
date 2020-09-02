@@ -10,7 +10,6 @@
     ("f,input-format", "Input file format (auto|float32|float64|nc|h5|vti)", cxxopts::value<std::string>()) \
     ("synthetic", "Use a synthetic case (woven|double_gyre|merger) as inputs", cxxopts::value<std::string>()) \
     ("m,mesh", "Input mesh file (will shadow arguments including width, height, depth)", cxxopts::value<std::string>()) \
-    ("dim", "Spatial dimensionality of data (auto|2|3)", cxxopts::value<std::string>()) \
     ("w,width", "Width", cxxopts::value<size_t>()) \
     ("h,height", "Height", cxxopts::value<size_t>()) \
     ("d,depth", "Depth.  Valid only for 3D data", cxxopts::value<size_t>()) \
@@ -20,6 +19,7 @@
     ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", cxxopts::value<size_t>()) \
     ("spatial-smoothing-kernel", "Spatial smoothing kernel bandwidth", cxxopts::value<double>()) \
     ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>())
+    // ("dim", "Spatial dimensionality of data (auto|2|3)", cxxopts::value<std::string>())
 
 static const std::string 
         str_auto("auto"),
@@ -96,9 +96,21 @@ static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
 
   if (results.count("input-format")) j["format"] = results["format"].as<std::string>();
   if (results.count("dim")) j["nd"] = results["dim"].as<std::string>();
-  if (results.count("width")) j["width"] = results["width"].as<size_t>();
-  if (results.count("height")) j["height"] = results["height"].as<size_t>();
-  if (results.count("depth")) j["depth"] = results["depth"].as<size_t>();
+  
+  std::vector<size_t> dims;
+  if (results.count("depth")) {
+    dims.resize(3);
+    dims[2] = results["depth"].as<size_t>();
+    dims[1] = results["height"].as<size_t>();
+    dims[0] = results["width"].as<size_t>();
+  } else if (results.count("height")) {
+    dims.resize(2);
+    dims[1] = results["height"].as<size_t>();
+    dims[0] = results["width"].as<size_t>();
+  }
+  if (dims.size())
+    j["dimensions"] = dims;
+
   if (results.count("timesteps")) j["n_timesteps"] = results["timesteps"].as<size_t>();
   if (results.count("var")) {
     const auto var = results["var"].as<std::string>();

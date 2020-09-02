@@ -473,7 +473,8 @@ void critical_point_tracker_wrapper::post_process()
       fprintf(stderr, "writing traced critical points..\n");
       if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
       else if (j["output_format"] == "text") tracker->write_traced_critical_points_text(j["output"]);
-      else tracker->write_traced_critical_points_json(j["output"]);
+      else if (j["output_format"] == "json") tracker->write_traced_critical_points_json(j["output"]);
+      else tracker->write_traced_critical_points_binary(j["output"]);
     } else if (j["output_type"] == "discrete") {
       fprintf(stderr, "writing discrete critical points..\n");
       if (j["output_format"] == "vtp") tracker->write_critical_points_vtk(j["output"]);

@@ -67,6 +67,10 @@ target_link_libraries (test_critical_point_tracking_double_gyre_unstructured ftk
 add_executable(test_adios2 test_adios2.cpp)
 target_link_libraries (test_adios2 ftk)
 
+add_executable (test_critical_point_tracking_merger_2d test_critical_point_tracking_merger_2d)
+target_link_libraries (test_critical_point_tracking_merger_2d ftk)
+catch_discover_tests (test_critical_point_tracking_merger_2d)
+
 # cli test
 if (FTK_BUILD_EXECUTABLES)
   if (FTK_HAVE_MPI)
