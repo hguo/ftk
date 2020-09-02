@@ -417,7 +417,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
   bool succ2 = ftk::inverse_lerp_s3v3(v, mu);
   if (!succ2) return false; // TODO
   for (int i = 0; i < 4; i ++)
-    if (isnan(mu[i]) || isinf(mu[i])) return false;
+    if (std::isnan(mu[i]) || std::isinf(mu[i])) return false;
   
   double X[4][4], x[4]; // position
   simplex_positions(vertices, X);
