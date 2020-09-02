@@ -75,11 +75,11 @@ PYBIND11_MODULE(pyftk, m) {
     const auto traces = tracker.get_traced_critical_points();
     py::list result;
 
-    for (auto i = 0; i < traces.size(); i ++) {
+    for (const auto &kv : traces) {
       py::dict traj;
       py::list trace;
-      for (auto j = 0; j < traces[i].size(); j ++) {
-        const auto &cp = traces[i][j];
+      for (auto j = 0; j < kv.second.size(); j ++) {
+        const auto &cp = kv.second[j];
         py::dict pcp;
         pcp["x"] = cp.x[0];
         pcp["y"] = cp.x[1];
@@ -88,7 +88,7 @@ PYBIND11_MODULE(pyftk, m) {
         pcp["scalar"] = cp.scalar[0];
         trace.append(pcp);
       }
-      traj["length"] = traces[i].size();
+      traj["length"] = kv.second.size();
       traj["trace"] = trace;
       result.append(traj);
     }
