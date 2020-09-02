@@ -96,6 +96,15 @@ public: // i/o for sliced critical points
   vtkSmartPointer<vtkPolyData> get_sliced_critical_points_vtk(int t) const;
 #endif
 
+public: // i/o for intercepted traced
+  critical_point_traj_set_t get_intercepted_critical_point(int t0, int t1) const {return traced_critical_points.intercept(t0, t1);}
+  void write_intercepted_critical_points_vtk(int t0, int t1, const std::string& filename) const;
+  void write_intercepted_critical_points_text(int t0, int t1, const std::string& filename) const;
+  void write_intercepted_critical_points_json(int t0, int t1, const std::string& filename) const;
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_intercepted_critical_points_vtk(int t0, int t1) const {return get_intercepted_critical_point(t0, t1).to_vtp(cpdims(), scalar_components);}
+#endif
+
 public: // i/o for discrete (untraced) critical points
   virtual std::vector<critical_point_t> get_critical_points() const = 0;
   json get_critical_points_json() const {return json(get_critical_points());}
@@ -236,6 +245,14 @@ inline bool critical_point_tracker::pop_field_data_snapshot()
 
 //////
 #if FTK_HAVE_VTK
+inline void critical_point_tracker::write_intercepted_critical_points_vtk(int t0, int t1, const std::string& filename) const
+{
+  if (comm.rank() == get_root_proc()) {
+    auto poly = get_intercepted_critical_points_vtk(t0, t1);
+    write_vtp(filename, poly);
+  }
+}
+
 inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename) const
 {
   if (comm.rank() == get_root_proc()) {

@@ -26,6 +26,9 @@ struct critical_point_traj_set_t : public std::map<int, critical_point_traj_t>
 
   void filter(std::function<bool(const critical_point_traj_t&)> f);
 
+  std::vector<critical_point_t> slice(int t) const;
+  critical_point_traj_set_t intercept(int t0, int t1) const;
+
 public: // IO
   void write(const std::string& format, const std::string& filename) const;
   void read(const std::string& format, const std::string& filename);
@@ -328,6 +331,17 @@ inline void critical_point_traj_set_t::split_all()
 
   for (const auto &traj : result)
     add(traj);
+}
+
+critical_point_traj_set_t critical_point_traj_set_t::intercept(int t0, int t1) const
+{
+  critical_point_traj_set_t result;
+  for (const auto &kv : * this) {
+    auto traj = kv.second.intercept(t0, t1);
+    if (!traj.empty())
+      result[kv.first] = traj;
+  }
+  return result;
 }
 
 } // namespace ftk

@@ -238,11 +238,15 @@ inline int critical_point_traj_t::locate(double t, bool cap) const
 inline critical_point_traj_t critical_point_traj_t::intercept(int t0, int t1) const //! assuming the traj is already reordered
 {
   critical_point_traj_t result;
-  if (t0 > back().t || t1 < front().t) return result;
-  return result;
+  if (t0 > back().t || t1 < front().t) 
+    return result;
 
-  int i0, i1;
-  // for (i0 = 0; i0 < size(); i ++)
+  for (int i = 0; i < size(); i ++)
+    if (at(i).t >= t0 && at(i).t <= t1)
+      result.push_back(at(i));
+
+  result.update_statistics();
+  return result;
 }
 
 } // namespace ftk

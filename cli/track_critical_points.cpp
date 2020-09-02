@@ -63,7 +63,7 @@ int parse_arguments(int argc, char **argv)
     ("xgc-write-back", "XGC write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_filename))
-    ("output-type", "Output type {discrete|traced|sliced}, by default traced", 
+    ("output-type", "Output type {discrete|traced|sliced|intercepted}, by default traced", 
      cxxopts::value<std::string>(output_type)->default_value("traced"))
     ("output-format", "Output format {auto|text|vtp}, by default auto", 
      cxxopts::value<std::string>(output_format)->default_value(str_auto))

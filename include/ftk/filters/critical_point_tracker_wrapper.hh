@@ -31,6 +31,7 @@ private:
   void consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm);
 
   void write_sliced_results(int k);
+  void write_intercepted_results(int k, int nt);
 
 private:
   std::shared_ptr<critical_point_tracker> tracker;
@@ -118,7 +119,8 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   static const std::set<std::string> valid_output_types = {
     "discrete", // discrete and un-traced critical points.  TODO: currently ignored
     "traced", // critical point trajectories
-    "sliced" // trajectories sliced into individual timesteps
+    "sliced", // trajectories sliced into individual timesteps
+    "intercepted"
   };
   static const std::string default_output_type = "traced";
   if (j.contains("output_type")) {
@@ -366,6 +368,14 @@ void critical_point_tracker_wrapper::write_sliced_results(int k)
     tracker->write_sliced_critical_points_text(k, filename);
 }
 
+void critical_point_tracker_wrapper::write_intercepted_results(int k, int nt)
+{
+  const std::string pattern = j["output"];
+  const std::string filename = ndarray_writer<double>::filename(pattern, k);
+  if (j["output_format"] == "vtp")
+    tracker->write_intercepted_critical_points_vtk(k-nt, k, filename);
+}
+
 void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
   const auto js = stream.get_json();
@@ -482,6 +492,10 @@ void critical_point_tracker_wrapper::post_process()
         tracker->slice_traced_critical_points();
       for (const auto &kv : tracker->get_sliced_critical_points()) 
         write_sliced_results(kv.first);
+    } else if (j["output_type"] == "intercepted") {
+      fprintf(stderr, "writing intercepted critical points..\n");
+      for (int t = 0; t < tracker->get_current_timestep(); t ++)
+        write_intercepted_results(t, 2);
     } else if (j["output_type"] == "traced") {
       fprintf(stderr, "writing traced critical points..\n");
       if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
