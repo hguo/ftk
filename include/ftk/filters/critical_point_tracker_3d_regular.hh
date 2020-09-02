@@ -120,8 +120,21 @@ void critical_point_tracker_3d_regular::finalize()
   if (comm.rank() == 0) {
     fprintf(stderr, "finalizing...\n");
     // trace_intersections();
-    trace_connected_components();
+    // trace_connected_components();
+    traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 
+        [&](element_t f) {
+          std::set<element_t> neighbors;
+          const auto cells = f.side_of(m);
+          for (const auto c : cells) {
+            const auto elements = c.sides(m);
+            for (const auto f1 : elements)
+              neighbors.insert(f1);
+          }
+          return neighbors;
+    }));
   }
+  
+  update_traj_statistics();
 }
 
 inline void critical_point_tracker_3d_regular::push_scalar_field_snapshot(const ndarray<double>& s)
