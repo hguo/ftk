@@ -45,7 +45,9 @@ public: // IO
   void write_vtk(const std::string& filename) const;
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> to_vtp(const int ncdims, const std::vector<std::string> &scalar_components) const;
+  vtkSmartPointer<vtkPolyData> to_vtp(const int ncdims, 
+      const std::vector<std::string> &scalar_components, 
+      double tfactor=1.0) const;
 #endif
 
 protected:
@@ -197,7 +199,7 @@ inline void critical_point_traj_set_t::write_vtk(const std::string& filename) co
 }
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims, const std::vector<std::string> &scalar_components) const
+vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims, const std::vector<std::string> &scalar_components, double tfactor) const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -206,7 +208,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
 
   foreach([&](const critical_point_traj_t& curve) {
     for (auto i = 0; i < curve.size(); i ++) {
-      double p[3] = {curve[i][0], curve[i][1], cpdims == 2 ? curve[i].t : curve[i][2]};
+      double p[3] = {curve[i][0], curve[i][1], cpdims == 2 ? curve[i].t * tfactor : curve[i][2]};
       points->InsertNextPoint(p);
     }
   });

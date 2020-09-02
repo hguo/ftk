@@ -102,7 +102,7 @@ public: // i/o for intercepted traced
   void write_intercepted_critical_points_text(int t0, int t1, const std::string& filename) const;
   void write_intercepted_critical_points_json(int t0, int t1, const std::string& filename) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_intercepted_critical_points_vtk(int t0, int t1) const {return get_intercepted_critical_point(t0, t1).to_vtp(cpdims(), scalar_components);}
+  vtkSmartPointer<vtkPolyData> get_intercepted_critical_points_vtk(int t0, int t1) const {return get_intercepted_critical_point(t0, t1).to_vtp(cpdims(), scalar_components, 0.0);}
 #endif
 
 public: // i/o for discrete (untraced) critical points

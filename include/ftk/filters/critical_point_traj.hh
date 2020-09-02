@@ -245,7 +245,11 @@ inline critical_point_traj_t critical_point_traj_t::intercept(int t0, int t1) co
     if (at(i).t >= t0 && at(i).t <= t1)
       result.push_back(at(i));
 
-  result.update_statistics();
+  if (result.size() > 0) {
+    result.relabel(id);
+    result.update_statistics();
+  }
+
   return result;
 }
 
