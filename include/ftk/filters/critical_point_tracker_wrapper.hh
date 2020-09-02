@@ -213,8 +213,10 @@ void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communi
 {
   tracker->set_communicator(comm);
   tracker->set_root_proc(j["root_proc"]);
-  
-  // tracker->set_number_of_threads(nthreads);
+ 
+  if (j.contains("nthreads") && j["nthreads"].is_number())
+    tracker->set_number_of_threads(j["nthreads"]);
+
   tracker->set_input_array_partial(false); // input data are not distributed
 
   // if (use_type_filter)

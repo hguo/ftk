@@ -121,6 +121,8 @@ int parse_arguments(int argc, char **argv)
   j_tracker["output_type"] = output_type;
   j_tracker["output_format"] = output_format;
 
+  j_tracker["nthreads"] = nthreads;
+
   if (archived_discrete_critical_points_filename.size() > 0)
     j_tracker["archived_discrete_critical_points_filename"] = archived_discrete_critical_points_filename;
   
@@ -149,14 +151,10 @@ int parse_arguments(int argc, char **argv)
 
   diy::mpi::communicator world;
   if (world.rank() == 0) {
-    fprintf(stderr, "SUMMARY\n=============\n");
-    std::cerr << "input=" << stream.get_json() << std::endl;
-    std::cerr << "config=" << wrapper.get_json() << std::endl;
-    // fprintf(stderr, "output_filename=%s\n", output_filename.c_str());
-    // fprintf(stderr, "output_format=%s\n", output_format.c_str());
-    // fprintf(stderr, "type_filter=%s\n", type_filter_str.c_str());
-    fprintf(stderr, "nthreads=%d\n", nthreads);
-    fprintf(stderr, "=============\n");
+    // fprintf(stderr, "SUMMARY\n=============\n");
+    std::cerr << "input=" << std::setw(2) << stream.get_json() << std::endl;
+    std::cerr << "config=" << std::setw(2) << wrapper.get_json() << std::endl;
+    // fprintf(stderr, "=============\n");
   }
 
   // assert(nd == 2 || nd == 3);
