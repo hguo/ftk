@@ -34,6 +34,7 @@ bool verbose = false, demo = false, show_vtk = false, help = false;
 bool enable_streaming_trajectories = false, 
      enable_discarding_interval_points = false,
      disable_robust_detection = false;
+int intercept_length = 2;
 
 // xgc specific
 std::string xgc_mesh_filename, 
@@ -67,6 +68,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(output_type)->default_value("traced"))
     ("output-format", "Output format {auto|text|vtp}, by default auto", 
      cxxopts::value<std::string>(output_format)->default_value(str_auto))
+    ("intercept-length", "Length of intercepted outputs", 
+     cxxopts::value<int>(intercept_length)->default_value("2"))
     ("type-filter", "Type filter: ane single or a combination of critical point types, e.g. `min', `max', `saddle', `min|max'",
      cxxopts::value<std::string>(type_filter_str))
     ("nthreads", "Number of threads", 
@@ -123,6 +126,7 @@ int parse_arguments(int argc, char **argv)
   j_tracker["output"] = output_filename;
   j_tracker["output_type"] = output_type;
   j_tracker["output_format"] = output_format;
+  j_tracker["intercept_length"] = intercept_length;
 
   j_tracker["nthreads"] = nthreads;
 

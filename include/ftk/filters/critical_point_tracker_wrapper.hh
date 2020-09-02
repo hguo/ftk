@@ -372,8 +372,12 @@ void critical_point_tracker_wrapper::write_intercepted_results(int k, int nt)
 {
   const std::string pattern = j["output"];
   const std::string filename = ndarray_writer<double>::filename(pattern, k);
-  if (j["output_format"] == "vtp")
+  if (j["output_format"] == "vtp") {
+    int nt = 2;
+    if (j.contains("intercept_length") && j["intercept_length"].is_number())
+      nt = j["intercept_length"];
     tracker->write_intercepted_critical_points_vtk(k-nt, k, filename);
+  }
 }
 
 void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm)
