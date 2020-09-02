@@ -94,7 +94,7 @@ static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
   } else 
     j["type"] = "file";
 
-  if (results.count("input-format")) j["format"] = results["format"].as<std::string>();
+  if (results.count("input-format")) j["format"] = results["input-format"].as<std::string>();
   if (results.count("dim")) j["nd"] = results["dim"].as<std::string>();
   
   std::vector<size_t> dims;
