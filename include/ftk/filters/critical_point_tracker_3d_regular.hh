@@ -402,9 +402,9 @@ bool critical_point_tracker_3d_regular::check_simplex(
 
   double mu[4]; // check intersection
   bool succ2 = ftk::inverse_lerp_s3v3(v, mu);
+  if (!succ2) return false; // TODO
   for (int i = 0; i < 4; i ++)
     if (isnan(mu[i]) || isinf(mu[i])) return false;
-  // if (!succ) return false;
   
   double X[4][4], x[4]; // position
   simplex_positions(vertices, X);
@@ -414,8 +414,17 @@ bool critical_point_tracker_3d_regular::check_simplex(
   cp.x[2] = x[2];
   cp.t = x[3];
 
+  double Js[4][3][3], J[3][3];
+  simplex_jacobians(vertices, Js);
+  ftk::lerp_s3m3x3(Js, mu, J);
+
+  cp.type = ftk::critical_point_type_3d(J, is_jacobian_field_symmetric);
+  cp.tag = e.to_integer(m);
+  cp.ordinal = e.is_ordinal(m);
+  cp.timestep = current_timestep;
+
   return true; // TODO
- 
+#if 0 // legacy
   if (scalar_field_source != SOURCE_NONE) {
     double values[3];
     simplex_scalars(vertices, values);
@@ -434,6 +443,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
   cp.type = critical_point_type_3d(J, is_jacobian_field_symmetric);
   if (filter_critical_point_type(cp)) return true; 
   else return false;
+#endif
 } 
 
 }
