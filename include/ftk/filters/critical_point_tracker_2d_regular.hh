@@ -74,7 +74,6 @@ protected:
   void trace_intersections();
   void trace_connected_components();
 
-  template <typename I=int> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
   virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
   template <typename T=double> void simplex_vectors(const std::vector<std::vector<int>>& vertices, T v[][2]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
@@ -455,14 +454,6 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
       // traced_critical_points.insert(traced_critical_points.end(), subtrajs.begin(), subtrajs.end());
     }
   }
-}
-
-template <typename I>
-inline void critical_point_tracker_2d_regular::simplex_indices(
-    const std::vector<std::vector<int>>& vertices, I indices[]) const
-{
-  for (int i = 0; i < vertices.size(); i ++)
-    indices[i] = m.get_lattice().to_integer(vertices[i]);
 }
 
 inline void critical_point_tracker_2d_regular::simplex_coordinates(

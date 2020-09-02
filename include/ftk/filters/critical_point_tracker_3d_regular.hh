@@ -160,7 +160,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         discrete_critical_points[e] = cp;
-        fprintf(stderr, "%f, %f, %f, %f, type=%d\n", cp[0], cp[1], cp[2], cp[3], cp.type);
+        fprintf(stderr, "x={%f, %f, %f}, t=%f, type=%d\n", cp[0], cp[1], cp[2], cp.t, cp.type);
       }
     };
 
@@ -374,6 +374,12 @@ bool critical_point_tracker_3d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
     critical_point_t& cp)
 {
+#if FTK_HAVE_GMP
+  typedef mpf_class fp_t;
+#else
+  typedef fixed_point<> fp_t;
+#endif
+
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m);
 
@@ -381,9 +387,24 @@ bool critical_point_tracker_3d_regular::check_simplex(
   simplex_vectors(vertices, v);
   // ftk::print4x3("v", v);
 
-  double mu[4]; // check intersection
-  bool succ = ftk::inverse_lerp_s3v3(v, mu);
+  fp_t vf[4][3];
+  for (int i = 0; i < 4; i ++)
+    for (int j = 0; j < 3; j ++) {
+      const double x = v[i][j];
+      if (std::isnan(x) || std::isinf(x)) return false;
+      else vf[i][j] = v[i][j];
+    }
+
+  int indices[4];
+  simplex_indices(vertices, indices);
+  bool succ = robust_critical_point_in_simplex3(vf, indices);
   if (!succ) return false;
+
+  double mu[4]; // check intersection
+  bool succ2 = ftk::inverse_lerp_s3v3(v, mu);
+  for (int i = 0; i < 4; i ++)
+    if (isnan(mu[i]) || isinf(mu[i])) return false;
+  // if (!succ) return false;
   
   double X[4][4], x[4]; // position
   simplex_positions(vertices, X);

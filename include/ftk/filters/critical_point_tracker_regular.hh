@@ -34,6 +34,9 @@ public: // cp io
   std::vector<critical_point_t> get_critical_points() const;
   void put_critical_points(const std::vector<critical_point_t>&);
 
+protected: // internal use
+  template <typename I=int> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
+
 protected: // config
   lattice domain, array_domain, 
           local_domain, local_array_domain;
@@ -64,6 +67,13 @@ inline void critical_point_tracker_regular::put_critical_points(const std::vecto
   }
 }
 
+template <typename I>
+inline void critical_point_tracker_regular::simplex_indices(
+    const std::vector<std::vector<int>>& vertices, I indices[]) const
+{
+  for (int i = 0; i < vertices.size(); i ++)
+    indices[i] = m.get_lattice().to_integer(vertices[i]);
+}
 
 }
 
