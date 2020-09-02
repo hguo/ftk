@@ -361,9 +361,14 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         coords.data()
       );
     
-    for (auto cp : results) {
+    fprintf(stderr, "ordinal_results#=%d\n", results.size());
+    for (auto lcp : results) {
+      critical_point_t cp(lcp);
       element_t e(3, 2);
       e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
+      cp.tag = e.to_integer(m);
+      cp.ordinal = true;
+      cp.timestep = current_timestep;
       discrete_critical_points[e] = cp;
     }
 
@@ -385,9 +390,13 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           coords.data()
         );
       fprintf(stderr, "interal_results#=%d\n", results.size());
-      for (auto cp : results) {
+      for (auto lcp : results) {
+        critical_point_t cp(lcp);
         element_t e(3, 2);
         e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
+        cp.tag = e.to_integer(m);
+        cp.ordinal = false;
+        cp.timestep = current_timestep;
         discrete_critical_points[e] = cp;
       }
     }
