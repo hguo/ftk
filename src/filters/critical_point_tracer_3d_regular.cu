@@ -4,7 +4,9 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
+#include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_type.hh>
+#include <ftk/numeric/critical_point_test.hh>
 #include <ftk/mesh/lattice.hh>
 // #include <ftk/filters/critical_point_lite.hh>
 #include "common.cuh"
@@ -22,13 +24,16 @@ bool check_simplex_cp3t(
     const double *scalar[2], // scalars
     cp_t &cp)
 {
+  typedef ftk::fixed_point<> fp_t;
+  
   // const int last_timestep = current_timestep - 1;
   // if (scope == scope_interval && e.corner[3] != last_timestep)
   if (e.corner[3] != current_timestep)
     return false;
   
-  int vertices[4][4];
-  for (int i = 0; i < 4; i ++)
+  int vertices[4][4], indices[4];
+  size_t local_indices[4];
+  for (int i = 0; i < 4; i ++) {
     for (int j = 0; j < 4; j ++) {
       vertices[i][j] = e.corner[j]
         + unit_simplex_offset_4_3<scope>(e.type, i, j);
@@ -36,23 +41,32 @@ bool check_simplex_cp3t(
           vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
     }
-
-  double v[4][3];
-  for (int i = 0; i < 4; i ++) {
-    size_t k = ext.to_index(vertices[i]);
-    for (int j = 0; j < 3; j ++)
-      v[i][j] = V[unit_simplex_offset_4_3<scope>(e.type, i, 3)][k*3+j]; // V has three channels
+    indices[i] = domain.to_index(vertices[i]);
+    local_indices[i] = ext.to_index(vertices[i]);
   }
 
+  double v[4][3];
+  fp_t vf[4][3];
+  for (int i = 0; i < 4; i ++) {
+    const size_t k = local_indices[i]; // k = ext.to_index(vertices[i]);
+    for (int j = 0; j < 3; j ++) {
+      v[i][j] = V[unit_simplex_offset_4_3<scope>(e.type, i, 3)][k*3+j]; // V has three channels
+      vf[i][j] = v[i][j];
+    }
+  }
+
+  bool succ = robust_critical_point_in_simplex3(vf, indices);
+  if (!succ) return false;
+
   double mu[4];
-  bool succ = ftk::inverse_lerp_s3v3(v, mu);
- 
-  if (succ) {
+  bool succ2 = ftk::inverse_lerp_s3v3(v, mu); //, 0.0);
+  if (succ2) {
+    // if (!succ2) return false;
     // linear jacobian interpolation
     if (gradV[0]) { // have given jacobian
       double Js[4][3][3], J[3][3];
       for (int i = 0; i < 4; i ++) {
-        size_t ii = ext.to_index(vertices[i]);
+        size_t ii = local_indices[i]; // ext.to_index(vertices[i]);
         int t = unit_simplex_offset_4_3<scope>(e.type, i, 3);
         for (int j = 0; j < 3; j ++) 
           for (int k = 0; k < 3; k ++)
@@ -67,7 +81,7 @@ bool check_simplex_cp3t(
     if (scalar[0]) { // have given scalar
       double values[4];
       for (int i = 0; i < 4; i ++) {
-        size_t ii = ext.to_index(vertices[i]);
+        size_t ii = local_indices[i]; // ext.to_index(vertices[i]);
         int t = unit_simplex_offset_4_3<scope>(e.type, i, 3);
         values[i] = scalar[t][ii];
       }
