@@ -67,6 +67,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
       fatal("missing " + key);
   };
 
+  add_boolean_option("enable_robust_detection", true);
   add_boolean_option("enable_streaming_trajectories", false);
   add_boolean_option("enable_discarding_interval_points", false);
   add_boolean_option("enable_discarding_degenerate_points", false);
@@ -110,6 +111,8 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   add_string_option(j, "archived_traced_critical_points_filename", false);
 
   add_string_option(j, "output", false);
+
+  add_string_option(j, "accelerator", false);
 
   // output type
   static const std::set<std::string> valid_output_types = {
@@ -217,11 +220,19 @@ void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communi
   if (j.contains("nthreads") && j["nthreads"].is_number())
     tracker->set_number_of_threads(j["nthreads"]);
 
+  if (j.contains("accelerator")) {
+    if (j["accelerator"] == "cuda")
+      tracker->use_accelerator( FTK_XL_CUDA );
+  }
+
   tracker->set_input_array_partial(false); // input data are not distributed
 
   // if (use_type_filter)
   //   tracker->set_type_filter(type_filter);
- 
+
+  if (j.contains("enable_robust_detection"))
+    tracker->set_enable_robust_detection( j["enable_robust_detection"].get<bool>() );
+
   if (j["enable_streaming_trajectories"] == true)
     tracker->set_enable_streaming_trajectories(true);
 

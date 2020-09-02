@@ -35,6 +35,7 @@ struct critical_point_tracker : public filter {
   void set_input_array_partial(bool b) {is_input_array_partial = b;}
   void set_use_default_domain_partition(bool b) {use_default_domain_partition = true;}
 
+  void set_enable_robust_detection(bool b) { enable_robust_detection = b; }
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
   void set_enable_discarding_interval_points(bool b) { enable_discarding_interval_points = b; }
   void set_enable_discarding_degenerate_points(bool b) { enable_discarding_degenerate_points = b; }
@@ -172,6 +173,7 @@ protected:
   // scalar components
   std::vector<std::string> scalar_components = {"scalar"};
 
+  bool enable_robust_detection = true;
   bool enable_streaming_trajectories = false;
   bool enable_discarding_interval_points = false;
   bool enable_discarding_degenerate_points = false;

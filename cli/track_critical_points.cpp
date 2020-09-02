@@ -32,7 +32,8 @@ std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 bool enable_streaming_trajectories = false, 
-     enable_discarding_interval_points = false;
+     enable_discarding_interval_points = false,
+     disable_robust_detection = false;
 
 // xgc specific
 std::string xgc_mesh_filename, 
@@ -76,6 +77,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<bool>(enable_streaming_trajectories))
     ("discard-interval-points", "Discard interval critical points (experimental)", 
      cxxopts::value<bool>(enable_discarding_interval_points))
+    ("disable-robust", "Disable robust detection (faster than robust detection)",
+     cxxopts::value<bool>(disable_robust_detection))
     ("vtk", "Show visualization with vtk (legacy)", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -123,6 +126,9 @@ int parse_arguments(int argc, char **argv)
 
   j_tracker["nthreads"] = nthreads;
 
+  if (accelerator != str_none)
+    j_tracker["accelerator"] = accelerator;
+
   if (archived_discrete_critical_points_filename.size() > 0)
     j_tracker["archived_discrete_critical_points_filename"] = archived_discrete_critical_points_filename;
   
@@ -134,6 +140,9 @@ int parse_arguments(int argc, char **argv)
 
   if (enable_discarding_interval_points)
     j_tracker["enable_discarding_interval_points"] = true;
+
+  if (disable_robust_detection)
+    j_tracker["enable_robust_detection"] = false;
 
   j_tracker["type_filter"] = type_filter_str;
 

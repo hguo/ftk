@@ -400,18 +400,20 @@ bool critical_point_tracker_3d_regular::check_simplex(
   simplex_vectors(vertices, v);
   // ftk::print4x3("v", v);
 
-  fp_t vf[4][3];
-  for (int i = 0; i < 4; i ++)
-    for (int j = 0; j < 3; j ++) {
-      const double x = v[i][j];
-      if (std::isnan(x) || std::isinf(x)) return false;
-      else vf[i][j] = v[i][j];
-    }
+  if (enable_robust_detection) {
+    fp_t vf[4][3];
+    for (int i = 0; i < 4; i ++)
+      for (int j = 0; j < 3; j ++) {
+        const double x = v[i][j];
+        if (std::isnan(x) || std::isinf(x)) return false;
+        else vf[i][j] = v[i][j];
+      }
 
-  int indices[4];
-  simplex_indices(vertices, indices);
-  bool succ = robust_critical_point_in_simplex3(vf, indices);
-  if (!succ) return false;
+    int indices[4];
+    simplex_indices(vertices, indices);
+    bool succ = robust_critical_point_in_simplex3(vf, indices);
+    if (!succ) return false;
+  }
 
   double mu[4]; // check intersection
   bool succ2 = ftk::inverse_lerp_s3v3(v, mu);
