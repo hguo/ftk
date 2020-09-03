@@ -438,16 +438,23 @@ inline vtkSmartPointer<vtkPolyData> critical_point_tracker::get_sliced_critical_
   vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
   types->SetName("type");
   types->SetNumberOfValues(cps.size());
+  
+  vtkSmartPointer<vtkDoubleArray> velocities = vtkSmartPointer<vtkDoubleArray>::New();
+  velocities->SetName("velocity");
+  velocities->SetNumberOfComponents(3);
+  velocities->SetNumberOfTuples(cps.size());
 
   int i = 0;
   for (const auto &cp : cps) {
     ids->SetValue(i, cp.id);
     types->SetValue(i, cp.type);
+    velocities->SetTuple3(i, cp.v[0], cp.v[1], cp.v[2]);
     i ++;
   }
 
   polyData->GetPointData()->AddArray(ids);
   polyData->GetPointData()->AddArray(types);
+  polyData->GetPointData()->AddArray(velocities);
   polyData->GetPointData()->SetActiveScalars("id");
   
   for (auto k = 0; k < scalar_components.size(); k ++) {

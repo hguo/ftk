@@ -488,6 +488,12 @@ void critical_point_tracker_wrapper::xgc_post_process()
     return false;
   });
   
+  auto &trajs = tracker->get_traced_critical_points();
+  trajs.foreach([](ftk::critical_point_traj_t& t) {
+    t.discard_interval_points();
+    t.derive_velocity();
+  });
+  
   tracker->slice_traced_critical_points();
   tracker->select_sliced_critical_points([](const ftk::critical_point_t& cp) {
     // if (cp.scalar[1] < 0.18 || cp.scalar[1] > 0.3) return false;
