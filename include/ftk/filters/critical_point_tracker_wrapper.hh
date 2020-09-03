@@ -499,7 +499,7 @@ void critical_point_tracker_wrapper::xgc_post_process()
 
 void critical_point_tracker_wrapper::post_process()
 {
-  if (j.contains("xgc") && j["xgc"].contains("post_process"))
+  if (j.contains("xgc") && j["xgc"].contains("post_process") && j["xgc"]["post_process"] == true)
     xgc_post_process();
 
   auto &trajs = tracker->get_traced_critical_points();
