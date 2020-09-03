@@ -18,6 +18,7 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
   void discard_interval_points();
   void discard_degenerate_points();
   void update_statistics();
+  void derive_velocity(); // (const std::vector<double> &dog_kernel); // assuming the traj contains only ordinal points (dt=1)
 
   std::vector<critical_point_traj_t> split() const; // split to consistent subtrajs
   std::vector<int/*idx in orignal traj*/> to_ordinals() const;
@@ -251,6 +252,40 @@ inline critical_point_traj_t critical_point_traj_t::intercept(int t0, int t1) co
   }
 
   return result;
+}
+
+inline void critical_point_traj_t::derive_velocity() // const std::vector<double> &kernel)
+{
+  if (empty()) return;
+  // const int half_kernel_size = kernel.size() / 2;
+  for (int k = 0; k < 3 /*cpdims*/; k ++) {
+    for (int i = 0; i < size(); i ++) {
+      if (i == 0) at(i).
+        v[k] = at(i+1).x[k] - at(i).x[k];
+      else if (i == size()-1) 
+        at(i).v[k] = at(i).x[k] - at(i-1).x[k];
+      else at(i).v[k] = 
+        0.5 * (at(i+1).x[k] - at(i-1).x[k]);
+    }
+#if 0
+    // preparation & padding
+    std::vector<double> f(size() + half_kernel_size * 2);
+    for (int i = 0; i < half_kernel_size; i ++) {
+      f[i] = front().x[k];
+      f[half_kernel_size + size() + i] = back().x[k];
+    }
+    for (int i = 0; i < size(); i ++)
+      f[half_kernel_size + i] = at(i).x[k];
+
+    // convolution
+    for (int i = 0; i < size(); i ++) {
+      double v = 0;
+      for (int j = 0; j < kernel.size(); j ++)
+        v += f[i + half_kernel_size + j] * kernel[j];
+      at(i).velocity[k] = v;
+    }
+#endif
+  }
 }
 
 } // namespace ftk

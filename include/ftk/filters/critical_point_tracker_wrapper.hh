@@ -523,6 +523,14 @@ void critical_point_tracker_wrapper::post_process()
     // t.relabel(k);
     t.update_statistics();
   });
+  
+  if (j.contains("enable_deriving_velocities")) {
+    trajs.foreach([](ftk::critical_point_traj_t& t) {
+      t.discard_interval_points();
+      t.derive_velocity();
+      t.update_statistics();
+    });
+  }
 
   if (j.contains("output")) {
     if (j["output_type"] == "sliced") {
