@@ -20,6 +20,7 @@ struct critical_point_tracker_wrapper : public object {
       diy::mpi::communicator comm = diy::mpi::communicator()/*MPI_COMM_WORLD*/);
 
   void post_process();
+  void xgc_post_process();
 
   std::shared_ptr<critical_point_tracker> get_tracker() {return tracker;};
 
@@ -471,8 +472,36 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
   // delete tracker;
 }
 
+void critical_point_tracker_wrapper::xgc_post_process()
+{
+  fprintf(stderr, "post processing for xgc...\n");
+
+  tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
+    if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
+    
+    if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MAXIMUM && traj.max[0] > 5.0) return true;
+    else if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MINIMUM && traj.min[0] < -5.0) return true;
+
+    // if (traj.max[1] /*max of psi*/ < 0.2) return false;
+    // if (traj.min[1] /*min of psi*/ > 0.3) return false;
+    //// if (traj.max[0] /*max of dpot*/ < 0.0) return false;
+    return false;
+  });
+  
+  tracker->slice_traced_critical_points();
+  tracker->select_sliced_critical_points([](const ftk::critical_point_t& cp) {
+    // if (cp.scalar[1] < 0.18 || cp.scalar[1] > 0.3) return false;
+    if (cp.type == ftk::CRITICAL_POINT_2D_MAXIMUM && cp.scalar[0] > 5.0) return true;
+    else if (cp.type == ftk::CRITICAL_POINT_2D_MINIMUM && cp.scalar[0] < -5.0) return true;
+    else return false;
+  });
+}
+
 void critical_point_tracker_wrapper::post_process()
 {
+  if (j.contains("xgc") && j["xgc"].contains("post_process"))
+    xgc_post_process();
+
   auto &trajs = tracker->get_traced_critical_points();
 
   trajs.foreach([](ftk::critical_point_traj_t& t) {
@@ -483,9 +512,14 @@ void critical_point_tracker_wrapper::post_process()
     t.update_statistics();
   });
   trajs.split_all();
+  if (j["enable_discarding_interval_points"] == true) {
+    trajs.foreach([](ftk::critical_point_traj_t& t) {
+      t.discard_interval_points();
+    });
+  }
   trajs.foreach([](ftk::critical_point_traj_t& t) {
     t.reorder();
-    // t.adjust_time();
+    t.adjust_time();
     // t.relabel(k);
     t.update_statistics();
   });

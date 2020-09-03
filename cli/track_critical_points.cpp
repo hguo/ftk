@@ -40,6 +40,7 @@ int intercept_length = 2;
 std::string xgc_mesh_filename, 
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_write_back_filename;
+bool xgc_post_process = false;
 double xgc_smoothing_kernel_size = 0.03;
 
 // tracker and input stream
@@ -62,6 +63,7 @@ int parse_arguments(int argc, char **argv)
     ("xgc-smoothing-kernel-file", "XGC smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
     ("xgc-write-back", "XGC write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
+    ("xgc-post-process", "XGC enable post-processing", cxxopts::value<bool>(xgc_post_process))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_filename))
     ("output-type", "Output type {discrete|traced|sliced|intercepted}, by default traced", 
@@ -155,6 +157,7 @@ int parse_arguments(int argc, char **argv)
     jx["mesh_filename"] = xgc_mesh_filename;
     jx["smoothing_kernel_filename"] = xgc_smoothing_kernel_filename;
     jx["smoothing_kernel_size"] = xgc_smoothing_kernel_size;
+    jx["post_process"] = xgc_post_process;
     if (xgc_write_back_filename.size() > 0)
       jx["write_back_filename"] = xgc_write_back_filename;
     j_tracker["xgc"] = jx;
@@ -220,38 +223,6 @@ void start_vtk_window()
 #endif
 }
 
-void xgc_post_process()
-{
-  fprintf(stderr, "post processing for xgc...\n");
-  auto tracker = wrapper.get_tracker();
-
-  // TODO: 1) drop interval points
-  //       2) split trajectories by type
-
-#if 1
-  tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
-    if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
-    
-    if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MAXIMUM && traj.max[0] > 5.0) return true;
-    else if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MINIMUM && traj.min[0] < -5.0) return true;
-
-    // if (traj.max[1] /*max of psi*/ < 0.2) return false;
-    // if (traj.min[1] /*min of psi*/ > 0.3) return false;
-    //// if (traj.max[0] /*max of dpot*/ < 0.0) return false;
-    return true;
-  });
-#endif
-#if 1
-  tracker->slice_traced_critical_points();
-  tracker->select_sliced_critical_points([](const ftk::critical_point_t& cp) {
-    // if (cp.scalar[1] < 0.18 || cp.scalar[1] > 0.3) return false;
-    if (cp.type == ftk::CRITICAL_POINT_2D_MAXIMUM && cp.scalar[0] > 5.0) return true;
-    else if (cp.type == ftk::CRITICAL_POINT_2D_MINIMUM && cp.scalar[0] < -5.0) return true;
-    else return false;
-  });
-#endif
-}
-
 int main(int argc, char **argv)
 {
   diy::mpi::environment env;
@@ -260,7 +231,6 @@ int main(int argc, char **argv)
   parse_arguments(argc, argv);
   wrapper.consume(stream);
   
-  if (xgc_mesh_filename.size()>0) xgc_post_process();
   wrapper.post_process();
  
   if (world.rank() == 0 && show_vtk) 
