@@ -216,7 +216,8 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
 
   size_t nv = 0;
   foreach([&](const critical_point_traj_t& curve) {
-    if (curve.size() < 2) { // isolated vertex
+    if (curve.empty()) { // skip
+    } else if (curve.size() < 2) { // isolated vertex
       vtkSmartPointer<vtkVertex> obj = vtkVertex::New();
       obj->GetPointIds()->SetNumberOfIds(curve.size());
       for (int i = 0; i < curve.size(); i ++)

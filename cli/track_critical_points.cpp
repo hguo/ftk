@@ -41,7 +41,8 @@ int intercept_length = 2;
 std::string xgc_mesh_filename, 
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_write_back_filename;
-bool xgc_post_process = false;
+bool xgc_post_process = false, 
+     xgc_torus = false;
 double xgc_smoothing_kernel_size = 0.03;
 
 // tracker and input stream
@@ -61,10 +62,11 @@ int parse_arguments(int argc, char **argv)
     ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
     ("archived-traced-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_traced_critical_points_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
-    ("xgc-smoothing-kernel-file", "XGC smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
-    ("xgc-smoothing-kernel-size", "XGC smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
-    ("xgc-write-back", "XGC write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
-    ("xgc-post-process", "XGC enable post-processing", cxxopts::value<bool>(xgc_post_process))
+    ("xgc-smoothing-kernel-file", "XGC: smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
+    ("xgc-smoothing-kernel-size", "XGC: smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
+    ("xgc-torus", "XGC: track over poloidal planes", cxxopts::value<bool>(xgc_torus))
+    ("xgc-write-back", "XGC: write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
+    ("xgc-post-process", "XGC: enable post-processing", cxxopts::value<bool>(xgc_post_process))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_filename))
     ("output-type", "Output type {discrete|traced|sliced|intercepted}, by default traced", 
@@ -164,6 +166,7 @@ int parse_arguments(int argc, char **argv)
     jx["smoothing_kernel_filename"] = xgc_smoothing_kernel_filename;
     jx["smoothing_kernel_size"] = xgc_smoothing_kernel_size;
     jx["post_process"] = xgc_post_process;
+    jx["torus"] = xgc_torus;
     if (xgc_write_back_filename.size() > 0)
       jx["write_back_filename"] = xgc_write_back_filename;
     j_tracker["xgc"] = jx;

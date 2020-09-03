@@ -347,12 +347,33 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
   };
   
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
-    push_timestep(k, field_data);
-    if (k != 0) tracker->advance_timestep();
-    if (k == DT-1) tracker->update_timestep();
+    if (j["xgc"].contains("torus") && j["xgc"]["torus"] == true) { // tracking over torus
+      auto dpot = field_data.transpose();
+      for (int k = 0; k < dpot.dim(1); k ++) {
+        ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
+        m.smooth_scalar_gradient_jacobian(dpot_slice, smoothing_kernel_size, scalar, grad, J);
 
-    if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
-      write_sliced_results(k-1);
+        ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
+        tracker->push_field_data_snapshot(scalars, grad, J);
+
+        if (k != 0) tracker->advance_timestep();
+        if (k == dpot.dim(1)-1) tracker->update_timestep();
+      
+        if (j["xgc"].contains("write_back_filename")) { // write data back to vtu files
+          const std::string pattern = j["xgc"]["write_back_filename"];
+          const std::string filename = ndarray_writer<double>::filename(pattern, k);
+          // m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
+          m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", scalar);
+        }
+      }
+    } else { // tracking over time
+      push_timestep(k, field_data);
+      if (k != 0) tracker->advance_timestep();
+      if (k == DT-1) tracker->update_timestep();
+
+      if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+        write_sliced_results(k-1);
+    }
   });
 
   stream.start();
@@ -477,7 +498,7 @@ void critical_point_tracker_wrapper::xgc_post_process()
   fprintf(stderr, "post processing for xgc...\n");
 
   tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
-    if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
+    // if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
     
     if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MAXIMUM && traj.max[0] > 5.0) return true;
     else if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MINIMUM && traj.min[0] < -5.0) return true;
@@ -505,9 +526,6 @@ void critical_point_tracker_wrapper::xgc_post_process()
 
 void critical_point_tracker_wrapper::post_process()
 {
-  if (j.contains("xgc") && j["xgc"].contains("post_process") && j["xgc"]["post_process"] == true)
-    xgc_post_process();
-
   auto &trajs = tracker->get_traced_critical_points();
 
   trajs.foreach([](ftk::critical_point_traj_t& t) {
@@ -529,6 +547,9 @@ void critical_point_tracker_wrapper::post_process()
     // t.relabel(k);
     t.update_statistics();
   });
+  
+  if (j.contains("xgc") && j["xgc"].contains("post_process") && j["xgc"]["post_process"] == true)
+    xgc_post_process();
   
   if (j.contains("enable_deriving_velocities")) {
     trajs.foreach([](ftk::critical_point_traj_t& t) {

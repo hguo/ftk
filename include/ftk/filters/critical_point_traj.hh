@@ -261,7 +261,7 @@ inline critical_point_traj_t critical_point_traj_t::intercept(int t0, int t1) co
 
 inline void critical_point_traj_t::derive_velocity() // const std::vector<double> &kernel)
 {
-  if (empty()) return;
+  if (size() < 2) return;
   // const int half_kernel_size = kernel.size() / 2;
   for (int k = 0; k < 3 /*cpdims*/; k ++) {
     for (int i = 0; i < size(); i ++) {
