@@ -33,6 +33,7 @@ int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 bool enable_streaming_trajectories = false, 
      enable_discarding_interval_points = false,
+     enable_deriving_velocities = false,
      disable_robust_detection = false;
 int intercept_length = 2;
 
@@ -80,6 +81,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<bool>(enable_streaming_trajectories))
     ("discard-interval-points", "Discard interval critical points (experimental)", 
      cxxopts::value<bool>(enable_discarding_interval_points))
+    ("derive-velocities", "Enable deriving velocities", 
+     cxxopts::value<bool>(enable_deriving_velocities))
     ("disable-robust", "Disable robust detection (faster than robust detection)",
      cxxopts::value<bool>(disable_robust_detection))
     ("vtk", "Show visualization with vtk (legacy)", 
@@ -144,6 +147,9 @@ int parse_arguments(int argc, char **argv)
 
   if (enable_discarding_interval_points)
     j_tracker["enable_discarding_interval_points"] = true;
+
+  if (enable_deriving_velocities)
+    j_tracker["enable_deriving_velocities"] = true;
 
   if (disable_robust_detection)
     j_tracker["enable_robust_detection"] = false;

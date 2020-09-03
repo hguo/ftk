@@ -25,17 +25,22 @@ struct critical_point_t {
   }
 
   double operator[](size_t i) const {return x[i];}
-  std::array<double, 3> x; // double x[3] = {0}; // coordinates 
+  std::array<double, 3> x = {0}; // double x[3] = {0}; // coordinates 
   double t = 0.0; // time
   int timestep = 0; 
   // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
-  std::array<double, FTK_CP_MAX_NUM_VARS> scalar; // double scalar[FTK_CP_MAX_NUM_VARS] = {0};
+  std::array<double, FTK_CP_MAX_NUM_VARS> scalar = {0}; // double scalar[FTK_CP_MAX_NUM_VARS] = {0};
+  std::array<double, 3> v = {0};
   unsigned int type = 0;
   bool ordinal = false;
   unsigned long long tag = 0, id = 0;
 
   // constexpr size_t size() const noexcept { return sizeof(critical_point_t<N, ValueType, IntegerType>); }
   constexpr size_t size() const noexcept { return sizeof(critical_point_t); }
+
+  double vmag() const { // velocity magnitude
+    return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+  }
 
   std::ostream& print(std::ostream& os, const int cpdims, const std::vector<std::string>& scalar_components) const {
     if (cpdims == 2) os << "x=(" << x[0] << ", " << x[1] << "), ";
@@ -44,6 +49,10 @@ struct critical_point_t {
 
     for (int k = 0; k < scalar_components.size(); k ++)
       os << scalar_components[k] << "=" << scalar[k] << ", ";
+
+    os << "v=";
+    if (cpdims == 2) os << "(" << v[0] << ", " << v[1] << "), ";
+    else os << "(" << v[0] << ", " << v[1] << ", " << v[2] << "), ";
     
     os << "type=" << critical_point_type_to_string(cpdims, type, scalar_components.size()) << ", "; 
     os << "timestep=" << timestep << ", ";
@@ -68,6 +77,7 @@ namespace nlohmann
       j["t"] = cp.t;
       j["timestep"] = cp.timestep;
       j["scalar"] = cp.scalar; // std::vector<double>(cp.scalar, cp.scalar+FTK_CP_MAX_NUM_VARS);
+      j["v"] = cp.v;
       j["type"] = cp.type;
       j["ordinal"] = cp.ordinal;
       j["tag"] = cp.tag;
@@ -79,6 +89,7 @@ namespace nlohmann
       cp.t = j["t"];
       cp.timestep = j["timestep"];
       cp.scalar = j["scalar"];  // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) cp.scalar[i] = j["scalar"][i];
+      cp.v = j["v"];
       cp.type = j["type"];
       cp.ordinal = j["ordinal"];
       cp.tag = j["tag"];
@@ -94,6 +105,7 @@ namespace diy {
     diy::save(bb, cp.t);
     diy::save(bb, cp.timestep);
     diy::save(bb, cp.scalar); // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) diy::save(bb, cp.scalar[i]);
+    diy::save(bb, cp.v);
     diy::save(bb, cp.type);
     diy::save(bb, cp.ordinal);
     diy::save(bb, cp.tag);
@@ -105,6 +117,7 @@ namespace diy {
     diy::load(bb, cp.t);  
     diy::load(bb, cp.timestep);
     diy::load(bb, cp.scalar); // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) diy::load(bb, cp.scalar[i]);
+    diy::load(bb, cp.v);
     diy::load(bb, cp.type);
     diy::load(bb, cp.ordinal);
     diy::load(bb, cp.tag);
