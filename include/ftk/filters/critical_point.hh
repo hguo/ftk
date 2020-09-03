@@ -73,10 +73,10 @@ namespace nlohmann
   template <>
   struct adl_serializer<critical_point_t> {
     static void to_json(json &j, const critical_point_t& cp) {
-      j["x"] = cp.x; // {cp.x[0], cp.x[1], cp.x[2]};
+      j["x"] = cp.x; 
       j["t"] = cp.t;
       j["timestep"] = cp.timestep;
-      j["scalar"] = cp.scalar; // std::vector<double>(cp.scalar, cp.scalar+FTK_CP_MAX_NUM_VARS);
+      j["scalar"] = cp.scalar; 
       j["v"] = cp.v;
       j["type"] = cp.type;
       j["ordinal"] = cp.ordinal;
@@ -85,10 +85,10 @@ namespace nlohmann
     }
 
     static void from_json(const json& j,critical_point_t& cp) {
-      cp.x = j["x"];  // for (int i = 0; i < 3; i ++) cp.x[i] = j["x"][i];
+      cp.x = j["x"];  
       cp.t = j["t"];
       cp.timestep = j["timestep"];
-      cp.scalar = j["scalar"];  // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) cp.scalar[i] = j["scalar"][i];
+      cp.scalar = j["scalar"];  
       cp.v = j["v"];
       cp.type = j["type"];
       cp.ordinal = j["ordinal"];
@@ -101,10 +101,10 @@ namespace nlohmann
 // serialization
 namespace diy {
   static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t &cp) {
-    diy::save(bb, cp.x); // for (int i = 0; i < 3; i ++) diy::save(bb, cp.x[i]);
+    diy::save(bb, cp.x); 
     diy::save(bb, cp.t);
     diy::save(bb, cp.timestep);
-    diy::save(bb, cp.scalar); // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) diy::save(bb, cp.scalar[i]);
+    diy::save(bb, cp.scalar); 
     diy::save(bb, cp.v);
     diy::save(bb, cp.type);
     diy::save(bb, cp.ordinal);
@@ -113,10 +113,10 @@ namespace diy {
   }
 
   static void load(diy::BinaryBuffer& bb, ftk::critical_point_t &cp) {
-    diy::load(bb, cp.x); // for (int i = 0; i < 4; i ++) diy::load(bb, cp.x[i]);
+    diy::load(bb, cp.x); 
     diy::load(bb, cp.t);  
     diy::load(bb, cp.timestep);
-    diy::load(bb, cp.scalar); // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) diy::load(bb, cp.scalar[i]);
+    diy::load(bb, cp.scalar); 
     diy::load(bb, cp.v);
     diy::load(bb, cp.type);
     diy::load(bb, cp.ordinal);

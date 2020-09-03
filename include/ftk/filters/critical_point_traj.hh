@@ -12,6 +12,7 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
   std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
   std::array<double, 3> bbmin, bbmax; // bounding box
   double tmin, tmax; // time bounding box
+  double vmmin, vmmax; // min/max moving speed
   unsigned int consistent_type = 0; // 0 if no consistent type
 
   void relabel(int i); // assign id for traj and each point in the traj
@@ -76,6 +77,8 @@ inline void critical_point_traj_t::update_statistics() {
   bbmin.fill( std::numeric_limits<double>::max() );
   tmax = std::numeric_limits<double>::lowest();
   tmin = std::numeric_limits<double>::max();
+  vmmax = std::numeric_limits<double>::lowest();
+  vmmin = std::numeric_limits<double>::max();
 
   for (auto i = 0; i < size(); i ++) {
     for (int k = 0; k < FTK_CP_MAX_NUM_VARS; k ++) {
@@ -88,6 +91,8 @@ inline void critical_point_traj_t::update_statistics() {
     }
     tmax = std::max(tmax, at(i).t);
     tmin = std::min(tmin, at(i).t);
+    vmmax = std::max(vmmax, at(i).vmag());
+    vmmin = std::min(vmmin, at(i).vmag());
   }
 
   for (int k = 0; k < FTK_CP_MAX_NUM_VARS; k ++)
