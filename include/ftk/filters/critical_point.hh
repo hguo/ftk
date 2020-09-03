@@ -92,6 +92,7 @@ namespace diy {
   static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t &cp) {
     diy::save(bb, cp.x); // for (int i = 0; i < 3; i ++) diy::save(bb, cp.x[i]);
     diy::save(bb, cp.t);
+    diy::save(bb, cp.timestep);
     diy::save(bb, cp.scalar); // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) diy::save(bb, cp.scalar[i]);
     diy::save(bb, cp.type);
     diy::save(bb, cp.ordinal);
@@ -102,6 +103,7 @@ namespace diy {
   static void load(diy::BinaryBuffer& bb, ftk::critical_point_t &cp) {
     diy::load(bb, cp.x); // for (int i = 0; i < 4; i ++) diy::load(bb, cp.x[i]);
     diy::load(bb, cp.t);  
+    diy::load(bb, cp.timestep);
     diy::load(bb, cp.scalar); // for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++) diy::load(bb, cp.scalar[i]);
     diy::load(bb, cp.type);
     diy::load(bb, cp.ordinal);

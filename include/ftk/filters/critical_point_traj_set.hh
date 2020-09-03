@@ -98,6 +98,7 @@ namespace diy {
       
       ftk::critical_point_traj_t traj;
       diy::load(bb, traj);
+      traj.relabel(id);
 
       s[id] = traj;
     }

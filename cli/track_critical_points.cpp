@@ -230,12 +230,14 @@ void xgc_post_process()
 
 #if 1
   tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
-    if (traj.max[0] < 5.0) return false;
-    if (traj.consistent_type != ftk::CRITICAL_POINT_2D_MAXIMUM) return false;
+    if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
+    
+    if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MAXIMUM && traj.max[0] > 5.0) return true;
+    else if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MINIMUM && traj.min[0] < -5.0) return true;
+
     // if (traj.max[1] /*max of psi*/ < 0.2) return false;
     // if (traj.min[1] /*min of psi*/ > 0.3) return false;
     //// if (traj.max[0] /*max of dpot*/ < 0.0) return false;
-    if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
     return true;
   });
 #endif
@@ -243,9 +245,9 @@ void xgc_post_process()
   tracker->slice_traced_critical_points();
   tracker->select_sliced_critical_points([](const ftk::critical_point_t& cp) {
     // if (cp.scalar[1] < 0.18 || cp.scalar[1] > 0.3) return false;
-    if (cp.scalar[0] < 5.0) return false;
-    if (cp.type != ftk::CRITICAL_POINT_2D_MAXIMUM) return false;
-    return true;
+    if (cp.type == ftk::CRITICAL_POINT_2D_MAXIMUM && cp.scalar[0] > 5.0) return true;
+    else if (cp.type == ftk::CRITICAL_POINT_2D_MINIMUM && cp.scalar[0] < -5.0) return true;
+    else return false;
   });
 #endif
 }

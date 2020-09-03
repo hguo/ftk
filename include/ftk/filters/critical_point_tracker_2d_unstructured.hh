@@ -126,13 +126,14 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
   double mu[3], x[3];
   bool succ2 = ftk::inverse_lerp_s2v2(V, mu);
   if (!succ2) { // clamp to normal range
-    fprintf(stderr,  "mu =%f, %f, %f\n", mu[0], mu[1], mu[2]);
     if (std::isnan(mu[0]) || std::isinf(mu[0])) 
-      mu[0] = mu[1] = mu[2] = 1.0 / 3;
+      return false;
+      // mu[0] = mu[1] = mu[2] = 1.0 / 3;
     else {
       mu[0] = std::max(std::min(1.0, mu[0]), 0.0);
       mu[1] = std::max(std::min(1.0-mu[0], mu[1]), 0.0);
       mu[2] = 1.0 - mu[0] - mu[1];
+      fprintf(stderr,  "mu =%f, %f, %f\n", mu[0], mu[1], mu[2]);
     }
     fprintf(stderr,  "mu'=%f, %f, %f\n", mu[0], mu[1], mu[2]);
   }

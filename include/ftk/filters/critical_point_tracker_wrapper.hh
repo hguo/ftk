@@ -35,7 +35,7 @@ private:
 
 private:
   std::shared_ptr<critical_point_tracker> tracker;
-  json j; // config
+  json j, js; // config
 
   static bool ends_with(std::string const & value, std::string const & ending) {
     if (ending.size() > value.size()) return false;
@@ -276,7 +276,8 @@ void critical_point_tracker_wrapper::consume(ndarray_stream<> &stream, diy::mpi:
 
 void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
-  const auto js = stream.get_json();
+  // const auto js = stream.get_json();
+  js = stream.get_json();
   const size_t DT = js["n_timesteps"];
 
   const std::string mesh_filename = j["xgc"]["mesh_filename"];
@@ -498,7 +499,8 @@ void critical_point_tracker_wrapper::post_process()
         write_sliced_results(kv.first);
     } else if (j["output_type"] == "intercepted") {
       fprintf(stderr, "writing intercepted critical points..\n");
-      for (int t = 0; t < tracker->get_current_timestep(); t ++)
+      // for (int t = 0; t < tracker->get_current_timestep(); t ++)
+      for (int t = 0; t < js["n_timesteps"]; t ++)
         write_intercepted_results(t, 2);
     } else if (j["output_type"] == "traced") {
       fprintf(stderr, "writing traced critical points..\n");
