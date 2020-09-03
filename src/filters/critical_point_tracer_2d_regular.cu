@@ -66,7 +66,7 @@ bool check_simplex_cp2t(
     double mu[3];
     ftk::inverse_lerp_s2v2(v, mu, 0.0);
     // linear jacobian interpolation
-    if (gradV[1]) { // have given jacobian
+    if (gradV[0]) { // have given jacobian
       double Js[3][2][2], J[2][2];
       for (int i = 0; i < 3; i ++) {
         // size_t ii = ext.to_index(vertices[i]);
