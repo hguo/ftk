@@ -23,6 +23,8 @@ struct ndarray_stream : public object {
   // optional fields:
   //  - filenames (required if type is file), string.  The list of filenames will be 
   //    determined by glob(3)
+  //  - mesh_filename (required for unstructured mesh, must be in vtu format in the 
+  //    current version), string.
   //  - format (required if type is file and format is float32/float64), string.  If not 
   //    given, the format will be determined by the filename extension.  The value of this 
   //    field must be one of the follows: vti, nc, h5, float32, float64.

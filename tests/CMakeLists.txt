@@ -5,6 +5,10 @@ if (FTK_BUILD_PYFTK)
     ${PYTHON_INCLUDE_DIRS})
 endif ()
 
+add_custom_target(copy_test_data ALL
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/data/* ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
 target_link_libraries (test_quadratic_interpolation ftk)
 catch_discover_tests (test_quadratic_interpolation)
@@ -54,6 +58,10 @@ catch_discover_tests (test_io)
 
 add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
 target_link_libraries (test_critical_point_tracking_woven ftk)
+
+add_executable (test_critical_point_tracking_woven_unstructured test_critical_point_tracking_woven_unstructured.cpp)
+target_link_libraries (test_critical_point_tracking_woven_unstructured ftk)
+catch_discover_tests (test_critical_point_tracking_woven_unstructured)
 
 add_executable (test_critical_point_tracking_moving_extremum_2d test_critical_point_tracking_moving_extremum_2d)
 target_link_libraries (test_critical_point_tracking_moving_extremum_2d ftk)
