@@ -56,8 +56,8 @@ add_executable (test_io test_io)
 target_link_libraries (test_io ftk)
 catch_discover_tests (test_io)
 
-add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
-target_link_libraries (test_critical_point_tracking_woven ftk)
+#add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
+#target_link_libraries (test_critical_point_tracking_woven ftk)
 
 add_executable (test_critical_point_tracking_woven_unstructured test_critical_point_tracking_woven_unstructured.cpp)
 target_link_libraries (test_critical_point_tracking_woven_unstructured ftk)
@@ -81,6 +81,20 @@ add_executable (test_critical_point_tracking_merger_2d test_critical_point_track
 target_link_libraries (test_critical_point_tracking_merger_2d ftk)
 catch_discover_tests (test_critical_point_tracking_merger_2d)
 
+function (add_mpi_test target maxp args)
+  add_executable (${target} ${target}.cpp)
+  target_link_libraries (${target} ftk)
+  if (FTK_HAVE_MPI)
+    foreach (p RAGE 1 ${maxp})
+      add_test (NAME ${target}_p${p}
+        COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:${target}> ${args})
+  else () # serial only
+    catch_discover_tests (${target})
+  endif ()
+endfunction ()
+
+add_mpi_test (test_critical_point_tracking_woven 4 "")
+
 # cli test
 if (FTK_BUILD_EXECUTABLES)
   if (FTK_HAVE_MPI)
@@ -95,10 +109,10 @@ endif ()
 # mpi test
 if (FTK_HAVE_MPI)
   set (maxp 4)
-  foreach (p RANGE 1 ${maxp})
-    add_test (NAME test_critical_point_tracking_woven_p${p} 
-      COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_woven>)
-  endforeach (p)
+  #foreach (p RANGE 1 ${maxp})
+  #  add_test (NAME test_critical_point_tracking_woven_p${p} 
+  #    COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_woven>)
+  #endforeach (p)
   foreach (p RANGE 1 ${maxp})
     add_test (NAME test_critical_point_tracking_moving_extremum_2d_p${p} 
       COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:test_critical_point_tracking_moving_extremum_2d>)
