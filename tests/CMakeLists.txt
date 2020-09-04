@@ -61,7 +61,9 @@ target_link_libraries (test_critical_point_tracking_woven ftk)
 
 add_executable (test_critical_point_tracking_woven_unstructured test_critical_point_tracking_woven_unstructured.cpp)
 target_link_libraries (test_critical_point_tracking_woven_unstructured ftk)
-catch_discover_tests (test_critical_point_tracking_woven_unstructured)
+
+add_executable (test_critical_point_tracking_moving_extremum_2d_unstructured test_critical_point_tracking_moving_extremum_2d_unstructured.cpp)
+target_link_libraries (test_critical_point_tracking_moving_extremum_2d_unstructured ftk)
 
 add_executable (test_critical_point_tracking_moving_extremum_2d test_critical_point_tracking_moving_extremum_2d)
 target_link_libraries (test_critical_point_tracking_moving_extremum_2d ftk)
@@ -109,6 +111,9 @@ else () # serial only
   catch_discover_tests (test_critical_point_tracking_woven)
   catch_discover_tests (test_critical_point_tracking_moving_extremum_2d)
   catch_discover_tests (test_critical_point_tracking_moving_extremum_3d)
+
+  catch_discover_tests (test_critical_point_tracking_woven_unstructured)
+  # catch_discover_tests (test_critical_point_tracking_moving_extremum_2d_unstructured) # unmature for now
 endif ()
 
 # pyftk

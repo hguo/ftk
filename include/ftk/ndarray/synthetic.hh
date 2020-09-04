@@ -232,6 +232,31 @@ ndarray<T> synthetic_moving_extremum(const std::vector<size_t>& shape, const T x
   return scalar;
 }
 
+template <typename T, int N>
+ndarray<T> synthetic_moving_extremum_unstructured(
+    const ndarray<T> coords /* N*n_vert */,
+    const std::array<T, N> x0, 
+    const std::array<T, N> dir,
+    T t)
+{
+  ndarray<T> scalar;
+  scalar.reshape(coords.dim(1));
+
+  std::array<T, N> xc;
+  for (int j = 0; j < N; j ++)
+    xc[j] = x0[j] + dir[j] * t;
+
+  for (auto i = 0; i < coords.dim(1); i ++) {
+    T d = 0;
+    for (int j = 0; j < N; j ++) {
+      d += pow(coords(j, i) - xc[j], T(2.0));
+    }
+    scalar[i] = d;
+  }
+
+  return scalar;
+}
+
 /// modified from https://web.cse.ohio-state.edu/~crawfis.3/Data/Tornado/tornadoSrc.c
 // void gen_tornado( int xs, int ys, int zs, int time, float *tornado )
 /*

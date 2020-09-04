@@ -8,10 +8,10 @@ using nlohmann::json;
 
 const std::string mesh_filename = "1x1.vtu";
 const int nt = 32;
-const double kernel_size = 0.045;
+const double kernel_size = 0.1; // 0.02; // 0.1;
 
 #if FTK_HAVE_VTK
-TEST_CASE("critical_point_tracking_woven_unstructured") {
+TEST_CASE("critical_point_tracking_moving_extremum_2d_unstructured") {
   diy::mpi::communicator world;
  
   ftk::simplicial_unstructured_2d_mesh<> m;
@@ -22,14 +22,21 @@ TEST_CASE("critical_point_tracking_woven_unstructured") {
   tracker.initialize();
 
   for (int i = 0; i < nt; i ++) {
-    auto data = ftk::synthetic_woven_2D_unstructured<double>(m.get_coords(), i*0.1, 
+    auto data = ftk::synthetic_moving_extremum_unstructured<double, 2>(
+        m.get_coords(), 
         {0.5, 0.5}, // center
-        10.0 // scaling factor
+        {0.02, 0.02}, // direction
+        static_cast<double>(i) // time
     );
 
     ftk::ndarray<double> scalar, grad, J;
     m.smooth_scalar_gradient_jacobian(data, kernel_size, scalar, grad, J);
     scalar.reshape({1, scalar.dim(0)});
+
+    // write back for debugging
+    char filename[1024];
+    sprintf(filename, "moving_extremum_grad-%02d.vtu", i);
+    m.vector_to_vtk_unstructured_grid_data_file(filename, "grad", grad);
 
     tracker.push_field_data_snapshot(scalar, grad, J);
 
@@ -38,19 +45,19 @@ TEST_CASE("critical_point_tracking_woven_unstructured") {
   }
 
   tracker.finalize();
-  tracker.write_traced_critical_points_vtk("woven_unstructured.vtp");
+  tracker.write_traced_critical_points_vtk("moving_extremum_2d_unstructured.vtp");
 
   auto trajs = tracker.get_traced_critical_points();
   
   if (world.rank() == 0)
-    REQUIRE(trajs.size() == 67); // woven_n_trajs);
+    REQUIRE(trajs.size() == 1);
 }
 #endif
 
 int main(int argc, char **argv)
 {
   diy::mpi::environment env;
-  
+
   Catch::Session session;
   return session.run(argc, argv);
 }
