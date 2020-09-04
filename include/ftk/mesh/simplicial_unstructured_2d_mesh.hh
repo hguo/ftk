@@ -24,6 +24,7 @@
 #include <vtkGenericCell.h>
 #include <vtkDataSetWriter.h>
 #include <vtkXMLUnstructuredGridWriter.h>
+#include <vtkXMLUnstructuredGridReader.h>
 #include <vtkUnstructuredGridReader.h>
 #include <vtkPointData.h>
 #include <vtkPoints2D.h>
@@ -63,7 +64,9 @@ struct simplicial_unstructured_2d_mesh : public object { // 2D triangular mesh
   ) const; 
 
 public: // io
-  void from_vtk_file(const std::string& filename);
+  void from_legacy_vtk_file(const std::string& filename);
+  void from_vtk_unstructured_grid_file(const std::string &filename);
+  void to_vtk_unstructured_grid_file(const std::string &filename) const;
 
   void scalar_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>&) const;
   void vector_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>&) const;
@@ -387,9 +390,18 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i) const
 
 #if FTK_HAVE_VTK
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::from_vtk_file(const std::string& filename)
+void simplicial_unstructured_2d_mesh<I, F>::from_legacy_vtk_file(const std::string& filename)
 {
   vtkSmartPointer<vtkUnstructuredGridReader> reader = vtkUnstructuredGridReader::New();
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+  from_vtk_unstructured_grid(reader->GetOutput());
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::from_vtk_unstructured_grid_file(const std::string& filename)
+{
+  vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
   reader->SetFileName(filename.c_str());
   reader->Update();
   from_vtk_unstructured_grid(reader->GetOutput());
@@ -484,6 +496,15 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::vect
 }
 
 template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::to_vtk_unstructured_grid_file(const std::string& filename) const
+{
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( to_vtk_unstructured_grid() );
+  writer->Write();
+}
+
+template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_file(
     const std::string& filename, 
     const std::string& varname, 
@@ -515,7 +536,7 @@ void simplicial_unstructured_2d_mesh<I, F>::scalar_to_vtk_unstructured_grid_data
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::from_vtk_file(const std::string& filename)
+void simplicial_unstructured_2d_mesh<I, F>::from_legacy_vtk_file(const std::string& filename)
 {
   fatal("FTK not compiled with VTK");
 }
