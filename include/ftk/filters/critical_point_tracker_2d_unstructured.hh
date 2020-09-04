@@ -144,14 +144,17 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
   cp.x[0] = x[0];
   cp.x[1] = x[1];
   cp.t = x[2];
- 
-  for (int k = 0; k < get_num_scalar_components(); k ++)
-    cp.scalar[k] = f[0][k] * mu[0] + f[1][k] * mu[1] + f[2][k] * mu[2];
 
-  double H[2][2]; // hessian or jacobian
-  ftk::lerp_s2m2x2(Js, mu, H);
+  if (!field_data_snapshots[0].scalar.empty())
+    for (int k = 0; k < get_num_scalar_components(); k ++)
+      cp.scalar[k] = f[0][k] * mu[0] + f[1][k] * mu[1] + f[2][k] * mu[2];
 
-  cp.type = ftk::critical_point_type_2d(H, true);
+  if (!field_data_snapshots[0].jacobian.empty()) {
+    double H[2][2]; // hessian or jacobian
+    ftk::lerp_s2m2x2(Js, mu, H);
+    cp.type = ftk::critical_point_type_2d(H, true);
+  }
+  
   cp.tag = i;
   cp.ordinal = m.is_ordinal(2, i);
   cp.timestep = current_timestep;

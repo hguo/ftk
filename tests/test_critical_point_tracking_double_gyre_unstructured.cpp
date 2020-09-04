@@ -38,6 +38,7 @@ TEST_CASE("critical_point_tracking_double_gyre_unstructured") {
 
   tracker.finalize();
   tracker.write_traced_critical_points_vtk("double_gyre_unstructured.vtp");
+  tracker.write_traced_critical_points_text("double_gyre_unstructured.txt");
 
   auto trajs = tracker.get_traced_critical_points();
   
