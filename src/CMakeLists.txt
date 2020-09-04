@@ -73,4 +73,4 @@ endif ()
 #  target_link_libraries (ftk ${PYTHON_LIBRARY})
 #endif ()
 
-install (TARGETS ftk EXPORT ${CMAKE_INSTALL_LIBDIR})
+install (TARGETS ftk DESTINATION ${CMAKE_INSTALL_LIBDIR} EXPORT ftk)
