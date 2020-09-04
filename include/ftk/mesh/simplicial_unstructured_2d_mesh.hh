@@ -540,6 +540,12 @@ void simplicial_unstructured_2d_mesh<I, F>::from_legacy_vtk_file(const std::stri
 {
   fatal("FTK not compiled with VTK");
 }
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::from_vtk_unstructured_grid_file(const std::string& filename)
+{
+  fatal("FTK not compiled with VTK");
+}
 #endif
 
 template <typename I, typename F>
