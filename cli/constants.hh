@@ -9,7 +9,6 @@
      cxxopts::value<std::string>()) \
     ("f,input-format", "Input file format (auto|float32|float64|nc|h5|vti)", cxxopts::value<std::string>()) \
     ("synthetic", "Use a synthetic case (woven|double_gyre|merger) as inputs", cxxopts::value<std::string>()) \
-    ("m,mesh", "Input mesh file (will shadow arguments including width, height, depth)", cxxopts::value<std::string>()) \
     ("w,width", "Width", cxxopts::value<size_t>()) \
     ("h,height", "Height", cxxopts::value<size_t>()) \
     ("d,depth", "Depth.  Valid only for 3D data", cxxopts::value<size_t>()) \

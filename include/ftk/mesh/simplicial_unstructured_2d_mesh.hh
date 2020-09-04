@@ -98,6 +98,8 @@ public: // mesh access
   bool find_edge(const I v[2], I& i) const;
   bool find_triangle(const I v[3], I& i) const;
 
+  const ndarray<F>& get_coords() const {return vertex_coords;}
+
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
   std::vector<std::set<I>> vertex_side_of;

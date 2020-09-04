@@ -3,10 +3,10 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/algorithms/cca.hh>
-#include <ftk/filters/filter.hh>
 #include <ftk/filters/critical_point.hh>
 #include <ftk/filters/critical_point_traj.hh>
 #include <ftk/filters/critical_point_traj_set.hh>
+#include <ftk/filters/filter.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/external/diy/serialization.hpp>

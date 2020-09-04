@@ -73,6 +73,25 @@ ndarray<T> synthetic_woven_2Dt(int DW, int DH, int DT, T scaling_factor = T(15))
   return scalar;
 }
 
+template <typename T>
+ndarray<T> synthetic_woven_2D_unstructured(
+    const ndarray<T>& coords/* 2*n_vert */, T t,
+    const std::array<double, 2> center = {0.5, 0.5}, 
+    const T scaling_factor = 15.0
+    )
+{
+  ndarray<T> scalar;
+  scalar.reshape(coords.dim(1));
+
+  for (int i = 0; i < coords.dim(1); i ++) {
+    double x = (coords(0, i) - center[0]) * scaling_factor,
+           y = (coords(1, i) - center[1]) * scaling_factor;
+    scalar[i] = woven_function_2Dt(x, y, t);
+  }
+
+  return scalar;
+}
+
 // double gyre 2D flow
 template <typename T>
 ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=false,

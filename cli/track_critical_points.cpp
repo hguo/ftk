@@ -25,6 +25,7 @@
   
 // global variables
 std::string output_filename, output_type, output_format;
+std::string mesh_filename;
 std::string archived_discrete_critical_points_filename,
   archived_traced_critical_points_filename;
 std::string accelerator;
@@ -59,6 +60,7 @@ int parse_arguments(int argc, char **argv)
 
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
+    ("m,mesh", "Input mesh file (will shadow arguments including width, height, depth)", cxxopts::value<std::string>())
     ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
     ("archived-traced-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_traced_critical_points_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
