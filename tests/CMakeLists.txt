@@ -88,6 +88,7 @@ function (add_mpi_test target maxp args)
     foreach (p RAGE 1 ${maxp})
       add_test (NAME ${target}_p${p}
         COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:${target}> ${args})
+    endforeach (p)
   else () # serial only
     catch_discover_tests (${target})
   endif ()
