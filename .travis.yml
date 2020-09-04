@@ -60,7 +60,7 @@ jobs:
           packages:
             - libvtk7-dev
       env: 
-        - CMAKE_ARG="-DFTK_USE_VTK=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
+        - CMAKE_ARG="-DFTK_USE_VTK=ON -DFTK_USE_GMP=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
     
     - name: build with mpich (osx)
       os: osx

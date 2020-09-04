@@ -111,6 +111,33 @@ PYBIND11_MODULE(pyftk, m) {
     return ftk::ndarray<double>::stack(arrays).to_numpy();
   }, R"pbdoc(Generate moving extremum data)pbdoc");
 
+  py::module numeric = m.def_submodule("numeric", "Numeric functions");
+  numeric.def("det4", [](py::array_t<double, py::array::c_style | py::array::forcecast> array) {
+    if (array.ndim() != 2)
+      throw std::runtime_error("Number of dimensions must be 2");
+
+    ftk::ndarray<double> m(array);
+    double M[4][4];
+    for (int i = 0; i < 4; i ++)
+      for (int j = 0; j < 4; j ++)
+        M[i][j] = m(j, i);
+
+    return ftk::det4(M);
+  });
+  
+  numeric.def("det3", [](py::array_t<double, py::array::c_style | py::array::forcecast> array) {
+    if (array.ndim() != 2)
+      throw std::runtime_error("Number of dimensions must be 2");
+
+    ftk::ndarray<double> m(array);
+    double M[3][3];
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 3; j ++)
+        M[i][j] = m(j, i);
+
+    return ftk::det3(M);
+  });
+
 #ifdef VERSION_INFO
   m.attr("__version__") = VERSION_INFO;
 #else

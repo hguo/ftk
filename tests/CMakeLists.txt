@@ -133,8 +133,13 @@ endif ()
 if (FTK_BUILD_PYFTK)
   add_test (NAME test_critical_point_tracking_py
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_critical_point_tracking.py)
+  
+  add_test (NAME test_numeric_py
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_numeric.py)
 
-  set_tests_properties (test_critical_point_tracking_py 
+  set_tests_properties (
+    test_critical_point_tracking_py 
+    test_numeric_py
     PROPERTIES 
     ENVIRONMENT "PYTHONPATH=${LIBRARY_OUTPUT_PATH}")
 endif ()
