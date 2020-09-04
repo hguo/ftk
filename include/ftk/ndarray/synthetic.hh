@@ -92,12 +92,10 @@ ndarray<T> synthetic_woven_2D_unstructured(
   return scalar;
 }
 
-// double gyre 2D flow
 template <typename T>
-ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=false,
-    const T A = 0.1, 
-    const T omega = M_PI * 0.2, 
-    const T epsilon = 0.25)
+std::array<T, 2> double_gyre(
+    const T x, const T y, const T t, 
+    const T A, const T omega, const T epsilon)
 {
   const auto a = [&](T t) { return epsilon * sin(omega * t); };
   const auto b = [&](T t) { return 1 - 2 * epsilon * sin(omega * t); };
@@ -112,6 +110,36 @@ ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=fal
     return  M_PI * A * cos(M_PI * f(x, t)) * sin(M_PI * y) * dfdx(x, t);
   };
 
+  return {u(x, y, t), v(x, y, t)};
+}
+
+template <typename T>
+ndarray<T> synthetic_double_gyre_unstructured(
+    const ndarray<T> coords, /* 2*n_vert */
+    const T time,
+    const T A = 0.1, 
+    const T omega = M_PI * 0.2, 
+    const T epsilon = 0.25)
+{
+  ndarray<T> result; 
+  result.reshape(coords);
+
+  for (auto i = 0; i < coords.dim(1); i ++) {
+    auto uv = double_gyre(coords(0, i), coords(1, i), time, A, omega, epsilon);
+    result(0, i) = uv[0];
+    result(1, i) = uv[1];
+  }
+
+  return result;
+}
+
+// double gyre 2D flow
+template <typename T>
+ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=false,
+    const T A = 0.1, 
+    const T omega = M_PI * 0.2, 
+    const T epsilon = 0.25)
+{
   ndarray<T> Vf;
   Vf.reshape(2 + zchannel, DW, DH);
 
@@ -121,8 +149,9 @@ ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=fal
       const T x = (T(i) / (DW-1)) * 2,
               y = (T(j) / (DH-1));
 
-      Vf(0, i, j) = u(x, y, time);
-      Vf(1, i, j) = v(x, y, time);
+      const auto uv = double_gyre(x, y, time, A, omega, epsilon);
+      Vf(0, i, j) = uv[0];
+      Vf(1, i, j) = uv[1];
       // if (zchannel) Vf(2, i, j) = T(0);
     }
   }

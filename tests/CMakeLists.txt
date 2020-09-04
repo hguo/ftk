@@ -71,9 +71,6 @@ target_link_libraries (test_critical_point_tracking_moving_extremum_2d ftk)
 add_executable (test_critical_point_tracking_moving_extremum_3d test_critical_point_tracking_moving_extremum_3d)
 target_link_libraries (test_critical_point_tracking_moving_extremum_3d ftk)
 
-add_executable(test_critical_point_tracking_double_gyre_unstructured test_critical_point_tracking_double_gyre_unstructured.cpp)
-target_link_libraries (test_critical_point_tracking_double_gyre_unstructured ftk)
-
 add_executable(test_adios2 test_adios2.cpp)
 target_link_libraries (test_adios2 ftk)
 
@@ -95,6 +92,7 @@ function (add_mpi_test target maxp args)
 endfunction ()
 
 add_mpi_test (test_critical_point_tracking_woven 4 "")
+add_mpi_test (test_critical_point_tracking_double_gyre_unstructured 4 "")
 
 # cli test
 if (FTK_BUILD_EXECUTABLES)

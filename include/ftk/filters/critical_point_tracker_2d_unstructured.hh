@@ -89,15 +89,18 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
     const int k = m.flat_vertex_id(verts[i]);
     const auto &data = field_data_snapshots[iv];
     m.get_coords(verts[i], X[i]);
-    if (!data.scalar.empty()) {
+
+    if (!data.scalar.empty())
       for (int j = 0; j < get_num_scalar_components(); j ++)
         f[i][j] = data.scalar(j, k);
-    }
-    for (int j = 0; j < 2; j ++) {
+
+    for (int j = 0; j < 2; j ++) 
       v[i][j] = data.vector(j, k);
-      for (int j1 = 0; j1 < 2; j1 ++)
-        J[i][j][j1] = data.jacobian(j1, j, k);
-    }
+
+    if (!data.jacobian.empty())
+      for (int j = 0; j < 2; j ++) 
+        for (int j1 = 0; j1 < 2; j1 ++)
+          J[i][j][j1] = data.jacobian(j1, j, k);
   }
 }
 
