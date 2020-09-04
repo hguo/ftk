@@ -85,7 +85,7 @@ function (add_mpi_test target maxp args)
   add_executable (${target} ${target}.cpp)
   target_link_libraries (${target} ftk)
   if (FTK_HAVE_MPI)
-    foreach (p RAGE 1 ${maxp})
+    foreach (p RANGE 1 ${maxp})
       add_test (NAME ${target}_p${p}
         COMMAND ${MPIEXEC} -np ${p} $<TARGET_FILE:${target}> ${args})
     endforeach (p)
