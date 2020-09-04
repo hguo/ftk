@@ -8,7 +8,7 @@ using nlohmann::json;
 
 const std::string mesh_filename = "1x1.vtu";
 const int nt = 32;
-const double kernel_size = 0.1; // 0.02; // 0.1;
+const double kernel_size = 0.2;
 
 #if FTK_HAVE_VTK
 TEST_CASE("critical_point_tracking_moving_extremum_2d_unstructured") {
@@ -31,13 +31,17 @@ TEST_CASE("critical_point_tracking_moving_extremum_2d_unstructured") {
 
     ftk::ndarray<double> scalar, grad, J;
     m.smooth_scalar_gradient_jacobian(data, kernel_size, scalar, grad, J);
-    scalar.reshape({1, scalar.dim(0)});
 
     // write back for debugging
     char filename[1024];
+    sprintf(filename, "moving_extremum-%02d.vtu", i);
+    m.scalar_to_vtk_unstructured_grid_data_file(filename, "scalar", data);
+    sprintf(filename, "moving_extremum-smooth-%02d.vtu", i);
+    m.scalar_to_vtk_unstructured_grid_data_file(filename, "scalar", scalar);
     sprintf(filename, "moving_extremum_grad-%02d.vtu", i);
     m.vector_to_vtk_unstructured_grid_data_file(filename, "grad", grad);
 
+    scalar.reshape({1, scalar.dim(0)});
     tracker.push_field_data_snapshot(scalar, grad, J);
 
     if (i != 0) tracker.advance_timestep();
