@@ -21,12 +21,17 @@ inline bool inverse_lerp_s1v2(const T V[2][2], T &mu, const T epsilon = std::num
 template <typename T>
 __device__ __host__
 inline bool inverse_lerp_s2v2(const T V[3][2], T mu[3], 
+    T *cond = NULL,
     const T epsilon = std::numeric_limits<T>::epsilon())
 {
   const T A[2][2] = {
     {V[0][0] - V[2][0], V[1][0] - V[2][0]},
     {V[0][1] - V[2][1], V[1][1] - V[2][1]}
   };
+
+  if (cond)
+    *cond = cond_real2x2(A);
+
   const T b[2] = {-V[2][0], -V[2][1]};
 
   solve_linear2x2(A, b, mu);
