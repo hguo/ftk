@@ -20,7 +20,8 @@ inline bool inverse_lerp_s1v2(const T V[2][2], T &mu, const T epsilon = std::num
 
 template <typename T>
 __device__ __host__
-inline bool inverse_lerp_s2v2(const T V[3][2], T mu[3], const T epsilon = std::numeric_limits<T>::epsilon())
+inline bool inverse_lerp_s2v2(const T V[3][2], T mu[3], 
+    const T epsilon = std::numeric_limits<T>::epsilon())
 {
   const T A[2][2] = {
     {V[0][0] - V[2][0], V[1][0] - V[2][0]},
@@ -93,22 +94,28 @@ inline bool integer_inverse_lerp_s1v2(const L V[2][2])
 
 template <typename T>
 __device__ __host__
-inline bool inverse_lerp_s3v3(const T V[4][3], T lambda[4])
+inline bool inverse_lerp_s3v3(const T V[4][3], T lambda[4],
+    T *cond = NULL,
+    const T epsilon = std::numeric_limits<T>::epsilon())
 {
   const T A[3][3] = { // linear transformation
     {V[0][0] - V[3][0], V[1][0] - V[3][0], V[2][0] - V[3][0]}, 
     {V[0][1] - V[3][1], V[1][1] - V[3][1], V[2][1] - V[3][1]}, 
     {V[0][2] - V[3][2], V[1][2] - V[3][2], V[2][2] - V[3][2]}
   };
+
+  if (cond) 
+    *cond = cond_real3x3(A);
+
   const T b[3] = {-V[3][0], -V[3][1], -V[3][2]};
 
   solve_linear3x3(A, b, lambda);
   lambda[3] = T(1) - lambda[0] - lambda[1] - lambda[2];
   
-  return lambda[0] >= T(0) && lambda[0] < T(1) && 
-         lambda[1] >= T(0) && lambda[1] < T(1) && 
-         lambda[2] >= T(0) && lambda[2] < T(1) && 
-         lambda[3] >= T(0) && lambda[3] < T(1);
+  return lambda[0] >= -epsilon && lambda[0] < T(1) + epsilon && 
+         lambda[1] >= -epsilon && lambda[1] < T(1) + epsilon && 
+         lambda[2] >= -epsilon && lambda[2] < T(1) + epsilon && 
+         lambda[3] >= -epsilon && lambda[3] < T(1) + epsilon;
 }
 
 }

@@ -27,6 +27,7 @@ struct critical_point_t {
   double operator[](size_t i) const {return x[i];}
   std::array<double, 3> x = {0}; // double x[3] = {0}; // coordinates 
   double t = 0.0; // time
+  double cond = 0.0; // condition number
   int timestep = 0; 
   // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
   std::array<double, FTK_CP_MAX_NUM_VARS> scalar = {0}; // double scalar[FTK_CP_MAX_NUM_VARS] = {0};
@@ -46,6 +47,8 @@ struct critical_point_t {
     if (cpdims == 2) os << "x=(" << x[0] << ", " << x[1] << "), ";
     else os << "x=(" << x[0] << ", " << x[1] << ", " << x[2] << "), ";
     os << "t=" << t << ", ";
+
+    os << "cond=" << cond << ", ";
 
     for (int k = 0; k < scalar_components.size(); k ++)
       os << scalar_components[k] << "=" << scalar[k] << ", ";
@@ -75,6 +78,7 @@ namespace nlohmann
     static void to_json(json &j, const critical_point_t& cp) {
       j["x"] = cp.x; 
       j["t"] = cp.t;
+      j["cond"] = cp.cond;
       j["timestep"] = cp.timestep;
       j["scalar"] = cp.scalar; 
       j["v"] = cp.v;
@@ -87,6 +91,7 @@ namespace nlohmann
     static void from_json(const json& j,critical_point_t& cp) {
       cp.x = j["x"];  
       cp.t = j["t"];
+      cp.cond = j["cond"];
       cp.timestep = j["timestep"];
       cp.scalar = j["scalar"];  
       cp.v = j["v"];
@@ -103,6 +108,7 @@ namespace diy {
   static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t &cp) {
     diy::save(bb, cp.x); 
     diy::save(bb, cp.t);
+    diy::save(bb, cp.cond);
     diy::save(bb, cp.timestep);
     diy::save(bb, cp.scalar); 
     diy::save(bb, cp.v);
@@ -115,6 +121,7 @@ namespace diy {
   static void load(diy::BinaryBuffer& bb, ftk::critical_point_t &cp) {
     diy::load(bb, cp.x); 
     diy::load(bb, cp.t);  
+    diy::load(bb, cp.cond);
     diy::load(bb, cp.timestep);
     diy::load(bb, cp.scalar); 
     diy::load(bb, cp.v);

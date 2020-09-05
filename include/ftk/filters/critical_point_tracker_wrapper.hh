@@ -472,7 +472,7 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
         tracker->push_scalar_field_snapshot(scalar);
       } else 
 #endif
-        tracker->push_scalar_field_snapshot(field_data);
+      tracker->push_scalar_field_snapshot(field_data);
     }
     else // vector field
       tracker->push_vector_field_snapshot(field_data);
@@ -529,6 +529,7 @@ void critical_point_tracker_wrapper::post_process()
   auto &trajs = tracker->get_traced_critical_points();
 
   trajs.foreach([](ftk::critical_point_traj_t& t) {
+    t.discard_high_cond();
     t.smooth_ordinal_types();
     t.smooth_interval_types();
     t.rotate();

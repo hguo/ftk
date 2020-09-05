@@ -73,7 +73,7 @@ protected:
   void trace_intersections();
   void trace_connected_components();
 
-  virtual void simplex_positions(const std::vector<std::vector<int>>& vertices, double X[4][4]) const;
+  virtual void simplex_positions(const std::vector<std::vector<int>>& vertices, double X[][4]) const;
   virtual void simplex_vectors(const std::vector<std::vector<int>>& vertices, double v[4][3]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[4]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
@@ -173,7 +173,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         discrete_critical_points[e] = cp;
-        fprintf(stderr, "x={%f, %f, %f}, t=%f, type=%d\n", cp[0], cp[1], cp[2], cp.t, cp.type);
+        fprintf(stderr, "x={%f, %f, %f}, t=%f, cond=%f, type=%d\n", cp[0], cp[1], cp[2], cp.t, cp.cond, cp.type);
       }
     };
 
@@ -197,7 +197,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
             local_domain.start(0), 
             local_domain.start(1), 
             local_domain.start(2), 
-            static_cast<size_t>(current_timestep - 1), 
+            static_cast<size_t>(current_timestep), 
           }, {
             local_domain.size(0), 
             local_domain.size(1), 
@@ -341,9 +341,9 @@ void critical_point_tracker_3d_regular::trace_connected_components()
 }
 
 void critical_point_tracker_3d_regular::simplex_positions(
-    const std::vector<std::vector<int>>& vertices, double X[4][4]) const
+    const std::vector<std::vector<int>>& vertices, double X[][4]) const
 {
-  for (int i = 0; i < 4; i ++)
+  for (int i = 0; i < vertices.size(); i ++)
     for (int j = 0; j < 4; j ++)
       X[i][j] = vertices[i][j];
 }
@@ -406,7 +406,6 @@ bool critical_point_tracker_3d_regular::check_simplex(
 
   double v[4][3]; // vector values on vertices
   simplex_vectors(vertices, v);
-  // ftk::print4x3("v", v);
 
   if (enable_robust_detection) {
     fp_t vf[4][3];
@@ -424,11 +423,12 @@ bool critical_point_tracker_3d_regular::check_simplex(
   }
 
   double mu[4]; // check intersection
-  bool succ2 = ftk::inverse_lerp_s3v3(v, mu);
-  if (!succ2) return false; // TODO
-  for (int i = 0; i < 4; i ++)
-    if (std::isnan(mu[i]) || std::isinf(mu[i])) return false;
-  
+  double cond; // condition number
+  bool succ2 = ftk::inverse_lerp_s3v3(v, mu, &cond);
+  // if (!succ2) return false; // TODO
+  // for (int i = 0; i < 4; i ++)
+  //   if (std::isnan(mu[i]) || std::isinf(mu[i])) return false;
+
   double X[4][4], x[4]; // position
   simplex_positions(vertices, X);
   lerp_s3v4(X, mu, x);
@@ -436,6 +436,7 @@ bool critical_point_tracker_3d_regular::check_simplex(
   cp.x[1] = x[1];
   cp.x[2] = x[2];
   cp.t = x[3];
+  cp.cond = cond;
 
   double Js[4][3][3], J[3][3];
   simplex_jacobians(vertices, Js);

@@ -9,6 +9,9 @@ add_custom_target(copy_test_data ALL
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/data/* ${CMAKE_CURRENT_BINARY_DIR}
 )
 
+add_executable (test_mesh test_mesh.cpp)
+target_link_libraries (test_mesh ftk)
+
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
 target_link_libraries (test_quadratic_interpolation ftk)
 catch_discover_tests (test_quadratic_interpolation)

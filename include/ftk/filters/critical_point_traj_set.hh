@@ -274,7 +274,19 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     vels->SetName("velocity");
     polyData->GetPointData()->AddArray(vels);
   }
-
+  
+  if (1) { // condition numbers
+    vtkSmartPointer<vtkDoubleArray> conds = vtkSmartPointer<vtkDoubleArray>::New();
+    conds->SetNumberOfValues(nv);
+    size_t i = 0;
+    foreach([&](const critical_point_traj_t& curve) {
+      for (auto j = 0; j < curve.size(); j ++)
+        conds->SetValue(i ++, curve[j].cond);
+    });
+    conds->SetName("cond");
+    polyData->GetPointData()->AddArray(conds);
+  }
+  
   // point data for scalars
   // if (has_scalar_field) {
   for (auto k = 0; k < scalar_components.size(); k ++) {

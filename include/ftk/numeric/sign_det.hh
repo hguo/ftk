@@ -100,6 +100,8 @@ inline int robust_sign_det4(const T X[4][3])
         {X[2][0], X[2][1], X[2][2], T(1)},
         {X[3][0], X[3][1], X[3][2], T(1)}
       };
+      // print4x4("M", M);
+      // std::cerr << "det=" << det4(M) << std::endl;
       sigma = sign(det4(M));
     } else if (t == 1) {
       const T M[3][3] = {
@@ -253,7 +255,7 @@ __device__ __host__
 inline int positive3(const T X1[4][3], const int indices1[4])
 {
   int indices[4], orders[4];
-  for (int i = 0; i < 3; i ++)
+  for (int i = 0; i < 4; i ++)
     indices[i] = indices1[i];
   int s = nswaps_bubble_sort<4, int>(indices, orders);
 
@@ -350,15 +352,19 @@ inline bool robust_point_in_simplex3(const T X[4][3], const int indices[3], cons
   int s = positive3(X, indices);
   for (int i = 0; i < 4; i ++) {
     T Y[4][3];
+    int my_indices[4];
     for (int j = 0; j < 4; j ++)
-      if (i == j)
+      if (i == j) {
+        my_indices[j] = ix;
         for (int k = 0; k < 3; k ++) 
           Y[j][k] = x[k];
-      else 
+      } else {
+        my_indices[j] = indices[j];
         for (int k = 0; k < 3; k ++) 
           Y[j][k] = X[j][k];
+      }
 
-    int si = positive3(Y, indices);
+    int si = positive3(Y, my_indices);
     if (s != si) return false;
   }
   return true;

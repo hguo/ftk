@@ -236,7 +236,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
         } else if (j["name"] == "tornado") {
           default_nd = 3;
           j["variables"] = {"u", "v", "w"};
-        } else fatal("synthetic case not available.");
+        } else {
+          std::cerr << "synthetic case name: " << j["name"] << std::endl;
+          fatal("synthetic case not available.");
+        }
       } else fatal("synthetic case name not given.");
      
       if (missing_dimensions) {

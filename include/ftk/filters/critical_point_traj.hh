@@ -30,6 +30,9 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
 
   void smooth_ordinal_types(const int half_window_size=2); // make types of ordinal points robust to noises
   void smooth_interval_types(); //! make types in intervals consistent
+
+  void discard(std::function<bool(const critical_point_t&)> f);
+  void discard_high_cond(double threshold = 1e8); //! prune points with very high condition numbers, unless the point is ordinal
   
   int locate(double t, bool cap=false/*lower (false) or higher (true) cap*/) const; //! locate interval id of given t; assuming the traj is already reordered
 
@@ -66,6 +69,25 @@ inline void critical_point_traj_t::discard_degenerate_points() {
   }
   traj.update_statistics();
   *this = traj;
+}
+
+inline void critical_point_traj_t::discard(std::function<bool(const critical_point_t&)> f)
+{
+  critical_point_traj_t traj;
+  for (const auto &cp : *this)
+    if (!f(cp))
+      traj.push_back(cp);
+  
+  traj.update_statistics();
+  *this = traj;
+}
+
+inline void critical_point_traj_t::discard_high_cond(double threshold)
+{
+  discard([&](const critical_point_t& cp) {
+    if (std::isinf(cp.cond) || std::isnan(cp.cond) || cp.cond > threshold) return true;
+    else return false;
+  });
 }
   
 inline void critical_point_traj_t::update_statistics() {
