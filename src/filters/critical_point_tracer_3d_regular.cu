@@ -58,9 +58,9 @@ bool check_simplex_cp3t(
   bool succ = robust_critical_point_in_simplex3(vf, indices);
   if (!succ) return false;
 
-  double mu[4];
-  bool succ2 = ftk::inverse_lerp_s3v3(v, mu); //, 0.0);
-  if (succ2) {
+  double mu[4], cond;
+  bool succ2 = ftk::inverse_lerp_s3v3(v, mu, &cond); //, 0.0);
+  if (1) { // (succ2) {
     // if (!succ2) return false;
     // linear jacobian interpolation
     if (gradV[0]) { // have given jacobian
@@ -97,9 +97,8 @@ bool check_simplex_cp3t(
     cp.x[1] = x[1];
     cp.x[2] = x[2];
     cp.t = x[3];
-    return true;
-  } else 
-    return false;
+    cp.cond = cond;
+  }
 }
 
 template <int scope>

@@ -64,7 +64,9 @@ bool check_simplex_cp2t(
   if (succ) {
     // inverse interpolation
     double mu[3];
-    ftk::inverse_lerp_s2v2(v, mu, 0.0);
+    double cond;
+    ftk::inverse_lerp_s2v2(v, mu, &cond);
+
     // linear jacobian interpolation
     if (gradV[0]) { // have given jacobian
       double Js[3][2][2], J[2][2];
@@ -116,6 +118,7 @@ bool check_simplex_cp2t(
     cp.x[0] = x[0];
     cp.x[1] = x[1];
     cp.t = x[2];
+    cp.cond = cond;
     
     return true;
   } else 
