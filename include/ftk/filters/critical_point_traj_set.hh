@@ -23,6 +23,8 @@ struct critical_point_traj_set_t : public std::map<int, critical_point_traj_t>
   
   void foreach(std::function<void(const critical_point_traj_t&)> f) const {for (const auto& kv : *this) f(kv.second);}
   void foreach(std::function<void(critical_point_traj_t&)> f) {for (auto& kv : *this) f(kv.second);}
+  void foreach(std::function<void(int, const critical_point_traj_t&)> f) const {for (const auto& kv : *this) f(kv.first, kv.second);}
+  void foreach(std::function<void(int, critical_point_traj_t&)> f) {for (auto& kv : *this) f(kv.first, kv.second);}
 
   void filter(std::function<bool(const critical_point_traj_t&)> f);
 
@@ -254,9 +256,9 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     vtkSmartPointer<vtkUnsignedIntArray> ids = vtkSmartPointer<vtkUnsignedIntArray>::New();
     ids->SetNumberOfValues(nv);
     size_t i = 0;
-    foreach([&](const critical_point_traj_t& curve) {
+    foreach([&](int id, const critical_point_traj_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
-        ids->SetValue(i ++, curve.id);
+        ids->SetValue(i ++, id);
     });
     ids->SetName("id");
     polyData->GetPointData()->AddArray(ids);

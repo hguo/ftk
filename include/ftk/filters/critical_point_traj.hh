@@ -16,8 +16,6 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
   unsigned int consistent_type = 0; // 0 if no consistent type
 
   void relabel(int i); // assign id for traj and each point in the traj
-  void discard_interval_points();
-  void discard_degenerate_points();
   void update_statistics();
   void derive_velocity(); // (const std::vector<double> &dog_kernel); // assuming the traj contains only ordinal points (dt=1)
 
@@ -33,8 +31,12 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
 
   void discard(std::function<bool(const critical_point_t&)> f);
   void discard_high_cond(double threshold = 1e8); //! prune points with very high condition numbers, unless the point is ordinal
+  void discard_interval_points();
+  void discard_degenerate_points();
   
   int locate(double t, bool cap=false/*lower (false) or higher (true) cap*/) const; //! locate interval id of given t; assuming the traj is already reordered
+  
+  void copy_info(critical_point_traj_t& t) {id = t.id; complete = t.complete; loop = t.loop;}
 
   critical_point_traj_t intercept(int t0, int t1) const; //! assuming the traj is already reordered
 };
@@ -47,39 +49,27 @@ inline void critical_point_traj_t::relabel(int i)
     at(i).id = id;
 }
 
-inline void critical_point_traj_t::discard_interval_points() {
-  critical_point_traj_t traj;
-  traj.id = id;
-  traj.loop = loop;
-  for (auto i = 0; i < size(); i ++) {
-    if (at(i).ordinal) 
-      traj.push_back(at(i));
-  }
-  traj.update_statistics();
-  *this = traj;
-}
-  
-inline void critical_point_traj_t::discard_degenerate_points() {
-  critical_point_traj_t traj;
-  traj.id = id;
-  traj.loop = loop;
-  for (auto i = 0; i < size(); i ++) {
-    if (at(i).type != 1 && at(i).type != 0) // degenerate or unknown
-      traj.push_back(at(i));
-  }
-  traj.update_statistics();
-  *this = traj;
-}
-
 inline void critical_point_traj_t::discard(std::function<bool(const critical_point_t&)> f)
 {
   critical_point_traj_t traj;
+  traj.copy_info(*this);
+
   for (const auto &cp : *this)
     if (!f(cp))
       traj.push_back(cp);
   
   traj.update_statistics();
   *this = traj;
+}
+
+inline void critical_point_traj_t::discard_interval_points() {
+  discard([&](const critical_point_t& cp) { return !cp.ordinal; });
+}
+  
+inline void critical_point_traj_t::discard_degenerate_points() {
+  discard([&](const critical_point_t& cp) { 
+    return cp.type == 0 || cp.type == 1; 
+  });
 }
 
 inline void critical_point_traj_t::discard_high_cond(double threshold)
