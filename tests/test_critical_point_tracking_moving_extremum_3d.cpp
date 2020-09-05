@@ -12,10 +12,10 @@
 using nlohmann::json;
 
 TEST_CASE("critical_point_tracking_moving_extremum_3d_random_motion") {
-  const int ncases = 10;
+  const int ncases = 3;
   const int width = 21, height = 21, depth = 21;
-  // const double x0[3] = {10.0, 10.0, 10.0};
-  const double x0[3] = {10.05, 10.03, 10.1};
+  const double x0[3] = {10.0, 10.0, 10.0};
+  // const double x0[3] = {10.05, 10.03, 10.1};
   
   std::random_device rd{};
   std::mt19937 gen{rd()};
@@ -49,9 +49,9 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_random_motion") {
     ftk::critical_point_tracker_wrapper consumer;
     consumer.configure(jc);
     consumer.consume(stream);
+    consumer.post_process();
 
-    // if (comm.rank() == root) {
-    if (1) { // comm.rank() == root) {
+    if (comm.rank() == root) {
       auto tracker = std::dynamic_pointer_cast<ftk::critical_point_tracker_3d_regular>( consumer.get_tracker() );
       auto trajs = tracker->get_traced_critical_points();
      
@@ -70,7 +70,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_random_motion") {
       REQUIRE(poly->GetNumberOfCells() == 1);
 #endif
 
-      // REQUIRE(trajs.size() == 1); // FIXME
+      REQUIRE(trajs.size() == 1);
       
       for (auto i = 0; i < trajs[0].size(); i ++) {
         const auto &p = trajs[0][i];
@@ -79,13 +79,11 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_random_motion") {
                z = x0[2] + dir[2] * p[3];
         fprintf(stderr, "p={%f, %f, %f, %f}, x={%f, %f, %f}\n", p[0], p[1], p[2], p[3], x, y, z);
 
-        // FIXME
-        // REQUIRE(p[0] == Approx(x));
-        // REQUIRE(p[1] == Approx(y));
-        // REQUIRE(p[2] == Approx(z));
+        REQUIRE(p[0] == Approx(x));
+        REQUIRE(p[1] == Approx(y));
+        REQUIRE(p[2] == Approx(z));
       }
     }
-    return;
   }
 }
 
