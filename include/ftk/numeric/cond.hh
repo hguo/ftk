@@ -7,6 +7,7 @@
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 T cond_real2x2(const T A[2][2])
 {
   T invA[2][2];
@@ -17,6 +18,7 @@ T cond_real2x2(const T A[2][2])
 }
 
 template <typename T>
+__device__ __host__
 T cond_real3x3(const T A[3][3])
 {
   T invA[3][3];
