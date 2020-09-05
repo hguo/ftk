@@ -277,6 +277,18 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     polyData->GetPointData()->AddArray(vels);
   }
   
+  if (1) { // time
+    vtkSmartPointer<vtkDoubleArray> time = vtkSmartPointer<vtkDoubleArray>::New();
+    time->SetNumberOfValues(nv);
+    size_t i = 0;
+    foreach([&](const critical_point_traj_t& curve) {
+      for (auto j = 0; j < curve.size(); j ++)
+        time->SetValue(i ++, curve[j].t);
+    });
+    time->SetName("time");
+    polyData->GetPointData()->AddArray(time);
+  }
+  
   if (1) { // condition numbers
     vtkSmartPointer<vtkDoubleArray> conds = vtkSmartPointer<vtkDoubleArray>::New();
     conds->SetNumberOfValues(nv);
