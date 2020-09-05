@@ -213,6 +213,7 @@ struct ndarray : object {
   template <typename Iterator>
   void copy(Iterator first, Iterator last);
 
+public: // i/o for binary file
   void from_binary_file(const std::string& filename);
   void from_binary_file(FILE *fp);
   void from_binary_file_sequence(const std::string& pattern);
@@ -225,6 +226,7 @@ struct ndarray : object {
   void from_bov(const std::string& filename);
   void to_bov(const std::string& filename) const;
 
+public: // i/o for vtk image data
   void from_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
   void from_vtk_image_data_file_sequence(const std::string& pattern);
   void to_vtk_image_data_file(const std::string& filename, bool multicomponent=false) const;
@@ -235,6 +237,7 @@ struct ndarray : object {
   vtkSmartPointer<vtkDataArray> to_vtk_data_array(bool multicomponent=false) const;
 #endif
 
+public: // i/o for hdf5
   void from_h5(const std::string& filename, const std::string& name); 
 #if FTK_HAVE_HDF5
   void from_h5(hid_t fid, const std::string& name);
@@ -243,11 +246,12 @@ struct ndarray : object {
   static hid_t h5_mem_type_id();
 #endif
 
+public: // i/o for parallel-netcdf
 #if FTK_HAVE_PNETCDF
   void from_pnetcdf_all(int ncid, int varid, const MPI_Offset *st, const MPI_Offset *sz);
 #endif
 
-public: // adios2
+public: // i/o for adios2
 #if FTK_HAVE_ADIOS2
   void from_adios2(
       adios2::IO &io, 
@@ -255,6 +259,10 @@ public: // adios2
       const std::string &varname, 
       int step_start = 0);
 #endif
+
+public: // i/o for png
+  void from_png(const std::string& filename);
+  void to_png(const std::string& filename) const;
 
 public: // pybind11
 #if FTK_HAVE_PYBIND11
@@ -1138,6 +1146,36 @@ pybind11::array_t<T, pybind11::array::c_style> ndarray<T>::to_numpy() const
   memcpy(ptr, data(), sizeof(T) * nelem());
 
   return result;
+}
+#endif
+
+#if FTK_HAVE_PNG // TODO
+template <typename T>
+void ndarray<T>::to_png(const std::string& filename) const
+{
+  ndarray<unsigned char> buf;
+  if (nd() == 2) 
+    buf.reshape({4, dim(0), dim(1)});
+  else if (nd() == 3 && dim(0) <= 4) 
+    buf.reshape({4, dim(1), dim(2)});
+  else 
+    fatal("unable to save to png");
+
+  // TODO
+}
+#else
+template <typename T>
+void ndarray<T>::from_png(const std::string& filename)
+{
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with PNG.\n");
+  assert(false);
+}
+
+template <typename T>
+void to_png(const std::string& filename) const
+{
+  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with PNG.\n");
+  assert(false);
 }
 #endif
 
