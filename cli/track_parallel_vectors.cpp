@@ -28,6 +28,9 @@ std::string accelerator;
 int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 
+// input stream
+ftk::ndarray_stream<> stream;
+
 ///////////////////////////////
 int parse_arguments(int argc, char **argv)
 {
@@ -72,6 +75,28 @@ int parse_arguments(int argc, char **argv)
 
   if (output_filename.empty())
     fatal("Missing '--output'.");
+  
+  nlohmann::json j_input = args_to_json(results);
+  stream.set_input_source_json(j_input);
+
+  const auto js = stream.get_json();
+  const size_t nd = stream.n_dimensions(),
+               DW = js["dimensions"][0], 
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+
+  ftk::parallel_vector_tracker_3d_regular tracker;
+  tracker.set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2}));
+  tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+  tracker.initialize();
+
+  stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+    tracker.push_field_data_snapshot(field_data, ftk::Jv_dot_v3(field_data));
+    tracker.update_timestep();
+  });
+  stream.start();
+  stream.finish();
+  // tracker.finalize();
 
   return 0;
 }
