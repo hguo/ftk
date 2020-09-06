@@ -17,6 +17,10 @@ struct parallel_vector_tracker_3d_regular : public filter
   void set_domain(const lattice& l) {domain = l;} // spatial domain
   void set_array_domain(const lattice& l) {array_domain = l;}
 
+  void push_field_data_snapshot(
+      const ndarray<double> &v, 
+      const ndarray<double> &w);
+
 protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;

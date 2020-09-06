@@ -171,6 +171,7 @@ ndarray<T> gradient3Dt(const ndarray<T>& scalar)
   return grad;
 }
 
+
 // derivate gradients (jacobians) for 3D vector field
 template <typename T>
 ndarray<T> jacobian3D(const ndarray<T>& V)
@@ -180,9 +181,9 @@ ndarray<T> jacobian3D(const ndarray<T>& V)
   J.reshape(3, 3, DW, DH, DD);
 
 #pragma omp parallel for collapse(3)
-  for (int k = 2; k < DD-2; k ++) {
-    for (int j = 2; j < DH-2; j ++) {
-      for (int i = 2; i < DW-2; i ++) {
+  for (int k = 1; k < DD-1; k ++) {
+    for (int j = 1; j < DH-1; j ++) {
+      for (int i = 1; i < DW-1; i ++) {
         const float H00 = J(0, 0, i, j, k) = // ddf/dx2
           0.5 * (V(0, i+1, j, k) - V(0, i-1, j, k));
         const float H01 = J(0, 1, i, j, k) = // ddf/dxdy
@@ -249,6 +250,29 @@ ndarray<T> jacobian3Dt(const ndarray<T>& V)
   }
 
   return J;
+}
+
+// derive $\nabla\mathbf{v}\cdot\mathbf{v}
+template <typename T>
+ndarray<T> Jv_dot_v3(const ndarray<T> &v)
+{
+  ndarray<T> Jvv; Jvv.reshape(v);
+  ndarray<T> Jv = jacobian3D(v);
+
+#pragma omp parallel for collapse(3)
+  for (int k = 1; k < v.dim(3)-1; k ++) {
+    for (int j = 1; j < v.dim(2)-1; j ++) {
+      for (int i = 1; i < v.dim(1)-1; i ++) {
+        for (int p = 0; p < 3; p ++) {
+          Jvv(p, i, j, k) = 
+            Jv(0, p, i, j, k) * v(0, i, j, k) +
+            Jv(1, p, i, j, k) * v(1, i, j, k) +
+            Jv(2, p, i, j, k) * v(2, i, j, k);
+        }
+      }
+    }
+  }
+  return Jvv;
 }
 
 }
