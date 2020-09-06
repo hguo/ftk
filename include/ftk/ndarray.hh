@@ -264,6 +264,9 @@ public: // i/o for png
   void from_png(const std::string& filename);
   void to_png(const std::string& filename) const;
 
+public: // i/o for amira, see https://www.csc.kth.se/~weinkauf/notes/amiramesh.html
+  bool from_amira(const std::string& filename); // T must be floatt
+
 public: // pybind11
 #if FTK_HAVE_PYBIND11
   ndarray(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &numpy_array);
@@ -430,7 +433,9 @@ void ndarray<T>::from_binary_file(const std::string& filename)
 template <typename T>
 void ndarray<T>::from_binary_file(FILE *fp)
 {
-  fread(&p[0], sizeof(T), nelem(), fp);
+  auto s = fread(&p[0], sizeof(T), nelem(), fp);
+  if (s != nelem())
+    warn("Unable to read expected number of bytes.");
 }
 
 template <typename T>
@@ -1172,12 +1177,86 @@ void ndarray<T>::from_png(const std::string& filename)
 }
 
 template <typename T>
-void to_png(const std::string& filename) const
+void ndarray<T>::to_png(const std::string& filename) const
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with PNG.\n");
   assert(false);
 }
 #endif
+
+// see https://www.csc.kth.se/~weinkauf/notes/amiramesh.html
+template <>
+bool ndarray<float>::from_amira(const std::string& filename)
+{
+  auto find_and_jump = [](const char* buffer, const char* SearchString) {
+    const char* FoundLoc = strstr(buffer, SearchString);
+    if (FoundLoc) return FoundLoc + strlen(SearchString);
+    return buffer;
+  };
+
+  FILE *fp = fopen(filename.c_str(), "rb"); 
+  if (!fp) {
+    warn("cannot open file " + filename);
+    return false;
+  }
+
+  char buffer[2048];
+  fread(buffer, sizeof(char), 2047, fp);
+  buffer[2047] = '\0';
+
+  if (!strstr(buffer, "# AmiraMesh BINARY-LITTLE-ENDIAN 2.1")) {
+    warn("Not a proper AmiraMesh file " + filename);
+    fclose(fp);
+    return false;
+  }
+
+  int xDim(0), yDim(0), zDim(0);
+  sscanf(find_and_jump(buffer, "define Lattice"), "%d %d %d", &xDim, &yDim, &zDim);
+  printf("\tAmriaMesh grid dimensions: %d %d %d\n", xDim, yDim, zDim);
+
+  float xmin(1.0f), ymin(1.0f), zmin(1.0f);
+  float xmax(-1.0f), ymax(-1.0f), zmax(-1.0f);
+
+  sscanf(find_and_jump(buffer, "BoundingBox"), "%g %g %g %g %g %g", &xmin, &xmax, &ymin, &ymax, &zmin, &zmax);
+  printf("\tBoundingBox in x-Direction: [%g ... %g]\n", xmin, xmax);
+  printf("\tBoundingBox in y-Direction: [%g ... %g]\n", ymin, ymax);
+  printf("\tBoundingBox in z-Direction: [%g ... %g]\n", zmin, zmax);
+
+  const bool bIsUniform = (strstr(buffer, "CoordType \"uniform\"") != NULL);
+  printf("\tGridType: %s\n", bIsUniform ? "uniform" : "UNKNOWN");
+
+  int NumComponents(0);
+  if (strstr(buffer, "Lattice { float Data }"))
+  { //Scalar field
+    NumComponents = 1;
+  } else {
+    sscanf(find_and_jump(buffer, "Lattice { float["), "%d", &NumComponents);
+  }
+  printf("\tNumber of Components: %d\n", NumComponents);
+
+  if (xDim <= 0 || yDim <= 0 || zDim <= 0
+      || xmin > xmax || ymin > ymax || zmin > zmax
+      || !bIsUniform || NumComponents <= 0)
+  {
+    warn("Something went wrong when reading AmiraMesh data\n");
+    fclose(fp);
+    return false;
+  }
+
+  const long idxStartData = strstr(buffer, "# Data section follows") - buffer;
+  if (idxStartData > 0)
+  {
+    fseek(fp, idxStartData, SEEK_SET);
+    fgets(buffer, 2047, fp);
+    fgets(buffer, 2047, fp);
+
+    reshape(NumComponents, xDim, yDim, zDim);
+    from_binary_file(fp);
+  }
+
+  fclose(fp);
+  return 0;
+}
 
 }
 

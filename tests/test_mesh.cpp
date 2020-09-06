@@ -1,5 +1,30 @@
 #include <ftk/mesh/simplicial_regular_mesh.hh>
+#include <ftk/ndarray.hh>
 
+int main(int argc, char **argv)
+{
+  const std::string filename(argv[1]);
+
+  ftk::ndarray<float> data;
+  data.from_amira(filename);
+  
+  // data.reshape({data.dim(1), data.dim(2), data.dim(3)});
+  // data.to_vtk_image_data_file(filename + ".vti", true);
+
+  std::cerr << data << std::endl;
+
+  auto d = data.slice_time();
+  for (auto i = 0; i < d.size(); i ++) {
+    // std::cerr << d[i] << std::endl;
+    char my_filename[1024];
+    sprintf(my_filename, "cylindar2D-%03d.bin", i);
+    d[i].to_binary_file(my_filename); // , true);
+  }
+
+  return 0;
+}
+
+#if 0
 int main(int argc, char **argv)
 {
   ftk::simplicial_regular_mesh m(4);
@@ -31,3 +56,4 @@ int main(int argc, char **argv)
 
   return 0;
 }
+#endif

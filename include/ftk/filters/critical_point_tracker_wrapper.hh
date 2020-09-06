@@ -436,6 +436,7 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
     rtracker->set_scalar_field_source( ftk::SOURCE_NONE );
     rtracker->set_vector_field_source( ftk::SOURCE_GIVEN );
     rtracker->set_jacobian_field_source( ftk::SOURCE_DERIVED );
+    rtracker->set_jacobian_symmetric( false );
     if (nd == 2) { // 2D
       rtracker->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
     } else {
