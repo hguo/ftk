@@ -7,6 +7,24 @@ int main(int argc, char **argv)
 
   ftk::ndarray<float> data;
   data.from_amira(filename);
+ 
+#if 0
+  double su = 0, sv = 0;
+  for (int k = 0; k < data.dim(3); k ++) 
+    for (int j = 0; j < data.dim(2); j ++) 
+      for (int i = 0; i < data.dim(1); i ++) {
+        su += data(0, i, j, k);
+        sv += data(1, i, j, k);
+      }
+  su /= (data.nelem() / 3);
+  sv /= (data.nelem() / 3);
+  fprintf(stderr, "su=%f, su=%f\n", su, sv);
+  
+  for (int k = 0; k < data.dim(3); k ++) 
+    for (int j = 0; j < data.dim(2); j ++) 
+      for (int i = 0; i < data.dim(1); i ++)
+        data(0, i, j, k) -= 0.636;
+#endif
   
   // data.reshape({data.dim(1), data.dim(2), data.dim(3)});
   data.to_binary_file(filename + ".bin");

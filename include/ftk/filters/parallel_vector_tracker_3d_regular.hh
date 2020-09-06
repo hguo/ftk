@@ -48,6 +48,7 @@ protected:
   
   struct field_data_snapshot_t {
     ndarray<double> v,  w;
+    ndarray<double> Jv; // jacobian of v
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
@@ -150,27 +151,27 @@ void parallel_vector_tracker_3d_regular::check_simplex(
   double X[3][4], V[3][3], W[3][3];
   simplex_values<3>(e, X, V, W);
 
-  double lambda[3] = {0}, mu[3][3];
-  int ns = solve_pv_s2v3(V, W, lambda, mu);
+  double lambda, mu[3], cond;
+  bool succ = solve_sujudi_haimes(V, W, lambda, mu, cond);
 
-  if (ns>1) fprintf(stderr, "ns=%d, lambda0=%f, lambda1=%f, lambda2=%f\n", 
-      ns, lambda[0], lambda[1], lambda[2]);
-
-  // we should only handle the first eigval in this impl
-  for (int k = 0; k < ns; k ++) {
+  if (succ) {
     parallel_vector_point_t pv;
-    double x[4];
-    
-    lerp_s2v4(X, mu[k], x);
+    double x[4], v[3], w[3];
+    lerp_s2v4(X, mu, x);
+    lerp_s2v3(V, mu, v);
+    lerp_s2v3(W, mu, w);
+
     for (int i = 0; i < 3; i ++) {
       pv.x[i] = x[i];
-      pv.v[i] = V[k][i];
-      pv.w[i] = W[k][i];
+      pv.v[i] = v[i];
+      pv.w[i] = w[i];
     }
     
     pv.t = x[3];
-    pv.lambda = lambda[k];
-      
+    pv.lambda = lambda;
+    pv.cond = cond;
+     
+    if (1) // pv.lambda > 0)
     {
       std::lock_guard<std::mutex> guard(mutex);
       discrete_pvs.insert(std::pair<element_t, pv_t>(e, pv));
