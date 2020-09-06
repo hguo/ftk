@@ -18,6 +18,7 @@ struct parallel_vector_point_t {
   int timestep;
   bool ordinal = false;
   unsigned long long tag = 0;
+  int id;
 };
 
 }

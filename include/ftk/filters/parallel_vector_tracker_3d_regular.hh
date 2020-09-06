@@ -34,6 +34,12 @@ struct parallel_vector_tracker_3d_regular : public filter
   void finalize();
   void update() {}
 
+public:
+  void write_discrete_pvs_vtk(const std::string& filename) const;
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_discrete_pvs_vtk() const;
+#endif
+
 protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
@@ -171,6 +177,98 @@ void parallel_vector_tracker_3d_regular::check_simplex(
     }
   }
 }
+
+#if FTK_HAVE_VTK
+vtkSmartPointer<vtkPolyData> parallel_vector_tracker_3d_regular::get_discrete_pvs_vtk() const
+{
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+  
+  vtkIdType pid[1];
+  
+  // const auto critical_points = get_critical_points();
+  for (const auto &kv : discrete_pvs) {
+    const auto &pv = kv.second;
+    double p[3] = {pv.x[0], pv.x[1], pv.x[2]}; // TODO: time
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  polyData->SetPoints(points);
+  polyData->SetVerts(vertices);
+ 
+  const size_t nv = discrete_pvs.size();
+
+  if (1) { // ids
+    vtkSmartPointer<vtkUnsignedIntArray> ids = vtkSmartPointer<vtkUnsignedIntArray>::New();
+    ids->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &kv : discrete_pvs)
+      ids->SetValue(i ++, kv.second.id);
+    ids->SetName("id");
+    polyData->GetPointData()->AddArray(ids);
+  }
+  
+  if (1) { // lambda
+    vtkSmartPointer<vtkDoubleArray> lambdas = vtkSmartPointer<vtkDoubleArray>::New();
+    lambdas->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &kv : discrete_pvs)
+      lambdas->SetValue(i ++, kv.second.lambda);
+    lambdas->SetName("lambda");
+    polyData->GetPointData()->AddArray(lambdas);
+  }
+  
+  if (1) { // v
+    vtkSmartPointer<vtkDoubleArray> v = vtkSmartPointer<vtkDoubleArray>::New();
+    v->SetNumberOfComponents(3);
+    v->SetNumberOfTuples(nv);
+    size_t i = 0;
+    for (const auto &kv : discrete_pvs)
+      v->SetTuple3(i ++, kv.second.v[0], kv.second.v[1], kv.second.v[2]);
+    v->SetName("v");
+    polyData->GetPointData()->AddArray(v);
+  }
+  
+  if (1) { // w
+    vtkSmartPointer<vtkDoubleArray> w = vtkSmartPointer<vtkDoubleArray>::New();
+    w->SetNumberOfComponents(3);
+    w->SetNumberOfTuples(nv);
+    size_t i = 0;
+    for (const auto &kv : discrete_pvs)
+      w->SetTuple3(i ++, kv.second.w[0], kv.second.w[1], kv.second.w[2]);
+    w->SetName("w");
+    polyData->GetPointData()->AddArray(w);
+  }
+
+  if (1) { // condition numbers
+    vtkSmartPointer<vtkDoubleArray> conds = vtkSmartPointer<vtkDoubleArray>::New();
+    conds->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &kv : discrete_pvs)
+      conds->SetValue(i ++, kv.second.cond);
+    conds->SetName("cond");
+    polyData->GetPointData()->AddArray(conds);
+  }
+
+  return polyData;
+}
+
+inline void parallel_vector_tracker_3d_regular::write_discrete_pvs_vtk(const std::string& filename) const
+{
+  if (is_root_proc()) {
+    auto poly = get_discrete_pvs_vtk();
+    write_vtp(filename, poly);
+  }
+}
+#else
+inline void parallel_vector_tracker_3d_regular::write_discrete_pvs_vtk(const std::string& filename) const
+{
+  if (is_root_proc())
+    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
+}
+#endif
 
 }
 

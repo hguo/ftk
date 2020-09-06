@@ -98,6 +98,8 @@ int parse_arguments(int argc, char **argv)
   stream.finish();
   tracker.finalize();
 
+  tracker.write_discrete_pvs_vtk(output_filename);
+
   return 0;
 }
 
