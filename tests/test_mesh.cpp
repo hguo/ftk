@@ -9,7 +9,23 @@ int main(int argc, char **argv)
   data.from_amira(filename);
   
   // data.reshape({data.dim(1), data.dim(2), data.dim(3)});
-  // data.to_vtk_image_data_file(filename + ".vti", true);
+  data.to_binary_file(filename + ".bin");
+
+  return 0;
+}
+
+#if 0
+int main(int argc, char **argv)
+{
+  const std::string filename(argv[1]);
+
+  ftk::ndarray<float> data;
+  data.from_amira(filename);
+  
+  // data.reshape({data.dim(1), data.dim(2), data.dim(3)});
+  data.to_vtk_image_data_file(filename + ".vti", true);
+
+  return 0;
 
 #if 0
   double su = 0, sv = 0;
@@ -36,7 +52,7 @@ int main(int argc, char **argv)
   for (auto i = 0; i < d.size(); i ++) {
     // std::cerr << d[i] << std::endl;
     char my_filename[1024];
-    sprintf(my_filename, "cylindar2D-%03d.bin", i);
+    sprintf(my_filename, "cylindar2D-%04d.bin", i);
     d[i].to_binary_file(my_filename); // , true);
     // sprintf(my_filename, "cylindar2D-%03d.vti", i);
     // d[i].to_vtk_image_data_file(my_filename, true);
@@ -45,6 +61,7 @@ int main(int argc, char **argv)
 
   return 0;
 }
+#endif
 
 #if 0
 int main(int argc, char **argv)

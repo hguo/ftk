@@ -435,6 +435,7 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
     } else { // 3D
       rtracker->set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
     }
+    fprintf(stderr, "treating input data as scalar field.\n");
   } else { // vector field
     rtracker->set_scalar_field_source( ftk::SOURCE_NONE );
     rtracker->set_vector_field_source( ftk::SOURCE_GIVEN );
@@ -445,6 +446,7 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
     } else {
       rtracker->set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2})); // the indentation is needed becase the jacoobian field will be automatically derived
     }
+    fprintf(stderr, "treating input data as vector field.\n");
   }
   tracker = rtracker;
   
