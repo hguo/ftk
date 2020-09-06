@@ -381,7 +381,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
   stream.start();
   stream.finish();
-  tracker.finalize();
+  tracker->finalize();
 }
 
 void critical_point_tracker_wrapper::write_sliced_results(int k)

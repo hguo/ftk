@@ -96,7 +96,7 @@ int parse_arguments(int argc, char **argv)
   });
   stream.start();
   stream.finish();
-  // tracker.finalize();
+  tracker.finalize();
 
   return 0;
 }

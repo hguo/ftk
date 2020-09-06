@@ -31,6 +31,7 @@ struct parallel_vector_tracker_3d_regular : public filter
   void update_timestep();
 
   void initialize();
+  void finalize();
   void update() {}
 
 protected:
@@ -49,7 +50,7 @@ protected:
       T X[n][4], T V[n][3], T W[n][3]) const;
 
 private:
-  bool check_simplex(const element_t& s, pv_t& cp);
+  void check_simplex(const element_t& s); // , pv_t& cp);
 
 protected:
   lattice domain, array_domain;
@@ -74,10 +75,16 @@ void parallel_vector_tracker_3d_regular::initialize()
     });
 }
 
+void parallel_vector_tracker_3d_regular::finalize()
+{
+  fprintf(stderr, "#dpvs=%zu\n", discrete_pvs.size());
+}
+
 void parallel_vector_tracker_3d_regular::update_timestep()
 {
   fprintf(stderr, "current_timestep = %d\n", current_timestep);
 
+#if 0
   auto func = [=](element_t e) {
     pv_t pv;
     if (check_simplex(e, pv)) {
@@ -86,8 +93,11 @@ void parallel_vector_tracker_3d_regular::update_timestep()
       fprintf(stderr, "x={%f, %f, %f}, t=%f, lambda=%f\n", pv.x[0], pv.x[1], pv.x[2], pv.t, pv.lambda);
     }
   };
-  
-  m.element_for_ordinal(2, current_timestep, func);
+#endif
+ 
+  using namespace std::placeholders;
+  m.element_for_ordinal(2, current_timestep, 
+      std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
 }
 
 inline void parallel_vector_tracker_3d_regular::push_field_data_snapshot(
@@ -125,11 +135,10 @@ void parallel_vector_tracker_3d_regular::simplex_values(
   }
 }
 
-bool parallel_vector_tracker_3d_regular::check_simplex(
-    const simplicial_regular_mesh_element& e, // 2-simplex
-    pv_t& pv)
+void parallel_vector_tracker_3d_regular::check_simplex(
+    const simplicial_regular_mesh_element& e) // 2-simplex
 {
-  if (!e.valid(m)) return false; // check if the 2-simplex is valid
+  if (!e.valid(m)) return; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m);
 
   double X[3][4], V[3][3], W[3][3];
@@ -141,13 +150,26 @@ bool parallel_vector_tracker_3d_regular::check_simplex(
   if (ns>1) fprintf(stderr, "ns=%d, lambda0=%f, lambda1=%f, lambda2=%f\n", 
       ns, lambda[0], lambda[1], lambda[2]);
 
-#if 0
-  for (int k = 0; k < std::min(1, ns); k ++) { // only handle the first eigval in this impl
+  // we should only handle the first eigval in this impl
+  for (int k = 0; k < ns; k ++) {
+    parallel_vector_point_t pv;
+    double x[4];
+    
+    lerp_s2v4(X, mu[k], x);
+    for (int i = 0; i < 3; i ++) {
+      pv.x[i] = x[i];
+      pv.v[i] = V[k][i];
+      pv.w[i] = W[k][i];
+    }
+    
+    pv.t = x[3];
     pv.lambda = lambda[k];
+      
+    {
+      std::lock_guard<std::mutex> guard(mutex);
+      discrete_pvs.insert(std::pair<element_t, pv_t>(e, pv));
+    }
   }
-#endif
-
-  return false;
 }
 
 }

@@ -70,6 +70,13 @@ inline void lerp_s2v3(const T V[3][3], const T mu[3], T v[3])
 
 template <typename T>
 __device__ __host__
+inline void lerp_s2v4(const T V[3][4], const T mu[3], T v[4])
+{
+  lerp_s2v<T, 4>(V, mu, v);
+}
+
+template <typename T>
+__device__ __host__
 inline void lerp_s2m2x2(const T V[3][2][2], const T mu[3], T v[2][2])
 {
   v[0][0] = V[0][0][0] * mu[0] + V[1][0][0] * mu[1] + V[2][0][0] * mu[2];
