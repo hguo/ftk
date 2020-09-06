@@ -8,7 +8,7 @@ FTK is a library that provides building blocks for feature tracking algorithms i
 
 ## Dependencies
 
-FTK requires CMake to build the libraries and executables.  Optional dependencies include ParaView (>=5.8.0 recommended), Python, VTK, Qt5, MPI, netCDF, parallel-netcdf, HDF5, ADIOS2, MPSolve, and CUDA.
+FTK depends in GMP and also requires CMake to build the libraries and executables.  Optional dependencies include ParaView (>=5.8.0 recommended), Python, VTK, Qt5, MPI, netCDF, parallel-netcdf, HDF5, ADIOS2, MPSolve, and CUDA.
 
 ## FTK for ParaView
 
@@ -94,7 +94,7 @@ $ cd $FTK_SOURCE_DIR/build
 $ cmake .. && make
 ```
 
-The executables can be found in the `bin` directory.  You may build FTK with NetCDF, HDF5, VTK, GMP, MPI, and CUDA to enable more features.  
+The executables can be found in the `bin` directory.  You may build FTK with NetCDF, HDF5, VTK, MPI, and CUDA to enable more features.  
 
 #### Building with VTK
 
