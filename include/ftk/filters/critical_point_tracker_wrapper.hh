@@ -22,6 +22,8 @@ struct critical_point_tracker_wrapper : public object {
   void post_process();
   void xgc_post_process();
 
+  void write();
+
   std::shared_ptr<critical_point_tracker> get_tracker() {return tracker;};
 
   json get_json() const {return j;}
@@ -70,6 +72,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   };
 
   add_boolean_option("enable_robust_detection", true);
+  add_boolean_option("enable_post_processing", true);
   add_boolean_option("enable_streaming_trajectories", false);
   add_boolean_option("enable_discarding_interval_points", false);
   add_boolean_option("enable_discarding_degenerate_points", false);
@@ -560,7 +563,10 @@ void critical_point_tracker_wrapper::post_process()
       t.update_statistics();
     });
   }
+}
 
+void critical_point_tracker_wrapper::write()
+{
   if (j.contains("output")) {
     if (j["output_type"] == "sliced") {
       fprintf(stderr, "slicing and writing..\n");

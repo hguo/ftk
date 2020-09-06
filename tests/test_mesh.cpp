@@ -11,15 +11,37 @@ int main(int argc, char **argv)
   // data.reshape({data.dim(1), data.dim(2), data.dim(3)});
   // data.to_vtk_image_data_file(filename + ".vti", true);
 
-  std::cerr << data << std::endl;
+#if 0
+  double su = 0, sv = 0;
+  for (int k = 0; k < data.dim(3); k ++) 
+    for (int j = 0; j < data.dim(2); j ++) 
+      for (int i = 0; i < data.dim(1); i ++) {
+        su += data(0, i, j, k);
+        sv += data(1, i, j, k);
+      }
 
+  su /= data.dim(1) * data.dim(2) * data.dim(3);
+  sv /= data.dim(1) * data.dim(2) * data.dim(3);
+  fprintf(stderr, "su=%f, sv=%f\n", su, sv);
+#endif // su=1.001280, sv=0.000033
+  
+  for (int k = 0; k < data.dim(3); k ++) 
+    for (int j = 0; j < data.dim(2); j ++) 
+      for (int i = 0; i < data.dim(1); i ++)
+        data(0, i, j, k) -= 1.001280; 
+  // std::cerr << data << std::endl;
+
+#if 1
   auto d = data.slice_time();
   for (auto i = 0; i < d.size(); i ++) {
     // std::cerr << d[i] << std::endl;
     char my_filename[1024];
     sprintf(my_filename, "cylindar2D-%03d.bin", i);
     d[i].to_binary_file(my_filename); // , true);
+    // sprintf(my_filename, "cylindar2D-%03d.vti", i);
+    // d[i].to_vtk_image_data_file(my_filename, true);
   }
+#endif
 
   return 0;
 }

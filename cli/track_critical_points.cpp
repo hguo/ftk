@@ -35,7 +35,8 @@ bool verbose = false, demo = false, show_vtk = false, help = false;
 bool enable_streaming_trajectories = false, 
      enable_discarding_interval_points = false,
      enable_deriving_velocities = false,
-     disable_robust_detection = false;
+     disable_robust_detection = false,
+     disable_post_processing = false;
 int intercept_length = 2;
 
 // xgc specific
@@ -89,8 +90,10 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<bool>(enable_discarding_interval_points))
     ("derive-velocities", "Enable deriving velocities", 
      cxxopts::value<bool>(enable_deriving_velocities))
-    ("disable-robust", "Disable robust detection (faster than robust detection)",
+    ("no-robust-detection", "Disable robust detection (faster than robust detection)",
      cxxopts::value<bool>(disable_robust_detection))
+    ("no-post-processing", "Disable post-processing",
+     cxxopts::value<bool>(disable_post_processing))
     ("vtk", "Show visualization with vtk (legacy)", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -159,6 +162,8 @@ int parse_arguments(int argc, char **argv)
 
   if (disable_robust_detection)
     j_tracker["enable_robust_detection"] = false;
+
+  j_tracker["enable_post_processing"] = !disable_post_processing;
 
   j_tracker["type_filter"] = type_filter_str;
 
@@ -241,8 +246,11 @@ int main(int argc, char **argv)
   
   parse_arguments(argc, argv);
   wrapper.consume(stream);
+ 
+  if (!disable_post_processing)
+     wrapper.post_process();
   
-  wrapper.post_process();
+  wrapper.write();
  
   if (world.rank() == 0 && show_vtk) 
     start_vtk_window();
