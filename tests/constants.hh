@@ -127,6 +127,7 @@ static std::tuple<size_t, size_t> track_cp2d(const json jstream, const json jcon
   consumer.configure(jconfig);
   consumer.consume(stream);
   consumer.post_process();
+  consumer.write();
     
   auto tracker = std::dynamic_pointer_cast<ftk::critical_point_tracker_2d_regular>( consumer.get_tracker() );
   auto trajs = tracker->get_traced_critical_points();
