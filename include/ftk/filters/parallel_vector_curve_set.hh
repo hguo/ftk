@@ -19,13 +19,29 @@ struct parallel_vector_curve_set_t : public std::map<int, parallel_vector_curve_
 {
   void foreach(std::function<void(int, const parallel_vector_curve_t&)> f) const {for (const auto& kv : *this) f(kv.first, kv.second); }
   void foreach(std::function<void(int, parallel_vector_curve_t&)> f) {for (auto& kv : *this) f(kv.first, kv.second); }
+  
+  int add(const parallel_vector_curve_t&);
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> to_vtp() const;
 #endif
+
+protected:
+  int get_new_id() const {
+    if (empty()) return 0; 
+    else return rbegin()->first + 1;
+  }
 };
 
 ////
+int parallel_vector_curve_set_t::add(const parallel_vector_curve_t& curve)
+{
+  const int id = get_new_id();
+  insert(std::pair<int, parallel_vector_curve_t>(id, curve));
+  // at(id).relabel(id);
+  return id;
+}
+
 #if FTK_HAVE_VTK
 vtkSmartPointer<vtkPolyData> parallel_vector_curve_set_t::to_vtp() const
 {

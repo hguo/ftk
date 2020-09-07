@@ -91,6 +91,9 @@ int parse_arguments(int argc, char **argv)
   tracker.initialize();
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+    const double sigma = 0.6;
+
+
     tracker.push_field_data_snapshot(field_data, ftk::Jv_dot_v3(field_data));
     tracker.update_timestep();
   });
@@ -98,7 +101,8 @@ int parse_arguments(int argc, char **argv)
   stream.finish();
   tracker.finalize();
 
-  tracker.write_discrete_pvs_vtk(output_filename);
+  // tracker.write_discrete_pvs_vtk(output_filename);
+  tracker.write_traced_pvs_vtk(output_filename);
 
   return 0;
 }

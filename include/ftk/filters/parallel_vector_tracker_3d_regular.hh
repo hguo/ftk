@@ -36,6 +36,7 @@ struct parallel_vector_tracker_3d_regular : public filter
 
 public:
   void write_discrete_pvs_vtk(const std::string& filename) const;
+  void write_traced_pvs_vtk(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_discrete_pvs_vtk() const;
 #endif
@@ -44,7 +45,10 @@ protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
   typedef parallel_vector_point_t pv_t;
-  std::multimap<element_t, parallel_vector_point_t> discrete_pvs; // discrete parallel vector points
+  // std::multimap<element_t, parallel_vector_point_t> discrete_pvs; // discrete parallel vector points
+  std::map<element_t, parallel_vector_point_t> discrete_pvs; // discrete parallel vector points
+
+  parallel_vector_curve_set_t traced_pvs;
   
   struct field_data_snapshot_t {
     ndarray<double> v,  w;
@@ -57,7 +61,9 @@ protected:
       T X[n][4], T V[n][3], T W[n][3]) const;
 
 private:
-  void check_simplex(const element_t& s); // , pv_t& cp);
+  void check_simplex_sujudi_haimes(const element_t& s); // , pv_t& cp);
+
+  void trace_curves();
 
 protected:
   lattice domain, array_domain;
@@ -66,7 +72,7 @@ protected:
 };
 
 /////
-void parallel_vector_tracker_3d_regular::initialize()
+inline void parallel_vector_tracker_3d_regular::initialize()
 {
   // initializing bounds
   m.set_lb_ub({
@@ -82,29 +88,19 @@ void parallel_vector_tracker_3d_regular::initialize()
     });
 }
 
-void parallel_vector_tracker_3d_regular::finalize()
+inline void parallel_vector_tracker_3d_regular::finalize()
 {
   fprintf(stderr, "#dpvs=%zu\n", discrete_pvs.size());
+  trace_curves();
 }
 
-void parallel_vector_tracker_3d_regular::update_timestep()
+inline void parallel_vector_tracker_3d_regular::update_timestep()
 {
   fprintf(stderr, "current_timestep = %d\n", current_timestep);
-
-#if 0
-  auto func = [=](element_t e) {
-    pv_t pv;
-    if (check_simplex(e, pv)) {
-      std::lock_guard<std::mutex> guard(mutex);
-      discrete_pvs.insert(std::pair<element_t, pv_t>(e, pv));
-      fprintf(stderr, "x={%f, %f, %f}, t=%f, lambda=%f\n", pv.x[0], pv.x[1], pv.x[2], pv.t, pv.lambda);
-    }
-  };
-#endif
  
   using namespace std::placeholders;
   m.element_for_ordinal(2, current_timestep, 
-      std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
+      std::bind(&parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes, this, _1));
 }
 
 inline void parallel_vector_tracker_3d_regular::push_field_data_snapshot(
@@ -142,7 +138,7 @@ void parallel_vector_tracker_3d_regular::simplex_values(
   }
 }
 
-void parallel_vector_tracker_3d_regular::check_simplex(
+inline void parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes(
     const simplicial_regular_mesh_element& e) // 2-simplex
 {
   if (!e.valid(m)) return; // check if the 2-simplex is valid
@@ -179,8 +175,42 @@ void parallel_vector_tracker_3d_regular::check_simplex(
   }
 }
 
+inline void parallel_vector_tracker_3d_regular::trace_curves()
+{
+  // Convert connected components to geometries
+  auto neighbors = [&](element_t f) {
+    std::set<element_t> neighbors;
+    const auto cells = f.side_of(m);
+    for (const auto c : cells) {
+      const auto elements = c.sides(m);
+      for (const auto f1 : elements)
+        neighbors.insert(f1);
+    }
+    return neighbors;
+  };
+
+  std::set<element_t> elements;
+  for (const auto &kv : discrete_pvs)
+    elements.insert(kv.first);
+  auto connected_components = extract_connected_components<element_t, std::set<element_t>>(
+      neighbors, elements);
+
+  fprintf(stderr, "#cc=%zu\n", connected_components.size());
+
+  for (const auto &component : connected_components) {
+    std::vector<std::vector<double>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      parallel_vector_curve_t curve; 
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        curve.push_back(discrete_pvs[linear_graphs[j][k]]);
+      traced_pvs.add(curve);
+    }
+  }
+}
+
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> parallel_vector_tracker_3d_regular::get_discrete_pvs_vtk() const
+inline vtkSmartPointer<vtkPolyData> parallel_vector_tracker_3d_regular::get_discrete_pvs_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -263,8 +293,22 @@ inline void parallel_vector_tracker_3d_regular::write_discrete_pvs_vtk(const std
     write_vtp(filename, poly);
   }
 }
+
+inline void parallel_vector_tracker_3d_regular::write_traced_pvs_vtk(const std::string& filename) const
+{
+  if (is_root_proc()) {
+    auto poly = traced_pvs.to_vtp();
+    write_vtp(filename, poly);
+  }
+}
 #else
 inline void parallel_vector_tracker_3d_regular::write_discrete_pvs_vtk(const std::string& filename) const
+{
+  if (is_root_proc())
+    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
+}
+
+inline void parallel_vector_tracker_3d_regular::write_traced_pvs_vtk(const std::string& filename) const
 {
   if (is_root_proc())
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
