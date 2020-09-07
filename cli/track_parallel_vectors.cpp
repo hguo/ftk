@@ -91,10 +91,20 @@ int parse_arguments(int argc, char **argv)
   tracker.initialize();
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+#if 1
+    auto &V = field_data;
+#else
     const double sigma = 0.6;
+    const size_t ks = 3;
 
+    auto components = field_data.slice_components();
+    for (auto &comp : components)
+      comp = ftk::conv_gaussian(comp, sigma, ks, ks/2);
 
-    tracker.push_field_data_snapshot(field_data, ftk::Jv_dot_v3(field_data));
+    auto V = ftk::ndarray<double>::concat(components);
+#endif
+
+    tracker.push_field_data_snapshot(V, ftk::Jv_dot_v3(V));
     tracker.update_timestep();
   });
   stream.start();

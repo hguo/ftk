@@ -1022,7 +1022,7 @@ inline std::vector<ndarray<T>> ndarray<T>::slice_time() const
 }
 
 template <typename T>
-ndarray<T> slice_components(size_t c) const
+ndarray<T> ndarray<T>::slice_components(size_t c) const
 {
   ndarray<T> array;
   std::vector<size_t> mydims; 
