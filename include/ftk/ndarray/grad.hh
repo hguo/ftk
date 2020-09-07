@@ -171,6 +171,23 @@ ndarray<T> gradient3Dt(const ndarray<T>& scalar)
   return grad;
 }
 
+template <typename T>
+ndarray<T> velmag3(const ndarray<T>& V)
+{
+  const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3);
+  ndarray<T> M;
+  M.reshape(DW, DH, DD);
+
+  for (int k = 1; k < DD-1; k ++)
+    for (int j = 1; j < DH-1; j ++)
+      for (int i = 1; i < DW-1; i ++)
+        M(i, j, k) = std::sqrt(
+            std::pow(V(0, i, j, k), T(2)) + 
+            std::pow(V(1, i, j, k), T(2)) + 
+            std::pow(V(2, i, j, k), T(2)));
+
+  return M;
+}
 
 // derivate gradients (jacobians) for 3D vector field
 template <typename T, bool symmetric=false>

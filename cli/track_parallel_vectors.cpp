@@ -93,6 +93,16 @@ int parse_arguments(int argc, char **argv)
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     auto &V = field_data;
 
+#if 0
+    auto M = ftk::velmag3(V);
+    // M = ftk::conv_gaussian(M, 0.6, 3, 1);
+    auto gradM = ftk::gradient3D(M);
+    auto J = ftk::jacobian3D<double, true>(gradM);
+    auto W = ftk::Jv_dot_v(J, gradM);
+    tracker.push_field_data_snapshot(gradM, W);
+#endif
+
+#if 0
     // preconditioning does not quite work here..
     const double sigma = 1.0;
     const size_t ks = 5;
@@ -104,13 +114,15 @@ int parse_arguments(int argc, char **argv)
     auto Vsmooth = ftk::ndarray<double>::concat(components);
 
 
-    auto Jv = ftk::jacobian3D(V);
-    // auto Jv = ftk::jacobian3D(Vsmooth);
+    // auto Jv = ftk::jacobian3D(V);
+    auto Jv = ftk::jacobian3D(Vsmooth);
     auto Jv_dot_v = ftk::Jv_dot_v(Jv, V);
     auto Jv_Jv_dot_v = ftk::Jv_dot_v(Jv, Jv_dot_v);
 
     // std::cerr << Jv << std::endl;
     // std::cerr << Jv_dot_v << std::endl;
+    // 
+#endif
 
     tracker.push_field_data_snapshot(V, Jv_dot_v);
     // tracker.push_field_data_snapshot(Jv_dot_v, Jv_Jv_dot_v);

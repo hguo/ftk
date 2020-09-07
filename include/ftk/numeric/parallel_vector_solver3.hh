@@ -201,7 +201,36 @@ template <typename T>
 inline bool solve_ridge(const T VV[3][3], const T WW[3][3], 
     T &lambda, T nu[3], T &cond, const T epsilon = std::numeric_limits<T>::epsilon())
 {
+  T V[3][3], W[3][3]; // transposed V and W
+  transpose3x3(VV, V);
+  transpose3x3(WW, W);
 
+  T P[4]; // characteristic polynomial
+  characteristic_polynomial_3x3(V, W, P);
+
+  T l[3] = {0};
+  const int n_roots = solve_cubic_real(P, l, epsilon);
+  if (n_roots < 3) return false;
+  for (int i = 0; i < 3; i ++) 
+    if (l[i] >= 0) return false;
+
+  lambda = std::max(std::max(l[0], l[1]), l[2]);
+    
+  const T M[2][2] = {
+    {(V[0][0] - V[0][2]) - lambda * (W[0][0] - W[0][2]), (V[0][1] - V[0][2]) - lambda * (W[0][1] - W[0][2])}, 
+    {(V[1][0] - V[1][2]) - lambda * (W[1][0] - W[1][2]), (V[1][1] - V[1][2]) - lambda * (W[1][1] - W[1][2])}
+  };
+  const T b[3] = {
+    -(V[0][2] - lambda*W[0][2]), 
+    -(V[1][2] - lambda*W[1][2])
+  };
+  
+  solve_linear2x2(M, b, nu);
+  nu[2] = T(1) - nu[0] - nu[1];
+    
+  if (nu[0] >= -epsilon && nu[0] <= 1+epsilon && nu[1] >= -epsilon && nu[1] <= 1+epsilon && nu[2] >= -epsilon && nu[2] <= 1+epsilon) 
+    return true;
+  else return false;
 }
 
 template <typename T>

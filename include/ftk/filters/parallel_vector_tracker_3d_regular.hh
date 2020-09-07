@@ -62,7 +62,7 @@ protected:
       T X[n][4], T V[n][3], T W[n][3]) const;
 
 private:
-  void check_simplex_sujudi_haimes(const element_t& s); // , pv_t& cp);
+  void check_simplex(const element_t& s); // , pv_t& cp);
 
   void trace_curves();
   void trace_surfaces();
@@ -103,11 +103,11 @@ inline void parallel_vector_tracker_3d_regular::update_timestep()
  
   using namespace std::placeholders;
   m.element_for_ordinal(2, current_timestep, 
-      std::bind(&parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes, this, _1));
+      std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
   
   if (field_data_snapshots.size() >= 2)
     m.element_for_interval(2, current_timestep, current_timestep+1,
-        std::bind(&parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes, this, _1));
+        std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
 }
 
 inline void parallel_vector_tracker_3d_regular::advance_timestep()
@@ -153,7 +153,7 @@ void parallel_vector_tracker_3d_regular::simplex_values(
   }
 }
 
-inline void parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes(
+inline void parallel_vector_tracker_3d_regular::check_simplex(
     const simplicial_regular_mesh_element& e) // 2-simplex
 {
   if (!e.valid(m)) return; // check if the 2-simplex is valid
@@ -163,7 +163,8 @@ inline void parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes(
   simplex_values<3>(e, X, V, W);
 
   double lambda, mu[3], cond;
-  bool succ = solve_sujudi_haimes(V, W, lambda, mu, cond);
+  // bool succ = solve_sujudi_haimes(V, W, lambda, mu, cond);
+  bool succ = solve_ridge(V, W, lambda, mu, cond);
 
   if (succ) {
     parallel_vector_point_t pv;
