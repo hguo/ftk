@@ -173,7 +173,7 @@ ndarray<T> gradient3Dt(const ndarray<T>& scalar)
 
 
 // derivate gradients (jacobians) for 3D vector field
-template <typename T>
+template <typename T, bool symmetric=false>
 ndarray<T> jacobian3D(const ndarray<T>& V)
 {
   const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3);
@@ -184,26 +184,45 @@ ndarray<T> jacobian3D(const ndarray<T>& V)
   for (int k = 1; k < DD-1; k ++) {
     for (int j = 1; j < DH-1; j ++) {
       for (int i = 1; i < DW-1; i ++) {
-        const float H00 = J(0, 0, i, j, k) = // ddf/dx2
+        const float H00 = 
           0.5 * (V(0, i+1, j, k) - V(0, i-1, j, k));
-        const float H01 = J(0, 1, i, j, k) = // ddf/dxdy
+        const float H01 = 
           0.5 * (V(0, i, j+1, k) - V(0, i, j-1, k));
-        const float H02 = J(0, 2, i, j, k) = // ddf/dxdz
+        const float H02 = 
           0.5 * (V(0, i, j, k+1) - V(0, i, j, k-1));
 
-        const float H10 = J(1, 0, i, j, k) = // ddf/dydx
+        const float H10 = 
           0.5 * (V(1, i+1, j, k) - V(1, i-1, j, k));
-        const float H11 = J(1, 1, i, j, k) = // ddf/dy2
+        const float H11 = 
           0.5 * (V(1, i, j+1, k) - V(1, i, j-1, k));
-        const float H12 = J(1, 2, i, j, k) = // ddf/dydz
+        const float H12 = 
           0.5 * (V(1, i, j, k+1) - V(1, i, j, k-1));
 
-        const float H20 = J(2, 0, i, j, k) = // ddf/dydx
+        const float H20 =
           0.5 * (V(2, i+1, j, k) - V(2, i-1, j, k));
-        const float H21 = J(2, 1, i, j, k) = // ddf/dy2
+        const float H21 = 
           0.5 * (V(2, i, j+1, k) - V(2, i, j-1, k));
-        const float H22 = J(2, 2, i, j, k) = // ddf/dydz
+        const float H22 = 
           0.5 * (V(2, i, j, k+1) - V(2, i, j, k-1));
+
+        if (symmetric) {
+          J(0, 0, i, j, k) = H00;
+          J(1, 1, i, j, k) = H11;
+          J(2, 2, i, j, k) = H22;
+          J(0, 1, i, j, k) = J(1, 0, i, j, k) = 0.5 * (H10 + H01);
+          J(0, 2, i, j, k) = J(2, 0, i, j, k) = 0.5 * (H20 + H02);
+          J(1, 2, i, j, k) = J(2, 1, i, j, k) = 0.5 * (H12 + H21);
+        } else {
+          J(0, 0, i, j, k) = H00;
+          J(0, 1, i, j, k) = H01;
+          J(0, 2, i, j, k) = H02;
+          J(1, 0, i, j, k) = H10;
+          J(1, 1, i, j, k) = H11;
+          J(1, 2, i, j, k) = H12;
+          J(2, 0, i, j, k) = H20;
+          J(2, 1, i, j, k) = H21;
+          J(2, 2, i, j, k) = H22;
+        }
       }
     }
   }
