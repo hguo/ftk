@@ -69,6 +69,7 @@ protected:
   ndarray<T> request_timestep_synthetic_moving_extremum_3d(int k);
   ndarray<T> request_timestep_synthetic_double_gyre(int k);
   ndarray<T> request_timestep_synthetic_merger_2d(int k);
+  ndarray<T> request_timestep_synthetic_volcano_2d(int k);
   ndarray<T> request_timestep_synthetic_tornado(int k);
 
   void modified_callback(int, const ndarray<T>&);
@@ -224,6 +225,35 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
               fatal("invalid dir");
           } else 
             j["dir"] = {0.1, 0.1, 0.1};
+          
+        } else if (j["name"] == "volcano_2d") {
+          if (missing_variables) 
+            j["variables"] = {"scalar"};
+          default_nd = 2;
+          default_dims[0] = 21; 
+          default_dims[1] = 21;
+          default_dims[2] = 21;
+          
+          if (j.contains("x0")) {
+            if (j["x0"].is_array()) {
+              if (j["x0"].size() == 2) {
+                for (int i = 0; i < 2; i ++)
+                  if (j["x0"][i].is_number()) {
+                    // OK
+                  } else 
+                    fatal("invalid x0 coordinates");
+              } else
+                fatal("invalid x0");
+            } else 
+              fatal("invalid x0");
+          } else 
+            j["x0"] = {10.0, 10.0};
+          
+          if (j.contains("radius")) {
+            if (j["radius"].is_number()) { // OK
+            } else fatal("invalid radius");
+          } else 
+            j["radius"] = 3.0;
           
         } else if (j["name"] == "double_gyre") {
           default_nd = 2;
@@ -554,6 +584,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic(int k)
     return request_timestep_synthetic_double_gyre(k);
   else if (j["name"] == "merger_2d")
     return request_timestep_synthetic_merger_2d(k);
+  else if (j["name"] == "volcano_2d")
+    return request_timestep_synthetic_volcano_2d(k);
   else if (j["name"] == "tornado")
     return request_timestep_synthetic_tornado(k);
   return ndarray<T>();
@@ -575,6 +607,16 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_extremum_2d(int 
           dir[2] = {j["dir"][0], j["dir"][1]};
 
   return ftk::synthetic_moving_extremum<T, 2>(shape, x0, dir, T(k));
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_synthetic_volcano_2d(int k) 
+{
+  const std::vector<size_t> shape({j["dimensions"][0], j["dimensions"][1]});
+  const T x0[2] = {j["x0"][0], j["x0"][1]}, 
+          radius = j["radius"];
+
+  return ftk::synthetic_volcano<T, 2>(shape, x0, radius+k);
 }
 
 template <typename T>

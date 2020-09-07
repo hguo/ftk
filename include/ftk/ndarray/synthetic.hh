@@ -286,6 +286,29 @@ ndarray<T> synthetic_moving_extremum_unstructured(
   return scalar;
 }
 
+template <typename T, int N>
+ndarray<T> synthetic_volcano(
+    const std::vector<size_t> &shape, 
+    const T x0[N],
+    T radius)
+{
+  ndarray<T> scalar(shape);
+  const auto lattice = scalar.get_lattice();
+  
+  for (auto i = 0; i < scalar.nelem(); i ++) {
+    std::vector<int> xi = lattice.from_integer(i);
+    T x[N];
+    T d = 0;
+    for (int j = 0; j < N; j ++) {
+      d += pow(xi[j] - x0[j], T(2.0));
+    }
+    d = std::sqrt(d);
+    scalar[i] = exp(-pow(d - radius, 2.0));
+  }
+
+  return scalar;
+}
+
 /// modified from https://web.cse.ohio-state.edu/~crawfis.3/Data/Tornado/tornadoSrc.c
 // void gen_tornado( int xs, int ys, int zs, int time, float *tornado )
 /*

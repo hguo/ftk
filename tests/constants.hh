@@ -37,6 +37,11 @@ const json js_moving_extremum_2d_vti = {
   {"filenames", "moving_extremum_2d-*.vti"},
 };
 
+const json js_volcano_2d_synthetic = {
+  {"type", "synthetic"},
+  {"name", "volcano_2d"}
+};
+
 const json js_tornado_synthetic = {
   {"type", "synthetic"},
   {"name", "tornado"},
@@ -108,6 +113,13 @@ const json jw_woven_vti {
   {"nd", 2},
   {"format", "vti"},
   {"filename", "woven-%04d.vti"},
+  {"variable", "scalar"}
+};
+
+const json jw_volcano_vti {
+  {"nd", 2},
+  {"format", "vti"},
+  {"filename", "volcano-%04d.vti"},
   {"variable", "scalar"}
 };
 
