@@ -22,7 +22,7 @@
 // Add the sparse representation by using Hash map/table 
 
 #define ISDEBUG   0
-#define OUTPUT_TIME_EACH_ROUND false
+#define OUTPUT_TIME_EACH_ROUND true
 #define TRACK_PEAK_MEMORY false
 
 namespace ftk {
@@ -328,13 +328,15 @@ struct Block_Union_Find : public ftk::distributed_union_find<std::string> {
 
   void get_sets(diy::mpi::communicator& world, diy::Master& master, diy::ContiguousAssigner& assigner, std::vector<std::set<std::string>>& results);
 
-  void update_peak_memory() {
-    #if TRACK_PEAK_MEMORY
-      if(this->cur_memory > this->peak_memory) {
-        this->peak_memory = this->cur_memory;   
-      }
-    #endif
-  }
+  #if TRACK_PEAK_MEMORY
+    void update_peak_memory() {
+      #if TRACK_PEAK_MEMORY
+        if(this->cur_memory > this->peak_memory) {
+          this->peak_memory = this->cur_memory;   
+        }
+      #endif
+    }
+  #endif
   
 public: 
 
@@ -343,8 +345,8 @@ public:
   int nchanges = 0; // # of processed unions per round = valid unions (united unions) + passing unions
 
   #if OUTPUT_TIME_EACH_ROUND
-    double time = 0; // time for measure duration of each round;
-    double time_final_update_start;
+    std::stringstream time_ss; // store time for measure duration of each round;
+    double time_start; 
   #endif
   
   // std::map<int, std::set<std::string>> cache_send_temporary_roots ;
@@ -558,7 +560,9 @@ void import_data(std::vector<Block_Union_Find*>& blocks, diy::Master& master, di
 }
 
 void query_gid(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
-  b->update_peak_memory();
+  #if TRACK_PEAK_MEMORY
+    b->update_peak_memory();
+  #endif
 
   int gid = cp.gid(); 
   diy::Link* l = cp.link();
@@ -1168,6 +1172,11 @@ void receive_msg(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
 }
 
 bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
+
+  #if OUTPUT_TIME_EACH_ROUND
+    b->time_ss << "," << MPI_Wtime() - b->time_start; 
+  #endif
+
   b->nchanges = 0; 
   
   receive_msg(b, cp); 
@@ -1179,10 +1188,13 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
   #endif
 
   b->nrounds += 1;
-  b->update_peak_memory(); 
+
+  #if TRACK_PEAK_MEMORY
+    b->update_peak_memory(); 
+  #endif
 
   #if OUTPUT_TIME_EACH_ROUND
-    b->time = MPI_Wtime();
+    b->time_ss << "," << MPI_Wtime() - b->time_start; 
   #endif
 
   return b->nchanges == 0; 
@@ -1190,8 +1202,9 @@ bool union_find_iexchange(Block_Union_Find* b, const diy::Master::ProxyWithLink&
 
 void assign_global_roots(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   #if OUTPUT_TIME_EACH_ROUND
-    b->time_final_update_start = MPI_Wtime();
+    b->time_ss << "," << MPI_Wtime() - b->time_start; 
   #endif
+
   for(auto& ele : b->eles) {
 
     if(!b->is_root(ele)) {
@@ -1206,6 +1219,10 @@ void assign_global_roots(Block_Union_Find* b, const diy::Master::ProxyWithLink& 
       }
     }
   }
+
+  #if OUTPUT_TIME_EACH_ROUND
+    b->time_ss << "," << MPI_Wtime() - b->time_start; 
+  #endif
 }
 
 
@@ -1221,10 +1238,9 @@ void total_changes(Block_Union_Find* b, const diy::Master::ProxyWithLink& cp) {
   b->nchanges = 0;
 
   b->nrounds += 1;
-  b->update_peak_memory(); 
 
-  #if OUTPUT_TIME_EACH_ROUND
-    b->time = MPI_Wtime();
+  #if TRACK_PEAK_MEMORY
+    b->update_peak_memory(); 
   #endif
 }
 
@@ -1249,11 +1265,10 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
   #if OUTPUT_TIME_EACH_ROUND
     #ifdef FTK_HAVE_MPI
-      std::stringstream ss;
-      ss << gids[0]; 
+      blocks[0]->time_ss << gids[0]; 
 
       MPI_Barrier(world); 
-      double start = MPI_Wtime();
+      blocks[0]->time_start = MPI_Wtime();
     #endif
   #endif
 
@@ -1264,57 +1279,21 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
     // =========================================
     // Debug and Print
 
-    #if OUTPUT_TIME_EACH_ROUND
-      #ifdef FTK_HAVE_MPI
-        if(!filename_time_uf_w.empty()) {
-          double time_final_update_end = MPI_Wtime(); 
-
-          double duration = blocks[0]->time - start; 
-          ss << " " << duration ;
-
-          // double duration_final_update = time_final_update_end - blocks[0]->time_final_update_start; 
-          // ss << " " << duration_final_update ;
-
-          MPI_Status status;
-          MPI_File fh;
-
-          ss<<std::endl;
-          const std::string buf = ss.str();
-
-          MPI_File_open(world, filename_time_uf_w.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
-          
-          MPI_File_write_ordered(fh, buf.c_str(), buf.length(), MPI_CHAR, &status);
-
-          MPI_File_close(&fh);
-        }
-      #endif
-    #endif
-
   } else { // for exchange
     bool all_done = false;
 
     master.foreach(&query_gid); // will also update peak memory
     master.exchange();
 
-    #if OUTPUT_TIME_EACH_ROUND
-      int round_cnt = 0; 
-    #endif
-
     while(!all_done) {
+      #if OUTPUT_TIME_EACH_ROUND
+        blocks[0]->time_ss << "," << MPI_Wtime() - blocks[0]->time_start; 
+      #endif
+
       exchange_process(master); 
 
       #if OUTPUT_TIME_EACH_ROUND
-        #ifdef FTK_HAVE_MPI
-          double duration = blocks[0]->time - start; 
-
-          // ss << "Round "<<round_cnt << ":"; 
-          ss << " " << duration ;
-
-          round_cnt ++; 
-
-          MPI_Barrier(world); 
-          start = MPI_Wtime(); 
-        #endif
+        blocks[0]->time_ss << "," << MPI_Wtime() - blocks[0]->time_start; 
       #endif
 
       master.exchange();
@@ -1332,57 +1311,26 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
     }
 
     master.foreach(&assign_global_roots); 
-
-    #if OUTPUT_TIME_EACH_ROUND
-      #ifdef FTK_HAVE_MPI
-        double duration = MPI_Wtime() - start; 
-
-        // ss << "Round "<<round_cnt << ":"; 
-        ss << " " << duration ;
-
-        round_cnt ++; 
-
-        MPI_Barrier(world); 
-        start = MPI_Wtime(); 
-      #endif
-    #endif
-
-    // #if OUTPUT_TIME_EACH_ROUND
-    //   #ifdef FTK_HAVE_MPI
-    //     double time_final_update_end = MPI_Wtime(); 
-    //     double duration_final_update = time_final_update_end - blocks[0]->time_final_update_start; 
-
-    //     // ss << "Round "<<round_cnt << ":"; 
-    //     ss << " " << duration_final_update ;
-
-    //     round_cnt ++; 
-
-    //     MPI_Barrier(world); 
-    //     start = MPI_Wtime(); 
-    //   #endif
-    // #endif
-
-
-    #if OUTPUT_TIME_EACH_ROUND
-      #ifdef FTK_HAVE_MPI
-        if(!filename_time_uf_w.empty()) {
-          // std::string filename = filename_time_uf_w + std::to_string(world.rank()) + ".time"; 
-
-          MPI_Status status;
-          MPI_File fh;
-
-          ss<<std::endl;
-          const std::string buf = ss.str();
-
-          MPI_File_open(world, filename_time_uf_w.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
-          
-          MPI_File_write_ordered(fh, buf.c_str(), buf.length(), MPI_CHAR, &status);
-
-          MPI_File_close(&fh);
-        }
-      #endif
-    #endif
   }
+
+  #if OUTPUT_TIME_EACH_ROUND
+    #ifdef FTK_HAVE_MPI
+      if(!filename_time_uf_w.empty()) {
+
+        MPI_Status status;
+        MPI_File fh;
+
+        blocks[0]->time_ss<<std::endl;
+        const std::string buf = blocks[0]->time_ss.str();
+
+        MPI_File_open(world, filename_time_uf_w.c_str(), MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+        
+        MPI_File_write_ordered(fh, buf.c_str(), buf.length(), MPI_CHAR, &status);
+
+        MPI_File_close(&fh);
+      }
+    #endif
+  #endif
 
   // master.iexchange(&union_find_iexchange, 16, 1000);
 }
