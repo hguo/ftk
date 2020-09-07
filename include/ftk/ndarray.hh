@@ -117,6 +117,9 @@ struct ndarray : object {
   ndarray<T> slice_time(size_t t) const; // assuming the last dimension is time, return an (n-1)-dimensional slice
   std::vector<ndarray<T>> slice_time() const; // slice_time for all timesteps
 
+  ndarray<T> slice_components(size_t t) const;
+  std::vector<ndarray<T>> slice_components() const;
+
   // merge multiple arrays into a multicomponent array
   static ndarray<T> concat(const std::vector<ndarray<T>>& arrays);
   static ndarray<T> stack(const std::vector<ndarray<T>>& arrays);
@@ -1015,6 +1018,31 @@ inline std::vector<ndarray<T>> ndarray<T>::slice_time() const
   const size_t nt = shape(nd()-1);
   for (size_t i = 0; i < nt; i ++) 
     arrays.push_back(slice_time(i));
+  return arrays;
+}
+
+template <typename T>
+ndarray<T> slice_components(size_t c) const
+{
+  ndarray<T> array;
+  std::vector<size_t> mydims; 
+  for (int i = 1; i < nd(); i ++)
+    mydims.push_back(dim(i));
+
+  array.reshape(mydims);
+  for (auto i = 0; i < array.nelem(); i ++)
+    array[i] = p[i*dim(0) + c];
+
+  return array;
+}
+
+template <typename T>
+inline std::vector<ndarray<T>> ndarray<T>::slice_components() const
+{
+  std::vector<ndarray<T>> arrays;
+  const size_t nc = dim(0);
+  for (size_t i = 0; i < nc; i ++) 
+    arrays.push_back(slice_components(i));
   return arrays;
 }
 
