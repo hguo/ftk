@@ -86,7 +86,7 @@ vtkSmartPointer<vtkPolyData> parallel_vector_curve_set_t::to_vtp() const
     size_t i = 0;
     foreach([&](int id, const parallel_vector_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
-        ids->SetValue(i ++, id);
+        ids->SetValue(i ++, curve[j].id);
     });
     ids->SetName("id");
     polyData->GetPointData()->AddArray(ids);
@@ -140,6 +140,18 @@ vtkSmartPointer<vtkPolyData> parallel_vector_curve_set_t::to_vtp() const
     });
     conds->SetName("cond");
     polyData->GetPointData()->AddArray(conds);
+  }
+  
+  if (1) { // time
+    vtkSmartPointer<vtkDoubleArray> time = vtkSmartPointer<vtkDoubleArray>::New();
+    time->SetNumberOfValues(nv);
+    size_t i = 0;
+    foreach([&](int, const parallel_vector_curve_t& curve) {
+      for (auto j = 0; j < curve.size(); j ++)
+        time->SetValue(i ++, curve[j].t);
+    });
+    time->SetName("time");
+    polyData->GetPointData()->AddArray(time);
   }
 
   return polyData;

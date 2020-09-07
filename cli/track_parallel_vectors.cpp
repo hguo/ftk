@@ -93,9 +93,9 @@ int parse_arguments(int argc, char **argv)
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
 #if 1
     auto &V = field_data;
-#else
-    const double sigma = 0.6;
-    const size_t ks = 3;
+#else // preconditioning does not quite work here..
+    const double sigma = 0.2;
+    const size_t ks = 5;
 
     auto components = field_data.slice_components();
     for (auto &comp : components)
@@ -105,7 +105,7 @@ int parse_arguments(int argc, char **argv)
 #endif
 
     tracker.push_field_data_snapshot(V, ftk::Jv_dot_v3(V));
-    tracker.update_timestep();
+    if (k != 0) tracker.advance_timestep();
   });
   stream.start();
   stream.finish();

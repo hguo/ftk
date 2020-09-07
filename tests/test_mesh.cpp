@@ -8,7 +8,7 @@ int main(int argc, char **argv)
   ftk::ndarray<float> data;
   data.from_amira(filename);
  
-#if 0
+#if 1
   double su = 0, sv = 0;
   for (int k = 0; k < data.dim(3); k ++) 
     for (int j = 0; j < data.dim(2); j ++) 

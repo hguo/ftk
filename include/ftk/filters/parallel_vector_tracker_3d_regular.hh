@@ -29,6 +29,7 @@ struct parallel_vector_tracker_3d_regular : public filter
       const ndarray<double> &w);
 
   void update_timestep();
+  void advance_timestep();
 
   void initialize();
   void finalize();
@@ -64,6 +65,7 @@ private:
   void check_simplex_sujudi_haimes(const element_t& s); // , pv_t& cp);
 
   void trace_curves();
+  void trace_surfaces();
 
 protected:
   lattice domain, array_domain;
@@ -91,7 +93,8 @@ inline void parallel_vector_tracker_3d_regular::initialize()
 inline void parallel_vector_tracker_3d_regular::finalize()
 {
   fprintf(stderr, "#dpvs=%zu\n", discrete_pvs.size());
-  trace_curves();
+  // trace_curves();
+  trace_surfaces();
 }
 
 inline void parallel_vector_tracker_3d_regular::update_timestep()
@@ -101,6 +104,18 @@ inline void parallel_vector_tracker_3d_regular::update_timestep()
   using namespace std::placeholders;
   m.element_for_ordinal(2, current_timestep, 
       std::bind(&parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes, this, _1));
+  
+  if (field_data_snapshots.size() >= 2)
+    m.element_for_interval(2, current_timestep, current_timestep+1,
+        std::bind(&parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes, this, _1));
+}
+
+inline void parallel_vector_tracker_3d_regular::advance_timestep()
+{
+  update_timestep();
+  field_data_snapshots.pop_front();
+
+  current_timestep ++;
 }
 
 inline void parallel_vector_tracker_3d_regular::push_field_data_snapshot(
@@ -166,6 +181,7 @@ inline void parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes(
     pv.t = x[3];
     pv.lambda = lambda;
     pv.cond = cond;
+    pv.ordinal = e.is_ordinal(m);
      
     if (1) // pv.lambda > 0)
     {
@@ -173,6 +189,48 @@ inline void parallel_vector_tracker_3d_regular::check_simplex_sujudi_haimes(
       discrete_pvs.insert(std::pair<element_t, pv_t>(e, pv));
     }
   }
+}
+
+inline void parallel_vector_tracker_3d_regular::trace_surfaces()
+{
+  // Convert connected components to geometries
+  auto neighbors = [&](element_t f) {
+    std::set<element_t> neighbors;
+    const auto cells = f.side_of(m);
+    for (const auto c : cells) {
+      const auto elements = c.sides(m);
+      for (const auto f1 : elements)
+        neighbors.insert(f1);
+    }
+    return neighbors;
+  };
+
+  std::set<element_t> elements;
+  for (const auto &kv : discrete_pvs)
+    elements.insert(kv.first);
+  auto connected_components = extract_connected_components<element_t, std::set<element_t>>(
+      neighbors, elements);
+
+  fprintf(stderr, "#cc=%zu\n", connected_components.size());
+
+  int k = 0;
+  for (const auto &cc : connected_components) {
+    if (cc.size() > 200) {
+      for (const auto &e : cc) {
+        if (discrete_pvs[e].ordinal)
+          discrete_pvs[e].id = k;
+        else 
+          discrete_pvs.erase(e);
+      }
+      k ++;
+    } else {
+      for (const auto &e : cc)
+        discrete_pvs.erase(e);
+    }
+  }
+  fprintf(stderr, "#cc2=%d\n", k);
+
+  trace_curves();
 }
 
 inline void parallel_vector_tracker_3d_regular::trace_curves()
@@ -281,6 +339,16 @@ inline vtkSmartPointer<vtkPolyData> parallel_vector_tracker_3d_regular::get_disc
       conds->SetValue(i ++, kv.second.cond);
     conds->SetName("cond");
     polyData->GetPointData()->AddArray(conds);
+  }
+  
+  if (1) { // time
+    vtkSmartPointer<vtkDoubleArray> time = vtkSmartPointer<vtkDoubleArray>::New();
+    time->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &kv : discrete_pvs)
+      time->SetValue(i ++, kv.second.t);
+    time->SetName("time");
+    polyData->GetPointData()->AddArray(time);
   }
 
   return polyData;
