@@ -46,6 +46,10 @@ TEST_CASE("io_write_vti_woven") {
   CHECK(write(js_woven_synthetic, jw_woven_vti));
 }
 
+TEST_CASE("io_write_vti_volcano") {
+  CHECK(write(js_volcano_2d_synthetic, jw_volcano_vti));
+}
+
 TEST_CASE("io_write_vti_moving_extremum_2d_synthetic") {
   CHECK(write(js_moving_extremum_2d_synthetic, jw_moving_extremum_2d_vti));
 }
