@@ -91,20 +91,30 @@ int parse_arguments(int argc, char **argv)
   tracker.initialize();
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
-#if 1
     auto &V = field_data;
-#else // preconditioning does not quite work here..
-    const double sigma = 0.2;
+
+    // preconditioning does not quite work here..
+    const double sigma = 1.0;
     const size_t ks = 5;
 
     auto components = field_data.slice_components();
     for (auto &comp : components)
       comp = ftk::conv_gaussian(comp, sigma, ks, ks/2);
 
-    auto V = ftk::ndarray<double>::concat(components);
-#endif
+    auto Vsmooth = ftk::ndarray<double>::concat(components);
 
-    tracker.push_field_data_snapshot(V, ftk::Jv_dot_v3(V));
+
+    auto Jv = ftk::jacobian3D(V);
+    // auto Jv = ftk::jacobian3D(Vsmooth);
+    auto Jv_dot_v = ftk::Jv_dot_v(Jv, V);
+    auto Jv_Jv_dot_v = ftk::Jv_dot_v(Jv, Jv_dot_v);
+
+    // std::cerr << Jv << std::endl;
+    // std::cerr << Jv_dot_v << std::endl;
+
+    tracker.push_field_data_snapshot(V, Jv_dot_v);
+    // tracker.push_field_data_snapshot(Jv_dot_v, Jv_Jv_dot_v);
+    if (js["n_timesteps"] == 1) tracker.update_timestep();
     if (k != 0) tracker.advance_timestep();
   });
   stream.start();

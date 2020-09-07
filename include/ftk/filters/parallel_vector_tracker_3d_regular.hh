@@ -93,8 +93,8 @@ inline void parallel_vector_tracker_3d_regular::initialize()
 inline void parallel_vector_tracker_3d_regular::finalize()
 {
   fprintf(stderr, "#dpvs=%zu\n", discrete_pvs.size());
-  // trace_curves();
-  trace_surfaces();
+  trace_curves();
+  // trace_surfaces();
 }
 
 inline void parallel_vector_tracker_3d_regular::update_timestep()
