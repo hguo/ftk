@@ -1261,8 +1261,6 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
   std::vector<int> gids;                     // global ids of local blocks
   assigner.local_gids(world.rank(), gids);   // get the gids of local blocks for a given process rank 
 
-  import_data(blocks, master, assigner, gids); 
-
   #if OUTPUT_TIME_EACH_ROUND
     #ifdef FTK_HAVE_MPI
       blocks[0]->time_ss << gids[0]; 
@@ -1271,6 +1269,8 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
       blocks[0]->time_start = MPI_Wtime();
     #endif
   #endif
+
+  import_data(blocks, master, assigner, gids); 
 
   if(is_iexchange) { // for iexchange
     master.foreach(&query_gid); // will also update peak memory
