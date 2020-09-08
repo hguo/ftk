@@ -101,8 +101,6 @@ inline void parallel_vector_tracker_3d_regular::finalize()
 inline void parallel_vector_tracker_3d_regular::update_timestep()
 {
   fprintf(stderr, "current_timestep = %d, #snapshots=%zu\n", current_timestep, field_data_snapshots.size());
-  
-  discrete_pvs.clear();
  
   using namespace std::placeholders;
   // m.element_for_ordinal(2, current_timestep, 
@@ -229,7 +227,6 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
     pv.cond = cond;
     pv.ordinal = e.is_ordinal(m);
     pv.tag = e.to_integer(m);
-    if (!pv.ordinal) fprintf(stderr, "fuck\n");
      
     if (1) // pv.lambda > 0)
     {
