@@ -89,6 +89,7 @@ int parse_arguments(int argc, char **argv)
   tracker.set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   tracker.initialize();
+  tracker.set_number_of_threads(nthreads);
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     auto &V = field_data;
@@ -102,7 +103,7 @@ int parse_arguments(int argc, char **argv)
     tracker.push_field_data_snapshot(gradM, W);
 #endif
 
-#if 1
+#if 0
     // preconditioning does not quite work here..
     const double sigma = 1.0;
     const size_t ks = 5;
@@ -112,6 +113,7 @@ int parse_arguments(int argc, char **argv)
       comp = ftk::conv_gaussian(comp, sigma, ks, ks/2);
 
     auto Vsmooth = ftk::ndarray<double>::concat(components);
+#endif
 
 
     auto Jv = ftk::jacobian3D(V);
@@ -122,7 +124,6 @@ int parse_arguments(int argc, char **argv)
     // std::cerr << Jv << std::endl;
     // std::cerr << Jv_dot_v << std::endl;
     // 
-#endif
 
     // tracker.push_field_data_snapshot(V, Jv_dot_v, Jv);
     tracker.push_field_data_snapshot(V, Jv_dot_v, ftk::ndarray<double>());

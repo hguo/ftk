@@ -100,12 +100,31 @@ inline void parallel_vector_tracker_3d_regular::finalize()
 
 inline void parallel_vector_tracker_3d_regular::update_timestep()
 {
-  fprintf(stderr, "current_timestep = %d\n", current_timestep);
+  fprintf(stderr, "current_timestep = %d, #snapshots=%zu\n", current_timestep, field_data_snapshots.size());
+  
+  discrete_pvs.clear();
  
   using namespace std::placeholders;
-  m.element_for_ordinal(2, current_timestep, 
-      std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
- 
+  // m.element_for_ordinal(2, current_timestep, 
+  //     std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
+  
+  m.element_for(2, lattice({ // ordinal
+        domain.start(0), 
+        domain.start(1), 
+        domain.start(2), 
+        static_cast<size_t>(current_timestep), 
+      }, {
+        domain.size(0), 
+        domain.size(1), 
+        domain.size(2), 
+        1
+      }), 
+      ftk::ELEMENT_SCOPE_ORDINAL, 
+      std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1), 
+      nthreads);
+
+  fprintf(stderr, "#dpvs=%zu\n", discrete_pvs.size());
+
 #if 0
   if (field_data_snapshots.size() >= 2)
     m.element_for_interval(2, current_timestep, current_timestep+1,
@@ -116,7 +135,8 @@ inline void parallel_vector_tracker_3d_regular::update_timestep()
 inline void parallel_vector_tracker_3d_regular::advance_timestep()
 {
   update_timestep();
-  field_data_snapshots.pop_front();
+  if (field_data_snapshots.size() >= 2)
+    field_data_snapshots.pop_front();
 
   current_timestep ++;
 }
@@ -156,7 +176,8 @@ void parallel_vector_tracker_3d_regular::simplex_values(
     if (!data.Jv.empty()) {
       for (int j = 0; j < 3; j ++)
         for (int k = 0; k < 3; k ++)
-          Jv[i][j][k] = data.Jv(j, k, vertices[i][0], vertices[i][1], vertices[i][2]);
+          Jv[i][j][k] = data.Jv(j, k, vertices[i][0], 
+              vertices[i][1], vertices[i][2]);
     }
     
     // coordinates
@@ -169,6 +190,7 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
     const simplicial_regular_mesh_element& e) // 2-simplex
 {
   if (!e.valid(m)) return; // check if the 2-simplex is valid
+  // std::cerr << e << std::endl;
   const auto &vertices = e.vertices(m);
 
   double X[3][4], V[3][3], W[3][3], JV[3][3][3];
@@ -206,6 +228,8 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
     pv.lambda = lambdas[i];
     pv.cond = cond;
     pv.ordinal = e.is_ordinal(m);
+    pv.tag = e.to_integer(m);
+    if (!pv.ordinal) fprintf(stderr, "fuck\n");
      
     if (1) // pv.lambda > 0)
     {
