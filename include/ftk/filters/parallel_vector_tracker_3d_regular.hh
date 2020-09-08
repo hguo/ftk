@@ -26,7 +26,8 @@ struct parallel_vector_tracker_3d_regular : public filter
 
   void push_field_data_snapshot(
       const ndarray<double> &v, 
-      const ndarray<double> &w);
+      const ndarray<double> &w, 
+      const ndarray<double> &Jv);
 
   void update_timestep();
   void advance_timestep();
@@ -59,7 +60,7 @@ protected:
 
   template <int n, typename T>
   void simplex_values(const element_t &e, 
-      T X[n][4], T V[n][3], T W[n][3]) const;
+      T X[n][4], T V[n][3], T W[n][3], T J[n][3][3]) const;
 
 private:
   void check_simplex(const element_t& s); // , pv_t& cp);
@@ -104,10 +105,12 @@ inline void parallel_vector_tracker_3d_regular::update_timestep()
   using namespace std::placeholders;
   m.element_for_ordinal(2, current_timestep, 
       std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
-  
+ 
+#if 0
   if (field_data_snapshots.size() >= 2)
     m.element_for_interval(2, current_timestep, current_timestep+1,
         std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
+#endif
 }
 
 inline void parallel_vector_tracker_3d_regular::advance_timestep()
@@ -120,11 +123,13 @@ inline void parallel_vector_tracker_3d_regular::advance_timestep()
 
 inline void parallel_vector_tracker_3d_regular::push_field_data_snapshot(
     const ndarray<double>& v,
-    const ndarray<double>& w)
+    const ndarray<double>& w, 
+    const ndarray<double>& Jv)
 {
   field_data_snapshot_t snapshot;
   snapshot.v = v;
   snapshot.w = w;
+  snapshot.Jv = Jv;
 
   field_data_snapshots.emplace_back(snapshot);
 }
@@ -132,7 +137,7 @@ inline void parallel_vector_tracker_3d_regular::push_field_data_snapshot(
 template <int n/*number of vertices*/, typename T>
 void parallel_vector_tracker_3d_regular::simplex_values(
     const element_t &e, 
-    T X[n][4], T V[n][3], T W[n][3]) const
+    T X[n][4], T V[n][3], T W[n][3], T Jv[n][3][3]) const
 {
   const auto &vertices = e.vertices(m);
   assert(n == vertices.size());
@@ -143,8 +148,15 @@ void parallel_vector_tracker_3d_regular::simplex_values(
    
     // v and w
     for (int j = 0; j < 3; j ++) {
-      V[i][j] = field_data_snapshots[iv].v(j, vertices[i][0], vertices[i][1], vertices[i][2]);
-      W[i][j] = field_data_snapshots[iv].w(j, vertices[i][0], vertices[i][1], vertices[i][2]);
+      V[i][j] = data.v(j, vertices[i][0], vertices[i][1], vertices[i][2]);
+      W[i][j] = data.w(j, vertices[i][0], vertices[i][1], vertices[i][2]);
+    }
+
+    // Jv
+    if (!data.Jv.empty()) {
+      for (int j = 0; j < 3; j ++)
+        for (int k = 0; k < 3; k ++)
+          Jv[i][j][k] = data.Jv(j, k, vertices[i][0], vertices[i][1], vertices[i][2]);
     }
     
     // coordinates
@@ -159,15 +171,25 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
   if (!e.valid(m)) return; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m);
 
-  double X[3][4], V[3][3], W[3][3];
-  simplex_values<3>(e, X, V, W);
+  double X[3][4], V[3][3], W[3][3], JV[3][3][3];
+  simplex_values<3>(e, X, V, W, JV);
 
   double lambdas[3], mus[3][3], cond;
   int ns = solve_pv_s2v3<double>(V, W, lambdas, mus, cond);
 
-  if (ns > 1) return;
+  // if (ns > 1) return;
   for (int i = 0; i < ns; i ++) {
     parallel_vector_point_t pv;
+
+#if 0 // check eigsystem
+    double Jv[3][3];
+    lerp_s2v3x3(JV, mus[i], Jv);
+
+    double P[4], roots[3];
+    characteristic_polynomial_3x3(Jv, P);
+    int nr = solve_cubic_real(P[2], P[1], P[0], roots);
+    if (nr > 1) continue;
+#endif
 
     double x[4], v[3], w[3];
     lerp_s2v4(X, mus[i], x);
@@ -331,6 +353,16 @@ inline vtkSmartPointer<vtkPolyData> parallel_vector_tracker_3d_regular::get_disc
       ids->SetValue(i ++, kv.second.id);
     ids->SetName("id");
     polyData->GetPointData()->AddArray(ids);
+  }
+  
+  if (1) { // ordinal
+    vtkSmartPointer<vtkUnsignedIntArray> ordinal = vtkSmartPointer<vtkUnsignedIntArray>::New();
+    ordinal->SetNumberOfValues(nv);
+    size_t i = 0;
+    for (const auto &kv : discrete_pvs)
+      ordinal->SetValue(i ++, kv.second.ordinal);
+    ordinal->SetName("ordinal");
+    polyData->GetPointData()->AddArray(ordinal);
   }
   
   if (1) { // lambda

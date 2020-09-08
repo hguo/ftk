@@ -124,10 +124,13 @@ int parse_arguments(int argc, char **argv)
     // 
 #endif
 
-    tracker.push_field_data_snapshot(V, Jv_dot_v);
+    // tracker.push_field_data_snapshot(V, Jv_dot_v, Jv);
+    tracker.push_field_data_snapshot(V, Jv_dot_v, ftk::ndarray<double>());
     // tracker.push_field_data_snapshot(Jv_dot_v, Jv_Jv_dot_v);
-    if (js["n_timesteps"] == 1) tracker.update_timestep();
+    //
+    const int nt = js["n_timesteps"];
     if (k != 0) tracker.advance_timestep();
+    if (k == nt - 1) tracker.update_timestep();
   });
   stream.start();
   stream.finish();
