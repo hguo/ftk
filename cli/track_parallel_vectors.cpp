@@ -102,7 +102,7 @@ int parse_arguments(int argc, char **argv)
     tracker.push_field_data_snapshot(gradM, W);
 #endif
 
-#if 0
+#if 1
     // preconditioning does not quite work here..
     const double sigma = 1.0;
     const size_t ks = 5;
@@ -114,8 +114,8 @@ int parse_arguments(int argc, char **argv)
     auto Vsmooth = ftk::ndarray<double>::concat(components);
 
 
-    // auto Jv = ftk::jacobian3D(V);
-    auto Jv = ftk::jacobian3D(Vsmooth);
+    auto Jv = ftk::jacobian3D(V);
+    // auto Jv = ftk::jacobian3D(Vsmooth);
     auto Jv_dot_v = ftk::Jv_dot_v(Jv, V);
     auto Jv_Jv_dot_v = ftk::Jv_dot_v(Jv, Jv_dot_v);
 

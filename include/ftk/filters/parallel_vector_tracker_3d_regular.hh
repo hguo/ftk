@@ -93,8 +93,8 @@ inline void parallel_vector_tracker_3d_regular::initialize()
 inline void parallel_vector_tracker_3d_regular::finalize()
 {
   fprintf(stderr, "#dpvs=%zu\n", discrete_pvs.size());
-  trace_curves();
   // trace_surfaces();
+  trace_curves();
 }
 
 inline void parallel_vector_tracker_3d_regular::update_timestep()
@@ -162,9 +162,41 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
   double X[3][4], V[3][3], W[3][3];
   simplex_values<3>(e, X, V, W);
 
+  double lambdas[3], mus[3][3], cond;
+  int ns = solve_pv_s2v3<double>(V, W, lambdas, mus, cond);
+
+  if (ns > 1) return;
+  for (int i = 0; i < ns; i ++) {
+    parallel_vector_point_t pv;
+
+    double x[4], v[3], w[3];
+    lerp_s2v4(X, mus[i], x);
+    lerp_s2v3(V, mus[i], v);
+    lerp_s2v3(W, mus[i], w);
+
+    for (int i = 0; i < 3; i ++) {
+      pv.x[i] = x[i];
+      pv.v[i] = v[i];
+      pv.w[i] = w[i];
+    }
+    
+    pv.t = x[3];
+    pv.lambda = lambdas[i];
+    pv.cond = cond;
+    pv.ordinal = e.is_ordinal(m);
+     
+    if (1) // pv.lambda > 0)
+    {
+      std::lock_guard<std::mutex> guard(mutex);
+      discrete_pvs.insert(std::pair<element_t, pv_t>(e, pv));
+    }
+  }
+
+
+#if 0
   double lambda, mu[3], cond;
-  // bool succ = solve_sujudi_haimes(V, W, lambda, mu, cond);
-  bool succ = solve_ridge(V, W, lambda, mu, cond);
+  bool succ = solve_sujudi_haimes(V, W, lambda, mu, cond);
+  // bool succ = solve_ridge(V, W, lambda, mu, cond);
 
   if (succ) {
     parallel_vector_point_t pv;
@@ -190,6 +222,7 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
       discrete_pvs.insert(std::pair<element_t, pv_t>(e, pv));
     }
   }
+#endif
 }
 
 inline void parallel_vector_tracker_3d_regular::trace_surfaces()

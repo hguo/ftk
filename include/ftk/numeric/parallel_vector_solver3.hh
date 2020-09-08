@@ -136,7 +136,7 @@ inline int solve_pv_s2v3(const T VV[3][3], const T WW[3][3],
       ftk::lerp_s2v3(WW, nu, w);
       ftk::cross_product(v, w, c);
       const double norm = ftk::vector_2norm_3(c);
-      if (norm > 1e-2) {
+      if (norm > 1.0) {
         fprintf(stderr, "rejecting: nu={%f, %f, %f}, v={%f, %f, %f}, w={%f, %f, %f}, c={%f, %f, %f}, norm=%f\n", 
             nu[0], nu[1], nu[2], v[0], v[1], v[2], w[0], w[1], w[2], c[0], c[1], c[2], norm);
         print3x3("V", VV);
@@ -191,7 +191,7 @@ inline bool solve_sujudi_haimes(const T VV[3][3], const T WW[3][3],
   
   solve_linear2x2(M, b, nu);
   nu[2] = T(1) - nu[0] - nu[1];
-    
+   
   if (nu[0] >= -epsilon && nu[0] <= 1+epsilon && nu[1] >= -epsilon && nu[1] <= 1+epsilon && nu[2] >= -epsilon && nu[2] <= 1+epsilon) 
     return true;
   else return false;

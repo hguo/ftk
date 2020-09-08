@@ -37,8 +37,14 @@ protected:
 int parallel_vector_curve_set_t::add(const parallel_vector_curve_t& curve)
 {
   const int id = get_new_id();
+#if 1
+  auto c = curve;
+  for (auto &p : c)
+    p.id = id;
+  insert(std::pair<int, parallel_vector_curve_t>(id, c));
+#else
   insert(std::pair<int, parallel_vector_curve_t>(id, curve));
-  // at(id).relabel(id);
+#endif
   return id;
 }
 
