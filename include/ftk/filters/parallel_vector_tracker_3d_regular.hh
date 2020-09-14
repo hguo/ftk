@@ -194,6 +194,7 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
   double X[3][4], V[3][3], W[3][3], JV[3][3][3];
   simplex_values<3>(e, X, V, W, JV);
 
+#if 1 // general detection
   double lambdas[3], mus[3][3], cond;
   int ns = solve_pv_s2v3<double>(V, W, lambdas, mus, cond);
 
@@ -201,7 +202,7 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
   for (int i = 0; i < ns; i ++) {
     parallel_vector_point_t pv;
 
-#if 0 // check eigsystem
+#if 1 // check eigsystem
     double Jv[3][3];
     lerp_s2v3x3(JV, mus[i], Jv);
 
@@ -234,9 +235,9 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
       discrete_pvs.insert(std::pair<element_t, pv_t>(e, pv));
     }
   }
+#endif
 
-
-#if 0
+#if 0 // sujudi haimes, not quite successful
   double lambda, mu[3], cond;
   bool succ = solve_sujudi_haimes(V, W, lambda, mu, cond);
   // bool succ = solve_ridge(V, W, lambda, mu, cond);

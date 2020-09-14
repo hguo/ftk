@@ -1,6 +1,42 @@
-#include <ftk/mesh/simplicial_regular_mesh.hh>
+//#include <ftk/mesh/simplicial_regular_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/ndarray.hh>
 
+int main(int argc, char **argv)
+{
+  std::vector<double> coords = {
+    0.0, 0.0, 
+    1.0, 0.0, 
+    2.0, 0.0,
+    3.0, 0.0,
+    0.5, 0.867,
+    0.5, -0.867,
+    1.5, 0.867,
+    1.5, -0.867,
+    2.5, 0.867,
+    2.5, -0.867
+  };
+
+  std::vector<int> triangles = {
+    0, 1, 4,
+    1, 6, 4,
+    1, 2, 6,
+    2, 8, 6,
+    2, 3, 8,
+    2, 9, 3,
+    2, 7, 9,
+    1, 7, 2,
+    1, 5, 7,
+    0, 5, 1
+  };
+
+  ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);
+  m.to_vtk_unstructured_grid_file("triangles.vtu");
+
+  return 0;
+}
+
+#if 0
 int main(int argc, char **argv)
 {
   const std::string filename(argv[1]);
@@ -31,6 +67,7 @@ int main(int argc, char **argv)
 
   return 0;
 }
+#endif
 
 #if 0
 int main(int argc, char **argv)

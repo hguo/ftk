@@ -43,7 +43,8 @@ std::vector<std::vector<NodeType>> connected_component_to_linear_components(
       }, ordinary_nodes);
 
   // sort the linear graphs
-  // fprintf(stderr, "#nodes=%lu, #linear graphs=%lu\n", connected_component.size(), cc.size());
+  fprintf(stderr, "#nodes=%lu, #linear_graphs=%lu, #special_nodes=%zu\n", connected_component.size(), cc.size(), 
+      special_nodes.size());
   for (auto &c : cc) {
     std::list<NodeType> trace;
     std::set<NodeType> visited;

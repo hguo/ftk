@@ -86,13 +86,14 @@ int parse_arguments(int argc, char **argv)
                DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
 
   ftk::parallel_vector_tracker_3d_regular tracker;
-  tracker.set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2}));
+  // tracker.set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2}));
+  tracker.set_domain(ftk::lattice({60, 3, 3}, {DW-5, DH-5, DD-5}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   tracker.initialize();
   tracker.set_number_of_threads(nthreads);
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
-    auto &V = field_data;
+    auto V = field_data;
 
 #if 0
     auto M = ftk::velmag3(V);
@@ -115,6 +116,10 @@ int parse_arguments(int argc, char **argv)
     auto Vsmooth = ftk::ndarray<double>::concat(components);
 #endif
 
+#if 0 // use a different reference frame
+    for (auto i = 0; i < V.nelem(); i += 3)
+      V[i] -= 0.636;
+#endif
 
     auto Jv = ftk::jacobian3D(V);
     // auto Jv = ftk::jacobian3D(Vsmooth);
