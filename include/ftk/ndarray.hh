@@ -86,6 +86,9 @@ struct ndarray : object {
   bool empty() const  {return p.empty();}
   const std::vector<size_t> &shape() const {return dims;}
 
+  void set_multicomponents(size_t c=1) {ncd = c;}
+  size_t multicomponents() const {return ncd;}
+
   lattice get_lattice() const;
 
   void fill(const std::vector<T>& values); //! fill values with std::vector
@@ -308,6 +311,8 @@ private:
   std::vector<size_t> dims, s;
   std::vector<T> p;
 
+  size_t ncd = 0; // Number of dimensions for components.  For 3D vector field, nd=4, ncd=1.  For 3D jacobian field, nd=5, ncd=2
+    
 #if FTK_HAVE_CUDA
   // arrays on GPU
   size_t *d_dims = NULL, *d_prod = NULL;
