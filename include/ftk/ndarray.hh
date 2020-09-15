@@ -306,6 +306,9 @@ public: // netcdf
 
   // statistics
   std::tuple<T, T> min_max() const;
+  T resolution() const; // the min abs nonzero value
+  
+  ndarray<uint64_t> quantize() const; // quantization based on resolution
 
 private:
   std::vector<size_t> dims, s;
@@ -888,6 +891,17 @@ std::tuple<T, T> ndarray<T>::min_max() const {
   }
 
   return std::make_tuple(min, max);
+}
+
+template <typename T>
+T ndarray<T>::resolution() const {
+  T r = std::numeric_limits<T>::max();
+
+  for (size_t i = 0; i < nelem(); i ++)
+    if (p[i] != T(0))
+      r = std::min(r, p[i]);
+
+  return r;
 }
 
 #if FTK_HAVE_MPI
