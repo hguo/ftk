@@ -87,6 +87,12 @@ const json jw_tornado_float32 = {
   {"filename", "tornado-%04d.bin"}
 };
 
+const json jw_moving_extremum_3d_float32 = {
+  {"nd", 3},
+  {"format", "float32"},
+  {"filename", "moving_extremum_3d-%04d.bin"}
+};
+
 const json jw_woven_nc_unlimited_time = {
   {"nd", 2},
   {"format", "nc"},
