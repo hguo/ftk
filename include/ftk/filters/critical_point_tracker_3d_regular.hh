@@ -166,6 +166,8 @@ inline void critical_point_tracker_3d_regular::update_timestep()
 {
   fprintf(stderr, "current_timestep = %d\n", current_timestep);
 
+  update_vector_field_scaling_factor();
+
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
   auto func3 = [=](element_t e) {
@@ -395,12 +397,6 @@ bool critical_point_tracker_3d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
     critical_point_t& cp)
 {
-#if FTK_HAVE_GMP
-  typedef mpf_class fp_t;
-#else
-  typedef fixed_point<> fp_t;
-#endif
-
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m);
 
@@ -415,6 +411,9 @@ bool critical_point_tracker_3d_regular::check_simplex(
   //   if (std::isnan(mu[i]) || std::isinf(mu[i])) return false;
 
   if (enable_robust_detection) {
+
+#if FTK_HAVE_GMP
+    typedef mpf_class fp_t;
     fp_t vf[4][3];
     for (int i = 0; i < 4; i ++)
       for (int j = 0; j < 3; j ++) {
@@ -422,6 +421,15 @@ bool critical_point_tracker_3d_regular::check_simplex(
         if (std::isnan(x) || std::isinf(x)) return false;
         else vf[i][j] = v[i][j];
       }
+#else
+    int64_t vf[4][3];
+    for (int i = 0; i < 4; i ++)
+      for (int j = 0; j < 3; j ++) {
+        const double x = v[i][j];
+        if (std::isnan(x) || std::isinf(x)) return false;
+        else vf[i][j] = v[i][j] * vector_field_scaling_factor;
+      }
+#endif
 
     int indices[4];
     simplex_indices(vertices, indices);

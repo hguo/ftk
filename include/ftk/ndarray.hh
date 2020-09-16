@@ -899,7 +899,7 @@ T ndarray<T>::resolution() const {
 
   for (size_t i = 0; i < nelem(); i ++)
     if (p[i] != T(0))
-      r = std::min(r, p[i]);
+      r = std::min(r, std::abs(p[i]));
 
   return r;
 }

@@ -206,6 +206,10 @@ inline void critical_point_tracker_2d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
+  update_vector_field_scaling_factor();
+  // fprintf(stderr, "resolution=%f, factor=%lld\n", 
+  //     vector_field_resolution, vector_field_factor);
+
 #if 0
   auto func0 = [=](element_t e) {
       critical_point_t cp;
@@ -525,50 +529,16 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
     critical_point_t& cp)
 {
-#if FTK_HAVE_GMP
-  typedef mpf_class fp_t;
-  // typedef double fp_t;
-#else
-  typedef fixed_point<> fp_t;
-#endif
-  
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
  
   double v[3][2]; // obtain vector values
   simplex_vectors(vertices, v);
 
-#if 0 // working in progress, handling degeneracy cases
-  fp_t vf[3][2];
-  for (int i = 0; i < 3; i ++)
-    for (int j = 0; j < 2; j ++)
-      vf[i][j] = v[i][j];
-  
-  const fp_t M[3][3] = {
-    {vf[0][0], vf[1][0], vf[2][0]},
-    {vf[0][1], vf[1][1], vf[2][1]},
-    {1, 1, 1}
-  };
-  fp_t adjM[3][3];
-  fp_t detM = ftk::det3(M);
-  // std::cerr << "detM=" << detM << std::endl;
-  adjugate3(M, adjM);
-  // ftk::print3x3("M", M);
-  // ftk::print3x3("adjM", adjM);
-  // long long b[3] = {adjM[0][2]*factor, adjM[1][2]*factor, adjM[2][2]*factor};
-  fp_t b[3] = {adjM[0][2], adjM[1][2], adjM[2][2]};
+#if FTK_HAVE_GMP
+  typedef mpf_class fp_t;
+  // typedef double fp_t;
 
-  int sign_detM = ftk::sign(detM);
-  if (sign_detM < 0) {
-    detM *= sign_detM;
-    for (int k = 0; k < 3; k ++)
-      b[k] *= sign_detM;
-  }
-  bool succ1 = (b[0] > 0 && b[0] < detM && b[1] > 0 && b[1] < detM && b[2] > 0 && b[2] < detM);
-  if (!succ1) return false;
-#endif
-
-  // robust critical point test
   fp_t vf[3][2];
   for (int i = 0; i < 3; i ++)
     for (int j = 0; j < 2; j ++) {
@@ -576,7 +546,20 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
       if (std::isnan(x) || std::isinf(x)) return false;
       else vf[i][j] = v[i][j];
     }
+#else
+  // typedef fixed_point<> fp_t;
+  const double factor = 1.0 / vector_field_resolution;
+  // fprintf(stderr, "factor=%f\n", factor);
+  int64_t vf[3][2];
+  for (int i = 0; i < 3; i ++)
+    for (int j = 0; j < 2; j ++) {
+      const double x = v[i][j];
+      if (std::isnan(x) || std::isinf(x)) return false;
+      else vf[i][j] = v[i][j] * vector_field_scaling_factor;
+    }
+#endif
 
+  // robust critical point test
   int indices[3];
   simplex_indices(vertices, indices);
   bool succ = robust_critical_point_in_simplex2(vf, indices);
