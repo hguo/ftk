@@ -175,7 +175,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         discrete_critical_points[e] = cp;
-        fprintf(stderr, "x={%f, %f, %f}, t=%f, cond=%f, type=%d\n", cp[0], cp[1], cp[2], cp.t, cp.cond, cp.type);
+        // fprintf(stderr, "x={%f, %f, %f}, t=%f, cond=%f, type=%d\n", cp[0], cp[1], cp[2], cp.t, cp.cond, cp.type);
       }
     };
 
