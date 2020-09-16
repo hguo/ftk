@@ -206,9 +206,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
+#ifndef FTK_HAVE_GMP
   update_vector_field_scaling_factor();
-  // fprintf(stderr, "resolution=%f, factor=%lld\n", 
-  //     vector_field_resolution, vector_field_factor);
+#endif
 
 #if 0
   auto func0 = [=](element_t e) {

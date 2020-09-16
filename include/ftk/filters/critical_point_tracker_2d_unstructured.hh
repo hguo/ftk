@@ -167,7 +167,10 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critica
 inline void critical_point_tracker_2d_unstructured::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+
+#ifndef FTK_HAVE_GMP
   update_vector_field_scaling_factor();
+#endif
   
   auto func = [&](int i) {
     critical_point_t cp;

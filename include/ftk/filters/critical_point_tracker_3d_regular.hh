@@ -166,7 +166,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
 {
   fprintf(stderr, "current_timestep = %d\n", current_timestep);
 
+#ifndef FTK_HAVE_GMP
   update_vector_field_scaling_factor();
+#endif
 
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
@@ -411,7 +413,6 @@ bool critical_point_tracker_3d_regular::check_simplex(
   //   if (std::isnan(mu[i]) || std::isinf(mu[i])) return false;
 
   if (enable_robust_detection) {
-
 #if FTK_HAVE_GMP
     typedef mpf_class fp_t;
     fp_t vf[4][3];
