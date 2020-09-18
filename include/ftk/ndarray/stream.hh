@@ -35,6 +35,7 @@ struct ndarray_stream : public object {
   //    [width, height, depth]
   //  - n_timesteps, integer.  The default is 32 for synthetic data; the number can be 
   //    automatically derived from file; the number can be automatically derived from files
+  //  - perturbation, number.  Add gaussian perturbation to the data
 
   void set_input_source_json_file(const std::string& filename);
   void set_input_source_json(const json& j_);
@@ -660,14 +661,22 @@ void ndarray_stream<T>::modified_callback(int k, const ndarray<T> &array)
     else
       callback(k, array);
   };
+    
+  auto f1 = [&](const ndarray<T> &array) { // handling perturbation
+    if (j.contains("perturbation")) { 
+      const auto array1 = array.perturb(j["perturbation"]);
+      f(array1);
+    } else 
+      f(array);
+  };
 
   if (j.contains("spatial-smoothing-kernel")) {
     const int ksize = j["spatial-smoothing-kernel-size"];
     const T sigma = j["spatial-smoothing-kernel"];
     ndarray<T> array1 = conv_gaussian(array, sigma, ksize, ksize/2);
-    f(array1);
+    f1(array1);
   } else
-    f(array);
+    f1(array);
 }
 
 template <typename T>
@@ -687,6 +696,7 @@ void ndarray_stream<T>::start()
       array = request_timestep_synthetic(i);
     else if (j["type"] == "file")
       array = request_timestep_file(i);
+
     modified_callback(i, array);
   }
 }

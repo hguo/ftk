@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
+#include <random>
 #include <glob.h>
 
 #if FTK_HAVE_ADIOS2
@@ -304,11 +305,13 @@ public: // netcdf
 
   void copy_to_cuda_device();
 
-  // statistics
+public: // statistics & misc
   std::tuple<T, T> min_max() const;
   T resolution() const; // the min abs nonzero value
   
   ndarray<uint64_t> quantize() const; // quantization based on resolution
+
+  ndarray<T> perturb(const T sigma) const; // add gaussian noise to the array
 
 private:
   std::vector<size_t> dims, s;
@@ -1275,6 +1278,22 @@ bool ndarray<float>::from_amira(const std::string& filename)
 
   fclose(fp);
   return 0;
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::perturb(const T sigma) const
+{
+  std::random_device rd{};
+  std::mt19937 gen{rd()};
+  std::normal_distribution<> d{0, sigma};
+
+  ndarray<T> result;
+  result.reshape(*this);
+
+  for (auto i = 0; i < nelem(); i ++)
+    result[i] = p[i] + d(gen);
+
+  return result;
 }
 
 }
