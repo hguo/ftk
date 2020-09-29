@@ -17,6 +17,12 @@ const json js_woven_synthetic = {
   {"dimensions", {woven_width, woven_height}}
 };
 
+const json js_woven_synthetic_perturbation = {
+  {"type", "synthetic"},
+  {"name", "woven"},
+  {"dimensions", {128, 128}}
+};
+
 const json js_merger_2d_synthetic = {
   {"type", "synthetic"},
   {"name", "merger_2d"}
@@ -79,6 +85,12 @@ const json jw_woven_float64 = {
   {"nd", 2},
   {"format", "float64"},
   {"filename", "woven-%04d.bin"}
+};
+
+const json jw_woven_float64_perturbation = {
+  {"nd", 2},
+  {"format", "float64"},
+  {"filename", "woven-perturbation-%04d.bin"}
 };
 
 const json jw_tornado_float32 = {
