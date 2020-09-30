@@ -57,7 +57,7 @@ const json js_tornado_synthetic = {
 const json js_woven_float64 = {
   {"type", "file"},
   {"format", "float64"},
-  {"filenames", "woven-*.bin"},
+  {"filenames", "woven-nonperturbation*.bin"},
   {"dimensions", {woven_width, woven_height}}
 };
 
@@ -84,7 +84,7 @@ const json js_woven_vti {
 const json jw_woven_float64 = {
   {"nd", 2},
   {"format", "float64"},
-  {"filename", "woven-%04d.bin"}
+  {"filename", "woven-nonperturbation-%04d.bin"}
 };
 
 const json jw_woven_float64_perturbation = {
