@@ -106,22 +106,24 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
 
 inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critical_point_t& cp)
 {
-#if FTK_HAVE_GMP
-  typedef mpf_class fp_t;
-#else
-  typedef ftk::fixed_point<> fp_t;
-#endif
-  
   int tri[3];
   m.get_simplex(2, i, tri); 
 
   double X[3][3], f[3][FTK_CP_MAX_NUM_VARS], V[3][2], Js[3][2][2];
   simplex_values<3, double>(tri, X, f, V, Js);
 
+#if FTK_HAVE_GMP
+  typedef mpf_class fp_t;
   fp_t Vf[3][2];
   for (int k = 0; k < 3; k ++) 
     for (int j = 0; j < 2; j ++)
       Vf[k][j] = V[k][j];
+#else
+  int64_t Vf[3][2];
+  for (int k = 0; k < 3; k ++) 
+    for (int j = 0; j < 2; j ++)
+      Vf[k][j] = V[k][j] * vector_field_scaling_factor;
+#endif
    
   bool succ = ftk::robust_critical_point_in_simplex2(Vf, tri);
   if (!succ) return false;
@@ -166,6 +168,10 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
+#ifndef FTK_HAVE_GMP
+  update_vector_field_scaling_factor();
+#endif
+  
   auto func = [&](int i) {
     critical_point_t cp;
     if (check_simplex(i, cp)) {

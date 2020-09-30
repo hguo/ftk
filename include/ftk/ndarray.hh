@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cassert>
+#include <random>
 #include <glob.h>
 
 #if FTK_HAVE_ADIOS2
@@ -85,6 +86,9 @@ struct ndarray : object {
   size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
   bool empty() const  {return p.empty();}
   const std::vector<size_t> &shape() const {return dims;}
+
+  void set_multicomponents(size_t c=1) {ncd = c;}
+  size_t multicomponents() const {return ncd;}
 
   lattice get_lattice() const;
 
@@ -304,13 +308,20 @@ public: // netcdf
 
   void copy_to_cuda_device();
 
-  // statistics
+public: // statistics & misc
   std::tuple<T, T> min_max() const;
+  T resolution() const; // the min abs nonzero value
+  
+  ndarray<uint64_t> quantize() const; // quantization based on resolution
+
+  ndarray<T> perturb(const T sigma) const; // add gaussian noise to the array
 
 private:
   std::vector<size_t> dims, s;
   std::vector<T> p;
 
+  size_t ncd = 0; // Number of dimensions for components.  For 3D vector field, nd=4, ncd=1.  For 3D jacobian field, nd=5, ncd=2
+    
 #if FTK_HAVE_CUDA
   // arrays on GPU
   size_t *d_dims = NULL, *d_prod = NULL;
@@ -888,6 +899,17 @@ std::tuple<T, T> ndarray<T>::min_max() const {
   return std::make_tuple(min, max);
 }
 
+template <typename T>
+T ndarray<T>::resolution() const {
+  T r = std::numeric_limits<T>::max();
+
+  for (size_t i = 0; i < nelem(); i ++)
+    if (p[i] != T(0))
+      r = std::min(r, std::abs(p[i]));
+
+  return r;
+}
+
 #if FTK_HAVE_MPI
 template <> inline MPI_Datatype ndarray<double>::mpi_datatype() { return MPI_DOUBLE; }
 template <> inline MPI_Datatype ndarray<float>::mpi_datatype() { return MPI_FLOAT; }
@@ -1284,6 +1306,22 @@ inline bool ndarray<float>::from_amira(const std::string& filename)
 
   fclose(fp);
   return 0;
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::perturb(const T sigma) const
+{
+  std::random_device rd{};
+  std::mt19937 gen{rd()};
+  std::normal_distribution<> d{0, sigma};
+
+  ndarray<T> result;
+  result.reshape(*this);
+
+  for (auto i = 0; i < nelem(); i ++)
+    result[i] = p[i] + d(gen);
+
+  return result;
 }
 
 }

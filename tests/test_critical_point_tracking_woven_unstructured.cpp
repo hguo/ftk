@@ -43,7 +43,7 @@ TEST_CASE("critical_point_tracking_woven_unstructured") {
   auto trajs = tracker.get_traced_critical_points();
   
   if (world.rank() == 0)
-    REQUIRE(trajs.size() == 67); // woven_n_trajs);
+    REQUIRE(trajs.size() == 67); 
 }
 #endif
 

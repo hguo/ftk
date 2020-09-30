@@ -62,6 +62,13 @@ void critical_point_tracker_wrapper::configure(const json& j0)
       j[key] = default_value;
   };
 
+  auto add_number_option = [&](const std::string& key, double default_value) {
+    if (j.contains(key)) {
+      if (j[key].is_number()) { // OK
+      } else fatal("invalid +" + key);
+    } else j[key] = default_value;
+  };
+
   auto add_string_option = [&](json &j, const std::string& key, bool required=true) {
     if (j.contains(key)) {
       if (j[key].is_string()) { // OK
@@ -77,6 +84,8 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   add_boolean_option("enable_discarding_interval_points", false);
   add_boolean_option("enable_discarding_degenerate_points", false);
   add_boolean_option("enable_ignoring_degenerate_points", false);
+
+  add_number_option("duration_pruning_threshold", 0);
   
   /// application specific
   if (j.contains("xgc")) {
@@ -542,6 +551,13 @@ void critical_point_tracker_wrapper::post_process()
     // t.discard_interval_points();
     t.update_statistics();
   });
+  if (j["duration_pruning_threshold"] > 0) {
+    const double threshold = j["duration_pruning_threshold"];
+    trajs.filter([&](const critical_point_traj_t& traj) {
+      if (traj.tmax - traj.tmin < threshold) return false;
+      else return true;
+    });
+  }
   trajs.split_all();
   if (j["enable_discarding_interval_points"] == true) {
     trajs.foreach([](ftk::critical_point_traj_t& t) {

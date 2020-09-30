@@ -38,6 +38,7 @@ bool enable_streaming_trajectories = false,
      disable_robust_detection = false,
      disable_post_processing = false;
 int intercept_length = 2;
+double duration_pruning_threshold = 0.0;
 
 // xgc specific
 std::string xgc_mesh_filename, 
@@ -94,6 +95,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<bool>(disable_robust_detection))
     ("no-post-processing", "Disable post-processing",
      cxxopts::value<bool>(disable_post_processing))
+    ("duration-pruning", "Prune trajectories below certain duration", 
+     cxxopts::value<double>(duration_pruning_threshold))
     ("vtk", "Show visualization with vtk (legacy)", 
      cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
@@ -162,6 +165,9 @@ int parse_arguments(int argc, char **argv)
 
   if (disable_robust_detection)
     j_tracker["enable_robust_detection"] = false;
+
+  if (duration_pruning_threshold > 0)
+    j_tracker["duration_pruning_threshold"] = duration_pruning_threshold;
 
   j_tracker["enable_post_processing"] = !disable_post_processing;
 

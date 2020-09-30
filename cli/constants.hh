@@ -17,7 +17,8 @@
     ("temporal-smoothing-kernel", "Temporal smoothing kernel bandwidth", cxxopts::value<double>()) \
     ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", cxxopts::value<size_t>()) \
     ("spatial-smoothing-kernel", "Spatial smoothing kernel bandwidth", cxxopts::value<double>()) \
-    ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>())
+    ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>()) \
+    ("perturbation", "Gaussian perturbation sigma", cxxopts::value<double>())
     // ("dim", "Spatial dimensionality of data (auto|2|3)", cxxopts::value<std::string>())
 
 static const std::string 
@@ -123,6 +124,7 @@ static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
   if (results.count("temporal-smoothing-kernel-size")) j["temporal-smoothing-kernel-size"] = results["temporal-smoothing-kernel-size"].as<size_t>();
   if (results.count("spatial-smoothing-kernel")) j["spatial-smoothing-kernel"] = results["spatial-smoothing-kernel"].as<double>();
   if (results.count("spatial-smoothing-kernel-size")) j["spatial-smoothing-kernel-size"] = results["spatial-smoothing-kernel-size"].as<size_t>();
+  if (results.count("perturbation")) j["perturbation"] = results["perturbation"].as<double>();
 
   return j;
 }

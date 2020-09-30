@@ -141,6 +141,8 @@ public: // inputs
 protected:
   bool filter_critical_point_type(const critical_point_t& cp);
 
+  void update_vector_field_scaling_factor(int minbits=8, int maxbits=21);
+
 protected:
   template <typename I> // mesh element type
   void trace_critical_points_online(
@@ -163,6 +165,10 @@ protected:
   int current_timestep = 0;
 
   std::deque<field_data_snapshot_t> field_data_snapshots;
+  
+  // for robust detection
+  double vector_field_resolution = std::numeric_limits<double>::max(); // min abs nonzero value of vector field.  for robust cp detection w/o gmp
+  uint64_t vector_field_scaling_factor = 1;
   
   critical_point_traj_set_t traced_critical_points;
   std::map<int/*time*/, std::vector<critical_point_t>> sliced_critical_points;
@@ -733,6 +739,22 @@ inline bool critical_point_tracker::advance_timestep()
 
   current_timestep ++;
   return field_data_snapshots.size() > 0;
+}
+  
+inline void critical_point_tracker::update_vector_field_scaling_factor(int minbits, int maxbits)
+{
+  // vector_field_resolution = std::numeric_limits<double>::max();
+  for (const auto &s : field_data_snapshots)
+    vector_field_resolution = std::min(vector_field_resolution, s.vector.resolution());
+  
+  int nbits = std::ceil(std::log2(1.0 / vector_field_resolution));
+  nbits = std::max(minbits, std::min(nbits, maxbits));
+
+  vector_field_scaling_factor = 1 << nbits;
+ 
+  std::cerr << "resolution=" << vector_field_resolution 
+    << ", factor=" << vector_field_scaling_factor 
+    << ", nbits=" << nbits << std::endl;
 }
 
 }
