@@ -9,7 +9,10 @@ target_link_libraries (track_critical_points PRIVATE ftk)
 add_executable (track_levelsets track_levelsets.cpp)
 target_link_libraries (track_levelsets PRIVATE ftk)
 
-install (TARGETS track_critical_points track_levelsets 
+add_executable (track_contours track_contours.cpp)
+target_link_libraries (track_contours PRIVATE ftk)
+
+install (TARGETS track_critical_points track_levelsets track_contours
   EXPORT FTKTargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

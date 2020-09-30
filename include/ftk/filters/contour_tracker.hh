@@ -1,0 +1,89 @@
+#ifndef _FTK_CRITICAL_POINT_TRACKER_HH
+#define _FTK_CRITICAL_POINT_TRACKER_HH
+
+#include <ftk/ftk_config.hh>
+#include <ftk/algorithms/cca.hh>
+// #include <ftk/filters/contour.hh>
+#include <ftk/filters/filter.hh>
+#include <ftk/filters/feature_point.hh>
+#include <ftk/geometry/points2vtk.hh>
+#include <ftk/geometry/cc2curves.hh>
+#include <ftk/external/diy/serialization.hpp>
+#include <ftk/external/diy-ext/gather.hh>
+#include <iomanip>
+
+namespace ftk {
+
+struct contour_tracker : public filter {
+  contour_tracker() {}
+
+  virtual void update() {}; 
+  void reset() {
+    field_data_snapshots.clear();
+    // traced_contours.clear();
+  }
+  
+  void set_scalar_components(const std::vector<std::string>& c);
+  int get_num_scalar_components() const {return scalar_components.size();}
+
+  void update_traj_statistics();
+
+public:
+  virtual void initialize() = 0;
+  virtual void finalize() = 0;
+
+  virtual bool advance_timestep();
+  virtual void update_timestep() = 0;
+
+public: // inputs
+  bool pop_field_data_snapshot();
+  virtual void push_field_data_snapshot(const ndarray<double> &scalar);
+
+  virtual void set_current_timestep(int t) {current_timestep = t;}
+  int get_current_timestep() const {return current_timestep;}
+
+protected:
+  struct field_data_snapshot_t {
+    ndarray<double> scalar;
+  };
+  std::deque<field_data_snapshot_t> field_data_snapshots;
+  
+  int current_timestep = 0;
+  int start_timestep = 0, 
+      end_timestep = std::numeric_limits<int>::max();
+  
+  // scalar components
+  std::vector<std::string> scalar_components = {"scalar"};
+};
+
+///////
+
+inline void contour_tracker::push_field_data_snapshot(const ndarray<double>& scalar)
+{
+  field_data_snapshot_t snapshot;
+  snapshot.scalar = scalar;
+
+  field_data_snapshots.emplace_back(snapshot);
+}
+
+inline bool contour_tracker::pop_field_data_snapshot()
+{
+  if (field_data_snapshots.size() > 0) {
+    field_data_snapshots.pop_front();
+    return true;
+  } else return false;
+}
+
+inline bool contour_tracker::advance_timestep()
+{
+  update_timestep();
+  pop_field_data_snapshot();
+
+  current_timestep ++;
+  return field_data_snapshots.size() > 0;
+}
+  
+
+}
+
+#endif
