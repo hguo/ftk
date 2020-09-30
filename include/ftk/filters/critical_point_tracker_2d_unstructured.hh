@@ -57,11 +57,11 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker
   void push_vector_field_snapshot(const ndarray<double>&) {} // TODO
 
 public:
-  std::vector<critical_point_t> get_critical_points() const;
-  void put_critical_points(const std::vector<critical_point_t>&);
+  std::vector<feature_point_t> get_critical_points() const;
+  void put_critical_points(const std::vector<feature_point_t>&);
 
 protected:
-  bool check_simplex(int, critical_point_t& cp);
+  bool check_simplex(int, feature_point_t& cp);
 
   template <int n, typename T> void simplex_values(
       const int verts[n], // vertices
@@ -74,7 +74,7 @@ protected:
 protected:
   const simplicial_unstructured_extruded_2d_mesh<> m;
   
-  std::map<int, critical_point_t> discrete_critical_points;
+  std::map<int, feature_point_t> discrete_critical_points;
   // std::vector<std::vector<critical_point_t>> traced_critical_points;
 };
 
@@ -104,7 +104,7 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
   }
 }
 
-inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, critical_point_t& cp)
+inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3];
   m.get_simplex(2, i, tri); 
@@ -173,7 +173,7 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
 #endif
   
   auto func = [&](int i) {
-    critical_point_t cp;
+    feature_point_t cp;
     if (check_simplex(i, cp)) {
       std::lock_guard<std::mutex> guard(mutex);
 
@@ -255,27 +255,27 @@ inline void critical_point_tracker_2d_unstructured::finalize()
   }
   
   if (enable_discarding_interval_points)
-    traced_critical_points.foreach([](critical_point_traj_t& traj) {
+    traced_critical_points.foreach([](feature_curve_t& traj) {
       traj.discard_interval_points();
     });
 
   if (enable_discarding_degenerate_points)
-    traced_critical_points.foreach([](critical_point_traj_t& traj) {
+    traced_critical_points.foreach([](feature_curve_t& traj) {
       traj.discard_degenerate_points();
     });
     
   update_traj_statistics();
 }
 
-inline std::vector<critical_point_t> critical_point_tracker_2d_unstructured::get_critical_points() const
+inline std::vector<feature_point_t> critical_point_tracker_2d_unstructured::get_critical_points() const
 {
-  std::vector<critical_point_t> results;
+  std::vector<feature_point_t> results;
   for (const auto &kv : discrete_critical_points) 
     results.push_back(kv.second);
   return results;
 }
 
-inline void critical_point_tracker_2d_unstructured::put_critical_points(const std::vector<critical_point_t>& data)
+inline void critical_point_tracker_2d_unstructured::put_critical_points(const std::vector<feature_point_t>& data)
 {
   // fprintf(stderr, "##cps=%zu\n", data.size());
   for (const auto& cp : data)

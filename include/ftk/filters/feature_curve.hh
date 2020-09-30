@@ -1,11 +1,11 @@
-#ifndef _FTK_CRITICAL_TRAJ_T_HH
-#define _FTK_CRITICAL_TRAJ_T_HH
+#ifndef _FTK_FEATURE_CURVE_T_HH
+#define _FTK_FEATURE_CURVE_T_HH
 
-#include <ftk/filters/critical_point.hh>
+#include <ftk/filters/feature_point.hh>
 
 namespace ftk {
   
-struct critical_point_traj_t : public std::vector<critical_point_t>
+struct feature_curve_t : public std::vector<feature_point_t>
 {
   int id;
   bool complete = false, loop = false;
@@ -19,7 +19,7 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
   void update_statistics();
   void derive_velocity(); // (const std::vector<double> &dog_kernel); // assuming the traj contains only ordinal points (dt=1)
 
-  std::vector<critical_point_traj_t> split() const; // split to consistent subtrajs
+  std::vector<feature_curve_t> split() const; // split to consistent subtrajs
   std::vector<int/*idx in orignal traj*/> to_ordinals() const;
 
   void rotate(); //! if the traj is a loop and the type is inconsistent, rotate the traj before splitting
@@ -29,29 +29,29 @@ struct critical_point_traj_t : public std::vector<critical_point_t>
   void smooth_ordinal_types(const int half_window_size=2); // make types of ordinal points robust to noises
   void smooth_interval_types(); //! make types in intervals consistent
 
-  void discard(std::function<bool(const critical_point_t&)> f);
+  void discard(std::function<bool(const feature_point_t&)> f);
   void discard_high_cond(double threshold = 1e8); //! prune points with very high condition numbers, unless the point is ordinal
   void discard_interval_points();
   void discard_degenerate_points();
   
   int locate(double t, bool cap=false/*lower (false) or higher (true) cap*/) const; //! locate interval id of given t; assuming the traj is already reordered
   
-  void copy_info(critical_point_traj_t& t) {id = t.id; complete = t.complete; loop = t.loop;}
+  void copy_info(feature_curve_t& t) {id = t.id; complete = t.complete; loop = t.loop;}
 
-  critical_point_traj_t intercept(int t0, int t1) const; //! assuming the traj is already reordered
+  feature_curve_t intercept(int t0, int t1) const; //! assuming the traj is already reordered
 };
 
 /////////
-inline void critical_point_traj_t::relabel(int i)
+inline void feature_curve_t::relabel(int i)
 {
   id = i;
   for (i = 0; i < size(); i ++)
     at(i).id = id;
 }
 
-inline void critical_point_traj_t::discard(std::function<bool(const critical_point_t&)> f)
+inline void feature_curve_t::discard(std::function<bool(const feature_point_t&)> f)
 {
-  critical_point_traj_t traj;
+  feature_curve_t traj;
   traj.copy_info(*this);
 
   for (const auto &cp : *this)
@@ -62,25 +62,25 @@ inline void critical_point_traj_t::discard(std::function<bool(const critical_poi
   *this = traj;
 }
 
-inline void critical_point_traj_t::discard_interval_points() {
-  discard([&](const critical_point_t& cp) { return !cp.ordinal; });
+inline void feature_curve_t::discard_interval_points() {
+  discard([&](const feature_point_t& cp) { return !cp.ordinal; });
 }
   
-inline void critical_point_traj_t::discard_degenerate_points() {
-  discard([&](const critical_point_t& cp) { 
+inline void feature_curve_t::discard_degenerate_points() {
+  discard([&](const feature_point_t& cp) { 
     return cp.type == 0 || cp.type == 1; 
   });
 }
 
-inline void critical_point_traj_t::discard_high_cond(double threshold)
+inline void feature_curve_t::discard_high_cond(double threshold)
 {
-  discard([&](const critical_point_t& cp) {
+  discard([&](const feature_point_t& cp) {
     if (std::isinf(cp.cond) || std::isnan(cp.cond) || cp.cond > threshold) return true;
     else return false;
   });
 }
   
-inline void critical_point_traj_t::update_statistics() {
+inline void feature_curve_t::update_statistics() {
   if (empty()) return; // nothing to do
 
   max.fill( std::numeric_limits<double>::lowest() );
@@ -118,10 +118,10 @@ inline void critical_point_traj_t::update_statistics() {
     }
 }
   
-inline std::vector<critical_point_traj_t> critical_point_traj_t::split() const 
+inline std::vector<feature_curve_t> feature_curve_t::split() const 
 {
-  std::vector<critical_point_traj_t> results;
-  critical_point_traj_t subtraj;
+  std::vector<feature_curve_t> results;
+  feature_curve_t subtraj;
   unsigned int current_type;
 
   for (auto i = 0; i < size(); i ++) {
@@ -143,7 +143,7 @@ inline std::vector<critical_point_traj_t> critical_point_traj_t::split() const
   return results;
 }
   
-inline std::vector<int> critical_point_traj_t::to_ordinals() const 
+inline std::vector<int> feature_curve_t::to_ordinals() const 
 {
   std::vector<int> result;
   for (auto i = 0; i < size(); i ++)
@@ -152,7 +152,7 @@ inline std::vector<int> critical_point_traj_t::to_ordinals() const
   return result;
 }
   
-inline void critical_point_traj_t::rotate() //! if the traj is a loop and the type is inconsistent, rotate the traj before splitting
+inline void feature_curve_t::rotate() //! if the traj is a loop and the type is inconsistent, rotate the traj before splitting
 { 
   if (!loop) return;
   if (front().type != back().type) return;
@@ -165,7 +165,7 @@ inline void critical_point_traj_t::rotate() //! if the traj is a loop and the ty
   }
 }
 
-inline void critical_point_traj_t::reorder() { // reorder by timestep
+inline void feature_curve_t::reorder() { // reorder by timestep
   if (empty()) return;
   if (loop) return;
   bool reverse = false;
@@ -179,7 +179,7 @@ inline void critical_point_traj_t::reorder() { // reorder by timestep
     std::reverse(std::begin(*this), std::end(*this));
 }
   
-inline void critical_point_traj_t::adjust_time() { //! assuming traj has only one single branch and is organized in ascending order, ensure that the time increases monotonously
+inline void feature_curve_t::adjust_time() { //! assuming traj has only one single branch and is organized in ascending order, ensure that the time increases monotonously
   // ascending loop
   for (auto i = 0; i < size(); i ++) {
     if (i == 0 || at(i).ordinal) continue;
@@ -192,7 +192,7 @@ inline void critical_point_traj_t::adjust_time() { //! assuming traj has only on
   }
 }
   
-inline void critical_point_traj_t::smooth_ordinal_types(const int half_window_size) {
+inline void feature_curve_t::smooth_ordinal_types(const int half_window_size) {
   auto ordinals = to_ordinals();
   if (ordinals.size() < half_window_size*2+1) return;
 
@@ -217,7 +217,7 @@ inline void critical_point_traj_t::smooth_ordinal_types(const int half_window_si
     at(kv.first).type = kv.second;
 }
   
-inline void critical_point_traj_t::smooth_interval_types() { //! make types in intervals consistent
+inline void feature_curve_t::smooth_interval_types() { //! make types in intervals consistent
   const auto ordinals = to_ordinals();
   if (ordinals.empty()) return;
 
@@ -248,14 +248,14 @@ inline void critical_point_traj_t::smooth_interval_types() { //! make types in i
   }
 }
   
-inline int critical_point_traj_t::locate(double t, bool cap) const 
+inline int feature_curve_t::locate(double t, bool cap) const 
 {
   return 0; // TODO: WIP
 }
   
-inline critical_point_traj_t critical_point_traj_t::intercept(int t0, int t1) const //! assuming the traj is already reordered
+inline feature_curve_t feature_curve_t::intercept(int t0, int t1) const //! assuming the traj is already reordered
 {
-  critical_point_traj_t result;
+  feature_curve_t result;
   if (t0 > back().t || t1 < front().t) 
     return result;
 
@@ -271,7 +271,7 @@ inline critical_point_traj_t critical_point_traj_t::intercept(int t0, int t1) co
   return result;
 }
 
-inline void critical_point_traj_t::derive_velocity() // const std::vector<double> &kernel)
+inline void feature_curve_t::derive_velocity() // const std::vector<double> &kernel)
 {
   if (size() < 2) return;
   // const int half_kernel_size = kernel.size() / 2;
@@ -313,8 +313,8 @@ namespace nlohmann
 {
   using namespace ftk;
   template <>
-  struct adl_serializer<critical_point_traj_t> {
-    static void to_json(json &j, const critical_point_traj_t& t) {
+  struct adl_serializer<feature_curve_t> {
+    static void to_json(json &j, const feature_curve_t& t) {
       j = {
         {"id", t.id},
         {"max", t.max},
@@ -325,11 +325,11 @@ namespace nlohmann
         {"tmin", t.tmin},
         {"tmax", t.tmax},
         {"consistent_type", t.consistent_type},
-        {"traj", static_cast<std::vector<critical_point_t>>(t)}
+        {"traj", static_cast<std::vector<feature_point_t>>(t)}
       };
     }
 
-    static void from_json(const json&j, critical_point_traj_t& t) {
+    static void from_json(const json&j, feature_curve_t& t) {
       t.id = j["id"];
       t.max = j["max"];
       t.min = j["min"];
@@ -339,7 +339,7 @@ namespace nlohmann
       t.tmin = j["tmin"];
       t.tmax = j["tmax"];
       t.consistent_type = j["consistent_type"];
-      std::vector<critical_point_t> traj = j["traj"];
+      std::vector<feature_point_t> traj = j["traj"];
       t.clear();
       t.insert(t.begin(), traj.begin(), traj.end());
     }
@@ -348,7 +348,7 @@ namespace nlohmann
 
 // serialization
 namespace diy {
-  static void save(diy::BinaryBuffer& bb, const ftk::critical_point_traj_t &t) {
+  static void save(diy::BinaryBuffer& bb, const ftk::feature_curve_t &t) {
     diy::save(bb, t.complete);
     diy::save(bb, t.max);
     diy::save(bb, t.min);
@@ -361,10 +361,10 @@ namespace diy {
     diy::save(bb, t.size());
     for (auto i = 0; i < t.size(); i ++)
       diy::save(bb, t[i]);
-    // diy::save<std::vector<ftk::critical_point_t>>(bb, t);
+    // diy::save<std::vector<ftk::feature_point_t>>(bb, t);
   }
   
-  static void load(diy::BinaryBuffer& bb, ftk::critical_point_traj_t &t) {
+  static void load(diy::BinaryBuffer& bb, ftk::feature_curve_t &t) {
     diy::load(bb, t.complete);
     diy::load(bb, t.max);
     diy::load(bb, t.min);
@@ -379,7 +379,7 @@ namespace diy {
     t.resize(s);
     for (auto i = 0; i < t.size(); i ++)
       diy::load(bb, t[i]);
-    // diy::load<std::vector<ftk::critical_point_t>>(bb, t);
+    // diy::load<std::vector<ftk::feature_point_t>>(bb, t);
   }
 } // namespace diy
 

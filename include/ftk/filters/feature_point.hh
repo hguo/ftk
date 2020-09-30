@@ -2,8 +2,8 @@
 #define _FTK_CRITICAL_POINT_T_HH
 
 #include <ftk/ftk_config.hh>
-#include <ftk/filters/critical_point_lite.hh>
-#include <ftk/numeric/critical_point_type.hh>
+#include <ftk/filters/feature_point_lite.hh>
+// #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/json.hh>
 
@@ -12,9 +12,9 @@ namespace ftk {
 using nlohmann::json;
 
 // template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
-struct critical_point_t {
-  critical_point_t() {}
-  critical_point_t(const critical_point_lite_t& cp) {
+struct feature_point_t {
+  feature_point_t() {}
+  feature_point_t(const feature_point_lite_t& cp) {
     for (int i = 0; i < 3; i ++)
       x[i] = cp.x[i];
     t = cp.t;
@@ -36,8 +36,8 @@ struct critical_point_t {
   bool ordinal = false;
   unsigned long long tag = 0, id = 0;
 
-  // constexpr size_t size() const noexcept { return sizeof(critical_point_t<N, ValueType, IntegerType>); }
-  constexpr size_t size() const noexcept { return sizeof(critical_point_t); }
+  // constexpr size_t size() const noexcept { return sizeof(feature_point_t<N, ValueType, IntegerType>); }
+  constexpr size_t size() const noexcept { return sizeof(feature_point_t); }
 
   double vmag() const { // velocity magnitude
     return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
@@ -57,7 +57,8 @@ struct critical_point_t {
     if (cpdims == 2) os << "(" << v[0] << ", " << v[1] << "), ";
     else os << "(" << v[0] << ", " << v[1] << ", " << v[2] << "), ";
     
-    os << "type=" << critical_point_type_to_string(cpdims, type, scalar_components.size()) << ", "; 
+    // os << "type=" << critical_point_type_to_string(cpdims, type, scalar_components.size()) << ", "; 
+    os << "type=" << type << ", "; 
     os << "timestep=" << timestep << ", ";
     os << "ordinal=" << ordinal << ", ";
     os << "tag=" << tag << ", "; 
@@ -74,8 +75,8 @@ namespace nlohmann
   using namespace ftk;
 
   template <>
-  struct adl_serializer<critical_point_t> {
-    static void to_json(json &j, const critical_point_t& cp) {
+  struct adl_serializer<feature_point_t> {
+    static void to_json(json &j, const feature_point_t& cp) {
       j["x"] = cp.x; 
       j["t"] = cp.t;
       j["cond"] = cp.cond;
@@ -88,7 +89,7 @@ namespace nlohmann
       j["id"] = cp.id;
     }
 
-    static void from_json(const json& j,critical_point_t& cp) {
+    static void from_json(const json& j,feature_point_t& cp) {
       cp.x = j["x"];  
       cp.t = j["t"];
       cp.cond = j["cond"];
@@ -105,7 +106,7 @@ namespace nlohmann
 
 // serialization
 namespace diy {
-  static void save(diy::BinaryBuffer& bb, const ftk::critical_point_t &cp) {
+  static void save(diy::BinaryBuffer& bb, const ftk::feature_point_t &cp) {
     diy::save(bb, cp.x); 
     diy::save(bb, cp.t);
     diy::save(bb, cp.cond);
@@ -118,7 +119,7 @@ namespace diy {
     diy::save(bb, cp.id);
   }
 
-  static void load(diy::BinaryBuffer& bb, ftk::critical_point_t &cp) {
+  static void load(diy::BinaryBuffer& bb, ftk::feature_point_t &cp) {
     diy::load(bb, cp.x); 
     diy::load(bb, cp.t);  
     diy::load(bb, cp.cond);
