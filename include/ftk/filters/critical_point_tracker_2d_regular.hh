@@ -79,11 +79,6 @@ protected:
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
       double Js[][2][2]) const;
-
-protected: // working in progress
-  bool robust_check_simplex0(const element_t& s, critical_point_t &cp);
-  bool robust_check_simplex1(const element_t& s, critical_point_t &cp);
-  bool robust_check_simplex2(const element_t& s, critical_point_t &cp);
 };
 
 
@@ -208,26 +203,6 @@ inline void critical_point_tracker_2d_regular::update_timestep()
 
 #ifndef FTK_HAVE_GMP
   update_vector_field_scaling_factor();
-#endif
-
-#if 0
-  auto func0 = [=](element_t e) {
-      critical_point_t cp;
-      if (robust_check_simplex0(e, cp)) {
-        std::lock_guard<std::mutex> guard(mutex);
-        if (filter_critical_point_type(cp))
-          discrete_critical_points[e] = cp;
-      }
-    };
-  
-  auto func1 = [=](element_t e) {
-      critical_point_t cp;
-      if (robust_check_simplex1(e, cp)) {
-        std::lock_guard<std::mutex> guard(mutex);
-        if (filter_critical_point_type(cp))
-          discrete_critical_points[e] = cp;
-      }
-    };
 #endif
 
   // scan 2-simplices
@@ -611,80 +586,6 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
 
   return true;
 } 
-
-inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e, critical_point_t& cp)
-{
-  typedef fixed_point<> fp_t;
-
-  if (!e.valid(m)) return false; // check if the 2-simplex is valid
-  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
-
-  fp_t v[1][2]; // obtain vector values
-  simplex_vectors<fp_t>(vertices, v);
-
-  if (v[0][0] == 0 && v[0][1] == 0) {
-    fprintf(stderr, "zero!\n");
-  }
-  return false;
-#if 0 // TODO
-  bool succ = inverse_lerp_s2v2(v, mu);
-  if (!succ) return false;
-
-  double X[3][3]; // position
-  simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, cp.x);
-#endif
-}
-
-inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const element_t& e, critical_point_t& cp)
-{
-  typedef fixed_point<> fp_t;
-
-  if (!e.valid(m)) return false; // check if the 2-simplex is valid
-  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
-
-  // fp_t v[2][2]; // obtain vector values
-  // simplex_vectors<fp_t>(vertices, v);
- 
-  double V[2][2];
-  long long iV[2][2];
-  simplex_vectors(vertices, V);
-  for (int i = 0; i < 2; i ++)
-    for (int j = 0; j < 2; j ++)
-      iV[i][j] = V[i][j] * 32768;
-
-  bool succ = ftk::integer_inverse_lerp_s1v2(iV);
-  if (succ) fprintf(stderr, "shoot\n");
-
-  return false;
-#if 0 // TODO
-  bool succ = inverse_lerp_s2v2(v, mu);
-  if (!succ) return false;
-
-  double X[3][3]; // position
-  simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, cp.x);
-#endif
-}
-
-#if 0
-void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s, critical_point_t& cp)
-{
-  if (!e.valid(m)) return false; // check if the 2-simplex is valid
-  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
- 
-  double v[3][2]; // obtain vector values
-  simplex_vectors(vertices, v);
- 
-  double mu[3]; // check intersection
-  bool succ = inverse_lerp_s2v2(v, mu);
-  if (!succ) return false;
-
-  double X[3][3]; // position
-  simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, cp.x);
-}
-#endif
 
 }
 
