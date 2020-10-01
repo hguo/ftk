@@ -82,8 +82,7 @@ int parse_arguments(int argc, char **argv)
                DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
 
   ftk::contour_tracker_2d_regular tracker;
-  // tracker.set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2}));
-  tracker.set_domain(ftk::lattice({60, 3, 3}, {DW-5, DH-5, DD-5}));
+  tracker.set_domain(ftk::lattice({1, 1, 1}, {DW-1, DH-1, DD-1}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   tracker.initialize();
   tracker.set_number_of_threads(nthreads);

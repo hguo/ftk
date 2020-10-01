@@ -8,6 +8,7 @@
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/bilinear_interpolation.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
+#include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/gradient.hh>
 #include <ftk/numeric/adjugate.hh>
 #include <ftk/numeric/fixed_point.hh>
@@ -98,15 +99,43 @@ inline void contour_tracker_2d_regular::reset()
 }
 
 inline bool contour_tracker_2d_regular::check_simplex(
-    const element_t& e, feature_point_t& cp)
+    const element_t& e, feature_point_t& p)
 {
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
-
+  
+  int indices[3];
+  simplex_indices(vertices, indices);
+  
   double f[2];
   simplex_scalars(vertices, f);
+ 
+  const long long factor = 2 << 20;
+  long long fi[2];
+  for (int i = 0; i < 2; i ++)
+    fi[i] = f[i] * factor;
 
-  return false;
+  bool succ = robust_critical_point_in_simplex1(f, indices);
+  if (!succ) return false;
+
+  double mu[2], cond;
+  bool succ2 = inverse_lerp_s1v1(f, mu);
+
+  double X[2][3], x[3];
+  simplex_coordinates(vertices, X);
+  lerp_s1v3(X, mu, x);
+
+  p.x[0] = x[0];
+  p.x[1] = x[1];
+  p.t = x[2];
+  p.tag = e.to_integer(m);
+  p.ordinal = e.is_ordinal(m);
+  p.timestep = current_timestep;
+
+  // p.print(std::cerr, 2, scalar_components) << std::endl;
+  // std::cerr << e << ", (" << f[0] << ", " << f[1] << "), mu=" << mu[0] << std::endl;
+
+  return true;
 }
 
 inline void contour_tracker_2d_regular::update_timestep()
@@ -121,9 +150,9 @@ inline void contour_tracker_2d_regular::update_timestep()
     }
   };
 
-  m.element_for_ordinal(1, current_timestep, func);
+  m.element_for_ordinal(1, current_timestep, func, nthreads);
   if (field_data_snapshots.size() >= 2) // interval
-    m.element_for_interval(1, current_timestep, current_timestep+1, func);
+    m.element_for_interval(1, current_timestep, current_timestep+1, func, nthreads);
 }
 
 inline void contour_tracker_2d_regular::simplex_coordinates(
