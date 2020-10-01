@@ -23,10 +23,9 @@ protected:
   std::map<element_t, feature_point_t> intersections;
 
 public: // cp io
-  const std::map<element_t, feature_point_t>& get_intersections() const {return intersections;}
+  const std::map<element_t, feature_point_t>& get_discrete_intersections() const {return intersections;}
 
-  // std::vector<feature_point_t> get_intersections() const;
-  // void put_intersections(const std::vector<feature_point_t>&);
+  std::vector<feature_point_t> get_intersections() const;
 
 protected: // internal use
   template <typename I=int> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
@@ -59,6 +58,17 @@ inline void contour_tracker_regular::simplex_indices(
 {
   for (int i = 0; i < vertices.size(); i ++)
     indices[i] = m.get_lattice().to_integer(vertices[i]);
+}
+
+inline std::vector<feature_point_t> contour_tracker_regular::get_intersections() const
+{
+  const auto pts = get_discrete_intersections();
+  std::vector<feature_point_t> results;
+
+  for (const auto &kv : pts)
+    results.push_back(kv.second);
+
+  return results;
 }
 
 }

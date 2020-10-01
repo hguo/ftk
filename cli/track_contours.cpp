@@ -28,6 +28,9 @@ std::string accelerator;
 int nthreads = std::thread::hardware_concurrency();
 bool verbose = false, demo = false, show_vtk = false, help = false;
 
+// determined later
+double threshold = 0.0;
+
 // input stream
 ftk::ndarray_stream<> stream;
 
@@ -38,6 +41,7 @@ int parse_arguments(int argc, char **argv)
 
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
+    ("threshold", "Threshold for levelset tracking", cxxopts::value<double>(threshold))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_filename))
     ("output-format", "Output format {auto|text|vtp}, by default auto", 
@@ -74,6 +78,13 @@ int parse_arguments(int argc, char **argv)
   
   nlohmann::json j_input = args_to_json(results);
   stream.set_input_source_json(j_input);
+  
+  fprintf(stderr, "SUMMARY\n=============\n");
+  std::cerr << "input=" << stream.get_json() << std::endl;
+  fprintf(stderr, "output_format=%s\n", output_format.c_str());
+  fprintf(stderr, "threshold=%f\n", threshold);
+  fprintf(stderr, "nthreads=%d\n", nthreads);
+  fprintf(stderr, "=============\n");
 
   const auto js = stream.get_json();
   const size_t nd = stream.n_dimensions(),
@@ -86,6 +97,7 @@ int parse_arguments(int argc, char **argv)
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   tracker.initialize();
   tracker.set_number_of_threads(nthreads);
+  tracker.set_threshold(threshold);
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     tracker.push_field_data_snapshot(field_data);
@@ -99,6 +111,7 @@ int parse_arguments(int argc, char **argv)
   tracker.finalize();
 
   // tracker.write_traced_pvs_vtk(output_filename);
+  tracker.write_intersections_vtk(output_filename);
 
   return 0;
 }

@@ -112,8 +112,10 @@ inline bool contour_tracker_2d_regular::check_simplex(
  
   const long long factor = 2 << 20;
   long long fi[2];
-  for (int i = 0; i < 2; i ++)
+  for (int i = 0; i < 2; i ++) {
+    f[i] = f[i] - threshold;
     fi[i] = f[i] * factor;
+  }
 
   bool succ = robust_critical_point_in_simplex1(f, indices);
   if (!succ) return false;
