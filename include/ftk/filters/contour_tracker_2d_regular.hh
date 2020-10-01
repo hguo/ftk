@@ -97,9 +97,33 @@ inline void contour_tracker_2d_regular::reset()
   contour_tracker::reset();
 }
 
+inline bool contour_tracker_2d_regular::check_simplex(
+    const element_t& e, feature_point_t& cp)
+{
+  if (!e.valid(m)) return false; // check if the 2-simplex is valid
+  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
+
+  double f[2];
+  simplex_scalars(vertices, f);
+
+  return false;
+}
+
 inline void contour_tracker_2d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+
+  auto func = [=](element_t e) {
+    feature_point_t p;
+    if (check_simplex(e, p)) {
+      std::lock_guard<std::mutex> guard(mutex);
+      intersections[e] = p;
+    }
+  };
+
+  m.element_for_ordinal(1, current_timestep, func);
+  if (field_data_snapshots.size() >= 2) // interval
+    m.element_for_interval(1, current_timestep, current_timestep+1, func);
 }
 
 inline void contour_tracker_2d_regular::simplex_coordinates(
