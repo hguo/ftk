@@ -91,10 +91,12 @@ int parse_arguments(int argc, char **argv)
                DW = js["dimensions"][0], 
                DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
                DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+  const int nt = js["n_timesteps"];
 
   ftk::contour_tracker_2d_regular tracker;
-  tracker.set_domain(ftk::lattice({1, 1, 1}, {DW-1, DH-1, DD-1}));
+  tracker.set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+  tracker.set_end_timestep(nt - 1);
   tracker.initialize();
   tracker.set_number_of_threads(nthreads);
   tracker.set_threshold(threshold);
@@ -102,7 +104,6 @@ int parse_arguments(int argc, char **argv)
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     tracker.push_field_data_snapshot(field_data);
     
-    const int nt = js["n_timesteps"];
     if (k != 0) tracker.advance_timestep();
     if (k == nt - 1) tracker.update_timestep();
   });

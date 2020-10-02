@@ -21,6 +21,7 @@ protected:
   typedef simplicial_regular_mesh_element element_t;
   
   std::map<element_t, feature_point_t> intersections;
+  std::set<element_t> related_cells;
 
 public: // cp io
   const std::map<element_t, feature_point_t>& get_discrete_intersections() const {return intersections;}

@@ -71,6 +71,22 @@ inline void contour_tracker_2d_regular::initialize()
 inline void contour_tracker_2d_regular::finalize()
 {
   diy::mpi::gather(comm, intersections, intersections, get_root_proc());
+  
+  for (const auto &e : related_cells) {
+    auto sides = e.sides(m);
+    int count = 0;
+
+    std::set<element_t> unique_edges;
+    for (auto tri : e.sides(m)) {
+      for (auto edge : tri.sides(m)) {
+        unique_edges.insert(edge);
+      }
+    }
+    for (auto edge : unique_edges) 
+      if (intersections.find(edge) != intersections.end())
+        count ++;
+    std::cerr << "count=" << count << ", " << e << std::endl;
+  }
 
   if (comm.rank() == get_root_proc()) {
     // fprintf(stderr, "finalizing...\n");
@@ -149,6 +165,16 @@ inline void contour_tracker_2d_regular::update_timestep()
     if (check_simplex(e, p)) {
       std::lock_guard<std::mutex> guard(mutex);
       intersections[e] = p;
+
+      auto tris = e.side_of(m);
+      for (auto tri : tris) {
+        if (tri.valid(m)) {
+          auto tets = tri.side_of(m);
+          for (auto tet : tets) 
+            if (tet.valid(m))
+              related_cells.insert(tet); // tets.begin(), tets.end());
+        }
+      }
     }
   };
 
