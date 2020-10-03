@@ -146,11 +146,12 @@ inline bool contour_tracker_2d_regular::check_simplex(
     fi[i] = f[i] * factor;
   }
 
-  bool succ = robust_critical_point_in_simplex1(f, indices);
-  if (!succ) return false;
+  // bool succ = robust_critical_point_in_simplex1(f, indices);
+  // if (!succ) return false;
 
-  double mu[2], cond;
+  double mu[2];
   bool succ2 = inverse_lerp_s1v1(f, mu);
+  if (!succ2) return false;
 
   double X[2][3], x[3];
   simplex_coordinates(vertices, X);
@@ -258,7 +259,9 @@ vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_trajectories_vtk() 
       quad->GetPointIds()->SetId(2, ids[2]);
       quad->GetPointIds()->SetId(3, ids[3]);
       cells->InsertNextCell(quad);
-    }
+    } else {
+      fprintf(stderr, "shoot..\n");
+    };
   }
 
   polyData->SetPoints(points);
