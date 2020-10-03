@@ -22,6 +22,11 @@
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/diy-ext/gather.hh>
 
+#if FTK_HAVE_VTK
+#include <vtkTriangle.h>
+#include <vtkQuad.h>
+#endif
+
 #if FTK_HAVE_GMP
 #include <gmpxx.h>
 #endif
@@ -39,6 +44,11 @@ struct contour_tracker_2d_regular : public contour_tracker_regular {
   void reset();
 
   void update_timestep();
+
+protected:
+#if FTK_HAVE_VTK
+  virtual vtkSmartPointer<vtkPolyData> get_trajectories_vtk() const;
+#endif
 
 protected:
   typedef simplicial_regular_mesh_element element_t;
@@ -71,7 +81,10 @@ inline void contour_tracker_2d_regular::initialize()
 inline void contour_tracker_2d_regular::finalize()
 {
   diy::mpi::gather(comm, intersections, intersections, get_root_proc());
-  
+
+  return; 
+
+  // TODO: build surfaces
   for (const auto &e : related_cells) {
     auto sides = e.sides(m);
     int count = 0;
@@ -201,6 +214,59 @@ inline void contour_tracker_2d_regular::simplex_scalars(
         vertices[i][1]);
   }
 }
+
+#if FTK_HAVE_VTK
+vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_trajectories_vtk() const
+{
+  vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
+
+  auto my_intersections = intersections; // get_intersections();
+  unsigned long long i = 0;
+  for (auto &kv : my_intersections) {
+    double p[3] = {kv.second.x[0], kv.second.x[1], kv.second.t};
+    kv.second.tag = i ++;
+    points->InsertNextPoint(p);
+  }
+  
+  for (const auto &e : related_cells) {
+    auto sides = e.sides(m);
+    int count = 0;
+    unsigned long long ids[4];
+
+    std::set<element_t> unique_edges;
+    for (auto tri : e.sides(m)) {
+      for (auto edge : tri.sides(m)) {
+        unique_edges.insert(edge);
+      }
+    }
+    for (auto edge : unique_edges) 
+      if (my_intersections.find(edge) != my_intersections.end())
+        ids[count ++] = my_intersections[edge].tag;
+
+    if (count == 3) {
+      vtkSmartPointer<vtkTriangle> tri = vtkTriangle::New();
+      tri->GetPointIds()->SetId(0, ids[0]);
+      tri->GetPointIds()->SetId(1, ids[1]);
+      tri->GetPointIds()->SetId(2, ids[2]);
+      cells->InsertNextCell(tri);
+    } else if (count == 4) { // quad
+      vtkSmartPointer<vtkQuad> quad = vtkQuad::New();
+      quad->GetPointIds()->SetId(0, ids[0]);
+      quad->GetPointIds()->SetId(1, ids[1]);
+      quad->GetPointIds()->SetId(2, ids[2]);
+      quad->GetPointIds()->SetId(3, ids[3]);
+      cells->InsertNextCell(quad);
+    }
+  }
+
+  polyData->SetPoints(points);
+  polyData->SetPolys(cells);
+
+  return polyData;
+}
+#endif
 
 }
 
