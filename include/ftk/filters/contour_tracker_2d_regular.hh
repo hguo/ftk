@@ -178,6 +178,8 @@ inline void contour_tracker_2d_regular::update_timestep()
     feature_point_t p;
     if (check_simplex(e, p)) {
       std::lock_guard<std::mutex> guard(mutex);
+      // std::cerr << e << std::endl;
+
       intersections[e] = p;
 
       auto tris = e.side_of(m);
@@ -223,6 +225,14 @@ vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_trajectories_vtk() 
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
 
+  auto add_triangle = [&cells](int i0, int i1, int i2) {
+    vtkSmartPointer<vtkTriangle> tri = vtkTriangle::New();
+    tri->GetPointIds()->SetId(0, i0);
+    tri->GetPointIds()->SetId(1, i1);
+    tri->GetPointIds()->SetId(2, i2);
+    cells->InsertNextCell(tri);
+  };
+
   auto my_intersections = intersections; // get_intersections();
   unsigned long long i = 0;
   for (auto &kv : my_intersections) {
@@ -230,9 +240,9 @@ vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_trajectories_vtk() 
     kv.second.tag = i ++;
     points->InsertNextPoint(p);
   }
-  
+
   for (const auto &e : related_cells) {
-    auto sides = e.sides(m);
+  // m.element_for(3, [&](element_t e) {
     int count = 0;
     unsigned long long ids[4];
 
@@ -242,27 +252,40 @@ vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_trajectories_vtk() 
         unique_edges.insert(edge);
       }
     }
+    // if (unique_edges.size() != 6) fprintf(stderr, "shoot %zu\n", unique_edges.size());
+    
     for (auto edge : unique_edges) 
       if (my_intersections.find(edge) != my_intersections.end())
         ids[count ++] = my_intersections[edge].tag;
 
     if (count == 3) {
-      vtkSmartPointer<vtkTriangle> tri = vtkTriangle::New();
-      tri->GetPointIds()->SetId(0, ids[0]);
-      tri->GetPointIds()->SetId(1, ids[1]);
-      tri->GetPointIds()->SetId(2, ids[2]);
-      cells->InsertNextCell(tri);
+      add_triangle(ids[0], ids[1], ids[2]);
     } else if (count == 4) { // quad
-      vtkSmartPointer<vtkQuad> quad = vtkQuad::New();
-      quad->GetPointIds()->SetId(0, ids[0]);
-      quad->GetPointIds()->SetId(1, ids[1]);
-      quad->GetPointIds()->SetId(2, ids[2]);
-      quad->GetPointIds()->SetId(3, ids[3]);
-      cells->InsertNextCell(quad);
+#if 0
+      double p[4][3];
+      for (int i = 0; i < 4; i ++)
+        points->GetPoint(ids[i], p[i]);
+
+      double A[3][3];
+      for (int i = 0; i < 3; i ++)
+        for (int j = 0; j < 3; j ++)
+          A[i][j] = p[j][i];
+      // print3x3("A", A);
+      double b[3] = {p[3][0], p[3][1], p[3][2]};
+      // fprintf(stderr, "b=%f, %f, %f\n", b[0], b[1], b[2]);
+
+      double mu[3];
+      solve_linear3x3(A, b, mu);
+      // fprintf(stderr, "mu=%f, %f, %f, sum=%f\n", mu[0], mu[1], mu[2], 
+      //     mu[0] + mu[1] + mu[2]);
+#endif
+
+      add_triangle(ids[0], ids[1], ids[2]);
+      add_triangle(ids[1], ids[3], ids[2]);
     } else {
-      fprintf(stderr, "shoot..\n");
+      // fprintf(stderr, "shoot..\n");
     };
-  }
+  }; //, 1); 
 
   polyData->SetPoints(points);
   polyData->SetPolys(cells);
