@@ -151,17 +151,17 @@ struct simplicial_regular_mesh {
   // There are three different modes: all, fixed time, and fixed interval.  Please
   // see the comments in the next two functions for more details.
   void element_for(int d, std::function<void(simplicial_regular_mesh_element)> f, 
-      int nthreads=std::thread::hardware_concurrency()); // , int scope = ELEMENT_SCOPE_ALL);
+      int nthreads=std::thread::hardware_concurrency()) const; // , int scope = ELEMENT_SCOPE_ALL);
 
   void element_for_ordinal(int d, int t, std::function<void(simplicial_regular_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency());
+      int nthreads=std::thread::hardware_concurrency()) const;
 
   void element_for_interval(int d, int t0, int t1, std::function<void(simplicial_regular_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency());
+      int nthreads=std::thread::hardware_concurrency()) const;
   
   void element_for(int d, const lattice& subdomain, int scope, 
       std::function<void(simplicial_regular_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency());
+      int nthreads=std::thread::hardware_concurrency()) const;
 
 #if 0
 public: // partitioning
@@ -896,12 +896,12 @@ inline size_t simplicial_regular_mesh::n(int d, int scope) const
   return (size_t)ntypes(d, scope) * dimprod_[nd()];
 }
   
-inline void simplicial_regular_mesh::element_for(int d, std::function<void(simplicial_regular_mesh_element)> f, int nthreads)
+inline void simplicial_regular_mesh::element_for(int d, std::function<void(simplicial_regular_mesh_element)> f, int nthreads) const
 {
   element_for(d, lattice_, ELEMENT_SCOPE_ALL, f, nthreads);
 }
   
-inline void simplicial_regular_mesh::element_for_ordinal(int d, int t, std::function<void(simplicial_regular_mesh_element)> f, int nthreads)
+inline void simplicial_regular_mesh::element_for_ordinal(int d, int t, std::function<void(simplicial_regular_mesh_element)> f, int nthreads) const
 {
   auto st = lattice_.starts(), sz = lattice_.sizes();
   st[nd()-1] = t;
@@ -913,7 +913,10 @@ inline void simplicial_regular_mesh::element_for_ordinal(int d, int t, std::func
   element_for(d, my_lattice, ELEMENT_SCOPE_ORDINAL, f, nthreads);
 }
   
-inline void simplicial_regular_mesh::element_for_interval(int d, int t0, int t1, std::function<void(simplicial_regular_mesh_element)> f, int nthreads)
+inline void simplicial_regular_mesh::element_for_interval(
+    int d, int t0, int t1, 
+    std::function<void(simplicial_regular_mesh_element)> f, 
+    int nthreads) const
 {
   auto st = lattice_.starts(), sz = lattice_.sizes();
   st[nd()-1] = t0;
@@ -927,7 +930,7 @@ inline void simplicial_regular_mesh::element_for_interval(int d, int t0, int t1,
 inline void simplicial_regular_mesh::element_for(
     int d, const lattice& l, int scope, 
     std::function<void(simplicial_regular_mesh_element)> f,
-    int nthreads)
+    int nthreads) const
 {
   auto lambda = [=](size_t j) {
     simplicial_regular_mesh_element e(*this, d, j, l, scope);
