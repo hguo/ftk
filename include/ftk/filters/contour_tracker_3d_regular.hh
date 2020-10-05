@@ -118,12 +118,12 @@ inline bool contour_tracker_3d_regular::check_simplex(
     fi[i] = f[i] * factor;
   }
 
-  // bool succ = robust_critical_point_in_simplex1(f, indices);
-  // if (!succ) return false;
+  bool succ = robust_critical_point_in_simplex1(f, indices);
+  if (!succ) return false;
 
   double mu[2];
   bool succ2 = inverse_lerp_s1v1(f, mu);
-  if (!succ2) return false;
+  // if (!succ2) return false;
 
   double X[2][4], x[4];
   simplex_coordinates(vertices, X);
@@ -222,6 +222,7 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
     kv.second.tag = i ++;
     points->InsertNextPoint(p);
   }
+  grid->SetPoints(points);
 
   auto add_tet = [&grid](vtkIdType ids[4]) {
     grid->InsertNextCell(VTK_TETRA, 4, ids);
@@ -229,7 +230,7 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
 
   for (const auto &e : related_cells) { // pentachoron
     int count = 0;
-    unsigned long long ids[10]; // 10 edges
+    vtkIdType ids[10]; // 10 edges
 
     std::set<element_t> unique_edges;
     for (auto tet : e.sides(m)) 
@@ -241,7 +242,13 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
       if (my_intersections.find(edge) != my_intersections.end())
         ids[count ++] = my_intersections[edge].tag;
 
-    fprintf(stderr, "count=%d\n", count);
+    if (count == 4) {
+      add_tet(ids);
+    } else if (count == 6) {
+
+    } else {
+      // should not happen
+    }
   }
 
   return grid;
