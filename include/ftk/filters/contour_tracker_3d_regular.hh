@@ -214,15 +214,23 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
-  
+  vtkSmartPointer<vtkDataArray> array_time = vtkDoubleArray::New();
+ 
+  array_time->SetName("time");
+  array_time->SetNumberOfComponents(1);
+  array_time->SetNumberOfTuples(intersections.size());
+
   auto my_intersections = intersections; // get_intersections();
   unsigned long long i = 0;
   for (auto &kv : my_intersections) {
     double p[3] = {kv.second.x[0], kv.second.x[1], kv.second.x[2]}; // TODO: time
-    kv.second.tag = i ++;
+    kv.second.tag = i;
     points->InsertNextPoint(p);
+    array_time->SetTuple1(i, kv.second.t);
+    i ++;
   }
   grid->SetPoints(points);
+  grid->GetPointData()->AddArray(array_time);
 
   auto add_tet = [&grid](vtkIdType ids[4]) {
     grid->InsertNextCell(VTK_TETRA, 4, ids);
