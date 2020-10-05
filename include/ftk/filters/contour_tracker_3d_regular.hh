@@ -23,6 +23,8 @@
 #include <ftk/external/diy-ext/gather.hh>
 
 #if FTK_HAVE_VTK
+#include <vtkUnstructuredGrid.h>
+#include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkTriangle.h>
 #include <vtkQuad.h>
 #endif
@@ -46,8 +48,9 @@ struct contour_tracker_3d_regular : public contour_tracker_regular {
   void update_timestep();
 
 protected:
+  void write_trajectories_vtk(const std::string& filename)  const;
 #if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_trajectories_vtk() const;
+  vtkSmartPointer<vtkUnstructuredGrid> get_trajectories_vtk() const;
 #endif
 
 protected:
@@ -154,13 +157,16 @@ inline void contour_tracker_3d_regular::update_timestep()
       intersections[e] = p;
 
 #if 1
-      auto tets = e.side_of(m);
-      for (auto tet : tets) {
-        if (tet.valid(m)) {
-          auto pents = tet.side_of(m);
-          for (auto pent : pents) 
-            if (pent.valid(m))
-              related_cells.insert(pent); 
+      auto tris = e.side_of(m);
+      for (auto tri : tris) {
+        auto tets = tri.side_of(m);
+        for (auto tet : tets) {
+          if (tet.valid(m)) {
+            auto pents = tet.side_of(m);
+            for (auto pent : pents) 
+              if (pent.valid(m))
+                related_cells.insert(pent); 
+          }
         }
       }
 #endif
@@ -193,8 +199,58 @@ inline void contour_tracker_3d_regular::simplex_scalars(
 }
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> contour_tracker_3d_regular::get_trajectories_vtk() const
+inline void contour_tracker_3d_regular::write_trajectories_vtk(const std::string& filename) const
 {
+  if (comm.rank() == get_root_proc()) {
+    vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
+      vtkXMLUnstructuredGridWriter::New();
+    writer->SetFileName(filename.c_str());
+    writer->SetInputData( get_trajectories_vtk() );
+    writer->Write();
+  }
+}
+
+vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectories_vtk() const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  
+  auto my_intersections = intersections; // get_intersections();
+  unsigned long long i = 0;
+  for (auto &kv : my_intersections) {
+    double p[3] = {kv.second.x[0], kv.second.x[1], kv.second.x[2]}; // TODO: time
+    kv.second.tag = i ++;
+    points->InsertNextPoint(p);
+  }
+
+  auto add_tet = [&grid](vtkIdType ids[4]) {
+    grid->InsertNextCell(VTK_TETRA, 4, ids);
+  };
+
+  for (const auto &e : related_cells) { // pentachoron
+    int count = 0;
+    unsigned long long ids[10]; // 10 edges
+
+    std::set<element_t> unique_edges;
+    for (auto tet : e.sides(m)) 
+      for (auto tri : tet.sides(m))
+        for (auto edge : tri.sides(m))
+          unique_edges.insert(edge);
+
+    for (auto edge : unique_edges)
+      if (my_intersections.find(edge) != my_intersections.end())
+        ids[count ++] = my_intersections[edge].tag;
+
+    fprintf(stderr, "count=%d\n", count);
+  }
+
+  return grid;
+}
+#else
+inline void contour_tracker_3d_regular::write_trajectories_vtk(const std::string& filename) const
+{
+  if (is_root_proc())
+    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
 }
 #endif
 

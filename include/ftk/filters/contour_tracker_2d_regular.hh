@@ -46,8 +46,9 @@ struct contour_tracker_2d_regular : public contour_tracker_regular {
   void update_timestep();
 
 protected:
+  void write_trajectories_vtk(const std::string& filename) const;
 #if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_trajectories_vtk() const;
+  vtkSmartPointer<vtkPolyData> get_trajectories_vtk() const;
 #endif
 
 protected:
@@ -219,6 +220,14 @@ inline void contour_tracker_2d_regular::simplex_scalars(
 }
 
 #if FTK_HAVE_VTK
+inline void contour_tracker_2d_regular::write_trajectories_vtk(const std::string& filename) const
+{
+  if (comm.rank() == get_root_proc()) {
+    auto poly = get_trajectories_vtk();
+    write_vtp(filename, poly);
+  }
+}
+
 vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_trajectories_vtk() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
@@ -291,6 +300,12 @@ vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_trajectories_vtk() 
   polyData->SetPolys(cells);
 
   return polyData;
+}
+#else
+inline void contour_tracker_2d_regular::write_trajectories_vtk(const std::string& filename) const
+{
+  if (is_root_proc())
+    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
 }
 #endif
 

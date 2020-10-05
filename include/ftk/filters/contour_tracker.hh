@@ -53,10 +53,7 @@ public:
   vtkSmartPointer<vtkPolyData> get_intersections_vtk() const;
 #endif
 
-  void write_trajectories_vtk(const std::string& filename) const;
-#if FTK_HAVE_VTK
-  virtual vtkSmartPointer<vtkPolyData> get_trajectories_vtk() const = 0;
-#endif
+  virtual void write_trajectories_vtk(const std::string& filename) const = 0;
 
 protected:
   virtual int cpdims() const = 0;
@@ -134,22 +131,8 @@ inline void contour_tracker::write_intersections_vtk(const std::string& filename
     write_vtp(filename, poly);
   }
 }
-
-inline void contour_tracker::write_trajectories_vtk(const std::string& filename) const
-{
-  if (comm.rank() == get_root_proc()) {
-    auto poly = get_trajectories_vtk();
-    write_vtp(filename, poly);
-  }
-}
 #else
 inline void contour_tracker::write_intersections_vtk(const std::string& filename) const
-{
-  if (is_root_proc())
-    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
-}
-
-inline void contour_tracker::write_trajectories_vtk(const std::string& filename) const
 {
   if (is_root_proc())
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
