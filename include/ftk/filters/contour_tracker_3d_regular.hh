@@ -232,7 +232,8 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
   grid->SetPoints(points);
   grid->GetPointData()->AddArray(array_time);
 
-  auto add_tet = [&grid](vtkIdType ids[4]) {
+  auto add_tet = [&grid](int i0, int i1, int i2, int i3) {
+    vtkIdType ids[4] = {i0, i1, i2, i3};
     grid->InsertNextCell(VTK_TETRA, 4, ids);
   };
 
@@ -251,11 +252,14 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
         ids[count ++] = my_intersections[edge].tag;
 
     if (count == 4) {
-      add_tet(ids);
+      // add_tet(ids[0], ids[1], ids[2], ids[3]);
     } else if (count == 6) {
-
+      add_tet(ids[0], ids[2], ids[3], ids[4]);
+      add_tet(ids[0], ids[3], ids[4], ids[5]);
+      add_tet(ids[0], ids[1], ids[3], ids[5]);
+      // add_tet(ids[1], ids[3], ids[4], ids[5]);
     } else {
-      // should not happen
+      // fprintf(stderr, "what?\n"); // should not happen
     }
   }
 
