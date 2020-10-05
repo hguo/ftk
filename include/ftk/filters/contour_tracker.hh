@@ -145,7 +145,7 @@ inline void contour_tracker::write_intersections_vtk(const std::string& filename
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
 }
 
-inline void contour_tracker::write_trajectory_vtk(const std::string& filename) const
+inline void contour_tracker::write_trajectories_vtk(const std::string& filename) const
 {
   if (is_root_proc())
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
