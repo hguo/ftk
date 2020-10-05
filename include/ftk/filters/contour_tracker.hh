@@ -59,6 +59,9 @@ public:
 #endif
 
 protected:
+  virtual int cpdims() const = 0;
+
+protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar;
   };
@@ -113,6 +116,7 @@ inline vtkSmartPointer<vtkPolyData> contour_tracker::get_intersections_vtk() con
   for (const auto &cp : get_intersections()) {
     // double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; // TODO: time
     double p[3] = {cp.x[0], cp.x[1], cp.t};
+    if (cpdims() == 3) p[2] = cp.x[2];
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
   }
