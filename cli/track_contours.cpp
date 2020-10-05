@@ -5,6 +5,7 @@
 #include "ftk/external/cxxopts.hpp"
 #include "ftk/ndarray/synthetic.hh"
 #include "ftk/filters/contour_tracker_2d_regular.hh"
+#include "ftk/filters/contour_tracker_3d_regular.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
@@ -93,26 +94,30 @@ int parse_arguments(int argc, char **argv)
                DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
   const int nt = js["n_timesteps"];
 
-  ftk::contour_tracker_2d_regular tracker;
-  tracker.set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
-  tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
-  tracker.set_end_timestep(nt - 1);
-  tracker.initialize();
-  tracker.set_number_of_threads(nthreads);
-  tracker.set_threshold(threshold);
+  ftk::contour_tracker_regular *tracker;
+  if (DD == 0) tracker = new ftk::contour_tracker_2d_regular; 
+  else tracker = new ftk::contour_tracker_3d_regular;
+
+  tracker->set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
+  tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+  tracker->set_end_timestep(nt - 1);
+  tracker->set_number_of_threads(nthreads);
+  tracker->set_threshold(threshold);
+  tracker->initialize();
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
-    tracker.push_field_data_snapshot(field_data);
+    tracker->push_field_data_snapshot(field_data);
     
-    if (k != 0) tracker.advance_timestep();
-    if (k == nt - 1) tracker.update_timestep();
+    if (k != 0) tracker->advance_timestep();
+    if (k == nt - 1) tracker->update_timestep();
   });
   stream.start();
   stream.finish();
-  tracker.finalize();
+  tracker->finalize();
 
   // tracker.write_intersections_vtk(output_filename);
-  tracker.write_trajectories_vtk(output_filename);
+  // tracker->write_trajectories_vtk(output_filename);
+  delete tracker;
 
   return 0;
 }
