@@ -259,16 +259,19 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
     } else if (count == 6) {
       // Delaunay3D
       vtkSmartPointer<vtkPoints> mypts = vtkPoints::New();
+      vtkSmartPointer<vtkCellArray> myverts = vtkCellArray::New();
       vtkIdType pid[1];
       for (int i = 0; i < count; i ++) {
         double p[3]; // dropping t
         points->GetPoint(ids[i], p);
-        mypts->InsertNextPoint(p);
+        pid[0] = mypts->InsertNextPoint(p);
+        myverts->InsertNextCell(1, pid);
         // fprintf(stderr, "%f, %f, %f\n", p[0], p[1], p[2]);
       }
 
       vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
       poly->SetPoints(mypts);
+      poly->SetVerts(myverts);
 
       vtkSmartPointer<vtkDelaunay3D> delaunay = vtkDelaunay3D::New();
       delaunay->SetInputData(poly);
@@ -280,8 +283,11 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
       for (int i = 0; i < out->GetNumberOfCells(); i ++) {
         vtkSmartPointer<vtkCell> cell = out->GetCell(i);
         if (cell->GetCellType() == VTK_TETRA) {
-          vtkSmartPointer<vtkIdList> ids = cell->GetPointIds();
-          add_tet(ids->GetId(0), ids->GetId(1), ids->GetId(2), ids->GetId(3));
+          vtkSmartPointer<vtkIdList> myids = cell->GetPointIds();
+          add_tet(ids[myids->GetId(0)], 
+              ids[myids->GetId(1)], 
+              ids[myids->GetId(2)], 
+              ids[myids->GetId(3)]);
         }
       }
     } else {
