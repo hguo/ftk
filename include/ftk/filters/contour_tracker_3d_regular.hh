@@ -27,6 +27,9 @@
 #include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkTriangle.h>
 #include <vtkQuad.h>
+#include <vtkPointSet.h>
+#include <vtkDelaunay3D.h>
+#include <vtkCellIterator.h>
 #endif
 
 #if FTK_HAVE_GMP
@@ -252,12 +255,35 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
         ids[count ++] = my_intersections[edge].tag;
 
     if (count == 4) {
-      // add_tet(ids[0], ids[1], ids[2], ids[3]);
+      add_tet(ids[0], ids[1], ids[2], ids[3]);
     } else if (count == 6) {
-      add_tet(ids[0], ids[2], ids[3], ids[4]);
-      add_tet(ids[0], ids[3], ids[4], ids[5]);
-      add_tet(ids[0], ids[1], ids[3], ids[5]);
-      // add_tet(ids[1], ids[3], ids[4], ids[5]);
+      // Delaunay3D
+      vtkSmartPointer<vtkPoints> mypts = vtkPoints::New();
+      vtkIdType pid[1];
+      for (int i = 0; i < count; i ++) {
+        double p[3]; // dropping t
+        points->GetPoint(ids[i], p);
+        mypts->InsertNextPoint(p);
+        // fprintf(stderr, "%f, %f, %f\n", p[0], p[1], p[2]);
+      }
+
+      vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
+      poly->SetPoints(mypts);
+
+      vtkSmartPointer<vtkDelaunay3D> delaunay = vtkDelaunay3D::New();
+      delaunay->SetInputData(poly);
+      delaunay->Update();
+
+      vtkSmartPointer<vtkUnstructuredGrid> out = delaunay->GetOutput();
+      // out->PrintSelf(std::cerr, vtkIndent(2));
+
+      for (int i = 0; i < out->GetNumberOfCells(); i ++) {
+        vtkSmartPointer<vtkCell> cell = out->GetCell(i);
+        if (cell->GetCellType() == VTK_TETRA) {
+          vtkSmartPointer<vtkIdList> ids = cell->GetPointIds();
+          add_tet(ids->GetId(0), ids->GetId(1), ids->GetId(2), ids->GetId(3));
+        }
+      }
     } else {
       // fprintf(stderr, "what?\n"); // should not happen
     }
