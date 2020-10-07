@@ -107,19 +107,25 @@ inline vtkSmartPointer<vtkPolyData> contour_tracker::get_intersections_vtk() con
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
-  
+ 
   vtkIdType pid[1];
-  
   for (const auto &cp : get_intersections()) {
-    // double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; // TODO: time
-    double p[3] = {cp.x[0], cp.x[1], cp.t};
-    if (cpdims() == 3) p[2] = cp.x[2];
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; // TODO: time
+    if (cpdims() == 2) p[2] = cp.t;
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
   }
 
   polyData->SetPoints(points);
   polyData->SetVerts(vertices);
+  
+  vtkSmartPointer<vtkDoubleArray> time_array = vtkSmartPointer<vtkDoubleArray>::New();
+  time_array->SetNumberOfValues(get_intersections().size());
+  int i = 0;
+  for (const auto &cp : get_intersections())
+    time_array->SetValue(i++, cp.t);
+  time_array->SetName("time");
+  polyData->GetPointData()->AddArray(time_array);
 
   return polyData;
 }
