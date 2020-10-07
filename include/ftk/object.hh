@@ -38,6 +38,14 @@ struct object {
 
     std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
   }
+
+  template <typename T>
+  static void parallel_for(const std::set<T>& set, int nthreads, std::function<void(const T&)> f) {
+    std::vector<T> vector(set.size());
+    std::copy(set.begin(), set.end(), vector.begin());
+
+    parallel_for(set.size(), nthreads, [&](int i) { f(vector[i]); } );
+  }
 };
 
 }

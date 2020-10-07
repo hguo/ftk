@@ -235,12 +235,15 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
   grid->SetPoints(points);
   grid->GetPointData()->AddArray(array_time);
 
-  auto add_tet = [&grid](int i0, int i1, int i2, int i3) {
+  std::mutex my_mutex;
+  auto add_tet = [&](int i0, int i1, int i2, int i3) {
+    std::lock_guard<std::mutex> guard(my_mutex);
     vtkIdType ids[4] = {i0, i1, i2, i3};
     grid->InsertNextCell(VTK_TETRA, 4, ids);
   };
 
-  for (const auto &e : related_cells) { // pentachoron
+  parallel_for<element_t>(related_cells, nthreads, [&](const element_t &e) {
+  // for (const auto &e : related_cells) { // pentachoron
     int count = 0;
     vtkIdType ids[10]; // 10 edges
 
@@ -293,7 +296,7 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
     } else {
       // fprintf(stderr, "what?\n"); // should not happen
     }
-  }
+  });
 
   return grid;
 }
