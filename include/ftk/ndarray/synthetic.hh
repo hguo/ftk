@@ -248,7 +248,7 @@ ndarray<T> synthetic_moving_ridge(const std::vector<size_t>& shape, T x0, T rate
   for (auto i = 0; i < scalar.nelem(); i ++) {
     std::vector<int> xi = lattice.from_integer(i);
     T x = xi[0];
-    scalar[i] = (x - x0) * (x - x0);
+    scalar[i] = (x - x0); //  * (x - x0);
   }
 
   return scalar;

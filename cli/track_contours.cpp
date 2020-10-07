@@ -115,8 +115,10 @@ int parse_arguments(int argc, char **argv)
   stream.finish();
   tracker->finalize();
 
-  tracker->write_intersections_vtk(output_filename);
-  // tracker->write_trajectories_vtk(output_filename);
+  if (ends_with(output_filename, "vtu"))
+    tracker->write_trajectories_vtk(output_filename);
+  else if (ends_with(output_filename, "vtp"))
+    tracker->write_intersections_vtk(output_filename);
   delete tracker;
 
   return 0;
