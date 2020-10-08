@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <set>
 #include <functional>
 #include <algorithm>
 #include <ftk/ftk_config.hh>
