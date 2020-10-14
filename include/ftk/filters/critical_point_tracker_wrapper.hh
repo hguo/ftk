@@ -11,6 +11,8 @@
 
 namespace ftk {
 
+typedef std::chrono::high_resolution_clock clock_type;
+
 struct critical_point_tracker_wrapper : public object {
   // json options:
   // - accelerator, string, 
@@ -84,6 +86,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   add_boolean_option("enable_discarding_interval_points", false);
   add_boolean_option("enable_discarding_degenerate_points", false);
   add_boolean_option("enable_ignoring_degenerate_points", false);
+  add_boolean_option("enable_timing", false);
 
   add_number_option("duration_pruning_threshold", 0);
   
@@ -417,6 +420,8 @@ void critical_point_tracker_wrapper::write_intercepted_results(int k, int nt)
 
 void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
+  auto t0 = clock_type::now();
+
   const auto js = stream.get_json();
   const size_t nd = stream.n_dimensions(),
                DW = js["dimensions"][0], 
@@ -461,7 +466,7 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
   
   tracker->initialize();
   configure_tracker_general(comm);
-  
+ 
   if (j.contains("archived_traced_critical_points_filename")) {
     fprintf(stderr, "reading archived traced critical points...\n");
     const std::string filename = j["archived_traced_critical_points_filename"];
@@ -502,9 +507,22 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
       write_sliced_results(k-1);
   });
 
+  auto t1 = clock_type::now();
+
   stream.start();
   stream.finish();
+
+  auto t2 = clock_type::now();
+  
   tracker->finalize();
+  auto t3 = clock_type::now();
+
+  if (j["enable_timing"]) {
+    float t_init = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
+          t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9,
+          t_finalize = std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2).count() * 1e-9;
+    fprintf(stderr, "t_init=%f, t_compute=%f, t_finalize=%f\n", t_init, t_compute, t_finalize);
+  }
   // delete tracker;
 }
 

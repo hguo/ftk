@@ -31,7 +31,7 @@ std::string archived_discrete_critical_points_filename,
 std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
-bool verbose = false, demo = false, show_vtk = false, help = false;
+bool verbose = false, timing = false, show_vtk = false, help = false;
 bool enable_streaming_trajectories = false, 
      enable_discarding_interval_points = false,
      enable_deriving_velocities = false,
@@ -83,6 +83,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(type_filter_str))
     ("nthreads", "Number of threads", 
      cxxopts::value<int>(nthreads))
+    ("timing", "Enable timing", 
+     cxxopts::value<bool>(timing))
     ("a,accelerator", "Accelerator {none|cuda} (experimental)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
     ("stream",  "Stream trajectories (experimental)",
@@ -144,6 +146,7 @@ int parse_arguments(int argc, char **argv)
   j_tracker["intercept_length"] = intercept_length;
 
   j_tracker["nthreads"] = nthreads;
+  j_tracker["enable_timing"] = timing;
 
   if (accelerator != str_none)
     j_tracker["accelerator"] = accelerator;
