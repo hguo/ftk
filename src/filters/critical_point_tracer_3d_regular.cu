@@ -98,7 +98,9 @@ bool check_simplex_cp3t(
     cp.x[2] = x[2];
     cp.t = x[3];
     cp.cond = cond;
-  }
+    return true;
+  } else 
+    return false;
 }
 
 template <int scope>
