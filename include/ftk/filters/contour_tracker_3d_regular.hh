@@ -248,7 +248,7 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
     vtkIdType ids[10]; // 10 edges
 
     std::set<element_t> unique_edges;
-    for (auto tet : e.sides(m)) 
+    for (auto tet : e.sides(m))
       for (auto tri : tet.sides(m))
         for (auto edge : tri.sides(m))
           unique_edges.insert(edge);
@@ -260,7 +260,44 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
     if (count == 4) {
       add_tet(ids[0], ids[1], ids[2], ids[3]);
     } else if (count == 6) {
-      // Delaunay3D
+      // triangulation. // if the pentachoron has six intersected 2-edges, the isovolume must be a prism
+      // (1) find two tets, each of which has a triangular isosurface patch
+      // (2) sort vertex of each patch
+      // (3) staircase triangulation
+
+      vtkIdType triangles[2][3];
+      int triangle_count = 0;
+
+      for (auto tet : e.sides(m)) {
+        int my_count = 0;
+        vtkIdType my_ids[4];
+
+        std::set<element_t> my_unique_edges;
+        for (auto tri : tet.sides(m))
+          for (auto edge : tri.sides(m))
+            my_unique_edges.insert(edge);
+
+        for (auto edge : my_unique_edges)
+          if (my_intersections.find(edge) != my_intersections.end())
+            my_ids[my_count ++] = my_intersections[edge].tag;
+
+        // fprintf(stderr, "my_count=%d\n", my_count);
+        if (my_count == 3) { // triangle
+          for (int i = 0; i < 3; i ++)
+            triangles[triangle_count][i] = my_ids[i];
+          triangle_count ++;
+        }
+      }
+      // fprintf(stderr, "triangle_count=%d\n", triangle_count);
+      assert(triangle_count == 2);
+
+      // staircase triangulation
+      add_tet(triangles[0][0], triangles[0][1], triangles[0][2], triangles[1][2]);
+      add_tet(triangles[0][0], triangles[0][1], triangles[1][1], triangles[1][2]);
+      add_tet(triangles[0][0], triangles[1][0], triangles[1][1], triangles[1][2]);
+    }
+
+#if 0 // vtkDelaunay3D
       vtkSmartPointer<vtkPoints> mypts = vtkPoints::New();
       vtkSmartPointer<vtkCellArray> myverts = vtkCellArray::New();
       vtkIdType pid[1];
@@ -296,6 +333,7 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
     } else {
       // fprintf(stderr, "what?\n"); // should not happen
     }
+#endif
   });
 
   return grid;
