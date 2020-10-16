@@ -19,6 +19,8 @@ struct feature_volume_t {
 
   void relabel();
 
+  feature_surface_t slice(std::function<bool(const feature_point_t&)>) const;
+
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
 #endif
@@ -35,6 +37,34 @@ inline void feature_volume_t::relabel()
 
   for (int i = 0; i < pts.size(); i ++)
     pts[i].id = uf.find(i);
+}
+
+inline feature_surface_t feature_volume_t::slice(std::function<bool(const feature_point_t&)> f) const 
+{
+  feature_surface_t surf;
+
+  std::map<int, int> map; // id, new_id
+  int j = 0;
+  for (int i = 0; i < pts.size(); i ++)
+    if (f(pts[i])) {
+      map[i] = j ++;
+      surf.pts.push_back(pts[i]);
+    }
+
+  for (int i = 0; i < conn.size(); i ++) {
+    const auto &c = conn[i];
+    int count = 0;
+    std::array<int, 4> q;
+    
+    for (int j = 0; j < 4; j ++)
+      if (map.find(c[j]) != map.end())
+        q[count ++] = c[j];
+
+    if (count == 3)
+      surf.conn.push_back({map[q[0]], map[q[1]], map[q[2]]});
+  }
+
+  return surf;
 }
 
 #if FTK_HAVE_VTK
