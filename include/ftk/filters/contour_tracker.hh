@@ -8,6 +8,7 @@
 #include <ftk/filters/feature_point.hh>
 #include <ftk/filters/feature_surface.hh>
 #include <ftk/filters/feature_volume.hh>
+#include <ftk/filters/feature_volume_set.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/external/diy/serialization.hpp>

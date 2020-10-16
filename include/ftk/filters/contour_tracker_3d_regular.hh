@@ -51,6 +51,9 @@ struct contour_tracker_3d_regular : public contour_tracker_regular {
   void update_timestep();
 
 protected:
+  void build_isovolumes();
+
+protected:
   void write_trajectories_vtk(const std::string& filename)  const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> get_trajectories_vtk() const;
@@ -86,10 +89,109 @@ inline void contour_tracker_3d_regular::initialize()
     });
 }
 
+inline void contour_tracker_3d_regular::build_isovolumes()
+{
+  fprintf(stderr, "building isovolumes...\n");
+  feature_volume_t vol;
+
+  int i = 0;
+  for (auto &kv : intersections) {
+    kv.second.id = i ++;
+    vol.pts.push_back(kv.second);
+  }
+
+  std::mutex my_mutex;
+  auto add_tet = [&](int i0, int i1, int i2, int i3) {
+    std::lock_guard<std::mutex> guard(my_mutex);
+    vol.conn.push_back({i0, i1, i2, i3});
+  };
+  
+  parallel_for<element_t>(related_cells, nthreads, [&](const element_t &e) {
+    int count = 0;
+    vtkIdType ids[6]; // 6 intersected edges max
+
+    std::set<element_t> unique_edges;
+    for (auto tet : e.sides(m))
+      for (auto tri : tet.sides(m))
+        for (auto edge : tri.sides(m))
+          unique_edges.insert(edge);
+
+    for (auto edge : unique_edges)
+      if (intersections.find(edge) != intersections.end())
+        ids[count ++] = intersections[edge].id;
+
+    if (count == 4) {
+      add_tet(ids[0], ids[1], ids[2], ids[3]);
+    } else if (count == 6) {
+      // triangulation. // if the pentachoron has six intersected 2-edges, the isovolume must be a prism
+      // (1) find two tets, each of which has a triangular isosurface patch
+      // (2) *sort vertex of each patch  *already sorted
+      // (3) staircase triangulation
+
+      int triangles[2][3], triangle_count = 0;
+
+      for (auto tet : e.sides(m)) {
+        int my_count = 0;
+        vtkIdType my_ids[4];
+
+        std::set<element_t> my_unique_edges;
+        for (auto tri : tet.sides(m))
+          for (auto edge : tri.sides(m))
+            my_unique_edges.insert(edge);
+
+        for (auto edge : my_unique_edges)
+          if (intersections.find(edge) != intersections.end())
+            my_ids[my_count ++] = intersections[edge].id;
+
+        // fprintf(stderr, "my_count=%d\n", my_count);
+        if (my_count == 3) { // triangle
+          for (int i = 0; i < 3; i ++)
+            triangles[triangle_count][i] = my_ids[i];
+          triangle_count ++;
+        }
+      }
+      // fprintf(stderr, "triangle_count=%d\n", triangle_count);
+      assert(triangle_count == 2);
+
+      // staircase triangulation
+      add_tet(triangles[0][0], triangles[0][1], triangles[0][2], triangles[1][2]);
+      add_tet(triangles[0][0], triangles[0][1], triangles[1][1], triangles[1][2]);
+      add_tet(triangles[0][0], triangles[1][0], triangles[1][1], triangles[1][2]);
+    }
+  });
+  fprintf(stderr, "isovolumes built\n");
+}
+
 inline void contour_tracker_3d_regular::finalize()
 {
   diy::mpi::gather(comm, intersections, intersections, get_root_proc());
-  return; 
+  diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
+
+  if (comm.rank() == get_root_proc()) {
+    build_isovolumes();
+    // feature_volume_set_t isovolumes;
+    
+#if 0 // this is not quite efficient; better to directly build feature volume
+    std::set<element_t> elements;
+    for (const auto &kv : intersections)
+      elements.insert(kv.first);
+
+    auto cc = extract_connected_components<element_t, std::set<element_t>>(
+        [&](element_t e) {
+          std::set<element_t> neighbors;
+          for (auto tri : e.side_of(m))
+            for (auto tet : tri.side_of(m))
+              for (auto pen : tet.side_of(m))
+                for (auto tet : pen.sides(m))
+                  for (auto tri : tet.sides(m))
+                    for (auto edge : tri.sides(m))
+                      neighbors.insert(edge);
+          return neighbors;
+        }, elements);
+
+    fprintf(stderr, "#cc=%zu\n", cc.size());
+#endif
+  }
 }
 
 inline void contour_tracker_3d_regular::reset()
