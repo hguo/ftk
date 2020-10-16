@@ -25,6 +25,7 @@ struct feature_volume_t {
 #if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkUnstructuredGrid> feature_volume_t::to_vtu() const
 {
+  fprintf(stderr, "%zu, %zu\n", pts.size(), conn.size());
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   
@@ -50,10 +51,11 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_volume_t::to_vtu() const
 
   for (int i = 0; i < conn.size(); i ++) {
     const auto &c = conn[i];
-    vtkIdType ids[4] = {std::get<0>(c), std::get<1>(c), std::get<2>(c), std::get<3>(c)};
+    vtkIdType ids[4] = {c[0], c[1], c[2], c[3]};
     grid->InsertNextCell(VTK_TETRA, 4, ids);
   }
 
+  // grid->PrintSelf(std::cerr, vtkIndent(2));
   return grid;
 }
 #endif

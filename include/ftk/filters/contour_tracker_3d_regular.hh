@@ -51,16 +51,18 @@ struct contour_tracker_3d_regular : public contour_tracker_regular {
   void update_timestep();
 
 protected:
-  void build_isovolumes();
+  void build_isovolume();
 
 protected:
   void write_trajectories_vtk(const std::string& filename)  const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> get_trajectories_vtk() const;
+  vtkSmartPointer<vtkUnstructuredGrid> get_trajectories_vtk() const; // legacy
 #endif
 
 protected:
   typedef simplicial_regular_mesh_element element_t;
+
+  feature_volume_t isovolume;
   
 protected:
   bool check_simplex(const element_t& s, feature_point_t& cp);
@@ -89,26 +91,25 @@ inline void contour_tracker_3d_regular::initialize()
     });
 }
 
-inline void contour_tracker_3d_regular::build_isovolumes()
+inline void contour_tracker_3d_regular::build_isovolume()
 {
   fprintf(stderr, "building isovolumes...\n");
-  feature_volume_t vol;
 
   int i = 0;
   for (auto &kv : intersections) {
     kv.second.id = i ++;
-    vol.pts.push_back(kv.second);
+    isovolume.pts.push_back(kv.second);
   }
 
   std::mutex my_mutex;
   auto add_tet = [&](int i0, int i1, int i2, int i3) {
     std::lock_guard<std::mutex> guard(my_mutex);
-    vol.conn.push_back({i0, i1, i2, i3});
+    isovolume.conn.push_back({i0, i1, i2, i3});
   };
   
   parallel_for<element_t>(related_cells, nthreads, [&](const element_t &e) {
     int count = 0;
-    vtkIdType ids[6]; // 6 intersected edges max
+    int ids[6]; // 6 intersected edges max
 
     std::set<element_t> unique_edges;
     for (auto tet : e.sides(m))
@@ -159,7 +160,7 @@ inline void contour_tracker_3d_regular::build_isovolumes()
       add_tet(triangles[0][0], triangles[1][0], triangles[1][1], triangles[1][2]);
     }
   });
-  fprintf(stderr, "isovolumes built\n");
+  fprintf(stderr, "isovolumes built, #pts=%zu, #tet=%zu\n", isovolume.pts.size(), isovolume.conn.size());
 }
 
 inline void contour_tracker_3d_regular::finalize()
@@ -168,7 +169,7 @@ inline void contour_tracker_3d_regular::finalize()
   diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
 
   if (comm.rank() == get_root_proc()) {
-    build_isovolumes();
+    build_isovolume();
     // feature_volume_set_t isovolumes;
     
 #if 0 // this is not quite efficient; better to directly build feature volume
@@ -310,7 +311,8 @@ inline void contour_tracker_3d_regular::write_trajectories_vtk(const std::string
     vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
       vtkXMLUnstructuredGridWriter::New();
     writer->SetFileName(filename.c_str());
-    writer->SetInputData( get_trajectories_vtk() );
+    // writer->SetInputData( get_trajectories_vtk() );
+    writer->SetInputData( isovolume.to_vtu() );
     writer->Write();
   }
 }
