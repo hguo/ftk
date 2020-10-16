@@ -2,6 +2,7 @@
 #define _FTK_FEATURE_VOLUME_HH
 
 #include <ftk/filters/feature_surface.hh>
+#include <ftk/basic/simple_union_find.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkDoubleArray.h>
@@ -16,16 +17,30 @@ struct feature_volume_t {
   std::vector<feature_point_t> pts;
   std::vector<std::array<int, 4>> conn;
 
+  void relabel();
+
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
 #endif
 };
 
+inline void feature_volume_t::relabel()
+{
+  simple_union_find<int> uf(pts.size());
+  for (auto tet : conn) {
+    uf.unite(tet[0], tet[1]);
+    uf.unite(tet[0], tet[2]);
+    uf.unite(tet[0], tet[3]);
+  }
+
+  for (int i = 0; i < pts.size(); i ++)
+    pts[i].id = uf.find(i);
+}
 
 #if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkUnstructuredGrid> feature_volume_t::to_vtu() const
 {
-  fprintf(stderr, "%zu, %zu\n", pts.size(), conn.size());
+  // fprintf(stderr, "%zu, %zu\n", pts.size(), conn.size());
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   

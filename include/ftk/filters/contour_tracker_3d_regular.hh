@@ -160,6 +160,8 @@ inline void contour_tracker_3d_regular::build_isovolume()
       add_tet(triangles[0][0], triangles[1][0], triangles[1][1], triangles[1][2]);
     }
   });
+
+  isovolume.relabel();
   fprintf(stderr, "isovolumes built, #pts=%zu, #tet=%zu\n", isovolume.pts.size(), isovolume.conn.size());
 }
 
