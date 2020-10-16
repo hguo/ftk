@@ -262,7 +262,7 @@ vtkSmartPointer<vtkUnstructuredGrid> contour_tracker_3d_regular::get_trajectorie
     } else if (count == 6) {
       // triangulation. // if the pentachoron has six intersected 2-edges, the isovolume must be a prism
       // (1) find two tets, each of which has a triangular isosurface patch
-      // (2) sort vertex of each patch
+      // (2) *sort vertex of each patch  *already sorted
       // (3) staircase triangulation
 
       vtkIdType triangles[2][3];
