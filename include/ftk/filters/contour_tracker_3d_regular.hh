@@ -133,7 +133,7 @@ inline void contour_tracker_3d_regular::build_isovolume()
 
       for (auto tet : e.sides(m)) {
         int my_count = 0;
-        vtkIdType my_ids[4];
+        int my_ids[4];
 
         std::set<element_t> my_unique_edges;
         for (auto tri : tet.sides(m))
