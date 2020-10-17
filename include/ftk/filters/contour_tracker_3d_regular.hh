@@ -17,6 +17,7 @@
 #include <ftk/geometry/curve2vtk.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
+#include <ftk/ndarray/writer.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/filters/contour_tracker_regular.hh>
 #include <ftk/external/diy/serialization.hpp>
@@ -54,10 +55,14 @@ protected:
   void build_isovolume();
 
 protected:
-  void write_trajectories_vtk(const std::string& filename)  const;
+  void write_isovolume_vtu(const std::string& filename) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> get_trajectories_vtk() const; // legacy
+  vtkSmartPointer<vtkUnstructuredGrid> get_isovolume_vtu() const; // legacy
 #endif
+
+  // void write_sliced_vtp(const std::string& pattern) const;
+  void write_sliced_vtu(const std::string& pattern) const;
+  feature_surface_t get_sliced(int t) const;
 
 protected:
   typedef simplicial_regular_mesh_element element_t;
@@ -306,22 +311,48 @@ inline void contour_tracker_3d_regular::simplex_scalars(
   }
 }
 
+feature_surface_t contour_tracker_3d_regular::get_sliced(int t) const
+{
+  return isovolume.slice([&](const feature_point_t& p) {
+    if (p.timestep == t && p.ordinal) return true;
+    else return false;
+  });
+}
+
 #if FTK_HAVE_VTK
-inline void contour_tracker_3d_regular::write_trajectories_vtk(const std::string& filename) const
+inline void contour_tracker_3d_regular::write_isovolume_vtu(const std::string& filename) const
 {
   if (comm.rank() == get_root_proc()) {
     vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
       vtkXMLUnstructuredGridWriter::New();
     writer->SetFileName(filename.c_str());
     writer->SetInputData( isovolume.to_vtu() );
-    // writer->SetInputData( isovolume.slice([](const feature_point_t& p) {
-    //   if (p.timestep == 3 && p.ordinal) return true; else return false; 
-    // }).to_vtu() );
     writer->Write();
   }
 }
+
+inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& pattern) const 
+{
+  if (comm.rank() == get_root_proc()) {
+    for (int i = 0; i < current_timestep; i ++) {
+      const auto filename = ndarray_writer<double>::filename(pattern, i);
+      
+      vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
+        vtkXMLUnstructuredGridWriter::New();
+      writer->SetFileName(filename.c_str());
+      writer->SetInputData(get_sliced(i).to_vtu());
+      writer->Write();
+    }
+  }
+}
 #else
-inline void contour_tracker_3d_regular::write_trajectories_vtk(const std::string& filename) const
+inline void contour_tracker_3d_regular::write_isovolume_vtu(const std::string& filename) const
+{
+  if (is_root_proc())
+    fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
+}
+
+inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& pattern) const 
 {
   if (is_root_proc())
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");

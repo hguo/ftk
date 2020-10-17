@@ -19,8 +19,8 @@ struct feature_surface_t {
   std::vector<std::array<int, 3>> conn;
 
 #if FTK_HAVE_VTK
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const; // preferred
   vtkSmartPointer<vtkPolyData> to_vtp() const;
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
 #endif
 };
 

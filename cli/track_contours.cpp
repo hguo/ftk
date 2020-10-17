@@ -45,6 +45,8 @@ int parse_arguments(int argc, char **argv)
     ("threshold", "Threshold for levelset tracking", cxxopts::value<double>(threshold))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_filename))
+    ("output-type", "Output type {isovolume|sliced|intersections}, by default isovolume", 
+     cxxopts::value<std::string>(output_type)->default_value("isovolume"))
     ("output-format", "Output format {auto|text|vtp}, by default auto", 
      cxxopts::value<std::string>(output_format)->default_value(str_auto))
     ("nthreads", "Number of threads", 
@@ -115,12 +117,15 @@ int parse_arguments(int argc, char **argv)
   stream.finish();
   tracker->finalize();
 
-  if (ends_with(output_filename, "vtu"))
-    tracker->write_trajectories_vtk(output_filename);
-  else if (ends_with(output_filename, "vtp"))
+  if (output_type == "intersections") {
     tracker->write_intersections_vtk(output_filename);
+  } else if (output_type == "sliced") {
+    tracker->write_sliced_vtu(output_filename);
+  } else {
+    tracker->write_isovolume_vtu(output_filename);
+  }
+  
   delete tracker;
-
   return 0;
 }
 

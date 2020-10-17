@@ -56,7 +56,9 @@ public:
   vtkSmartPointer<vtkPolyData> get_intersections_vtk() const;
 #endif
 
-  virtual void write_trajectories_vtk(const std::string& filename) const = 0;
+  virtual void write_isovolume_vtu(const std::string& filename) const = 0;
+  virtual void write_sliced_vtu(const std::string& pattern) const {}
+  virtual void write_sliced_vtp(const std::string& pattern) const {}
 
 protected:
   virtual int cpdims() const = 0;
