@@ -25,6 +25,7 @@
 #if FTK_HAVE_VTK
 #include <vtkTriangle.h>
 #include <vtkQuad.h>
+#include <vtkPolyDataNormals.h>
 #endif
 
 #if FTK_HAVE_GMP
@@ -225,7 +226,18 @@ inline void contour_tracker_2d_regular::write_isovolume_vtu(const std::string& f
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_isovolume_vtp();
-    write_vtp(filename, poly);
+
+    vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
+    normalGenerator->SetInputData(poly);
+    // normalGenerator->ComputePointNormalsOn();
+    normalGenerator->ComputePointNormalsOff();
+    normalGenerator->ComputeCellNormalsOn();
+    // normalGenerator->SetFlipNormals(true);
+    normalGenerator->AutoOrientNormalsOn();
+    normalGenerator->Update();
+
+    // write_vtp(filename, poly);
+    write_vtp(filename, normalGenerator->GetOutput());
   }
 }
 

@@ -75,7 +75,7 @@ protected:
   void trace_connected_components();
 
   void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][4]) const;
-  void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
+  void simplex_values(const std::vector<std::vector<int>>& vertices, double scalars[], double gradients[][3]) const;
 };
 
 
@@ -221,8 +221,8 @@ inline bool contour_tracker_3d_regular::check_simplex(
   int indices[2];
   simplex_indices(vertices, indices);
   
-  double f[2];
-  simplex_scalars(vertices, f);
+  double f[2], g[2][3];
+  simplex_values(vertices, f, g);
  
   const long long factor = 2 << 20;
   long long fi[2];
@@ -238,6 +238,9 @@ inline bool contour_tracker_3d_regular::check_simplex(
   bool succ2 = inverse_lerp_s1v1(f, mu);
   // if (!succ2) return false;
 
+  double grad[3];
+  lerp_s1v3(g, mu, grad);
+
   double X[2][4], x[4];
   simplex_coordinates(vertices, X);
   lerp_s1v4(X, mu, x);
@@ -246,6 +249,9 @@ inline bool contour_tracker_3d_regular::check_simplex(
   p.x[1] = x[1];
   p.x[2] = x[2];
   p.t = x[3];
+  p.v[0] = grad[0];
+  p.v[1] = grad[1];
+  p.v[2] = grad[2];
   p.tag = e.to_integer(m);
   p.ordinal = e.is_ordinal(m);
   p.timestep = current_timestep;
@@ -301,15 +307,18 @@ inline void contour_tracker_3d_regular::simplex_coordinates(
       X[i][j] = vertices[i][j];
 }
 
-inline void contour_tracker_3d_regular::simplex_scalars(
-    const std::vector<std::vector<int>>& vertices, double values[]) const
+inline void contour_tracker_3d_regular::simplex_values(
+    const std::vector<std::vector<int>>& vertices, double scalars[], double grads[][3]) const
 {
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
-    values[i] = field_data_snapshots[iv].scalar(
+    scalars[i] = field_data_snapshots[iv].scalar(
         vertices[i][0],
         vertices[i][1],
         vertices[i][2]);
+    for (int j = 0; j < 3; j ++)
+      grads[i][j] = field_data_snapshots[iv].gradient(
+          j, vertices[i][0], vertices[i][1], vertices[i][2]);
   }
 }
 

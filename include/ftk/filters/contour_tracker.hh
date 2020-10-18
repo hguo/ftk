@@ -65,7 +65,7 @@ protected:
 
 protected:
   struct field_data_snapshot_t {
-    ndarray<double> scalar;
+    ndarray<double> scalar, gradient;
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
@@ -85,6 +85,10 @@ inline void contour_tracker::push_field_data_snapshot(const ndarray<double>& sca
 {
   field_data_snapshot_t snapshot;
   snapshot.scalar = scalar;
+  if (scalar.nd() == 2) 
+    snapshot.gradient = gradient2D(scalar);
+  else 
+    snapshot.gradient = gradient3D(scalar);
 
   field_data_snapshots.emplace_back(snapshot);
 }
