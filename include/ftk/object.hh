@@ -10,6 +10,10 @@
 #include <algorithm>
 #include <ftk/ftk_config.hh>
 #include <ftk/external/diy/mpi.hpp>
+#include <unistd.h>
+#include <sched.h>
+#include <sys/resource.h>
+#include <sys/syscall.h>
 
 namespace ftk {
 
@@ -23,17 +27,30 @@ struct object {
     std::cerr << "WARN: " << str << std::endl;
   }
 
+  static void set_affinity(int cpu) {
+#if !defined(_MSC_VER) && !defined(__APPLE__)
+    cpu_set_t cpu_set;
+    CPU_ZERO(&cpu_set);
+    CPU_SET(cpu, &cpu_set);
+
+    pthread_t thread = pthread_self();
+    pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpu_set);
+#endif
+  }
+
   static void parallel_for(int ntasks, int nthreads, std::function<void(int)> f) {
     nthreads = std::min(ntasks, nthreads);
 
     std::vector<std::thread> workers;
     for (auto i = 1; i < nthreads; i ++) {
       workers.push_back(std::thread([=]() {
+        set_affinity(i);
         for (auto j = i; j < ntasks; j += nthreads)
           f(j);
       }));
     }
 
+    set_affinity(0);
     for (auto j = 0; j < ntasks; j += nthreads) // the main thread
       f(j);
 
