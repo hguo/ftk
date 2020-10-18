@@ -44,13 +44,13 @@ struct object {
     std::vector<std::thread> workers;
     for (auto i = 1; i < nthreads; i ++) {
       workers.push_back(std::thread([=]() {
-        set_affinity(i);
+        // set_affinity(i);
         for (auto j = i; j < ntasks; j += nthreads)
           f(j);
       }));
     }
 
-    set_affinity(0);
+    // set_affinity(0);
     for (auto j = 0; j < ntasks; j += nthreads) // the main thread
       f(j);
 

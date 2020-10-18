@@ -264,12 +264,8 @@ inline void contour_tracker_3d_regular::update_timestep()
   auto func = [=](element_t e) {
     feature_point_t p;
     if (check_simplex(e, p)) {
-      std::lock_guard<std::mutex> guard(mutex);
-      // std::cerr << e << std::endl;
+      std::set<element_t> my_related_cells;
 
-      intersections[e] = p;
-
-#if 1
       auto tris = e.side_of(m);
       for (auto tri : tris) {
         auto tets = tri.side_of(m);
@@ -278,11 +274,17 @@ inline void contour_tracker_3d_regular::update_timestep()
             auto pents = tet.side_of(m);
             for (auto pent : pents) 
               if (pent.valid(m))
-                related_cells.insert(pent); 
+                my_related_cells.insert(pent); 
           }
         }
       }
-#endif
+     
+      {
+        std::lock_guard<std::mutex> guard(mutex);
+        // std::cerr << e << std::endl;
+        intersections[e] = p;
+        related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      }
     }
   };
 
