@@ -288,6 +288,7 @@ public: // netcdf
   void from_netcdf(const std::string& filename, const std::string& varname);
   void from_netcdf(int ncid, const std::string& varname);
   void from_netcdf(int ncid, int varid);
+  void from_netcdf_slice(const std::string& filename, const std::string& varname, int k);
   // void to_netcdf(int ncid, const std::string& varname);
   // void to_netcdf(int ncid, int varid);
   void to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const;
