@@ -64,20 +64,6 @@ T cond_inverse_lerp_s2v2(const T V[3][2])
 
 template <typename L>
 __device__ __host__
-inline bool integer_inverse_lerp_s2v2(const L V[3][2])
-{
-#if 0
-  T M[3][3] = {
-    {V[0][0], V[0][1], V[0][2]},
-    {V[1][0], V[1][1], V[1][2]},
-    {T(1), T(1), T(1)}
-  };
-  T adjM[3][3];
-#endif
-}
-
-template <typename L>
-__device__ __host__
 inline bool integer_inverse_lerp_s1v2(const L V[2][2])
 {
   const L A[2] = {V[0][0] - V[1][0], V[0][1] - V[1][1]},
