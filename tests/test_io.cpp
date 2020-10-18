@@ -62,8 +62,8 @@ TEST_CASE("io_write_vti_moving_extremum_2d_synthetic") {
   CHECK(write(js_moving_extremum_2d_synthetic, jw_moving_extremum_2d_vti));
 }
 
-TEST_CASE("io_write_vti_moving_ridge_3d_synthetic") {
-  CHECK(write(js_moving_ridge_3d_synthetic, jw_moving_ridge_3d_vti));
+TEST_CASE("io_write_vti_moving_ramp_3d_synthetic") {
+  CHECK(write(js_moving_ramp_3d_synthetic, jw_moving_ramp_3d_vti));
 }
 #endif
 
