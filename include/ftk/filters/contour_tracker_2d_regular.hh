@@ -303,7 +303,7 @@ vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_isovolume_vtp() con
   return polyData;
 }
 #else
-inline void contour_tracker_2d_regular::write_trajectories_vtk(const std::string& filename) const
+inline void contour_tracker_2d_regular::write_isovolume_vtu(const std::string& filename) const
 {
   if (is_root_proc())
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
