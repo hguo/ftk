@@ -274,13 +274,15 @@ inline void contour_tracker_3d_regular::update_timestep()
 
       auto tris = e.side_of(m);
       for (auto tri : tris) {
-        auto tets = tri.side_of(m);
-        for (auto tet : tets) {
-          if (tet.valid(m)) {
-            auto pents = tet.side_of(m);
-            for (auto pent : pents) 
-              if (pent.valid(m))
-                my_related_cells.insert(pent); 
+        if (tri.valid(m)) {
+          auto tets = tri.side_of(m);
+          for (auto tet : tets) {
+            if (tet.valid(m)) {
+              auto pents = tet.side_of(m);
+              for (auto pent : pents) 
+                if (pent.valid(m))
+                  my_related_cells.insert(pent); 
+            }
           }
         }
       }
