@@ -26,6 +26,7 @@
 #include <vtkTriangle.h>
 #include <vtkQuad.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkPCANormalEstimation.h>
 #endif
 
 #if FTK_HAVE_GMP
@@ -227,6 +228,8 @@ inline void contour_tracker_2d_regular::write_isovolume_vtu(const std::string& f
   if (comm.rank() == get_root_proc()) {
     auto poly = get_isovolume_vtp();
 
+    write_vtp(filename, poly);
+#if 0
     vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
     normalGenerator->SetInputData(poly);
     // normalGenerator->ComputePointNormalsOn();
@@ -236,8 +239,21 @@ inline void contour_tracker_2d_regular::write_isovolume_vtu(const std::string& f
     normalGenerator->AutoOrientNormalsOn();
     normalGenerator->Update();
 
-    // write_vtp(filename, poly);
     write_vtp(filename, normalGenerator->GetOutput());
+#endif
+
+#if 0
+    vtkSmartPointer<vtkPCANormalEstimation> normals = vtkSmartPointer<vtkPCANormalEstimation>::New();
+    normals->SetSampleSize(10);
+    normals->SetInputData(poly);
+    normals->FlipNormalsOn();
+    normals->SetNormalOrientationToGraphTraversal();
+    // normals->SetNormalOrientationToAsComputed();
+    // normals->SetNormalOrientationToPoint();
+    normals->Update();
+    poly->GetPointData()->SetNormals( normals->GetOutput()->GetPointData()->GetArray(0) );
+    write_vtp(filename, poly);
+#endif
   }
 }
 
