@@ -41,15 +41,21 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp() const
   array_time->SetNumberOfComponents(1);
   array_time->SetNumberOfTuples(pts.size());
 
+  vtkSmartPointer<vtkDataArray> array_grad = vtkDoubleArray::New();
+  array_grad->SetNumberOfComponents(3);
+  array_grad->SetNumberOfTuples(pts.size());
+
   for (int i = 0; i < pts.size(); i ++) {
     const auto &p = pts[i];
     points->InsertNextPoint(p.x[0], p.x[1], p.x[2]);
     array_id->SetTuple1(i, p.id);
     array_time->SetTuple1(i, p.t);
+    array_grad->SetTuple3(i, p.v[0], p.v[1], p.v[2]);
   }
   poly->SetPoints(points);
   poly->GetPointData()->AddArray(array_id);
   poly->GetPointData()->AddArray(array_time);
+  poly->GetPointData()->SetNormals(array_grad);
 
   for (int i = 0; i < conn.size(); i ++) {
     const auto &c = conn[i];
@@ -78,16 +84,22 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
   array_time->SetName("time");
   array_time->SetNumberOfComponents(1);
   array_time->SetNumberOfTuples(pts.size());
+  
+  vtkSmartPointer<vtkDataArray> array_grad = vtkDoubleArray::New();
+  array_grad->SetNumberOfComponents(3);
+  array_grad->SetNumberOfTuples(pts.size());
 
   for (int i = 0; i < pts.size(); i ++) {
     const auto &p = pts[i];
     points->InsertNextPoint(p.x[0], p.x[1], p.x[2]);
     array_id->SetTuple1(i, p.id);
     array_time->SetTuple1(i, p.t);
+    array_grad->SetTuple3(i, p.v[0], p.v[1], p.v[2]);
   }
   grid->SetPoints(points);
   grid->GetPointData()->AddArray(array_id);
   grid->GetPointData()->AddArray(array_time);
+  grid->GetPointData()->SetNormals(array_grad);
 
   for (int i = 0; i < conn.size(); i ++) {
     const auto &c = conn[i];
