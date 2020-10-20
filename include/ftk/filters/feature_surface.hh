@@ -122,7 +122,6 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
 
 inline void feature_surface_t::reorient()
 {
-#if 0
   fprintf(stderr, "reorienting, #pts=%zu, #tris=%zu\n", pts.size(), conn.size());
   auto edge = [](int i, int j) {
     if (i > j) std::swap(i, j);
@@ -151,40 +150,40 @@ inline void feature_surface_t::reorient()
           return -1;
       }
 
+    assert(false);
     return 0;
   };
 
   // 2. reorientate triangles with bfs
   std::set<int> visited;
   std::queue<int> Q;
-  Q.push(std::make_tuple(0, 1));
+  Q.push(0);
+  visited.insert(0);
 
   while (!Q.empty()) {
     auto current = Q.front();
     Q.pop();
 
-    const int i = std::get<0>(current);
-    visited.insert(i);
-
-    if (std::get<1>(current) == -1) { // reorder the current triangle
-      const int i = current;
-      fprintf(stderr, "flipping %d\n", i);
-      std::swap(conn[i][0], conn[i][1]);
-    }
+    const int i = current;
 
     for (int j = 0; j < 3; j ++) {
       auto e = edge(conn[i][j], conn[i][(j+1)%3]);
       auto neighbors = edge_triangle[e];
       neighbors.erase(i);
 
+      // fprintf(stderr, "#neighbors=%zu\n", neighbors.size());
       for (auto k : neighbors)
         if (visited.find(k) == visited.end()) {
           // fprintf(stderr, "pushing %d, chi=%d\n", k, chirality(conn[i], conn[k]));
-          Q.push(std::make_tuple(k, chirality(conn[i], conn[k])));
+          if (chirality(conn[i], conn[k]) < 0) {
+            // fprintf(stderr, "flipping %d\n", k);
+            std::swap(conn[k][0], conn[k][1]);
+          }
+          Q.push(k); // std::make_tuple(k, chirality(conn[i], conn[k])));
+          visited.insert(k);
         }
     }
   }
-#endif
 }
 
 }
