@@ -87,6 +87,11 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
   array_time->SetNumberOfComponents(1);
   array_time->SetNumberOfTuples(pts.size());
   
+  vtkSmartPointer<vtkDataArray> array_scalar = vtkDoubleArray::New();
+  array_scalar->SetName("scalar");
+  array_scalar->SetNumberOfComponents(1);
+  array_scalar->SetNumberOfTuples(pts.size());
+  
   vtkSmartPointer<vtkDataArray> array_grad = vtkDoubleArray::New();
   array_grad->SetNumberOfComponents(3);
   array_grad->SetNumberOfTuples(pts.size());
@@ -96,11 +101,13 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
     points->InsertNextPoint(p.x[0], p.x[1], p.x[2]);
     array_id->SetTuple1(i, p.id);
     array_time->SetTuple1(i, p.t);
+    array_scalar->SetTuple1(i, p.scalar[0]);
     array_grad->SetTuple3(i, p.v[0], p.v[1], p.v[2]);
   }
   grid->SetPoints(points);
   grid->GetPointData()->AddArray(array_id);
   grid->GetPointData()->AddArray(array_time);
+  grid->GetPointData()->AddArray(array_scalar);
   grid->GetPointData()->SetNormals(array_grad);
 
   for (int i = 0; i < conn.size(); i ++) {

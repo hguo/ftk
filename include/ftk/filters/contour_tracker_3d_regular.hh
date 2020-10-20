@@ -238,7 +238,7 @@ inline bool contour_tracker_3d_regular::check_simplex(
     fi[i] = f[i] * factor;
   }
 
-  bool succ = robust_critical_point_in_simplex1(f, indices);
+  bool succ = robust_critical_point_in_simplex1(fi, indices);
   if (!succ) return false;
 
   double mu[2];
@@ -247,6 +247,8 @@ inline bool contour_tracker_3d_regular::check_simplex(
 
   double grad[3];
   lerp_s1v3(g, mu, grad);
+  
+  double ff = lerp_s1(f, mu) + threshold;
 
   double X[2][4], x[4];
   simplex_coordinates(vertices, X);
@@ -259,6 +261,7 @@ inline bool contour_tracker_3d_regular::check_simplex(
   p.v[0] = grad[0];
   p.v[1] = grad[1];
   p.v[2] = grad[2];
+  p.scalar[0] = ff;
   p.tag = e.to_integer(m);
   p.ordinal = e.is_ordinal(m);
   p.timestep = current_timestep;
