@@ -354,6 +354,19 @@ inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& patt
   if (comm.rank() == get_root_proc()) {
     for (int i = 0; i < current_timestep; i ++) {
       const auto filename = ndarray_writer<double>::filename(pattern, i);
+      
+      auto poly = isovolume.slice_time(i).to_vtp();
+   
+      vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
+      normalGenerator->SetInputData(poly);
+      normalGenerator->ConsistencyOn();
+      normalGenerator->ComputePointNormalsOff();
+      normalGenerator->ComputeCellNormalsOn();
+      // normalGenerator->SetFlipNormals(true);
+      // normalGenerator->AutoOrientNormalsOn();
+      normalGenerator->Update();
+
+      write_vtp(filename, normalGenerator->GetOutput());
     
 #if 0
       vtkSmartPointer<vtkPLYWriter> writer = vtkPLYWriter::New();
@@ -363,7 +376,7 @@ inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& patt
       writer->SetInputData(sliced.to_vtp());
       writer->Write();
 #endif
-#if 1
+#if 0
       vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
         vtkXMLUnstructuredGridWriter::New();
       writer->SetFileName(filename.c_str());
