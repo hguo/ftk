@@ -26,7 +26,7 @@
 #include <vtkTriangle.h>
 #include <vtkQuad.h>
 #include <vtkPolyDataNormals.h>
-#include <vtkPCANormalEstimation.h>
+// #include <vtkPCANormalEstimation.h>
 #endif
 
 #if FTK_HAVE_GMP
