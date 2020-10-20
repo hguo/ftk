@@ -122,6 +122,7 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
 
 inline void feature_surface_t::reorient()
 {
+#if 0
   fprintf(stderr, "reorienting, #pts=%zu, #tris=%zu\n", pts.size(), conn.size());
   auto edge = [](int i, int j) {
     if (i > j) std::swap(i, j);
@@ -132,29 +133,58 @@ inline void feature_surface_t::reorient()
   std::map<std::tuple<int, int>, std::set<int>> edge_triangle;
   for (int i = 0; i < conn.size(); i ++) {
     auto tri = conn[i];
-    edge_triangle[edge(tri[0], tri[1])].insert(i);
-    edge_triangle[edge(tri[1], tri[2])].insert(i);
-    edge_triangle[edge(tri[0], tri[2])].insert(i);
+    for (int j = 0; j < 3; j ++)
+      edge_triangle[edge(tri[j], tri[(j+1)%3])].insert(i);
   }
 
-  std::vector<std::set<int>> neighbors(conn.size());
-  auto add_neighbors = [&neighbors](int i, const std::set<int>& set) {
-    for (const auto j : set)
-      if (i != j) 
-        neighbors[i].insert(j);
+  auto chirality = [](std::array<int, 3> a, std::array<int, 3> b) {
+    std::vector<std::tuple<int, int>> ea, eb;
+    for (int i = 0; i < 3; i ++) {
+      ea.push_back(std::make_tuple(a[i], a[(i+1)%3]));
+      eb.push_back(std::make_tuple(b[i], b[(i+1)%3]));
+    }
+
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 3; j ++) {
+        if (ea[i] == eb[i]) return 1;
+        else if (ea[i] == std::make_tuple(std::get<1>(eb[j]), std::get<0>(eb[j]))) 
+          return -1;
+      }
+
+    return 0;
   };
- 
-  for (int i = 0; i < conn.size(); i ++) {
-    auto tri = conn[i];
-    add_neighbors(i, edge_triangle[edge(tri[0], tri[1])]);
-    add_neighbors(i, edge_triangle[edge(tri[1], tri[2])]);
-    add_neighbors(i, edge_triangle[edge(tri[0], tri[2])]);
+
+  // 2. reorientate triangles with bfs
+  std::set<int> visited;
+  std::queue<int> Q;
+  Q.push(std::make_tuple(0, 1));
+
+  while (!Q.empty()) {
+    auto current = Q.front();
+    Q.pop();
+
+    const int i = std::get<0>(current);
+    visited.insert(i);
+
+    if (std::get<1>(current) == -1) { // reorder the current triangle
+      const int i = current;
+      fprintf(stderr, "flipping %d\n", i);
+      std::swap(conn[i][0], conn[i][1]);
+    }
+
+    for (int j = 0; j < 3; j ++) {
+      auto e = edge(conn[i][j], conn[i][(j+1)%3]);
+      auto neighbors = edge_triangle[e];
+      neighbors.erase(i);
+
+      for (auto k : neighbors)
+        if (visited.find(k) == visited.end()) {
+          // fprintf(stderr, "pushing %d, chi=%d\n", k, chirality(conn[i], conn[k]));
+          Q.push(std::make_tuple(k, chirality(conn[i], conn[k])));
+        }
+    }
   }
-
-  // for (int i = 0; i < neighbors.size(); i ++)
-    // fprintf(stderr, "%d, %zu\n", i, neighbors[i].size());
-
-  // 2. reorientate triangles via bfs
+#endif
 }
 
 }

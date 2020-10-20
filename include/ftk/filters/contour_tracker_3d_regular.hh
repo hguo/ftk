@@ -26,6 +26,7 @@
 #if FTK_HAVE_VTK
 #include <vtkUnstructuredGrid.h>
 #include <vtkXMLUnstructuredGridWriter.h>
+#include <vtkPLYWriter.h>
 #include <vtkTriangle.h>
 #include <vtkQuad.h>
 #include <vtkPointSet.h>
@@ -353,7 +354,13 @@ inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& patt
   if (comm.rank() == get_root_proc()) {
     for (int i = 0; i < current_timestep; i ++) {
       const auto filename = ndarray_writer<double>::filename(pattern, i);
-      
+     
+      vtkSmartPointer<vtkPLYWriter> writer = vtkPLYWriter::New();
+      writer->SetFileName(filename.c_str());
+      auto sliced = isovolume.slice_time(i);
+      writer->SetInputData(sliced.to_vtp());
+      writer->Write();
+#if 0
       vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
         vtkXMLUnstructuredGridWriter::New();
       writer->SetFileName(filename.c_str());
@@ -363,6 +370,7 @@ inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& patt
 
       writer->SetInputData(sliced.to_vtu());
       writer->Write();
+#endif
     }
   }
 }
