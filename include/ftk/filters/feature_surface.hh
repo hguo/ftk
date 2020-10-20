@@ -16,7 +16,9 @@ namespace ftk {
 
 struct feature_surface_t {
   std::vector<feature_point_t> pts;
-  std::vector<std::array<int, 3>> conn;
+  std::vector<std::array<int, 3>> conn; // triangles
+
+  void reorient();
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const; // preferred
@@ -110,6 +112,43 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
   return grid;
 }
 #endif
+
+inline void feature_surface_t::reorient()
+{
+  fprintf(stderr, "reorienting, #pts=%zu, #tris=%zu\n", pts.size(), conn.size());
+  auto edge = [](int i, int j) {
+    if (i > j) std::swap(i, j);
+    return std::make_tuple(i, j);
+  };
+
+  // 1. build triangle-triangle graph
+  std::map<std::tuple<int, int>, std::set<int>> edge_triangle;
+  for (int i = 0; i < conn.size(); i ++) {
+    auto tri = conn[i];
+    edge_triangle[edge(tri[0], tri[1])].insert(i);
+    edge_triangle[edge(tri[1], tri[2])].insert(i);
+    edge_triangle[edge(tri[0], tri[2])].insert(i);
+  }
+
+  std::vector<std::set<int>> neighbors(conn.size());
+  auto add_neighbors = [&neighbors](int i, const std::set<int>& set) {
+    for (const auto j : set)
+      if (i != j) 
+        neighbors[i].insert(j);
+  };
+ 
+  for (int i = 0; i < conn.size(); i ++) {
+    auto tri = conn[i];
+    add_neighbors(i, edge_triangle[edge(tri[0], tri[1])]);
+    add_neighbors(i, edge_triangle[edge(tri[1], tri[2])]);
+    add_neighbors(i, edge_triangle[edge(tri[0], tri[2])]);
+  }
+
+  // for (int i = 0; i < neighbors.size(); i ++)
+    // fprintf(stderr, "%d, %zu\n", i, neighbors[i].size());
+
+  // 2. reorientate triangles via bfs
+}
 
 }
 

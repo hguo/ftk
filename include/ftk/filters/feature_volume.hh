@@ -20,6 +20,7 @@ struct feature_volume_t {
   void relabel();
 
   feature_surface_t slice(std::function<bool(const feature_point_t&)>) const;
+  feature_surface_t slice_time(int t) const;
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
@@ -51,6 +52,7 @@ inline feature_surface_t feature_volume_t::slice(std::function<bool(const featur
       surf.pts.push_back(pts[i]);
     }
 
+  std::set<std::array<int, 3>> tris;
   for (int i = 0; i < conn.size(); i ++) {
     const auto &c = conn[i];
     int count = 0;
@@ -58,12 +60,64 @@ inline feature_surface_t feature_volume_t::slice(std::function<bool(const featur
     
     for (int j = 0; j < 4; j ++)
       if (map.find(c[j]) != map.end())
-        q[count ++] = c[j];
+        q[count ++] = map[c[j]];
 
-    if (count == 3)
-      surf.conn.push_back({map[q[0]], map[q[1]], map[q[2]]});
+    if (count == 3) {
+      std::array<int, 3> q3 = {q[0], q[1], q[2]};
+      std::sort(q3.begin(), q3.end());
+      tris.insert(q3);
+      // surf.conn.push_back({q[0], q[1], q[2]});
+    }
   }
 
+  for (auto tri : tris)
+    surf.conn.push_back(tri);
+
+  return surf;
+}
+
+inline feature_surface_t feature_volume_t::slice_time(int t) const
+{
+  feature_surface_t surf;
+
+  std::map<int, int> map; // id, new_id
+  int j = 0;
+  for (int i = 0; i < pts.size(); i ++)
+    if (pts[i].timestep == t && pts[i].ordinal) {
+      map[i] = j ++;
+      surf.pts.push_back(pts[i]);
+    }
+
+  std::set<std::array<int, 3>> tris;
+  for (int i = 0; i < conn.size(); i ++) {
+    const auto &c = conn[i];
+    int count = 0;
+    std::array<int, 4> q;
+ 
+    bool valid = true;
+    for (int j = 0; j < 4; j ++)
+      if (pts[c[j]].timestep != t)
+        valid = false;
+
+    if (valid) {
+      for (int j = 0; j < 4; j ++)
+        if (map.find(c[j]) != map.end()) {
+          q[count ++] = map[c[j]];
+        }
+
+      if (count == 3) {
+        std::array<int, 3> q3 = {q[0], q[1], q[2]};
+        std::sort(q3.begin(), q3.end());
+        tris.insert(q3);
+        // surf.conn.push_back({q[0], q[1], q[2]});
+      }
+    }
+  }
+
+  for (auto tri : tris)
+    surf.conn.push_back(tri);
+
+  fprintf(stderr, "sliced time=%d, #pts=%zu, #tri=%zu\n", t, surf.pts.size(), surf.conn.size());
   return surf;
 }
 

@@ -62,7 +62,6 @@ protected:
 
   // void write_sliced_vtp(const std::string& pattern) const;
   void write_sliced_vtu(const std::string& pattern) const;
-  feature_surface_t get_sliced(int t) const;
 
 protected:
   typedef simplicial_regular_mesh_element element_t;
@@ -101,7 +100,7 @@ inline void contour_tracker_3d_regular::build_isovolume()
   fprintf(stderr, "building isovolumes...\n");
 
   int i = 0;
-  for (auto &kv : intersections) {
+  for (auto &kv : intersections) { 
     kv.second.id = i ++;
     isovolume.pts.push_back(kv.second);
   }
@@ -131,9 +130,10 @@ inline void contour_tracker_3d_regular::build_isovolume()
     } else if (count == 6) {
       // triangulation. // if the pentachoron has six intersected 2-edges, the isovolume must be a prism
       // (1) find two tets, each of which has a triangular isosurface patch
-      // (2) *sort vertex of each patch  *already sorted
+      // (2) sort vertices of each patch
       // (3) staircase triangulation
 
+      int quadrilaterals[3][4], quadrilaterals_count = 0;
       int triangles[2][3], triangle_count = 0;
 
       for (auto tet : e.sides(m)) {
@@ -142,8 +142,10 @@ inline void contour_tracker_3d_regular::build_isovolume()
 
         std::set<element_t> my_unique_edges;
         for (auto tri : tet.sides(m))
-          for (auto edge : tri.sides(m))
-            my_unique_edges.insert(edge);
+          if (tri.valid(m)) 
+            for (auto edge : tri.sides(m))
+              if (edge.valid(m))
+                my_unique_edges.insert(edge);
 
         for (auto edge : my_unique_edges)
           if (intersections.find(edge) != intersections.end())
@@ -154,12 +156,17 @@ inline void contour_tracker_3d_regular::build_isovolume()
           for (int i = 0; i < 3; i ++)
             triangles[triangle_count][i] = my_ids[i];
           triangle_count ++;
+        } else if (my_count == 4) { // quadrilateral
+          for (int i = 0; i < 4; i ++) 
+            quadrilaterals[quadrilaterals_count][i] = my_ids[i];
+          quadrilaterals_count ++;
         }
       }
       // fprintf(stderr, "triangle_count=%d\n", triangle_count);
       assert(triangle_count == 2);
+      assert(quadrilaterals_count == 3);
 
-      // staircase triangulation
+      // staircase triangulatio8n
       add_tet(triangles[0][0], triangles[0][1], triangles[0][2], triangles[1][2]);
       add_tet(triangles[0][0], triangles[0][1], triangles[1][1], triangles[1][2]);
       add_tet(triangles[0][0], triangles[1][0], triangles[1][1], triangles[1][2]);
@@ -256,7 +263,9 @@ inline bool contour_tracker_3d_regular::check_simplex(
   p.ordinal = e.is_ordinal(m);
   p.timestep = current_timestep;
 
-  // std::cerr << e << std::endl;
+  // std::cerr << p.ordinal << ", " 
+  //   << p.timestep << ", "
+  //   << e << std::endl;
   // print_matrix<double, 2, 4>("X", X);
   // fprintf(stderr, "%f, %f, %f, %f\n", p.x[0], p.x[1], p.x[2], p.t);
 
@@ -322,14 +331,6 @@ inline void contour_tracker_3d_regular::simplex_values(
   }
 }
 
-feature_surface_t contour_tracker_3d_regular::get_sliced(int t) const
-{
-  return isovolume.slice([&](const feature_point_t& p) {
-    if (p.timestep == t && p.ordinal) return true;
-    else return false;
-  });
-}
-
 #if FTK_HAVE_VTK
 inline void contour_tracker_3d_regular::write_isovolume_vtu(const std::string& filename) const
 {
@@ -351,7 +352,11 @@ inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& patt
       vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = 
         vtkXMLUnstructuredGridWriter::New();
       writer->SetFileName(filename.c_str());
-      writer->SetInputData(get_sliced(i).to_vtu());
+
+      auto sliced = isovolume.slice_time(i);
+      sliced.reorient();
+
+      writer->SetInputData(sliced.to_vtu());
       writer->Write();
     }
   }
