@@ -3,6 +3,8 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/filters/tdgl_vortex_tracker.hh>
+#include <ftk/numeric/inverse_linear_interpolation_solver.hh>
+#include <ftk/numeric/linear_interpolation.hh>
 
 namespace ftk {
 
@@ -28,13 +30,21 @@ protected:
   std::set<element_t> related_cells;
 
 protected:
+  bool check_simplex(const element_t& s, feature_point_t& cp);
+  
   void simplex_values(
       const std::vector<std::vector<int>>& vertices,
       float X[][4],
+      float A[][3], 
       float rho[], float phi[],
       float re[], float im[]);
-  
-  bool check_simplex(const element_t& s, feature_point_t& cp);
+
+  void magnetic_potential(const tdgl_metadata_t& m, const float X[3], float A[3]) const;
+
+  static float line_integral(float X0[], float X1[], float A0[], float A1[]);
+
+  template <typename T> inline static T mod2pi(T x) { T y = fmod(x, 2*M_PI); if (y<0) y+= 2*M_PI; return y; }
+  template <typename T> static T mod2pi1(T x) { return mod2pi(x + M_PI) - M_PI; }
 
 protected: // config
   lattice domain, array_domain;
@@ -79,7 +89,51 @@ inline bool tdgl_vortex_tracker_3d_regular::check_simplex(
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
 
-  return false;
+  float X[3][4], // coordinates
+        A[3][3]; // averaged magnetic potential
+  float rho[3], phi[3], re[3], im[3]; // values
+  simplex_values(vertices, X, A, rho, phi, re, im);
+
+  // compute contour integral
+  float delta[3], phase_shift = 0;
+  for (int i = 0; i < 3; i ++) { // ignoring quasi periodical boundary conditions
+    int j = (i+1) % 3;
+    float li = line_integral(X[i], X[j], A[i], A[j]);
+    delta[i] = mod2pi1( phi[j] - phi[i] - li ); // gauge transformation
+    phase_shift -= delta[i];
+  }
+
+  // check contour integral
+  float critera = phase_shift / (2 * M_PI);
+  if (std::abs(critera) < 0.5) return false; // ignoring chiralities
+
+  // guage transformation
+  float psi[3][2]; // in re/im
+  for (int i = 0; i < 3; i ++) {
+    if (i != 0) phi[i] = phi[i-1] + delta[i-1];
+    psi[i][0] = rho[i] * cos(phi[i]);
+    psi[i][1] = rho[i] * sin(phi[i]);
+  }
+
+  // locate zero
+  float mu[3], // barycentric coordinates
+        cond; // condition number
+  inverse_lerp_s2v2(psi, mu, &cond);
+
+  // interpolation
+  float x[4];
+  lerp_s2v4(X, mu, x);
+
+  // result
+  p.x[0] = x[0];
+  p.x[1] = x[1];
+  p.x[2] = x[2];
+  p.t = x[3];
+  p.cond = cond;
+  p.tag = e.to_integer(m);
+  p.timestep = current_timestep;
+
+  return true;
 }
 
 inline void tdgl_vortex_tracker_3d_regular::update_timestep()
@@ -102,6 +156,7 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
 inline void tdgl_vortex_tracker_3d_regular::simplex_values(
       const std::vector<std::vector<int>>& vertices,
       float X[][4],
+      float A[][3],
       float rho[], float phi[],
       float re[], float im[])
 {
@@ -116,6 +171,29 @@ inline void tdgl_vortex_tracker_3d_regular::simplex_values(
     
     for (int j = 0; j < 4; j ++)
       X[i][j] = vertices[i][j];
+      
+    for (int j = 0; j < 4; j ++)
+      magnetic_potential(f.meta, X[i], A[i]);
+  }
+}
+  
+inline float tdgl_vortex_tracker_3d_regular::line_integral(float X0[], float X1[], float A0[], float A1[])
+{
+  float dX[3] = {X1[0] - X0[0], X1[1] - X0[1], X1[2] - X0[2]};
+  float A[3]  = {A0[0] + A1[0], A0[1] + A1[1], A0[2] + A1[2]};
+  return 0.5 * inner_product3(A, dX);
+}
+
+inline void tdgl_vortex_tracker_3d_regular::magnetic_potential(const tdgl_metadata_t& m, const float X[3], float A[3]) const
+{
+  if (m.B[1]>0) {
+    A[0] = -m.Kex;
+    A[1] = X[0] * m.B[2];
+    A[2] = -X[0] * m.B[1];
+  } else {
+    A[0] = -X[1] * m.B[2] - m.Kex;
+    A[1] = 0;
+    A[2] = X[1] * m.B[0];
   }
 }
 
