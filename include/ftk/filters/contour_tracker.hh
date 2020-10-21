@@ -147,7 +147,7 @@ inline void contour_tracker::write_intersections_vtp(const std::string& filename
   }
 }
 #else
-inline void contour_tracker::write_intersections_vtk(const std::string& filename) const
+inline void contour_tracker::write_intersections_vtp(const std::string& filename) const
 {
   if (is_root_proc())
     fprintf(stderr, "[FTK] fatal: FTK not compiled with VTK.\n");
