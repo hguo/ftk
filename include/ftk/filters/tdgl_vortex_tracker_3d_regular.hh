@@ -118,8 +118,16 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
       if (intersections.find(tri) != intersections.end())
         ids[count ++] = intersections[tri].id;
 
+    if (count == 3) {
+      add_tri(ids[0], ids[1], ids[2]);
+    } else if (count == 4) {
+      add_tri(ids[0], ids[1], ids[2]);
+      add_tri(ids[1], ids[3], ids[2]);
+    }
     // fprintf(stderr, "count=%d\n", count); // WIP: triangulation
   });
+
+  fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.conn.size());
 }
 
 inline void tdgl_vortex_tracker_3d_regular::reset()
