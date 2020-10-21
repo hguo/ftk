@@ -129,6 +129,7 @@ inline bool tdgl_vortex_tracker_3d_regular::check_simplex(
   float mu[3], // barycentric coordinates
         cond; // condition number
   inverse_lerp_s2v2(psi, mu, &cond);
+  // mu[0] = mu[1] = mu[2] = 0.3333;
 
   // interpolation
   float x[4];
@@ -152,7 +153,7 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
-  auto func = [&](element_t e) {
+  auto func = [=](element_t e) {
     feature_point_t p;
     if (check_simplex(e, p)) {
       std::lock_guard<std::mutex> guard(mutex);
@@ -176,13 +177,18 @@ inline void tdgl_vortex_tracker_3d_regular::simplex_values(
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     const auto &f = field_data_snapshots[iv];
 
-    rho[i] = f.rho(vertices[i][0], vertices[i][1], vertices[i][2]);
-    phi[i] = f.phi(vertices[i][0], vertices[i][1], vertices[i][2]);
-    re[i] = f.re(vertices[i][0], vertices[i][1], vertices[i][2]);
-    im[i] = f.im(vertices[i][0], vertices[i][1], vertices[i][2]);
+    const size_t idx = f.rho.index(std::vector<int>({vertices[i][0], vertices[i][1], vertices[i][2]}));
+    rho[i] = f.rho[idx];
+    phi[i] = f.phi[idx];
+    re[i] = f.re[idx];
+    im[i] = f.im[idx];
+    // rho[i] = f.rho(vertices[i][0], vertices[i][1], vertices[i][2]);
+    // phi[i] = f.phi(vertices[i][0], vertices[i][1], vertices[i][2]);
+    // re[i] = f.re(vertices[i][0], vertices[i][1], vertices[i][2]);
+    // im[i] = f.im(vertices[i][0], vertices[i][1], vertices[i][2]);
     
     for (int j = 0; j < 4; j ++)
-      X[i][j] = vertices[i][j];
+      X[i][j] = vertices[i][j] * f.meta.cell_lengths[j] + f.meta.origins[j];
       
     for (int j = 0; j < 4; j ++)
       magnetic_potential(f.meta, X[i], A[i]);
@@ -198,7 +204,7 @@ inline float tdgl_vortex_tracker_3d_regular::line_integral(float X0[], float X1[
 
 inline void tdgl_vortex_tracker_3d_regular::magnetic_potential(const tdgl_metadata_t& m, const float X[3], float A[3]) const
 {
-  if (m.B[1]>0) {
+  if (m.B[1] > 0) {
     A[0] = -m.Kex;
     A[1] = X[0] * m.B[2];
     A[2] = -X[0] * m.B[1];
