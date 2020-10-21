@@ -47,7 +47,7 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(output_filename))
     ("output-type", "Output type {isovolume|sliced|intersections}, by default isovolume", 
      cxxopts::value<std::string>(output_type)->default_value("isovolume"))
-    ("output-format", "Output format {auto|text|vtp}, by default auto", 
+    ("output-format", "Output format {auto|text|vtp|vtu|ply}, by default auto", 
      cxxopts::value<std::string>(output_format)->default_value(str_auto))
     ("nthreads", "Number of threads", 
      cxxopts::value<int>(nthreads))
@@ -118,7 +118,7 @@ int parse_arguments(int argc, char **argv)
   tracker->finalize();
 
   if (output_type == "intersections") {
-    tracker->write_intersections_vtk(output_filename);
+    tracker->write_intersections_vtp(output_filename);
   } else if (output_type == "sliced") {
     tracker->write_sliced_vtu(output_filename);
   } else {

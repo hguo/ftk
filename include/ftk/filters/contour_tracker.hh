@@ -51,9 +51,9 @@ public:
   virtual std::vector<feature_point_t> get_intersections() const = 0;
 
   void write_intersections(const std::string& filenames) const;
-  void write_intersections_vtk(const std::string& filenames) const;
+  void write_intersections_vtp(const std::string& filenames) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_intersections_vtk() const;
+  vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
 #endif
 
   virtual void write_isovolume_vtu(const std::string& filename) const = 0;
@@ -111,7 +111,7 @@ inline bool contour_tracker::advance_timestep()
 }
 
 #if FTK_HAVE_VTK
-inline vtkSmartPointer<vtkPolyData> contour_tracker::get_intersections_vtk() const
+inline vtkSmartPointer<vtkPolyData> contour_tracker::get_intersections_vtp() const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -119,7 +119,7 @@ inline vtkSmartPointer<vtkPolyData> contour_tracker::get_intersections_vtk() con
  
   vtkIdType pid[1];
   for (const auto &cp : get_intersections()) {
-    double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; // TODO: time
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; 
     if (cpdims() == 2) p[2] = cp.t;
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
@@ -139,10 +139,10 @@ inline vtkSmartPointer<vtkPolyData> contour_tracker::get_intersections_vtk() con
   return polyData;
 }
 
-inline void contour_tracker::write_intersections_vtk(const std::string& filename) const
+inline void contour_tracker::write_intersections_vtp(const std::string& filename) const
 {
   if (comm.rank() == get_root_proc()) {
-    auto poly = get_intersections_vtk();
+    auto poly = get_intersections_vtp();
     write_vtp(filename, poly);
   }
 }
