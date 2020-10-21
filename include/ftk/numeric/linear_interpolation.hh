@@ -40,6 +40,16 @@ inline void lerp_s1v3(const T V[2][3], const T mu[2], T v[3])
 
 template <typename T>
 __device__ __host__
+inline void lerp_s1v4(const T V[2][4], const T mu[2], T v[4])
+{
+  v[0] = V[0][0] * mu[0] + V[1][0] * mu[1];
+  v[1] = V[0][1] * mu[0] + V[1][1] * mu[1];
+  v[2] = V[0][2] * mu[0] + V[1][2] * mu[1];
+  v[3] = V[0][3] * mu[0] + V[1][3] * mu[1];
+}
+
+template <typename T>
+__device__ __host__
 inline T lerp_s2(const T v[3], const T mu[3])
 {
   return v[0] * mu[0] + v[1] * mu[1] + v[2] * mu[2];

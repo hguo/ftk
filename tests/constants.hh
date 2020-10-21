@@ -38,9 +38,9 @@ const json js_moving_extremum_3d_synthetic = {
   {"name", "moving_extremum_3d"}
 };
 
-const json js_moving_ridge_3d_synthetic = {
+const json js_moving_ramp_3d_synthetic = {
   {"type", "synthetic"},
-  {"name", "moving_ridge_3d"}
+  {"name", "moving_ramp_3d"}
 };
 
 const json js_moving_extremum_2d_vti = {
@@ -153,10 +153,10 @@ const json jw_moving_extremum_2d_vti = {
   {"variable", "scalar"}
 };
 
-const json jw_moving_ridge_3d_vti = {
+const json jw_moving_ramp_3d_vti = {
   {"nd", 3},
   {"format", "vti"},
-  {"filename", "moving_ridge_3d_-%04d.vti"},
+  {"filename", "moving_ramp_3d_-%04d.vti"},
   {"variable", "scalar"}
 };
 

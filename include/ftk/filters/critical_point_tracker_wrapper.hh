@@ -530,7 +530,7 @@ void critical_point_tracker_wrapper::xgc_post_process()
 {
   fprintf(stderr, "post processing for xgc...\n");
 
-  tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
+  tracker->select_trajectories([](const ftk::feature_curve_t& traj) {
     // if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
     
     if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MAXIMUM && traj.max[0] > 5.0) return true;
@@ -543,13 +543,13 @@ void critical_point_tracker_wrapper::xgc_post_process()
   });
   
   auto &trajs = tracker->get_traced_critical_points();
-  trajs.foreach([](ftk::critical_point_traj_t& t) {
+  trajs.foreach([](ftk::feature_curve_t& t) {
     t.discard_interval_points();
     t.derive_velocity();
   });
   
   tracker->slice_traced_critical_points();
-  tracker->select_sliced_critical_points([](const ftk::critical_point_t& cp) {
+  tracker->select_sliced_critical_points([](const ftk::feature_point_t& cp) {
     // if (cp.scalar[1] < 0.18 || cp.scalar[1] > 0.3) return false;
     if (cp.type == ftk::CRITICAL_POINT_2D_MAXIMUM && cp.scalar[0] > 5.0) return true;
     else if (cp.type == ftk::CRITICAL_POINT_2D_MINIMUM && cp.scalar[0] < -5.0) return true;
@@ -561,7 +561,7 @@ void critical_point_tracker_wrapper::post_process()
 {
   auto &trajs = tracker->get_traced_critical_points();
 
-  trajs.foreach([](ftk::critical_point_traj_t& t) {
+  trajs.foreach([](ftk::feature_curve_t& t) {
     t.discard_high_cond();
     t.smooth_ordinal_types();
     t.smooth_interval_types();
@@ -571,18 +571,18 @@ void critical_point_tracker_wrapper::post_process()
   });
   if (j["duration_pruning_threshold"] > 0) {
     const double threshold = j["duration_pruning_threshold"];
-    trajs.filter([&](const critical_point_traj_t& traj) {
+    trajs.filter([&](const feature_curve_t& traj) {
       if (traj.tmax - traj.tmin < threshold) return false;
       else return true;
     });
   }
   trajs.split_all();
   if (j["enable_discarding_interval_points"] == true) {
-    trajs.foreach([](ftk::critical_point_traj_t& t) {
+    trajs.foreach([](ftk::feature_curve_t& t) {
       t.discard_interval_points();
     });
   }
-  trajs.foreach([](ftk::critical_point_traj_t& t) {
+  trajs.foreach([](ftk::feature_curve_t& t) {
     t.reorder();
     t.adjust_time();
     // t.relabel(k);
@@ -593,7 +593,7 @@ void critical_point_tracker_wrapper::post_process()
     xgc_post_process();
   
   if (j.contains("enable_deriving_velocities")) {
-    trajs.foreach([](ftk::critical_point_traj_t& t) {
+    trajs.foreach([](ftk::feature_curve_t& t) {
       t.discard_interval_points();
       t.derive_velocity();
       t.update_statistics();

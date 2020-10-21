@@ -15,6 +15,7 @@
 #include <cassert>
 #include <iterator>
 #include <functional>
+#include <ftk/object.hh>
 #include <ftk/mesh/lattice.hh>
 #include <ftk/external/diy/serialization.hpp>
 
@@ -87,7 +88,7 @@ struct simplicial_regular_mesh_element {
 };
 
 
-struct simplicial_regular_mesh {
+struct simplicial_regular_mesh : public object {
   friend class simplicial_regular_mesh_element;
   typedef simplicial_regular_mesh_element iterator;
 
@@ -948,8 +949,10 @@ inline void simplicial_regular_mesh::element_for(
           lambda(i);
       });
 #else
+  // set_affinity(0);
   std::vector<std::thread> workers;
   for (size_t i = 1; i < nthreads; i ++) {
+    // set_affinity(i);
     workers.push_back(std::thread([=]() {
       for (size_t j = i; j < ntasks; j += nthreads)
         lambda(j);
