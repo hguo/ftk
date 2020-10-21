@@ -20,13 +20,22 @@ struct feature_surface_t {
   std::vector<std::array<int, 3>> tris; 
   std::vector<std::array<int, 4>> quads;
 
-  void reorient();
+  void triangulate(); // WIP
+  void reorient(); // WIP
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const; // preferred
   vtkSmartPointer<vtkPolyData> to_vtp() const;
 #endif
 };
+
+inline feature_surface_t::triangulate()
+{
+  // 1. find all edges of triangles
+  // 2. for each quad, find all combinations of edges
+  //    - there should be at most four edges identified
+  //    - TODO
+}
 
 #if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp() const

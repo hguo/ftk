@@ -1,3 +1,7 @@
+if (FTK_BUILD_PYFTK)
+  include_directories (${PYTHON_INCLUDE_DIRS})
+endif ()
+
 file (GLOB_RECURSE ftk_sources *.cpp)
 add_library (ftk SHARED ${ftk_sources} ${ftk_cuda_sources})
 
