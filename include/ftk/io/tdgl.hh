@@ -2,6 +2,8 @@
 #define _TDGL_IO_HH
 
 #include <ftk/ftk_config.hh>
+#include <ftk/ndarray.hh>
+#include <iostream>
 
 namespace ftk {
 
@@ -19,21 +21,21 @@ struct tdgl_metadata_t {
 }; 
 
 struct tdgl_reader {
-  tdgl_reader(const std::string& filename, 
-      bool derive_rho_phi_ = true, 
-      bool derive_re_im_ = true,
-      bool derive_J_ = true) :
-    derive_rho_phi(derive_rho_phi_), 
-    derive_re_im(derive_re_im_),
+  tdgl_reader(const std::string& filename_, 
+      bool read_field_data_ = true,
+      bool derive_J_ = true) : 
+    filename(filename_),
+    read_field_data(read_field_data_),
     derive_J(derive_J_) {}
 
   bool read();
 
 public:
-  bool derive_rho_phi, derive_re_im, derive_J;
+  bool read_field_data, derive_J;
 
+  const std::string& filename;
   tdgl_metadata_t meta;
-  ndarray<float> rho_phi, re_im, J;
+  ndarray<float> rho, phi, re, im, J;
 };
 
 }

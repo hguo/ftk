@@ -1208,7 +1208,7 @@ void ndarray<T>::to_png(const std::string& filename) const
 
 // see https://www.csc.kth.se/~weinkauf/notes/amiramesh.html
 template <>
-bool ndarray<float>::from_amira(const std::string& filename)
+inline bool ndarray<float>::from_amira(const std::string& filename)
 {
   auto find_and_jump = [](const char* buffer, const char* SearchString) {
     const char* FoundLoc = strstr(buffer, SearchString);

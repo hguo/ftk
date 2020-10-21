@@ -49,6 +49,11 @@ inline void tdgl_vortex_tracker_3d_regular::initialize()
     });
 }
 
+inline void tdgl_vortex_tracker_3d_regular::finalize()
+{
+  // TODO
+}
+
 inline void tdgl_vortex_tracker_3d_regular::reset()
 {
   current_timestep = 0;

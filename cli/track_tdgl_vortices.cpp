@@ -77,7 +77,7 @@ int parse_arguments(int argc, char **argv)
   auto filenames = ftk::ndarray<float>::glob(input_pattern);
   if (ntimesteps != 0) filenames.resize(ntimesteps);
 
-  ftk::tdgl_reader meta_reader(filenames[0], false, false, false); // read metadata without read actuall data
+  ftk::tdgl_reader meta_reader(filenames[0], false); // read metadata without read actuall data
   meta_reader.read();
   const auto &meta = meta_reader.meta;
 
@@ -92,10 +92,12 @@ int parse_arguments(int argc, char **argv)
   tracker.initialize();
 
   for (int k = 0; k < filenames.size(); k ++) {
-    ftk::tdgl_reader reader(filenames[k], true, true, false);
+    ftk::tdgl_reader reader(filenames[k]);
     reader.read();
 
-    tracker.push_field_data_snapshot(reader.meta, reader.rho_phi, reader.re_im);
+    tracker.push_field_data_snapshot(reader.meta, 
+        reader.rho, reader.phi, 
+        reader.re, reader.im);
     
     if (k != 0) tracker.advance_timestep();
     if (k == nt - 1) tracker.update_timestep();

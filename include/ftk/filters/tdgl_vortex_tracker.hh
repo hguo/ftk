@@ -35,10 +35,12 @@ public:
 
 public:
   bool pop_field_data_snapshot();
-  virtual void push_field_data_snapshot(
+  void push_field_data_snapshot(
       const tdgl_metadata_t &meta,
-      const ndarray<float> &rho_phi,
-      const ndarray<float> &re_im
+      const ndarray<float> &rho, 
+      const ndarray<float> &phi, 
+      const ndarray<float> &re, 
+      const ndarray<float> &im 
   );
 
   virtual void set_current_timestep(int t) {current_timestep = t;}
@@ -49,7 +51,7 @@ public:
 protected:
   struct field_data_snapshot_t {
     tdgl_metadata_t meta;
-    ndarray<float> re_im, rho_phi;
+    ndarray<float> rho, phi, re, im;
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
@@ -66,6 +68,32 @@ inline bool tdgl_vortex_tracker::advance_timestep()
 
   current_timestep ++;
   return field_data_snapshots.size() > 0;
+}
+
+inline bool tdgl_vortex_tracker::pop_field_data_snapshot()
+{
+  if (field_data_snapshots.size() > 0) {
+    field_data_snapshots.pop_front();
+    return true;
+  } else return false;
+}
+  
+inline void tdgl_vortex_tracker::push_field_data_snapshot(
+      const tdgl_metadata_t &meta,
+      const ndarray<float> &rho, 
+      const ndarray<float> &phi, 
+      const ndarray<float> &re, 
+      const ndarray<float> &im 
+  )
+{
+  field_data_snapshot_t snapshot;
+  snapshot.meta = meta;
+  snapshot.rho = rho;
+  snapshot.phi = phi;
+  snapshot.re = re;
+  snapshot.im = im;
+
+  field_data_snapshots.emplace_back(snapshot);
 }
 
 }
