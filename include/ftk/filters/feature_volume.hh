@@ -71,7 +71,7 @@ inline feature_surface_t feature_volume_t::slice(std::function<bool(const featur
   }
 
   for (auto tri : tris)
-    surf.conn.push_back(tri);
+    surf.tris.push_back(tri);
 
   return surf;
 }
@@ -115,9 +115,9 @@ inline feature_surface_t feature_volume_t::slice_time(int t) const
   }
 
   for (auto tri : tris)
-    surf.conn.push_back(tri);
+    surf.tris.push_back(tri);
 
-  fprintf(stderr, "sliced time=%d, #pts=%zu, #tri=%zu\n", t, surf.pts.size(), surf.conn.size());
+  fprintf(stderr, "sliced time=%d, #pts=%zu, #tri=%zu\n", t, surf.pts.size(), surf.tris.size());
   return surf;
 }
 

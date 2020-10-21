@@ -108,7 +108,7 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
   std::mutex my_mutex;
   auto add_tri = [&](int i0, int i1, int i2) {
     std::lock_guard<std::mutex> guard(my_mutex);
-    surfaces.conn.push_back({i0, i1, i2});
+    surfaces.tris.push_back({i0, i1, i2});
   };
 
   parallel_for<element_t>(related_cells, nthreads, [&](const element_t &e) {
@@ -134,7 +134,7 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
     // fprintf(stderr, "count=%d\n", count); // WIP: triangulation
   });
 
-  fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.conn.size());
+  fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.tris.size());
 }
 
 inline void tdgl_vortex_tracker_3d_regular::reset()

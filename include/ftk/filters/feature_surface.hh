@@ -16,7 +16,8 @@ namespace ftk {
 
 struct feature_surface_t {
   std::vector<feature_point_t> pts;
-  std::vector<std::array<int, 3>> conn; // triangles
+  std::vector<std::array<int, 3>> tris; 
+  std::vector<std::array<int, 4>> quads;
 
   void reorient();
 
@@ -59,8 +60,8 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp() const
   poly->GetPointData()->AddArray(array_time);
   poly->GetPointData()->SetNormals(array_grad);
 
-  for (int i = 0; i < conn.size(); i ++) {
-    const auto &c = conn[i];
+  for (int i = 0; i < tris.size(); i ++) {
+    const auto &c = tris[i];
     vtkSmartPointer<vtkTriangle> tri = vtkTriangle::New();
     tri->GetPointIds()->SetId(0, c[0]);
     tri->GetPointIds()->SetId(1, c[1]);
@@ -110,8 +111,8 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
   grid->GetPointData()->AddArray(array_scalar);
   grid->GetPointData()->SetNormals(array_grad);
 
-  for (int i = 0; i < conn.size(); i ++) {
-    const auto &c = conn[i];
+  for (int i = 0; i < tris.size(); i ++) {
+    const auto &c = tris[i];
     vtkIdType ids[3] = {c[0], c[1], c[2]};
     grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
   }
@@ -122,7 +123,7 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
 
 inline void feature_surface_t::reorient()
 {
-  fprintf(stderr, "reorienting, #pts=%zu, #tris=%zu\n", pts.size(), conn.size());
+  fprintf(stderr, "reorienting, #pts=%zu, #tris=%zu\n", pts.size(), tris.size());
   auto edge = [](int i, int j) {
     if (i > j) std::swap(i, j);
     return std::make_tuple(i, j);
@@ -130,8 +131,8 @@ inline void feature_surface_t::reorient()
 
   // 1. build triangle-triangle graph
   std::map<std::tuple<int, int>, std::set<int>> edge_triangle;
-  for (int i = 0; i < conn.size(); i ++) {
-    auto tri = conn[i];
+  for (int i = 0; i < tris.size(); i ++) {
+    auto tri = tris[i];
     for (int j = 0; j < 3; j ++)
       edge_triangle[edge(tri[j], tri[(j+1)%3])].insert(i);
   }
@@ -167,19 +168,19 @@ inline void feature_surface_t::reorient()
     const int i = current;
 
     for (int j = 0; j < 3; j ++) {
-      auto e = edge(conn[i][j], conn[i][(j+1)%3]);
+      auto e = edge(tris[i][j], tris[i][(j+1)%3]);
       auto neighbors = edge_triangle[e];
       neighbors.erase(i);
 
       // fprintf(stderr, "#neighbors=%zu\n", neighbors.size());
       for (auto k : neighbors)
         if (visited.find(k) == visited.end()) {
-          // fprintf(stderr, "pushing %d, chi=%d\n", k, chirality(conn[i], conn[k]));
-          if (chirality(conn[i], conn[k]) < 0) {
+          // fprintf(stderr, "pushing %d, chi=%d\n", k, chirality(tris[i], tris[k]));
+          if (chirality(tris[i], tris[k]) < 0) {
             // fprintf(stderr, "flipping %d\n", k);
-            std::swap(conn[k][0], conn[k][1]);
+            std::swap(tris[k][0], tris[k][1]);
           }
-          Q.push(k); // std::make_tuple(k, chirality(conn[i], conn[k])));
+          Q.push(k); // std::make_tuple(k, chirality(tris[i], tris[k])));
           visited.insert(k);
         }
     }
