@@ -68,22 +68,30 @@ int parse_arguments(int argc, char **argv)
   if (output_filename.empty())
     fatal("Missing '--output'.");
   
-  fprintf(stderr, "SUMMARY\n=============\n");
-  // std::cerr << "input=" << stream.get_json() << std::endl;
-  fprintf(stderr, "output_format=%s\n", output_format.c_str());
-  fprintf(stderr, "nthreads=%d\n", nthreads);
-  fprintf(stderr, "=============\n");
-
   auto filenames = ftk::ndarray<float>::glob(input_pattern);
+  if (filenames.empty()) 
+    fatal("unable to find matching filenames.");
+
   if (ntimesteps != 0) filenames.resize(ntimesteps);
 
   ftk::tdgl_reader meta_reader(filenames[0], false); // read metadata without read actuall data
   meta_reader.read();
   const auto &meta = meta_reader.meta;
-
-  ftk::tdgl_vortex_tracker_3d_regular tracker;
+  
   const size_t DW = meta.dims[0], DH = meta.dims[1], DD = meta.dims[2];
   const int nt = filenames.size();
+  
+  fprintf(stderr, "SUMMARY\n=============\n");
+  // std::cerr << "input=" << stream.get_json() << std::endl;
+  fprintf(stderr, "input_pattern=%s\n", input_pattern.c_str());
+  fprintf(stderr, "dims=%zu, %zu, %zu\n", DW, DH, DD);
+  fprintf(stderr, "nt=%d\n", nt);
+  fprintf(stderr, "output_format=%s\n", output_format.c_str());
+  fprintf(stderr, "nthreads=%d\n", nthreads);
+  fprintf(stderr, "=============\n");
+
+
+  ftk::tdgl_vortex_tracker_3d_regular tracker;
 
   tracker.set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
