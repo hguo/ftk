@@ -21,18 +21,20 @@ struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
   void update_timestep();
  
 protected:
-  void simplex_values(
-      const std::vector<std::vector<int>>& vertices,
-      float X[][4],
-      float rho[], float phi[],
-      float re[], float im[]);
-
-protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
   
   std::map<element_t, feature_point_t> intersections;
   std::set<element_t> related_cells;
+
+protected:
+  void simplex_values(
+      const std::vector<std::vector<int>>& vertices,
+      float X[][4],
+      float rho[], float phi[],
+      float re[], float im[]);
+  
+  bool check_simplex(const element_t& s, feature_point_t& cp);
 
 protected: // config
   lattice domain, array_domain;
@@ -71,9 +73,30 @@ inline void tdgl_vortex_tracker_3d_regular::reset()
   tdgl_vortex_tracker::reset();
 }
 
+inline bool tdgl_vortex_tracker_3d_regular::check_simplex(
+    const element_t& e, feature_point_t& p)
+{
+  if (!e.valid(m)) return false; // check if the 2-simplex is valid
+  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
+
+  return false;
+}
+
 inline void tdgl_vortex_tracker_3d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+
+  auto func = [&](element_t e) {
+    feature_point_t p;
+    if (check_simplex(e, p)) {
+      std::lock_guard<std::mutex> guard(mutex);
+      intersections[e] = p;
+    }
+  };
+
+  m.element_for_ordinal(1, current_timestep, func, nthreads);
+  if (field_data_snapshots.size() >= 2) // interval
+    m.element_for_interval(1, current_timestep, current_timestep+1, func, nthreads);
 }
   
 inline void tdgl_vortex_tracker_3d_regular::simplex_values(
