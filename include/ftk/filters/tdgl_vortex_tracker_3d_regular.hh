@@ -9,6 +9,7 @@
 
 #if FTK_HAVE_VTK
 #include <vtkPolyDataNormals.h>
+#include <vtkPLYWriter.h>
 #endif
 
 namespace ftk {
@@ -298,7 +299,6 @@ inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::s
 inline void tdgl_vortex_tracker_3d_regular::write_surfaces_vtp(const std::string& filename) const 
 {
   if (comm.rank() == get_root_proc()) {
-
     auto poly = surfaces.to_vtp();
       
     vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
@@ -309,8 +309,14 @@ inline void tdgl_vortex_tracker_3d_regular::write_surfaces_vtp(const std::string
     // normalGenerator->SetFlipNormals(true);
     normalGenerator->AutoOrientNormalsOn();
     normalGenerator->Update();
-  
-    write_vtp(filename, surfaces.to_vtp());
+
+    write_vtp(filename, poly);
+#if 0
+    vtkSmartPointer<vtkPLYWriter> writer = vtkPLYWriter::New();
+    writer->SetFileName(filename.c_str());
+    writer->SetInputData(poly);
+    writer->Write();
+#endif
   }
 }
 
