@@ -131,7 +131,7 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
       // std::lock_guard<std::mutex> guard(my_mutex);
       // surfaces.quads.push_back({ids[0], ids[1], ids[2], ids[3]});
       add_tri(ids[0], ids[1], ids[2]);
-      add_tri(ids[1], ids[3], ids[2]);
+      add_tri(ids[0], ids[1], ids[3]);
     } else if (count == 5) {
       // std::lock_guard<std::mutex> guard(my_mutex);
       // surfaces.pentagons.push_back({ids[0], ids[1], ids[2], ids[3], ids[4]});

@@ -21,6 +21,10 @@ if (FTK_HAVE_BOOST)
   target_link_libraries (ftk ${Boost_LIBRARIES})
 endif ()
 
+if (FTK_HAVE_CGAL)
+  target_link_libraries (ftk CGAL::CGAL)
+endif ()
+
 if (FTK_HAVE_GMP)
   target_link_libraries (ftk ${GMP_LIBRARIES})
 endif ()
