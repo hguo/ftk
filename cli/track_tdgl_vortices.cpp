@@ -12,7 +12,7 @@
 
 // global variables
 std::string input_pattern;
-std::string output_filename, output_type, output_format;
+std::string output_pattern, output_type, output_format;
 std::string accelerator;
 size_t ntimesteps = 0;
 int nthreads = std::thread::hardware_concurrency();
@@ -33,7 +33,7 @@ int parse_arguments(int argc, char **argv)
     ("n,timesteps", "Number of timesteps (override)", 
      cxxopts::value<size_t>(ntimesteps))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
-     cxxopts::value<std::string>(output_filename))
+     cxxopts::value<std::string>(output_pattern))
     ("output-type", "Output type {surfaces|sliced|intersections}, by default surfaces", 
      cxxopts::value<std::string>(output_type)->default_value("surfaces"))
     ("output-format", "Output format {text|vtp|vtu|ply}",
@@ -65,7 +65,7 @@ int parse_arguments(int argc, char **argv)
   if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
     fatal("invalid '--accelerator'");
 
-  if (output_filename.empty())
+  if (output_pattern.empty())
     fatal("Missing '--output'.");
   
   auto filenames = ftk::ndarray<float>::glob(input_pattern);
@@ -113,16 +113,12 @@ int parse_arguments(int argc, char **argv)
   
   tracker.finalize();
 
-  tracker.write_intersections_vtp(output_filename);
-#if 0
-  if (output_type == "intersections") {
-    tracker->write_intersections_vtp(output_filename);
-  } else if (output_type == "sliced") {
-    tracker->write_vortices_vtp(output_filename);
-  } else {
-    tracker->write_surfaces_vtp(output_filename);
-  }
-#endif
+  if (output_type == "intersections")
+    tracker.write_intersections_vtp(output_pattern);
+  else if (output_type == "sliced")
+    tracker.write_sliced_vtp(output_pattern);
+  else 
+    tracker.write_surfaces_vtp(output_pattern);
   
   return 0;
 }

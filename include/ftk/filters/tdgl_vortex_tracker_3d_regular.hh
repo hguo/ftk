@@ -7,6 +7,10 @@
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/geometry/points2vtk.hh>
 
+#if FTK_HAVE_VTK
+#include <vtkPolyDataNormals.h>
+#endif
+
 namespace ftk {
 
 struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
@@ -27,6 +31,8 @@ public:
   void build_vortex_surfaces();
 
   void write_intersections_vtp(const std::string& filename) const;
+  void write_sliced_vtp(const std::string& pattern) const {}
+  void write_surfaces_vtp(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
 #endif
@@ -122,7 +128,8 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
       add_tri(ids[0], ids[1], ids[2]);
     } else if (count == 4) {
       add_tri(ids[0], ids[1], ids[2]);
-      add_tri(ids[1], ids[3], ids[2]);
+      // add_tri(ids[1], ids[3], ids[2]);
+      add_tri(ids[0], ids[2], ids[3]);
     }
     // fprintf(stderr, "count=%d\n", count); // WIP: triangulation
   });
@@ -285,6 +292,25 @@ inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::s
 {
   if (comm.rank() == get_root_proc())
     write_vtp(filename, get_intersections_vtp());
+}
+
+inline void tdgl_vortex_tracker_3d_regular::write_surfaces_vtp(const std::string& filename) const 
+{
+  if (comm.rank() == get_root_proc()) {
+
+    auto poly = surfaces.to_vtp();
+      
+    vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
+    normalGenerator->SetInputData(poly);
+    normalGenerator->ConsistencyOn();
+    normalGenerator->ComputePointNormalsOn();
+    normalGenerator->ComputeCellNormalsOn();
+    // normalGenerator->SetFlipNormals(true);
+    normalGenerator->AutoOrientNormalsOn();
+    normalGenerator->Update();
+  
+    write_vtp(filename, surfaces.to_vtp());
+  }
 }
 
 inline vtkSmartPointer<vtkPolyData> tdgl_vortex_tracker_3d_regular::get_intersections_vtp() const
