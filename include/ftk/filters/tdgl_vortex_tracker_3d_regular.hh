@@ -19,7 +19,14 @@ struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
   void reset();
 
   void update_timestep();
-  
+ 
+protected:
+  void simplex_values(
+      const std::vector<std::vector<int>>& vertices,
+      float X[][4],
+      float rho[], float phi[],
+      float re[], float im[]);
+
 protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
@@ -67,6 +74,26 @@ inline void tdgl_vortex_tracker_3d_regular::reset()
 inline void tdgl_vortex_tracker_3d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+}
+  
+inline void tdgl_vortex_tracker_3d_regular::simplex_values(
+      const std::vector<std::vector<int>>& vertices,
+      float X[][4],
+      float rho[], float phi[],
+      float re[], float im[])
+{
+  for (int i = 0; i < vertices.size(); i ++) {
+    const int iv = vertices[i][3] == current_timestep ? 0 : 1;
+    const auto &f = field_data_snapshots[iv];
+
+    rho[i] = f.rho(vertices[i][0], vertices[i][1], vertices[i][2]);
+    phi[i] = f.phi(vertices[i][0], vertices[i][1], vertices[i][2]);
+    re[i] = f.re(vertices[i][0], vertices[i][1], vertices[i][2]);
+    im[i] = f.im(vertices[i][0], vertices[i][1], vertices[i][2]);
+    
+    for (int j = 0; j < 4; j ++)
+      X[i][j] = vertices[i][j];
+  }
 }
 
 }
