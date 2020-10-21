@@ -8,6 +8,7 @@
 #include <vtkUnsignedIntArray.h>
 #include <vtkPolyData.h>
 #include <vtkTriangle.h>
+#include <vtkQuad.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkXMLPolyDataWriter.h>
 #endif
@@ -63,10 +64,16 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp() const
   for (int i = 0; i < tris.size(); i ++) {
     const auto &c = tris[i];
     vtkSmartPointer<vtkTriangle> tri = vtkTriangle::New();
-    tri->GetPointIds()->SetId(0, c[0]);
-    tri->GetPointIds()->SetId(1, c[1]);
-    tri->GetPointIds()->SetId(2, c[2]);
+    for (int j = 0; j < 3; j ++)
+      tri->GetPointIds()->SetId(j, c[j]);
     cells->InsertNextCell(tri);
+  }
+  for (int i = 0; i < quads.size(); i ++) {
+    const auto &q = quads[i];
+    vtkSmartPointer<vtkQuad> quad = vtkQuad::New();
+    for (int j = 0; j < 4; j ++)
+      quad->GetPointIds()->SetId(j, q[j]);
+    cells->InsertNextCell(quad);
   }
   poly->SetPolys(cells);
 

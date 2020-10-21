@@ -127,9 +127,10 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
     if (count == 3) {
       add_tri(ids[0], ids[1], ids[2]);
     } else if (count == 4) {
-      add_tri(ids[0], ids[1], ids[2]);
+      std::lock_guard<std::mutex> guard(my_mutex);
+      surfaces.quads.push_back({ids[0], ids[1], ids[2], ids[3]});
+      // add_tri(ids[0], ids[1], ids[2]);
       // add_tri(ids[1], ids[3], ids[2]);
-      add_tri(ids[0], ids[2], ids[3]);
     }
     // fprintf(stderr, "count=%d\n", count); // WIP: triangulation
   });
