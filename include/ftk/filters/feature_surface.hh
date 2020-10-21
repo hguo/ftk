@@ -13,6 +13,14 @@
 #include <vtkXMLPolyDataWriter.h>
 #endif
 
+#if FTK_HAVE_CGAL
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Surface_mesh.h>
+#include <CGAL/Polygon_mesh_processing/repair_polygon_soup.h>
+#include <CGAL/Polygon_mesh_processing/orient_polygon_soup.h>
+#include <CGAL/Polygon_mesh_processing/polygon_soup_to_polygon_mesh.h>
+#endif
+
 namespace ftk {
 
 struct feature_surface_t {
@@ -32,10 +40,16 @@ struct feature_surface_t {
 
 inline void feature_surface_t::triangulate()
 {
-  // 1. find all edges of triangles
-  // 2. for each quad, find all combinations of edges
-  //    - there should be at most four edges identified
-  //    - TODO
+#if FTK_HAVE_CGAL
+  typedef CGAL::Exact_predicates_inexact_constructions_kernel     K;
+  typedef K::FT                                                   FT;
+  typedef K::Point_3                                              Point_3;
+  typedef CGAL::Surface_mesh<Point_3>                             Mesh;
+  typedef std::array<FT, 3>                                       Custom_point;
+  typedef std::vector<std::size_t>                                CGAL_Polygon;
+
+  namespace PMP = CGAL::Polygon_mesh_processing;
+#endif
 }
 
 #if FTK_HAVE_VTK
