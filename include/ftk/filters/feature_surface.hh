@@ -29,7 +29,7 @@ struct feature_surface_t {
 #endif
 };
 
-inline feature_surface_t::triangulate()
+inline void feature_surface_t::triangulate()
 {
   // 1. find all edges of triangles
   // 2. for each quad, find all combinations of edges
