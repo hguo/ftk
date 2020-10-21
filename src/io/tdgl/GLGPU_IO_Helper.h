@@ -1,8 +1,8 @@
 #ifndef _GLGPU_IO_HELPER_H
 #define _GLGPU_IO_HELPER_H
 
-// #include "GLHeader.h"
-// #include "BDATReader.h"
+#include "GLHeader.h"
+#include "BDATReader.h"
 
 bool GLGPU_IO_Helper_ReadBDAT(
     const std::string& filename, 

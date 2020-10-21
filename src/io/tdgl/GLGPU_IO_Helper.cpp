@@ -1,8 +1,8 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/ndarray.hh>
-#include <ftk/io/tdgl/GLHeader.h>
-#include <ftk/io/tdgl/GLGPU_IO_Helper.h>
+#include "GLHeader.h"
 #include "BDATReader.h"
+#include "GLGPU_IO_Helper.h"
 #include "glpp/GL_post_process.h"
 #include <cmath>
 #include <cassert>
