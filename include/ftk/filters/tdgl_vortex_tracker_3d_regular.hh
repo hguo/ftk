@@ -5,6 +5,7 @@
 #include <ftk/filters/tdgl_vortex_tracker.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/geometry/points2vtk.hh>
 
 namespace ftk {
 
@@ -21,7 +22,13 @@ struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
   void reset();
 
   void update_timestep();
- 
+
+public:
+  void write_intersections_vtp(const std::string& filename) const;
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
+#endif
+
 protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
@@ -93,6 +100,7 @@ inline bool tdgl_vortex_tracker_3d_regular::check_simplex(
         A[3][3]; // averaged magnetic potential
   float rho[3], phi[3], re[3], im[3]; // values
   simplex_values(vertices, X, A, rho, phi, re, im);
+  // fprintf(stderr, "rho=%f, %f, %f, phi=%f, %f, %f\n", rho[0], rho[1], rho[2], phi[0], phi[1], phi[2]);
 
   // compute contour integral
   float delta[3], phase_shift = 0;
@@ -106,6 +114,8 @@ inline bool tdgl_vortex_tracker_3d_regular::check_simplex(
   // check contour integral
   float critera = phase_shift / (2 * M_PI);
   if (std::abs(critera) < 0.5) return false; // ignoring chiralities
+
+  // fprintf(stderr, "delta=%f, %f, %f\n", delta[0], delta[1], delta[2]);
 
   // guage transformation
   float psi[3][2]; // in re/im
@@ -133,6 +143,8 @@ inline bool tdgl_vortex_tracker_3d_regular::check_simplex(
   p.tag = e.to_integer(m);
   p.timestep = current_timestep;
 
+  // fprintf(stderr, "%f, %f, %f, %f\n", p[0], p[1], p[2], p[3]);
+
   return true;
 }
 
@@ -148,9 +160,9 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
     }
   };
 
-  m.element_for_ordinal(1, current_timestep, func, nthreads);
+  m.element_for_ordinal(2, current_timestep, func, nthreads);
   if (field_data_snapshots.size() >= 2) // interval
-    m.element_for_interval(1, current_timestep, current_timestep+1, func, nthreads);
+    m.element_for_interval(2, current_timestep, current_timestep+1, func, nthreads);
 }
   
 inline void tdgl_vortex_tracker_3d_regular::simplex_values(
@@ -196,6 +208,40 @@ inline void tdgl_vortex_tracker_3d_regular::magnetic_potential(const tdgl_metada
     A[2] = X[1] * m.B[0];
   }
 }
+  
+#if FTK_HAVE_VTK
+inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::string& filename) const
+{
+  if (comm.rank() == get_root_proc())
+    write_vtp(filename, get_intersections_vtp());
+}
+
+inline vtkSmartPointer<vtkPolyData> tdgl_vortex_tracker_3d_regular::get_intersections_vtp() const
+{
+  vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+ 
+  vtkIdType pid[1];
+  for (const auto &kv : intersections) {
+    const auto &cp = kv.second;
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; 
+    if (cpdims() == 2) p[2] = cp.t;
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  poly->SetPoints(points);
+  poly->SetVerts(vertices);
+  
+  return poly;
+}
+#else
+inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::string& filename) const
+{
+  fatal("FTK not compiled with VTK.");
+}
+#endif
 
 }
 

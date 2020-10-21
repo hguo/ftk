@@ -113,6 +113,7 @@ int parse_arguments(int argc, char **argv)
   
   tracker.finalize();
 
+  tracker.write_intersections_vtp(output_filename);
 #if 0
   if (output_type == "intersections") {
     tracker->write_intersections_vtp(output_filename);
