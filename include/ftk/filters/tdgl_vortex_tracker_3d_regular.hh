@@ -128,12 +128,19 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
     if (count == 3) {
       add_tri(ids[0], ids[1], ids[2]);
     } else if (count == 4) {
-      std::lock_guard<std::mutex> guard(my_mutex);
-      surfaces.quads.push_back({ids[0], ids[1], ids[2], ids[3]});
-      // add_tri(ids[0], ids[1], ids[2]);
-      // add_tri(ids[1], ids[3], ids[2]);
+      // std::lock_guard<std::mutex> guard(my_mutex);
+      // surfaces.quads.push_back({ids[0], ids[1], ids[2], ids[3]});
+      add_tri(ids[0], ids[1], ids[2]);
+      add_tri(ids[1], ids[3], ids[2]);
+    } else if (count == 5) {
+      // std::lock_guard<std::mutex> guard(my_mutex);
+      // surfaces.pentagons.push_back({ids[0], ids[1], ids[2], ids[3], ids[4]});
+      add_tri(ids[0], ids[1], ids[2]);
+      add_tri(ids[0], ids[2], ids[3]);
+      add_tri(ids[0], ids[3], ids[4]);
+    } else {
+      fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
     }
-    // fprintf(stderr, "count=%d\n", count); // WIP: triangulation
   });
 
   fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.tris.size());
@@ -342,6 +349,11 @@ inline vtkSmartPointer<vtkPolyData> tdgl_vortex_tracker_3d_regular::get_intersec
 }
 #else
 inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::string& filename) const
+{
+  fatal("FTK not compiled with VTK.");
+}
+
+inline void tdgl_vortex_tracker_3d_regular::write_surfaces_vtp(const std::string& filename) const 
 {
   fatal("FTK not compiled with VTK.");
 }

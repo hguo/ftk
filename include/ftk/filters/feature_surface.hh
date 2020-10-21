@@ -19,6 +19,7 @@ struct feature_surface_t {
   std::vector<feature_point_t> pts;
   std::vector<std::array<int, 3>> tris; 
   std::vector<std::array<int, 4>> quads;
+  std::vector<std::array<int, 5>> pentagons;
 
   void triangulate(); // WIP
   void reorient(); // WIP
