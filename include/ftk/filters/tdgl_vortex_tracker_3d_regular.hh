@@ -24,6 +24,8 @@ struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
   void update_timestep();
 
 public:
+  void build_vortex_surfaces();
+
   void write_intersections_vtp(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
@@ -35,6 +37,8 @@ protected:
   
   std::map<element_t, feature_point_t> intersections;
   std::set<element_t> related_cells;
+
+  feature_surface_t surfaces;
 
 protected:
   bool check_simplex(const element_t& s, feature_point_t& cp);
@@ -77,7 +81,45 @@ inline void tdgl_vortex_tracker_3d_regular::initialize()
 
 inline void tdgl_vortex_tracker_3d_regular::finalize()
 {
-  // TODO
+  diy::mpi::gather(comm, intersections, intersections, get_root_proc());
+  diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
+  
+  if (comm.rank() == get_root_proc()) {
+    build_vortex_surfaces();
+  }
+}
+
+inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
+{
+  fprintf(stderr, "building vortex surfaces...\n");
+
+  int i = 0;
+  for (auto &kv : intersections) {
+    kv.second.id = i ++;
+    surfaces.pts.push_back(kv.second);
+  }
+
+  std::mutex my_mutex;
+  auto add_tri = [&](int i0, int i1, int i2) {
+    std::lock_guard<std::mutex> guard(my_mutex);
+    surfaces.conn.push_back({i0, i1, i2});
+  };
+
+  parallel_for<element_t>(related_cells, nthreads, [&](const element_t &e) {
+    int count = 0;
+    int ids[6];
+
+    std::set<element_t> unique_tris;
+    for (auto tet : e.sides(m))
+      for (auto tri : tet.sides(m))
+        unique_tris.insert(tri);
+
+    for (auto tri : unique_tris)
+      if (intersections.find(tri) != intersections.end())
+        ids[count ++] = intersections[tri].id;
+
+    // fprintf(stderr, "count=%d\n", count); // WIP: triangulation
+  });
 }
 
 inline void tdgl_vortex_tracker_3d_regular::reset()
@@ -156,8 +198,23 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
   auto func = [=](element_t e) {
     feature_point_t p;
     if (check_simplex(e, p)) {
-      std::lock_guard<std::mutex> guard(mutex);
-      intersections[e] = p;
+      std::set<element_t> my_related_cells;
+
+      auto tets = e.side_of(m);
+      for (auto tet : tets) {
+        if (tet.valid(m)) {
+          auto pents = tet.side_of(m);
+          for (auto pent : pents)
+            if (pent.valid(m))
+              my_related_cells.insert(pent);
+        }
+      }
+
+      {
+        std::lock_guard<std::mutex> guard(mutex);
+        intersections[e] = p;
+        related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      }
     }
   };
 

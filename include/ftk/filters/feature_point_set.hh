@@ -7,14 +7,17 @@ namespace ftk {
 
 struct feature_point_set_t : public std::set<feature_point_t>
 {
-
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> to_vtp(int fpdims) const;
+  vtkSmartPointer<vtkPolyData> to_vtp(
+      int fpdims, 
+      const std::vector<std::string>& scalar_components) const;
 #endif
 };
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> feature_point_set::to_vtp(int fpdims) const
+vtkSmartPointer<vtkPolyData> feature_point_set::to_vtp(
+    int fpdims, 
+    const std::vector<std::string>& scalar_components) const
 {
   vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
