@@ -82,7 +82,7 @@ int parse_arguments(int argc, char **argv)
     fatal("Missing '--output'.");
 
   if (output_format == str_auto) {
-    if (ends_with(output_filename_pattern, str_ext_vtp)) {
+    if (ftk::ends_with(output_filename_pattern, str_ext_vtp)) {
 #if FTK_HAVE_VTK
       output_format = str_vtp;
 #else

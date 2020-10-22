@@ -228,7 +228,7 @@ inline void contour_tracker_2d_regular::write_isovolume_vtu(const std::string& f
   if (comm.rank() == get_root_proc()) {
     auto poly = get_isovolume_vtp();
 
-    // write_vtp(filename, poly);
+    // write_polydata(filename, poly);
 #if 1
     vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
     normalGenerator->SetInputData(poly);
@@ -240,7 +240,7 @@ inline void contour_tracker_2d_regular::write_isovolume_vtu(const std::string& f
     normalGenerator->AutoOrientNormalsOn();
     normalGenerator->Update();
 
-    write_vtp(filename, normalGenerator->GetOutput());
+    write_polydata(filename, normalGenerator->GetOutput());
 #endif
 
 #if 0
@@ -253,7 +253,7 @@ inline void contour_tracker_2d_regular::write_isovolume_vtu(const std::string& f
     // normals->SetNormalOrientationToPoint();
     normals->Update();
     poly->GetPointData()->SetNormals( normals->GetOutput()->GetPointData()->GetArray(0) );
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
 #endif
   }
 }

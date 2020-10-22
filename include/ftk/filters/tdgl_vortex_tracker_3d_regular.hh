@@ -6,6 +6,7 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/geometry/points2vtk.hh>
+#include <ftk/geometry/write_polydata.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkPolyDataNormals.h>
@@ -308,7 +309,7 @@ inline void tdgl_vortex_tracker_3d_regular::magnetic_potential(const tdgl_metada
 inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::string& filename) const
 {
   if (comm.rank() == get_root_proc())
-    write_vtp(filename, get_intersections_vtp());
+    write_polydata(filename, get_intersections_vtp());
 }
 
 inline void tdgl_vortex_tracker_3d_regular::write_surfaces_vtp(const std::string& filename) const 
@@ -325,7 +326,7 @@ inline void tdgl_vortex_tracker_3d_regular::write_surfaces_vtp(const std::string
     normalGenerator->AutoOrientNormalsOn();
     normalGenerator->Update();
 
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
 #if 0
     vtkSmartPointer<vtkPLYWriter> writer = vtkPLYWriter::New();
     writer->SetFileName(filename.c_str());

@@ -9,6 +9,7 @@
 #include <ftk/filters/filter.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
+#include <ftk/geometry/write_polydata.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/diy-ext/gather.hh>
 #include <iomanip>
@@ -255,7 +256,7 @@ inline void critical_point_tracker::write_intercepted_critical_points_vtk(int t0
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_intercepted_critical_points_vtk(t0, t1);
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 
@@ -263,7 +264,7 @@ inline void critical_point_tracker::write_traced_critical_points_vtk(const std::
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = traced_critical_points.to_vtp(cpdims(), scalar_components); 
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 
@@ -271,7 +272,7 @@ inline void critical_point_tracker::write_sliced_critical_points_vtk(int k, cons
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_sliced_critical_points_vtk(k);
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 
@@ -279,7 +280,7 @@ inline void critical_point_tracker::write_critical_points_vtk(const std::string&
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_critical_points_vtk();
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 

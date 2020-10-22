@@ -366,7 +366,7 @@ inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& patt
       // normalGenerator->AutoOrientNormalsOn();
       normalGenerator->Update();
 
-      write_vtp(filename, normalGenerator->GetOutput());
+      write_polydata(filename, normalGenerator->GetOutput());
     
 #if 0
       vtkSmartPointer<vtkPLYWriter> writer = vtkPLYWriter::New();

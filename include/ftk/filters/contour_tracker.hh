@@ -9,6 +9,7 @@
 #include <ftk/filters/feature_surface.hh>
 #include <ftk/filters/feature_volume.hh>
 #include <ftk/filters/feature_volume_set.hh>
+#include <ftk/geometry/write_polydata.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/external/diy/serialization.hpp>
@@ -143,7 +144,7 @@ inline void contour_tracker::write_intersections_vtp(const std::string& filename
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_intersections_vtp();
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 #else
