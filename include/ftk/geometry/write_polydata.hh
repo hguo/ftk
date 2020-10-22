@@ -18,7 +18,7 @@ inline void write_polydata(
     vtkSmartPointer<vtkPolyData> poly, 
     std::string format="auto") // format can be vtp, ply
 {
-  if (format == "auto") { // determine format by extension
+  if (format == "auto" || format.empty()) { // determine format by extension
     if (ends_with(filename, "ply")) format = "ply";
     else if (ends_with(filename, "stl")) format = "stl";
     else if (ends_with(filename, "vtk")) format = "legacy";

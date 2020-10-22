@@ -118,7 +118,7 @@ int parse_arguments(int argc, char **argv)
   else if (output_type == "sliced")
     tracker.write_sliced_vtp(output_pattern);
   else 
-    tracker.write_surfaces_vtp(output_pattern);
+    tracker.write_surfaces(output_pattern, output_format);
   
   return 0;
 }

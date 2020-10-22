@@ -2,6 +2,7 @@
 #define _FTK_FEATURE_SURFACE_HH
 
 #include <ftk/filters/feature_curve.hh>
+#include <ftk/basic/simple_union_find.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkDoubleArray.h>
@@ -11,6 +12,8 @@
 #include <vtkQuad.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkXMLPolyDataWriter.h>
+#include <vtkPolyDataNormals.h>
+#include <vtkPLYWriter.h>
 #endif
 
 #if FTK_HAVE_CGAL
@@ -29,14 +32,35 @@ struct feature_surface_t {
   std::vector<std::array<int, 4>> quads;
   std::vector<std::array<int, 5>> pentagons;
 
+  void relabel();
+
   void triangulate(); // WIP
   void reorient(); // WIP
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const; // preferred
-  vtkSmartPointer<vtkPolyData> to_vtp() const;
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
+  vtkSmartPointer<vtkPolyData> to_vtp(bool generate_normal=false) const;
 #endif
 };
+
+inline void feature_surface_t::relabel()
+{
+  simple_union_find<int> uf(pts.size());
+  for (auto tet : tris)
+    for (int j = 1; j < 3; j ++)
+      uf.unite(tet[0], tet[j]);
+
+  for (auto quad : quads) 
+    for (int j = 1; j < 4; j ++)
+      uf.unite(quad[0], quad[j]);
+
+  for (auto pentagon : pentagons)
+    for (int j = 1; j < 4; j ++)
+      uf.unite(pentagon[0], pentagon[j]);
+
+  for (int i = 0; i < pts.size(); i ++)
+    pts[i].id = uf.find(i);
+}
 
 inline void feature_surface_t::triangulate()
 {
@@ -53,7 +77,7 @@ inline void feature_surface_t::triangulate()
 }
 
 #if FTK_HAVE_VTK
-inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp() const
+inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_normal) const
 {
   vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -100,6 +124,17 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp() const
     cells->InsertNextCell(quad);
   }
   poly->SetPolys(cells);
+
+  if (generate_normal) {
+    vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
+    normalGenerator->SetInputData(poly);
+    normalGenerator->ConsistencyOn();
+    normalGenerator->ComputePointNormalsOn();
+    normalGenerator->ComputeCellNormalsOn();
+    // normalGenerator->SetFlipNormals(true);
+    normalGenerator->AutoOrientNormalsOn();
+    normalGenerator->Update();
+  }
 
   return poly;
 }

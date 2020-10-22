@@ -8,11 +8,6 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/write_polydata.hh>
 
-#if FTK_HAVE_VTK
-#include <vtkPolyDataNormals.h>
-#include <vtkPLYWriter.h>
-#endif
-
 namespace ftk {
 
 struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
@@ -34,7 +29,7 @@ public:
 
   void write_intersections_vtp(const std::string& filename) const;
   void write_sliced_vtp(const std::string& pattern) const {}
-  void write_surfaces_vtp(const std::string& filename) const;
+  void write_surfaces(const std::string& filename, std::string format="auto") const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
 #endif
@@ -152,6 +147,7 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
     }
   });
 
+  surfaces.relabel();
   fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.tris.size());
 }
 
@@ -312,27 +308,11 @@ inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::s
     write_polydata(filename, get_intersections_vtp());
 }
 
-inline void tdgl_vortex_tracker_3d_regular::write_surfaces_vtp(const std::string& filename) const 
+inline void tdgl_vortex_tracker_3d_regular::write_surfaces(const std::string& filename, std::string format) const 
 {
   if (comm.rank() == get_root_proc()) {
-    auto poly = surfaces.to_vtp();
-      
-    vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
-    normalGenerator->SetInputData(poly);
-    normalGenerator->ConsistencyOn();
-    normalGenerator->ComputePointNormalsOn();
-    normalGenerator->ComputeCellNormalsOn();
-    // normalGenerator->SetFlipNormals(true);
-    normalGenerator->AutoOrientNormalsOn();
-    normalGenerator->Update();
-
-    write_polydata(filename, poly);
-#if 0
-    vtkSmartPointer<vtkPLYWriter> writer = vtkPLYWriter::New();
-    writer->SetFileName(filename.c_str());
-    writer->SetInputData(poly);
-    writer->Write();
-#endif
+    auto poly = surfaces.to_vtp(true);
+    write_polydata(filename, poly, format);
   }
 }
 
