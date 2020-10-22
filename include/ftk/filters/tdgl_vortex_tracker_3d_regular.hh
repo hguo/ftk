@@ -273,8 +273,9 @@ inline void tdgl_vortex_tracker_3d_regular::simplex_values(
     // re[i] = f.re(vertices[i][0], vertices[i][1], vertices[i][2]);
     // im[i] = f.im(vertices[i][0], vertices[i][1], vertices[i][2]);
     
-    for (int j = 0; j < 4; j ++)
+    for (int j = 0; j < 3; j ++)
       X[i][j] = vertices[i][j] * f.meta.cell_lengths[j] + f.meta.origins[j];
+    X[i][3] = vertices[i][3];
       
     for (int j = 0; j < 4; j ++)
       magnetic_potential(f.meta, X[i], A[i]);

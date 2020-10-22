@@ -9,6 +9,7 @@
 #include <vtkUnsignedIntArray.h>
 #include <vtkPolyData.h>
 #include <vtkTriangle.h>
+#include <vtkCellArray.h>
 #include <vtkQuad.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkXMLPolyDataWriter.h>
