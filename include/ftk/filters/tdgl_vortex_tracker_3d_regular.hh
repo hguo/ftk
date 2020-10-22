@@ -27,8 +27,8 @@ struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
 public:
   void build_vortex_surfaces();
 
-  void write_intersections_vtp(const std::string& filename) const;
-  void write_sliced_vtp(const std::string& pattern) const {}
+  void write_intersections(const std::string& filename) const;
+  void write_sliced(const std::string& pattern) const {}
   void write_surfaces(const std::string& filename, std::string format="auto") const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
@@ -302,7 +302,7 @@ inline void tdgl_vortex_tracker_3d_regular::magnetic_potential(const tdgl_metada
 }
   
 #if FTK_HAVE_VTK
-inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::string& filename) const
+inline void tdgl_vortex_tracker_3d_regular::write_intersections(const std::string& filename) const
 {
   if (comm.rank() == get_root_proc())
     write_polydata(filename, get_intersections_vtp());
@@ -337,12 +337,12 @@ inline vtkSmartPointer<vtkPolyData> tdgl_vortex_tracker_3d_regular::get_intersec
   return poly;
 }
 #else
-inline void tdgl_vortex_tracker_3d_regular::write_intersections_vtp(const std::string& filename) const
+inline void tdgl_vortex_tracker_3d_regular::write_intersections(const std::string& filename) const
 {
   fatal("FTK not compiled with VTK.");
 }
 
-inline void tdgl_vortex_tracker_3d_regular::write_surfaces_vtp(const std::string& filename) const 
+inline void tdgl_vortex_tracker_3d_regular::write_surfaces(const std::string& filename) const 
 {
   fatal("FTK not compiled with VTK.");
 }

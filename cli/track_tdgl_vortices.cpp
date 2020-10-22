@@ -114,9 +114,9 @@ int parse_arguments(int argc, char **argv)
   tracker.finalize();
 
   if (output_type == "intersections")
-    tracker.write_intersections_vtp(output_pattern);
+    tracker.write_intersections(output_pattern);
   else if (output_type == "sliced")
-    tracker.write_sliced_vtp(output_pattern);
+    tracker.write_sliced(output_pattern);
   else 
     tracker.write_surfaces(output_pattern, output_format);
   
