@@ -23,7 +23,7 @@ struct tdgl_metadata_t {
 struct tdgl_reader {
   tdgl_reader(const std::string& filename_, 
       bool read_field_data_ = true,
-      bool derive_J_ = true) : 
+      bool derive_J_ = false) : 
     filename(filename_),
     read_field_data(read_field_data_),
     derive_J(derive_J_) {}
