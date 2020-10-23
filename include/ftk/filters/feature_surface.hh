@@ -1,8 +1,11 @@
 #ifndef _FTK_FEATURE_SURFACE_HH
 #define _FTK_FEATURE_SURFACE_HH
 
+#include <ftk/ftk_config.hh>
 #include <ftk/filters/feature_curve.hh>
+#include <ftk/filters/feature_curve_set.hh>
 #include <ftk/basic/simple_union_find.hh>
+#include <ftk/geometry/cc2curves.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkDoubleArray.h>
@@ -34,6 +37,8 @@ struct feature_surface_t {
   std::vector<std::array<int, 5>> pentagons;
 
   void relabel();
+
+  feature_curve_set_t slice_time(int t) const;
 
   void triangulate(); // WIP
   void reorient(); // WIP
@@ -252,6 +257,55 @@ inline void feature_surface_t::reorient()
         }
     }
   }
+}
+
+inline feature_curve_set_t feature_surface_t::slice_time(int t) const
+{
+  feature_curve_set_t curve_set;
+  
+  std::vector<feature_point_t> pts;
+  std::set<int> nodes;
+  std::map<int, std::set<int>> links;
+
+  std::map<int, int> map; // id, new_id
+  int j = 0;
+  for (int i = 0; i < pts.size(); i ++)
+    if (pts[i].timestep == t && pts[i].ordinal) {
+      nodes.insert(j);
+      map[i] = j;
+      pts.push_back(pts[i]);
+      j ++;
+    }
+
+  for (int i = 0; i < tris.size(); i ++) {
+    const auto &c = tris[i];
+
+    std::set<int> cc;
+    for (int j = 0; j < 3; j ++)
+      if (map.find(c[j]) != map.end())
+        cc.insert(map[c[j]]);
+
+    if (!cc.empty()) {
+      for (const auto k : cc)
+        links[k].insert(cc.begin(), cc.end());
+    }
+  }
+
+  auto cc = extract_connected_components<int, std::set<int>>(
+      [&](int i) { return links[i]; }, 
+      nodes);
+
+  for (const auto &component : cc) {
+    auto linear_graphs = connected_component_to_linear_components<int>(component, [&](int i) {return links[i];});
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      feature_curve_t traj;
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        traj.push_back(pts[linear_graphs[j][k]]);
+      curve_set.add(traj);
+    }
+  }
+
+  return curve_set;
 }
 
 }

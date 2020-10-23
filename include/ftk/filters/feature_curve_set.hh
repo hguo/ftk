@@ -9,6 +9,8 @@
 #include <vtkDoubleArray.h>
 #include <vtkVertex.h>
 #include <vtkSmartPointer.h>
+#include <vtkPolyLine.h>
+#include <vtkPolyData.h>
 #endif
 
 namespace ftk {

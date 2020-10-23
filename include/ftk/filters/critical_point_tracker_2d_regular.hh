@@ -431,7 +431,7 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
       neighbors, elements);
 
   for (const auto &component : connected_components) {
-    std::vector<std::vector<double>> mycurves;
+    // std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
       feature_curve_t traj; 
