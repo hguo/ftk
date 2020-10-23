@@ -7,6 +7,7 @@
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/write_polydata.hh>
+#include <ftk/ndarray/writer.hh>
 
 namespace ftk {
 
@@ -28,7 +29,7 @@ public:
   void build_vortex_surfaces();
 
   void write_intersections(const std::string& filename) const;
-  void write_sliced(const std::string& pattern) const {}
+  void write_sliced(const std::string& pattern) const;
   void write_surfaces(const std::string& filename, std::string format="auto") const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
@@ -307,6 +308,17 @@ inline void tdgl_vortex_tracker_3d_regular::write_intersections(const std::strin
 {
   if (comm.rank() == get_root_proc())
     write_polydata(filename, get_intersections_vtp());
+}
+
+inline void tdgl_vortex_tracker_3d_regular::write_sliced(const std::string& pattern) const
+{
+  if (comm.rank() == get_root_proc()) {
+    for (int i = 0; i < current_timestep; i ++) {
+      const auto filename = ndarray_writer<double>::filename(pattern, i);
+      auto poly = surfaces.slice_time(i).to_vtp(3, std::vector<std::string>());
+      write_polydata(filename, poly);
+    }
+  }
 }
 
 inline void tdgl_vortex_tracker_3d_regular::write_surfaces(const std::string& filename, std::string format) const 
