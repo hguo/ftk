@@ -362,7 +362,7 @@ void feature_surface_t::save(const std::string& filename, std::string format) co
     write_polydata(filename, to_vtp(), format);
 #else
     fprintf(stderr, "unsupported file format\n");
-    assertt(false);
+    assert(false);
     // fatal("unsupported file format");
 #endif
   }
