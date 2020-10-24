@@ -9,6 +9,7 @@
 #include <vtkDoubleArray.h>
 #include <vtkVertex.h>
 #include <vtkSmartPointer.h>
+#include <vtkCellArray.h>
 #include <vtkPolyLine.h>
 #include <vtkPolyData.h>
 #endif
