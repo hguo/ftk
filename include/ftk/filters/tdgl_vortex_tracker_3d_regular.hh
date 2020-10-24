@@ -216,6 +216,7 @@ inline bool tdgl_vortex_tracker_3d_regular::check_simplex(
   p.t = x[3];
   p.cond = cond;
   p.tag = e.to_integer(m);
+  p.ordinal = e.is_ordinal(m);
   p.timestep = current_timestep;
 
   // fprintf(stderr, "%f, %f, %f, %f\n", p[0], p[1], p[2], p[3]);
@@ -331,9 +332,13 @@ inline void tdgl_vortex_tracker_3d_regular::write_intersections(const std::strin
 inline void tdgl_vortex_tracker_3d_regular::write_sliced(const std::string& pattern) const
 {
   if (comm.rank() == get_root_proc()) {
-    for (int i = 0; i < current_timestep; i ++) {
+    for (int i = 0; i < end_timestep; i ++) {
+      auto sliced = surfaces.slice_time(i);
+      fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
+
+      auto poly = sliced.to_vtp(3, std::vector<std::string>());
+      
       const auto filename = ndarray_writer<double>::filename(pattern, i);
-      auto poly = surfaces.slice_time(i).to_vtp(3, std::vector<std::string>());
       write_polydata(filename, poly);
     }
   }

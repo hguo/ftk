@@ -294,7 +294,7 @@ inline feature_curve_set_t feature_surface_t::slice_time(int t) const
 {
   feature_curve_set_t curve_set;
   
-  std::vector<feature_point_t> pts;
+  std::vector<feature_point_t> mypts;
   std::set<int> nodes;
   std::map<int, std::set<int>> links;
 
@@ -304,9 +304,11 @@ inline feature_curve_set_t feature_surface_t::slice_time(int t) const
     if (pts[i].timestep == t && pts[i].ordinal) {
       nodes.insert(j);
       map[i] = j;
-      pts.push_back(pts[i]);
+      mypts.push_back(pts[i]);
       j ++;
     }
+
+  fprintf(stderr, "#pts=%zu\n", map.size());
 
   for (int i = 0; i < tris.size(); i ++) {
     const auto &c = tris[i];
@@ -331,7 +333,7 @@ inline feature_curve_set_t feature_surface_t::slice_time(int t) const
     for (int j = 0; j < linear_graphs.size(); j ++) {
       feature_curve_t traj;
       for (int k = 0; k < linear_graphs[j].size(); k ++)
-        traj.push_back(pts[linear_graphs[j][k]]);
+        traj.push_back(mypts[linear_graphs[j][k]]);
       curve_set.add(traj);
     }
   }
