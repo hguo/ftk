@@ -11,7 +11,7 @@
 #include "constants.hh"
 
 // global variables
-std::string input_pattern;
+std::string input_pattern, input_type;
 std::string output_pattern, output_type, output_format;
 std::string accelerator;
 size_t ntimesteps = 0;
@@ -30,6 +30,8 @@ int parse_arguments(int argc, char **argv)
   options.add_options()
     ("i,input", "Input file name pattern", 
      cxxopts::value<std::string>(input_pattern))
+    ("input-type", "Input type {data|intersections|surfaces}, by default data",
+     cxxopts::value<std::string>(input_type)->default_value("data"))
     ("n,timesteps", "Number of timesteps (override)", 
      cxxopts::value<size_t>(ntimesteps))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
@@ -99,19 +101,23 @@ int parse_arguments(int argc, char **argv)
   tracker.set_number_of_threads(nthreads);
   tracker.initialize();
 
-  for (int k = 0; k < filenames.size(); k ++) {
-    ftk::tdgl_reader reader(filenames[k]);
-    reader.read();
+  if (input_type == "data") {
+    for (int k = 0; k < filenames.size(); k ++) {
+      ftk::tdgl_reader reader(filenames[k]);
+      reader.read();
 
-    tracker.push_field_data_snapshot(reader.meta, 
-        reader.rho, reader.phi, 
-        reader.re, reader.im);
+      tracker.push_field_data_snapshot(reader.meta, 
+          reader.rho, reader.phi, 
+          reader.re, reader.im);
+      
+      if (k != 0) tracker.advance_timestep();
+      if (k == nt - 1) tracker.update_timestep();
+    }
     
-    if (k != 0) tracker.advance_timestep();
-    if (k == nt - 1) tracker.update_timestep();
+    tracker.finalize();
+  } else if (input_type == "surfaces") {
+    tracker.read_surfaces(input_pattern);
   }
-  
-  tracker.finalize();
 
   if (output_type == "intersections")
     tracker.write_intersections(output_pattern);
