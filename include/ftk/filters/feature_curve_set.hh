@@ -18,6 +18,7 @@ namespace ftk {
 struct feature_curve_set_t : public std::map<int, feature_curve_t>
 {
   int add(const feature_curve_t&);
+  void add(const feature_curve_t&, int label);
   std::vector<int> add(const std::vector<feature_curve_t>&);
 
   std::vector<int> split(int);
@@ -338,6 +339,11 @@ inline int feature_curve_set_t::add(const feature_curve_t& t)
   insert(std::pair<int, feature_curve_t>(id, t));
   at(id).relabel(id);
   return id;
+}
+
+inline void feature_curve_set_t::add(const feature_curve_t& t, int label)
+{
+  insert(std::pair<int, feature_curve_t>(label, t));
 }
 
 inline std::vector<int> feature_curve_set_t::add(const std::vector<feature_curve_t>& trajs)
