@@ -5,7 +5,10 @@
 #include <ftk/filters/feature_curve.hh>
 #include <ftk/filters/feature_curve_set.hh>
 #include <ftk/basic/simple_union_find.hh>
+#include <ftk/utils/file_extensions.hh>
 #include <ftk/geometry/cc2curves.hh>
+#include <ftk/geometry/write_polydata.hh>
+#include <ftk/external/diy-ext/serialization.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkDoubleArray.h>
@@ -43,11 +46,39 @@ struct feature_surface_t {
   void triangulate(); // WIP
   void reorient(); // WIP
 
+public: // IO
+  void save(const std::string& filename, std::string format="") const;
+  void load(const std::string& filename, std::string format="");
+
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
   vtkSmartPointer<vtkPolyData> to_vtp(bool generate_normal=false) const;
 #endif
 };
+
+} // namespace ftk
+
+//////////////////////// serialization
+namespace diy {
+  template <> struct Serialization<ftk::feature_surface_t> {
+    static void save(diy::BinaryBuffer& bb, const ftk::feature_surface_t& s) {
+      diy::save(bb, s.pts); 
+      diy::save(bb, s.tris); 
+      diy::save(bb, s.quads); 
+      diy::save(bb, s.pentagons); 
+    }
+
+    static void load(diy::BinaryBuffer& bb, ftk::feature_surface_t &s) {
+      diy::load(bb, s.pts); 
+      diy::load(bb, s.tris); 
+      diy::load(bb, s.quads); 
+      diy::load(bb, s.pentagons); 
+    }
+  };
+}
+////////////////////////
+
+namespace ftk {
 
 inline void feature_surface_t::relabel()
 {
@@ -306,6 +337,20 @@ inline feature_curve_set_t feature_surface_t::slice_time(int t) const
   }
 
   return curve_set;
+}
+
+void feature_surface_t::save(const std::string& filename, std::string format) const
+{
+  const int fmt = file_extension(filename, format);
+  if (fmt == FILE_EXT_BIN) {
+    // diy::serializeToFile(*this, filename);
+  } else {
+#if FTK_HAVE_VTK
+    write_polydata(filename, to_vtp(), format);
+#else
+    fatal("unsupported file format");
+#endif
+  }
 }
 
 }

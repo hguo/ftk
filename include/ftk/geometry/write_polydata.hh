@@ -2,7 +2,7 @@
 #define _FTK_WRITE_VTP_HH
 
 #include <ftk/ftk_config.hh>
-#include <ftk/basic/string.hh>
+#include <ftk/utils/string.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkSmartPointer.h>

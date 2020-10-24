@@ -302,6 +302,23 @@ inline void tdgl_vortex_tracker_3d_regular::magnetic_potential(const tdgl_metada
     A[2] = X[1] * m.B[0];
   }
 }
+
+inline void tdgl_vortex_tracker_3d_regular::write_surfaces(const std::string& filename, std::string format) const 
+{
+  if (comm.rank() == get_root_proc()) {
+    if (format == "bin" || format == "binary") {
+      diy::serializeToFile(surfaces, filename);
+    } else {
+#if FTK_HAVE_VTK
+      auto poly = surfaces.to_vtp(true);
+      write_polydata(filename, poly, format);
+#else
+    fatal("FTK not compiled with VTK.");
+#endif
+    }
+  }
+}
+
   
 #if FTK_HAVE_VTK
 inline void tdgl_vortex_tracker_3d_regular::write_intersections(const std::string& filename) const
@@ -318,14 +335,6 @@ inline void tdgl_vortex_tracker_3d_regular::write_sliced(const std::string& patt
       auto poly = surfaces.slice_time(i).to_vtp(3, std::vector<std::string>());
       write_polydata(filename, poly);
     }
-  }
-}
-
-inline void tdgl_vortex_tracker_3d_regular::write_surfaces(const std::string& filename, std::string format) const 
-{
-  if (comm.rank() == get_root_proc()) {
-    auto poly = surfaces.to_vtp(true);
-    write_polydata(filename, poly, format);
   }
 }
 
@@ -351,11 +360,6 @@ inline vtkSmartPointer<vtkPolyData> tdgl_vortex_tracker_3d_regular::get_intersec
 }
 #else
 inline void tdgl_vortex_tracker_3d_regular::write_intersections(const std::string& filename) const
-{
-  fatal("FTK not compiled with VTK.");
-}
-
-inline void tdgl_vortex_tracker_3d_regular::write_surfaces(const std::string& filename, std::string) const 
 {
   fatal("FTK not compiled with VTK.");
 }

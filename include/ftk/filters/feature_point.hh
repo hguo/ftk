@@ -104,6 +104,7 @@ namespace nlohmann
   };
 }
 
+#if 0
 // serialization
 namespace diy {
   static void save(diy::BinaryBuffer& bb, const ftk::feature_point_t &cp) {
@@ -132,5 +133,6 @@ namespace diy {
     diy::load(bb, cp.id);
   }
 }
+#endif
 
 #endif

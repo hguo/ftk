@@ -2,7 +2,7 @@
 #define _FTK_CLI_CONSTANTS_HH
 
 #include <ftk/ndarray/stream.hh>
-#include <ftk/basic/string.hh>
+#include <ftk/utils/string.hh>
 #include <ftk/external/cxxopts.hpp>
 
 #define COMMON_OPTS_INPUTS() \
