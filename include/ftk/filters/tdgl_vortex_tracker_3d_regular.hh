@@ -316,6 +316,7 @@ inline void tdgl_vortex_tracker_3d_regular::read_surfaces(const std::string& fil
 {
   if (comm.rank() == get_root_proc()) {
     surfaces.load(filename, format);
+    fprintf(stderr, "readed surfaces #pts=%zu, #tris=%zu\n", surfaces.pts.size(), surfaces.tris.size());
   }
 }
 

@@ -30,6 +30,8 @@ struct tdgl_reader {
 
   bool read();
 
+  const tdgl_metadata_t& get_meta() const {return meta;}
+
 public:
   bool read_field_data, derive_J;
 

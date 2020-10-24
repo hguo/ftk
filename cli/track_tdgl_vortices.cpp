@@ -11,7 +11,8 @@
 #include "constants.hh"
 
 // global variables
-std::string input_pattern, input_type;
+std::string input_pattern;
+std::string archived_intersections, archived_surfaces;
 std::string output_pattern, output_type, output_format;
 std::string accelerator;
 size_t ntimesteps = 0;
@@ -30,8 +31,10 @@ int parse_arguments(int argc, char **argv)
   options.add_options()
     ("i,input", "Input file name pattern", 
      cxxopts::value<std::string>(input_pattern))
-    ("input-type", "Input type {data|intersections|surfaces}, by default data",
-     cxxopts::value<std::string>(input_type)->default_value("data"))
+    ("archived-intersections", "Archived vortex intersections", 
+     cxxopts::value<std::string>(archived_intersections))
+    ("archived-surfaces", "Archived vortex surfaces", 
+     cxxopts::value<std::string>(archived_surfaces))
     ("n,timesteps", "Number of timesteps (override)", 
      cxxopts::value<size_t>(ntimesteps))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
@@ -78,7 +81,7 @@ int parse_arguments(int argc, char **argv)
 
   ftk::tdgl_reader meta_reader(filenames[0], false); // read metadata without read actuall data
   meta_reader.read();
-  const auto &meta = meta_reader.meta;
+  const auto &meta = meta_reader.get_meta();
   
   const size_t DW = meta.dims[0], DH = meta.dims[1], DD = meta.dims[2];
   const int nt = filenames.size();
@@ -101,7 +104,11 @@ int parse_arguments(int argc, char **argv)
   tracker.set_number_of_threads(nthreads);
   tracker.initialize();
 
-  if (input_type == "data") {
+  if (!archived_intersections.empty()) {
+    // TODO
+  } else if (!archived_surfaces.empty()) {
+    tracker.read_surfaces(archived_surfaces);
+  } else {
     for (int k = 0; k < filenames.size(); k ++) {
       ftk::tdgl_reader reader(filenames[k]);
       reader.read();
@@ -113,10 +120,7 @@ int parse_arguments(int argc, char **argv)
       if (k != 0) tracker.advance_timestep();
       if (k == nt - 1) tracker.update_timestep();
     }
-    
     tracker.finalize();
-  } else if (input_type == "surfaces") {
-    tracker.read_surfaces(input_pattern);
   }
 
   if (output_type == "intersections")
