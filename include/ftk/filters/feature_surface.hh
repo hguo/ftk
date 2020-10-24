@@ -339,16 +339,29 @@ inline feature_curve_set_t feature_surface_t::slice_time(int t) const
   return curve_set;
 }
 
+void feature_surface_t::load(const std::string& filename, std::string format)
+{
+  const int fmt = file_extension(filename, format);
+  if (fmt == FILE_EXT_BIN) {
+    diy::unserializeFromFile(filename, *this);
+  } else {
+    fprintf(stderr, "unsupported file format\n");
+    assert(false);
+  }
+}
+
 void feature_surface_t::save(const std::string& filename, std::string format) const
 {
   const int fmt = file_extension(filename, format);
   if (fmt == FILE_EXT_BIN) {
-    // diy::serializeToFile(*this, filename);
+    diy::serializeToFile(*this, filename);
   } else {
 #if FTK_HAVE_VTK
     write_polydata(filename, to_vtp(), format);
 #else
-    fatal("unsupported file format");
+    fprintf(stderr, "unsupported file format\n");
+    assertt(false);
+    // fatal("unsupported file format");
 #endif
   }
 }

@@ -28,6 +28,8 @@ struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
 public:
   void build_vortex_surfaces();
 
+  void read_surfaces(const std::string& filename, std::string format="auto");
+
   void write_intersections(const std::string& filename) const;
   void write_sliced(const std::string& pattern) const;
   void write_surfaces(const std::string& filename, std::string format="auto") const;
@@ -306,16 +308,14 @@ inline void tdgl_vortex_tracker_3d_regular::magnetic_potential(const tdgl_metada
 inline void tdgl_vortex_tracker_3d_regular::write_surfaces(const std::string& filename, std::string format) const 
 {
   if (comm.rank() == get_root_proc()) {
-    if (format == "bin" || format == "binary") {
-      diy::serializeToFile(surfaces, filename);
-    } else {
-#if FTK_HAVE_VTK
-      auto poly = surfaces.to_vtp(true);
-      write_polydata(filename, poly, format);
-#else
-    fatal("FTK not compiled with VTK.");
-#endif
-    }
+    surfaces.save(filename, format);
+  }
+}
+
+inline void tdgl_vortex_tracker_3d_regular::read_surfaces(const std::string& filename, std::string format)
+{
+  if (comm.rank() == get_root_proc()) {
+    surfaces.load(filename, format);
   }
 }
 
