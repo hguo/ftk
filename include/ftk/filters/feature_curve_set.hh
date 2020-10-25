@@ -345,6 +345,7 @@ inline int feature_curve_set_t::add(const feature_curve_t& t)
 inline void feature_curve_set_t::add(const feature_curve_t& t, int label)
 {
   insert(std::pair<int, feature_curve_t>(label, t));
+  at(label).relabel(label);
 }
 
 inline std::vector<int> feature_curve_set_t::add(const std::vector<feature_curve_t>& trajs)

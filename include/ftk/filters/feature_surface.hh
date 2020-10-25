@@ -334,9 +334,14 @@ inline feature_curve_set_t feature_surface_t::slice_time(int t) const
       feature_curve_t traj;
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(mypts[linear_graphs[j][k]]);
-      curve_set.add(traj, traj[0].id);
+      curve_set.add(traj); // , traj[0].id);
     }
   }
+
+  size_t count = 0;
+  for (auto i = 0; i < curve_set.size(); i ++)
+    count += curve_set[i].size();
+  fprintf(stderr, "pts_count=%zu, curve_count=%zu\n", count, curve_set.size());
 
   return curve_set;
 }
