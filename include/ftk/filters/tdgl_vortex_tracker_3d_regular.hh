@@ -369,6 +369,11 @@ inline void tdgl_vortex_tracker_3d_regular::write_intersections(const std::strin
 {
   fatal("FTK not compiled with VTK.");
 }
+
+inline void tdgl_vortex_tracker_3d_regular::write_sliced(const std::string& pattern) const
+{
+  fatal("FTK not compiled with VTK.");
+}
 #endif
 
 }
