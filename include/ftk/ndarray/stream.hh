@@ -327,12 +327,12 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
     } else if (j["type"] == "file") {
       if (j.contains("filenames")) {
         if (j["filenames"].is_array()) {
-          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
+          // j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else {
           auto filenames = ftk::ndarray<double>::glob(j["filenames"]);
           if (filenames.empty()) fatal("unable to find matching filename(s).");
-          if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
-          else j["n_timesteps"] = filenames.size();
+          // if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
+          // else j["n_timesteps"] = filenames.size();
           j["filenames"] = filenames;
         }
         const std::string filename0 = j["filenames"][0];
@@ -353,6 +353,8 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             const std::vector<std::string> vars = {var};
             j["variables"] = vars;
           }
+          
+          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else if (j["format"] == "vti") {
 #if FTK_HAVE_VTK
           vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
@@ -404,6 +406,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           for (int i = 0; i < ncdims; i ++) 
             NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &dimlens[i]) );
 
+          int nt;
           int unlimited_recid;
           NC_SAFE_CALL( nc_inq_unlimdim(ncid, &unlimited_recid) );
           NC_SAFE_CALL( nc_close(ncid) );
@@ -426,7 +429,16 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             }
             j["timesteps_per_file"] = timesteps_per_file;
             j["first_timestep_per_file"] = first_timestep_per_file;
+          
+            nt = std::accumulate(timesteps_per_file.begin(), timesteps_per_file.end(), 0);
+          } else {
+            nt = j["filenames"].size();
           }
+            
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+            j["n_timesteps"] = std::min(j["n_timesteps"].template get<int>(), nt);
+          else 
+            j["n_timesteps"] = nt;
           
           if (j.contains("dimensions"))
             warn("ignorning dimensions");
@@ -446,11 +458,6 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           } else 
             fatal("unsupported netcdf variable dimensionality");
 
-          // determine number timesteps
-          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
-            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
-          else 
-            j["n_timesteps"] = j["filenames"].size();
 #else
           fatal("FTK not compiled with NetCDF.");
 #endif
@@ -477,6 +484,8 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           j["dimensions"] = dims;
 
           H5Fclose(fid);
+          
+          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
 #else
           fatal("FTK not compiled with HDF5.");
           // fatal("array stream w/ h5 not implemented yet");
@@ -622,6 +631,9 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     }
   }
 
+  fprintf(stderr, "st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
+      starts[0], starts[1], starts[2], starts[3], 
+      sizes[0], sizes[1], sizes[2], sizes[3]);
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][fid];
 #if FTK_HAVE_NETCDF
