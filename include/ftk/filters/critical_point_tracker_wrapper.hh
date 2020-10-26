@@ -517,7 +517,7 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
   tracker->finalize();
   auto t3 = clock_type::now();
 
-  if (j["enable_timing"]) {
+  if (comm.rank() == 0 && j["enable_timing"]) {
     float t_init = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
           t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9,
           t_finalize = std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2).count() * 1e-9;

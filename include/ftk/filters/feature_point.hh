@@ -36,8 +36,7 @@ struct feature_point_t {
   bool ordinal = false;
   unsigned long long tag = 0, id = 0;
 
-  // constexpr size_t size() const noexcept { return sizeof(feature_point_t<N, ValueType, IntegerType>); }
-  constexpr size_t size() const noexcept { return sizeof(feature_point_t); }
+  // constexpr size_t size() const noexcept { return sizeof(feature_point_t); }
 
   double vmag() const { // velocity magnitude
     return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);

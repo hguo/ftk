@@ -169,8 +169,9 @@ inline void critical_point_tracker_3d_regular::push_vector_field_snapshot(const 
 
 inline void critical_point_tracker_3d_regular::update_timestep()
 {
-  fprintf(stderr, "current_timestep = %d\n", current_timestep);
-
+  if (comm.rank() == 0) 
+    fprintf(stderr, "current_timestep = %d\n", current_timestep);
+  
 #ifndef FTK_HAVE_GMP
   update_vector_field_scaling_factor();
 #endif
@@ -277,7 +278,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
         field_data_snapshots[0].scalar.data(),
         NULL // scalar[0].data(),
       );
-    
+   
     for (auto lcp : results) {
       feature_point_t cp(lcp);
       element_t e(4, 3);
