@@ -197,6 +197,9 @@ protected:
   
   bool is_input_array_partial = false;
   bool use_default_domain_partition = true;
+
+protected: // benchmark
+  double accumulated_kernel_time = 0.0;
 };
 
 ///////

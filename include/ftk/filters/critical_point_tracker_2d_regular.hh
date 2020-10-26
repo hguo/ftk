@@ -114,6 +114,11 @@ inline void critical_point_tracker_2d_regular::initialize()
 
 inline void critical_point_tracker_2d_regular::finalize()
 {
+  double max_accumulated_kernel_time;
+  diy::mpi::reduce(comm, accumulated_kernel_time, max_accumulated_kernel_time, get_root_proc(), diy::mpi::maximum<double>());
+  if (comm.rank() == get_root_proc())
+    fprintf(stderr, "max_accumulated_kernel_time=%f\n", accumulated_kernel_time);
+
   if (enable_streaming_trajectories) {
     // done
   } else {
@@ -204,6 +209,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
 #ifndef FTK_HAVE_GMP
   update_vector_field_scaling_factor();
 #endif
+
+  typedef std::chrono::high_resolution_clock clock_type;
+  auto t0 = clock_type::now();
 
   // scan 2-simplices
   // fprintf(stderr, "tracking 2D critical points...\n");
@@ -383,6 +391,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
     assert(false);
 #endif
   }
+
+  auto t1 = clock_type::now();
+  accumulated_kernel_time += std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
 }
 
 inline void critical_point_tracker_2d_regular::trace_intersections()

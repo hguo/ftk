@@ -115,6 +115,11 @@ void critical_point_tracker_3d_regular::initialize()
 
 void critical_point_tracker_3d_regular::finalize()
 {
+  double max_accumulated_kernel_time;
+  diy::mpi::reduce(comm, accumulated_kernel_time, max_accumulated_kernel_time, get_root_proc(), diy::mpi::maximum<double>());
+  if (comm.rank() == get_root_proc())
+    fprintf(stderr, "max_accumulated_kernel_time=%f\n", accumulated_kernel_time);
+  
   diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
   if (comm.rank() == 0) {
@@ -169,6 +174,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
 #ifndef FTK_HAVE_GMP
   update_vector_field_scaling_factor();
 #endif
+  
+  typedef std::chrono::high_resolution_clock clock_type;
+  auto t0 = clock_type::now();
 
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
@@ -310,6 +318,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
     assert(false);
 #endif
   }
+  
+  auto t1 = clock_type::now();
+  accumulated_kernel_time += std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
 }
 
 void critical_point_tracker_3d_regular::trace_connected_components()
