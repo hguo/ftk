@@ -321,10 +321,6 @@ if (FTK_BUILD_EXECUTABLES)
   add_subdirectory (cli)
 endif ()
 
-if (FTK_BUILD_APPLICATIONS)
-  add_subdirectory (apps)
-endif ()
-
 if (FTK_BUILD_PARAVIEW)
   add_subdirectory (paraview)
 endif ()
