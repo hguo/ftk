@@ -3,6 +3,7 @@
 
 #include <ftk/object.hh>
 #include <fstream>
+#include <chrono>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/filters/streaming_filter.hh>
@@ -754,13 +755,21 @@ void ndarray_stream<T>::start()
   }
 
   for (int i = 0; i < j["n_timesteps"]; i ++) {
+    auto t0 = std::chrono::high_resolution_clock::now();
     ndarray<T> array;
     if (j["type"] == "synthetic") 
       array = request_timestep_synthetic(i);
     else if (j["type"] == "file")
       array = request_timestep_file(i);
+    auto t1 = std::chrono::high_resolution_clock::now();
 
     modified_callback(i, array);
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    float t_io = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
+          t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9;
+    
+    fprintf(stderr, "timestep=%d, t_io=%f, t_compute=%f\n", i, t_io, t_compute);
   }
 }
  

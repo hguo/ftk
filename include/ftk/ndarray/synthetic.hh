@@ -280,6 +280,7 @@ ndarray<T> synthetic_moving_extremum(const std::vector<size_t>& shape, const T x
   for (int j = 0; j < N; j ++)
     xc[j] = x0[j] + dir[j] * t;
 
+#pragma omp parallel for
   for (auto i = 0; i < scalar.nelem(); i ++) {
     std::vector<int> xi = lattice.from_integer(i);
     T x[N];

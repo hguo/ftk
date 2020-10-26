@@ -949,10 +949,16 @@ inline void simplicial_regular_mesh::element_for(
           lambda(i);
       });
 #else
-  // set_affinity(0);
+#pragma omp parallel for
+  for (size_t j = 0; j < ntasks; j ++) {
+    simplicial_regular_mesh_element e(*this, d, j, l, scope);
+    f(e);
+  }
+#if 0
+  set_affinity(0);
   std::vector<std::thread> workers;
   for (size_t i = 1; i < nthreads; i ++) {
-    // set_affinity(i);
+    set_affinity(i);
     workers.push_back(std::thread([=]() {
       for (size_t j = i; j < ntasks; j += nthreads)
         lambda(j);
@@ -963,6 +969,7 @@ inline void simplicial_regular_mesh::element_for(
     lambda(j);
 
   std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
+#endif
 #endif
 }
 

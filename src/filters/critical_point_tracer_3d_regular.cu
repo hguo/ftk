@@ -1,6 +1,7 @@
 #include <nvfunctional>
 #include <cstdio>
 #include <cassert>
+#include <chrono>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
@@ -150,7 +151,10 @@ static std::vector<cp_t> extract_cp3dt(
     const double *Sc,
     const double *Sn)
 {
+  auto t0 = std::chrono::high_resolution_clock::now();
+
   const size_t ntasks = core.n() * ntypes_4_3<scope>();
+  // fprintf(stderr, "ntasks=%zu\n", ntasks);
   const int maxGridDim = 1024;
   const int blockSize = 256;
   const int nBlocks = idivup(ntasks, blockSize);
@@ -233,7 +237,11 @@ static std::vector<cp_t> extract_cp3dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
  
   cudaDeviceSynchronize();
-  fprintf(stderr, "exitting gpu kernel, ncps=%llu\n", ncps);
+  auto t1 = std::chrono::high_resolution_clock::now();
+  float duration = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
+
+  fprintf(stderr, "exitting gpu kernel, ncps=%llu, time=%f\n", ncps, duration);
+  
 
   return cps;
 }
