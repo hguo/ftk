@@ -25,14 +25,14 @@ protected:
   simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
   
-  std::map<element_t, critical_point_t> discrete_critical_points;
+  std::map<element_t, feature_point_t> discrete_critical_points;
   std::vector<std::set<element_t>> connected_components;
 
 public: // cp io
-  const std::map<element_t, critical_point_t>& get_discrete_critical_points() const {return discrete_critical_points;}
+  const std::map<element_t, feature_point_t>& get_discrete_critical_points() const {return discrete_critical_points;}
 
-  std::vector<critical_point_t> get_critical_points() const;
-  void put_critical_points(const std::vector<critical_point_t>&);
+  std::vector<feature_point_t> get_critical_points() const;
+  void put_critical_points(const std::vector<feature_point_t>&);
 
 protected: // internal use
   template <typename I=int> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
@@ -51,15 +51,15 @@ protected:
 
 /////
 ////
-inline std::vector<critical_point_t> critical_point_tracker_regular::get_critical_points() const
+inline std::vector<feature_point_t> critical_point_tracker_regular::get_critical_points() const
 {
-  std::vector<critical_point_t> results;
+  std::vector<feature_point_t> results;
   for (const auto &kv : discrete_critical_points) 
     results.push_back(kv.second);
   return results;
 }
 
-inline void critical_point_tracker_regular::put_critical_points(const std::vector<critical_point_t>& data) 
+inline void critical_point_tracker_regular::put_critical_points(const std::vector<feature_point_t>& data) 
 {
   for (const auto& cp : data) {
     element_t e(m, cpdims(), cp.tag);

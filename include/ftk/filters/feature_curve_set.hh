@@ -1,7 +1,7 @@
 #ifndef _FTK_CRITICAL_POINT_TRAJ_SET_HH
 #define _FTK_CRITICAL_POINT_TRAJ_SET_HH
 
-#include <ftk/filters/critical_point_traj.hh>
+#include <ftk/filters/feature_curve.hh>
 #include <map>
 
 #if FTK_HAVE_VTK
@@ -9,27 +9,31 @@
 #include <vtkDoubleArray.h>
 #include <vtkVertex.h>
 #include <vtkSmartPointer.h>
+#include <vtkCellArray.h>
+#include <vtkPolyLine.h>
+#include <vtkPolyData.h>
 #endif
 
 namespace ftk {
 
-struct critical_point_traj_set_t : public std::map<int, critical_point_traj_t>
+struct feature_curve_set_t : public std::map<int, feature_curve_t>
 {
-  int add(const critical_point_traj_t&);
-  std::vector<int> add(const std::vector<critical_point_traj_t>&);
+  int add(const feature_curve_t&);
+  void add(const feature_curve_t&, int label);
+  std::vector<int> add(const std::vector<feature_curve_t>&);
 
   std::vector<int> split(int);
   void split_all();
   
-  void foreach(std::function<void(const critical_point_traj_t&)> f) const {for (const auto& kv : *this) f(kv.second);}
-  void foreach(std::function<void(critical_point_traj_t&)> f) {for (auto& kv : *this) f(kv.second);}
-  void foreach(std::function<void(int, const critical_point_traj_t&)> f) const {for (const auto& kv : *this) f(kv.first, kv.second);}
-  void foreach(std::function<void(int, critical_point_traj_t&)> f) {for (auto& kv : *this) f(kv.first, kv.second);}
+  void foreach(std::function<void(const feature_curve_t&)> f) const {for (const auto& kv : *this) f(kv.second);}
+  void foreach(std::function<void(feature_curve_t&)> f) {for (auto& kv : *this) f(kv.second);}
+  void foreach(std::function<void(int, const feature_curve_t&)> f) const {for (const auto& kv : *this) f(kv.first, kv.second);}
+  void foreach(std::function<void(int, feature_curve_t&)> f) {for (auto& kv : *this) f(kv.first, kv.second);}
 
-  void filter(std::function<bool(const critical_point_traj_t&)> f);
+  void filter(std::function<bool(const feature_curve_t&)> f);
 
-  std::vector<critical_point_t> slice(int t) const;
-  critical_point_traj_set_t intercept(int t0, int t1) const;
+  std::vector<feature_point_t> slice(int t) const;
+  feature_curve_set_t intercept(int t0, int t1) const;
 
 public: // IO
   void write(const std::string& format, const std::string& filename) const;
@@ -65,13 +69,13 @@ namespace nlohmann
 {
   using namespace ftk;
   template <>
-  struct adl_serializer<critical_point_traj_set_t> {
-    static void to_json(json& j, const critical_point_traj_set_t& s) {
-      j = {{"trajs", static_cast<std::map<int, critical_point_traj_t>>(s)}};
+  struct adl_serializer<feature_curve_set_t> {
+    static void to_json(json& j, const feature_curve_set_t& s) {
+      j = {{"trajs", static_cast<std::map<int, feature_curve_t>>(s)}};
     }
    
-    static void from_json(const json&j, critical_point_traj_set_t& s) {
-      std::map<int, critical_point_traj_t> trajs = j["trajs"];
+    static void from_json(const json&j, feature_curve_set_t& s) {
+      std::map<int, feature_curve_t> trajs = j["trajs"];
       s.clear();
       for (auto &kv : trajs)
         s.insert(kv);
@@ -83,7 +87,7 @@ namespace nlohmann
 
 // serialization
 namespace diy {
-  static void save(diy::BinaryBuffer& bb, const ftk::critical_point_traj_set_t &s) {
+  static void save(diy::BinaryBuffer& bb, const ftk::feature_curve_set_t &s) {
     diy::save(bb, s.size());
     for (const auto &kv : s) {
       diy::save(bb, kv.first);  // identifer
@@ -91,14 +95,14 @@ namespace diy {
     }
   }
 
-  static void load(diy::BinaryBuffer& bb, ftk::critical_point_traj_set_t &s) {
+  static void load(diy::BinaryBuffer& bb, ftk::feature_curve_set_t &s) {
     size_t size;
     diy::load(bb, size);
     for (auto i = 0; i < size; i ++) {
       int id;
       diy::load(bb, id);
       
-      ftk::critical_point_traj_t traj;
+      ftk::feature_curve_t traj;
       diy::load(bb, traj);
       traj.relabel(id);
 
@@ -110,38 +114,38 @@ namespace diy {
 //////
 namespace ftk {
 
-inline void critical_point_traj_set_t::write(const std::string& format, const std::string& filename) const
+inline void feature_curve_set_t::write(const std::string& format, const std::string& filename) const
 {
   // TODO
 }
 
-inline void critical_point_traj_set_t::read(const std::string& format, const std::string& filename)
+inline void feature_curve_set_t::read(const std::string& format, const std::string& filename)
 {
   // TODO
 }
 
-inline void critical_point_traj_set_t::write_json(const std::string& filename, int indent) const
+inline void feature_curve_set_t::write_json(const std::string& filename, int indent) const
 {
   // TODO
 }
 
-inline void critical_point_traj_set_t::read_json(const std::string& filename)
+inline void feature_curve_set_t::read_json(const std::string& filename)
 {
   // TODO
 }
 
-inline void critical_point_traj_set_t::write_binary(const std::string& filename) const
+inline void feature_curve_set_t::write_binary(const std::string& filename) const
 {
   // TODO
 }
 
-inline void critical_point_traj_set_t::read_binary(const std::string& filename)
+inline void feature_curve_set_t::read_binary(const std::string& filename)
 {
   // TODO
 }
 
 
-inline void critical_point_traj_set_t::write_text(std::ostream& os, const int cpdims, const std::vector<std::string>& scalar_components) const
+inline void feature_curve_set_t::write_text(std::ostream& os, const int cpdims, const std::vector<std::string>& scalar_components) const
 {
   os << "#trajectories=" << size() << std::endl;
   for (const auto &kv : *this) {
@@ -179,7 +183,8 @@ inline void critical_point_traj_set_t::write_text(std::ostream& os, const int cp
     
     os << "tmin=" << curve.tmin << ", tmax=" << curve.tmax << ", ";
 
-    os << "consistent_type=" << critical_point_type_to_string(cpdims, curve.consistent_type, scalar_components.size()) << ", ";
+    // os << "consistent_type=" << critical_point_type_to_string(cpdims, curve.consistent_type, scalar_components.size()) << ", ";
+    os << "consistent_type=" << curve.consistent_type << ", ";
     os << "loop=" << curve.loop;
     os << std::endl;
 
@@ -190,26 +195,26 @@ inline void critical_point_traj_set_t::write_text(std::ostream& os, const int cp
   }
 }
 
-inline void critical_point_traj_set_t::write_text(const std::string& filename, const int cpdims, const std::vector<std::string>& scalar_components) const
+inline void feature_curve_set_t::write_text(const std::string& filename, const int cpdims, const std::vector<std::string>& scalar_components) const
 {
   // TODO
 }
 
 
-inline void critical_point_traj_set_t::write_vtk(const std::string& filename) const
+inline void feature_curve_set_t::write_vtk(const std::string& filename) const
 {
   // TODO
 }
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims, const std::vector<std::string> &scalar_components, double tfactor) const
+vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims, const std::vector<std::string> &scalar_components, double tfactor) const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   vtkSmartPointer<vtkCellArray> lines = vtkCellArray::New();
   vtkSmartPointer<vtkCellArray> verts = vtkCellArray::New();
 
-  foreach([&](const critical_point_traj_t& curve) {
+  foreach([&](const feature_curve_t& curve) {
     for (auto i = 0; i < curve.size(); i ++) {
       double p[3] = {curve[i][0], curve[i][1], cpdims == 2 ? curve[i].t * tfactor : curve[i][2]};
       points->InsertNextPoint(p);
@@ -217,7 +222,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
   });
 
   size_t nv = 0;
-  foreach([&](const critical_point_traj_t& curve) {
+  foreach([&](const feature_curve_t& curve) {
     if (curve.empty()) { // skip
     } else if (curve.size() < 2) { // isolated vertex
       vtkSmartPointer<vtkVertex> obj = vtkVertex::New();
@@ -244,7 +249,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     vtkSmartPointer<vtkUnsignedIntArray> types = vtkSmartPointer<vtkUnsignedIntArray>::New();
     types->SetNumberOfValues(nv);
     size_t i = 0;
-    foreach([&](const critical_point_traj_t& curve) {
+    foreach([&](const feature_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
         types->SetValue(i ++, curve[j].type);
     });
@@ -256,7 +261,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     vtkSmartPointer<vtkUnsignedIntArray> ids = vtkSmartPointer<vtkUnsignedIntArray>::New();
     ids->SetNumberOfValues(nv);
     size_t i = 0;
-    foreach([&](int id, const critical_point_traj_t& curve) {
+    foreach([&](int id, const feature_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
         ids->SetValue(i ++, id);
     });
@@ -269,7 +274,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     vels->SetNumberOfComponents(3);
     vels->SetNumberOfTuples(nv);
     size_t i = 0;
-    foreach([&](const critical_point_traj_t& curve) {
+    foreach([&](const feature_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
         vels->SetTuple3(i ++, curve[j].v[0], curve[j].v[1], curve[j].v[2]);
     });
@@ -281,7 +286,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     vtkSmartPointer<vtkDoubleArray> time = vtkSmartPointer<vtkDoubleArray>::New();
     time->SetNumberOfValues(nv);
     size_t i = 0;
-    foreach([&](const critical_point_traj_t& curve) {
+    foreach([&](const feature_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
         time->SetValue(i ++, curve[j].t);
     });
@@ -293,7 +298,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     vtkSmartPointer<vtkDoubleArray> conds = vtkSmartPointer<vtkDoubleArray>::New();
     conds->SetNumberOfValues(nv);
     size_t i = 0;
-    foreach([&](const critical_point_traj_t& curve) {
+    foreach([&](const feature_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
         conds->SetValue(i ++, curve[j].cond);
     });
@@ -307,7 +312,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
     vtkSmartPointer<vtkDoubleArray> scalar = vtkSmartPointer<vtkDoubleArray>::New();
     scalar->SetNumberOfValues(nv);
     size_t i = 0;
-    foreach([&](const critical_point_traj_t& curve) {
+    foreach([&](const feature_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
         scalar->SetValue(i ++, curve[j].scalar[k]);
     });
@@ -319,7 +324,7 @@ vtkSmartPointer<vtkPolyData> critical_point_traj_set_t::to_vtp(const int cpdims,
 }
 #endif
 
-inline void critical_point_traj_set_t::filter(std::function<bool(const critical_point_traj_t&)> f)
+inline void feature_curve_set_t::filter(std::function<bool(const feature_curve_t&)> f)
 {
   for (auto it = cbegin(); it != cend(); ) {
     if (!f(it->second)) 
@@ -329,15 +334,21 @@ inline void critical_point_traj_set_t::filter(std::function<bool(const critical_
   }
 }
 
-inline int critical_point_traj_set_t::add(const critical_point_traj_t& t)
+inline int feature_curve_set_t::add(const feature_curve_t& t)
 {
   const int id = get_new_id();
-  insert(std::pair<int, critical_point_traj_t>(id, t));
+  insert(std::pair<int, feature_curve_t>(id, t));
   at(id).relabel(id);
   return id;
 }
 
-inline std::vector<int> critical_point_traj_set_t::add(const std::vector<critical_point_traj_t>& trajs)
+inline void feature_curve_set_t::add(const feature_curve_t& t, int label)
+{
+  insert(std::pair<int, feature_curve_t>(label, t));
+  at(label).relabel(label);
+}
+
+inline std::vector<int> feature_curve_set_t::add(const std::vector<feature_curve_t>& trajs)
 {
   std::vector<int> ids;
   for (const auto &traj : trajs)
@@ -345,7 +356,7 @@ inline std::vector<int> critical_point_traj_set_t::add(const std::vector<critica
   return ids;
 }
 
-inline std::vector<int> critical_point_traj_set_t::split(int i)
+inline std::vector<int> feature_curve_set_t::split(int i)
 {
   std::vector<int> result;
   const auto subtrajs = at(i).split();
@@ -355,9 +366,9 @@ inline std::vector<int> critical_point_traj_set_t::split(int i)
   return result;
 }
 
-inline void critical_point_traj_set_t::split_all()
+inline void feature_curve_set_t::split_all()
 {
-  std::vector<critical_point_traj_t> result;
+  std::vector<feature_curve_t> result;
   std::vector<int> to_erase;
 
   for (const auto &kv : *this) {
@@ -375,9 +386,9 @@ inline void critical_point_traj_set_t::split_all()
     add(traj);
 }
 
-critical_point_traj_set_t critical_point_traj_set_t::intercept(int t0, int t1) const
+feature_curve_set_t feature_curve_set_t::intercept(int t0, int t1) const
 {
-  critical_point_traj_set_t result;
+  feature_curve_set_t result;
   for (const auto &kv : * this) {
     auto traj = kv.second.intercept(t0, t1);
     if (!traj.empty())

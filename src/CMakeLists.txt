@@ -1,3 +1,7 @@
+if (FTK_BUILD_PYFTK)
+  include_directories (${PYTHON_INCLUDE_DIRS})
+endif ()
+
 file (GLOB_RECURSE ftk_sources *.cpp)
 add_library (ftk SHARED ${ftk_sources} ${ftk_cuda_sources})
 
@@ -15,6 +19,10 @@ endif ()
 
 if (FTK_HAVE_BOOST)
   target_link_libraries (ftk ${Boost_LIBRARIES})
+endif ()
+
+if (FTK_HAVE_CGAL)
+  target_link_libraries (ftk CGAL::CGAL)
 endif ()
 
 if (FTK_HAVE_GMP)

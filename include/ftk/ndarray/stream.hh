@@ -68,8 +68,8 @@ protected:
   ndarray<T> request_timestep_synthetic_woven(int k);
   ndarray<T> request_timestep_synthetic_moving_extremum_2d(int k);
   ndarray<T> request_timestep_synthetic_moving_extremum_3d(int k);
-  ndarray<T> request_timestep_synthetic_moving_ridge_2d(int k);
-  ndarray<T> request_timestep_synthetic_moving_ridge_3d(int k);
+  ndarray<T> request_timestep_synthetic_moving_ramp_3d(int k);
+  ndarray<T> request_timestep_synthetic_moving_dual_ramp_3d(int k);
   ndarray<T> request_timestep_synthetic_double_gyre(int k);
   ndarray<T> request_timestep_synthetic_merger_2d(int k);
   ndarray<T> request_timestep_synthetic_volcano_2d(int k);
@@ -229,7 +229,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           } else 
             j["dir"] = {0.1, 0.1, 0.1};
           
-        } else if (j["name"] == "moving_ridge_3d") {
+        } else if (j["name"] == "moving_ramp_3d") {
           if (missing_variables) 
             j["variables"] = {"scalar"};
           default_nd = 3;
@@ -246,6 +246,28 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             if (j["rate"].is_number()) { // OK
             } else fatal("invalid rate");
           } else j["rate"] = 0.1;
+        } else if (j["name"] == "moving_dual_ramp_3d") {
+          if (missing_variables) 
+            j["variables"] = {"scalar"};
+          default_nd = 3;
+          default_dims[0] = 21; 
+          default_dims[1] = 21;
+          default_dims[2] = 21;
+          
+          if (j.contains("x0")) {
+            if (j["x0"].is_number()) { // OK
+            } else fatal("invalid x0");
+          } else j["x0"] = 10;
+
+          if (j.contains("rate")) {
+            if (j["rate"].is_number()) { // OK
+            } else fatal("invalid rate");
+          } else j["rate"] = 0.7;
+
+          if (j.contains("offset")) {
+            if (j["offset"].is_number()) { // OK
+            } else fatal("invalid offset");
+          } else j["offset"] = 2.0;
         } else if (j["name"] == "volcano_2d") {
           if (missing_variables) 
             j["variables"] = {"scalar"};
@@ -657,8 +679,10 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic(int k)
     return request_timestep_synthetic_moving_extremum_2d(k);
   else if (j["name"] == "moving_extremum_3d")
     return request_timestep_synthetic_moving_extremum_3d(k);
-  else if (j["name"] == "moving_ridge_3d")
-    return request_timestep_synthetic_moving_ridge_3d(k);
+  else if (j["name"] == "moving_ramp_3d")
+    return request_timestep_synthetic_moving_ramp_3d(k);
+  else if (j["name"] == "moving_dual_ramp_3d")
+    return request_timestep_synthetic_moving_dual_ramp_3d(k);
   else if (j["name"] == "double_gyre")
     return request_timestep_synthetic_double_gyre(k);
   else if (j["name"] == "merger_2d")
@@ -709,12 +733,21 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_extremum_3d(int 
 }
 
 template <typename T>
-ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_ridge_3d(int k) 
+ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_ramp_3d(int k) 
 {
   const std::vector<size_t> shape({j["dimensions"][0], j["dimensions"][1], j["dimensions"][2]});
   const T x0 = j["x0"], rate = j["rate"];
 
-  return ftk::synthetic_moving_ridge<T, 3>(shape, x0, rate, T(k));
+  return ftk::synthetic_moving_ramp<T, 3>(shape, x0, rate, T(k));
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_dual_ramp_3d(int k) 
+{
+  const std::vector<size_t> shape({j["dimensions"][0], j["dimensions"][1], j["dimensions"][2]});
+  const T x0 = j["x0"], rate = j["rate"], offset = j["offset"];
+
+  return ftk::synthetic_moving_dual_ramp<T, 3>(shape, x0, rate, T(k) + offset);
 }
 
 template <typename T>

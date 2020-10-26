@@ -17,7 +17,7 @@
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
-#include <ftk/filters/critical_point.hh>
+#include <ftk/filters/feature_point.hh>
 #include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/external/diy/serialization.hpp>
 
@@ -34,7 +34,7 @@
 #endif
 
 #if FTK_HAVE_CUDA
-extern std::vector<ftk::critical_point_lite_t> // <4, double>> 
+extern std::vector<ftk::feature_point_lite_t> // <4, double>> 
 extract_cp3dt_cuda(
     int scope, int current_timestep, 
     const ftk::lattice& domain4,
@@ -69,7 +69,7 @@ protected:
   typedef simplicial_regular_mesh_element element_t;
 
 protected:
-  bool check_simplex(const element_t& s, critical_point_t& cp);
+  bool check_simplex(const element_t& s, feature_point_t& cp);
   void trace_intersections();
   void trace_connected_components();
 
@@ -173,7 +173,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
   // scan 3-simplices
   // fprintf(stderr, "tracking 3D critical points...\n");
   auto func3 = [=](element_t e) {
-      critical_point_t cp;
+      feature_point_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         discrete_critical_points[e] = cp;
@@ -271,7 +271,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
       );
     
     for (auto lcp : results) {
-      critical_point_t cp(lcp);
+      feature_point_t cp(lcp);
       element_t e(4, 3);
       e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
       cp.tag = e.to_integer(m);
@@ -297,7 +297,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
         );
       fprintf(stderr, "interval_results#=%d\n", results.size());
       for (auto lcp : results) {
-        critical_point_t cp(lcp);
+        feature_point_t cp(lcp);
         element_t e(4, 3);
         e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
         cp.tag = e.to_integer(m);
@@ -336,7 +336,7 @@ void critical_point_tracker_3d_regular::trace_connected_components()
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      critical_point_traj_t traj; 
+      feature_curve_t traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.add(traj);
@@ -397,7 +397,7 @@ void critical_point_tracker_3d_regular::simplex_jacobians(
 
 bool critical_point_tracker_3d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
-    critical_point_t& cp)
+    feature_point_t& cp)
 {
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m);
