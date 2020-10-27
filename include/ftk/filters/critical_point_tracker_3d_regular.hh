@@ -464,6 +464,12 @@ bool critical_point_tracker_3d_regular::check_simplex(
   cp.t = x[3];
   cp.cond = cond;
 
+  if (scalar_field_source != SOURCE_NONE) {
+    double values[4];
+    simplex_scalars(vertices, values);
+    cp.scalar[0] = lerp_s3(values, mu);
+  }
+
   double Js[4][3][3], J[3][3];
   simplex_jacobians(vertices, Js);
   ftk::lerp_s3m3x3(Js, mu, J);
@@ -475,12 +481,6 @@ bool critical_point_tracker_3d_regular::check_simplex(
 
   return true; // TODO
 #if 0 // legacy
-  if (scalar_field_source != SOURCE_NONE) {
-    double values[3];
-    simplex_scalars(vertices, values);
-    cp.scalar[0] = lerp_s3(values, mu);
-  }
-
   double J[3][3] = {0}; // jacobian or hessian
   if (jacobian_field_source != SOURCE_NONE) {
     double Js[4][3][3];
