@@ -408,8 +408,26 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           int unlimited_recid;
           NC_SAFE_CALL( nc_inq_unlimdim(ncid, &unlimited_recid) );
           NC_SAFE_CALL( nc_close(ncid) );
-          if (unlimited_recid >= 0)
+          if (unlimited_recid >= 0) {
             j["nc_has_unlimited_time_dimension"] = true;
+
+            // check timesteps per file
+            const int nf = j["filenames"].size();
+            std::vector<int> timesteps_per_file(nf), first_timestep_per_file(nf);
+            int total_timesteps = 0;
+            for (int i = 0; i < nf; i ++) {
+              const std::string filename = j["filenames"][i];
+              size_t nt;
+              NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+              NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[0], &nt) );
+              NC_SAFE_CALL( nc_close(ncid) );
+              timesteps_per_file[i] = nt;
+              first_timestep_per_file[i] = total_timesteps;
+              total_timesteps += nt;
+            }
+            j["timesteps_per_file"] = timesteps_per_file;
+            j["first_timestep_per_file"] = first_timestep_per_file;
+          }
           
           if (j.contains("dimensions"))
             warn("ignorning dimensions");
@@ -566,17 +584,56 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
 {
+  size_t fid = 0, offset = 0;
+  size_t starts[4] = {0}, sizes[4] = {0};
+  std::vector<size_t> dims = j["dimensions"];
+  
+  // determine which file to read
+  if (j.contains("first_timestep_per_file")) {
+    std::vector<int> first_timestep_per_file = j["first_timestep_per_file"], 
+      timesteps_per_file = j["timesteps_per_file"];
+    const size_t nf = first_timestep_per_file.size();
+
+    for (size_t i = 0; i < nf-1; i ++) {
+      if (k >= first_timestep_per_file[i] && k < first_timestep_per_file[i] + timesteps_per_file[i]) {
+        fid = k;
+        offset = k - first_timestep_per_file[i];
+        break;
+      }
+    }
+
+    starts[0] = offset; sizes[0] = 1;
+    if (dims.size() == 2) {
+      sizes[1] = dims[1];
+      sizes[2] = dims[0];
+    } else {
+      sizes[1] = dims[2];
+      sizes[2] = dims[1];
+      sizes[3] = dims[0];
+    }
+  } else {
+    fid = k;
+    if (dims.size() == 2) {
+      sizes[0] = dims[1];
+      sizes[1] = dims[0];
+    } else {
+      sizes[0] = dims[2];
+      sizes[1] = dims[1];
+      sizes[2] = dims[0];
+    }
+  }
+
   ftk::ndarray<T> array;
-  const std::string filename = j["filenames"][k];
+  const std::string filename = j["filenames"][fid];
 #if FTK_HAVE_NETCDF
   if (is_single_component()) { // all data in one single variable; channels are automatically handled in ndarray
-    array.from_netcdf(filename, j["variables"][0]);
+    array.from_netcdf(filename, j["variables"][0], starts, sizes);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
     const int nv = n_components();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_netcdf(filename, j["variables"][i]);
+      arrays[i].from_netcdf(filename, j["variables"][i], starts, sizes);
 
     array.reshape(shape());
     for (int i = 0; i < arrays[0].nelem(); i ++) {
