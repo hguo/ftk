@@ -602,9 +602,9 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
       timesteps_per_file = j["timesteps_per_file"];
     const size_t nf = first_timestep_per_file.size();
 
-    for (size_t i = 0; i < nf-1; i ++) {
+    for (size_t i = 0; i < nf; i ++) {
       if (k >= first_timestep_per_file[i] && k < first_timestep_per_file[i] + timesteps_per_file[i]) {
-        fid = k;
+        fid = i;
         offset = k - first_timestep_per_file[i];
         break;
       }
@@ -634,6 +634,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
   fprintf(stderr, "st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
       starts[0], starts[1], starts[2], starts[3], 
       sizes[0], sizes[1], sizes[2], sizes[3]);
+  fprintf(stderr, "k=%d, offset=%zu, fid=%zu\n", k, offset, fid);
+
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][fid];
 #if FTK_HAVE_NETCDF
