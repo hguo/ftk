@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/numeric/print.hh>
+#include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -557,6 +558,8 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   // if (!succ2) return false;
   // if (std::isnan(mu[0]) || std::isnan(mu[1]) || std::isnan(mu[2])) return false;
   // fprintf(stderr, "mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
+
+  if (!succ2) clamp_barycentric<3>(mu);
 
   double X[3][3], x[3]; // position
   simplex_coordinates(vertices, X);

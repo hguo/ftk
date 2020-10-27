@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/numeric/print.hh>
+#include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -448,6 +449,8 @@ bool critical_point_tracker_3d_regular::check_simplex(
     simplex_indices(vertices, indices);
     bool succ = robust_critical_point_in_simplex3(vf, indices);
     if (!succ) return false;
+
+    if (!succ2) clamp_barycentric<4>(mu);
   } else {
     if (!succ2) return false;
   }

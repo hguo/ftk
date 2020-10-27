@@ -4,6 +4,7 @@
 #include <chrono>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_type.hh>
@@ -61,6 +62,8 @@ bool check_simplex_cp3t(
 
   double mu[4], cond;
   bool succ2 = ftk::inverse_lerp_s3v3(v, mu, &cond); //, 0.0);
+  if (!succ2) ftk::clamp_barycentric<4>(mu);
+
   if (1) { // (succ2) {
     // if (!succ2) return false;
     // linear jacobian interpolation

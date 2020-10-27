@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_type.hh>
@@ -65,7 +66,8 @@ bool check_simplex_cp2t(
     // inverse interpolation
     double mu[3];
     double cond;
-    ftk::inverse_lerp_s2v2(v, mu, &cond);
+    bool succ2 = ftk::inverse_lerp_s2v2(v, mu, &cond);
+    if (!succ2) ftk::clamp_barycentric<3>(mu);
 
     // linear jacobian interpolation
     if (gradV[0]) { // have given jacobian
