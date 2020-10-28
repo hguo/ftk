@@ -387,6 +387,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         cp.timestep = current_timestep;
         discrete_critical_points[e] = cp;
       }
+      
+      if (enable_streaming_trajectories)
+        grow();
     }
 #else
     assert(false);

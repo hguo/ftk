@@ -120,24 +120,28 @@ void critical_point_tracker_3d_regular::finalize()
   diy::mpi::reduce(comm, accumulated_kernel_time, max_accumulated_kernel_time, get_root_proc(), diy::mpi::maximum<double>());
   if (comm.rank() == get_root_proc())
     fprintf(stderr, "max_accumulated_kernel_time=%f\n", accumulated_kernel_time);
-  
-  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
+ 
+  if (enable_streaming_trajectories) {
+    // already done
+  } else {
+    diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
-  if (comm.rank() == 0) {
-    fprintf(stderr, "finalizing...\n");
-    // trace_intersections();
-    // trace_connected_components();
-    traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 
-        [&](element_t f) {
-          std::set<element_t> neighbors;
-          const auto cells = f.side_of(m);
-          for (const auto c : cells) {
-            const auto elements = c.sides(m);
-            for (const auto f1 : elements)
-              neighbors.insert(f1);
-          }
-          return neighbors;
-    }));
+    if (comm.rank() == 0) {
+      fprintf(stderr, "finalizing...\n");
+      // trace_intersections();
+      // trace_connected_components();
+      traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 
+          [&](element_t f) {
+            std::set<element_t> neighbors;
+            const auto cells = f.side_of(m);
+            for (const auto c : cells) {
+              const auto elements = c.sides(m);
+              for (const auto f1 : elements)
+                neighbors.insert(f1);
+            }
+            return neighbors;
+      }));
+    }
   }
   
   update_traj_statistics();
@@ -190,6 +194,25 @@ inline void critical_point_tracker_3d_regular::update_timestep()
         // fprintf(stderr, "x={%f, %f, %f}, t=%f, cond=%f, type=%d\n", cp[0], cp[1], cp[2], cp.t, cp.cond, cp.type);
       }
     };
+  
+  auto grow = [&]() {
+    trace_critical_points_online<element_t>(
+        traced_critical_points, 
+        discrete_critical_points, 
+        [&](element_t f) {
+          std::set<element_t> neighbors;
+          const auto cells = f.side_of(m);
+          for (const auto c : cells) {
+            const auto elements = c.sides(m);
+            for (const auto f1 : elements)
+              neighbors.insert(f1);
+          }
+          return neighbors;
+        }, 
+        [&](unsigned long long tag) {
+          return element_t(m, 2, tag);
+        });
+  };
 
   if (xl == FTK_XL_NONE) {
     m.element_for(3, lattice({ // ordinal
@@ -220,6 +243,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
           }),
           ftk::ELEMENT_SCOPE_INTERVAL, 
           func3, nthreads);
+      
+      if (enable_streaming_trajectories)
+        grow();
     }
   } else if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
@@ -315,6 +341,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
         cp.timestep = current_timestep;
         discrete_critical_points[e] = cp;
       }
+      
+      if (enable_streaming_trajectories)
+        grow();
     }
 #else
     assert(false);
