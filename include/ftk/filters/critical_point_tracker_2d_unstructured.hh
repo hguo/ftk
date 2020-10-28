@@ -208,6 +208,7 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
               neighbors.insert(f1);
           return neighbors;
         },
+        [](unsigned long long i) {return  i;},
         [](unsigned long long i) {return  i;}
     );
   }

@@ -228,7 +228,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             } else 
               fatal("invalid dir");
           } else 
-            j["dir"] = {0.1, 0.1, 0.1};
+            j["dir"] = {0.1, 0.11, 0.1};
           
         } else if (j["name"] == "moving_ramp_3d") {
           if (missing_variables) 

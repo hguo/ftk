@@ -258,6 +258,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         }, 
         [&](unsigned long long tag) {
           return element_t(m, 2, tag);
+        }, 
+        [&](element_t e) {
+          return e.to_integer(m);
         });
   };
 

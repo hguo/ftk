@@ -150,7 +150,8 @@ protected:
       feature_curve_set_t &trajectories,
       std::map<I, feature_point_t> &discrete_critical_poionts, // critical point tag needs to index mesh element ID.  Discrete critical points will be cleared after tracing
       std::function<std::set<I>(I)> neighbors, 
-      std::function<I(unsigned long long)> tag_to_element
+      std::function<I(unsigned long long)> tag_to_element,
+      std::function<unsigned long long(I)> elementt_to_tag
   );
 
 	template <typename I> // mesh element type
@@ -544,23 +545,33 @@ void critical_point_tracker::trace_critical_points_online(
       // std::vector<bool> &alive,
       std::map<I, feature_point_t> &discrete_critical_points, // will be cleared after tracing
       std::function<std::set<I>(I)> neighbors,
-      std::function<I(unsigned long long)> tag_to_element)
+      std::function<I(unsigned long long)> tag_to_element,
+      std::function<unsigned long long(I)> element_to_tag)
 {
   // 0. gather discrete trajectories
   diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
   if (!is_root_proc()) return;
 
+  // fprintf(stderr, "hey!!!, #traj=%zu, discrete points:\n", trajectories.size());
+  // for (const auto kv : discrete_critical_points)
+  //   std::cerr << "----" << kv.second.tag << ", " << kv.first << ", " << tag_to_element(kv.second.tag) << std::endl;
+
   // 1. continue existing trajectories
   trajectories.foreach([&](feature_curve_t& traj) {
-    if (traj.complete) return; // continue;
+    if (traj.complete) {
+      // fprintf(stderr, "traj already complete.\n");
+      return; // continue;
+    }
     bool continued = false;
 
     // forward direction
     auto terminal = traj.back();
     auto current = tag_to_element(terminal.tag);
+    // std::cerr << "forward terminal: " << terminal.tag << ", " << tag_to_element(terminal.tag) << std::endl;
     while (1) {
       bool has_next = false;
       for (auto i : neighbors(current)) {
+        // std::cerr << "-------forward neighbor: " << element_to_tag(i) << ", " << i << std::endl;
         if (discrete_critical_points.find(i) != discrete_critical_points.end()) 
         {
           current = i;
@@ -572,6 +583,7 @@ void critical_point_tracker::trace_critical_points_online(
           discrete_critical_points.erase(current);
           has_next = true;
           continued = true;
+          // fprintf(stderr, "found next forward!!\n");
           break;
         }
       }
@@ -582,9 +594,11 @@ void critical_point_tracker::trace_critical_points_online(
     // backward direction
     terminal = traj.front();
     current = tag_to_element(terminal.tag);
+    // std::cerr << "backward terminal: " << terminal.tag << ", " << tag_to_element(terminal.tag) << std::endl;
     while (1) {
       bool has_next = false;
       for (auto i : neighbors(current)) {
+        // std::cerr << "-------backward neighbor: " << element_to_tag(i) << ", " << i << std::endl;
         if (discrete_critical_points.find(i) != discrete_critical_points.end()) 
         {
           // fprintf(stderr, "tracing backwards!!\n");
@@ -598,6 +612,7 @@ void critical_point_tracker::trace_critical_points_online(
           discrete_critical_points.erase(current);
           has_next = true;
           continued = true;
+          // fprintf(stderr, "found next backward!!\n");
           break;
         }
       }

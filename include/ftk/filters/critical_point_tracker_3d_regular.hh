@@ -210,7 +210,10 @@ inline void critical_point_tracker_3d_regular::update_timestep()
           return neighbors;
         }, 
         [&](unsigned long long tag) {
-          return element_t(m, 2, tag);
+          return element_t(m, 3, tag);
+        },
+        [&](element_t e) {
+          return e.to_integer(m);
         });
   };
 
