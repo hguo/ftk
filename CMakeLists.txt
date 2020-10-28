@@ -34,20 +34,20 @@ ftk_option (CGAL "Use CGAL" FALSE) # experimental
 ftk_option (CUDA "Use CUDA" FALSE) # experimental
 ftk_option (GSL "Use GSL (GNU Scientific Library)" FALSE)
 ftk_option (GMP "Use GMP (GNU Multiple Precision Arithmetic Library)" AUTO) # strongly recommended to have GMP
-ftk_option (HDF5 "Use HDF5" AUTO)
+ftk_option (HDF5 "Use HDF5" FALSE)
 ftk_option (Kokkos "Use Kokkos" FALSE) # experimental
 ftk_option (LevelDB "Use LevelDB" FALSE)
 ftk_option (MPFR "Use MPFR" FALSE)
 ftk_option (MPI "Use MPI" FALSE)
 ftk_option (MPSolve "Use MPSolve" FALSE)
-ftk_option (NETCDF "Use NetCDF" AUTO)
+ftk_option (NETCDF "Use NetCDF" FALSE)
 ftk_option (OpenMP "Use OpenMP" FALSE)
 ftk_option (PNETCDF "Use parallel-netcdf" FALSE)
-ftk_option (PNG "Use PNG" AUTO)
+ftk_option (PNG "Use PNG" FALSE)
 ftk_option (Qt5 "Use Qt5" FALSE)
 ftk_option (RocksDB "Use RocksDB" FALSE)
 ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # experimental
-ftk_option (VTK "Use VTK" AUTO)
+ftk_option (VTK "Use VTK" FALSE)
 
 find_package (Threads REQUIRED)
 
