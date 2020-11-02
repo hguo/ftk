@@ -112,7 +112,7 @@ inline void contour_tracker_3d_regular::build_isovolume()
     isovolume.conn.push_back({i0, i1, i2, i3});
   };
   
-  parallel_for<element_t>(related_cells, nthreads, [&](const element_t &e) {
+  parallel_for<element_t>(related_cells, [&](const element_t &e) {
     int count = 0;
     int ids[6]; // 6 intersected edges max
 
@@ -172,7 +172,7 @@ inline void contour_tracker_3d_regular::build_isovolume()
       add_tet(triangles[0][0], triangles[0][1], triangles[1][1], triangles[1][2]);
       add_tet(triangles[0][0], triangles[1][0], triangles[1][1], triangles[1][2]);
     }
-  });
+  }, FTK_XL_PTHREAD, nthreads, enable_set_affinity);
 
   isovolume.relabel();
   fprintf(stderr, "isovolumes built, #pts=%zu, #tet=%zu\n", isovolume.pts.size(), isovolume.conn.size());
@@ -309,9 +309,9 @@ inline void contour_tracker_3d_regular::update_timestep()
     }
   };
 
-  m.element_for_ordinal(1, current_timestep, func, nthreads);
+  m.element_for_ordinal(1, current_timestep, func, xl, nthreads, enable_set_affinity);
   if (field_data_snapshots.size() >= 2) // interval
-    m.element_for_interval(1, current_timestep, current_timestep+1, func, nthreads);
+    m.element_for_interval(1, current_timestep, current_timestep+1, func, xl, nthreads, enable_set_affinity);
 }
 
 inline void contour_tracker_3d_regular::simplex_coordinates(

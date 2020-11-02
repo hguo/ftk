@@ -11,15 +11,6 @@
 
 namespace ftk {
 
-enum { 
-  FTK_XL_NONE = 0,
-  FTK_XL_OPENMP = 1,
-  FTK_XL_SYCL = 2,
-  FTK_XL_TBB = 3,
-  FTK_XL_CUDA = 4,
-  FTK_XL_KOKKOS_CUDA = 5
-};
-
 struct filter : public object {
   filter() {
     nthreads = default_nthreads();
@@ -60,6 +51,8 @@ protected:
 
   int xl = FTK_XL_NONE;
   int nthreads = 1;
+  bool enable_set_affinity = true;
+
   int root_proc = 0;
   std::vector<int> device_ids;
 

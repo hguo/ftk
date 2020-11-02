@@ -230,7 +230,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
           1
         }), 
         ftk::ELEMENT_SCOPE_ORDINAL, 
-        func3, nthreads);
+        func3, xl, nthreads, enable_set_affinity);
 
     if (field_data_snapshots.size() >= 2) { // interval
       m.element_for(3, lattice({
@@ -245,7 +245,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
             1
           }),
           ftk::ELEMENT_SCOPE_INTERVAL, 
-          func3, nthreads);
+          func3, xl, nthreads, enable_set_affinity);
       
       if (enable_streaming_trajectories)
         grow();

@@ -111,7 +111,7 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
     surfaces.tris.push_back({i0, i1, i2});
   };
 
-  parallel_for<element_t>(related_cells, nthreads, [&](const element_t &e) {
+  parallel_for<element_t>(related_cells, [&](const element_t &e) {
     int count = 0;
     int ids[6];
 
@@ -148,7 +148,7 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
     } else {
       fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
     }
-  });
+  }, FTK_XL_PTHREAD, nthreads, enable_set_affinity);
 
   surfaces.relabel();
   fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.tris.size());
@@ -251,9 +251,9 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
     }
   };
 
-  m.element_for_ordinal(2, current_timestep, func, nthreads);
+  m.element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
   if (field_data_snapshots.size() >= 2) // interval
-    m.element_for_interval(2, current_timestep, current_timestep+1, func, nthreads);
+    m.element_for_interval(2, current_timestep, current_timestep+1, func, xl, nthreads, enable_set_affinity);
 }
   
 inline void tdgl_vortex_tracker_3d_regular::simplex_values(

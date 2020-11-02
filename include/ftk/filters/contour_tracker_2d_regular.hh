@@ -198,9 +198,9 @@ inline void contour_tracker_2d_regular::update_timestep()
     }
   };
 
-  m.element_for_ordinal(1, current_timestep, func, nthreads);
+  m.element_for_ordinal(1, current_timestep, func, xl, nthreads, enable_set_affinity);
   if (field_data_snapshots.size() >= 2) // interval
-    m.element_for_interval(1, current_timestep, current_timestep+1, func, nthreads);
+    m.element_for_interval(1, current_timestep, current_timestep+1, func, xl, nthreads, enable_set_affinity);
 }
 
 inline void contour_tracker_2d_regular::simplex_coordinates(

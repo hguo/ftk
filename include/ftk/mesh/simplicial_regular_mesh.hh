@@ -152,17 +152,25 @@ struct simplicial_regular_mesh : public object {
   // There are three different modes: all, fixed time, and fixed interval.  Please
   // see the comments in the next two functions for more details.
   void element_for(int d, std::function<void(simplicial_regular_mesh_element)> f, 
-      int nthreads=std::thread::hardware_concurrency()) const; // , int scope = ELEMENT_SCOPE_ALL);
+      int accelerator = FTK_XL_NONE,
+      int nthreads=std::thread::hardware_concurrency(), 
+      bool affinity = false) const;
 
   void element_for_ordinal(int d, int t, std::function<void(simplicial_regular_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency()) const;
+      int accelerator = FTK_XL_NONE,
+      int nthreads=std::thread::hardware_concurrency(), 
+      bool affinity = false) const;
 
   void element_for_interval(int d, int t0, int t1, std::function<void(simplicial_regular_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency()) const;
+      int accelerator = FTK_XL_NONE,
+      int nthreads=std::thread::hardware_concurrency(), 
+      bool affinity = false) const;
   
   void element_for(int d, const lattice& subdomain, int scope, 
       std::function<void(simplicial_regular_mesh_element)> f,
-      int nthreads=std::thread::hardware_concurrency()) const;
+      int accelerator = FTK_XL_NONE,
+      int nthreads=std::thread::hardware_concurrency(), 
+      bool affinity = false) const;
 
 #if 0
 public: // partitioning
@@ -897,12 +905,18 @@ inline size_t simplicial_regular_mesh::n(int d, int scope) const
   return (size_t)ntypes(d, scope) * dimprod_[nd()];
 }
   
-inline void simplicial_regular_mesh::element_for(int d, std::function<void(simplicial_regular_mesh_element)> f, int nthreads) const
+inline void simplicial_regular_mesh::element_for(int d, 
+    std::function<void(simplicial_regular_mesh_element)> f, 
+    int accelerator, int nthreads, bool affinity) const
 {
-  element_for(d, lattice_, ELEMENT_SCOPE_ALL, f, nthreads);
+  element_for(d, lattice_, ELEMENT_SCOPE_ALL, f, 
+      accelerator, nthreads, affinity);
 }
   
-inline void simplicial_regular_mesh::element_for_ordinal(int d, int t, std::function<void(simplicial_regular_mesh_element)> f, int nthreads) const
+inline void simplicial_regular_mesh::element_for_ordinal(
+    int d, int t, 
+    std::function<void(simplicial_regular_mesh_element)> f, 
+    int accelerator, int nthreads, bool affinity) const
 {
   auto st = lattice_.starts(), sz = lattice_.sizes();
   st[nd()-1] = t;
@@ -911,13 +925,14 @@ inline void simplicial_regular_mesh::element_for_ordinal(int d, int t, std::func
   lattice my_lattice(st, sz);
   // my_lattice.print(std::cerr);
 
-  element_for(d, my_lattice, ELEMENT_SCOPE_ORDINAL, f, nthreads);
+  element_for(d, my_lattice, ELEMENT_SCOPE_ORDINAL, f, 
+      accelerator, nthreads, affinity);
 }
   
 inline void simplicial_regular_mesh::element_for_interval(
     int d, int t0, int t1, 
     std::function<void(simplicial_regular_mesh_element)> f, 
-    int nthreads) const
+    int accelerator, int nthreads, bool affinity) const
 {
   auto st = lattice_.starts(), sz = lattice_.sizes();
   st[nd()-1] = t0;
@@ -925,13 +940,14 @@ inline void simplicial_regular_mesh::element_for_interval(
 
   lattice my_lattice(st, sz);
 
-  element_for(d, my_lattice, ELEMENT_SCOPE_INTERVAL, f, nthreads);
+  element_for(d, my_lattice, ELEMENT_SCOPE_INTERVAL, f, 
+      accelerator, nthreads, affinity);
 }
 
 inline void simplicial_regular_mesh::element_for(
     int d, const lattice& l, int scope, 
     std::function<void(simplicial_regular_mesh_element)> f,
-    int nthreads) const
+    int accelerator, int nthreads, bool affinity) const
 {
   auto lambda = [=](size_t j) {
     simplicial_regular_mesh_element e(*this, d, j, l, scope);
@@ -939,38 +955,8 @@ inline void simplicial_regular_mesh::element_for(
   };
 
   const auto ntasks = l.n() * ntypes(d, scope);
-  // fprintf(stderr,  "ntasks=%lu\n", ntasks);
-#if FTK_HAVE_KOKKOS
-  Kokkos::parallel_for("element_for", ntasks, KOKKOS_LAMBDA(const int& j) {f(j);});
-#elif FTK_HAVE_TBB
-  tbb::parallel_for(tbb::blocked_range<size_t>(0, ntasks),
-      [=](const tbb::blocked_range<size_t>& r) {
-        for (size_t i = r.begin(); i != r.end(); ++ i) 
-          lambda(i);
-      });
-#else
-#pragma omp parallel for
-  for (size_t j = 0; j < ntasks; j ++) {
-    simplicial_regular_mesh_element e(*this, d, j, l, scope);
-    f(e);
-  }
-#if 0
-  set_affinity(0);
-  std::vector<std::thread> workers;
-  for (size_t i = 1; i < nthreads; i ++) {
-    set_affinity(i);
-    workers.push_back(std::thread([=]() {
-      for (size_t j = i; j < ntasks; j += nthreads)
-        lambda(j);
-    }));
-  }
 
-  for (size_t j = 0; j < ntasks; j += nthreads) // the main thread
-    lambda(j);
-
-  std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
-#endif
-#endif
+  parallel_for(ntasks, lambda, accelerator, nthreads, affinity);
 }
 
 }

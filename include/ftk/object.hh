@@ -15,11 +15,24 @@
 #include <sys/resource.h>
 #include <sys/syscall.h>
 
+#if FTK_HAVE_TBB
+#include <tbb/tbb.h>
+#endif
+
 namespace ftk {
+
+enum { 
+  FTK_XL_NONE = 0,
+  FTK_XL_PTHREAD = 0,
+  FTK_XL_OPENMP = 1,
+  FTK_XL_SYCL = 2,
+  FTK_XL_TBB = 3,
+  FTK_XL_CUDA = 4,
+  FTK_XL_KOKKOS_CUDA = 5
+};
 
 struct object {
   static void fatal(const std::string& str) {
-    std::cerr << "FATAL: " << str << std::endl;
     exit(1);
   }
 
@@ -35,35 +48,62 @@ struct object {
 
     pthread_t thread = pthread_self();
     pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpu_set);
-    fprintf(stderr, "cpu=%d\n", cpu);
+    // fprintf(stderr, "cpu=%d\n", cpu);
 #endif
   }
 
-  static void parallel_for(int ntasks, int nthreads, std::function<void(int)> f) {
-    nthreads = std::min(ntasks, nthreads);
+  static void parallel_for(int ntasks, std::function<void(int)> f, 
+      int accelerator = FTK_XL_PTHREAD, 
+      int nthreads = std::thread::hardware_concurrency(), 
+      bool affinity = true)
+  {
+    if (accelerator == FTK_XL_PTHREAD) {
+      nthreads = std::min(ntasks, nthreads);
 
-    std::vector<std::thread> workers;
-    for (auto i = 1; i < nthreads; i ++) {
-      workers.push_back(std::thread([=]() {
-        set_affinity(i);
-        for (auto j = i; j < ntasks; j += nthreads)
-          f(j);
-      }));
-    }
+      std::vector<std::thread> workers;
+      for (auto i = 1; i < nthreads; i ++) {
+        workers.push_back(std::thread([=]() {
+          if (affinity) set_affinity(i);
+          for (auto j = i; j < ntasks; j += nthreads)
+            f(j);
+        }));
+      }
 
-    set_affinity(0);
-    for (auto j = 0; j < ntasks; j += nthreads) // the main thread
-      f(j);
+      if (affinity) set_affinity(0);
+      for (auto j = 0; j < ntasks; j += nthreads) // the main thread
+        f(j);
 
-    std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
+      std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
+    } else if (accelerator == FTK_XL_OPENMP) {
+#if FTK_HAVE_OPENMP
+#pragma omp parallel for
+      for (size_t j = 0; j < ntasks; j ++)
+        f(j);
+#else
+      fatal("FTK not built with OpenMP");
+#endif
+    } else if (accelerator == FTK_XL_TBB) {
+#if FTK_HAVE_TBB
+      tbb::parallel_for(tbb::blocked_range<size_t>(0, ntasks),
+          [=](const tbb::blocked_range<size_t>& r) {
+            for (size_t i = r.begin(); i != r.end(); ++ i) 
+              f(i);
+          });
+#else
+      fatal("FTK not built with TBB");
+#endif
+    } else 
+      fatal("Unsupported accelerator");
   }
 
   template <typename T>
-  static void parallel_for(const std::set<T>& set, int nthreads, std::function<void(const T&)> f) {
+  static void parallel_for(const std::set<T>& set, std::function<void(const T&)> f, 
+      int xl, int nthreads, bool affinity) {
     std::vector<T> vector(set.size());
     std::copy(set.begin(), set.end(), vector.begin());
 
-    parallel_for(set.size(), nthreads, [&](int i) { f(vector[i]); } );
+    parallel_for(set.size(), [&](int i) { f(vector[i]); }, 
+        xl, nthreads, affinity);
   }
 };
 
