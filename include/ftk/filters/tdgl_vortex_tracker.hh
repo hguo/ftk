@@ -16,7 +16,7 @@
 
 namespace ftk {
   
-struct tdgl_vortex_tracker : public filter {
+struct tdgl_vortex_tracker : public virtual filter {
   int cpdims() const { return 3; }
   
   virtual void update() {}; 

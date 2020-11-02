@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/filters/tdgl_vortex_tracker.hh>
+#include <ftk/filters/regular_tracker.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/geometry/points2vtk.hh>
@@ -11,13 +12,10 @@
 
 namespace ftk {
 
-struct tdgl_vortex_tracker_3d_regular : public tdgl_vortex_tracker
+struct tdgl_vortex_tracker_3d_regular : public virtual tdgl_vortex_tracker, public virtual regular_tracker
 {
-  tdgl_vortex_tracker_3d_regular() : m(4) {}
+  tdgl_vortex_tracker_3d_regular() : regular_tracker(3) {}
   virtual ~tdgl_vortex_tracker_3d_regular() {}
-  
-  void set_domain(const lattice& l) {domain = l;} // spatial domain
-  void set_array_domain(const lattice& l) {array_domain = l;}
 
   void initialize();
   void finalize();
@@ -38,7 +36,6 @@ public:
 #endif
 
 protected:
-  simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
   
   std::map<element_t, feature_point_t> intersections;
@@ -62,9 +59,6 @@ protected:
 
   template <typename T> inline static T mod2pi(T x) { T y = fmod(x, 2*M_PI); if (y<0) y+= 2*M_PI; return y; }
   template <typename T> static T mod2pi1(T x) { return mod2pi(x + M_PI) - M_PI; }
-
-protected: // config
-  lattice domain, array_domain;
 };
 
 
