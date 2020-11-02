@@ -17,7 +17,7 @@
 
 namespace ftk {
 
-struct contour_tracker : public filter {
+struct contour_tracker : public virtual filter {
   contour_tracker() {}
 
   virtual void update() {}; 
