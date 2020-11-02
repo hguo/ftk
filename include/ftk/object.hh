@@ -32,6 +32,11 @@ enum {
 };
 
 struct object {
+  void set_communicator(const diy::mpi::communicator comm_) {comm = comm_;}
+  void set_root_proc(int p) {root_proc = p;}
+  int get_root_proc() const {return root_proc;}
+  bool is_root_proc() const {return root_proc == comm.rank();}
+
   static void fatal(const std::string& str) {
     exit(1);
   }
@@ -105,6 +110,10 @@ struct object {
     parallel_for(set.size(), [&](int i) { f(vector[i]); }, 
         xl, nthreads, affinity);
   }
+ 
+protected:
+  diy::mpi::communicator comm;
+  int root_proc = 0;
 };
 
 }

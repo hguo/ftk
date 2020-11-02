@@ -31,15 +31,9 @@ struct filter : public object {
     if (comm.size() > 1) return 1; // use 1 thread per proc for mpi runs
     else return std::thread::hardware_concurrency(); 
   }
-
-  void set_communicator(const diy::mpi::communicator comm_) {comm = comm_;}
   
   void set_number_of_threads(int n) {nthreads = n;}
   int get_number_of_threads() const {return nthreads;}
-
-  void set_root_proc(int p) {root_proc = p;}
-  int get_root_proc() const {return root_proc;}
-  bool is_root_proc() const {return root_proc == comm.rank();}
 
   void set_device_id(int d) {set_device_ids(std::vector<int>({d}));}
   void set_device_ids(const std::vector<int>& ids) {device_ids = ids;}
@@ -47,13 +41,10 @@ struct filter : public object {
   int get_number_devices() const {return device_ids.size();}
 
 protected:
-  diy::mpi::communicator comm;
-
   int xl = FTK_XL_NONE;
   int nthreads = 1;
   bool enable_set_affinity = true;
 
-  int root_proc = 0;
   std::vector<int> device_ids;
 
   std::mutex mutex;

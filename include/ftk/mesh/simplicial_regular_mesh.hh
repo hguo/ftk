@@ -811,6 +811,9 @@ inline void simplicial_regular_mesh::print_unit_simplices(int nd, int d) const
 
 inline void simplicial_regular_mesh::initialize_subdivision()
 {
+  if (is_root_proc())
+    fprintf(stderr, "initializing %d-dimensional mesh...\n", nd());
+
   ntypes_.resize(nd() + 1);
   unit_simplices.resize(nd() + 1);
 
