@@ -22,7 +22,7 @@ enum {
   SOURCE_DERIVED // implicit
 };
 
-struct critical_point_tracker : public filter {
+struct critical_point_tracker : public virtual filter {
   critical_point_tracker() {}
 
   virtual void update() {}; 
