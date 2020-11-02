@@ -35,7 +35,7 @@ struct object {
 
     pthread_t thread = pthread_self();
     pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpu_set);
-    fprintf(stderr, "cpu=%d\n", cpu);
+    // fprintf(stderr, "cpu=%d\n", cpu);
 #endif
   }
 

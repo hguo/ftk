@@ -948,13 +948,13 @@ inline void simplicial_regular_mesh::element_for(
         for (size_t i = r.begin(); i != r.end(); ++ i) 
           lambda(i);
       });
-#else
+#elif FTK_HAVE_OPENMP
 #pragma omp parallel for
   for (size_t j = 0; j < ntasks; j ++) {
     simplicial_regular_mesh_element e(*this, d, j, l, scope);
     f(e);
   }
-#if 0
+#else 
   set_affinity(0);
   std::vector<std::thread> workers;
   for (size_t i = 1; i < nthreads; i ++) {
@@ -969,7 +969,6 @@ inline void simplicial_regular_mesh::element_for(
     lambda(j);
 
   std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
-#endif
 #endif
 }
 
