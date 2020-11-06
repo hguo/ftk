@@ -31,11 +31,6 @@ struct critical_point_tracker : public virtual tracker {
     field_data_snapshots.clear();
     traced_critical_points.clear();
   }
-  
-  virtual int cpdims() const = 0;
-  
-  void set_input_array_partial(bool b) {is_input_array_partial = b;}
-  void set_use_default_domain_partition(bool b) {use_default_domain_partition = true;}
 
   void set_enable_robust_detection(bool b) { enable_robust_detection = b; }
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
@@ -61,11 +56,11 @@ struct critical_point_tracker : public virtual tracker {
   void slice_traced_critical_points(); // slice traces after finalization
 
 public:
-  virtual void initialize() = 0;
-  virtual void finalize() = 0;
+  // virtual void initialize() = 0;
+  // virtual void finalize() = 0;
 
-  virtual bool advance_timestep();
-  virtual void update_timestep() = 0;
+  bool advance_timestep();
+  // virtual void update_timestep() = 0;
 
 public: // i/o for traced critical points (trajectories)
   const feature_curve_set_t& get_traced_critical_points() const {return traced_critical_points;}
@@ -161,8 +156,6 @@ protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
   };
-  
-  int current_timestep = 0;
 
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
@@ -190,9 +183,6 @@ protected:
   bool enable_discarding_interval_points = false;
   bool enable_discarding_degenerate_points = false;
   bool enable_ignoring_degenerate_points = false;
-  
-  bool is_input_array_partial = false;
-  bool use_default_domain_partition = true;
 
 protected: // benchmark
   double accumulated_kernel_time = 0.0;

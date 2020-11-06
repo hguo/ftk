@@ -20,6 +20,8 @@ struct levelset_tracker : public connected_component_tracker<TimeIndexType, Labe
     connected_component_tracker<TimeIndexType, LabelIdType>(comm), filter(comm) {}
   virtual ~levelset_tracker() {};
 
+  void initialize() {}
+
   void set_threshold(double threshold, int mode=FTK_COMPARE_GE);
   void set_input_shape(const lattice& shape);
 
@@ -27,6 +29,8 @@ struct levelset_tracker : public connected_component_tracker<TimeIndexType, Labe
   void push_scalar_field_data_snapshot(const ndarray<FloatType>&);
 
   ndarray<LabelIdType> get_last_labeled_array_snapshot() const;
+
+  int cpdims() const {return 0;}
 
 protected:
   double threshold = 0.0;
