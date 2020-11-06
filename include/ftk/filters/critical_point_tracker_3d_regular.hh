@@ -34,6 +34,10 @@
 #include <vtkXMLPolyDataWriter.h>
 #endif
 
+#if FTK_HAVE_GMP
+#include <gmpxx.h>
+#endif
+
 #if FTK_HAVE_CUDA
 extern std::vector<ftk::feature_point_lite_t> // <4, double>> 
 extract_cp3dt_cuda(
