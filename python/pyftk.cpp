@@ -4,6 +4,9 @@
 #include <ftk/ndarray.hh>
 #include <ftk/filters/critical_point_tracker_wrapper.hh>
 
+diy::mpi::environment env;
+diy::mpi::communicator comm;
+
 namespace py = pybind11;
 
 PYBIND11_MODULE(pyftk, m) {
@@ -18,7 +21,7 @@ PYBIND11_MODULE(pyftk, m) {
     const size_t DW = data.dim(0), DH = data.dim(1);
     data.reshape(DW, DH);
 
-    ftk::critical_point_tracker_2d_regular tracker;
+    ftk::critical_point_tracker_2d_regular tracker(comm);
     tracker.set_scalar_field_source( ftk::SOURCE_GIVEN );
     tracker.set_vector_field_source( ftk::SOURCE_DERIVED );
     tracker.set_jacobian_field_source( ftk::SOURCE_DERIVED );
@@ -57,7 +60,7 @@ PYBIND11_MODULE(pyftk, m) {
     const size_t DW = data.dim(1), DH = data.dim(2);
     data.reshape(2, DW, DH);
 
-    ftk::critical_point_tracker_2d_regular tracker;
+    ftk::critical_point_tracker_2d_regular tracker(comm);
     tracker.set_scalar_field_source( ftk::SOURCE_NONE );
     tracker.set_vector_field_source( ftk::SOURCE_DERIVED );
     tracker.set_jacobian_field_source( ftk::SOURCE_DERIVED );
@@ -95,7 +98,7 @@ PYBIND11_MODULE(pyftk, m) {
     const size_t DW = data.dim(1), DH = data.dim(2), DT = data.dim(3);
     data.reshape(DW, DH, DT);
 
-    ftk::critical_point_tracker_2d_regular tracker;
+    ftk::critical_point_tracker_2d_regular tracker(comm);
     tracker.set_scalar_field_source( ftk::SOURCE_GIVEN );
     tracker.set_vector_field_source( ftk::SOURCE_DERIVED );
     tracker.set_jacobian_field_source( ftk::SOURCE_DERIVED );
