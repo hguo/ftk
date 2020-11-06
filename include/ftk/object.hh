@@ -32,6 +32,9 @@ enum {
 };
 
 struct object {
+  object() {}
+  object(diy::mpi::communicator c) {comm = c;}
+
   void set_communicator(const diy::mpi::communicator comm_) {comm = comm_;}
   void set_root_proc(int p) {root_proc = p;}
   int get_root_proc() const {return root_proc;}

@@ -7,6 +7,7 @@
 #include <ftk/filters/feature_curve.hh>
 #include <ftk/filters/feature_curve_set.hh>
 #include <ftk/filters/filter.hh>
+#include <ftk/filters/tracker.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/write_polydata.hh>
@@ -22,8 +23,8 @@ enum {
   SOURCE_DERIVED // implicit
 };
 
-struct critical_point_tracker : public virtual filter {
-  critical_point_tracker() {}
+struct critical_point_tracker : public virtual tracker {
+  critical_point_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
   virtual void update() {}; 
   void reset() {
@@ -43,9 +44,6 @@ struct critical_point_tracker : public virtual filter {
   void set_enable_ignoring_degenerate_points(bool b) { enable_ignoring_degenerate_points = b; }
 
   void set_type_filter(unsigned int);
-  
-  // void set_start_timestep(int);
-  // void set_end_timestep(int);
   
   void set_scalar_field_source(int s) {scalar_field_source = s;}
   void set_vector_field_source(int s) {vector_field_source = s;}
@@ -179,9 +177,6 @@ protected:
   bool use_type_filter = false;
   unsigned int type_filter = 0;
   
-  int start_timestep = 0, 
-      end_timestep = std::numeric_limits<int>::max();
-
   int scalar_field_source = SOURCE_NONE, 
       vector_field_source = SOURCE_NONE,
       jacobian_field_source = SOURCE_NONE;

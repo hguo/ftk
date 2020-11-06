@@ -318,7 +318,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
   // tracker set up
   tracker = std::shared_ptr<critical_point_tracker_2d_unstructured>(
-      new ftk::critical_point_tracker_2d_unstructured(m));
+      new critical_point_tracker_2d_unstructured(comm, m));
   configure_tracker_general(comm);
 
   tracker->set_scalar_components({"dneOverne0", "psi"});
@@ -436,10 +436,10 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
 
   std::shared_ptr<critical_point_tracker_regular> rtracker;
   if (nd == 2) {
-    rtracker.reset(new ftk::critical_point_tracker_2d_regular);
+    rtracker.reset(new critical_point_tracker_2d_regular(comm));
     rtracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   } else {
-    rtracker.reset(new ftk::critical_point_tracker_3d_regular);
+    rtracker.reset(new critical_point_tracker_3d_regular(comm));
     rtracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
 

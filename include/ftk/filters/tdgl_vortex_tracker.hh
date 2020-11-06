@@ -3,7 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/algorithms/cca.hh>
-#include <ftk/filters/filter.hh>
+#include <ftk/filters/tracker.hh>
 #include <ftk/filters/feature_point.hh>
 #include <ftk/filters/feature_surface.hh>
 #include <ftk/filters/feature_volume.hh>
@@ -16,7 +16,9 @@
 
 namespace ftk {
   
-struct tdgl_vortex_tracker : public virtual filter {
+struct tdgl_vortex_tracker : public virtual tracker {
+  tdgl_vortex_tracker(diy::mpi::communicator comm) : tracker(comm) {}
+
   int cpdims() const { return 3; }
   
   virtual void update() {}; 

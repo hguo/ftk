@@ -135,7 +135,7 @@ struct simplicial_regular_mesh : public object {
   std::vector<std::vector<int>> unit_simplex(int d, int t) const {return unit_simplices[d][t];}
 
   void get_lb_ub(std::vector<int>& lb, std::vector<int>& ub) {lb = lb_; ub = ub_;}
-  void set_lb_ub(const std::vector<int>& lb, const std::vector<int>& ub);
+  template <typename I=int> void set_lb_ub(const std::vector<I>& lb, const std::vector<I>& ub);
   void set_lb_ub(const lattice& lattice); 
   int lb(int d) const {return lb_[d];}
   int ub(int d) const {return ub_[d];}
@@ -847,7 +847,8 @@ inline void simplicial_regular_mesh::initialize_subdivision()
   derive_ordinal_and_interval_simplices();
 }
 
-inline void simplicial_regular_mesh::set_lb_ub(const std::vector<int>& l, const std::vector<int>& u)
+template <typename I>
+inline void simplicial_regular_mesh::set_lb_ub(const std::vector<I>& l, const std::vector<I>& u)
 {
   lb_.resize(nd());
   ub_.resize(nd());

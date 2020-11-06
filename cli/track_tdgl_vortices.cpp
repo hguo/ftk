@@ -95,8 +95,8 @@ int parse_arguments(int argc, char **argv)
   fprintf(stderr, "nthreads=%d\n", nthreads);
   fprintf(stderr, "=============\n");
 
-
-  ftk::tdgl_vortex_tracker_3d_regular tracker;
+  diy::mpi::communicator world;
+  ftk::tdgl_vortex_tracker_3d_regular tracker(world);
 
   tracker.set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));

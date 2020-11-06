@@ -4,7 +4,7 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/algorithms/cca.hh>
 // #include <ftk/filters/contour.hh>
-#include <ftk/filters/filter.hh>
+#include <ftk/filters/tracker.hh>
 #include <ftk/filters/feature_point.hh>
 #include <ftk/filters/feature_surface.hh>
 #include <ftk/filters/feature_volume.hh>
@@ -17,8 +17,8 @@
 
 namespace ftk {
 
-struct contour_tracker : public virtual filter {
-  contour_tracker() {}
+struct contour_tracker : public virtual tracker {
+  contour_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
   virtual void update() {}; 
   void reset() {
@@ -41,11 +41,6 @@ public:
 public: // inputs
   bool pop_field_data_snapshot();
   virtual void push_field_data_snapshot(const ndarray<double> &scalar);
-
-  virtual void set_current_timestep(int t) {current_timestep = t;}
-  int get_current_timestep() const {return current_timestep;}
-
-  void set_end_timestep(int t) {end_timestep = t;}
 
 public:
   virtual std::vector<feature_point_t> get_intersections() const = 0;
@@ -70,8 +65,6 @@ protected:
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
   int current_timestep = 0;
-  int start_timestep = 0, 
-      end_timestep = std::numeric_limits<int>::max();
 
   double threshold = 0.0;
   

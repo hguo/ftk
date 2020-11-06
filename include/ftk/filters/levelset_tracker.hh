@@ -16,7 +16,8 @@ enum {
 template <typename TimeIndexType=size_t, typename LabelIdType=size_t>
 struct levelset_tracker : public connected_component_tracker<TimeIndexType, LabelIdType>
 {
-  levelset_tracker() {}
+  levelset_tracker(diy::mpi::communicator comm) : 
+    connected_component_tracker<TimeIndexType, LabelIdType>(comm), filter(comm) {}
   virtual ~levelset_tracker() {};
 
   void set_threshold(double threshold, int mode=FTK_COMPARE_GE);

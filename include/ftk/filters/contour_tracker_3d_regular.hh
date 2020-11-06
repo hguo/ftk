@@ -41,7 +41,7 @@
 namespace ftk {
 
 struct contour_tracker_3d_regular : public contour_tracker_regular {
-  contour_tracker_3d_regular() : contour_tracker_regular(3) {}
+  contour_tracker_3d_regular(diy::mpi::communicator comm) : contour_tracker_regular(comm, 3), tracker(comm), filter(comm) {}
   virtual ~contour_tracker_3d_regular() {}
 
   int cpdims() const { return 3; }

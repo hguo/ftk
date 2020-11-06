@@ -3,14 +3,14 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/mesh/lattice_partitioner.hh>
-#include <ftk/filters/filter.hh>
+#include <ftk/filters/tracker.hh>
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy/decomposition.hpp>
 
 namespace ftk {
 
-struct regular_tracker : public virtual filter {
-  regular_tracker(int nd/*2 or 3*/) : m(nd+1), master(comm) {}
+struct regular_tracker : public virtual tracker {
+  regular_tracker(diy::mpi::communicator comm, int nd/*2 or 3*/) : tracker(comm), m(nd+1) {}
   virtual ~regular_tracker() {}
  
 public:
@@ -29,8 +29,6 @@ protected:
     int gid;
     lattice local_domain, local_array_domain;
   };
-
-  diy::Master master;
 
 protected:
   simplicial_regular_mesh m; // spacetime mesh
@@ -59,6 +57,7 @@ inline void regular_tracker::initialize()
     m.set_lb_ub(lb, ub);
   }
 
+#if 0 // experiment code to use DIY for multi-block handling
   // iniitalize partitions
   diy::RoundRobinAssigner assigner(comm.size(), nblocks);
   
@@ -92,6 +91,7 @@ inline void regular_tracker::initialize()
     // std::cerr << b->local_domain << std::endl;
     // std::cerr << b->local_array_domain << std::endl;
   });
+#endif
 }
 
 template <typename I>

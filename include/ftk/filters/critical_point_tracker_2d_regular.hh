@@ -53,7 +53,11 @@ namespace ftk {
 // typedef critical_point_t<3, double> critical_point_t;
 
 struct critical_point_tracker_2d_regular : public critical_point_tracker_regular {
-  critical_point_tracker_2d_regular() : critical_point_tracker_regular(2) {}
+  critical_point_tracker_2d_regular(diy::mpi::communicator comm) : 
+    critical_point_tracker_regular(comm, 2),
+    tracker(comm),
+    filter(comm)
+  {}
   virtual ~critical_point_tracker_2d_regular() {}
 
   int cpdims() const { return 2; }

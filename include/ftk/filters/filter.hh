@@ -12,7 +12,7 @@
 namespace ftk {
 
 struct filter : public object {
-  filter() {
+  filter(diy::mpi::communicator comm) : object(comm) {
     nthreads = default_nthreads();
   }
 
