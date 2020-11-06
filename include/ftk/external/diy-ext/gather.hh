@@ -92,8 +92,7 @@ inline void gather(const communicator& comm, const std::set<T>& in, std::set<T>&
     while (sb) {
       std::set<T> set;
       load(sb, set);
-      for (const auto &e : set)
-        set.insert(e);
+      out.insert(set.begin(), set.end());
     }
   }
 #else

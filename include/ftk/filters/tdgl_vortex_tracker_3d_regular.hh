@@ -68,6 +68,8 @@ inline void tdgl_vortex_tracker_3d_regular::finalize()
   diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
   
   if (comm.rank() == get_root_proc()) {
+    fprintf(stderr, "#intersecttions=%zu, #related_cells=%zu\n", 
+        intersections.size(), related_cells.size());
     build_vortex_surfaces();
   }
 }
