@@ -85,19 +85,8 @@ protected:
 ////////////////////
 void critical_point_tracker_3d_regular::initialize()
 {
-  // initializing bounds
-  m.set_lb_ub({
-      static_cast<int>(domain.start(0)),
-      static_cast<int>(domain.start(1)),
-      static_cast<int>(domain.start(2)),
-      start_timestep
-    }, {
-      static_cast<int>(domain.size(0)),
-      static_cast<int>(domain.size(1)),
-      static_cast<int>(domain.size(2)),
-      end_timestep
-    });
-
+  regular_tracker::initialize();
+#if 0
   if (use_default_domain_partition) {
     lattice_partitioner partitioner(domain);
     
@@ -112,6 +101,7 @@ void critical_point_tracker_3d_regular::initialize()
 
   if (!is_input_array_partial)
     local_array_domain = array_domain;
+#endif
 }
 
 void critical_point_tracker_3d_regular::finalize()

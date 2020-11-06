@@ -89,6 +89,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   add_boolean_option("enable_timing", false);
 
   add_number_option("duration_pruning_threshold", 0);
+  add_number_option("nblocks", 1);
   
   /// application specific
   if (j.contains("xgc")) {
@@ -242,6 +243,9 @@ void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communi
     if (j["accelerator"] == "cuda")
       tracker->use_accelerator( FTK_XL_CUDA );
   }
+
+  if (j.contains("nblocks"))
+    tracker->set_number_of_blocks(j["nblocks"]);
 
   tracker->set_input_array_partial(false); // input data are not distributed
 
@@ -464,8 +468,8 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
   }
   tracker = rtracker;
   
-  tracker->initialize();
   configure_tracker_general(comm);
+  tracker->initialize();
  
   if (j.contains("archived_traced_critical_points_filename")) {
     fprintf(stderr, "reading archived traced critical points...\n");

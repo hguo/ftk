@@ -13,6 +13,8 @@ namespace ftk {
 struct contour_tracker_regular : public contour_tracker, public regular_tracker {
   contour_tracker_regular(int nd/*2 or 3*/) : regular_tracker(nd) {}
   virtual ~contour_tracker_regular() {}
+  
+  void initialize() {} // TODO
 
 protected:
   typedef simplicial_regular_mesh_element element_t;
