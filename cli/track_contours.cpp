@@ -22,6 +22,8 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #endif
   
+diy::mpi::environment env;
+  
 // global variables
 std::string output_filename, output_type, output_format;
 std::string archived_discrete_pvs_filenames, archived_traced_pvs_filename;
@@ -38,6 +40,7 @@ ftk::ndarray_stream<> stream;
 ///////////////////////////////
 int parse_arguments(int argc, char **argv)
 {
+  diy::mpi::communicator world;
   const int argc0 = argc;
 
   cxxopts::Options options(argv[0]);
@@ -97,8 +100,8 @@ int parse_arguments(int argc, char **argv)
   const int nt = js["n_timesteps"];
 
   ftk::contour_tracker_regular *tracker;
-  if (DD == 0) tracker = new ftk::contour_tracker_2d_regular; 
-  else tracker = new ftk::contour_tracker_3d_regular;
+  if (DD == 0) tracker = new ftk::contour_tracker_2d_regular(world);
+  else tracker = new ftk::contour_tracker_3d_regular(world);
 
   tracker->set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
   tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
@@ -131,9 +134,6 @@ int parse_arguments(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-  diy::mpi::environment env;
-  diy::mpi::communicator world;
-  
   parse_arguments(argc, argv);
  
   return 0;

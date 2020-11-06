@@ -9,6 +9,8 @@
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
 #include "constants.hh"
+  
+diy::mpi::environment env;
 
 // global variables
 std::string input_pattern;
@@ -85,18 +87,20 @@ int parse_arguments(int argc, char **argv)
   
   const size_t DW = meta.dims[0], DH = meta.dims[1], DD = meta.dims[2];
   const int nt = filenames.size();
-  
-  fprintf(stderr, "SUMMARY\n=============\n");
-  // std::cerr << "input=" << stream.get_json() << std::endl;
-  fprintf(stderr, "input_pattern=%s\n", input_pattern.c_str());
-  fprintf(stderr, "dims=%zu, %zu, %zu\n", DW, DH, DD);
-  fprintf(stderr, "nt=%d\n", nt);
-  fprintf(stderr, "output_format=%s\n", output_format.c_str());
-  fprintf(stderr, "nthreads=%d\n", nthreads);
-  fprintf(stderr, "=============\n");
+ 
+  diy::mpi::communicator world;
+  if (world.rank() == 0) {
+    fprintf(stderr, "SUMMARY\n=============\n");
+    // std::cerr << "input=" << stream.get_json() << std::endl;
+    fprintf(stderr, "input_pattern=%s\n", input_pattern.c_str());
+    fprintf(stderr, "dims=%zu, %zu, %zu\n", DW, DH, DD);
+    fprintf(stderr, "nt=%d\n", nt);
+    fprintf(stderr, "output_format=%s\n", output_format.c_str());
+    fprintf(stderr, "nthreads=%d\n", nthreads);
+    fprintf(stderr, "=============\n");
+  }
 
-
-  ftk::tdgl_vortex_tracker_3d_regular tracker;
+  ftk::tdgl_vortex_tracker_3d_regular tracker(world);
 
   tracker.set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
@@ -135,7 +139,6 @@ int parse_arguments(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-  diy::mpi::environment env;
   diy::mpi::communicator world;
   
   parse_arguments(argc, argv);

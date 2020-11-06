@@ -36,7 +36,11 @@
 namespace ftk {
 
 struct contour_tracker_2d_regular : public contour_tracker_regular {
-  contour_tracker_2d_regular() : contour_tracker_regular(2) {}
+  contour_tracker_2d_regular(diy::mpi::communicator comm) : 
+    contour_tracker_regular(comm, 2),
+    tracker(comm),
+    filter(comm)
+  {}
   virtual ~contour_tracker_2d_regular() {}
 
   int cpdims() const { return 2; }
@@ -217,8 +221,8 @@ inline void contour_tracker_2d_regular::simplex_scalars(
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][2] == current_timestep ? 0 : 1;
     values[i] = field_data_snapshots[iv].scalar(
-        vertices[i][0],
-        vertices[i][1]);
+        vertices[i][0] - local_array_domain.start(0), 
+        vertices[i][1] - local_array_domain.start(1));
   }
 }
 

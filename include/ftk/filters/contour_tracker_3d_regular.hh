@@ -41,12 +41,11 @@
 namespace ftk {
 
 struct contour_tracker_3d_regular : public contour_tracker_regular {
-  contour_tracker_3d_regular() : contour_tracker_regular(3) {}
+  contour_tracker_3d_regular(diy::mpi::communicator comm) : contour_tracker_regular(comm, 3), tracker(comm), filter(comm) {}
   virtual ~contour_tracker_3d_regular() {}
 
   int cpdims() const { return 3; }
 
-  void initialize();
   void finalize();
   void reset();
 
@@ -80,22 +79,6 @@ protected:
 
 
 ////////////////////
-inline void contour_tracker_3d_regular::initialize()
-{
-  // initializing bounds
-  m.set_lb_ub({
-      static_cast<int>(domain.start(0)),
-      static_cast<int>(domain.start(1)),
-      static_cast<int>(domain.start(2)),
-      start_timestep
-    }, {
-      static_cast<int>(domain.size(0)),
-      static_cast<int>(domain.size(1)),
-      static_cast<int>(domain.size(2)),
-      end_timestep
-    });
-}
-
 inline void contour_tracker_3d_regular::build_isovolume()
 {
   fprintf(stderr, "building isovolumes...\n");
@@ -309,9 +292,9 @@ inline void contour_tracker_3d_regular::update_timestep()
     }
   };
 
-  m.element_for_ordinal(1, current_timestep, func, xl, nthreads, enable_set_affinity);
+  element_for_ordinal(1, func);
   if (field_data_snapshots.size() >= 2) // interval
-    m.element_for_interval(1, current_timestep, current_timestep+1, func, xl, nthreads, enable_set_affinity);
+    element_for_interval(1, func);
 }
 
 inline void contour_tracker_3d_regular::simplex_coordinates(
@@ -328,9 +311,9 @@ inline void contour_tracker_3d_regular::simplex_values(
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     scalars[i] = field_data_snapshots[iv].scalar(
-        vertices[i][0],
-        vertices[i][1],
-        vertices[i][2]);
+        vertices[i][0] - local_array_domain.start(0), 
+        vertices[i][1] - local_array_domain.start(1), 
+        vertices[i][2] - local_array_domain.start(2));
     for (int j = 0; j < 3; j ++)
       grads[i][j] = field_data_snapshots[iv].gradient(
           j, vertices[i][0], vertices[i][1], vertices[i][2]);

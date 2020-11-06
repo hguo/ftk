@@ -6,6 +6,8 @@
 #include <ftk/ndarray.hh>
 #include <ftk/numeric/rand.hh>
 
+diy::mpi::environment env;
+
 const int nruns = 100000;
 const double epsilon = 1e-9;
 

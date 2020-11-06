@@ -3,6 +3,8 @@
 #include <ftk/algorithms/hoshen_kopelman.hh>
 #include <random>
 
+diy::mpi::environment env;
+
 TEST_CASE("hoshen_kopelman_2d", "hoshen_kopelman")
 {
   ftk::ndarray<int> input({8, 8}), output({8, 8});

@@ -14,10 +14,9 @@ namespace ftk {
 
 struct tdgl_vortex_tracker_3d_regular : public virtual tdgl_vortex_tracker, public virtual regular_tracker
 {
-  tdgl_vortex_tracker_3d_regular() : regular_tracker(3) {}
+  tdgl_vortex_tracker_3d_regular(diy::mpi::communicator comm) : tdgl_vortex_tracker(comm), regular_tracker(comm, 3), tracker(comm), filter(comm) {}
   virtual ~tdgl_vortex_tracker_3d_regular() {}
 
-  void initialize();
   void finalize();
   void reset();
 
@@ -63,28 +62,14 @@ protected:
 
 
 ////////////////////
-inline void tdgl_vortex_tracker_3d_regular::initialize()
-{
-  // initializing bounds
-  m.set_lb_ub({
-      static_cast<int>(domain.start(0)),
-      static_cast<int>(domain.start(1)),
-      static_cast<int>(domain.start(2)),
-      start_timestep
-    }, {
-      static_cast<int>(domain.size(0)),
-      static_cast<int>(domain.size(1)),
-      static_cast<int>(domain.size(2)),
-      end_timestep
-    });
-}
-
 inline void tdgl_vortex_tracker_3d_regular::finalize()
 {
   diy::mpi::gather(comm, intersections, intersections, get_root_proc());
   diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
   
   if (comm.rank() == get_root_proc()) {
+    fprintf(stderr, "#intersecttions=%zu, #related_cells=%zu\n", 
+        intersections.size(), related_cells.size());
     build_vortex_surfaces();
   }
 }
@@ -245,9 +230,13 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
     }
   };
 
-  m.element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
-  if (field_data_snapshots.size() >= 2) // interval
-    m.element_for_interval(2, current_timestep, current_timestep+1, func, xl, nthreads, enable_set_affinity);
+  if (xl == FTK_XL_CUDA) {
+    fatal("CUDA kernels for tdgl vortices not yet implemented.");
+  } else {
+    element_for_ordinal(2, func);
+    if (field_data_snapshots.size() >= 2) 
+      element_for_interval(2, func);
+  }
 }
   
 inline void tdgl_vortex_tracker_3d_regular::simplex_values(
@@ -261,15 +250,14 @@ inline void tdgl_vortex_tracker_3d_regular::simplex_values(
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     const auto &f = field_data_snapshots[iv];
 
-    const size_t idx = f.rho.index(std::vector<int>({vertices[i][0], vertices[i][1], vertices[i][2]}));
+    const auto idx = f.rho.index(std::vector<size_t>({
+          vertices[i][0] - local_array_domain.start(0), 
+          vertices[i][1] - local_array_domain.start(1), 
+          vertices[i][2] - local_array_domain.start(2)}));
     rho[i] = f.rho[idx];
     phi[i] = f.phi[idx];
     re[i] = f.re[idx];
     im[i] = f.im[idx];
-    // rho[i] = f.rho(vertices[i][0], vertices[i][1], vertices[i][2]);
-    // phi[i] = f.phi(vertices[i][0], vertices[i][1], vertices[i][2]);
-    // re[i] = f.re(vertices[i][0], vertices[i][1], vertices[i][2]);
-    // im[i] = f.im(vertices[i][0], vertices[i][1], vertices[i][2]);
     
     for (int j = 0; j < 3; j ++)
       X[i][j] = vertices[i][j] * f.meta.cell_lengths[j] + f.meta.origins[j];

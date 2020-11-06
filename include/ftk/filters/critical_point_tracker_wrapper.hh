@@ -89,6 +89,7 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   add_boolean_option("enable_timing", false);
 
   add_number_option("duration_pruning_threshold", 0);
+  add_number_option("nblocks", 1);
   
   /// application specific
   if (j.contains("xgc")) {
@@ -243,6 +244,9 @@ void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communi
       tracker->use_accelerator( FTK_XL_CUDA );
   }
 
+  if (j.contains("nblocks"))
+    tracker->set_number_of_blocks(j["nblocks"]);
+
   tracker->set_input_array_partial(false); // input data are not distributed
 
   // if (use_type_filter)
@@ -314,7 +318,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
   // tracker set up
   tracker = std::shared_ptr<critical_point_tracker_2d_unstructured>(
-      new ftk::critical_point_tracker_2d_unstructured(m));
+      new critical_point_tracker_2d_unstructured(comm, m));
   configure_tracker_general(comm);
 
   tracker->set_scalar_components({"dneOverne0", "psi"});
@@ -432,10 +436,10 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
 
   std::shared_ptr<critical_point_tracker_regular> rtracker;
   if (nd == 2) {
-    rtracker.reset(new ftk::critical_point_tracker_2d_regular);
+    rtracker.reset(new critical_point_tracker_2d_regular(comm));
     rtracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   } else {
-    rtracker.reset(new ftk::critical_point_tracker_3d_regular);
+    rtracker.reset(new critical_point_tracker_3d_regular(comm));
     rtracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
 
@@ -464,8 +468,8 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
   }
   tracker = rtracker;
   
-  tracker->initialize();
   configure_tracker_general(comm);
+  tracker->initialize();
  
   if (j.contains("archived_traced_critical_points_filename")) {
     fprintf(stderr, "reading archived traced critical points...\n");

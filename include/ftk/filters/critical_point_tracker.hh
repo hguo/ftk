@@ -7,6 +7,7 @@
 #include <ftk/filters/feature_curve.hh>
 #include <ftk/filters/feature_curve_set.hh>
 #include <ftk/filters/filter.hh>
+#include <ftk/filters/tracker.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/write_polydata.hh>
@@ -22,19 +23,14 @@ enum {
   SOURCE_DERIVED // implicit
 };
 
-struct critical_point_tracker : public virtual filter {
-  critical_point_tracker() {}
+struct critical_point_tracker : public virtual tracker {
+  critical_point_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
   virtual void update() {}; 
   void reset() {
     field_data_snapshots.clear();
     traced_critical_points.clear();
   }
-  
-  virtual int cpdims() const = 0;
-  
-  void set_input_array_partial(bool b) {is_input_array_partial = b;}
-  void set_use_default_domain_partition(bool b) {use_default_domain_partition = true;}
 
   void set_enable_robust_detection(bool b) { enable_robust_detection = b; }
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
@@ -43,9 +39,6 @@ struct critical_point_tracker : public virtual filter {
   void set_enable_ignoring_degenerate_points(bool b) { enable_ignoring_degenerate_points = b; }
 
   void set_type_filter(unsigned int);
-  
-  // void set_start_timestep(int);
-  // void set_end_timestep(int);
   
   void set_scalar_field_source(int s) {scalar_field_source = s;}
   void set_vector_field_source(int s) {vector_field_source = s;}
@@ -63,11 +56,11 @@ struct critical_point_tracker : public virtual filter {
   void slice_traced_critical_points(); // slice traces after finalization
 
 public:
-  virtual void initialize() = 0;
-  virtual void finalize() = 0;
+  // virtual void initialize() = 0;
+  // virtual void finalize() = 0;
 
-  virtual bool advance_timestep();
-  virtual void update_timestep() = 0;
+  bool advance_timestep();
+  // virtual void update_timestep() = 0;
 
 public: // i/o for traced critical points (trajectories)
   const feature_curve_set_t& get_traced_critical_points() const {return traced_critical_points;}
@@ -136,9 +129,6 @@ public: // inputs
   virtual void push_scalar_field_snapshot(const ndarray<double> &scalar);
   virtual void push_vector_field_snapshot(const ndarray<double> &vector);
 
-  virtual void set_current_timestep(int t) {current_timestep = t;}
-  int get_current_timestep() const {return current_timestep;}
-
 protected:
   bool filter_critical_point_type(const feature_point_t& cp);
 
@@ -163,8 +153,6 @@ protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
   };
-  
-  int current_timestep = 0;
 
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
@@ -179,9 +167,6 @@ protected:
   bool use_type_filter = false;
   unsigned int type_filter = 0;
   
-  int start_timestep = 0, 
-      end_timestep = std::numeric_limits<int>::max();
-
   int scalar_field_source = SOURCE_NONE, 
       vector_field_source = SOURCE_NONE,
       jacobian_field_source = SOURCE_NONE;
@@ -195,9 +180,6 @@ protected:
   bool enable_discarding_interval_points = false;
   bool enable_discarding_degenerate_points = false;
   bool enable_ignoring_degenerate_points = false;
-  
-  bool is_input_array_partial = false;
-  bool use_default_domain_partition = true;
 
 protected: // benchmark
   double accumulated_kernel_time = 0.0;

@@ -13,6 +13,9 @@
 #include <ftk/tracking_graph/tracking_graph.hh>
 #include "constants.hh"
 
+diy::mpi::environment env;
+diy::mpi::communicator world;
+
 using nlohmann::json;
 
 std::string output_filename_pattern,
@@ -29,7 +32,7 @@ double threshold = 0.0;
 static const std::set<std::string> set_valid_output_format({str_auto, str_text, str_vti});
 
 // tracker
-ftk::levelset_tracker<> tracker;
+ftk::levelset_tracker<> tracker(world);
 ftk::ndarray_stream<> stream;
 
 int parse_arguments(int argc, char **argv)

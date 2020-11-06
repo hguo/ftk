@@ -3,7 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/algorithms/cca.hh>
-#include <ftk/filters/filter.hh>
+#include <ftk/filters/tracker.hh>
 #include <ftk/filters/feature_point.hh>
 #include <ftk/filters/feature_surface.hh>
 #include <ftk/filters/feature_volume.hh>
@@ -16,7 +16,9 @@
 
 namespace ftk {
   
-struct tdgl_vortex_tracker : public virtual filter {
+struct tdgl_vortex_tracker : public virtual tracker {
+  tdgl_vortex_tracker(diy::mpi::communicator comm) : tracker(comm) {}
+
   int cpdims() const { return 3; }
   
   virtual void update() {}; 
@@ -26,11 +28,7 @@ struct tdgl_vortex_tracker : public virtual filter {
   }
   
 public:
-  virtual void initialize() = 0;
-  virtual void finalize() = 0;
-
   bool advance_timestep();
-  virtual void update_timestep() = 0;
 
 public:
   bool pop_field_data_snapshot();
@@ -41,11 +39,6 @@ public:
       const ndarray<float> &re, 
       const ndarray<float> &im 
   );
-
-  virtual void set_current_timestep(int t) {current_timestep = t;}
-  int get_current_timestep() const {return current_timestep;}
-
-  void set_end_timestep(int t) {end_timestep = t;}
   
 protected:
   struct field_data_snapshot_t {
@@ -53,10 +46,6 @@ protected:
     ndarray<float> rho, phi, re, im;
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
-  
-  int current_timestep = 0;
-  int start_timestep = 0, 
-      end_timestep = std::numeric_limits<int>::max();
 };
 
 /////

@@ -21,6 +21,7 @@
     ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>()) \
     ("perturbation", "Gaussian perturbation sigma", cxxopts::value<double>())
     // ("dim", "Spatial dimensionality of data (auto|2|3)", cxxopts::value<std::string>())
+    // ("nblocks-per-proc", "Number of blocks per proc", cxxopts::value<int>()) \
 
 static const std::string 
         str_auto("auto"),

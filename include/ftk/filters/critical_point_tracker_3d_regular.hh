@@ -57,12 +57,11 @@ extract_cp3dt_cuda(
 namespace ftk {
 
 struct critical_point_tracker_3d_regular : public critical_point_tracker_regular {
-  critical_point_tracker_3d_regular() : critical_point_tracker_regular(3) {}
+  critical_point_tracker_3d_regular(diy::mpi::communicator comm) : critical_point_tracker_regular(comm, 3), tracker(comm), filter(comm) {}
   virtual ~critical_point_tracker_3d_regular() {}
   
   int cpdims() const { return 3; }
 
-  void initialize();
   void finalize();
 
   void update_timestep();
@@ -87,37 +86,6 @@ protected:
 
 
 ////////////////////
-void critical_point_tracker_3d_regular::initialize()
-{
-  // initializing bounds
-  m.set_lb_ub({
-      static_cast<int>(domain.start(0)),
-      static_cast<int>(domain.start(1)),
-      static_cast<int>(domain.start(2)),
-      start_timestep
-    }, {
-      static_cast<int>(domain.size(0)),
-      static_cast<int>(domain.size(1)),
-      static_cast<int>(domain.size(2)),
-      end_timestep
-    });
-
-  if (use_default_domain_partition) {
-    lattice_partitioner partitioner(domain);
-    
-    // a ghost size of 2 is necessary for jacobian derivaition; 
-    // even if jacobian is not necessary, a ghost size of 1 is 
-    // necessary for accessing values on boundaries
-    partitioner.partition(comm.size(), {}, {2, 2, 2});
-
-    local_domain = partitioner.get_core(comm.rank());
-    local_array_domain = partitioner.get_ext(comm.rank());
-  }
-
-  if (!is_input_array_partial)
-    local_array_domain = array_domain;
-}
-
 void critical_point_tracker_3d_regular::finalize()
 {
   double max_accumulated_kernel_time;
@@ -222,34 +190,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
   };
 
   if (xl == FTK_XL_NONE) {
-    m.element_for(3, lattice({ // ordinal
-          local_domain.start(0), 
-          local_domain.start(1), 
-          local_domain.start(2), 
-          static_cast<size_t>(current_timestep), 
-        }, {
-          local_domain.size(0), 
-          local_domain.size(1), 
-          local_domain.size(2), 
-          1
-        }), 
-        ftk::ELEMENT_SCOPE_ORDINAL, 
-        func3, xl, nthreads, enable_set_affinity);
-
+    element_for_ordinal(3, func3);
     if (field_data_snapshots.size() >= 2) { // interval
-      m.element_for(3, lattice({
-            local_domain.start(0), 
-            local_domain.start(1), 
-            local_domain.start(2), 
-            static_cast<size_t>(current_timestep), 
-          }, {
-            local_domain.size(0), 
-            local_domain.size(1), 
-            local_domain.size(2), 
-            1
-          }),
-          ftk::ELEMENT_SCOPE_INTERVAL, 
-          func3, xl, nthreads, enable_set_affinity);
+      element_for_interval(3, func3);
       
       if (enable_streaming_trajectories)
         grow();

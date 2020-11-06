@@ -12,7 +12,7 @@
 namespace ftk {
 
 struct filter : public object {
-  filter() {
+  filter(diy::mpi::communicator comm) : object(comm) {
     nthreads = default_nthreads();
   }
 
@@ -35,6 +35,9 @@ struct filter : public object {
   void set_number_of_threads(int n) {nthreads = n;}
   int get_number_of_threads() const {return nthreads;}
 
+  void set_number_of_blocks(int n) {nblocks = n; fprintf(stderr, "setting nb=%d\n", n);}
+  int get_number_of_blocks() const {return nblocks;}
+
   void set_device_id(int d) {set_device_ids(std::vector<int>({d}));}
   void set_device_ids(const std::vector<int>& ids) {device_ids = ids;}
   const std::vector<int>& get_device_ids() const {return device_ids;}
@@ -42,7 +45,7 @@ struct filter : public object {
 
 protected:
   int xl = FTK_XL_NONE;
-  int nthreads = 1;
+  int nthreads = 1, nblocks = 0;
   bool enable_set_affinity = true;
 
   std::vector<int> device_ids;

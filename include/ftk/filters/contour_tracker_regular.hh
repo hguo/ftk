@@ -11,7 +11,7 @@ namespace ftk {
 
 // this is an abstract class, not for users
 struct contour_tracker_regular : public contour_tracker, public regular_tracker {
-  contour_tracker_regular(int nd/*2 or 3*/) : regular_tracker(nd) {}
+  contour_tracker_regular(diy::mpi::communicator comm, int nd/*2 or 3*/) : contour_tracker(comm), regular_tracker(comm, nd) {}
   virtual ~contour_tracker_regular() {}
 
 protected:

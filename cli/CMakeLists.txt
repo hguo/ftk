@@ -15,7 +15,7 @@ target_link_libraries (track_contours PRIVATE ftk)
 add_executable (track_tdgl_vortices track_tdgl_vortices.cpp)
 target_link_libraries (track_tdgl_vortices PRIVATE ftk)
 
-install (TARGETS track_critical_points track_levelsets track_contours
+install (TARGETS track_critical_points track_levelsets track_contours track_tdgl_vortices
   EXPORT FTKTargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
