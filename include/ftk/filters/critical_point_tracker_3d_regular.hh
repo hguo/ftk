@@ -186,34 +186,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
   };
 
   if (xl == FTK_XL_NONE) {
-    m.element_for(3, lattice({ // ordinal
-          local_domain.start(0), 
-          local_domain.start(1), 
-          local_domain.start(2), 
-          static_cast<size_t>(current_timestep), 
-        }, {
-          local_domain.size(0), 
-          local_domain.size(1), 
-          local_domain.size(2), 
-          1
-        }), 
-        ftk::ELEMENT_SCOPE_ORDINAL, 
-        func3, xl, nthreads, enable_set_affinity);
-
+    element_for_ordinal(3, func3);
     if (field_data_snapshots.size() >= 2) { // interval
-      m.element_for(3, lattice({
-            local_domain.start(0), 
-            local_domain.start(1), 
-            local_domain.start(2), 
-            static_cast<size_t>(current_timestep), 
-          }, {
-            local_domain.size(0), 
-            local_domain.size(1), 
-            local_domain.size(2), 
-            1
-          }),
-          ftk::ELEMENT_SCOPE_INTERVAL, 
-          func3, xl, nthreads, enable_set_affinity);
+      element_for_interval(3, func3);
       
       if (enable_streaming_trajectories)
         grow();

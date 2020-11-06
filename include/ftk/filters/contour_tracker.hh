@@ -32,11 +32,7 @@ struct contour_tracker : public virtual tracker {
   void set_threshold(double t) {threshold = t;}
 
 public:
-  virtual void initialize() = 0;
-  virtual void finalize() = 0;
-
   virtual bool advance_timestep();
-  virtual void update_timestep() = 0;
 
 public: // inputs
   bool pop_field_data_snapshot();

@@ -46,7 +46,6 @@ struct contour_tracker_3d_regular : public contour_tracker_regular {
 
   int cpdims() const { return 3; }
 
-  void initialize();
   void finalize();
   void reset();
 
@@ -80,22 +79,6 @@ protected:
 
 
 ////////////////////
-inline void contour_tracker_3d_regular::initialize()
-{
-  // initializing bounds
-  m.set_lb_ub({
-      static_cast<int>(domain.start(0)),
-      static_cast<int>(domain.start(1)),
-      static_cast<int>(domain.start(2)),
-      start_timestep
-    }, {
-      static_cast<int>(domain.size(0)),
-      static_cast<int>(domain.size(1)),
-      static_cast<int>(domain.size(2)),
-      end_timestep
-    });
-}
-
 inline void contour_tracker_3d_regular::build_isovolume()
 {
   fprintf(stderr, "building isovolumes...\n");
@@ -309,9 +292,9 @@ inline void contour_tracker_3d_regular::update_timestep()
     }
   };
 
-  m.element_for_ordinal(1, current_timestep, func, xl, nthreads, enable_set_affinity);
+  element_for_ordinal(1, func);
   if (field_data_snapshots.size() >= 2) // interval
-    m.element_for_interval(1, current_timestep, current_timestep+1, func, xl, nthreads, enable_set_affinity);
+    element_for_interval(1, func);
 }
 
 inline void contour_tracker_3d_regular::simplex_coordinates(
