@@ -28,11 +28,7 @@ struct tdgl_vortex_tracker : public virtual tracker {
   }
   
 public:
-  virtual void initialize() = 0;
-  virtual void finalize() = 0;
-
   bool advance_timestep();
-  virtual void update_timestep() = 0;
 
 public:
   bool pop_field_data_snapshot();
