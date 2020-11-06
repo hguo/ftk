@@ -55,10 +55,6 @@ protected:
     ndarray<float> rho, phi, re, im;
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
-  
-  int current_timestep = 0;
-  int start_timestep = 0, 
-      end_timestep = std::numeric_limits<int>::max();
 };
 
 /////

@@ -9,6 +9,8 @@
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
 #include "constants.hh"
+  
+diy::mpi::environment env;
 
 // global variables
 std::string input_pattern;
@@ -135,7 +137,6 @@ int parse_arguments(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-  diy::mpi::environment env;
   diy::mpi::communicator world;
   
   parse_arguments(argc, argv);
