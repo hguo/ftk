@@ -4,6 +4,8 @@
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 
+diy::mpi::environment env;
+
 bool write(const json& jstream, const json& jwriter)
 {
   ftk::ndarray_stream<> stream;
