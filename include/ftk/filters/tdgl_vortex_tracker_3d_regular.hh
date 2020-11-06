@@ -230,41 +230,12 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
     }
   };
 
-  if (xl == FTK_XL_NONE) {
-    // m.element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
-    // if (field_data_snapshots.size() >= 2) // interval
-    //   m.element_for_interval(2, current_timestep, current_timestep+1, func, xl, nthreads, enable_set_affinity);
-    m.element_for(2, lattice({ // ordinal
-          local_domain.start(0), 
-          local_domain.start(1), 
-          local_domain.start(2), 
-          static_cast<size_t>(current_timestep), 
-        }, {
-          local_domain.size(0), 
-          local_domain.size(1), 
-          local_domain.size(2), 
-          1
-        }), 
-        ftk::ELEMENT_SCOPE_ORDINAL, 
-        func, xl, nthreads, enable_set_affinity);
-
-    if (field_data_snapshots.size() >= 2) { // interval
-      m.element_for(2, lattice({
-            local_domain.start(0), 
-            local_domain.start(1), 
-            local_domain.start(2), 
-            static_cast<size_t>(current_timestep), 
-          }, {
-            local_domain.size(0), 
-            local_domain.size(1), 
-            local_domain.size(2), 
-            1
-          }),
-          ftk::ELEMENT_SCOPE_INTERVAL, 
-          func, xl, nthreads, enable_set_affinity);
-    }
+  if (xl == FTK_XL_CUDA) {
+    fatal("CUDA kernels for tdgl vortices not yet implemented.");
   } else {
-    fatal("Unsupported accelerator");
+    element_for_ordinal(2, func);
+    if (field_data_snapshots.size() >= 2) 
+      element_for_interval(2, func);
   }
 }
   

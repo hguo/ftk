@@ -39,11 +39,6 @@ public:
       const ndarray<float> &re, 
       const ndarray<float> &im 
   );
-
-  virtual void set_current_timestep(int t) {current_timestep = t;}
-  int get_current_timestep() const {return current_timestep;}
-
-  void set_end_timestep(int t) {end_timestep = t;}
   
 protected:
   struct field_data_snapshot_t {

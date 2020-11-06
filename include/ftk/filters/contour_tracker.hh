@@ -64,8 +64,6 @@ protected:
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
-  int current_timestep = 0;
-
   double threshold = 0.0;
   
   // scalar components

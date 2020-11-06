@@ -953,6 +953,8 @@ inline void simplicial_regular_mesh::element_for(
     std::function<void(simplicial_regular_mesh_element)> f,
     int accelerator, int nthreads, bool affinity) const
 {
+  // std::cerr << "element_for, d=" << d << ", scope=" << scope << ", lattice=" <<  l << std::endl;
+
   auto lambda = [=](size_t j) {
     simplicial_regular_mesh_element e(*this, d, j, l, scope);
     f(e);

@@ -129,9 +129,6 @@ public: // inputs
   virtual void push_scalar_field_snapshot(const ndarray<double> &scalar);
   virtual void push_vector_field_snapshot(const ndarray<double> &vector);
 
-  virtual void set_current_timestep(int t) {current_timestep = t;}
-  int get_current_timestep() const {return current_timestep;}
-
 protected:
   bool filter_critical_point_type(const feature_point_t& cp);
 

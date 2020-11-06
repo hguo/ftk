@@ -31,6 +31,7 @@ protected:
   };
 
 protected:
+  typedef simplicial_regular_mesh_element element_t;
   simplicial_regular_mesh m; // spacetime mesh
   
   lattice domain, array_domain, 
@@ -41,6 +42,10 @@ protected:
 
 protected: // internal use
   template <typename I=int> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
+
+  void element_for_ordinal(int k, std::function<void(element_t)> f) { element_for(true, k, f); }
+  void element_for_interval(int k, std::function<void(element_t)> f) { element_for(false, k, f); }
+  void element_for(bool ordinal, int k, std::function<void(element_t)> f);
 };
 
 /////////////////////////////
@@ -120,6 +125,20 @@ inline void regular_tracker::simplex_indices(
 {
   for (int i = 0; i < vertices.size(); i ++)
     indices[i] = m.get_lattice().to_integer(vertices[i]);
+}
+
+inline void regular_tracker::element_for(bool ordinal, int k, std::function<void(element_t)> f) 
+{
+  auto st = local_domain.starts(), sz = local_domain.sizes();
+  st.push_back(current_timestep);
+  sz.push_back(1);
+
+  lattice local_spacetime_domain(st, sz);
+  // std::cerr << local_spacetime_domain << std::endl;
+
+  m.element_for(k, local_spacetime_domain, 
+      ordinal ? ELEMENT_SCOPE_ORDINAL : ELEMENT_SCOPE_INTERVAL, 
+      f, xl, nthreads, enable_set_affinity);
 }
 
 }
