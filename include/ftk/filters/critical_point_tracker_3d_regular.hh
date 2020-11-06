@@ -58,7 +58,6 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   
   int cpdims() const { return 3; }
 
-  void initialize();
   void finalize();
 
   void update_timestep();
@@ -83,27 +82,6 @@ protected:
 
 
 ////////////////////
-void critical_point_tracker_3d_regular::initialize()
-{
-  regular_tracker::initialize();
-#if 0
-  if (use_default_domain_partition) {
-    lattice_partitioner partitioner(domain);
-    
-    // a ghost size of 2 is necessary for jacobian derivaition; 
-    // even if jacobian is not necessary, a ghost size of 1 is 
-    // necessary for accessing values on boundaries
-    partitioner.partition(comm.size(), {}, {2, 2, 2});
-
-    local_domain = partitioner.get_core(comm.rank());
-    local_array_domain = partitioner.get_ext(comm.rank());
-  }
-
-  if (!is_input_array_partial)
-    local_array_domain = array_domain;
-#endif
-}
-
 void critical_point_tracker_3d_regular::finalize()
 {
   double max_accumulated_kernel_time;

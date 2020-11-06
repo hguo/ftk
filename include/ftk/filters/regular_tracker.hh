@@ -56,8 +56,28 @@ inline void regular_tracker::initialize()
 
     m.set_lb_ub(lb, ub);
   }
+  
+  // initialize spattial domain decomposittion
+  if (use_default_domain_partition) {
+    lattice_partitioner partitioner(domain);
+   
+    // a ghost size of 2 is necessary for jacobian derivaition; 
+    // even if jacobian is not necessary, a ghost size of 1 is 
+    // necessary for accessing values on boundaries
+    std::vector<size_t> ghost;
+    for (int i = 0; i < domain.nd(); i ++)
+      ghost.push_back(2);
+    
+    partitioner.partition(comm.size(), {}, ghost);
 
-#if 0 // experiment code to use DIY for multi-block handling
+    local_domain = partitioner.get_core(comm.rank());
+    local_array_domain = partitioner.get_ext(comm.rank());
+  }
+
+  if (!is_input_array_partial)
+    local_array_domain = array_domain;
+
+#if 0 // experimental code to use DIY for multi-block handling
   // iniitalize partitions
   diy::RoundRobinAssigner assigner(comm.size(), nblocks);
   
