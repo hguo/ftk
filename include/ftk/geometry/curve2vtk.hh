@@ -9,6 +9,7 @@
 #include <vtkPolyLine.h>
 #include <vtkCellArray.h>
 #include <vtkXMLPolyDataWriter.h>
+#include <vtkSmartPointer.h>
 
 namespace ftk {
 
