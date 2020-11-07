@@ -180,9 +180,6 @@ protected:
   bool enable_discarding_interval_points = false;
   bool enable_discarding_degenerate_points = false;
   bool enable_ignoring_degenerate_points = false;
-
-protected: // benchmark
-  double accumulated_kernel_time = 0.0;
 };
 
 ///////

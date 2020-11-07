@@ -46,7 +46,7 @@ struct filter : public object {
 protected:
   int xl = FTK_XL_NONE;
   int nthreads = 1, nblocks = 0;
-  bool enable_set_affinity = true;
+  bool enable_set_affinity = false; // true;
 
   std::vector<int> device_ids;
 
