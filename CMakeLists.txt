@@ -327,7 +327,10 @@ endif ()
 
 # If FTK_BUILD_TESTS is on, enable testing.
 if (FTK_BUILD_TESTS)
-  # find_package (GTest REQUIRED)
+  if (FTK_HAVE_MPI)
+    set (TEST_EXECUTOR ${MPIEXEC})
+  endif()
+
   enable_testing ()
   include (Catch)
   add_subdirectory (tests)
