@@ -5,12 +5,24 @@ dist: bionic
 
 env:
   - CMAKE_BUILD_TYPE=RELEASE
+  - SPACK_ROOT: $HOME/spack
+  - PATH: $PATH:$SPACK_ROOT/bin
 
 jobs:
   include:
     - name: build without external dependencies (linux)
       os: linux
       dist: bionic
+
+    - name: build with mpich from spack
+      os: linux
+      dist: bionic
+      before_install:
+        - sh tests/travis/install-spack.sh
+        - spack insatll mpich
+        - spack load mpich
+      env:
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
     - name: build without external dependencies (osx)
       os: osx
