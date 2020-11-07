@@ -18,6 +18,10 @@ jobs:
         - sh tests/travis/install-spack.sh
         - spack install mpich
         - spack load mpich
+      addons:
+        apt:
+          packages:
+            - gfortran
       env:
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
