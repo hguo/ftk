@@ -4,9 +4,10 @@ os: linux
 dist: bionic
 
 env:
-  - CMAKE_BUILD_TYPE=RELEASE
-  - SPACK_ROOT: $HOME/spack
-  - PATH: $PATH:$SPACK_ROOT/bin
+  global: 
+    - CMAKE_BUILD_TYPE=RELEASE
+    - SPACK_ROOT: $HOME/spack
+    - PATH: $PATH:$SPACK_ROOT/bin
 
 jobs:
   include:
