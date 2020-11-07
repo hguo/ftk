@@ -14,7 +14,7 @@ namespace ftk {
 
 struct tdgl_vortex_tracker_3d_regular : public virtual tdgl_vortex_tracker, public virtual regular_tracker
 {
-  tdgl_vortex_tracker_3d_regular(diy::mpi::communicator comm) : tdgl_vortex_tracker(comm), regular_tracker(comm, 3), tracker(comm), filter(comm) {}
+  tdgl_vortex_tracker_3d_regular(diy::mpi::communicator comm) : tdgl_vortex_tracker(comm), regular_tracker(comm, 3), tracker(comm) {}
   virtual ~tdgl_vortex_tracker_3d_regular() {}
 
   void finalize();

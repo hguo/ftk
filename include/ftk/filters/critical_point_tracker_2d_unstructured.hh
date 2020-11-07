@@ -43,7 +43,7 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker
   // critical_point_tracker_2d_unstructured(const simplicial_unstructured_extruded_2d_mesh<>& m) : m(m) {}
   // critical_point_tracker_2d_unstructured() {}
   critical_point_tracker_2d_unstructured(diy::mpi::communicator comm, const simplicial_unstructured_2d_mesh<>& m) : 
-    critical_point_tracker(comm), m(simplicial_unstructured_extruded_2d_mesh<>(m)), tracker(comm), filter(comm) {}
+    critical_point_tracker(comm), m(simplicial_unstructured_extruded_2d_mesh<>(m)), tracker(comm) {}
   virtual ~critical_point_tracker_2d_unstructured() {};
   
   int cpdims() const { return 2; }

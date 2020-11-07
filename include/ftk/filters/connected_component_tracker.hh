@@ -10,7 +10,7 @@ namespace ftk {
 template <typename TimeIndexType=size_t, typename LabelIdType=size_t>
 struct connected_component_tracker : public tracker
 {
-  connected_component_tracker(diy::mpi::communicator comm) : tracker(comm), filter(comm) {}
+  connected_component_tracker(diy::mpi::communicator comm) : tracker(comm) {}
   virtual ~connected_component_tracker() {};
 
   virtual bool advance_timestep();

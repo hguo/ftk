@@ -38,8 +38,7 @@ namespace ftk {
 struct contour_tracker_2d_regular : public contour_tracker_regular {
   contour_tracker_2d_regular(diy::mpi::communicator comm) : 
     contour_tracker_regular(comm, 2),
-    tracker(comm),
-    filter(comm)
+    tracker(comm)
   {}
   virtual ~contour_tracker_2d_regular() {}
 

@@ -17,7 +17,7 @@ template <typename TimeIndexType=size_t, typename LabelIdType=size_t>
 struct levelset_tracker : public connected_component_tracker<TimeIndexType, LabelIdType>
 {
   levelset_tracker(diy::mpi::communicator comm) : 
-    connected_component_tracker<TimeIndexType, LabelIdType>(comm), filter(comm) {}
+    connected_component_tracker<TimeIndexType, LabelIdType>(comm) {}
   virtual ~levelset_tracker() {};
 
   void initialize() {}

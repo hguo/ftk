@@ -7,7 +7,7 @@
 
 namespace ftk {
 
-struct tracker : public virtual filter
+struct tracker : public filter
 {
   tracker(diy::mpi::communicator comm) : filter(comm), master(comm) {}
   virtual ~tracker() {}

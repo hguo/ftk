@@ -57,7 +57,7 @@ extract_cp3dt_cuda(
 namespace ftk {
 
 struct critical_point_tracker_3d_regular : public critical_point_tracker_regular {
-  critical_point_tracker_3d_regular(diy::mpi::communicator comm) : critical_point_tracker_regular(comm, 3), tracker(comm), filter(comm) {}
+  critical_point_tracker_3d_regular(diy::mpi::communicator comm) : critical_point_tracker_regular(comm, 3), tracker(comm) {}
   virtual ~critical_point_tracker_3d_regular() {}
   
   int cpdims() const { return 3; }

@@ -55,8 +55,7 @@ namespace ftk {
 struct critical_point_tracker_2d_regular : public critical_point_tracker_regular {
   critical_point_tracker_2d_regular(diy::mpi::communicator comm) : 
     critical_point_tracker_regular(comm, 2),
-    tracker(comm),
-    filter(comm)
+    tracker(comm)
   {}
   virtual ~critical_point_tracker_2d_regular() {}
 
