@@ -11,10 +11,6 @@ env:
 
 jobs:
   include:
-    - name: build without external dependencies (linux)
-      os: linux
-      dist: bionic
-
     - name: build with mpich from spack
       os: linux
       dist: bionic
@@ -24,6 +20,10 @@ jobs:
         - spack load mpich
       env:
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
+    - name: build without external dependencies (linux)
+      os: linux
+      dist: bionic
 
     - name: build without external dependencies (osx)
       os: osx
