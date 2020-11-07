@@ -44,7 +44,6 @@ struct contour_tracker_2d_regular : public contour_tracker_regular {
 
   int cpdims() const { return 2; }
 
-  void initialize();
   void finalize();
   void reset();
 
@@ -71,20 +70,6 @@ protected:
 
 
 ////////////////////
-inline void contour_tracker_2d_regular::initialize()
-{
-  // initializing bounds
-  m.set_lb_ub({
-      static_cast<int>(domain.start(0)),
-      static_cast<int>(domain.start(1)),
-      start_timestep
-    }, {
-      static_cast<int>(domain.size(0)),
-      static_cast<int>(domain.size(1)),
-      end_timestep
-    });
-}
-
 inline void contour_tracker_2d_regular::finalize()
 {
   diy::mpi::gather(comm, intersections, intersections, get_root_proc());

@@ -11,7 +11,7 @@ namespace ftk {
 
 // this is an abstract class, not for users
 struct critical_point_tracker_regular : public critical_point_tracker, public regular_tracker {
-  critical_point_tracker_regular(diy::mpi::communicator comm, int nd) : critical_point_tracker(comm), regular_tracker(comm, nd) {}
+  critical_point_tracker_regular(diy::mpi::communicator comm, int nd) : critical_point_tracker(comm), regular_tracker(comm, nd), tracker(comm) {}
   virtual ~critical_point_tracker_regular() {}
 
 protected:
