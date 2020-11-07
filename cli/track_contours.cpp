@@ -84,13 +84,15 @@ int parse_arguments(int argc, char **argv)
   
   nlohmann::json j_input = args_to_json(results);
   stream.set_input_source_json(j_input);
-  
-  fprintf(stderr, "SUMMARY\n=============\n");
-  std::cerr << "input=" << stream.get_json() << std::endl;
-  fprintf(stderr, "output_format=%s\n", output_format.c_str());
-  fprintf(stderr, "threshold=%f\n", threshold);
-  fprintf(stderr, "nthreads=%d\n", nthreads);
-  fprintf(stderr, "=============\n");
+ 
+  if (world.rank() == 0) {
+    fprintf(stderr, "SUMMARY\n=============\n");
+    std::cerr << "input=" << stream.get_json() << std::endl;
+    fprintf(stderr, "output_format=%s\n", output_format.c_str());
+    fprintf(stderr, "threshold=%f\n", threshold);
+    fprintf(stderr, "nthreads=%d\n", nthreads);
+    fprintf(stderr, "=============\n");
+  }
 
   const auto js = stream.get_json();
   const size_t nd = stream.n_dimensions(),
