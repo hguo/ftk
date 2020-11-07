@@ -163,6 +163,11 @@ inline void contour_tracker_3d_regular::build_isovolume()
 
 inline void contour_tracker_3d_regular::finalize()
 {
+  double max_accumulated_kernel_time;
+  diy::mpi::reduce(comm, accumulated_kernel_time, max_accumulated_kernel_time, get_root_proc(), diy::mpi::maximum<double>());
+  if (comm.rank() == get_root_proc())
+    fprintf(stderr, "max_accumulated_kernel_time=%f\n", accumulated_kernel_time);
+  
   diy::mpi::gather(comm, intersections, intersections, get_root_proc());
   diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
 
@@ -262,6 +267,9 @@ inline bool contour_tracker_3d_regular::check_simplex(
 inline void contour_tracker_3d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+  
+  typedef std::chrono::high_resolution_clock clock_type;
+  auto t0 = clock_type::now();
 
   auto func = [=](element_t e) {
     feature_point_t p;
@@ -295,6 +303,9 @@ inline void contour_tracker_3d_regular::update_timestep()
   element_for_ordinal(1, func);
   if (field_data_snapshots.size() >= 2) // interval
     element_for_interval(1, func);
+  
+  auto t1 = clock_type::now();
+  accumulated_kernel_time += std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
 }
 
 inline void contour_tracker_3d_regular::simplex_coordinates(
