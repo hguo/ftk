@@ -11,20 +11,6 @@ env:
 
 jobs:
   include:
-    - name: build with mpich from spack
-      os: linux
-      dist: bionic
-      before_install:
-        - sh tests/travis/install-spack.sh
-        - spack install mpich
-        - spack load mpich
-      addons:
-        apt:
-          packages:
-            - gfortran
-      env:
-        - CMAKE_ARG="-DFTK_USE_MPI=ON"
-
     - name: build without external dependencies (linux)
       os: linux
       dist: bionic
@@ -163,6 +149,21 @@ jobs:
 
 
   allow_failures:
+    - name: build with mpich from spack
+      os: linux
+      dist: bionic
+      before_install:
+        - sh tests/travis/install-spack.sh
+        - source $SPACK_ROOT/share/spack/setup-env.sh
+        - spack install mpich
+        - spack load mpich
+      addons:
+        apt:
+          packages:
+            - gfortran
+      env:
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
     - name: build with vtk (osx)
       env: 
         - CMAKE_ARG="-DFTK_USE_VTK=ON"
