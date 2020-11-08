@@ -181,7 +181,7 @@ public: // partitioning
 #endif
 
 public:
-  void print_unit_simplices(int nd, int d) const;
+  void print_unit_simplices(int d, int scope) const;
 
 private: // initialization functions
   void initialize_subdivision();
@@ -804,9 +804,29 @@ inline void simplicial_regular_mesh::partition(int np, const std::vector<size_t>
 }
 #endif
 
-inline void simplicial_regular_mesh::print_unit_simplices(int nd, int d) const
+inline void simplicial_regular_mesh::print_unit_simplices(int d, int scope) const
 {
+  const auto &simplices = unit_simplices[d];
+  for (int i = 0; i < simplices.size(); i ++) {
+    bool b;
+    if (scope == ELEMENT_SCOPE_ALL) b = true;
+    else if (scope == ELEMENT_SCOPE_ORDINAL) b = is_unit_simplex_type_ordinal[d][i];
+    else b = !is_unit_simplex_type_ordinal[d][i];
 
+    if (b) {
+      const auto &simplex = simplices[i];
+      for (int j = 0; j < simplex.size(); j ++) {
+        const auto &vertex = simplex[j];
+        for (int k = 0; k < vertex.size(); k ++)
+          std::cerr << vertex[k];
+
+        if (j < simplex.size()-1) 
+          std::cerr << ", ";
+        else 
+          std::cerr <<  std::endl;
+      }
+    }
+  }
 }
 
 inline void simplicial_regular_mesh::initialize_subdivision()

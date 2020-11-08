@@ -51,6 +51,14 @@ protected: // internal use
 /////////////////////////////
 inline void regular_tracker::initialize()
 {
+#if 0
+  fprintf(stderr, "ordinal 1-simplices:\n");
+  m.print_unit_simplices(1, ELEMENT_SCOPE_ORDINAL);
+  
+  fprintf(stderr, "interval 1-simplices:\n");
+  m.print_unit_simplices(1, ELEMENT_SCOPE_INTERVAL);
+#endif
+
   // initialize spacetime mesh
   {
     auto lb = domain.lower_bounds(), 
