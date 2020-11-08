@@ -328,7 +328,7 @@ endif ()
 # If FTK_BUILD_TESTS is on, enable testing.
 if (FTK_BUILD_TESTS)
   if (FTK_HAVE_MPI)
-    set (TEST_EXECUTOR ${MPIEXEC})
+    set (TEST_EXECUTOR ${MPIEXEC_EXECUTABLE})
   endif()
 
   enable_testing ()
