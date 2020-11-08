@@ -29,7 +29,7 @@ if(NOT EXISTS "${TEST_EXECUTABLE}")
   )
 endif()
 execute_process(
-  COMMAND ${TEST_EXECUTOR} "${TEST_EXECUTABLE}" ${spec} --list-test-names-only
+  COMMAND "${TEST_EXECUTOR}" "${TEST_EXECUTABLE}" ${spec} --list-test-names-only
   OUTPUT_VARIABLE output
   RESULT_VARIABLE result
 )
@@ -59,7 +59,7 @@ foreach(line ${output})
   # ...and add to script
   add_command(add_test
     "${prefix}${test}${suffix}"
-    ${TEST_EXECUTOR}
+    "${TEST_EXECUTOR}"
     "${TEST_EXECUTABLE}"
     "${test_name}"
     ${extra_args}

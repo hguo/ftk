@@ -116,6 +116,7 @@ function(catch_discover_tests TARGET)
   # Define rule to generate test list for aforementioned test executable
   set(ctest_include_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_include-${args_hash}.cmake")
   set(ctest_tests_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_tests-${args_hash}.cmake")
+
   get_property(crosscompiling_emulator
     TARGET ${TARGET}
     PROPERTY CROSSCOMPILING_EMULATOR
@@ -126,8 +127,7 @@ function(catch_discover_tests TARGET)
     COMMAND "${CMAKE_COMMAND}"
             -D "TEST_TARGET=${TARGET}"
             -D "TEST_EXECUTABLE=$<TARGET_FILE:${TARGET}>"
-            # -D "TEST_EXECUTOR=${crosscompiling_emulator}"
-            -D "TEST_EXECUTOR=${MPIEXEC_EXECUTABLE}"
+            -D "TEST_EXECUTOR=${crosscompiling_emulator}"
             -D "TEST_WORKING_DIR=${_WORKING_DIRECTORY}"
             -D "TEST_SPEC=${_TEST_SPEC}"
             -D "TEST_EXTRA_ARGS=${_EXTRA_ARGS}"

@@ -8,6 +8,7 @@ env:
     - CMAKE_BUILD_TYPE=RELEASE
     - SPACK_ROOT: $HOME/spack
     - PATH: $PATH:$SPACK_ROOT/bin
+    - OMPI_MCA_orte_base_help_aggregate: 0
 
 jobs:
   include:
