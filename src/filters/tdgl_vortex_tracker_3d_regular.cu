@@ -14,6 +14,10 @@
 // #include <ftk/filters/critical_point_lite.hh>
 #include "common.cuh"
 
+using namespace ftk;
+
+typedef tdgl_metadata_t meta_t;
+
 template <typename T> 
 __device__
 T line_integral(const T X0[], const T X1[], const T A0[], const T A1[]) 
@@ -24,9 +28,9 @@ T line_integral(const T X0[], const T X1[], const T A0[], const T A1[])
   return 0.5 * inner_product(A, dX);
 }
 
-template <typename T, int gauge>
+template <typename T>
 __device__
-inline void magnetic_potential(const tdgl_metadata_t& h, T X[3], T A[3])
+inline void magnetic_potential(const meta_t& m, T X[4], T A[3])
 {
   if (m.B[1] > 0) {
     A[0] = -m.Kex;
@@ -46,9 +50,10 @@ bool check_simplex_tdgl_vortex_3dt(
     const lattice4_t& domain, 
     const lattice4_t& core, 
     const lattice3_t& ext, // array dimension
-    const element43_t& e, 
-    const double *Rho[2], // current and next timesteps
-    const double *Phi[2], 
+    const element43_t& e,
+    const meta_t *h[2],
+    const float *Rho[2], // current and next timesteps
+    const float *Phi[2], 
     cp_t &p)
 {
   if (e.corner[3] != current_timestep)
@@ -67,8 +72,9 @@ bool check_simplex_tdgl_vortex_3dt(
     indices[i] = domain.to_index(vertices[i]);
     local_indices[i] = ext.to_index(vertices[i]);
   }
-  
-  double rho[3], phi[3], re[3], im[3];
+ 
+  float X[3][4], A[3][3];
+  float rho[3], phi[3], re[3], im[3];
   for (int i = 0; i < 3; i ++) {
     const size_t k = local_indices[i]; // k = ext.to_index(vertices[i]);
     const size_t t = unit_simplex_offset_4_3<scope>(e.type, i, 3);
@@ -77,6 +83,12 @@ bool check_simplex_tdgl_vortex_3dt(
     phi[i] = Phi[t][k];
     re[i] = rho[i] * cos(phi[i]);
     im[i] = rho[i] * sin(phi[i]);
+
+    for (int j = 0; j < 3; j ++)
+      X[i][j] = vertices[i][j] * h[0]->cell_lengths[j] + h[0]->origins[j];
+    X[i][3] = vertices[i][3];
+
+    magnetic_potential<float>(*h[t], X[i], A[i]);
   }
   
   // compute contour integral
@@ -126,14 +138,17 @@ void sweep_simplices(
     const lattice4_t domain,
     const lattice4_t core,
     const lattice3_t ext, // array dimension
-    const double *rho_c, // current timestep
-    const double *rho_n, // next timestep
-    const double *phi_c, 
-    const double *phi_n,
+    const meta_t *h_c, 
+    const meta_t *h_n,
+    const float *rho_c, // current timestep
+    const float *rho_n, // next timestep
+    const float *phi_c, 
+    const float *phi_n,
     unsigned long long &ncps, cp_t *cps)
 {
-  const double *Rho[2] = {rho_c, rho_n};
-  const double *Phi[2] = {phi_c, phi_n};
+  const float *Rho[2] = {rho_c, rho_n};
+  const float *Phi[2] = {phi_c, phi_n};
+  const meta_t *h[2] = {h_c, h_n};
   
   int tid = getGlobalIdx_3D_1D();
   const element43_t e = element43_from_index<scope>(core, tid);
@@ -141,7 +156,7 @@ void sweep_simplices(
   cp_t cp;
   bool succ = check_simplex_tdgl_vortex_3dt<scope>(
       current_timestep,
-      domain, core, ext, e, Rho, Phi, cp);
+      domain, core, ext, e, h, Rho, Phi, cp);
 
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
@@ -155,11 +170,13 @@ static std::vector<cp_t> extract_tdgl_vortex_3dt(
     int current_timestep,
     const lattice4_t& domain,
     const lattice4_t& core, 
-    const lattice3_t& ext, 
-    const double *rho_c,
-    const double *rho_n, 
-    const double *phi_c,
-    const double *phi_n)
+    const lattice3_t& ext,
+    const meta_t &h_c, 
+    const meta_t &h_n,
+    const float *rho_c,
+    const float *rho_n, 
+    const float *phi_c,
+    const float *phi_n)
 {
   auto t0 = std::chrono::high_resolution_clock::now();
 
@@ -175,28 +192,34 @@ static std::vector<cp_t> extract_tdgl_vortex_3dt(
   else 
     gridSize = dim3(nBlocks);
 
-  double *drho_c = NULL, *drho_n = NULL;
+  meta_t *dh_c = NULL, *dh_n = NULL; // headers
+  cudaMalloc((void**)&dh_c, sizeof(meta_t));
+  cudaMemcpy(dh_c, &h_c, sizeof(meta_t), cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&dh_n, sizeof(meta_t));
+  cudaMemcpy(dh_n, &h_n, sizeof(meta_t), cudaMemcpyHostToDevice);
+
+  float *drho_c = NULL, *drho_n = NULL;
   if (rho_c) {
-    cudaMalloc((void**)&drho_c, 3 * sizeof(double) * ext.n());
+    cudaMalloc((void**)&drho_c, 3 * sizeof(float) * ext.n());
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating drho_c");
-    cudaMemcpy(drho_c, rho_c, 3 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMemcpy(drho_c, rho_c, 3 * sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying drho_c");
   }
   if (rho_n) {
-    cudaMalloc((void**)&drho_n, 3 * sizeof(double) * ext.n());
+    cudaMalloc((void**)&drho_n, 3 * sizeof(float) * ext.n());
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating drho_l");
-    cudaMemcpy(drho_n, rho_n, 3 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMemcpy(drho_n, rho_n, 3 * sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying drho_l");
   }
   
-  double *dphi_c = NULL, *dphi_n = NULL;
+  float *dphi_c = NULL, *dphi_n = NULL;
   if (phi_c) {
-    cudaMalloc((void**)&dphi_c, 9 * sizeof(double) * ext.n());
-    cudaMemcpy(dphi_c, phi_c, 9 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&dphi_c, 9 * sizeof(float) * ext.n());
+    cudaMemcpy(dphi_c, phi_c, 9 * sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
   }
   if (phi_n) {
-    cudaMalloc((void**)&dphi_n, 9 * sizeof(double) * ext.n());
-    cudaMemcpy(dphi_n, phi_n, 9 * sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&dphi_n, 9 * sizeof(float) * ext.n());
+    cudaMemcpy(dphi_n, phi_n, 9 * sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
   }
   
   unsigned long long *dncps; // number of cps
@@ -212,7 +235,7 @@ static std::vector<cp_t> extract_tdgl_vortex_3dt(
   fprintf(stderr, "calling kernel func...\n");
   sweep_simplices<scope><<<gridSize, blockSize>>>(
       current_timestep, 
-      domain, core, ext, drho_c, drho_n, dphi_c, dphi_n, 
+      domain, core, ext, dh_c, dh_n, drho_c, drho_n, dphi_c, dphi_n, 
       *dncps, dcps);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices, kernel function");
@@ -225,7 +248,9 @@ static std::vector<cp_t> extract_tdgl_vortex_3dt(
   std::vector<cp_t> cps(ncps);
   cudaMemcpy(cps.data(), dcps, sizeof(cp_t) * ncps, cudaMemcpyDeviceToHost);
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaMemcpyDeviceToHost");
-  
+ 
+  cudaFree(dh_c);
+  cudaFree(dh_n);
   if (drho_c) cudaFree(drho_c);
   if (drho_n) cudaFree(drho_n);
   if (dphi_c) cudaFree(dphi_c);
@@ -250,19 +275,21 @@ extract_tdgl_vortex_3dt_cuda(
     const ftk::lattice& domain,
     const ftk::lattice& core, 
     const ftk::lattice& ext, 
-    const double *rho_c, 
-    const double *rho_l,
-    const double *phi_c, 
-    const double *phi_l)
+    const meta_t &h_c,
+    const meta_t &h_n,
+    const float *rho_c, 
+    const float *rho_l,
+    const float *phi_c, 
+    const float *phi_l)
 {
   lattice4_t D(domain);
   lattice4_t C(core);
   lattice3_t E(ext);
 
   if (scope == scope_interval) 
-    return extract_tdgl_vortex_3dt<scope_interval>(current_timestep, D, C, E, rho_c, rho_l, phi_c, phi_l);
+    return extract_tdgl_vortex_3dt<scope_interval>(current_timestep, D, C, E, h_c, h_n, rho_c, rho_l, phi_c, phi_l);
   if (scope == scope_ordinal) 
-    return extract_tdgl_vortex_3dt<scope_ordinal>(current_timestep, D, C, E, rho_c, rho_l, phi_c, phi_l);
+    return extract_tdgl_vortex_3dt<scope_ordinal>(current_timestep, D, C, E, h_c, h_n, rho_c, rho_l, phi_c, phi_l);
   else // scope == 2
-    return extract_tdgl_vortex_3dt<scope_all>(current_timestep, D, C, E, rho_c, rho_l, phi_c, phi_l);
+    return extract_tdgl_vortex_3dt<scope_all>(current_timestep, D, C, E, h_c, h_n, rho_c, rho_l, phi_c, phi_l);
 }
