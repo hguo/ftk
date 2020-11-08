@@ -20,7 +20,7 @@
 
 #if FTK_HAVE_CUDA
 // #include <cuda.h>
-#include <cuda_runtime.h>
+// #include <cuda_runtime.h>
 #endif
 
 #if FTK_HAVE_MPI
@@ -320,7 +320,7 @@ private:
 
   size_t ncd = 0; // Number of dimensions for components.  For 3D vector field, nd=4, ncd=1.  For 3D jacobian field, nd=5, ncd=2
     
-#if FTK_HAVE_CUDA
+#if 0 // FTK_HAVE_CUDA
   // arrays on GPU
   size_t *d_dims = NULL, *d_prod = NULL;
   T *d_p = NULL;
@@ -937,7 +937,7 @@ inline void ndarray<T>::from_adios2(adios2::IO &io, adios2::Engine &reader, cons
 template <typename T>
 inline void ndarray<T>::copy_to_cuda_device()
 {
-#if FTK_HAVE_CUDA
+#if 0 // FTK_HAVE_CUDA
   if (d_dims == NULL)
     cudaMalloc((void**)&d_dims, sizeof(size_t) * dims.size());
   cudaMemcpy(d_dims, dims.data(), sizeof(size_t) * dims.size(), cudaMemcpyHostToDevice);
