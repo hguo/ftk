@@ -10,8 +10,34 @@
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/mesh/lattice.hh>
+#include <ftk/io/tdgl.hh>
 // #include <ftk/filters/critical_point_lite.hh>
 #include "common.cuh"
+
+template <typename T> 
+__device__
+T line_integral(const T X0[], const T X1[], const T A0[], const T A1[]) 
+{
+  T dX[3] = {X1[0] - X0[0], X1[1] - X0[1], X1[2] - X0[2]};
+  T A[3] = {A0[0] + A1[0], A0[1] + A1[1], A0[2] + A1[2]};
+
+  return 0.5 * inner_product(A, dX);
+}
+
+template <typename T, int gauge>
+__device__
+inline void magnetic_potential(const tdgl_metadata_t& h, T X[3], T A[3])
+{
+  if (m.B[1] > 0) {
+    A[0] = -m.Kex;
+    A[1] = X[0] * m.B[2];
+    A[2] = -X[0] * m.B[1];
+  } else {
+    A[0] = -X[1] * m.B[2] - m.Kex;
+    A[1] = 0;
+    A[2] = X[1] * m.B[0];
+  }
+}
 
 template <int scope>
 __device__
@@ -23,7 +49,7 @@ bool check_simplex_tdgl_vortex_3dt(
     const element43_t& e, 
     const double *Rho[2], // current and next timesteps
     const double *Phi[2], 
-    cp_t &cp)
+    cp_t &p)
 {
   if (e.corner[3] != current_timestep)
     return false;
@@ -42,14 +68,53 @@ bool check_simplex_tdgl_vortex_3dt(
     local_indices[i] = ext.to_index(vertices[i]);
   }
   
-  double rho[3], phi[3];
+  double rho[3], phi[3], re[3], im[3];
   for (int i = 0; i < 3; i ++) {
     const size_t k = local_indices[i]; // k = ext.to_index(vertices[i]);
     const size_t t = unit_simplex_offset_4_3<scope>(e.type, i, 3);
       
     rho[i] = Rho[t][k];
     phi[i] = Phi[t][k];
+    re[i] = rho[i] * cos(phi[i]);
+    im[i] = rho[i] * sin(phi[i]);
   }
+  
+  // compute contour integral
+  float delta[3], phase_shift = 0;
+  for (int i = 0; i < 3; i ++) { // ignoring quasi periodical boundary conditions
+    int j = (i+1) % 3;
+    float li = line_integral(X[i], X[j], A[i], A[j]);
+    delta[i] = mod2pi1( phi[j] - phi[i] - li ); // gauge transformation
+    phase_shift -= delta[i];
+  }
+
+  // check contour integral
+  float critera = phase_shift / (2 * M_PI);
+  if (fabs(critera) < 0.5) return false; // ignoring chiralities
+
+  // guage transformation
+  float psi[3][2]; // in re/im
+  for (int i = 0; i < 3; i ++) {
+    if (i != 0) phi[i] = phi[i-1] + delta[i-1];
+    psi[i][0] = rho[i] * cos(phi[i]);
+    psi[i][1] = rho[i] * sin(phi[i]);
+  }
+
+  // locate zero
+  float mu[3], // barycentric coordinates
+        cond; // condition number
+  inverse_lerp_s2v2(psi, mu, &cond);
+
+  // interpolation
+  float x[4];
+  lerp_s2v4(X, mu, x);
+
+  // result
+  p.x[0] = x[0];
+  p.x[1] = x[1];
+  p.x[2] = x[2];
+  p.t = x[3];
+  p.cond = cond;
 
   return false; // WIP
 }
