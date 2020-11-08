@@ -76,7 +76,7 @@ void sweep_simplices(
   cp_t cp;
   bool succ = check_simplex_tdgl_vortex_3dt<scope>(
       current_timestep,
-      domain, core, ext, e, V, J, S, cp);
+      domain, core, ext, e, Rho, Phi, cp);
 
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
