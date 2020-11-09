@@ -59,9 +59,9 @@ bool check_simplex_tdgl_vortex_3dt(
   if (e.corner[3] != current_timestep)
     return false;
   
-  int vertices[4][4], indices[4];
-  size_t local_indices[4];
-  for (int i = 0; i < 4; i ++) {
+  int vertices[3][4], indices[3];
+  size_t local_indices[3];
+  for (int i = 0; i < 3; i ++) {
     for (int j = 0; j < 4; j ++) {
       vertices[i][j] = e.corner[j]
         + unit_simplex_offset_4_2<scope>(e.type, i, j);
