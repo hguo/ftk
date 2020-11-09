@@ -54,12 +54,12 @@ bool check_simplex_contour_3dt(
     const size_t t = unit_simplex_offset_4_1<scope>(e.type, i, 3);
      
     f[i] = F[t][k] - threshold;
-    f[i] = f[i] * factor;
+    fi[i] = f[i] * factor;
 
     for (int j = 0; j < 4; j ++)
       X[i][j] = vertices[i][j];
   }
-  
+ 
   bool succ = robust_critical_point_in_simplex1(fi, indices);
   if (!succ) return false;
 
