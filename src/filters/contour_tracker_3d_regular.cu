@@ -44,20 +44,37 @@ bool check_simplex_contour_3dt(
     indices[i] = domain.to_index(vertices[i]);
     local_indices[i] = ext.to_index(vertices[i]);
   }
- 
+  
+  const long long factor = 2 << 20; // using fixed point rep
   double X[2][4];
   double f[2];
+  long long fi[2];
   for (int i = 0; i < 2; i ++) {
     const size_t k = local_indices[i]; // k = ext.to_index(vertices[i]);
     const size_t t = unit_simplex_offset_4_1<scope>(e.type, i, 3);
      
-    f[i] = F[t][k];
+    f[i] = F[t][k] - threshold;
+    f[i] = f[i] * factor;
 
     for (int j = 0; j < 4; j ++)
       X[i][j] = vertices[i][j];
   }
+  
+  bool succ = robust_critical_point_in_simplex1(fi, indices);
+  if (!succ) return false;
 
-  return false;
+  double mu[2];
+  bool succ2 = inverse_lerp_s1v1(f, mu);
+  
+  double x[4];
+  lerp_s1v4(X, mu, x);
+
+  p.x[0] = x[0];
+  p.x[1] = x[1];
+  p.x[2] = x[2];
+  p.t = x[3];
+
+  return true;
 }
 
 template <int scope>
