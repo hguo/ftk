@@ -41,5 +41,6 @@ TEST_CASE("simple_union_find") {
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv);
+  return 0;
 }

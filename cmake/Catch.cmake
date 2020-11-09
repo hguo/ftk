@@ -117,10 +117,15 @@ function(catch_discover_tests TARGET)
   set(ctest_include_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_include-${args_hash}.cmake")
   set(ctest_tests_file "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_tests-${args_hash}.cmake")
 
-  get_property(crosscompiling_emulator
-    TARGET ${TARGET}
-    PROPERTY CROSSCOMPILING_EMULATOR
-  )
+  #get_property(crosscompiling_emulator
+  #  TARGET ${TARGET}
+  #  PROPERTY CROSSCOMPILING_EMULATOR
+  #)
+
+  if (FTK_HAVE_MPI)
+    set (crosscompiling_emulator ${MPIEXEC_EXECUTABLE})
+  endif ()
+
   add_custom_command(
     TARGET ${TARGET} POST_BUILD
     BYPRODUCTS "${ctest_tests_file}"

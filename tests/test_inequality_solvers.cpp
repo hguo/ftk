@@ -46,5 +46,6 @@ TEST_CASE("linear_inequality_test2") {
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv);
+  return 0;
 }

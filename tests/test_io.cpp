@@ -72,5 +72,6 @@ TEST_CASE("io_write_vti_moving_ramp_3d_synthetic") {
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv);
+  return 0;
 }
