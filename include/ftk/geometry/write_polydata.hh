@@ -8,8 +8,11 @@
 #include <vtkSmartPointer.h>
 #include <vtkPolyDataWriter.h>
 #include <vtkXMLPolyDataWriter.h>
+
+#ifndef FTK_HAVE_PARAVIEW
 #include <vtkPLYWriter.h>
 #include <vtkSTLWriter.h>
+#endif
 
 namespace ftk {
 
@@ -31,15 +34,19 @@ inline void write_polydata(
     writer->SetInputData(poly);
     writer->Write();
   } else if (format == "ply") {
+#ifndef FTK_HAVE_PARAVIEW
     vtkSmartPointer<vtkPLYWriter> writer = vtkPLYWriter::New();
     writer->SetFileName(filename.c_str());
     writer->SetInputData(poly);
     writer->Write();
+#endif
   } else if (format == "stl") {
+#ifndef FTK_HAVE_PARAVIEW
     vtkSmartPointer<vtkSTLWriter> writer = vtkSTLWriter::New();
     writer->SetFileName(filename.c_str());
     writer->SetInputData(poly);
     writer->Write();
+#endif
   } else if (format == "legacy") {
     vtkSmartPointer<vtkPolyDataWriter> writer = vtkPolyDataWriter::New();
     writer->SetFileName(filename.c_str());

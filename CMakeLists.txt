@@ -8,6 +8,7 @@ include(GNUInstallDirs)
 
 if (FTK_BUILD_PARAVIEW)
   find_package (ParaView REQUIRED)
+  set (FTK_HAVE_PARAVIEW TRUE)
 endif ()
 
 if (FTK_BUILD_PYFTK)

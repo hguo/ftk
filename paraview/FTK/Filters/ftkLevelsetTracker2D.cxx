@@ -16,6 +16,7 @@
 vtkStandardNewMacro(ftkLevelsetTracker2D);
 
 ftkLevelsetTracker2D::ftkLevelsetTracker2D()
+  : tracker(diy::mpi::communicator())
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);

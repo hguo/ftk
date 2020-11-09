@@ -207,7 +207,7 @@ inline void feature_curve_set_t::write_vtk(const std::string& filename) const
 }
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims, const std::vector<std::string> &scalar_components, double tfactor) const
+inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims, const std::vector<std::string> &scalar_components, double tfactor) const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -386,7 +386,7 @@ inline void feature_curve_set_t::split_all()
     add(traj);
 }
 
-feature_curve_set_t feature_curve_set_t::intercept(int t0, int t1) const
+inline feature_curve_set_t feature_curve_set_t::intercept(int t0, int t1) const
 {
   feature_curve_set_t result;
   for (const auto &kv : * this) {

@@ -8,3 +8,4 @@ REQUIRES_MODULES
   VTK::CommonExecutionModel
   VTK::FiltersSources
   VTK::IOLegacy
+  VTK::IOPLY
