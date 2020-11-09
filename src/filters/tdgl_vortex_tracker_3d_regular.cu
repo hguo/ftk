@@ -128,7 +128,7 @@ bool check_simplex_tdgl_vortex_3dt(
   p.t = x[3];
   p.cond = cond;
 
-  return false; // WIP
+  return true;
 }
 
 template <int scope>
@@ -152,7 +152,7 @@ void sweep_simplices(
   
   int tid = getGlobalIdx_3D_1D();
   const element43_t e = element43_from_index<scope>(core, tid);
-#if 0
+  
   cp_t cp;
   bool succ = check_simplex_tdgl_vortex_3dt<scope>(
       current_timestep,
@@ -163,7 +163,6 @@ void sweep_simplices(
     cp.tag = tid;
     cps[i] = cp;
   }
-#endif
 }
 
 template <int scope>
