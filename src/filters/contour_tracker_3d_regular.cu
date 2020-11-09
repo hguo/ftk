@@ -10,7 +10,6 @@
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/mesh/lattice.hh>
-#include <ftk/io/tdgl.hh>
 // #include <ftk/filters/critical_point_lite.hh>
 #include "common.cuh"
 

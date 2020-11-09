@@ -3,18 +3,16 @@ if (FTK_BUILD_PYFTK)
 endif ()
 
 file (GLOB_RECURSE ftk_sources *.cpp)
+if (FTK_HAVE_CUDA)
+  file (GLOB_RECURSE ftk_cuda_sources *.cu)
+endif ()
+
 add_library (ftk SHARED ${ftk_sources} ${ftk_cuda_sources})
 
 target_link_libraries (ftk ${CMAKE_THREAD_LIBS_INIT})
 
 if (FTK_HAVE_ADIOS2)
   target_link_libraries (ftk ${ADIOS2_LIBRARIES})
-endif ()
-
-if (FTK_HAVE_CUDA)
-  file (GLOB_RECURSE ftk_cuda_sources *.cu)
-  cuda_add_library (ftk_cuda ${ftk_cuda_sources})
-  target_link_libraries (ftk ftk_cuda)
 endif ()
 
 if (FTK_HAVE_BOOST)
@@ -73,9 +71,9 @@ if (FTK_HAVE_OPENMP)
   target_link_libraries (ftk OpenMP::OpenMP_CXX)
 endif ()
 
-if (FTK_HAVE_CUDA)
-  target_link_libraries (ftk ${CUDA_LIBRARIES})
-endif ()
+#if (FTK_HAVE_CUDA)
+#  target_link_libraries (ftk ${CUDA_LIBRARIES})
+#endif ()
 
 #if (FTK_HAVE_PYBIND11)
 #  target_link_libraries (ftk ${PYTHON_LIBRARY})
