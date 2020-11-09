@@ -50,7 +50,7 @@ bool check_simplex_tdgl_vortex_3dt(
     const lattice4_t& domain, 
     const lattice4_t& core, 
     const lattice3_t& ext, // array dimension
-    const element43_t& e,
+    const element42_t& e,
     const meta_t *h[2],
     const float *Rho[2], // current and next timesteps
     const float *Phi[2], 
@@ -64,7 +64,7 @@ bool check_simplex_tdgl_vortex_3dt(
   for (int i = 0; i < 4; i ++) {
     for (int j = 0; j < 4; j ++) {
       vertices[i][j] = e.corner[j]
-        + unit_simplex_offset_4_3<scope>(e.type, i, j);
+        + unit_simplex_offset_4_2<scope>(e.type, i, j);
       if (vertices[i][j] < domain.st[j] || 
           vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
         return false;
@@ -77,7 +77,7 @@ bool check_simplex_tdgl_vortex_3dt(
   float rho[3], phi[3], re[3], im[3];
   for (int i = 0; i < 3; i ++) {
     const size_t k = local_indices[i]; // k = ext.to_index(vertices[i]);
-    const size_t t = unit_simplex_offset_4_3<scope>(e.type, i, 3);
+    const size_t t = unit_simplex_offset_4_2<scope>(e.type, i, 3);
       
     rho[i] = Rho[t][k];
     phi[i] = Phi[t][k];
@@ -151,7 +151,7 @@ void sweep_simplices(
   const meta_t *h[2] = {h_c, h_n};
   
   int tid = getGlobalIdx_3D_1D();
-  const element43_t e = element43_from_index<scope>(core, tid);
+  const element42_t e = element42_from_index<scope>(core, tid);
   
   cp_t cp;
   bool succ = check_simplex_tdgl_vortex_3dt<scope>(
@@ -180,7 +180,7 @@ static std::vector<cp_t> extract_tdgl_vortex_3dt(
 {
   auto t0 = std::chrono::high_resolution_clock::now();
 
-  const size_t ntasks = core.n() * ntypes_4_3<scope>();
+  const size_t ntasks = core.n() * ntypes_4_2<scope>();
   // fprintf(stderr, "ntasks=%zu\n", ntasks);
   const int maxGridDim = 1024;
   const int blockSize = 256;
@@ -291,8 +291,6 @@ extract_tdgl_vortex_3dt_cuda(
 
   if (scope == scope_interval) 
     return extract_tdgl_vortex_3dt<scope_interval>(current_timestep, D, C, E, h_c, h_n, rho_c, rho_l, phi_c, phi_l);
-  if (scope == scope_ordinal) 
+  else
     return extract_tdgl_vortex_3dt<scope_ordinal>(current_timestep, D, C, E, h_c, h_n, rho_c, rho_l, phi_c, phi_l);
-  else // scope == 2
-    return extract_tdgl_vortex_3dt<scope_all>(current_timestep, D, C, E, h_c, h_n, rho_c, rho_l, phi_c, phi_l);
 }

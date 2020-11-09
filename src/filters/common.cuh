@@ -95,6 +95,7 @@ typedef lite_element_t<3> element32_t;
 
 typedef lite_lattice_t<4> lattice4_t;
 typedef lite_element_t<4> element43_t;
+typedef lite_element_t<4> element42_t;
 // typedef ftk::critical_point_t<4, double> cp4_t;
 typedef ftk::feature_point_lite_t cp_t;
 typedef ftk::feature_point_lite_t fp_t;
@@ -465,6 +466,26 @@ __device__ __host__
 uint element32_to_index(const lattice3_t& l, const int idx[3]) {
   size_t i = l.to_index(idx);
   return i * ntypes_3_2<scope>();
+}
+
+
+template <int scope=0, typename uint=size_t>
+__device__ __host__
+element42_t element42_from_index(const lattice4_t& l, uint i) {
+  element42_t e;
+  
+  e.type = i % ntypes_4_2<scope>();
+  uint ii = i / ntypes_4_2<scope>(); 
+  l.from_index(ii, e.corner);
+
+  return e;
+}
+
+template <int scope=0, typename uint=size_t>
+__device__ __host__
+uint element42_to_index(const lattice4_t& l, const int idx[4]) {
+  size_t i = l.to_index(idx);
+  return i * ntypes_4_2<scope>; 
 }
 
 template <int scope=0, typename uint=size_t>

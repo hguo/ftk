@@ -229,20 +229,26 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
   typedef std::chrono::high_resolution_clock clock_type;
   auto t0 = clock_type::now();
 
+  auto get_relatetd_cels = [&](element_t e) {
+    std::set<element_t> my_related_cells;
+    
+    auto tets = e.side_of(m);
+    for (auto tet : tets) {
+      if (tet.valid(m)) {
+        auto pents = tet.side_of(m);
+        for (auto pent : pents)
+          if (pent.valid(m))
+            my_related_cells.insert(pent);
+      }
+    }
+
+    return my_related_cells;
+  };
+
   auto func = [=](element_t e) {
     feature_point_t p;
     if (check_simplex(e, p)) {
-      std::set<element_t> my_related_cells;
-
-      auto tets = e.side_of(m);
-      for (auto tet : tets) {
-        if (tet.valid(m)) {
-          auto pents = tet.side_of(m);
-          for (auto pent : pents)
-            if (pent.valid(m))
-              my_related_cells.insert(pent);
-        }
-      }
+      std::set<element_t> my_related_cells = get_relatetd_cels(e);
 
       {
         std::lock_guard<std::mutex> guard(mutex);
@@ -311,20 +317,21 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
         NULL // scalar[0].data(),
       );
   
-#if 0
     for (auto lcp : results) {
       feature_point_t cp(lcp);
-      element_t e(4, 3);
+      element_t e(4, 2);
       e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
       cp.tag = e.to_integer(m);
       cp.ordinal = true;
       cp.timestep = current_timestep;
-      discrete_critical_points[e] = cp;
+
+      intersections[e] = cp;
+      std::set<element_t> my_related_cells = get_relatetd_cels(e);
+      related_cells.insert(my_related_cells.begin(), my_related_cells.end());
     }
-#endif
 
     if (field_data_snapshots.size() >= 2) { // interval
-      fprintf(stderr, "processing interval %d, %d\n", current_timestep - 1, current_timestep);
+      fprintf(stderr, "processing interval %d, %d\n", current_timestep, current_timestep + 1);
       auto results = extract_tdgl_vortex_3dt_cuda(
           ELEMENT_SCOPE_INTERVAL, 
           current_timestep,
@@ -338,18 +345,20 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
           field_data_snapshots[0].phi.data(),
           field_data_snapshots[1].phi.data()
         );
-#if 0
+      
       fprintf(stderr, "interval_results#=%zu\n", results.size());
       for (auto lcp : results) {
         feature_point_t cp(lcp);
-        element_t e(4, 3);
+        element_t e(4, 2);
         e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
         cp.tag = e.to_integer(m);
         cp.ordinal = false;
         cp.timestep = current_timestep;
-        discrete_critical_points[e] = cp;
+      
+        intersections[e] = cp;
+        std::set<element_t> my_related_cells = get_relatetd_cels(e);
+        related_cells.insert(my_related_cells.begin(), my_related_cells.end());
       }
-#endif 
     }
 
 #else
