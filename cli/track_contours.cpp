@@ -104,6 +104,9 @@ int parse_arguments(int argc, char **argv)
   ftk::contour_tracker_regular *tracker;
   if (DD == 0) tracker = new ftk::contour_tracker_2d_regular(world);
   else tracker = new ftk::contour_tracker_3d_regular(world);
+  
+  if (accelerator == "cuda")
+    tracker->use_accelerator(ftk::FTK_XL_CUDA);
 
   tracker->set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
   tracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
