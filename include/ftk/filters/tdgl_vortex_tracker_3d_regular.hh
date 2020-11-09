@@ -10,7 +10,7 @@
 #include <ftk/geometry/write_polydata.hh>
 #include <ftk/ndarray/writer.hh>
 
-extern std::vector<ftk::feature_point_lite_t> // <4, double>> 
+extern std::vector<ftk::feature_point_lite_t> 
 extract_tdgl_vortex_3dt_cuda(
     int scope, 
     int current_timestep, 

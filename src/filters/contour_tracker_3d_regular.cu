@@ -56,15 +56,6 @@ bool check_simplex_contour_3dt(
     for (int j = 0; j < 4; j ++)
       X[i][j] = vertices[i][j];
   }
-  
-  // compute contour integral
-  double delta[3], phase_shift = 0;
-  for (int i = 0; i < 3; i ++) { // ignoring quasi periodical boundary conditions
-    int j = (i+1) % 3;
-    double li = line_integral(X[i], X[j], A[i], A[j]);
-    delta[i] = mod2pi1( phi[j] - phi[i] - li ); // gauge transformation
-    phase_shift -= delta[i];
-  }
 
   return false;
 }

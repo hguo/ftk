@@ -38,6 +38,17 @@
 #include <gmpxx.h>
 #endif
 
+extern std::vector<ftk::feature_point_lite_t> 
+extract_contour_3dt_cuda(
+    int scope, 
+    int current_timestep, 
+    const ftk::lattice& domain,
+    const ftk::lattice& core, 
+    const ftk::lattice& ext, 
+    double threshold,
+    const double *F_c, 
+    const double *F_n);
+
 namespace ftk {
 
 struct contour_tracker_3d_regular : public contour_tracker_regular {
@@ -270,26 +281,32 @@ inline void contour_tracker_3d_regular::update_timestep()
   
   typedef std::chrono::high_resolution_clock clock_type;
   auto t0 = clock_type::now();
+  
+  auto get_relatetd_cels = [&](element_t e) {
+    std::set<element_t> my_related_cells;
+    
+    auto tris = e.side_of(m);
+    for (auto tri : tris) {
+      if (tri.valid(m)) {
+        auto tets = tri.side_of(m);
+        for (auto tet : tets) {
+          if (tet.valid(m)) {
+            auto pents = tet.side_of(m);
+            for (auto pent : pents) 
+              if (pent.valid(m))
+                my_related_cells.insert(pent); 
+          }
+        }
+      }
+    }
+
+    return my_related_cells;
+  };
 
   auto func = [=](element_t e) {
     feature_point_t p;
     if (check_simplex(e, p)) {
-      std::set<element_t> my_related_cells;
-
-      auto tris = e.side_of(m);
-      for (auto tri : tris) {
-        if (tri.valid(m)) {
-          auto tets = tri.side_of(m);
-          for (auto tet : tets) {
-            if (tet.valid(m)) {
-              auto pents = tet.side_of(m);
-              for (auto pent : pents) 
-                if (pent.valid(m))
-                  my_related_cells.insert(pent); 
-            }
-          }
-        }
-      }
+      std::set<element_t> my_related_cells = get_relatetd_cels(e);
      
       {
         std::lock_guard<std::mutex> guard(mutex);
@@ -300,9 +317,111 @@ inline void contour_tracker_3d_regular::update_timestep()
     }
   };
 
-  element_for_ordinal(1, func);
-  if (field_data_snapshots.size() >= 2) // interval
-    element_for_interval(1, func);
+  if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    ftk::lattice domain4({
+          domain.start(0), 
+          domain.start(1), 
+          domain.start(2), 
+          0
+        }, {
+          domain.size(0)-1,
+          domain.size(1)-1,
+          domain.size(2)-1,
+          std::numeric_limits<int>::max()
+        });
+
+    ftk::lattice ordinal_core({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        });
+
+    ftk::lattice interval_core({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          // static_cast<size_t>(current_timestep-1), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        });
+
+    ftk::lattice ext({0, 0, 0}, 
+        {field_data_snapshots[0].scalar.dim(0), 
+         field_data_snapshots[0].scalar.dim(1),
+         field_data_snapshots[0].scalar.dim(2)});
+
+    // ordinal
+    auto results = extract_contour_3dt_cuda(
+        ELEMENT_SCOPE_ORDINAL, 
+        current_timestep, 
+        domain4,
+        ordinal_core,
+        ext,
+        threshold,
+        field_data_snapshots[0].scalar.data(),
+        NULL
+      );
+  
+    for (auto lcp : results) {
+      feature_point_t cp(lcp);
+      element_t e(4, 1);
+      e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
+      cp.tag = e.to_integer(m);
+      cp.ordinal = true;
+      cp.timestep = current_timestep;
+
+      intersections[e] = cp;
+      std::set<element_t> my_related_cells = get_relatetd_cels(e);
+      related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+    }
+
+    if (field_data_snapshots.size() >= 2) { // interval
+      fprintf(stderr, "processing interval %d, %d\n", current_timestep, current_timestep + 1);
+      auto results = extract_contour_3dt_cuda(
+          ELEMENT_SCOPE_INTERVAL, 
+          current_timestep,
+          domain4,
+          interval_core,
+          ext,
+          threshold,
+          field_data_snapshots[0].scalar.data(),
+          field_data_snapshots[1].scalar.data()
+        );
+      
+      fprintf(stderr, "interval_results#=%zu\n", results.size());
+      for (auto lcp : results) {
+        feature_point_t cp(lcp);
+        element_t e(4, 1);
+        e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
+        cp.tag = e.to_integer(m);
+        cp.ordinal = false;
+        cp.timestep = current_timestep;
+      
+        intersections[e] = cp;
+        std::set<element_t> my_related_cells = get_relatetd_cels(e);
+        related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      }
+    }
+#else
+    fatal("FTK not compiled with CUDA.");
+#endif
+
+  } else {
+    element_for_ordinal(1, func);
+    if (field_data_snapshots.size() >= 2) // interval
+      element_for_interval(1, func);
+  }
   
   auto t1 = clock_type::now();
   accumulated_kernel_time += std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
