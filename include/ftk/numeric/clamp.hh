@@ -5,14 +5,17 @@
 
 namespace ftk {
 
+#ifndef __CUDACC__
+  using std::min;
+  using std::max;
+  using std::isnan;
+  using std::isinf;
+#endif
+
 template <typename T>
 __device__ __host__
 inline T clamp(T x, T a, T b)
 {
-#ifndef __CUDACC__
-  using std::min;
-  using std::max;
-#endif
   return std::min(std::max(a, x), b);
 }
 
@@ -20,13 +23,6 @@ template <int n, typename T>
 __device__ __host__
 inline void clamp_barycentric(T x[3])
 {
-#ifndef __CUDACC__
-  using std::min;
-  using std::max;
-  using std::isnan;
-  using std::isinf;
-#endif
-  
   T sum = 0.0;
   for (int i = 0; i < n; i ++) {
     x[i] = clamp(x[i], 0.0, 1.0);

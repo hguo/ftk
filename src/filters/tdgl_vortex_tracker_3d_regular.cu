@@ -19,7 +19,7 @@ using namespace ftk;
 typedef tdgl_metadata_t meta_t;
 
 template <typename T> 
-__device__
+__device__ __host__
 T line_integral(const T X0[], const T X1[], const T A0[], const T A1[]) 
 {
   T dX[3] = {X1[0] - X0[0], X1[1] - X0[1], X1[2] - X0[2]};
@@ -29,7 +29,7 @@ T line_integral(const T X0[], const T X1[], const T A0[], const T A1[])
 }
 
 template <typename T>
-__device__
+__device__ __host__
 inline void magnetic_potential(const meta_t& m, T X[4], T A[3])
 {
   if (m.B[1] > 0) {
@@ -44,7 +44,7 @@ inline void magnetic_potential(const meta_t& m, T X[4], T A[3])
 }
 
 template <int scope>
-__device__
+__device__ __host__
 bool check_simplex_tdgl_vortex_3dt(
     int current_timestep,
     const lattice4_t& domain, 
