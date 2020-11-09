@@ -266,9 +266,9 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
           domain.start(2), 
           0
         }, {
-          domain.size(0)-1,
-          domain.size(1)-1,
-          domain.size(2)-1,
+          domain.size(0),
+          domain.size(1),
+          domain.size(2),
           std::numeric_limits<int>::max()
         });
 
