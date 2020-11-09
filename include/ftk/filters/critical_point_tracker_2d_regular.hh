@@ -299,7 +299,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         coords.data()
       );
     
-    fprintf(stderr, "ordinal_results#=%d\n", results.size());
+    fprintf(stderr, "ordinal_results#=%zu\n", results.size());
     for (auto lcp : results) {
       feature_point_t cp(lcp);
       element_t e(3, 2);
@@ -327,7 +327,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           use_explicit_coords, 
           coords.data()
         );
-      fprintf(stderr, "interal_results#=%d\n", results.size());
+      fprintf(stderr, "interal_results#=%zu\n", results.size());
       for (auto lcp : results) {
         feature_point_t cp(lcp);
         element_t e(3, 2);

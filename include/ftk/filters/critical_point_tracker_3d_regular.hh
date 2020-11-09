@@ -281,7 +281,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
           field_data_snapshots[0].scalar.data(),
           field_data_snapshots[0].scalar.data()
         );
-      fprintf(stderr, "interval_results#=%d\n", results.size());
+      fprintf(stderr, "interval_results#=%zu\n", results.size());
       for (auto lcp : results) {
         feature_point_t cp(lcp);
         element_t e(4, 3);
