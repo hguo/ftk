@@ -102,6 +102,9 @@ int parse_arguments(int argc, char **argv)
 
   ftk::tdgl_vortex_tracker_3d_regular tracker(world);
 
+  if (accelerator == "cuda")
+    tracker.use_accelerator(ftk::FTK_XL_CUDA);
+
   tracker.set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
   tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   tracker.set_end_timestep(nt - 1);

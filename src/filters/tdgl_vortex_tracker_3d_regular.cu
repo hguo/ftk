@@ -152,7 +152,7 @@ void sweep_simplices(
   
   int tid = getGlobalIdx_3D_1D();
   const element43_t e = element43_from_index<scope>(core, tid);
-
+#if 0
   cp_t cp;
   bool succ = check_simplex_tdgl_vortex_3dt<scope>(
       current_timestep,
@@ -163,6 +163,7 @@ void sweep_simplices(
     cp.tag = tid;
     cps[i] = cp;
   }
+#endif
 }
 
 template <int scope>
@@ -195,31 +196,34 @@ static std::vector<cp_t> extract_tdgl_vortex_3dt(
   meta_t *dh_c = NULL, *dh_n = NULL; // headers
   cudaMalloc((void**)&dh_c, sizeof(meta_t));
   cudaMemcpy(dh_c, &h_c, sizeof(meta_t), cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating dh_c");
   cudaMalloc((void**)&dh_n, sizeof(meta_t));
   cudaMemcpy(dh_n, &h_n, sizeof(meta_t), cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating dh_n");
 
   float *drho_c = NULL, *drho_n = NULL;
   if (rho_c) {
-    cudaMalloc((void**)&drho_c, 3 * sizeof(float) * ext.n());
+    cudaMalloc((void**)&drho_c, sizeof(float) * ext.n());
+    // fprintf(stderr, "allocating mem %zu\n", sizeof(float) * ext.n());
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating drho_c");
-    cudaMemcpy(drho_c, rho_c, 3 * sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMemcpy(drho_c, rho_c, sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying drho_c");
   }
   if (rho_n) {
-    cudaMalloc((void**)&drho_n, 3 * sizeof(float) * ext.n());
+    cudaMalloc((void**)&drho_n, sizeof(float) * ext.n());
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating drho_l");
-    cudaMemcpy(drho_n, rho_n, 3 * sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMemcpy(drho_n, rho_n, sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying drho_l");
   }
   
   float *dphi_c = NULL, *dphi_n = NULL;
   if (phi_c) {
-    cudaMalloc((void**)&dphi_c, 9 * sizeof(float) * ext.n());
-    cudaMemcpy(dphi_c, phi_c, 9 * sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&dphi_c, sizeof(float) * ext.n());
+    cudaMemcpy(dphi_c, phi_c, sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
   }
   if (phi_n) {
-    cudaMalloc((void**)&dphi_n, 9 * sizeof(float) * ext.n());
-    cudaMemcpy(dphi_n, phi_n, 9 * sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&dphi_n, sizeof(float) * ext.n());
+    cudaMemcpy(dphi_n, phi_n, sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
   }
   
   unsigned long long *dncps; // number of cps

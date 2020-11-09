@@ -10,6 +10,20 @@
 #include <ftk/geometry/write_polydata.hh>
 #include <ftk/ndarray/writer.hh>
 
+extern std::vector<ftk::feature_point_lite_t> // <4, double>> 
+extract_tdgl_vortex_3dt_cuda(
+    int scope, 
+    int current_timestep, 
+    const ftk::lattice& domain,
+    const ftk::lattice& core, 
+    const ftk::lattice& ext, 
+    const ftk::tdgl_metadata_t &h_c,
+    const ftk::tdgl_metadata_t &h_n,
+    const float *rho_c, 
+    const float *rho_l,
+    const float *phi_c, 
+    const float *phi_l);
+
 namespace ftk {
 
 struct tdgl_vortex_tracker_3d_regular : public virtual tdgl_vortex_tracker, public virtual regular_tracker
@@ -239,7 +253,108 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
   };
 
   if (xl == FTK_XL_CUDA) {
-    fatal("CUDA kernels for tdgl vortices not yet implemented.");
+#if FTK_HAVE_CUDA
+    ftk::lattice domain4({
+          domain.start(0), 
+          domain.start(1), 
+          domain.start(2), 
+          0
+        }, {
+          domain.size(0)-1,
+          domain.size(1)-1,
+          domain.size(2)-1,
+          std::numeric_limits<int>::max()
+        });
+
+    ftk::lattice ordinal_core({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        });
+
+    ftk::lattice interval_core({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          // static_cast<size_t>(current_timestep-1), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        });
+
+    ftk::lattice ext({0, 0, 0}, 
+        {field_data_snapshots[0].rho.dim(0), 
+         field_data_snapshots[0].rho.dim(1),
+         field_data_snapshots[0].rho.dim(2)});
+
+    // ordinal
+    auto results = extract_tdgl_vortex_3dt_cuda(
+        ELEMENT_SCOPE_ORDINAL, 
+        current_timestep, 
+        domain4,
+        ordinal_core,
+        ext,
+        field_data_snapshots[0].meta,
+        field_data_snapshots[0].meta,
+        field_data_snapshots[0].rho.data(),
+        NULL, // gradV[0].data(),
+        field_data_snapshots[0].phi.data(),
+        NULL // scalar[0].data(),
+      );
+  
+#if 0
+    for (auto lcp : results) {
+      feature_point_t cp(lcp);
+      element_t e(4, 3);
+      e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
+      cp.tag = e.to_integer(m);
+      cp.ordinal = true;
+      cp.timestep = current_timestep;
+      discrete_critical_points[e] = cp;
+    }
+#endif
+
+    if (field_data_snapshots.size() >= 2) { // interval
+      fprintf(stderr, "processing interval %d, %d\n", current_timestep - 1, current_timestep);
+      auto results = extract_tdgl_vortex_3dt_cuda(
+          ELEMENT_SCOPE_INTERVAL, 
+          current_timestep,
+          domain4,
+          interval_core,
+          ext,
+          field_data_snapshots[0].meta,
+          field_data_snapshots[1].meta,
+          field_data_snapshots[0].rho.data(),
+          field_data_snapshots[1].rho.data(),
+          field_data_snapshots[0].phi.data(),
+          field_data_snapshots[1].phi.data()
+        );
+#if 0
+      fprintf(stderr, "interval_results#=%zu\n", results.size());
+      for (auto lcp : results) {
+        feature_point_t cp(lcp);
+        element_t e(4, 3);
+        e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
+        cp.tag = e.to_integer(m);
+        cp.ordinal = false;
+        cp.timestep = current_timestep;
+        discrete_critical_points[e] = cp;
+      }
+#endif 
+    }
+
+#else
+    fatal("FTK not compiled with CUDA.");
+#endif
   } else {
     element_for_ordinal(2, func);
     if (field_data_snapshots.size() >= 2) 
