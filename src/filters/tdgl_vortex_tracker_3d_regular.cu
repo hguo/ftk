@@ -50,7 +50,7 @@ bool check_simplex_tdgl_vortex_3dt(
     const lattice4_t& domain, 
     const lattice4_t& core, 
     const lattice3_t& ext, // array dimension
-    const element43_t& e,
+    const element42_t& e,
     const meta_t *h[2],
     const float *Rho[2], // current and next timesteps
     const float *Phi[2], 
@@ -151,7 +151,7 @@ void sweep_simplices(
   const meta_t *h[2] = {h_c, h_n};
   
   int tid = getGlobalIdx_3D_1D();
-  const element43_t e = element43_from_index<scope>(core, tid);
+  const element42_t e = element42_from_index<scope>(core, tid);
   
   cp_t cp;
   bool succ = check_simplex_tdgl_vortex_3dt<scope>(
