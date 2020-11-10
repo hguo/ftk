@@ -269,7 +269,8 @@ before_script:
   - mkdir build
   - cd build
   - cmake .. -DFTK_BUILD_TESTS=ON ${CMAKE_ARG}
-  - cmake --build .
+  - make VERBOSE=1
+  #- cmake --build .
 
 script: 
   - ctest -VV
