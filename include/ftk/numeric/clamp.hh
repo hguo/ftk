@@ -16,7 +16,7 @@ template <typename T>
 __device__ __host__
 inline T clamp(T x, T a, T b)
 {
-  return std::min(std::max(a, x), b);
+  return min(max(a, x), b);
 }
 
 template <int n, typename T>
