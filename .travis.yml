@@ -109,6 +109,14 @@ jobs:
         - UBUNTU_VERSION=ubuntu1804
         - CMAKE_ARG="-DFTK_USE_CUDA=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc"
 
+    - name: build with paraview (linux)
+      os: linux
+      dist: bionic
+      before_install:
+        - sh tests/travis/install-paraview.sh
+      env: 
+        - CMAKE_ARG="-DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=$HOME/paraview-5.8.1/lib/cmake/paraview-5.8"
+
     - name: build with mpsolve, netcdf, hdf5, vtk, and openmpi (linux)
       os: linux
       dist: bionic
