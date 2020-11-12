@@ -26,7 +26,6 @@
 #if FTK_HAVE_VTK
 #include <vtkUnstructuredGrid.h>
 #include <vtkXMLUnstructuredGridWriter.h>
-#include <vtkPLYWriter.h>
 #include <vtkTriangle.h>
 #include <vtkQuad.h>
 #include <vtkPointSet.h>

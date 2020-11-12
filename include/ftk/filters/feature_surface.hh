@@ -20,7 +20,6 @@
 #include <vtkUnstructuredGrid.h>
 #include <vtkXMLPolyDataWriter.h>
 #include <vtkPolyDataNormals.h>
-#include <vtkPLYWriter.h>
 #endif
 
 #if FTK_HAVE_CGAL
