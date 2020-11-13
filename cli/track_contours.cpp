@@ -11,17 +11,6 @@
 #include "ftk/ndarray/conv.hh"
 #include "constants.hh"
 
-#if FTK_HAVE_VTK
-#include <ftk/geometry/curve2vtk.hh>
-#include <vtkPolyDataMapper.h>
-#include <vtkTubeFilter.h>
-#include <vtkActor.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#endif
-  
 diy::mpi::environment env;
   
 // global variables

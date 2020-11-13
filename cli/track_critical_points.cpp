@@ -12,7 +12,7 @@
 #include "ftk/ndarray/conv.hh"
 #include "constants.hh"
 
-#if FTK_HAVE_VTK
+#if FTK_HAVE_VTK && !FTK_HAVE_PARAVIEW
 #include <ftk/geometry/curve2vtk.hh>
 #include <vtkPolyDataMapper.h>
 #include <vtkTubeFilter.h>
@@ -213,8 +213,8 @@ int parse_arguments(int argc, char **argv)
 
 void start_vtk_window()
 {
+#if FTK_HAVE_VTK && !FTK_HAVE_PARAVIEW
   auto tracker = wrapper.get_tracker();
-#if FTK_HAVE_VTK
   auto vtkcurves = tracker->get_traced_critical_points_vtk();
   vtkcurves->Print(std::cerr);
 
