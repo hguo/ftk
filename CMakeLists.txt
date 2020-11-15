@@ -280,9 +280,9 @@ set (FTK_INCLUDE_DIR
 )
 include_directories (${FTK_INCLUDE_DIR})
 
-option (FTK_BUILD_EXECUTABLES "Build executables" ON)
 option (FTK_BUILD_TESTS "Build tests" OFF)
-option (FTK_BUILD_APPLICATIONS "Build applications" OFF)
+# option (FTK_BUILD_EXECUTABLES "Build executables" ON)
+# option (FTK_BUILD_APPLICATIONS "Build applications" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
 option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
 set (FTK_FP_PRECISION "32768" CACHE STRING "Fixed point precision")
@@ -319,9 +319,9 @@ endif ()
 
 add_subdirectory (src)
 
-if (FTK_BUILD_EXECUTABLES)
-  add_subdirectory (cli)
-endif ()
+#if (FTK_BUILD_EXECUTABLES)
+#  add_subdirectory (cli)
+#endif ()
 
 if (FTK_BUILD_PARAVIEW)
   add_subdirectory (paraview)
