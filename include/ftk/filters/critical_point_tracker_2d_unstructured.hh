@@ -19,6 +19,7 @@
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
 #include <ftk/filters/critical_point_tracker_regular.hh>
+#include <ftk/filters/unstructured_2d_tracker.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
@@ -38,12 +39,12 @@ namespace ftk {
 
 // typedef critical_point_t<3, double> critical_point_t;
 
-struct critical_point_tracker_2d_unstructured : public critical_point_tracker
+struct critical_point_tracker_2d_unstructured : public critical_point_tracker, public unstructured_2d_tracker
 {
   // critical_point_tracker_2d_unstructured(const simplicial_unstructured_extruded_2d_mesh<>& m) : m(m) {}
   // critical_point_tracker_2d_unstructured() {}
   critical_point_tracker_2d_unstructured(diy::mpi::communicator comm, const simplicial_unstructured_2d_mesh<>& m) : 
-    critical_point_tracker(comm), m(simplicial_unstructured_extruded_2d_mesh<>(m)), tracker(comm) {}
+    critical_point_tracker(comm), unstructured_2d_tracker(comm, m), tracker(comm) {}
   virtual ~critical_point_tracker_2d_unstructured() {};
   
   int cpdims() const { return 2; }
@@ -73,8 +74,6 @@ protected:
   ) const;
 
 protected:
-  const simplicial_unstructured_extruded_2d_mesh<> m;
-  
   std::map<int, feature_point_t> discrete_critical_points;
   // std::vector<std::vector<critical_point_t>> traced_critical_points;
 };
