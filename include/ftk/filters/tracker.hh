@@ -9,7 +9,7 @@ namespace ftk {
 
 struct tracker : public filter
 {
-  tracker(diy::mpi::communicator comm) : filter(comm), master(comm) {}
+  tracker(diy::mpi::communicator comm) : filter(comm) {} // , master(comm) {}
   virtual ~tracker() {}
   
   virtual int cpdims() const = 0; // featutre dimension
@@ -31,7 +31,7 @@ public:
   virtual void update_timestep() = 0;
 
 protected:
-  diy::Master master;
+  // diy::Master master;
   
 protected:
   int start_timestep = 0, 
