@@ -10,20 +10,9 @@
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
-#include "constants.hh"
-
-#if FTK_HAVE_VTK && !FTK_HAVE_PARAVIEW
-#include <ftk/geometry/curve2vtk.hh>
-#include <vtkPolyDataMapper.h>
-#include <vtkTubeFilter.h>
-#include <vtkActor.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
-#include <vtkInteractorStyleTrackballCamera.h>
-#endif
   
 // global variables
+std::string feature;
 std::string output_filename, output_type, output_format;
 std::string mesh_filename;
 std::string archived_discrete_critical_points_filename,
@@ -31,7 +20,7 @@ std::string archived_discrete_critical_points_filename,
 std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
-bool verbose = false, timing = false, show_vtk = false, help = false;
+bool verbose = false, timing = false, help = false;
 int nblocks; 
 bool enable_streaming_trajectories = false, 
      enable_discarding_interval_points = false,
@@ -59,7 +48,126 @@ double xgc_smoothing_kernel_size = 0.03;
 std::shared_ptr<ftk::critical_point_tracker_wrapper> wrapper;
 std::shared_ptr<ftk::ndarray_stream<>> stream;
 
-nlohmann::json j_tracker;
+nlohmann::json j_input, j_tracker;
+
+// input stream
+static const std::string 
+        str_auto("auto"),
+        str_none("none"),
+        str_zero("0"),
+        str_two("2"),
+        str_three("3"),
+        str_float32("float32"),
+        str_float64("float64"),
+        str_adios2("adios2"),
+        str_netcdf("nc"),
+        str_hdf5("h5"),
+        str_vti("vti"),
+        str_vtp("vtp"),
+        str_scalar("scalar"),
+        str_vector("vector"),
+        str_text("text"),
+        str_cuda("cuda");
+
+static const std::string
+        str_ext_vti(".vti"), // vtkImageData
+        str_ext_vtp(".vtp"), // vtkPolyData
+        str_ext_ply(".ply"),
+        str_ext_stl(".stl"),
+        str_ext_netcdf(".nc"),
+        str_ext_hdf5(".h5"),
+        str_ext_adios2(".bp");
+
+static const std::string
+        str_critical_point_type_min("min"),
+        str_critical_point_type_max("max"),
+        str_critical_point_type_saddle("saddle");
+
+static const std::string
+        str_feature_critical_point("cp"),
+        str_feature_tdgl_vortex("tdgl"),
+        str_feature_isosurface("iso");
+
+static const std::set<std::string>
+        set_valid_features({str_feature_critical_point, str_feature_tdgl_vortex, str_feature_isosurface}),
+        set_valid_accelerator({str_none, str_cuda}),
+        set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti, str_adios2}),
+        set_valid_input_dimension({str_auto, str_two, str_three});
+
+static void fatal(const cxxopts::Options &options, const std::string& str) {
+  std::cerr << "FATAL: " << str << std::endl
+            << options.help() << std::endl;
+  exit(1);
+};
+
+static void fatal(const std::string& str) {
+  std::cerr << "FATAL: " << str << std::endl;
+  exit(1);
+};
+
+void warn(const std::string& str) {
+  std::cerr << "WARN: " << str << std::endl;
+};
+
+static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& results)
+{
+  using nlohmann::json;
+  json j;
+
+  if (results.count("input")) {
+    const std::string input = results["input"].as<std::string>();
+    if (ftk::ends_with(input, ".json")) {
+      std::ifstream t(input);
+      std::string str((std::istreambuf_iterator<char>(t)),
+                       std::istreambuf_iterator<char>());
+      t.close();
+      return json::parse(str);
+    }
+    else 
+      j["filenames"] = results["input"].as<std::string>();
+  }
+
+  if (results.count("synthetic")) {
+    j["type"] = "synthetic";
+    j["name"] = results["synthetic"].as<std::string>();
+  } else 
+    j["type"] = "file";
+
+  if (results.count("input-format")) j["format"] = results["input-format"].as<std::string>();
+  if (results.count("dim")) j["nd"] = results["dim"].as<std::string>();
+  
+  std::vector<size_t> dims;
+  if (results.count("depth")) {
+    dims.resize(3);
+    dims[2] = results["depth"].as<size_t>();
+    dims[1] = results["height"].as<size_t>();
+    dims[0] = results["width"].as<size_t>();
+  } else if (results.count("height")) {
+    dims.resize(2);
+    dims[1] = results["height"].as<size_t>();
+    dims[0] = results["width"].as<size_t>();
+  }
+  if (dims.size())
+    j["dimensions"] = dims;
+
+  if (results.count("timesteps")) j["n_timesteps"] = results["timesteps"].as<size_t>();
+  if (results.count("var")) {
+    const auto var = results["var"].as<std::string>();
+    const auto vars = ftk::split(var, ",");
+    // if (vars.size() == 1) j["variable"] = var;
+    // else if (var.size() > 1) j["variable"] = vars; 
+    j["variables"] = vars;
+  }
+
+  if (results.count("temporal-smoothing-kernel")) j["temporal-smoothing-kernel"] = results["temporal-smoothing-kernel"].as<double>();
+  if (results.count("temporal-smoothing-kernel-size")) j["temporal-smoothing-kernel-size"] = results["temporal-smoothing-kernel-size"].as<size_t>();
+  if (results.count("spatial-smoothing-kernel")) j["spatial-smoothing-kernel"] = results["spatial-smoothing-kernel"].as<double>();
+  if (results.count("spatial-smoothing-kernel-size")) j["spatial-smoothing-kernel-size"] = results["spatial-smoothing-kernel-size"].as<size_t>();
+  if (results.count("perturbation")) j["perturbation"] = results["perturbation"].as<double>();
+
+  return j;
+}
+
 
 ///////////////////////////////
 int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
@@ -69,7 +177,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   cxxopts::Options options(argv[0]);
   options.add_options()
     ("f,feature", "Feature type (cp|tdgl|iso), cp for critical points, tdgl for TDGL vortices, and iso for isosurfaces", 
-     cxxopts::value<std::string>())
+     cxxopts::value<std::string>(feature))
     ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'",
      cxxopts::value<std::string>())
     ("input-format", "Input file format (auto|float32|float64|nc|h5|vti)", cxxopts::value<std::string>())
@@ -122,44 +230,21 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<bool>(disable_post_processing))
     ("duration-pruning", "Prune trajectories below certain duration", 
      cxxopts::value<double>(duration_pruning_threshold))
-    ("vtk", "Show visualization with vtk (legacy)", 
-     cxxopts::value<bool>(show_vtk))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
     ("help", "Print usage", cxxopts::value<bool>(help));
   auto results = options.parse(argc, argv);
 
-  if ((argc0 < 2) || help) {
-    std::cerr << options.help() << std::endl;
-    return 0;
-  }
-
-  auto fatal = [&](const std::string& str) {
-	  std::cerr << "FATAL: " << str << std::endl
-	            << options.help() << std::endl;
-	  exit(1);
-	};
-
-	auto warn = [&](const std::string& str) {
-	  std::cerr << "WARN: " << str << std::endl;
-	};
-
   // sanity check of arguments
+  if (set_valid_features.find(feature) == set_valid_features.end())
+    fatal(options, "missing or invalid '--feature'");
+  
   if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
-    fatal("invalid '--accelerator'");
-
-  // processing output
-  if (show_vtk) {
-#if FTK_HAVE_VTK
-#else
-    fatal("FTK not compiled with VTK.");
-#endif
-  }
+    fatal(options, "invalid '--accelerator'");
 
   if (output_filename.empty())
-    fatal("Missing '--output'.");
+    fatal(options, "Missing '--output'.");
 
-  nlohmann::json j_input = args_to_json(results), 
-                 j_tracker;
+  j_input = args_to_input_stream_json(results);
 
   stream->set_input_source_json(j_input);
   
