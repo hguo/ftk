@@ -1,5 +1,5 @@
-#ifndef _FTK_CRITICAL_POINT_TRACKER_HH
-#define _FTK_CRITICAL_POINT_TRACKER_HH
+#ifndef _FTK_CONTOUR_TRACKER_HH
+#define _FTK_CONTOUR_TRACKER_HH
 
 #include <ftk/ftk_config.hh>
 #include <ftk/algorithms/cca.hh>

@@ -1,5 +1,5 @@
-#ifndef _FTK_CRITICAL_POINT_TRACKER_REGULAR_HH
-#define _FTK_CRITICAL_POINT_TRACKER_REGULAR_HH
+#ifndef _FTK_CONTOUR_TRACKER_REGULAR_HH
+#define _FTK_CONTOUR_TRACKER_REGULAR_HH
 
 #include <ftk/ndarray.hh>
 #include <ftk/mesh/lattice_partitioner.hh>

@@ -7,6 +7,8 @@
 #include "ftk/filters/critical_point_tracker_2d_regular.hh"
 #include "ftk/filters/critical_point_tracker_3d_regular.hh"
 #include "ftk/filters/critical_point_tracker_wrapper.hh"
+#include "ftk/filters/contour_tracker_2d_regular.hh"
+#include "ftk/filters/contour_tracker_3d_regular.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
@@ -45,7 +47,8 @@ bool xgc_post_process = false,
 double xgc_smoothing_kernel_size = 0.03;
 
 // tracker and input stream
-std::shared_ptr<ftk::critical_point_tracker_wrapper> wrapper;
+std::shared_ptr<ftk::critical_point_tracker_wrapper> tracker_critical_point;
+std::shared_ptr<ftk::contour_tracker_regular> tracker_contour;
 std::shared_ptr<ftk::ndarray_stream<>> stream;
 
 nlohmann::json j_input, j_tracker;
@@ -109,7 +112,7 @@ void warn(const std::string& str) {
   std::cerr << "WARN: " << str << std::endl;
 };
 
-static void initialize_critical_point_tracking(diy::mpi::communicator comm)
+static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 {
   j_tracker["output"] = output_filename;
   j_tracker["output_type"] = output_type;
@@ -161,13 +164,13 @@ static void initialize_critical_point_tracking(diy::mpi::communicator comm)
     j_tracker["xgc"] = jx;
   }
 
-  wrapper.reset(new ftk::critical_point_tracker_wrapper);
-  wrapper->configure(j_tracker);
+  tracker_critical_point.reset(new ftk::critical_point_tracker_wrapper);
+  tracker_critical_point->configure(j_tracker);
 
   if (comm.rank() == 0) {
     // fprintf(stderr, "SUMMARY\n=============\n");
     std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
-    std::cerr << "config=" << std::setw(2) << wrapper->get_json() << std::endl;
+    std::cerr << "config=" << std::setw(2) << tracker_critical_point->get_json() << std::endl;
     // fprintf(stderr, "=============\n");
   }
 
@@ -176,16 +179,61 @@ static void initialize_critical_point_tracking(diy::mpi::communicator comm)
   // assert(DT > 0);
 }
 
-static void execute_critical_point_tracking(diy::mpi::communicator comm)
+static void execute_critical_point_tracker(diy::mpi::communicator comm)
 {
-  wrapper->consume(*stream);
+  tracker_critical_point->consume(*stream);
  
   if (!disable_post_processing)
-     wrapper->post_process();
+     tracker_critical_point->post_process();
   
-  wrapper->write();
+  tracker_critical_point->write();
 }
 
+void initialize_contour_tracker(diy::mpi::communicator comm)
+{
+  const auto js = stream->get_json();
+  const size_t nd = stream->n_dimensions(),
+               DW = js["dimensions"][0], 
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+  const int nt = js["n_timesteps"];
+
+  if (DD == 0) tracker_contour.reset( new ftk::contour_tracker_2d_regular(comm) ); 
+  else tracker_contour.reset(new ftk::contour_tracker_3d_regular(comm) );
+  
+  if (accelerator == "cuda")
+    tracker_contour->use_accelerator(ftk::FTK_XL_CUDA);
+
+  tracker_contour->set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
+  tracker_contour->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+  tracker_contour->set_end_timestep(nt - 1);
+  tracker_contour->set_number_of_threads(nthreads);
+  tracker_contour->set_threshold(threshold);
+}
+
+void execute_contour_tracker(diy::mpi::communicator comm)
+{
+  tracker_contour->initialize();
+  stream->set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+    tracker_contour->push_field_data_snapshot(field_data);
+    
+    if (k != 0) tracker_contour->advance_timestep();
+    if (k == stream->n_timesteps() - 1) tracker_contour->update_timestep();
+  });
+  stream->start();
+  stream->finish();
+  tracker_contour->finalize();
+
+  if (output_type == "intersections") {
+    tracker_contour->write_intersections_vtp(output_filename);
+  } else if (output_type == "sliced") {
+    tracker_contour->write_sliced_vtu(output_filename);
+  } else {
+    tracker_contour->write_isovolume_vtu(output_filename);
+  }
+}
+
+/////////////////
 static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& results)
 {
   using nlohmann::json;
@@ -244,7 +292,6 @@ static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& res
 
   return j;
 }
-
 
 ///////////////////////////////
 int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
@@ -325,7 +372,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   stream->set_input_source_json(j_input);
 
   if (feature == "cp")
-    initialize_critical_point_tracking(comm);
+    initialize_critical_point_tracker(comm);
 
   return 0;
 }
@@ -340,7 +387,9 @@ int main(int argc, char **argv)
   parse_arguments(argc, argv, comm);
 
   if (feature == "cp")
-    execute_critical_point_tracking(comm);
+    execute_critical_point_tracker(comm);
+  else if (feature == "iso")
+    execute_contour_tracker(comm);
 
   return 0;
 }

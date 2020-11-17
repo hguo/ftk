@@ -55,6 +55,10 @@ struct ndarray_stream : public object {
     // else return j["dimensions"].size(); 
     return j["dimensions"].size(); 
   }
+  size_t n_timesteps() const {
+    if (j.contains("n_timesteps")) return j["n_timesteps"];
+    else return std::numeric_limits<size_t>::max();
+  }
 
   std::vector<size_t> shape() const;
 
