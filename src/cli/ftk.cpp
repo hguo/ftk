@@ -268,6 +268,8 @@ void initialize_tdgl_tracker(diy::mpi::communicator comm)
   tracker_tdgl->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
   tracker_tdgl->set_end_timestep(ntimesteps - 1);
   tracker_tdgl->set_number_of_threads(nthreads);
+  if (accelerator == "cuda")
+    tracker->use_accelerator(ftk::FTK_XL_CUDA);
 }
 
 void execute_tdgl_tracker(diy::mpi::communicator comm)
