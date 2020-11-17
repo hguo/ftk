@@ -7,6 +7,12 @@
 
 namespace ftk {
 
+enum {
+  TRACKER_CRITICAL_POINT = 1,
+  TRACKER_TDGL_VORTEX = 2,
+  TRACKER_CONTOUR = 3
+};
+
 struct tracker : public filter
 {
   tracker(diy::mpi::communicator comm) : filter(comm) {} // , master(comm) {}
@@ -22,7 +28,9 @@ struct tracker : public filter
  
   void set_input_array_partial(bool b) {is_input_array_partial = b;}
   void set_use_default_domain_partition(bool b) {use_default_domain_partition = true;}
- 
+
+  static int str2tracker(const std::string&);
+
 public:
   virtual void initialize() = 0;
   virtual void finalize() = 0;
@@ -46,6 +54,18 @@ protected:
 protected: // benchmark
   double accumulated_kernel_time = 0.0;
 };
+
+////////
+inline int tracker::str2tracker(const std::string& s) 
+{
+  if (s == "cp" || s == "critical_point") 
+    return TRACKER_CRITICAL_POINT;
+  else if (s == "iso" || s == "isovolume" || s == "isosurface" || s == "isosurfaces")
+    return TRACKER_CONTOUR;
+  else if (s == "tdgl" || s == "tdgl_vortex" || s == "tdgl_vortices")
+    return TRACKER_TDGL_VORTEX;
+  else return 0;
+}
 
 }
 

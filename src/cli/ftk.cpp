@@ -92,7 +92,6 @@ static const std::string
         str_feature_isosurface("iso");
 
 static const std::set<std::string>
-        set_valid_features({str_feature_critical_point, str_feature_tdgl_vortex, str_feature_isosurface}),
         set_valid_accelerator({str_none, str_cuda}),
         set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti, str_adios2}),
         set_valid_input_dimension({str_auto, str_two, str_three});
@@ -359,9 +358,6 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   auto results = options.parse(argc, argv);
 
   // sanity check of arguments
-  if (set_valid_features.find(feature) == set_valid_features.end())
-    fatal(options, "missing or invalid '--feature'");
-  
   if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
     fatal(options, "invalid '--accelerator'");
 
@@ -371,8 +367,13 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   j_input = args_to_input_stream_json(results);
   stream->set_input_source_json(j_input);
 
-  if (feature == "cp")
+  int ttype = ftk::tracker::str2tracker(feature);
+  if (ttype == ftk::TRACKER_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);
+  if (ttype == ftk::TRACKER_CONTOUR)
+    initialize_contour_tracker(comm); 
+  else 
+    fatal(options, "missing or invalid '--feature'");
 
   return 0;
 }
