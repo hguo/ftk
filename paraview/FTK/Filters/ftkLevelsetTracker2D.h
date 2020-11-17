@@ -3,7 +3,7 @@
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
-#include <ftk/filters/levelset_tracker.hh>
+#include <ftk/filters/threshold_tracker.hh>
 
 class vtkDataSet;
 
@@ -36,7 +36,7 @@ private:
   int currentTimestep;
   int inputDataComponents;
   
-  ftk::levelset_tracker<> tracker; 
+  ftk::threshold_tracker<> tracker; 
 };
 
 #endif

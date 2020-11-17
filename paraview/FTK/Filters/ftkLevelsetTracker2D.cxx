@@ -73,7 +73,7 @@ int ftkLevelsetTracker2D::RequestData(
     request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
     currentTimestep = 0;
     tracker.finalize();
-    // auto output = tracker.get_traced_levelset_vtk();
+    // auto output = tracker.get_traced_threshold_vtk();
   }
 
   currentTimestep ++;
