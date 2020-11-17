@@ -109,6 +109,83 @@ void warn(const std::string& str) {
   std::cerr << "WARN: " << str << std::endl;
 };
 
+static void initialize_critical_point_tracking(diy::mpi::communicator comm)
+{
+  j_tracker["output"] = output_filename;
+  j_tracker["output_type"] = output_type;
+  j_tracker["output_format"] = output_format;
+  j_tracker["intercept_length"] = intercept_length;
+
+  j_tracker["nthreads"] = nthreads;
+  j_tracker["enable_timing"] = timing;
+
+  j_tracker["nblocks"] = std::max(comm.size(), nblocks);
+
+  if (accelerator != str_none)
+    j_tracker["accelerator"] = accelerator;
+
+  if (archived_discrete_critical_points_filename.size() > 0)
+    j_tracker["archived_discrete_critical_points_filename"] = archived_discrete_critical_points_filename;
+  
+  if (archived_traced_critical_points_filename.size() > 0)
+    j_tracker["archived_traced_critical_points_filename"] = archived_traced_critical_points_filename;
+  
+  if (enable_streaming_trajectories) 
+    j_tracker["enable_streaming_trajectories"] = true;
+
+  if (enable_discarding_interval_points)
+    j_tracker["enable_discarding_interval_points"] = true;
+
+  if (enable_deriving_velocities)
+    j_tracker["enable_deriving_velocities"] = true;
+
+  if (disable_robust_detection)
+    j_tracker["enable_robust_detection"] = false;
+
+  if (duration_pruning_threshold > 0)
+    j_tracker["duration_pruning_threshold"] = duration_pruning_threshold;
+
+  j_tracker["enable_post_processing"] = !disable_post_processing;
+
+  j_tracker["type_filter"] = type_filter_str;
+
+  if (xgc_mesh_filename.size() > 0) {
+    nlohmann::json jx;
+    jx["mesh_filename"] = xgc_mesh_filename;
+    jx["smoothing_kernel_filename"] = xgc_smoothing_kernel_filename;
+    jx["smoothing_kernel_size"] = xgc_smoothing_kernel_size;
+    jx["post_process"] = xgc_post_process;
+    jx["torus"] = xgc_torus;
+    if (xgc_write_back_filename.size() > 0)
+      jx["write_back_filename"] = xgc_write_back_filename;
+    j_tracker["xgc"] = jx;
+  }
+
+  wrapper.reset(new ftk::critical_point_tracker_wrapper);
+  wrapper->configure(j_tracker);
+
+  if (comm.rank() == 0) {
+    // fprintf(stderr, "SUMMARY\n=============\n");
+    std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
+    std::cerr << "config=" << std::setw(2) << wrapper->get_json() << std::endl;
+    // fprintf(stderr, "=============\n");
+  }
+
+  // assert(nd == 2 || nd == 3);
+  // assert(nv == 1 || nv == 2 || nv == 3);
+  // assert(DT > 0);
+}
+
+static void execute_critical_point_tracking(diy::mpi::communicator comm)
+{
+  wrapper->consume(*stream);
+ 
+  if (!disable_post_processing)
+     wrapper->post_process();
+  
+  wrapper->write();
+}
+
 static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& results)
 {
   using nlohmann::json;
@@ -243,73 +320,12 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 
   if (output_filename.empty())
     fatal(options, "Missing '--output'.");
-
+  
   j_input = args_to_input_stream_json(results);
-
   stream->set_input_source_json(j_input);
-  
-  j_tracker["output"] = output_filename;
-  j_tracker["output_type"] = output_type;
-  j_tracker["output_format"] = output_format;
-  j_tracker["intercept_length"] = intercept_length;
 
-  j_tracker["nthreads"] = nthreads;
-  j_tracker["enable_timing"] = timing;
-
-  j_tracker["nblocks"] = std::max(comm.size(), nblocks);
-
-  if (accelerator != str_none)
-    j_tracker["accelerator"] = accelerator;
-
-  if (archived_discrete_critical_points_filename.size() > 0)
-    j_tracker["archived_discrete_critical_points_filename"] = archived_discrete_critical_points_filename;
-  
-  if (archived_traced_critical_points_filename.size() > 0)
-    j_tracker["archived_traced_critical_points_filename"] = archived_traced_critical_points_filename;
-  
-  if (enable_streaming_trajectories) 
-    j_tracker["enable_streaming_trajectories"] = true;
-
-  if (enable_discarding_interval_points)
-    j_tracker["enable_discarding_interval_points"] = true;
-
-  if (enable_deriving_velocities)
-    j_tracker["enable_deriving_velocities"] = true;
-
-  if (disable_robust_detection)
-    j_tracker["enable_robust_detection"] = false;
-
-  if (duration_pruning_threshold > 0)
-    j_tracker["duration_pruning_threshold"] = duration_pruning_threshold;
-
-  j_tracker["enable_post_processing"] = !disable_post_processing;
-
-  j_tracker["type_filter"] = type_filter_str;
-
-  if (xgc_mesh_filename.size() > 0) {
-    nlohmann::json jx;
-    jx["mesh_filename"] = xgc_mesh_filename;
-    jx["smoothing_kernel_filename"] = xgc_smoothing_kernel_filename;
-    jx["smoothing_kernel_size"] = xgc_smoothing_kernel_size;
-    jx["post_process"] = xgc_post_process;
-    jx["torus"] = xgc_torus;
-    if (xgc_write_back_filename.size() > 0)
-      jx["write_back_filename"] = xgc_write_back_filename;
-    j_tracker["xgc"] = jx;
-  }
-
-  wrapper->configure(j_tracker);
-
-  if (comm.rank() == 0) {
-    // fprintf(stderr, "SUMMARY\n=============\n");
-    std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
-    std::cerr << "config=" << std::setw(2) << wrapper->get_json() << std::endl;
-    // fprintf(stderr, "=============\n");
-  }
-
-  // assert(nd == 2 || nd == 3);
-  // assert(nv == 1 || nv == 2 || nv == 3);
-  // assert(DT > 0);
+  if (feature == "cp")
+    initialize_critical_point_tracking(comm);
 
   return 0;
 }
@@ -318,17 +334,13 @@ int main(int argc, char **argv)
 {
   diy::mpi::environment env(argc, argv);
   diy::mpi::communicator comm;
- 
-  wrapper.reset(new ftk::critical_point_tracker_wrapper);
-  stream.reset(new ftk::ndarray_stream<>);
-
-  parse_arguments(argc, argv, comm);
-  wrapper->consume(*stream);
- 
-  if (!disable_post_processing)
-     wrapper->post_process();
   
-  wrapper->write();
+  stream.reset(new ftk::ndarray_stream<>);
+ 
+  parse_arguments(argc, argv, comm);
+
+  if (feature == "cp")
+    execute_critical_point_tracking(comm);
 
   return 0;
 }
