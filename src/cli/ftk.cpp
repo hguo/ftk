@@ -9,16 +9,21 @@
 #include "ftk/filters/critical_point_tracker_wrapper.hh"
 #include "ftk/filters/contour_tracker_2d_regular.hh"
 #include "ftk/filters/contour_tracker_3d_regular.hh"
+#include "ftk/filters/tdgl_vortex_tracker_3d_regular.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
-  
+ 
+using namespace ftk;
+
 // global variables
 std::string feature;
-std::string output_filename, output_type, output_format;
+int ttype = 0; // feature type in integer
+std::string input_pattern;
+std::string output_pattern, output_type, output_format;
 std::string mesh_filename;
-std::string archived_discrete_critical_points_filename,
-  archived_traced_critical_points_filename;
+std::string archived_intersections_filename, // archived_discrete_critical_points_filename,
+  archived_traced_filename; // archived_traced_critical_points_filename;
 std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
@@ -32,8 +37,8 @@ bool enable_streaming_trajectories = false,
 int intercept_length = 2;
 double duration_pruning_threshold = 0.0;
 
-// tdgl specific
 size_t ntimesteps = 0;
+std::vector<std::string> input_filenames;
 
 // contour/levelset specific
 double threshold = 0.0;
@@ -47,9 +52,10 @@ bool xgc_post_process = false,
 double xgc_smoothing_kernel_size = 0.03;
 
 // tracker and input stream
-std::shared_ptr<ftk::critical_point_tracker_wrapper> tracker_critical_point;
-std::shared_ptr<ftk::contour_tracker_regular> tracker_contour;
-std::shared_ptr<ftk::ndarray_stream<>> stream;
+std::shared_ptr<critical_point_tracker_wrapper> tracker_critical_point;
+std::shared_ptr<contour_tracker_regular> tracker_contour;
+std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
+std::shared_ptr<ndarray_stream<>> stream;
 
 nlohmann::json j_input, j_tracker;
 
@@ -113,7 +119,7 @@ void warn(const std::string& str) {
 
 static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 {
-  j_tracker["output"] = output_filename;
+  j_tracker["output"] = output_pattern;
   j_tracker["output_type"] = output_type;
   j_tracker["output_format"] = output_format;
   j_tracker["intercept_length"] = intercept_length;
@@ -126,11 +132,11 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
   if (accelerator != str_none)
     j_tracker["accelerator"] = accelerator;
 
-  if (archived_discrete_critical_points_filename.size() > 0)
-    j_tracker["archived_discrete_critical_points_filename"] = archived_discrete_critical_points_filename;
+  if (archived_intersections_filename.size() > 0)
+    j_tracker["archived_discrete_critical_points_filename"] = archived_intersections_filename;
   
-  if (archived_traced_critical_points_filename.size() > 0)
-    j_tracker["archived_traced_critical_points_filename"] = archived_traced_critical_points_filename;
+  if (archived_traced_filename.size() > 0)
+    j_tracker["archived_traced_critical_points_filename"] = archived_traced_filename;
   
   if (enable_streaming_trajectories) 
     j_tracker["enable_streaming_trajectories"] = true;
@@ -163,7 +169,7 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
     j_tracker["xgc"] = jx;
   }
 
-  tracker_critical_point.reset(new ftk::critical_point_tracker_wrapper);
+  tracker_critical_point.reset(new critical_point_tracker_wrapper);
   tracker_critical_point->configure(j_tracker);
 
   if (comm.rank() == 0) {
@@ -197,14 +203,14 @@ void initialize_contour_tracker(diy::mpi::communicator comm)
                DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
   const int nt = js["n_timesteps"];
 
-  if (DD == 0) tracker_contour.reset( new ftk::contour_tracker_2d_regular(comm) ); 
-  else tracker_contour.reset(new ftk::contour_tracker_3d_regular(comm) );
+  if (DD == 0) tracker_contour.reset( new contour_tracker_2d_regular(comm) ); 
+  else tracker_contour.reset(new contour_tracker_3d_regular(comm) );
   
   if (accelerator == "cuda")
-    tracker_contour->use_accelerator(ftk::FTK_XL_CUDA);
+    tracker_contour->use_accelerator(FTK_XL_CUDA);
 
-  tracker_contour->set_domain(ftk::lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
-  tracker_contour->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+  tracker_contour->set_domain(lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
+  tracker_contour->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
   tracker_contour->set_end_timestep(nt - 1);
   tracker_contour->set_number_of_threads(nthreads);
   tracker_contour->set_threshold(threshold);
@@ -213,7 +219,7 @@ void initialize_contour_tracker(diy::mpi::communicator comm)
 void execute_contour_tracker(diy::mpi::communicator comm)
 {
   tracker_contour->initialize();
-  stream->set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+  stream->set_callback([&](int k, const ndarray<double> &field_data) {
     tracker_contour->push_field_data_snapshot(field_data);
     
     if (k != 0) tracker_contour->advance_timestep();
@@ -224,12 +230,75 @@ void execute_contour_tracker(diy::mpi::communicator comm)
   tracker_contour->finalize();
 
   if (output_type == "intersections") {
-    tracker_contour->write_intersections_vtp(output_filename);
+    tracker_contour->write_intersections_vtp(output_pattern);
   } else if (output_type == "sliced") {
-    tracker_contour->write_sliced_vtu(output_filename);
+    tracker_contour->write_sliced_vtu(output_pattern);
   } else {
-    tracker_contour->write_isovolume_vtu(output_filename);
+    tracker_contour->write_isovolume_vtu(output_pattern);
   }
+}
+
+void initialize_tdgl_tracker(diy::mpi::communicator comm)
+{
+  input_filenames = ndarray<float>::glob(input_pattern);
+  if (input_filenames.empty()) 
+    fatal("unable to find matching filenames.");
+
+  if (ntimesteps != 0) input_filenames.resize(ntimesteps);
+
+  tdgl_reader meta_reader(input_filenames[0], false); // read metadata without read actuall data
+  meta_reader.read();
+  const auto &meta = meta_reader.get_meta();
+  
+  const size_t DW = meta.dims[0], DH = meta.dims[1], DD = meta.dims[2];
+  ntimesteps = input_filenames.size();
+  
+  if (comm.rank() == 0) {
+    fprintf(stderr, "SUMMARY\n=============\n");
+    fprintf(stderr, "input_pattern=%s\n", input_pattern.c_str());
+    fprintf(stderr, "dims=%zu, %zu, %zu\n", DW, DH, DD);
+    fprintf(stderr, "nt=%zu\n", ntimesteps);
+    fprintf(stderr, "output_format=%s\n", output_format.c_str());
+    fprintf(stderr, "nthreads=%d\n", nthreads);
+    fprintf(stderr, "=============\n");
+  }
+
+  tracker_tdgl.reset(new tdgl_vortex_tracker_3d_regular(comm));
+  tracker_tdgl->set_domain(lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
+  tracker_tdgl->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
+  tracker_tdgl->set_end_timestep(ntimesteps - 1);
+  tracker_tdgl->set_number_of_threads(nthreads);
+}
+
+void execute_tdgl_tracker(diy::mpi::communicator comm)
+{
+  tracker_tdgl->initialize();
+
+  if (!archived_intersections_filename.empty()) {
+    // TODO
+  } else if (!archived_traced_filename.empty()) {
+    tracker_tdgl->read_surfaces(archived_traced_filename);
+  } else {
+    for (int k = 0; k < input_filenames.size(); k ++) {
+      tdgl_reader reader(input_filenames[k]);
+      reader.read();
+
+      tracker_tdgl->push_field_data_snapshot(reader.meta, 
+          reader.rho, reader.phi, 
+          reader.re, reader.im);
+      
+      if (k != 0) tracker_tdgl->advance_timestep();
+      if (k == ntimesteps - 1) tracker_tdgl->update_timestep();
+    }
+    tracker_tdgl->finalize();
+  }
+
+  if (output_type == "intersections")
+    tracker_tdgl->write_intersections(output_pattern);
+  else if (output_type == "sliced")
+    tracker_tdgl->write_sliced(output_pattern);
+  else 
+    tracker_tdgl->write_surfaces(output_pattern, output_format);
 }
 
 /////////////////
@@ -240,7 +309,7 @@ static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& res
 
   if (results.count("input")) {
     const std::string input = results["input"].as<std::string>();
-    if (ftk::ends_with(input, ".json")) {
+    if (ends_with(input, ".json")) {
       std::ifstream t(input);
       std::string str((std::istreambuf_iterator<char>(t)),
                        std::istreambuf_iterator<char>());
@@ -277,7 +346,7 @@ static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& res
   if (results.count("timesteps")) j["n_timesteps"] = results["timesteps"].as<size_t>();
   if (results.count("var")) {
     const auto var = results["var"].as<std::string>();
-    const auto vars = ftk::split(var, ",");
+    const auto vars = split(var, ",");
     // if (vars.size() == 1) j["variable"] = var;
     // else if (var.size() > 1) j["variable"] = vars; 
     j["variables"] = vars;
@@ -302,7 +371,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("f,feature", "Feature type (cp|tdgl|iso), cp for critical points, tdgl for TDGL vortices, and iso for isosurfaces", 
      cxxopts::value<std::string>(feature))
     ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'",
-     cxxopts::value<std::string>())
+     cxxopts::value<std::string>(input_pattern))
     ("input-format", "Input file format (auto|float32|float64|nc|h5|vti)", cxxopts::value<std::string>())
     ("synthetic", "Use a synthetic case (woven|double_gyre|merger) as inputs", cxxopts::value<std::string>())
     ("w,width", "Width", cxxopts::value<size_t>())
@@ -317,8 +386,9 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("perturbation", "Gaussian perturbation sigma", cxxopts::value<double>())
     ("m,mesh", "Input mesh file (will shadow arguments including width, height, depth)", cxxopts::value<std::string>())
     ("nblocks", "Number of total blocks", cxxopts::value<int>(nblocks))
-    ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
-    ("archived-traced-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_traced_critical_points_filename))
+    // ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
+    ("archived-intersections", "Archived discrete intersections", cxxopts::value<std::string>(archived_intersections_filename))
+    ("archived-traced", "Archived traced results", cxxopts::value<std::string>(archived_traced_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
     ("xgc-smoothing-kernel-file", "XGC: smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC: smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
@@ -326,7 +396,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("xgc-write-back", "XGC: write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("xgc-post-process", "XGC: enable post-processing", cxxopts::value<bool>(xgc_post_process))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
-     cxxopts::value<std::string>(output_filename))
+     cxxopts::value<std::string>(output_pattern))
     ("output-type", "Output type {discrete|traced|sliced|intercepted}, by default traced", 
      cxxopts::value<std::string>(output_type)->default_value("traced"))
     ("output-format", "Output format {text|vtp|vtu|ply}.  The default behavior is to automatically determine format by filename", 
@@ -361,17 +431,21 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
     fatal(options, "invalid '--accelerator'");
 
-  if (output_filename.empty())
+  if (output_pattern.empty())
     fatal(options, "Missing '--output'.");
   
-  j_input = args_to_input_stream_json(results);
-  stream->set_input_source_json(j_input);
+  ttype = tracker::str2tracker(feature);
+  if (ttype != TRACKER_TDGL_VORTEX) { // TDGL uses a different reader for now
+    j_input = args_to_input_stream_json(results);
+    stream->set_input_source_json(j_input);
+  }
 
-  int ttype = ftk::tracker::str2tracker(feature);
-  if (ttype == ftk::TRACKER_CRITICAL_POINT)
+  if (ttype == TRACKER_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);
-  if (ttype == ftk::TRACKER_CONTOUR)
+  if (ttype == TRACKER_CONTOUR)
     initialize_contour_tracker(comm); 
+  else if (ttype == TRACKER_TDGL_VORTEX)
+    initialize_tdgl_tracker(comm);
   else 
     fatal(options, "missing or invalid '--feature'");
 
@@ -383,14 +457,16 @@ int main(int argc, char **argv)
   diy::mpi::environment env(argc, argv);
   diy::mpi::communicator comm;
   
-  stream.reset(new ftk::ndarray_stream<>);
+  stream.reset(new ndarray_stream<>);
  
   parse_arguments(argc, argv, comm);
 
-  if (feature == "cp")
+  if (ttype == TRACKER_CRITICAL_POINT)
     execute_critical_point_tracker(comm);
-  else if (feature == "iso")
+  else if (ttype == TRACKER_CONTOUR)
     execute_contour_tracker(comm);
+  else if (ttype == TRACKER_TDGL_VORTEX)
+    execute_tdgl_tracker(comm);
 
   return 0;
 }
