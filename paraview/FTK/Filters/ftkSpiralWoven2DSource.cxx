@@ -18,7 +18,7 @@
 vtkStandardNewMacro(ftkSpiralWoven2DSource);
 
 ftkSpiralWoven2DSource::ftkSpiralWoven2DSource() 
-  : DW(32), DH(32), DT(10), ScalingFactor(15.0)
+  : DW(32), DH(32), DT(10), ScalingFactor(15.0), StartTime(0.0), TimeScale(1.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
