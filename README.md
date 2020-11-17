@@ -2,90 +2,19 @@
 
 [![Build Status](https://travis-ci.org/hguo/ftk.svg?branch=master)](https://travis-ci.org/hguo/ftk)
 
-FTK is a library that provides building blocks for feature tracking algorithms in scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or command line interface.   
+FTK is a library that scales, simplifies, and delivers feature tracking algorithms for scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or command line interface.   
 
 ![](docs/images/critical_point_tracking_2d_paraview.png)
 
 ## Dependencies
 
-FTK depends in GMP and also requires CMake to build the libraries and executables.  Optional dependencies include ParaView (>=5.8.0 recommended), Python, VTK, Qt5, MPI, netCDF, parallel-netcdf, HDF5, ADIOS2, MPSolve, and CUDA.
-
-## FTK for ParaView
-
-### Building ParaView plugins
-
-FTK provides ParaView plugins to allow users track critical points (maxima, minima, and saddles) in scalar field data.  In order to build the plugins, we recommend to build and use 
-
-```bash
-$ git clone https://github.com/hguo/ftk $FTK_SOURCE_DIR
-$ mkdir $FTK_SOURCE_DIR/build && cd $FTK_SOURCE_DIR/build
-$ cmake .. -DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=$YOUR_ParaView_Build
-$ make
-```
-
-If built successfully, you will see the plugins binary as `lib/paraview-5.8/plugins/FTK/FTK.so`.  Open the "Plugin Manager" in ParaView, and load this binary with "Load New..." button, and then select and load FTK in the list.  To reproduce the results in the above figure, use "Sources-->FTK-->SpiralWoven2DSource", "Filters-->FTK-->CriticalPointTracker2D",followed by the "Tube" filter in ParaView.
-
-### Using ParaView plugins
-
-We demo the use the 2D critical point tracking filter (`vtkCriticalPoint2DTracker`) with a dataset.  The input of this filter must be a 3D volumetric data that stacks 2D time-varying scalar fields in the Z direction.  In this demo, we first add a synthetic 3D volume data by using Sources / FTK / Spiral2DSource.  We then track the trajectories of 2D critical points with Filters / FTK / CriticalPoint2DTracker.  The output trajectires can be visualized as tubes and color-coded by their types, scalar values, or IDs.  In this demo, the time-varying scalar field is defined in closed form: 
-
-$f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\sin t + y\cos t),$
-
-where $x$ and $y$ are 2D coordinates and $t$ is time.  We discretize the $x,y$ domain into a $128\times 128$ regular grid and the time domain into 10 timesteps.  Local maximum are defined as the loci of points that $(\frac{\partial f}{\partial x}, \frac{\partial f}{\partial x})=0$ and both eigenvalues of the Hessian of $f$ (in terms of $x$ and $y$) are negative.  We use a sweep-and-trace algorithm to first localize local maximum and trace the maximum over space-time.  We first mesh the scalar field with a 3D regular simplex mesh and check every 2-elements (faces) meets the criteria.  We then do the connected component labeling; two faces are connected if each of them has a local maxima and share the same 3-element (tetrahedra).  The trajectories are then constructured from the connected components.  
-
-## FTK for Python (PyFTK)
-
-### Installing from PyPI
-
-You can install PyFTK with `pip`.  The only dependency in the current release is `numpy`.
-
-```bash
-$ pip3 install pyftk
-```
-
-### Building PyFTK from source
-
-FTK Python bindings is based on [pybind11](https://github.com/pybind/pybind11).  You may build PyFTK with `setuptools` or CMake.  Notice that CMake is required to build PyFTK.  Advanced build options is currently not possible to configure with `setuptools`.  
-
-Build PyFTK with `setuptools`:
-
-```bash
-$ cd $FTK_SOURCE_DIR
-$ python setup.py install
-```
-
-Build PyFTK with CMake:
-
-```bash
-$ mkdir $FTK_SOURCE_DIR/build && cd $FTK_SOURCE_DIR/build
-$ cmake .. -DFTK_BUILD_PYFTK=ON
-$ make
-```
-
-The output PyFTK binary will be in the `lib` directory.
-
-### Using PyFTK
-
-PyFTK provides synthetic data generators (`pyftk.synthesizers`), feature extractors (`pyftk.extractors`), and feature trackers (`pyftk.trackers`).  Currently, PyFTK only supports critical points.  The following is an example of tracking critical points in a synthetic spiral woven data:
-
-```python
->>> import pyftk
->>> data = pyftk.synthesizers.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (10, 10, 20)
->>> result = pyftk.trackers.track_critical_points_2d_scalar(data) # track critical points in a scalar field
->>> print(result)
-```
-
-The results are trajectories organized in a list: 
-
-```
-[{'length': 9, 'trace': [{'x': 2.275077079338536, 'y': 2.0, 't': 2.843946435964648, 'type': 'min', 'scalar': -0.7349697808320285}, {'x': 2.3009922790096073, 'y': 2.057205556154771, 't': 3.0, 'type': 'min', 'scalar': -0.7126261556354363}, {'x': 2.316376550504984, 'y': 2.0789601019629704, 't': 3.0789601019629704, 'type': 'min', 'scalar': -0.6994583185227987}, {'x': 2.3396684290296013, 'y': 2.109042720626548, 't': 3.339668429029601, 'type': 'min', 'scalar': -0.6203974444741183}, {'x': 2.4602960605411885, 'y': 2.367439624426215, 't': 4.0, 'type': 'min', 'scalar': -0.502426092806519}, {'x': 2.5836144734591056, 'y': 2.5204553926376145, 't': 4.520455392637614, 'type': 'saddle', 'scalar': -0.3968294787319291}, {'x': 2.587217124155211, 'y': 2.5205274563826645, 't': 4.587217124155211, 'type': 'saddle', 'scalar': -0.37723450315450113}, ...
-```
+FTK depends on GMP and requires CMake to build the libraries and executables.  Optional dependencies include ParaView (>=5.8.0 recommended), Python3, VTK, MPI, netCDF, HDF5, ADIOS2, MPSolve, and CUDA.
 
 ## FTK command line interface
 
 FTK provides one single executable `ftk`.
 
-### Building FTK executables
+### Building the FTK executable
 
 FTK executables are built by default with CMake:
 
@@ -119,7 +48,7 @@ $ CC=mpicc CXX=mpicxx cmake -DFTK_USE_MPI=ON
 Use  `mpiexec` to run the executable
 
 ```bash
-$ mpiexec -n $NUM_PROCS ftk
+$ mpiexec -n $NUM_PROCS ftk ...
 ```
 
 #### Building with CUDA
@@ -128,12 +57,6 @@ In order to build FTK with CUDA, you need to specify the path to the CUDA instal
 
 ```bash
 $ cmake -DFTK_USE_CUDA=ON -DCUDA_TOOLKIT_ROOT_DIR=$YOUR_CUDA_TOOLKIT_DIR
-```
-
-#### Building with Qt5
-
-```bash
-$ cmake -FTK_USE_Qt5=ON -DCMAKE_PREFIX_PATH="$your_qt5_path/lib/cmake"
 ```
 
 ### Use FTK command line interface
@@ -162,9 +85,11 @@ It is mandatory to use the argument `-f` specifies the type of features that are
 #### Specify file inputs
 
 Use `--input` or `-i` to specify input files.  The input argument typically needs to contain wildcards in order to read a list of files of the time-varying data.  For example, assuming the working directory has a series of files, each of which contains one timestep of the 2D regular-grid scalar field data: `scalar-000.raw`, `scalar-001.raw`, ... `scalar-255.raw`; to track critical points: 
+
 ```bash
 $ ftk -f cp --input "scalar-*.raw" --width 128 --height 128 --input-format float64 --output trajs.vtp
 ```
+
 Note that it is highly recommended to **use quotes** for the `-i` argument; otherwise the executable may only read the first file, and the behavior may very depending on which shell you use.  It is also important to **make sure that wildcards lead to the correct sequence** of files.  A counterexample is `0.raw`, `1.raw`, ... `10.raw`, `11.raw`, ..., `100.raw`; in this case, the sequence could be parsed as 0, 1, 10, 100, 11, ..., 2, 20, 21, which is undesired and could lead to meaningless results.  
 
 
@@ -240,6 +165,77 @@ By default, the executable uses the maximum number of hardware threads, unless `
 ##### CUDA
 
 Use `--accelerator cuda` if FTK is compiled with CUDA and an NVIDIA GPU is available. 
+
+## FTK for ParaView
+
+### Building ParaView plugins
+
+FTK provides ParaView plugins to allow users track critical points (maxima, minima, and saddles) in scalar field data.  In order to build the plugins, we recommend to build and use 
+
+```bash
+$ git clone https://github.com/hguo/ftk $FTK_SOURCE_DIR
+$ mkdir $FTK_SOURCE_DIR/build && cd $FTK_SOURCE_DIR/build
+$ cmake .. -DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=$YOUR_ParaView_Build
+$ make
+```
+
+If built successfully, you will see the plugins binary as `lib/paraview-5.8/plugins/FTK/FTK.so`.  Open the "Plugin Manager" in ParaView, and load this binary with "Load New..." button, and then select and load FTK in the list.  To check if ParaView plugins are correctly built by reproducing the results in the above figure, use "Sources-->FTK-->SpiralWoven2DSource", "Filters-->FTK-->CriticalPointTracker2D",followed by the "Tube" filter in ParaView.
+
+### Using ParaView plugins
+
+We demonstrate the use the 2D critical point tracking filter (`vtkCriticalPoint2DTracker`) with a dataset.  The input of this filter must be a 3D volumetric data that stacks 2D time-varying scalar fields in the Z direction.  In this demo, we first add a synthetic 3D volume data by using Sources / FTK / Spiral2DSource.  We then track the trajectories of 2D critical points with Filters / FTK / CriticalPoint2DTracker.  The output trajectires can be visualized as tubes and color-coded by their types, scalar values, or IDs.  In this demo, the time-varying scalar field is defined in closed form: 
+
+$f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\sin t + y\cos t),$
+
+where $x$ and $y$ are 2D coordinates and $t$ is time.  We discretize the $x,y$ domain into a $128\times 128$ regular grid and the time domain into 10 timesteps.  Local maximum are defined as the loci of points that $(\frac{\partial f}{\partial x}, \frac{\partial f}{\partial x})=0$ and both eigenvalues of the Hessian of $f$ (in terms of $x$ and $y$) are negative.  We use a sweep-and-trace algorithm to first localize local maximum and trace the maximum over space-time.  We first mesh the scalar field with a 3D regular simplex mesh and check every 2-elements (faces) meets the criteria.  We then do the connected component labeling; two faces are connected if each of them has a local maxima and share the same 3-element (tetrahedra).  The trajectories are then constructured from the connected components.  
+
+## FTK for Python (PyFTK)
+
+### Installing from PyPI
+
+You can install PyFTK with `pip`.  The only dependency in the current release is `numpy`.
+
+```bash
+$ pip3 install pyftk
+```
+
+### Building PyFTK from source
+
+FTK Python bindings is based on [pybind11](https://github.com/pybind/pybind11).  You may build PyFTK with `setuptools` or CMake.  Notice that CMake is required to build PyFTK.  Advanced build options is currently not possible to configure with `setuptools`.  
+
+Build PyFTK with `setuptools`:
+
+```bash
+$ cd $FTK_SOURCE_DIR
+$ python setup.py install
+```
+
+Build PyFTK with CMake:
+
+```bash
+$ mkdir $FTK_SOURCE_DIR/build && cd $FTK_SOURCE_DIR/build
+$ cmake .. -DFTK_BUILD_PYFTK=ON
+$ make
+```
+
+The output PyFTK binary will be in the `lib` directory.
+
+### Using PyFTK
+
+PyFTK provides synthetic data generators (`pyftk.synthesizers`), feature extractors (`pyftk.extractors`), and feature trackers (`pyftk.trackers`).  Currently, PyFTK only supports critical points.  The following is an example of tracking critical points in a synthetic spiral woven data:
+
+```python
+>>> import pyftk
+>>> data = pyftk.synthesizers.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (1, 10, 10, 20)
+>>> result = pyftk.trackers.track_critical_points_2d_scalar(data) # track critical points in a scalar field
+>>> print(result)
+```
+
+The results are trajectories organized in a list: 
+
+```
+[{'length': 9, 'trace': [{'x': 2.275077079338536, 'y': 2.0, 't': 2.843946435964648, 'type': 'min', 'scalar': -0.7349697808320285}, {'x': 2.3009922790096073, 'y': 2.057205556154771, 't': 3.0, 'type': 'min', 'scalar': -0.7126261556354363}, {'x': 2.316376550504984, 'y': 2.0789601019629704, 't': 3.0789601019629704, 'type': 'min', 'scalar': -0.6994583185227987}, {'x': 2.3396684290296013, 'y': 2.109042720626548, 't': 3.339668429029601, 'type': 'min', 'scalar': -0.6203974444741183}, {'x': 2.4602960605411885, 'y': 2.367439624426215, 't': 4.0, 'type': 'min', 'scalar': -0.502426092806519}, {'x': 2.5836144734591056, 'y': 2.5204553926376145, 't': 4.520455392637614, 'type': 'saddle', 'scalar': -0.3968294787319291}, {'x': 2.587217124155211, 'y': 2.5205274563826645, 't': 4.587217124155211, 'type': 'saddle', 'scalar': -0.37723450315450113}, ...
+```
 
 
 ## FTK C++ Libraries
