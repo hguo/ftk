@@ -10,7 +10,8 @@ namespace ftk {
 enum {
   TRACKER_CRITICAL_POINT = 1,
   TRACKER_TDGL_VORTEX = 2,
-  TRACKER_CONTOUR = 3
+  TRACKER_CONTOUR = 3,
+  TRACKER_CONNECTED_COMPONENTS = 4
 };
 
 struct tracker : public filter
@@ -64,6 +65,8 @@ inline int tracker::str2tracker(const std::string& s)
     return TRACKER_CONTOUR;
   else if (s == "tdgl" || s == "tdgl_vortex" || s == "tdgl_vortices")
     return TRACKER_TDGL_VORTEX;
+  else if (s == "cc" || s == "connected_component" || s == "connected_components")
+    return TRACKER_CONNECTED_COMPONENTS;
   else return 0;
 }
 

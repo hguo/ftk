@@ -10,6 +10,7 @@
 #include "ftk/filters/contour_tracker_2d_regular.hh"
 #include "ftk/filters/contour_tracker_3d_regular.hh"
 #include "ftk/filters/tdgl_vortex_tracker_3d_regular.hh"
+#include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
@@ -55,6 +56,7 @@ double xgc_smoothing_kernel_size = 0.03;
 std::shared_ptr<critical_point_tracker_wrapper> tracker_critical_point;
 std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
+std::shared_ptr<threshold_tracker<>> tracker_threshold;
 std::shared_ptr<ndarray_stream<>> stream;
 
 nlohmann::json j_input, j_tracker;
@@ -238,6 +240,29 @@ void execute_contour_tracker(diy::mpi::communicator comm)
   }
 }
 
+void initialize_threshold_tracker(diy::mpi::communicator comm)
+{
+  tracker_threshold.reset(new threshold_tracker<>(comm));
+}
+
+void execute_threshold_tracker(diy::mpi::communicator comm)
+{
+  tracker_threshold->set_threshold( threshold );
+
+  stream->set_callback([&](int k, ftk::ndarray<double> field_data) {
+    fprintf(stderr, "current_timestep=%d\n", k);
+    tracker_threshold->push_scalar_field_data_snapshot(field_data);
+    tracker_threshold->advance_timestep();
+  });
+
+  stream->start();
+  stream->finish();
+  tracker_threshold->finalize();
+
+  const auto &tg = tracker_threshold->get_tracking_graph();
+  tg.generate_dot_file("dot"); // TODO
+}
+
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
 {
   input_filenames = ndarray<float>::glob(input_pattern);
@@ -269,7 +294,7 @@ void initialize_tdgl_tracker(diy::mpi::communicator comm)
   tracker_tdgl->set_end_timestep(ntimesteps - 1);
   tracker_tdgl->set_number_of_threads(nthreads);
   if (accelerator == "cuda")
-    tracker->use_accelerator(ftk::FTK_XL_CUDA);
+    tracker_tdgl->use_accelerator(ftk::FTK_XL_CUDA);
 }
 
 void execute_tdgl_tracker(diy::mpi::communicator comm)
@@ -370,7 +395,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 
   cxxopts::Options options(argv[0]);
   options.add_options()
-    ("f,feature", "Feature type (cp|tdgl|iso), cp for critical points, tdgl for TDGL vortices, and iso for isosurfaces", 
+    ("f,feature", "Feature type: critical_point, isosurface, tdgl_vortex, or connected_component)",
      cxxopts::value<std::string>(feature))
     ("i,input", "Input file name pattern: a single file or a series of file, e.g. 'scalar.raw', 'cm1out_000*.nc'",
      cxxopts::value<std::string>(input_pattern))

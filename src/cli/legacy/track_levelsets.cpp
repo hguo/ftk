@@ -5,7 +5,7 @@
 #include <iostream>
 #include <ftk/external/cxxopts.hpp>
 #include <ftk/ndarray/synthetic.hh>
-#include <ftk/filters/levelset_tracker.hh>
+#include <ftk/filters/threshold_tracker.hh>
 #include <ftk/filters/connected_component_tracker.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/stream.hh>
@@ -32,14 +32,14 @@ double threshold = 0.0;
 static const std::set<std::string> set_valid_output_format({str_auto, str_text, str_vti});
 
 // tracker
-ftk::levelset_tracker<> tracker(world);
+ftk::threshold_tracker<> tracker(world);
 ftk::ndarray_stream<> stream;
 
 int parse_arguments(int argc, char **argv)
 {
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
-    ("threshold", "Threshold for levelset tracking", cxxopts::value<double>(threshold))
+    ("threshold", "Threshold for threshold tracking", cxxopts::value<double>(threshold))
     ("o,output", "Output file name pattern, e.g. 'out-%d.raw', 'out-%04d.vti'",
      cxxopts::value<std::string>(output_filename_pattern))
     ("output-format", "Output file format (auto|raw|nc|h5|vti)",
@@ -110,7 +110,7 @@ int parse_arguments(int argc, char **argv)
   return 0;
 }
 
-void track_levelset()
+void track_threshold()
 {
   tracker.set_threshold( threshold );
 
@@ -137,6 +137,6 @@ int main(int argc, char **argv)
 {
   diy::mpi::environment env;
   parse_arguments(argc, argv);
-  track_levelset();
+  track_threshold();
   return 0;
 }
