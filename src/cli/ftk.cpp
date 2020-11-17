@@ -469,7 +469,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 
   if (ttype == TRACKER_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);
-  if (ttype == TRACKER_CONTOUR)
+  else if (ttype == TRACKER_CONTOUR)
     initialize_contour_tracker(comm); 
   else if (ttype == TRACKER_TDGL_VORTEX)
     initialize_tdgl_tracker(comm);
