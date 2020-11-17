@@ -15,7 +15,7 @@ set(classes
 vtk_module_add_module(FTKFilters
   CLASSES ${classes})
 vtk_module_link(FTKFilters
-  PRIVATE ftk)
+  PRIVATE libftk)
 
 paraview_add_server_manager_xmls(XMLS 
   CriticalPointTracker2D.xml
