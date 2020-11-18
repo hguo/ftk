@@ -325,7 +325,7 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
   J.reshape({2, 2, n(0)});
 
   // for (auto i = 0; i < smoothing_kernel.size(); i ++) {
-  parallel_for(smoothing_kernel.size(), std::thread::hardware_concurrency(), [&](int i) {
+  parallel_for(smoothing_kernel.size(), [&](int i) {
     for (auto j = 0; j < smoothing_kernel[i].size(); j ++) {
       auto tuple = smoothing_kernel[i][j];
       const auto k = std::get<0>(tuple);

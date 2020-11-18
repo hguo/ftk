@@ -3,6 +3,7 @@
 
 #include <ftk/object.hh>
 #include <fstream>
+#include <chrono>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/filters/streaming_filter.hh>
@@ -54,6 +55,10 @@ struct ndarray_stream : public object {
     // else return j["dimensions"].size(); 
     return j["dimensions"].size(); 
   }
+  size_t n_timesteps() const {
+    if (j.contains("n_timesteps")) return j["n_timesteps"];
+    else return std::numeric_limits<size_t>::max();
+  }
 
   std::vector<size_t> shape() const;
 
@@ -68,6 +73,8 @@ protected:
   ndarray<T> request_timestep_synthetic_woven(int k);
   ndarray<T> request_timestep_synthetic_moving_extremum_2d(int k);
   ndarray<T> request_timestep_synthetic_moving_extremum_3d(int k);
+  ndarray<T> request_timestep_synthetic_moving_ramp_3d(int k);
+  ndarray<T> request_timestep_synthetic_moving_dual_ramp_3d(int k);
   ndarray<T> request_timestep_synthetic_double_gyre(int k);
   ndarray<T> request_timestep_synthetic_merger_2d(int k);
   ndarray<T> request_timestep_synthetic_volcano_2d(int k);
@@ -225,8 +232,47 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             } else 
               fatal("invalid dir");
           } else 
-            j["dir"] = {0.1, 0.1, 0.1};
+            j["dir"] = {0.1, 0.11, 0.1};
           
+        } else if (j["name"] == "moving_ramp_3d") {
+          if (missing_variables) 
+            j["variables"] = {"scalar"};
+          default_nd = 3;
+          default_dims[0] = 21; 
+          default_dims[1] = 21;
+          default_dims[2] = 21;
+          
+          if (j.contains("x0")) {
+            if (j["x0"].is_number()) { // OK
+            } else fatal("invalid x0");
+          } else j["x0"] = 10;
+
+          if (j.contains("rate")) {
+            if (j["rate"].is_number()) { // OK
+            } else fatal("invalid rate");
+          } else j["rate"] = 0.1;
+        } else if (j["name"] == "moving_dual_ramp_3d") {
+          if (missing_variables) 
+            j["variables"] = {"scalar"};
+          default_nd = 3;
+          default_dims[0] = 21; 
+          default_dims[1] = 21;
+          default_dims[2] = 21;
+          
+          if (j.contains("x0")) {
+            if (j["x0"].is_number()) { // OK
+            } else fatal("invalid x0");
+          } else j["x0"] = 10;
+
+          if (j.contains("rate")) {
+            if (j["rate"].is_number()) { // OK
+            } else fatal("invalid rate");
+          } else j["rate"] = 0.7;
+
+          if (j.contains("offset")) {
+            if (j["offset"].is_number()) { // OK
+            } else fatal("invalid offset");
+          } else j["offset"] = 2.0;
         } else if (j["name"] == "volcano_2d") {
           if (missing_variables) 
             j["variables"] = {"scalar"};
@@ -286,12 +332,12 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
     } else if (j["type"] == "file") {
       if (j.contains("filenames")) {
         if (j["filenames"].is_array()) {
-          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
+          // j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else {
           auto filenames = ftk::ndarray<double>::glob(j["filenames"]);
           if (filenames.empty()) fatal("unable to find matching filename(s).");
-          if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
-          else j["n_timesteps"] = filenames.size();
+          // if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
+          // else j["n_timesteps"] = filenames.size();
           j["filenames"] = filenames;
         }
         const std::string filename0 = j["filenames"][0];
@@ -312,6 +358,8 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             const std::vector<std::string> vars = {var};
             j["variables"] = vars;
           }
+          
+          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else if (j["format"] == "vti") {
 #if FTK_HAVE_VTK
           vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
@@ -363,11 +411,39 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           for (int i = 0; i < ncdims; i ++) 
             NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &dimlens[i]) );
 
+          int nt;
           int unlimited_recid;
           NC_SAFE_CALL( nc_inq_unlimdim(ncid, &unlimited_recid) );
           NC_SAFE_CALL( nc_close(ncid) );
-          if (unlimited_recid >= 0)
+          if (unlimited_recid >= 0) {
             j["nc_has_unlimited_time_dimension"] = true;
+
+            // check timesteps per file
+            const int nf = j["filenames"].size();
+            std::vector<int> timesteps_per_file(nf), first_timestep_per_file(nf);
+            int total_timesteps = 0;
+            for (int i = 0; i < nf; i ++) {
+              const std::string filename = j["filenames"][i];
+              size_t nt;
+              NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+              NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[0], &nt) );
+              NC_SAFE_CALL( nc_close(ncid) );
+              timesteps_per_file[i] = nt;
+              first_timestep_per_file[i] = total_timesteps;
+              total_timesteps += nt;
+            }
+            j["timesteps_per_file"] = timesteps_per_file;
+            j["first_timestep_per_file"] = first_timestep_per_file;
+          
+            nt = std::accumulate(timesteps_per_file.begin(), timesteps_per_file.end(), 0);
+          } else {
+            nt = j["filenames"].size();
+          }
+            
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+            j["n_timesteps"] = std::min(j["n_timesteps"].template get<int>(), nt);
+          else 
+            j["n_timesteps"] = nt;
           
           if (j.contains("dimensions"))
             warn("ignorning dimensions");
@@ -387,11 +463,6 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           } else 
             fatal("unsupported netcdf variable dimensionality");
 
-          // determine number timesteps
-          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
-            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
-          else 
-            j["n_timesteps"] = j["filenames"].size();
 #else
           fatal("FTK not compiled with NetCDF.");
 #endif
@@ -418,6 +489,8 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           j["dimensions"] = dims;
 
           H5Fclose(fid);
+          
+          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
 #else
           fatal("FTK not compiled with HDF5.");
           // fatal("array stream w/ h5 not implemented yet");
@@ -524,17 +597,61 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
 {
+  size_t fid = 0, offset = 0;
+  size_t starts[4] = {0}, sizes[4] = {0};
+  std::vector<size_t> dims = j["dimensions"];
+  
+  // determine which file to read
+  if (j.contains("first_timestep_per_file")) {
+    std::vector<int> first_timestep_per_file = j["first_timestep_per_file"], 
+      timesteps_per_file = j["timesteps_per_file"];
+    const size_t nf = first_timestep_per_file.size();
+
+    for (size_t i = 0; i < nf; i ++) {
+      if (k >= first_timestep_per_file[i] && k < first_timestep_per_file[i] + timesteps_per_file[i]) {
+        fid = i;
+        offset = k - first_timestep_per_file[i];
+        break;
+      }
+    }
+
+    starts[0] = offset; sizes[0] = 1;
+    if (dims.size() == 2) {
+      sizes[1] = dims[1];
+      sizes[2] = dims[0];
+    } else {
+      sizes[1] = dims[2];
+      sizes[2] = dims[1];
+      sizes[3] = dims[0];
+    }
+  } else {
+    fid = k;
+    if (dims.size() == 2) {
+      sizes[0] = dims[1];
+      sizes[1] = dims[0];
+    } else {
+      sizes[0] = dims[2];
+      sizes[1] = dims[1];
+      sizes[2] = dims[0];
+    }
+  }
+
+  fprintf(stderr, "st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
+      starts[0], starts[1], starts[2], starts[3], 
+      sizes[0], sizes[1], sizes[2], sizes[3]);
+  fprintf(stderr, "k=%d, offset=%zu, fid=%zu\n", k, offset, fid);
+
   ftk::ndarray<T> array;
-  const std::string filename = j["filenames"][k];
+  const std::string filename = j["filenames"][fid];
 #if FTK_HAVE_NETCDF
   if (is_single_component()) { // all data in one single variable; channels are automatically handled in ndarray
-    array.from_netcdf(filename, j["variables"][0]);
+    array.from_netcdf(filename, j["variables"][0], starts, sizes);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
     const int nv = n_components();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_netcdf(filename, j["variables"][i]);
+      arrays[i].from_netcdf(filename, j["variables"][i], starts, sizes);
 
     array.reshape(shape());
     for (int i = 0; i < arrays[0].nelem(); i ++) {
@@ -581,6 +698,10 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic(int k)
     return request_timestep_synthetic_moving_extremum_2d(k);
   else if (j["name"] == "moving_extremum_3d")
     return request_timestep_synthetic_moving_extremum_3d(k);
+  else if (j["name"] == "moving_ramp_3d")
+    return request_timestep_synthetic_moving_ramp_3d(k);
+  else if (j["name"] == "moving_dual_ramp_3d")
+    return request_timestep_synthetic_moving_dual_ramp_3d(k);
   else if (j["name"] == "double_gyre")
     return request_timestep_synthetic_double_gyre(k);
   else if (j["name"] == "merger_2d")
@@ -628,6 +749,24 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_extremum_3d(int 
           dir[3] = {j["dir"][0], j["dir"][1], j["dir"][2]};
 
   return ftk::synthetic_moving_extremum<T, 3>(shape, x0, dir, T(k));
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_ramp_3d(int k) 
+{
+  const std::vector<size_t> shape({j["dimensions"][0], j["dimensions"][1], j["dimensions"][2]});
+  const T x0 = j["x0"], rate = j["rate"];
+
+  return ftk::synthetic_moving_ramp<T, 3>(shape, x0, rate, T(k));
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_synthetic_moving_dual_ramp_3d(int k) 
+{
+  const std::vector<size_t> shape({j["dimensions"][0], j["dimensions"][1], j["dimensions"][2]});
+  const T x0 = j["x0"], rate = j["rate"], offset = j["offset"];
+
+  return ftk::synthetic_moving_dual_ramp<T, 3>(shape, x0, rate, T(k) + offset);
 }
 
 template <typename T>
@@ -691,13 +830,21 @@ void ndarray_stream<T>::start()
   }
 
   for (int i = 0; i < j["n_timesteps"]; i ++) {
+    auto t0 = std::chrono::high_resolution_clock::now();
     ndarray<T> array;
     if (j["type"] == "synthetic") 
       array = request_timestep_synthetic(i);
     else if (j["type"] == "file")
       array = request_timestep_file(i);
+    auto t1 = std::chrono::high_resolution_clock::now();
 
     modified_callback(i, array);
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    float t_io = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
+          t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9;
+    
+    fprintf(stderr, "timestep=%d, t_io=%f, t_compute=%f\n", i, t_io, t_compute);
   }
 }
  

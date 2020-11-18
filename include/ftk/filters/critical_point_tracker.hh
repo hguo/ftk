@@ -3,12 +3,14 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/algorithms/cca.hh>
-#include <ftk/filters/critical_point.hh>
-#include <ftk/filters/critical_point_traj.hh>
-#include <ftk/filters/critical_point_traj_set.hh>
+#include <ftk/filters/feature_point.hh>
+#include <ftk/filters/feature_curve.hh>
+#include <ftk/filters/feature_curve_set.hh>
 #include <ftk/filters/filter.hh>
+#include <ftk/filters/tracker.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
+#include <ftk/geometry/write_polydata.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/diy-ext/gather.hh>
 #include <iomanip>
@@ -21,19 +23,14 @@ enum {
   SOURCE_DERIVED // implicit
 };
 
-struct critical_point_tracker : public filter {
-  critical_point_tracker() {}
+struct critical_point_tracker : public virtual tracker {
+  critical_point_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
   virtual void update() {}; 
   void reset() {
     field_data_snapshots.clear();
     traced_critical_points.clear();
   }
-  
-  virtual int cpdims() const = 0;
-  
-  void set_input_array_partial(bool b) {is_input_array_partial = b;}
-  void set_use_default_domain_partition(bool b) {use_default_domain_partition = true;}
 
   void set_enable_robust_detection(bool b) { enable_robust_detection = b; }
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
@@ -42,9 +39,6 @@ struct critical_point_tracker : public filter {
   void set_enable_ignoring_degenerate_points(bool b) { enable_ignoring_degenerate_points = b; }
 
   void set_type_filter(unsigned int);
-  
-  // void set_start_timestep(int);
-  // void set_end_timestep(int);
   
   void set_scalar_field_source(int s) {scalar_field_source = s;}
   void set_vector_field_source(int s) {vector_field_source = s;}
@@ -56,21 +50,21 @@ struct critical_point_tracker : public filter {
 
   void update_traj_statistics();
 
-  void select_trajectories(std::function<bool(const critical_point_traj_t& traj)>);
-  void select_sliced_critical_points(std::function<bool(const critical_point_t& cp)>);
+  void select_trajectories(std::function<bool(const feature_curve_t& traj)>);
+  void select_sliced_critical_points(std::function<bool(const feature_point_t& cp)>);
 
   void slice_traced_critical_points(); // slice traces after finalization
 
 public:
-  virtual void initialize() = 0;
-  virtual void finalize() = 0;
+  // virtual void initialize() = 0;
+  // virtual void finalize() = 0;
 
-  virtual bool advance_timestep();
-  virtual void update_timestep() = 0;
+  bool advance_timestep();
+  // virtual void update_timestep() = 0;
 
 public: // i/o for traced critical points (trajectories)
-  const critical_point_traj_set_t& get_traced_critical_points() const {return traced_critical_points;}
-  critical_point_traj_set_t& get_traced_critical_points() {return traced_critical_points;}
+  const feature_curve_set_t& get_traced_critical_points() const {return traced_critical_points;}
+  feature_curve_set_t& get_traced_critical_points() {return traced_critical_points;}
 
   json get_traced_critical_points_json() const {return json(traced_critical_points);}
   void write_traced_critical_points_json(const std::string& filename, int indent=0) const;
@@ -85,10 +79,10 @@ public: // i/o for traced critical points (trajectories)
 #endif
 
 public: // i/o for sliced critical points
-  const std::map<int, std::vector<critical_point_t>>& get_sliced_critical_points() const {return sliced_critical_points;}
+  const std::map<int, std::vector<feature_point_t>>& get_sliced_critical_points() const {return sliced_critical_points;}
   json get_sliced_critical_points_json() const {return json(sliced_critical_points);}
   void write_sliced_critical_points_json(const std::string& filename) const {std::ofstream f(filename); f << get_sliced_critical_points_json(); f.close();}
-  void read_sliced_critical_points_json(const std::string& filename) {std::ifstream f(filename); json j; f >> j; f.close(); sliced_critical_points = j.get<std::map<int, std::vector<critical_point_t>>>();}
+  void read_sliced_critical_points_json(const std::string& filename) {std::ifstream f(filename); json j; f >> j; f.close(); sliced_critical_points = j.get<std::map<int, std::vector<feature_point_t>>>();}
   void write_sliced_critical_points_text(int t, std::ostream& os) const;
   void write_sliced_critical_points_text(int t, const std::string& filename) const;
   void write_sliced_critical_points_vtk(int t, const std::string& filename) const;
@@ -97,7 +91,7 @@ public: // i/o for sliced critical points
 #endif
 
 public: // i/o for intercepted traced
-  critical_point_traj_set_t get_intercepted_critical_point(int t0, int t1) const {return traced_critical_points.intercept(t0, t1);}
+  feature_curve_set_t get_intercepted_critical_point(int t0, int t1) const {return traced_critical_points.intercept(t0, t1);}
   void write_intercepted_critical_points_vtk(int t0, int t1, const std::string& filename) const;
   void write_intercepted_critical_points_text(int t0, int t1, const std::string& filename) const;
   void write_intercepted_critical_points_json(int t0, int t1, const std::string& filename) const;
@@ -106,9 +100,9 @@ public: // i/o for intercepted traced
 #endif
 
 public: // i/o for discrete (untraced) critical points
-  virtual std::vector<critical_point_t> get_critical_points() const = 0;
+  virtual std::vector<feature_point_t> get_critical_points() const = 0;
   json get_critical_points_json() const {return json(get_critical_points());}
-  virtual void put_critical_points(const std::vector<critical_point_t>&) = 0;
+  virtual void put_critical_points(const std::vector<feature_point_t>&) = 0;
   void write_critical_points_json(const std::string& filename) const {std::ofstream f(filename); f << get_critical_points_json(); f.close();}
   void read_critical_points_json(const std::string& filename);
   void write_critical_points_binary(const std::string& filename) const;
@@ -123,7 +117,7 @@ public: // i/o for discrete (untraced) critical points
 #endif
 
 public: // post-processing and simplification
-  // void foreach_trajectory(std::function<void(int, critical_point_traj_t&)> f) {for (int i = 0; i < traced_critical_points.size(); i ++) f(i, traced_critical_points[i]);}
+  // void foreach_trajectory(std::function<void(int, feature_curve_t&)> f) {for (int i = 0; i < traced_critical_points.size(); i ++) f(i, traced_critical_points[i]);}
   // void split_trajectories();
 
 public: // inputs
@@ -135,34 +129,30 @@ public: // inputs
   virtual void push_scalar_field_snapshot(const ndarray<double> &scalar);
   virtual void push_vector_field_snapshot(const ndarray<double> &vector);
 
-  virtual void set_current_timestep(int t) {current_timestep = t;}
-  int get_current_timestep() const {return current_timestep;}
-
 protected:
-  bool filter_critical_point_type(const critical_point_t& cp);
+  bool filter_critical_point_type(const feature_point_t& cp);
 
   void update_vector_field_scaling_factor(int minbits=8, int maxbits=21);
 
 protected:
   template <typename I> // mesh element type
   void trace_critical_points_online(
-      critical_point_traj_set_t &trajectories,
-      std::map<I, critical_point_t> &discrete_critical_poionts, // critical point tag needs to index mesh element ID.  Discrete critical points will be cleared after tracing
+      feature_curve_set_t &trajectories,
+      std::map<I, feature_point_t> &discrete_critical_poionts, // critical point tag needs to index mesh element ID.  Discrete critical points will be cleared after tracing
       std::function<std::set<I>(I)> neighbors, 
-      std::function<I(unsigned long long)> tag_to_element
+      std::function<I(unsigned long long)> tag_to_element,
+      std::function<unsigned long long(I)> elementt_to_tag
   );
 
 	template <typename I> // mesh element type
-	std::vector<critical_point_traj_t> trace_critical_points_offline(
-		std::map<I, critical_point_t> &discrete_critical_points, // id of each cp will be updated
+	std::vector<feature_curve_t> trace_critical_points_offline(
+		std::map<I, feature_point_t> &discrete_critical_points, // id of each cp will be updated
 		std::function<std::set<I>(I)> neighbors);
 
 protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
   };
-  
-  int current_timestep = 0;
 
   std::deque<field_data_snapshot_t> field_data_snapshots;
   
@@ -170,16 +160,13 @@ protected:
   double vector_field_resolution = std::numeric_limits<double>::max(); // min abs nonzero value of vector field.  for robust cp detection w/o gmp
   uint64_t vector_field_scaling_factor = 1;
   
-  critical_point_traj_set_t traced_critical_points;
-  std::map<int/*time*/, std::vector<critical_point_t>> sliced_critical_points;
+  feature_curve_set_t traced_critical_points;
+  std::map<int/*time*/, std::vector<feature_point_t>> sliced_critical_points;
 
   // type filter
   bool use_type_filter = false;
   unsigned int type_filter = 0;
   
-  int start_timestep = 0, 
-      end_timestep = std::numeric_limits<int>::max();
-
   int scalar_field_source = SOURCE_NONE, 
       vector_field_source = SOURCE_NONE,
       jacobian_field_source = SOURCE_NONE;
@@ -193,15 +180,12 @@ protected:
   bool enable_discarding_interval_points = false;
   bool enable_discarding_degenerate_points = false;
   bool enable_ignoring_degenerate_points = false;
-  
-  bool is_input_array_partial = false;
-  bool use_default_domain_partition = true;
 };
 
 ///////
 
 inline bool critical_point_tracker::filter_critical_point_type(
-    const critical_point_t& cp)
+    const feature_point_t& cp)
 {
   // fprintf(stderr, "typefilter=%lu, type=%lu\n", 
   //     type_filter, cp.type);
@@ -255,7 +239,7 @@ inline void critical_point_tracker::write_intercepted_critical_points_vtk(int t0
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_intercepted_critical_points_vtk(t0, t1);
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 
@@ -263,7 +247,7 @@ inline void critical_point_tracker::write_traced_critical_points_vtk(const std::
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = traced_critical_points.to_vtp(cpdims(), scalar_components); 
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 
@@ -271,7 +255,7 @@ inline void critical_point_tracker::write_sliced_critical_points_vtk(int k, cons
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_sliced_critical_points_vtk(k);
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 
@@ -279,7 +263,7 @@ inline void critical_point_tracker::write_critical_points_vtk(const std::string&
 {
   if (comm.rank() == get_root_proc()) {
     auto poly = get_critical_points_vtk();
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 
@@ -360,7 +344,7 @@ inline void critical_point_tracker::write_critical_points_binary(const std::stri
 inline void critical_point_tracker::read_critical_points_binary(const std::string& filename)
 {
   if (is_root_proc()) {
-    std::vector<critical_point_t> cps;
+    std::vector<feature_point_t> cps;
     diy::unserializeFromFile(filename, cps);
     put_critical_points(cps);
   }
@@ -505,8 +489,8 @@ inline void critical_point_tracker::read_traced_critical_points_json(const std::
     json j; 
     f >> j; 
     f.close(); 
-    // traced_critical_points = j.get<std::map<int, critical_point_traj_t>>();
-    traced_critical_points = j.get<critical_point_traj_set_t>();
+    // traced_critical_points = j.get<std::map<int, feature_curve_t>>();
+    traced_critical_points = j.get<feature_curve_set_t>();
   }
 }
 
@@ -518,7 +502,7 @@ inline void critical_point_tracker::read_critical_points_json(const std::string&
     f >> j; 
     // fprintf(stderr, "#cps=%zu\n", j.size()); 
     f.close(); 
-    put_critical_points(j.get<std::vector<critical_point_t>>());
+    put_critical_points(j.get<std::vector<feature_point_t>>());
   }
 }
 
@@ -536,27 +520,37 @@ inline void critical_point_tracker::set_scalar_components(const std::vector<std:
 
 template <typename I>
 void critical_point_tracker::trace_critical_points_online(
-      critical_point_traj_set_t &trajectories,
+      feature_curve_set_t &trajectories,
       // std::vector<bool> &alive,
-      std::map<I, critical_point_t> &discrete_critical_points, // will be cleared after tracing
+      std::map<I, feature_point_t> &discrete_critical_points, // will be cleared after tracing
       std::function<std::set<I>(I)> neighbors,
-      std::function<I(unsigned long long)> tag_to_element)
+      std::function<I(unsigned long long)> tag_to_element,
+      std::function<unsigned long long(I)> element_to_tag)
 {
   // 0. gather discrete trajectories
   diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
   if (!is_root_proc()) return;
 
+  // fprintf(stderr, "hey!!!, #traj=%zu, discrete points:\n", trajectories.size());
+  // for (const auto kv : discrete_critical_points)
+  //   std::cerr << "----" << kv.second.tag << ", " << kv.first << ", " << tag_to_element(kv.second.tag) << std::endl;
+
   // 1. continue existing trajectories
-  trajectories.foreach([&](critical_point_traj_t& traj) {
-    if (traj.complete) return; // continue;
+  trajectories.foreach([&](feature_curve_t& traj) {
+    if (traj.complete) {
+      // fprintf(stderr, "traj already complete.\n");
+      return; // continue;
+    }
     bool continued = false;
 
     // forward direction
     auto terminal = traj.back();
     auto current = tag_to_element(terminal.tag);
+    // std::cerr << "forward terminal: " << terminal.tag << ", " << tag_to_element(terminal.tag) << std::endl;
     while (1) {
       bool has_next = false;
       for (auto i : neighbors(current)) {
+        // std::cerr << "-------forward neighbor: " << element_to_tag(i) << ", " << i << std::endl;
         if (discrete_critical_points.find(i) != discrete_critical_points.end()) 
         {
           current = i;
@@ -568,6 +562,7 @@ void critical_point_tracker::trace_critical_points_online(
           discrete_critical_points.erase(current);
           has_next = true;
           continued = true;
+          // fprintf(stderr, "found next forward!!\n");
           break;
         }
       }
@@ -578,9 +573,11 @@ void critical_point_tracker::trace_critical_points_online(
     // backward direction
     terminal = traj.front();
     current = tag_to_element(terminal.tag);
+    // std::cerr << "backward terminal: " << terminal.tag << ", " << tag_to_element(terminal.tag) << std::endl;
     while (1) {
       bool has_next = false;
       for (auto i : neighbors(current)) {
+        // std::cerr << "-------backward neighbor: " << element_to_tag(i) << ", " << i << std::endl;
         if (discrete_critical_points.find(i) != discrete_critical_points.end()) 
         {
           // fprintf(stderr, "tracing backwards!!\n");
@@ -594,6 +591,7 @@ void critical_point_tracker::trace_critical_points_online(
           discrete_critical_points.erase(current);
           has_next = true;
           continued = true;
+          // fprintf(stderr, "found next backward!!\n");
           break;
         }
       }
@@ -618,7 +616,7 @@ void critical_point_tracker::trace_critical_points_online(
     // fprintf(stderr, "size_component=%zu, size_linear_graph=%zu\n", component.size(), linear_graphs.size());
     for (int j = 0; j < linear_graphs.size(); j ++) {
       const auto &linear_graph = linear_graphs[j];
-      critical_point_traj_t traj;
+      feature_curve_t traj;
       traj.loop = is_loop(linear_graph, neighbors);
 
       // const int new_id = trajectories.size();
@@ -643,21 +641,21 @@ void critical_point_tracker::trace_critical_points_online(
 
 inline void critical_point_tracker::update_traj_statistics()
 {
-  traced_critical_points.foreach([](critical_point_traj_t& t) {
+  traced_critical_points.foreach([](feature_curve_t& t) {
       t.update_statistics();
   });
 }
 
-inline void critical_point_tracker::select_trajectories(std::function<bool(const critical_point_traj_t& traj)> f)
+inline void critical_point_tracker::select_trajectories(std::function<bool(const feature_curve_t& traj)> f)
 {
   traced_critical_points.filter(f);
 }
 
-inline void critical_point_tracker::select_sliced_critical_points(std::function<bool(const critical_point_t& cp)> f)
+inline void critical_point_tracker::select_sliced_critical_points(std::function<bool(const feature_point_t& cp)> f)
 {
   for (auto &kv : sliced_critical_points) {
     auto &cps = kv.second;
-    std::vector<critical_point_t> filtered_cps;
+    std::vector<feature_point_t> filtered_cps;
     for (auto i = 0; i < cps.size(); i ++) 
       if (f(cps[i]))
         filtered_cps.push_back(cps[i]);
@@ -667,11 +665,11 @@ inline void critical_point_tracker::select_sliced_critical_points(std::function<
 }
 
 template <typename element_t>
-std::vector<critical_point_traj_t> critical_point_tracker::trace_critical_points_offline(
-	std::map<element_t, critical_point_t> &discrete_critical_points,
+std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offline(
+	std::map<element_t, feature_point_t> &discrete_critical_points,
 	std::function<std::set<element_t>(element_t)> neighbors)
 {
-  std::vector<critical_point_traj_t> traced_critical_points;
+  std::vector<feature_curve_t> traced_critical_points;
 
   std::set<element_t> elements;
   for (const auto &kv : discrete_critical_points)
@@ -692,7 +690,7 @@ std::vector<critical_point_traj_t> critical_point_tracker::trace_critical_points
     for (int j = 0; j < linear_graphs.size(); j ++) {
       const unsigned int id = traced_critical_points.size(); 
 
-      critical_point_traj_t traj; 
+      feature_curve_t traj; 
       traj.loop = is_loop(linear_graphs[j], neighbors);
       for (int k = 0; k < linear_graphs[j].size(); k ++) {
         auto &cp = discrete_critical_points[linear_graphs[j][k]];

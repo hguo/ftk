@@ -2,13 +2,165 @@
 
 [![Build Status](https://travis-ci.org/hguo/ftk.svg?branch=master)](https://travis-ci.org/hguo/ftk)
 
-FTK is a library that provides building blocks for feature tracking algorithms in scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or command line interface.   
+FTK is a library that scales, simplifies, and delivers feature tracking algorithms for scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or command line interface.   
 
 ![](docs/images/critical_point_tracking_2d_paraview.png)
 
 ## Dependencies
 
-FTK depends in GMP and also requires CMake to build the libraries and executables.  Optional dependencies include ParaView (>=5.8.0 recommended), Python, VTK, Qt5, MPI, netCDF, parallel-netcdf, HDF5, ADIOS2, MPSolve, and CUDA.
+FTK depends on GMP and requires CMake to build the libraries and executables.  Optional dependencies include ParaView (>=5.8.0 recommended), Python3, VTK, MPI, netCDF, HDF5, ADIOS2, MPSolve, and CUDA.
+
+## FTK command line interface
+
+FTK provides one single executable `ftk`.
+
+### Building the FTK executable
+
+FTK executables are built by default with CMake:
+
+```bash
+$ cd $FTK_SOURCE_DIR/build
+$ cmake .. && make
+```
+
+The executables can be found in the `bin` directory.  You may build FTK with NetCDF, HDF5, VTK, MPI, and CUDA to enable more features.  
+
+#### Building with VTK
+
+```bash
+$ cmake -DFTK_USE_VTK=ON -DCMAKE_PREFIX_PATH="$your_vtk_path/lib/cmake"
+```
+
+#### Building with NetCDF
+
+```bash
+$ cmake -DFTK_USE_NETCDF=ON -DNETCDF_DIR=${your_netcdf_path}
+```
+
+#### Building with MPI
+
+You may use MPI to accelerate feature tracking with both distributed-parallelism.  To build FTK with MPI, you need to use MPI C/C++ compilers: 
+
+```bash
+$ CC=mpicc CXX=mpicxx cmake -DFTK_USE_MPI=ON
+```
+
+#### Building with CUDA
+
+```bash
+$ cmake -DFTK_USE_CUDA=ON -DCMAKE_CUDA_COMPILER=$YOUR_NVCC_COMPILER
+```
+
+### Use FTK command line interface
+
+Follow the help information to explore all options the FTK CLI.
+
+```bash
+$ ftk --help
+Usage:
+  ./bin/ftk [OPTION...]
+
+  -f, --feature arg             Feature type: critical_point, isosurface,
+                                tdgl_vortex, or connected_component)
+  -i, --input arg               Input file name pattern: a single file or a
+                                series of file, e.g. 'scalar.raw',
+                                'cm1out_000*.nc'
+      --input-format arg        Input file format
+...
+```
+
+#### Specify feature type
+
+It is mandatory to use the argument `-f` specifies the type of features that are tracked, e.g. `critical_point` (`cp` for short), `isosurface` (`iso` for short), and `tdgl_vortex` (`tdgl` for short).  
+
+
+#### Specify file inputs
+
+Use `--input` or `-i` to specify input files.  The input argument typically needs to contain wildcards in order to read a list of files of the time-varying data.  For example, assuming the working directory has a series of files, each of which contains one timestep of the 2D regular-grid scalar field data: `scalar-000.raw`, `scalar-001.raw`, ... `scalar-255.raw`; to track critical points: 
+
+```bash
+$ ftk -f cp --input "scalar-*.raw" --width 128 --height 128 --input-format float64 --output trajs.vtp
+```
+
+Note that it is highly recommended to **use quotes** for the `-i` argument; otherwise the executable may only read the first file, and the behavior may very depending on which shell you use.  It is also important to **make sure that wildcards lead to the correct sequence** of files.  A counterexample is `0.raw`, `1.raw`, ... `10.raw`, `11.raw`, ..., `100.raw`; in this case, the sequence could be parsed as 0, 1, 10, 100, 11, ..., 2, 20, 21, which is undesired and could lead to meaningless results.  
+
+
+##### Input format
+
+Use `--input-format` to explicitly specify the input format, if the format is not possible to be determined based on file extensions.  Acceptable arguments for `--input-format` include `float32`, `float64`, `vti` (VTK image data format), `h5` (HDF5), and `nc` (netCDF).  In case file names end with `.vti`, `.nc`, and `.h5`, one may omit `--input-format`.  
+
+The data of `float32` and `float64` are in the "block-of-value" format, and we assume the data are stored in the row-major order, a,k,a the C-style.  If such data contain mmultiple components (e.g. u and v), the dimension of components are the most fast-changing dimension in the file, e.g. (u0, v0, u1, v1, ...).  One needs to reorder the data if they are not in the correct order.  See the "input variables" section for more information.
+
+
+##### Input dimensions
+
+It is mandatory to specify `--width`, `--height`, `[--depth]` if the inputs are in `float32` or `float64` formats.  Note that `--depth` only applies to 3D data.
+
+##### Input timesteps
+
+We assume the number of timesteps are the number of files (unless in the case that each netCDF file contains multiple timesteps).  One may override the number of timesteps by explicitly use the `--timesteps` option, but the number must be less than or equals to the number of available timesteps. 
+
+##### Input variables
+
+Depending on file formats and number of components, it may or may not be necessary to specify `--var`.  If one single variable (e.g. `scalar`) is used, specify the variable name (e.g. `--var scalar`); if multiple variables are used, use comma between variable names, e.g. `--var u,v,w` for `u`, `v`, and `w`. 
+
+- `float32`/`float64` (single component): not necessary
+- `float32`/`float64` (multi component): necessary, e.g. `--var u,v`; in this case, components, width, height, depths are presumed to be stored in the raw-major order
+- `nc` and `h5`: necessary regardless of single- or multi-components; the dimension of each variable must be identical
+- `vti`: recommended but not necessary; the default variable will be used if `--var` is not specified
+
+
+#### Use synthetic inputs in lieu of file inputs
+
+Use `--synthetic` to use synthetic data instead of file inputs for demonstration and testing purposes.  Available options include `woven`, `double_gyre_2d`, `merger_2d`, `moving_extremum_2d`, `moving_extremum_3d`.  For example, to track critical in the 2D woven synthetic data:
+
+```bash
+$ ftk -f cp --synthetic woven --output woven.txt 
+```
+
+The dimensions and number of timesteps, which default values for each synthetic case, may be overridden by `--width`, `--height`, `--depth`, and `--timesteps` options.  Note that the `--depth` option is not applicable for 2D synthetic cases.  For example, to track critical points in a 30x30x30x10 3D moving extremum case:
+
+```bash
+$ ftk -f cp --synthetic momving_extremum_3d --width 30 --height 30 --depth 30 --timesteps 10 --output woven.txt 
+```
+
+#### Outputs
+
+Use `--output` to specify output file name(s).  Outputs are usually in one single file; in cases that outputs are in multiple files, use wildcards.  For example, `out-%03d.vtp` will lead to a sequence of files (`out-000.vtp`, `out-001.vtp`, ...).  
+
+##### Output formats
+
+Possible output formats are plain text (`.txt`), JSON (`.json`), `vtkPolyData` (`.vtp`), `vtkUnstructuredGrid` (`.vtu`), and binary (for debugging purposes only), depending on the feature type and whether FTK is compiled with external dependencies.  The executable will automatically determine the output format, unless `--output-format` is specified. 
+
+##### Output types
+
+In general, there are four types of outputs, specified by the `--output-type` option:
+
+- `traced` (default).  Outputs are trajectories of features in one single file, e.g. critical point trajectories (in text, JSON, or `.vtp` formats), surface trajectories of vortex lines (in `.vtp` or `.vtu` formats), and volume trajectories of isosurfaces (in `.vtu` format)
+- `sliced`.  Outputs are features in individual timesteps, each timestep corresponds to an output file, e.g., critical points (in text, JSON, or `.vtp` formats), vortex lines (in `.vtp` format), and isosurfaces (in `.vtp` format)
+- `discrete`.  The single output file contains untraced feature points in spacetime.  
+- `intercepted`.  A series of output files; each is a subset of traced features for the given duration of time (specified by `--intercept-length`), currently only available to critical point tracking.
+
+
+#### Parallel execution
+
+Use `mpiexec` for distributed execution; use `--nthreads` and `--accelerator` to specify number of threads and if a hardware accelerator (GPU) is used. 
+
+##### MPI
+
+The FTK executable recognizes the option to use multiple processes if `mpiexec` is used.  It is recommended to specify `--nthreads` to avoid over-subscribing resources if multiple processes are on the same computing node:
+
+```bash
+$ mpiexec -n $NUM_PROCS ftk --nthreads $NUM_THREADS_PER_PROC ...
+```
+
+##### POSIX Threads
+
+By default, the executable uses the maximum number of hardware threads, unless `--nthreads` is specified.  
+
+##### CUDA
+
+Use `--accelerator cuda` if FTK is compiled with CUDA and an NVIDIA GPU is available. 
 
 ## FTK for ParaView
 
@@ -23,11 +175,11 @@ $ cmake .. -DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=$YOUR_ParaView_Build
 $ make
 ```
 
-If built successfully, you will see the plugins binary as `lib/paraview-5.8/plugins/FTK/FTK.so`.  Open the "Plugin Manager" in ParaView, and load this binary with "Load New..." button, and then select and load FTK in the list.  
+If built successfully, you will see the plugins binary as `lib/paraview-5.8/plugins/FTK/FTK.so`.  Open the "Plugin Manager" in ParaView, and load this binary with "Load New..." button, and then select and load FTK in the list.  To check if ParaView plugins are correctly built by reproducing the results in the above figure, use "Sources-->FTK-->SpiralWoven2DSource", "Filters-->FTK-->CriticalPointTracker2D",followed by the "Tube" filter in ParaView.
 
 ### Using ParaView plugins
 
-We demo the use the 2D critical point tracking filter (`vtkCriticalPoint2DTracker`) with a dataset.  The input of this filter must be a 3D volumetric data that stacks 2D time-varying scalar fields in the Z direction.  In this demo, we first add a synthetic 3D volume data by using Sources / FTK / Spiral2DSource.  We then track the trajectories of 2D critical points with Filters / FTK / CriticalPoint2DTracker.  The output trajectires can be visualized as tubes and color-coded by their types, scalar values, or IDs.  In this demo, the time-varying scalar field is defined in closed form: 
+We demonstrate the use the 2D critical point tracking filter (`vtkCriticalPoint2DTracker`) with a dataset.  The input of this filter must be a 3D volumetric data that stacks 2D time-varying scalar fields in the Z direction.  In this demo, we first add a synthetic 3D volume data by using Sources / FTK / Spiral2DSource.  We then track the trajectories of 2D critical points with Filters / FTK / CriticalPoint2DTracker.  The output trajectires can be visualized as tubes and color-coded by their types, scalar values, or IDs.  In this demo, the time-varying scalar field is defined in closed form: 
 
 $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\sin t + y\cos t),$
 
@@ -70,7 +222,7 @@ PyFTK provides synthetic data generators (`pyftk.synthesizers`), feature extract
 
 ```python
 >>> import pyftk
->>> data = pyftk.synthesizers.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (10, 10, 20)
+>>> data = pyftk.synthesizers.spiral_woven(10, 10, 20) # generate synthetic spiral woven data (width=10, height=10, and 20 timesteps).  The shape of data is (1, 10, 10, 20)
 >>> result = pyftk.trackers.track_critical_points_2d_scalar(data) # track critical points in a scalar field
 >>> print(result)
 ```
@@ -78,170 +230,9 @@ PyFTK provides synthetic data generators (`pyftk.synthesizers`), feature extract
 The results are trajectories organized in a list: 
 
 ```
-[{'length': 9, 'trace': [{'x': 2.275077079338536, 'y': 2.0, 't': 2.843946435964648, 'type': 'min', 'scalar': -0.7349697808320285}, {'x': 2.3009922790096073, 'y': 2.057205556154771, 't': 3.0, 'type': 'min', 'scalar': -0.7126261556354363}, {'x': 2.316376550504984, 'y': 2.0789601019629704, 't': 3.0789601019629704, 'type': 'min', 'scalar': -0.6994583185227987}, {'x': 2.3396684290296013, 'y': 2.109042720626548, 't': 3.339668429029601, 'type': 'min', 'scalar': -0.6203974444741183}, {'x': 2.4602960605411885, 'y': 2.367439624426215, 't': 4.0, 'type': 'min', 'scalar': -0.502426092806519}, {'x': 2.5836144734591056, 'y': 2.5204553926376145, 't': 4.520455392637614, 'type': 'saddle', 'scalar': -0.3968294787319291}, {'x': 2.587217124155211, 'y': 2.5205274563826645, 't': 4.587217124155211, 'type': 'saddle', 'scalar': -0.37723450315450113}, ...
+[{'length': 9, 'trace': [{'x': 2.275077079338536, 'y': 2.0, 't': 2.843946435964648, 'type': 'min', 'scalar': -0.7349697808320285}, {'x': 2.3009922790096073, 'y': 2.057205556154771, 't': 3.0, 'type': 'min', 'scalar': -0.7126261556354363}, {'x': 2.316376550504984, 'y': 2.0789601019629704, 't': 3.0789601019629704, 'type': 'min', 'scalar': -0.6994583185227987}, {'x': 2.3396684290296013, 'y': 2.109042720626548, 't': 3.339668429029601, 'type': 'min', 'scalar': -0.6203974444741183}, ...
 ```
 
-## FTK command line interface
-
-FTK provides two executables: `track_critical_points` and `track_levelsets`.
-
-### Building FTK executables
-
-FTK executables are built by default with CMake:
-
-```bash
-$ cd $FTK_SOURCE_DIR/build
-$ cmake .. && make
-```
-
-The executables can be found in the `bin` directory.  You may build FTK with NetCDF, HDF5, VTK, MPI, and CUDA to enable more features.  
-
-#### Building with VTK
-
-```bash
-$ cmake -DFTK_USE_VTK=ON -DCMAKE_PREFIX_PATH="$your_vtk_path/lib/cmake"
-```
-
-#### Building with NetCDF
-
-```bash
-$ cmake -DFTK_USE_NETCDF=ON -DNETCDF_DIR=${your_netcdf_path}
-```
-
-#### Building with MPI
-
-You may use MPI to accelerate feature tracking with both distributed-parallelism.  To build FTK with MPI, you need to use MPI C/C++ compilers: 
-
-```bash
-$ CC=mpicc CXX=mpicxx cmake -DFTK_USE_MPI=ON
-```
-
-Use  `mpiexec` to run the executable
-
-```bash
-$ mpiexec -n $NUM_PROCS track_critical_points
-```
-
-#### Building with CUDA
-
-In order to build FTK with CUDA, you need to specify the path to the CUDA installation:
-
-```bash
-$ cmake -DFTK_USE_CUDA=ON -DCUDA_TOOLKIT_ROOT_DIR=$YOUR_CUDA_TOOLKIT_DIR
-```
-
-#### Building with Qt5
-
-```bash
-$ cmake -FTK_USE_Qt5=ON -DCMAKE_PREFIX_PATH="$your_qt5_path/lib/cmake"
-```
-
-### Use FTK command line interface
-
-#### `track_critical_points`: track critical points in 2D/3D scalar/vector fields in regular grid
-
-Follow the help information below to track critical points:
-
-```bash
-$ track_critical_points --help
-Usage:
-  ./bin/track_critical_points [OPTION...]
-
-  -i, --input arg               Input file name pattern: a single file or a
-                                series of file, e.g. 'scalar.raw',
-                                'cm1out_000*.nc'
-  -f, --input-format arg        Input file format
-                                (auto|float32|float64|nc|h5|vti)
-      --synthetic arg           Use a synthetic case
-                                (woven|double_gyre|merger) as inputs
-  -m, --mesh arg                Input mesh file (will shadow arguments
-                                including width, height, depth)
-      --dim arg                 Spatial dimensionality of data (auto|2|3)
-  -w, --width arg               Width
-  -h, --height arg              Height
-  -d, --depth arg               Depth.  Valid only for 3D data
-  -n, --timesteps arg           Number of timesteps
-      --var arg                 Variable name(s), e.g. `scalar', `u,v,w'. 
-                                Valid only for NetCDF, HDF5, and VTK.
-      --temporal-smoothing-kernel arg
-                                Temporal smoothing kernel bandwidth
-      --temporal-smoothing-kernel-size arg
-                                Temporal smoothing kernel size
-      --spatial-smoothing-kernel arg
-                                Spatial smoothing kernel bandwidth
-      --spatial-smoothing-kernel-size arg
-                                Spatial smoothing kernel size
-      --xgc-mesh arg            XGC mesh file
-      --xgc-smoothing-kernel-file arg
-                                XGC smoothing kernel file
-      --xgc-smoothing-kernel-size arg
-                                XGC smoothing kernel size
-      --xgc-write-back arg      XGC write original back into vtu files
-  -o, --output arg              Output file, either one single file (e.g.
-                                out.vtp) or a pattern (e.g. out-%05d.vtp)
-      --output-type arg         Output type {discrete|traced|sliced}, by
-                                default traced (default: traced)
-      --output-format arg       Output format {auto|text|vtp}, by default
-                                auto (default: auto)
-      --type-filter arg         Type filter: ane single or a combination of
-                                critical point types, e.g. `min', `max',
-                                `saddle', `min|max'
-      --nthreads arg            Number of threads
-  -a, --accelerator arg         Accelerator {none|cuda} (experimental)
-                                (default: none)
-      --stream                  Stream trajectories (experimental)
-      --discard-interval-points
-                                Discard interval critical points
-                                (experimental)
-      --vtk                     Show visualization with vtk (legacy)
-  -v, --verbose                 Verbose outputs
-      --help                    Print usage
-```
-
-#### `track_levelsets`: track super/sub-levelsets in 2D/3D scalar fields in regular grid
-
-Follow the help information below to track levelsets based on a given threshold:
-
-```bash
-$ track_levelsets --help
-Usage:
-  ./track_levelsets [OPTION...]
-
-  -i, --input arg               Input file name pattern: a single file or a
-                                series of file, e.g. 'scalar.raw',
-                                'cm1out_000*.nc'
-  -f, --input-format arg        Input file format
-                                (auto|float32|float64|nc|h5|vti)
-      --synthetic arg           Use a synthetic case
-                                (woven|double_gyre|merger) as inputs
-  -m, --mesh arg                Input mesh file (will shadow arguments
-                                including width, height, depth)
-      --dim arg                 Spatial dimensionality of data (auto|2|3)
-  -w, --width arg               Width
-  -h, --height arg              Height
-  -d, --depth arg               Depth.  Valid only for 3D data
-  -n, --timesteps arg           Number of timesteps
-      --var arg                 Variable name(s), e.g. `scalar', `u,v,w'. 
-                                Valid only for NetCDF, HDF5, and VTK.
-      --temporal-smoothing-kernel arg
-                                Temporal smoothing kernel bandwidth
-      --temporal-smoothing-kernel-size arg
-                                Temporal smoothing kernel size
-      --spatial-smoothing-kernel arg
-                                Spatial smoothing kernel bandwidth
-      --spatial-smoothing-kernel-size arg
-                                Spatial smoothing kernel size
-      --threshold arg           Threshold for levelset tracking
-  -o, --output arg              Output file name pattern, e.g. 'out-%d.raw',
-                                'out-%04d.vti'
-      --output-format arg       Output file format (auto|raw|nc|h5|vti)
-                                (default: auto)
-      --write-graph-dot arg     Write tracking graph in GraphViz format
-      --nthreads arg            Number of threads
-  -a, --accelerator arg         Accelerator (none|cuda) (default: none)
-  -v, --verbose                 Verbose outputs
-      --help                    Print usage
-```
 
 ## FTK C++ Libraries
 
@@ -259,18 +250,21 @@ The installed files are organized as follows:
 ```bash
 $ tree $FTK_INSTALL_DIR
 .
+├── bin
+│   └── ftk
 ├── include
-│   ├── ftk
-│   │   ├── algorithms
-│   │   │   ├── bfs.hh
+│   └── ftk
+│       ├── algorithms
+│       │   ├── bfs.hh
 ...
-│   └── hypermesh
-│       ├── ndarray.hh
-│       ├── regular_mesh.hh
+│   └── mesh
+│       ├── lattice.hh
 ...
 └── lib
-    └── cmake
-        └── FTKConfig.cmake
+    ├── cmake
+    │   └── FTK
+    │       └── FTKConfig.cmake
+    └── liblibftk.so
 ```
 
 #### Including FTK in your CMake project
@@ -280,6 +274,7 @@ You may use the FTK installation in your own CMakeLists.txt file:
 ```cmake
 find_package(FTK REQUIRED)
 include_directories (${FTK_INCLUDE_DIR})
+target_link_library (${YOUR_TARGET} libftk)
 ```
 
 When you configure your build, please specify FTK_DIR with CMake: 
@@ -298,8 +293,3 @@ $ cmake -DFTK_DIR=$FTK_INSTALL_DIR/lib/cmake
 * CCL: connected component labeling algorithm for building feature tracking algorithms
 * Geometry: utilities to transform connect components to geometry for visualization and analysis
 * Tracking graph: data structures to record births, deaths, merges, and splits of features; visualization algorithms for tracking graphs
-
-## Applications that use FTK
-
-* [vortexfinder2](https://github.com/hguo/vortexfinder2): Vortex finder for time-dependent Ginzburg-Landau superconductor simulation data
-* [libpressio](https://github.com/robertu94/libpressio): A library to abstract between different lossless and lossy compressors

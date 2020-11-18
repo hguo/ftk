@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/numeric/print.hh>
+#include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -30,7 +31,7 @@
 #endif
 
 #if FTK_HAVE_CUDA
-extern std::vector<ftk::critical_point_lite_t> // <3, double>> 
+extern std::vector<ftk::feature_point_lite_t> // <3, double>> 
 extract_cp2dt_cuda(
     int scope, int current_timestep, 
     const ftk::lattice& domain, // 3D
@@ -52,12 +53,14 @@ namespace ftk {
 // typedef critical_point_t<3, double> critical_point_t;
 
 struct critical_point_tracker_2d_regular : public critical_point_tracker_regular {
-  critical_point_tracker_2d_regular() : critical_point_tracker_regular(2) {}
+  critical_point_tracker_2d_regular(diy::mpi::communicator comm) : 
+    critical_point_tracker_regular(comm, 2),
+    tracker(comm)
+  {}
   virtual ~critical_point_tracker_2d_regular() {}
 
   int cpdims() const { return 2; }
 
-  void initialize();
   void finalize();
   void reset();
 
@@ -70,7 +73,7 @@ protected:
   typedef simplicial_regular_mesh_element element_t;
   
 protected:
-  bool check_simplex(const element_t& s, critical_point_t& cp);
+  bool check_simplex(const element_t& s, feature_point_t& cp);
   void trace_intersections();
   void trace_connected_components();
 
@@ -79,46 +82,17 @@ protected:
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
       double Js[][2][2]) const;
-
-protected: // working in progress
-  bool robust_check_simplex0(const element_t& s, critical_point_t &cp);
-  bool robust_check_simplex1(const element_t& s, critical_point_t &cp);
-  bool robust_check_simplex2(const element_t& s, critical_point_t &cp);
 };
 
 
 ////////////////////
-inline void critical_point_tracker_2d_regular::initialize()
-{
-  // initializing bounds
-  m.set_lb_ub({
-      static_cast<int>(domain.start(0)),
-      static_cast<int>(domain.start(1)),
-      start_timestep
-    }, {
-      static_cast<int>(domain.size(0)),
-      static_cast<int>(domain.size(1)),
-      end_timestep
-    });
-
-  if (use_default_domain_partition) {
-    lattice_partitioner partitioner(domain);
-    
-    // a ghost size of 2 is necessary for jacobian derivaition; 
-    // even if jacobian is not necessary, a ghost size of 1 is 
-    // necessary for accessing values on boundaries
-    partitioner.partition(comm.size(), {}, {2, 2});
-
-    local_domain = partitioner.get_core(comm.rank());
-    local_array_domain = partitioner.get_ext(comm.rank());
-  }
-
-  if (!is_input_array_partial)
-    local_array_domain = array_domain;
-}
-
 inline void critical_point_tracker_2d_regular::finalize()
 {
+  double max_accumulated_kernel_time;
+  diy::mpi::reduce(comm, accumulated_kernel_time, max_accumulated_kernel_time, get_root_proc(), diy::mpi::maximum<double>());
+  if (comm.rank() == get_root_proc())
+    fprintf(stderr, "max_accumulated_kernel_time=%f\n", accumulated_kernel_time);
+
   if (enable_streaming_trajectories) {
     // done
   } else {
@@ -159,7 +133,7 @@ inline void critical_point_tracker_2d_regular::finalize()
   }
   
   if (enable_discarding_interval_points)
-    traced_critical_points.foreach([](critical_point_traj_t& traj) {
+    traced_critical_points.foreach([](feature_curve_t& traj) {
       traj.discard_interval_points();
     });
 
@@ -210,30 +184,13 @@ inline void critical_point_tracker_2d_regular::update_timestep()
   update_vector_field_scaling_factor();
 #endif
 
-#if 0
-  auto func0 = [=](element_t e) {
-      critical_point_t cp;
-      if (robust_check_simplex0(e, cp)) {
-        std::lock_guard<std::mutex> guard(mutex);
-        if (filter_critical_point_type(cp))
-          discrete_critical_points[e] = cp;
-      }
-    };
-  
-  auto func1 = [=](element_t e) {
-      critical_point_t cp;
-      if (robust_check_simplex1(e, cp)) {
-        std::lock_guard<std::mutex> guard(mutex);
-        if (filter_critical_point_type(cp))
-          discrete_critical_points[e] = cp;
-      }
-    };
-#endif
+  typedef std::chrono::high_resolution_clock clock_type;
+  auto t0 = clock_type::now();
 
   // scan 2-simplices
   // fprintf(stderr, "tracking 2D critical points...\n");
   auto func2 = [=](element_t e) {
-      critical_point_t cp;
+      feature_point_t cp;
       if (check_simplex(e, cp)) {
         std::lock_guard<std::mutex> guard(mutex);
         if (filter_critical_point_type(cp)) {
@@ -274,43 +231,20 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         }, 
         [&](unsigned long long tag) {
           return element_t(m, 2, tag);
+        }, 
+        [&](element_t e) {
+          return e.to_integer(m);
         });
   };
 
   if (xl == FTK_XL_NONE) {
-    
-    // m.element_for_ordinal(2, current_timestep, func2);
-    m.element_for(2, lattice({ // ordinal
-          local_domain.start(0), 
-          local_domain.start(1), 
-          static_cast<size_t>(current_timestep), 
-        }, {
-          local_domain.size(0), 
-          local_domain.size(1), 
-          1
-        }), 
-        ftk::ELEMENT_SCOPE_ORDINAL, 
-        func2, nthreads);
-
+    element_for_ordinal(2, func2);
     if (field_data_snapshots.size() >= 2) { // interval
-      // m.element_for_interval(2, current_timestep-1, current_timestep, func2);
-      m.element_for(2, lattice({
-            local_domain.start(0), 
-            local_domain.start(1), 
-            // static_cast<size_t>(current_timestep - 1), 
-            static_cast<size_t>(current_timestep),
-          }, {
-            local_domain.size(0), 
-            local_domain.size(1), 
-            1
-          }),
-          ftk::ELEMENT_SCOPE_INTERVAL, 
-          func2, nthreads);
+      element_for_interval(2, func2);
 
       if (enable_streaming_trajectories)
         grow();
     }
-    
   } else if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     ftk::lattice domain3({
@@ -365,9 +299,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         coords.data()
       );
     
-    fprintf(stderr, "ordinal_results#=%d\n", results.size());
+    fprintf(stderr, "ordinal_results#=%zu\n", results.size());
     for (auto lcp : results) {
-      critical_point_t cp(lcp);
+      feature_point_t cp(lcp);
       element_t e(3, 2);
       e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
       cp.tag = e.to_integer(m);
@@ -393,9 +327,9 @@ inline void critical_point_tracker_2d_regular::update_timestep()
           use_explicit_coords, 
           coords.data()
         );
-      fprintf(stderr, "interal_results#=%d\n", results.size());
+      fprintf(stderr, "interal_results#=%zu\n", results.size());
       for (auto lcp : results) {
-        critical_point_t cp(lcp);
+        feature_point_t cp(lcp);
         element_t e(3, 2);
         e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
         cp.tag = e.to_integer(m);
@@ -403,11 +337,17 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         cp.timestep = current_timestep;
         discrete_critical_points[e] = cp;
       }
+      
+      if (enable_streaming_trajectories)
+        grow();
     }
 #else
     assert(false);
 #endif
   }
+
+  auto t1 = clock_type::now();
+  accumulated_kernel_time += std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
 }
 
 inline void critical_point_tracker_2d_regular::trace_intersections()
@@ -456,10 +396,10 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
       neighbors, elements);
 
   for (const auto &component : connected_components) {
-    std::vector<std::vector<double>> mycurves;
+    // std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      critical_point_traj_t traj; 
+      feature_curve_t traj; 
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
       traced_critical_points.add(traj);
@@ -527,7 +467,7 @@ inline void critical_point_tracker_2d_regular::simplex_jacobians(
 
 inline bool critical_point_tracker_2d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
-    critical_point_t& cp)
+    feature_point_t& cp)
 {
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
@@ -572,6 +512,8 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
   // if (std::isnan(mu[0]) || std::isnan(mu[1]) || std::isnan(mu[2])) return false;
   // fprintf(stderr, "mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
 
+  if (!succ2) clamp_barycentric<3>(mu);
+
   double X[3][3], x[3]; // position
   simplex_coordinates(vertices, X);
   lerp_s2v3(X, mu, x);
@@ -611,80 +553,6 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
 
   return true;
 } 
-
-inline bool critical_point_tracker_2d_regular::robust_check_simplex0(const element_t& e, critical_point_t& cp)
-{
-  typedef fixed_point<> fp_t;
-
-  if (!e.valid(m)) return false; // check if the 2-simplex is valid
-  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
-
-  fp_t v[1][2]; // obtain vector values
-  simplex_vectors<fp_t>(vertices, v);
-
-  if (v[0][0] == 0 && v[0][1] == 0) {
-    fprintf(stderr, "zero!\n");
-  }
-  return false;
-#if 0 // TODO
-  bool succ = inverse_lerp_s2v2(v, mu);
-  if (!succ) return false;
-
-  double X[3][3]; // position
-  simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, cp.x);
-#endif
-}
-
-inline bool critical_point_tracker_2d_regular::robust_check_simplex1(const element_t& e, critical_point_t& cp)
-{
-  typedef fixed_point<> fp_t;
-
-  if (!e.valid(m)) return false; // check if the 2-simplex is valid
-  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
-
-  // fp_t v[2][2]; // obtain vector values
-  // simplex_vectors<fp_t>(vertices, v);
- 
-  double V[2][2];
-  long long iV[2][2];
-  simplex_vectors(vertices, V);
-  for (int i = 0; i < 2; i ++)
-    for (int j = 0; j < 2; j ++)
-      iV[i][j] = V[i][j] * 32768;
-
-  bool succ = ftk::integer_inverse_lerp_s1v2(iV);
-  if (succ) fprintf(stderr, "shoot\n");
-
-  return false;
-#if 0 // TODO
-  bool succ = inverse_lerp_s2v2(v, mu);
-  if (!succ) return false;
-
-  double X[3][3]; // position
-  simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, cp.x);
-#endif
-}
-
-#if 0
-void critical_point_tracker_2d_regular::robust_check_simplex2(const element_t& s, critical_point_t& cp)
-{
-  if (!e.valid(m)) return false; // check if the 2-simplex is valid
-  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
- 
-  double v[3][2]; // obtain vector values
-  simplex_vectors(vertices, v);
- 
-  double mu[3]; // check intersection
-  bool succ = inverse_lerp_s2v2(v, mu);
-  if (!succ) return false;
-
-  double X[3][3]; // position
-  simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, cp.x);
-}
-#endif
 
 }
 

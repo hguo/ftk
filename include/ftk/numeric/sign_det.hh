@@ -226,6 +226,27 @@ inline int nswaps_bubble_sort(T arr[n], T order[n])
 
 template <typename T=long long>
 __device__ __host__
+inline int positive1(const T X1[2], const int indices1[2])
+{
+  int indices[2], orders[2];
+  for (int i = 0; i < 2; i ++)
+    indices[i] = indices1[i];
+  int s = nswaps_bubble_sort<2, int>(indices, orders);
+
+  T X[2];
+  for (int i = 0; i < 2; i ++)
+    X[i] = X1[orders[i]];
+
+  int d = robust_sign_det2(X);
+
+  if (s % 2 != 0) 
+    d = -d;
+
+  return d;
+}
+
+template <typename T=long long>
+__device__ __host__
 inline int positive2(const T X1[3][2], const int indices1[3])
 {
   int indices[3], orders[3];
@@ -311,6 +332,32 @@ inline bool robust_point_in_polygon2(
   fprintf(stderr, "count=%d\n", count);
   if (count % 2 == 1) return true;
   else return false;
+}
+
+// check if a point in a 1-simplex
+template <typename T=long long>
+__device__ __host__
+inline bool robust_point_in_simplex1(const T X[2], const int indices[2], const T x, const int ix)
+{
+  const int s = positive1(X, indices);
+
+  for (int i = 0; i < 2; i ++) {
+    T Y[2];
+    int my_indices[2];
+    for (int j = 0; j < 2; j ++)
+      if (i == j) {
+        my_indices[j] = ix;
+        Y[j] = x;
+      } else {
+        my_indices[j] = indices[j];
+        Y[j] = X[j];
+      }
+
+    int si = positive1(Y, my_indices);
+    if (s != si) 
+      return false;
+  }
+  return true;
 }
 
 // check if a point is in a 2-simplex

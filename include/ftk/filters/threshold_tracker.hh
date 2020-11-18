@@ -14,10 +14,13 @@ enum {
 };
 
 template <typename TimeIndexType=size_t, typename LabelIdType=size_t>
-struct levelset_tracker : public connected_component_tracker<TimeIndexType, LabelIdType>
+struct threshold_tracker : public connected_component_tracker<TimeIndexType, LabelIdType>
 {
-  levelset_tracker() {}
-  virtual ~levelset_tracker() {};
+  threshold_tracker(diy::mpi::communicator comm) : 
+    connected_component_tracker<TimeIndexType, LabelIdType>(comm) {}
+  virtual ~threshold_tracker() {};
+
+  void initialize() {}
 
   void set_threshold(double threshold, int mode=FTK_COMPARE_GE);
   void set_input_shape(const lattice& shape);
@@ -26,6 +29,8 @@ struct levelset_tracker : public connected_component_tracker<TimeIndexType, Labe
   void push_scalar_field_data_snapshot(const ndarray<FloatType>&);
 
   ndarray<LabelIdType> get_last_labeled_array_snapshot() const;
+
+  int cpdims() const {return 0;}
 
 protected:
   double threshold = 0.0;
@@ -36,7 +41,7 @@ protected:
 
 ///////////////
 template <typename TimeIndexType, typename LabelIdType>
-void levelset_tracker<TimeIndexType, LabelIdType>::set_threshold(double t, int m)
+void threshold_tracker<TimeIndexType, LabelIdType>::set_threshold(double t, int m)
 {
   threshold = t;
   mode = m;
@@ -44,7 +49,7 @@ void levelset_tracker<TimeIndexType, LabelIdType>::set_threshold(double t, int m
 
 template <typename TimeIndexType, typename LabelIdType>
 template <typename FloatType>
-void levelset_tracker<TimeIndexType, LabelIdType>::push_scalar_field_data_snapshot(const ndarray<FloatType>& array)
+void threshold_tracker<TimeIndexType, LabelIdType>::push_scalar_field_data_snapshot(const ndarray<FloatType>& array)
 {
   input_shape = array.shape();
 
@@ -68,7 +73,7 @@ void levelset_tracker<TimeIndexType, LabelIdType>::push_scalar_field_data_snapsh
 }
 
 template <typename TimeIndexType, typename LabelIdType>
-ndarray<LabelIdType> levelset_tracker<TimeIndexType, LabelIdType>::get_last_labeled_array_snapshot() const
+ndarray<LabelIdType> threshold_tracker<TimeIndexType, LabelIdType>::get_last_labeled_array_snapshot() const
 {
   ndarray<LabelIdType> array(input_shape);
   array.from_vector(this->get_last_labeled_data_snapshot());

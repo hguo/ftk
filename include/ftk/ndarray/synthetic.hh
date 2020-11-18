@@ -239,6 +239,38 @@ ndarray<T> synthetic_merger_2D(int DW, int DH, T t)
 }
 
 template <typename T, int N>
+ndarray<T> synthetic_moving_ramp(const std::vector<size_t>& shape, T x0, T rate, T t)
+{
+  ndarray<T> scalar(shape);
+  const auto lattice = scalar.get_lattice();
+  x0 = x0 + rate * t;
+
+  for (auto i = 0; i < scalar.nelem(); i ++) {
+    std::vector<int> xi = lattice.from_integer(i);
+    T x = xi[0];
+    scalar[i] = (x - x0); //  * (x - x0);
+  }
+
+  return scalar;
+}
+
+template <typename T, int N>
+ndarray<T> synthetic_moving_dual_ramp(const std::vector<size_t>& shape, T x0, T rate, T t)
+{
+  ndarray<T> scalar(shape);
+  const auto lattice = scalar.get_lattice();
+  // x0 = x0 + rate * t;
+
+  for (auto i = 0; i < scalar.nelem(); i ++) {
+    std::vector<int> xi = lattice.from_integer(i);
+    T x = xi[0];
+    scalar[i] = std::abs(x - x0) - rate * t; //  * (x - x0);
+  }
+
+  return scalar;
+}
+
+template <typename T, int N>
 ndarray<T> synthetic_moving_extremum(const std::vector<size_t>& shape, const T x0[N], const T dir[N], T t)
 {
   ndarray<T> scalar(shape);
@@ -248,6 +280,7 @@ ndarray<T> synthetic_moving_extremum(const std::vector<size_t>& shape, const T x
   for (int j = 0; j < N; j ++)
     xc[j] = x0[j] + dir[j] * t;
 
+#pragma omp parallel for
   for (auto i = 0; i < scalar.nelem(); i ++) {
     std::vector<int> xi = lattice.from_integer(i);
     T x[N];

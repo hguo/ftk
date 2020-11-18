@@ -1,11 +1,22 @@
 #ifndef _FTK_INVERSE_LINEAR_INTERPOLATION_SOLVER_HH
 #define _FTK_INVERSE_LINEAR_INTERPOLATION_SOLVER_HH
 
+#include <ftk/ftk_config.hh>
 #include <ftk/numeric/linear_solver.hh>
 #include <ftk/numeric/cond.hh>
 #include <ftk/numeric/print.hh>
 
 namespace ftk {
+
+template <typename T>
+__device__ __host__
+inline bool inverse_lerp_s1v1(const T f[2], T mu[2])
+{
+  mu[0] = f[1] / (f[1] - f[0]);
+  mu[1] = T(1) - mu[0];
+
+  return mu[0] >= T(0) && mu[0] < T(1);
+}
 
 template <typename T>
 __device__ __host__
@@ -50,20 +61,6 @@ T cond_inverse_lerp_s2v2(const T V[3][2])
     {V[0][1] - V[2][1], V[1][1] - V[2][1]}
   };
   return cond_real2x2(A);
-}
-
-template <typename L>
-__device__ __host__
-inline bool integer_inverse_lerp_s2v2(const L V[3][2])
-{
-#if 0
-  T M[3][3] = {
-    {V[0][0], V[0][1], V[0][2]},
-    {V[1][0], V[1][1], V[1][2]},
-    {T(1), T(1), T(1)}
-  };
-  T adjM[3][3];
-#endif
 }
 
 template <typename L>

@@ -11,6 +11,8 @@
 
 namespace ftk {
 
+typedef std::chrono::high_resolution_clock clock_type;
+
 struct critical_point_tracker_wrapper : public object {
   // json options:
   // - accelerator, string, 
@@ -84,8 +86,10 @@ void critical_point_tracker_wrapper::configure(const json& j0)
   add_boolean_option("enable_discarding_interval_points", false);
   add_boolean_option("enable_discarding_degenerate_points", false);
   add_boolean_option("enable_ignoring_degenerate_points", false);
+  add_boolean_option("enable_timing", false);
 
   add_number_option("duration_pruning_threshold", 0);
+  add_number_option("nblocks", 1);
   
   /// application specific
   if (j.contains("xgc")) {
@@ -240,6 +244,9 @@ void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communi
       tracker->use_accelerator( FTK_XL_CUDA );
   }
 
+  if (j.contains("nblocks"))
+    tracker->set_number_of_blocks(j["nblocks"]);
+
   tracker->set_input_array_partial(false); // input data are not distributed
 
   // if (use_type_filter)
@@ -311,7 +318,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
   // tracker set up
   tracker = std::shared_ptr<critical_point_tracker_2d_unstructured>(
-      new ftk::critical_point_tracker_2d_unstructured(m));
+      new critical_point_tracker_2d_unstructured(comm, m));
   configure_tracker_general(comm);
 
   tracker->set_scalar_components({"dneOverne0", "psi"});
@@ -417,6 +424,8 @@ void critical_point_tracker_wrapper::write_intercepted_results(int k, int nt)
 
 void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
+  auto t0 = clock_type::now();
+
   const auto js = stream.get_json();
   const size_t nd = stream.n_dimensions(),
                DW = js["dimensions"][0], 
@@ -427,10 +436,10 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
 
   std::shared_ptr<critical_point_tracker_regular> rtracker;
   if (nd == 2) {
-    rtracker.reset(new ftk::critical_point_tracker_2d_regular);
+    rtracker.reset(new critical_point_tracker_2d_regular(comm));
     rtracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   } else {
-    rtracker.reset(new ftk::critical_point_tracker_3d_regular);
+    rtracker.reset(new critical_point_tracker_3d_regular(comm));
     rtracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
 
@@ -459,9 +468,9 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
   }
   tracker = rtracker;
   
-  tracker->initialize();
   configure_tracker_general(comm);
-  
+  tracker->initialize();
+ 
   if (j.contains("archived_traced_critical_points_filename")) {
     fprintf(stderr, "reading archived traced critical points...\n");
     const std::string filename = j["archived_traced_critical_points_filename"];
@@ -502,9 +511,22 @@ void critical_point_tracker_wrapper::consume_regular(ndarray_stream<> &stream, d
       write_sliced_results(k-1);
   });
 
+  auto t1 = clock_type::now();
+
   stream.start();
   stream.finish();
+
+  auto t2 = clock_type::now();
+  
   tracker->finalize();
+  auto t3 = clock_type::now();
+
+  if (comm.rank() == 0 && j["enable_timing"]) {
+    float t_init = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
+          t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9,
+          t_finalize = std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2).count() * 1e-9;
+    fprintf(stderr, "t_init=%f, t_compute=%f, t_finalize=%f\n", t_init, t_compute, t_finalize);
+  }
   // delete tracker;
 }
 
@@ -512,7 +534,7 @@ void critical_point_tracker_wrapper::xgc_post_process()
 {
   fprintf(stderr, "post processing for xgc...\n");
 
-  tracker->select_trajectories([](const ftk::critical_point_traj_t& traj) {
+  tracker->select_trajectories([](const ftk::feature_curve_t& traj) {
     // if (traj.tmax - traj.tmin /*duration*/< 2.0) return false;
     
     if (traj.consistent_type == ftk::CRITICAL_POINT_2D_MAXIMUM && traj.max[0] > 5.0) return true;
@@ -525,13 +547,13 @@ void critical_point_tracker_wrapper::xgc_post_process()
   });
   
   auto &trajs = tracker->get_traced_critical_points();
-  trajs.foreach([](ftk::critical_point_traj_t& t) {
+  trajs.foreach([](ftk::feature_curve_t& t) {
     t.discard_interval_points();
     t.derive_velocity();
   });
   
   tracker->slice_traced_critical_points();
-  tracker->select_sliced_critical_points([](const ftk::critical_point_t& cp) {
+  tracker->select_sliced_critical_points([](const ftk::feature_point_t& cp) {
     // if (cp.scalar[1] < 0.18 || cp.scalar[1] > 0.3) return false;
     if (cp.type == ftk::CRITICAL_POINT_2D_MAXIMUM && cp.scalar[0] > 5.0) return true;
     else if (cp.type == ftk::CRITICAL_POINT_2D_MINIMUM && cp.scalar[0] < -5.0) return true;
@@ -543,7 +565,7 @@ void critical_point_tracker_wrapper::post_process()
 {
   auto &trajs = tracker->get_traced_critical_points();
 
-  trajs.foreach([](ftk::critical_point_traj_t& t) {
+  trajs.foreach([](ftk::feature_curve_t& t) {
     t.discard_high_cond();
     t.smooth_ordinal_types();
     t.smooth_interval_types();
@@ -553,18 +575,18 @@ void critical_point_tracker_wrapper::post_process()
   });
   if (j["duration_pruning_threshold"] > 0) {
     const double threshold = j["duration_pruning_threshold"];
-    trajs.filter([&](const critical_point_traj_t& traj) {
+    trajs.filter([&](const feature_curve_t& traj) {
       if (traj.tmax - traj.tmin < threshold) return false;
       else return true;
     });
   }
   trajs.split_all();
   if (j["enable_discarding_interval_points"] == true) {
-    trajs.foreach([](ftk::critical_point_traj_t& t) {
+    trajs.foreach([](ftk::feature_curve_t& t) {
       t.discard_interval_points();
     });
   }
-  trajs.foreach([](ftk::critical_point_traj_t& t) {
+  trajs.foreach([](ftk::feature_curve_t& t) {
     t.reorder();
     t.adjust_time();
     // t.relabel(k);
@@ -575,7 +597,7 @@ void critical_point_tracker_wrapper::post_process()
     xgc_post_process();
   
   if (j.contains("enable_deriving_velocities")) {
-    trajs.foreach([](ftk::critical_point_traj_t& t) {
+    trajs.foreach([](ftk::feature_curve_t& t) {
       t.discard_interval_points();
       t.derive_velocity();
       t.update_statistics();

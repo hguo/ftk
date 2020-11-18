@@ -20,6 +20,8 @@
 vtkStandardNewMacro(ftkCriticalPointTracker3D);
 
 ftkCriticalPointTracker3D::ftkCriticalPointTracker3D()
+  : tracker(diy::mpi::communicator()), 
+  UseGPU(false), GaussianKernelSize(1.0)
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);

@@ -20,6 +20,8 @@ vtkStandardNewMacro(ftkMovingExtremum2DSource);
 ftkMovingExtremum2DSource::ftkMovingExtremum2DSource() : 
   DW(32), DH(32), DT(10)
 {
+  X0[0] = X0[1] = 10.0;
+  Dir[0] = Dir[1] = 0.1;
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }

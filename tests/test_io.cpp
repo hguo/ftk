@@ -4,6 +4,8 @@
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 
+diy::mpi::environment env;
+
 bool write(const json& jstream, const json& jwriter)
 {
   ftk::ndarray_stream<> stream;
@@ -61,10 +63,15 @@ TEST_CASE("io_write_vti_volcano") {
 TEST_CASE("io_write_vti_moving_extremum_2d_synthetic") {
   CHECK(write(js_moving_extremum_2d_synthetic, jw_moving_extremum_2d_vti));
 }
+
+TEST_CASE("io_write_vti_moving_ramp_3d_synthetic") {
+  CHECK(write(js_moving_ramp_3d_synthetic, jw_moving_ramp_3d_vti));
+}
 #endif
 
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv);
+  return 0;
 }

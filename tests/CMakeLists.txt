@@ -10,80 +10,80 @@ add_custom_target(copy_test_data ALL
 )
 
 add_executable (test_mesh test_mesh.cpp)
-target_link_libraries (test_mesh ftk)
+target_link_libraries (test_mesh libftk)
 
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
-target_link_libraries (test_quadratic_interpolation ftk)
+target_link_libraries (test_quadratic_interpolation libftk)
 catch_discover_tests (test_quadratic_interpolation)
 
 add_executable (test_regular_simplex_mesh test_regular_simplex_mesh.cpp)
-target_link_libraries (test_regular_simplex_mesh ftk)
+target_link_libraries (test_regular_simplex_mesh libftk)
 # catch_discover_tests (test_regular_simplex_mesh)
 
 add_executable (test_array_stream test_array_stream.cpp)
-target_link_libraries (test_array_stream ftk)
+target_link_libraries (test_array_stream libftk)
 
 add_executable (test_union_find test_union_find.cpp)
-target_link_libraries (test_union_find ftk)
+target_link_libraries (test_union_find libftk)
 catch_discover_tests (test_union_find)
 
 add_executable (test_parallel_vectors test_parallel_vectors.cpp)
-target_link_libraries (test_parallel_vectors ftk)
+target_link_libraries (test_parallel_vectors libftk)
 catch_discover_tests (test_parallel_vectors)
 
 add_executable (test_polynomial test_polynomial.cpp)
-target_link_libraries (test_polynomial ftk)
+target_link_libraries (test_polynomial libftk)
 catch_discover_tests (test_polynomial)
 
 add_executable (test_hoshen_kopelman test_hoshen_kopelman.cpp)
-target_link_libraries (test_hoshen_kopelman ftk)
+target_link_libraries (test_hoshen_kopelman libftk)
 catch_discover_tests (test_hoshen_kopelman)
 
 add_executable (test_conv test_conv.cpp)
-target_link_libraries (test_conv ftk)
+target_link_libraries (test_conv libftk)
 catch_discover_tests (test_conv)
 
 add_executable (test_inequality_solvers test_inequality_solvers.cpp)
-target_link_libraries (test_inequality_solvers ftk)
+target_link_libraries (test_inequality_solvers libftk)
 catch_discover_tests (test_inequality_solvers)
 
 add_executable (test_matrix test_matrix.cpp)
-target_link_libraries (test_matrix ftk)
+target_link_libraries (test_matrix libftk)
 catch_discover_tests (test_matrix)
 
 add_executable (test_inverse_interpolation test_inverse_interpolation.cpp)
-target_link_libraries (test_inverse_interpolation ftk)
+target_link_libraries (test_inverse_interpolation libftk)
 catch_discover_tests (test_inverse_interpolation)
 
 add_executable (test_io test_io)
-target_link_libraries (test_io ftk)
+target_link_libraries (test_io libftk)
 catch_discover_tests (test_io)
 
 #add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
-#target_link_libraries (test_critical_point_tracking_woven ftk)
+#target_link_libraries (test_critical_point_tracking_woven libftk)
 
 add_executable (test_critical_point_tracking_woven_unstructured test_critical_point_tracking_woven_unstructured.cpp)
-target_link_libraries (test_critical_point_tracking_woven_unstructured ftk)
+target_link_libraries (test_critical_point_tracking_woven_unstructured libftk)
 
 add_executable (test_critical_point_tracking_moving_extremum_2d_unstructured test_critical_point_tracking_moving_extremum_2d_unstructured.cpp)
-target_link_libraries (test_critical_point_tracking_moving_extremum_2d_unstructured ftk)
+target_link_libraries (test_critical_point_tracking_moving_extremum_2d_unstructured libftk)
 
 add_executable (test_critical_point_tracking_moving_extremum_2d test_critical_point_tracking_moving_extremum_2d)
-target_link_libraries (test_critical_point_tracking_moving_extremum_2d ftk)
+target_link_libraries (test_critical_point_tracking_moving_extremum_2d libftk)
 
 add_executable (test_critical_point_tracking_moving_extremum_3d test_critical_point_tracking_moving_extremum_3d)
-target_link_libraries (test_critical_point_tracking_moving_extremum_3d ftk)
+target_link_libraries (test_critical_point_tracking_moving_extremum_3d libftk)
 
 add_executable(test_adios2 test_adios2.cpp)
-target_link_libraries (test_adios2 ftk)
+target_link_libraries (test_adios2 libftk)
 
 add_executable (test_critical_point_tracking_merger_2d test_critical_point_tracking_merger_2d)
-target_link_libraries (test_critical_point_tracking_merger_2d ftk)
+target_link_libraries (test_critical_point_tracking_merger_2d libftk)
 catch_discover_tests (test_critical_point_tracking_merger_2d)
 
 function (add_mpi_test target maxp args)
   add_executable (${target} ${target}.cpp)
-  target_link_libraries (${target} ftk)
+  target_link_libraries (${target} libftk)
   if (FTK_HAVE_MPI)
     foreach (p RANGE 1 ${maxp})
       add_test (NAME ${target}_p${p}
@@ -101,10 +101,10 @@ add_mpi_test (test_critical_point_tracking_double_gyre_unstructured 4 "")
 if (FTK_BUILD_EXECUTABLES)
   if (FTK_HAVE_MPI)
     add_test (NAME test_critical_point_tracking_cli_woven
-      COMMAND ${MPIEXEC} -np 1 $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.txt)
+      COMMAND ${MPIEXEC} -np 1 $<TARGET_FILE:ftk> -f cp --synthetic woven --output woven.txt)
   else ()
     add_test (NAME test_critical_point_tracking_cli_woven
-      COMMAND $<TARGET_FILE:track_critical_points> --synthetic woven --output woven.txt)
+      COMMAND $<TARGET_FILE:ftk> -f cp --synthetic woven --output woven.txt)
   endif ()
 endif ()
 

@@ -2,6 +2,7 @@
 #define _FTK_CLI_CONSTANTS_HH
 
 #include <ftk/ndarray/stream.hh>
+#include <ftk/utils/string.hh>
 #include <ftk/external/cxxopts.hpp>
 
 #define COMMON_OPTS_INPUTS() \
@@ -20,6 +21,7 @@
     ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>()) \
     ("perturbation", "Gaussian perturbation sigma", cxxopts::value<double>())
     // ("dim", "Spatial dimensionality of data (auto|2|3)", cxxopts::value<std::string>())
+    // ("nblocks-per-proc", "Number of blocks per proc", cxxopts::value<int>()) \
 
 static const std::string 
         str_auto("auto"),
@@ -54,22 +56,6 @@ static const std::set<std::string>
         set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti}),
         set_valid_input_dimension({str_auto, str_two, str_three});
 
-static inline bool ends_with(std::string const & value, std::string const & ending)
-{
-  if (ending.size() > value.size()) return false;
-  return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
-}
-
-// https://stackoverflow.com/questions/9435385/split-a-string-using-c11
-static inline std::vector<std::string> split(const std::string& input, const std::string& regex) {
-    // passing -1 as the submatch index parameter performs splitting
-    std::regex re(regex);
-    std::sregex_token_iterator
-        first{input.begin(), input.end(), re, -1},
-        last;
-    return {first, last};
-}
-
 static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
 {
   using nlohmann::json;
@@ -77,7 +63,7 @@ static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
 
   if (results.count("input")) {
     const std::string input = results["input"].as<std::string>();
-    if (ends_with(input, ".json")) {
+    if (ftk::ends_with(input, ".json")) {
       std::ifstream t(input);
       std::string str((std::istreambuf_iterator<char>(t)),
                        std::istreambuf_iterator<char>());
@@ -114,7 +100,7 @@ static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
   if (results.count("timesteps")) j["n_timesteps"] = results["timesteps"].as<size_t>();
   if (results.count("var")) {
     const auto var = results["var"].as<std::string>();
-    const auto vars = split(var, ",");
+    const auto vars = ftk::split(var, ",");
     // if (vars.size() == 1) j["variable"] = var;
     // else if (var.size() > 1) j["variable"] = vars; 
     j["variables"] = vars;

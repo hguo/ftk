@@ -5,6 +5,8 @@
 #include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
 
 using nlohmann::json;
+  
+diy::mpi::environment env;
 
 const std::string mesh_filename = "1x1.vtu";
 const int nt = 32;
@@ -18,7 +20,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_2d_unstructured") {
   m.from_vtk_unstructured_grid_file(mesh_filename);
   m.build_smoothing_kernel(kernel_size);
 
-  ftk::critical_point_tracker_2d_unstructured tracker(m);
+  ftk::critical_point_tracker_2d_unstructured tracker(world, m);
   tracker.initialize();
 
   for (int i = 0; i < nt; i ++) {
@@ -60,8 +62,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_2d_unstructured") {
 
 int main(int argc, char **argv)
 {
-  diy::mpi::environment env;
-
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv);
+  return 0;
 }

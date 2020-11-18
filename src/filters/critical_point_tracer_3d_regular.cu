@@ -1,8 +1,10 @@
 #include <nvfunctional>
 #include <cstdio>
 #include <cassert>
+#include <chrono>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_type.hh>
@@ -60,6 +62,8 @@ bool check_simplex_cp3t(
 
   double mu[4], cond;
   bool succ2 = ftk::inverse_lerp_s3v3(v, mu, &cond); //, 0.0);
+  if (!succ2) ftk::clamp_barycentric<4>(mu);
+
   if (1) { // (succ2) {
     // if (!succ2) return false;
     // linear jacobian interpolation
@@ -98,7 +102,9 @@ bool check_simplex_cp3t(
     cp.x[2] = x[2];
     cp.t = x[3];
     cp.cond = cond;
-  }
+    return true;
+  } else 
+    return false;
 }
 
 template <int scope>
@@ -148,7 +154,10 @@ static std::vector<cp_t> extract_cp3dt(
     const double *Sc,
     const double *Sn)
 {
+  auto t0 = std::chrono::high_resolution_clock::now();
+
   const size_t ntasks = core.n() * ntypes_4_3<scope>();
+  // fprintf(stderr, "ntasks=%zu\n", ntasks);
   const int maxGridDim = 1024;
   const int blockSize = 256;
   const int nBlocks = idivup(ntasks, blockSize);
@@ -231,7 +240,11 @@ static std::vector<cp_t> extract_cp3dt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: cudaFree");
  
   cudaDeviceSynchronize();
-  fprintf(stderr, "exitting gpu kernel, ncps=%llu\n", ncps);
+  auto t1 = std::chrono::high_resolution_clock::now();
+  float duration = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
+
+  fprintf(stderr, "exitting gpu kernel, ncps=%llu, time=%f\n", ncps, duration);
+  
 
   return cps;
 }

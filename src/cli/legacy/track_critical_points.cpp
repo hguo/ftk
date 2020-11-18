@@ -12,7 +12,7 @@
 #include "ftk/ndarray/conv.hh"
 #include "constants.hh"
 
-#if FTK_HAVE_VTK
+#if FTK_HAVE_VTK && !FTK_HAVE_PARAVIEW
 #include <ftk/geometry/curve2vtk.hh>
 #include <vtkPolyDataMapper.h>
 #include <vtkTubeFilter.h>
@@ -23,6 +23,8 @@
 #include <vtkInteractorStyleTrackballCamera.h>
 #endif
   
+diy::mpi::environment env;
+  
 // global variables
 std::string output_filename, output_type, output_format;
 std::string mesh_filename;
@@ -31,7 +33,8 @@ std::string archived_discrete_critical_points_filename,
 std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
-bool verbose = false, demo = false, show_vtk = false, help = false;
+bool verbose = false, timing = false, show_vtk = false, help = false;
+int nblocks; 
 bool enable_streaming_trajectories = false, 
      enable_discarding_interval_points = false,
      enable_deriving_velocities = false,
@@ -58,11 +61,13 @@ nlohmann::json j_tracker;
 ///////////////////////////////
 int parse_arguments(int argc, char **argv)
 {
+  diy::mpi::communicator world;
   const int argc0 = argc;
 
   cxxopts::Options options(argv[0]);
   options.add_options()COMMON_OPTS_INPUTS()
     ("m,mesh", "Input mesh file (will shadow arguments including width, height, depth)", cxxopts::value<std::string>())
+    ("nblocks", "Number of total blocks", cxxopts::value<int>(nblocks))
     ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
     ("archived-traced-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_traced_critical_points_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
@@ -83,6 +88,8 @@ int parse_arguments(int argc, char **argv)
      cxxopts::value<std::string>(type_filter_str))
     ("nthreads", "Number of threads", 
      cxxopts::value<int>(nthreads))
+    ("timing", "Enable timing", 
+     cxxopts::value<bool>(timing))
     ("a,accelerator", "Accelerator {none|cuda} (experimental)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
     ("stream",  "Stream trajectories (experimental)",
@@ -144,6 +151,9 @@ int parse_arguments(int argc, char **argv)
   j_tracker["intercept_length"] = intercept_length;
 
   j_tracker["nthreads"] = nthreads;
+  j_tracker["enable_timing"] = timing;
+
+  j_tracker["nblocks"] = std::max(world.size(), nblocks);
 
   if (accelerator != str_none)
     j_tracker["accelerator"] = accelerator;
@@ -187,7 +197,6 @@ int parse_arguments(int argc, char **argv)
 
   wrapper.configure(j_tracker);
 
-  diy::mpi::communicator world;
   if (world.rank() == 0) {
     // fprintf(stderr, "SUMMARY\n=============\n");
     std::cerr << "input=" << std::setw(2) << stream.get_json() << std::endl;
@@ -204,8 +213,8 @@ int parse_arguments(int argc, char **argv)
 
 void start_vtk_window()
 {
+#if FTK_HAVE_VTK && !FTK_HAVE_PARAVIEW
   auto tracker = wrapper.get_tracker();
-#if FTK_HAVE_VTK
   auto vtkcurves = tracker->get_traced_critical_points_vtk();
   vtkcurves->Print(std::cerr);
 
@@ -247,7 +256,6 @@ void start_vtk_window()
 
 int main(int argc, char **argv)
 {
-  diy::mpi::environment env;
   diy::mpi::communicator world;
   
   parse_arguments(argc, argv);

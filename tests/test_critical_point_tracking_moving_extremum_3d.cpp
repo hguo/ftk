@@ -92,5 +92,6 @@ int main(int argc, char **argv)
   diy::mpi::environment env;
   
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv);
+  return 0;
 }

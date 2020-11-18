@@ -1,15 +1,16 @@
 #ifndef _FTK_CONNECT_COMPONENT_TRACKER
 #define _FTK_CONNECT_COMPONENT_TRACKER
 
-#include <ftk/filters/filter.hh>
+#include <ftk/ftk_config.hh>
+#include <ftk/filters/tracker.hh>
 #include <ftk/tracking_graph/tracking_graph.hh>
 
 namespace ftk {
 
 template <typename TimeIndexType=size_t, typename LabelIdType=size_t>
-struct connected_component_tracker : public filter
+struct connected_component_tracker : public tracker
 {
-  connected_component_tracker() {}
+  connected_component_tracker(diy::mpi::communicator comm) : tracker(comm) {}
   virtual ~connected_component_tracker() {};
 
   virtual bool advance_timestep();

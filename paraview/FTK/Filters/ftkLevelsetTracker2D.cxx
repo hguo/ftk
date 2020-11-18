@@ -16,6 +16,8 @@
 vtkStandardNewMacro(ftkLevelsetTracker2D);
 
 ftkLevelsetTracker2D::ftkLevelsetTracker2D()
+  : tracker(diy::mpi::communicator()), 
+  Threshold(0.0)
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);
@@ -72,7 +74,7 @@ int ftkLevelsetTracker2D::RequestData(
     request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
     currentTimestep = 0;
     tracker.finalize();
-    // auto output = tracker.get_traced_levelset_vtk();
+    // auto output = tracker.get_traced_threshold_vtk();
   }
 
   currentTimestep ++;

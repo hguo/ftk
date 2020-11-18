@@ -67,7 +67,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name='pyftk',
-    version=('version.txt', 'r').read(),
+    version=open('version.txt', 'r').read(),
     author='Hanqi Guo',
     author_email='guohanqi@gmail.com',
     description='FTK: A Feature Tracking Kit',

@@ -7,6 +7,7 @@ using nlohmann::json;
 
 const int merger_n_trajs = 9;
   
+diy::mpi::environment env;
 diy::mpi::communicator world;
 
 TEST_CASE("critical_point_tracking_merger_2d_write_discrete_critical_points_binary") {
@@ -88,8 +89,7 @@ TEST_CASE("critical_point_tracking_merger_2d_read_traced_critical_points_json") 
 
 int main(int argc, char **argv)
 {
-  diy::mpi::environment env;
-
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv); // ignoring results
+  return 0;
 }

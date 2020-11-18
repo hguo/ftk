@@ -5,6 +5,7 @@
 
 #cmakedefine FTK_HAVE_ADIOS2 1
 #cmakedefine FTK_HAVE_BOOST 1
+#cmakedefine FTK_HAVE_CGAL 1
 #cmakedefine FTK_HAVE_CUDA 1
 #cmakedefine FTK_HAVE_GMP 1
 #cmakedefine FTK_HAVE_HDF5 1
@@ -14,6 +15,7 @@
 #cmakedefine FTK_HAVE_MPSOLVE 1
 #cmakedefine FTK_HAVE_NETCDF 1
 #cmakedefine FTK_HAVE_OPENMP 1
+#cmakedefine FTK_HAVE_PARAVIEW 1
 #cmakedefine FTK_HAVE_PNETCDF 1
 #cmakedefine FTK_HAVE_PNG 1
 #cmakedefine FTK_HAVE_PYBIND11 1

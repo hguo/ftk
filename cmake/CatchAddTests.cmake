@@ -31,20 +31,20 @@ endif()
 execute_process(
   COMMAND ${TEST_EXECUTOR} "${TEST_EXECUTABLE}" ${spec} --list-test-names-only
   OUTPUT_VARIABLE output
-  RESULT_VARIABLE result
+  # RESULT_VARIABLE result
 )
 # Catch --list-test-names-only reports the number of tests, so 0 is... surprising
-if(${result} EQUAL 0)
-  message(WARNING
-    "Test executable '${TEST_EXECUTABLE}' contains no tests!\n"
-  )
-elseif(${result} LESS 0)
-  message(FATAL_ERROR
-    "Error running test executable '${TEST_EXECUTABLE}':\n"
-    "  Result: ${result}\n"
-    "  Output: ${output}\n"
-  )
-endif()
+#if(${result} EQUAL 0)
+#  message(WARNING
+#    "Test executable '${TEST_EXECUTABLE}' contains no tests!\n"
+#  )
+#elseif(${result} LESS 0)
+#  message(FATAL_ERROR
+#    "Error running test executable '${TEST_EXECUTABLE}':\n"
+#    "  Result: ${result}\n"
+#    "  Output: ${output}\n"
+#  )
+#endif()
 
 string(REPLACE "\n" ";" output "${output}")
 

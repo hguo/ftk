@@ -3,6 +3,8 @@
 #include <ftk/algorithms/hoshen_kopelman.hh>
 #include <random>
 
+diy::mpi::environment env;
+
 TEST_CASE("hoshen_kopelman_2d", "hoshen_kopelman")
 {
   ftk::ndarray<int> input({8, 8}), output({8, 8});
@@ -35,5 +37,6 @@ TEST_CASE("hoshen_kopelman_2d", "hoshen_kopelman")
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv);
+  return 0;
 }

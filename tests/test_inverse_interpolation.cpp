@@ -73,5 +73,6 @@ TEST_CASE("inverse_trilinear_interpolation3") {
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  return session.run(argc, argv);
+  session.run(argc, argv);
+  return 0;
 }

@@ -26,13 +26,13 @@ struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded fr
 
 public: // element iteration
   void element_for(int d, std::function<void(I)> f, 
-      int nthreads=std::thread::hardware_concurrency()) const;
+      int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
 
   void element_for_ordinal(int d, int t, std::function<void(I)> f,
-      int nthreads=std::thread::hardware_concurrency()) const;
+      int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
   
   void element_for_interval(int d, int t, std::function<void(I)> f,
-      int nthreads=std::thread::hardware_concurrency()) const;
+      int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
 
 public: // mesh access
   std::set<I> sides(int d, I i) const;
@@ -171,30 +171,33 @@ size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n_interval(int d) const
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f, int nthreads) const
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f, 
+    int xl, int nthreads, bool affinity) const
 {
-  parallel_for(n(d), nthreads, [&](int i) {f(i);});
+  parallel_for(n(d), [&](int i) {f(i);}, xl, nthreads, affinity);
   // for (auto i = 0; i < n(d); i ++)
   //   f(i);
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f, int nthreads) const
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f, 
+    int xl, int nthreads, bool affinity) const
 {
-  parallel_for(n_ordinal(d), nthreads, [&](int i) {
-      f(i + t * n(d));});
+  parallel_for(n_ordinal(d), [&](int i) {
+      f(i + t * n(d));}, xl, nthreads, affinity);
 
   // for (auto i = 0; i < n_ordinal(d); i ++)
   //   f(i + t * n(d));
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f, int nthreads) const
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f, 
+    int xl, int nthreads, bool affinity) const
 {
-  parallel_for(n_interval(d), nthreads, [&](int i) {
+  parallel_for(n_interval(d), [&](int i) {
     const auto id = i + n_ordinal(d) + t * n(d);
     f(id);
-  });
+  }, xl, nthreads, affinity);
 
   // for (auto i = 0; i < n_interval(d); i ++) {
   //   const auto id = i + n_ordinal(d) + t * n(d);

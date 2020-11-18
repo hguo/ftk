@@ -25,7 +25,7 @@ static inline dim3 idivup(dim3 a, dim3 b)
 }
 
 template <typename T>
-__device__
+__device__ __host__
 inline static T fmod1(T x, T y)
 {
   T z = fmod(x, y);
@@ -34,7 +34,7 @@ inline static T fmod1(T x, T y)
 }
 
 template <typename T>
-__device__
+__device__ __host__
 inline static T mod2pi(T x)
 {
   T y = fmod(x, 2*M_PI); 
@@ -43,28 +43,28 @@ inline static T mod2pi(T x)
 }
 
 template <typename T>
-__device__
+__device__ __host__
 inline static T mod2pi1(T x)
 {
   return mod2pi(x + M_PI) - M_PI;
 }
 
 template <typename T> 
-__device__
+__device__ __host__
 inline int sgn(T x) 
 {
   return (T(0) < x) - (x < T(0));
 }
 
 template <typename T>
-__device__
+__device__ __host__
 static inline T inner_product(const T A[3], const T B[3])
 {
   return A[0]*B[0] + A[1]*B[1] + A[2]*B[2];
 }
 
 template <typename T>
-__device__
+__device__ __host__
 static inline T dist2(const T A[3], const T B[3])
 {
   const T D[3] = {B[0]-A[0], B[1]-A[1], B[2]-A[2]};

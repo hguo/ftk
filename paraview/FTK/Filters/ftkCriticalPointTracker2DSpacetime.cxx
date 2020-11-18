@@ -65,7 +65,7 @@ int ftkCriticalPointTracker2DSpacetime::TrackCriticalPoints2DSpacetime(vtkImageD
   // fprintf(stderr, "currentTimestep=%d, DW=%lu, DH=%lu, DT=%lu\n", 
   //     currentTimestep, DW, DH, DT);
 
-  ftk::critical_point_tracker_2d_regular tracker; 
+  ftk::critical_point_tracker_2d_regular tracker((diy::mpi::communicator())); 
   tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3}));
   // tracker.set_domain(ftk::lattice({4, 4}, {DW-6, DH-6}));
   tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));

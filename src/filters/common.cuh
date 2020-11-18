@@ -3,7 +3,7 @@
 
 #include "threadIdx.cuh"
 #include "utils.cuh"
-#include <ftk/filters/critical_point_lite.hh>
+#include <ftk/filters/feature_point_lite.hh>
 
 enum {
   scope_all = 0, 
@@ -95,9 +95,12 @@ typedef lite_element_t<3> element32_t;
 
 typedef lite_lattice_t<4> lattice4_t;
 typedef lite_element_t<4> element43_t;
+typedef lite_element_t<4> element42_t;
+typedef lite_element_t<4> element41_t;
 // typedef ftk::critical_point_t<4, double> cp4_t;
-typedef ftk::critical_point_lite_t cp_t;
-  
+typedef ftk::feature_point_lite_t cp_t;
+typedef ftk::feature_point_lite_t fp_t;
+
 template <int scope>
 __device__ __host__ inline int ntypes_3_2();
 
@@ -109,6 +112,27 @@ __device__ __host__ inline int ntypes_3_2<1>() { return 2; }
 
 template <>
 __device__ __host__ inline int ntypes_3_2<2>() { return 10; }
+
+template <int scope>
+__device__ __host__ inline int ntypes_4_1();
+
+template <>
+__device__ __host__ inline int ntypes_4_1<1>() {return 7;}
+
+template <>
+__device__ __host__ inline int ntypes_4_1<2>() {return 8;}
+
+template <int scope>
+__device__ __host__ inline int ntypes_4_2();
+
+template <>
+__device__ __host__ inline int ntypes_4_2<0>() { return 50; }
+
+template <>
+__device__ __host__ inline int ntypes_4_2<1>() { return 12; }
+
+template <>
+__device__ __host__ inline int ntypes_4_2<2>() { return 38; }
 
 template <int scope>
 __device__ __host__ inline int ntypes_4_3();
@@ -171,6 +195,109 @@ __device__ __host__ inline int unit_simplex_offset_3_2<2>(int type, int i, int j
       {{0,0,0},{1,1,0},{1,1,1}}
     };
   return unit_simplices_3_2_interval[type][i][j];
+}
+
+template <int scope>
+__device__ __host__ inline int unit_simplex_offset_4_1(int type, int i, int j);
+
+template <>
+__device__ __host__ inline int unit_simplex_offset_4_1<1>(int type, int i, int j)
+{
+  static const int unit_simplices_4_1_ordinal[][2][4] = {
+    {{0, 0, 0, 0}, {0, 0, 1, 0}},
+    {{0, 0, 0, 0}, {0, 1, 0, 0}},
+    {{0, 0, 0, 0}, {0, 1, 1, 0}},
+    {{0, 0, 0, 0}, {1, 0, 0, 0}},
+    {{0, 0, 0, 0}, {1, 0, 1, 0}},
+    {{0, 0, 0, 0}, {1, 1, 0, 0}},
+    {{0, 0, 0, 0}, {1, 1, 1, 0}}
+  };
+  return unit_simplices_4_1_ordinal[type][i][j];
+}
+
+template <>
+__device__ __host__ inline int unit_simplex_offset_4_1<2>(int type, int i, int j)
+{
+  static const int unit_simplices_4_1_interval[][2][4] = {
+    {{0, 0, 0, 0}, {0, 0, 0, 1}},
+    {{0, 0, 0, 0}, {0, 0, 1, 1}},
+    {{0, 0, 0, 0}, {0, 1, 0, 1}},
+    {{0, 0, 0, 0}, {0, 1, 1, 1}},
+    {{0, 0, 0, 0}, {1, 0, 0, 1}},
+    {{0, 0, 0, 0}, {1, 0, 1, 1}},
+    {{0, 0, 0, 0}, {1, 1, 0, 1}},
+    {{0, 0, 0, 0}, {1, 1, 1, 1}}
+  };
+  return unit_simplices_4_1_interval[type][i][j];
+}
+
+template <int scope>
+__device__ __host__ inline int unit_simplex_offset_4_2(int type, int i, int j);
+
+template <>
+__device__ __host__ inline int unit_simplex_offset_4_2<1>(int type, int i, int j)
+{
+  static const int unit_simplices_4_2_ordinal[][3][4] = {
+    {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 1, 0}},
+    {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 0, 1, 0}},
+    {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 1, 1, 0}},
+    {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 0}},
+    {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0}},
+    {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 1, 0}},
+    {{0, 0, 0, 0}, {0, 1, 1, 0}, {1, 1, 1, 0}},
+    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 1, 0}},
+    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 0, 0}},
+    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 1, 0}},
+    {{0, 0, 0, 0}, {1, 0, 1, 0}, {1, 1, 1, 0}},
+    {{0, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 1, 0}}
+  };  
+  return unit_simplices_4_2_ordinal[type][i][j];
+}
+
+template <>
+__device__ __host__ inline int unit_simplex_offset_4_2<2>(int type, int i, int j)
+{
+  static const int unit_simplices_4_2_interval[][3][4] = {
+    {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 0, 1}},
+    {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 0, 0, 1}},
+    {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 0, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 1, 0, 1}},
+    {{0, 0, 0, 0}, {0, 0, 0, 1}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 0, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 0, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 1, 1}, {0, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 1, 1}, {1, 0, 1, 1}},
+    {{0, 0, 0, 0}, {0, 0, 1, 1}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 1}},
+    {{0, 0, 0, 0}, {0, 1, 0, 0}, {0, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 1}},
+    {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 1, 0, 1}, {0, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 1, 0, 1}, {1, 1, 0, 1}},
+    {{0, 0, 0, 0}, {0, 1, 0, 1}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 1, 1, 0}, {0, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 1, 1, 0}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {0, 1, 1, 1}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 0, 1}},
+    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 0, 1, 1}},
+    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 0, 1}},
+    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {1, 0, 0, 1}, {1, 0, 1, 1}},
+    {{0, 0, 0, 0}, {1, 0, 0, 1}, {1, 1, 0, 1}},
+    {{0, 0, 0, 0}, {1, 0, 0, 1}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {1, 0, 1, 0}, {1, 0, 1, 1}},
+    {{0, 0, 0, 0}, {1, 0, 1, 0}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {1, 0, 1, 1}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 0, 1}},
+    {{0, 0, 0, 0}, {1, 1, 0, 0}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {1, 1, 0, 1}, {1, 1, 1, 1}},
+    {{0, 0, 0, 0}, {1, 1, 1, 0}, {1, 1, 1, 1}}
+  };  
+  return unit_simplices_4_2_interval[type][i][j];
 }
 
 template <int scope>
@@ -337,6 +464,44 @@ __device__ __host__
 uint element32_to_index(const lattice3_t& l, const int idx[3]) {
   size_t i = l.to_index(idx);
   return i * ntypes_3_2<scope>();
+}
+
+template <int scope=0, typename uint=size_t>
+__device__ __host__
+element41_t element41_from_index(const lattice4_t& l, uint i) {
+  element41_t e;
+  
+  e.type = i % ntypes_4_1<scope>();
+  uint ii = i / ntypes_4_1<scope>(); 
+  l.from_index(ii, e.corner);
+
+  return e;
+}
+
+template <int scope=0, typename uint=size_t>
+__device__ __host__
+uint element41_to_index(const lattice4_t& l, const int idx[4]) {
+  size_t i = l.to_index(idx);
+  return i * ntypes_4_1<scope>; 
+}
+
+template <int scope=0, typename uint=size_t>
+__device__ __host__
+element42_t element42_from_index(const lattice4_t& l, uint i) {
+  element42_t e;
+  
+  e.type = i % ntypes_4_2<scope>();
+  uint ii = i / ntypes_4_2<scope>(); 
+  l.from_index(ii, e.corner);
+
+  return e;
+}
+
+template <int scope=0, typename uint=size_t>
+__device__ __host__
+uint element42_to_index(const lattice4_t& l, const int idx[4]) {
+  size_t i = l.to_index(idx);
+  return i * ntypes_4_2<scope>; 
 }
 
 template <int scope=0, typename uint=size_t>

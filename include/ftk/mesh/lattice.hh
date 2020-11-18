@@ -9,6 +9,8 @@
 #include <ostream>
 #include <limits>
 
+#include <ftk/external/diy/types.hpp>
+
 namespace ftk {
 
 struct lattice {
@@ -18,6 +20,9 @@ struct lattice {
   lattice(int n);
   lattice(const std::vector<size_t> &starts, const std::vector<size_t> &sizes) {reshape(starts, sizes);}
   lattice(const std::vector<size_t> &sizes) {reshape(sizes);}
+
+  lattice(const diy::DiscreteBounds& b);
+  diy::DiscreteBounds to_diy_bounds() const;
 
   friend std::ostream& operator<<(std::ostream& os, const lattice&);
 
@@ -64,6 +69,30 @@ inline lattice::lattice(int n)
 {
   starts_.resize(n);
   sizes_.resize(n);
+}
+
+inline lattice::lattice(const diy::DiscreteBounds& b)
+{
+  const int nd = b.min.dimension();
+  starts_.resize(nd);
+  sizes_.resize(nd);
+
+  for (int i = 0; i < nd; i ++) {
+    starts_[i] = b.min[i];
+    sizes_[i] = b.max[i] - b.min[i] + 1;
+  }
+
+  reshape(starts_, sizes_);
+}
+
+inline diy::DiscreteBounds lattice::to_diy_bounds() const
+{
+  std::vector<int> lower(starts_.size()), upper(starts_.size());
+  for (int i = 0; i < starts_.size(); i ++) {
+    lower[i] = starts_[i];
+    upper[i] = starts_[i] + sizes_[i] - 1;
+  }
+  return diy::DiscreteBounds(lower, upper);
 }
 
 inline std::ostream& operator<<(std::ostream& os, const lattice& l)
