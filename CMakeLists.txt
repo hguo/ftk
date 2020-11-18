@@ -6,6 +6,10 @@ file(READ "version.txt" FTK_VERSION)
 include(GNUInstallDirs)
 # include (ExternalProject)
 
+option (FTK_BUILD_TESTS "Build tests" OFF)
+option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
+option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
+
 if (FTK_BUILD_PARAVIEW)
   find_package (ParaView REQUIRED)
   set (FTK_HAVE_PARAVIEW TRUE)
@@ -281,11 +285,6 @@ set (FTK_INCLUDE_DIR
 )
 include_directories (${FTK_INCLUDE_DIR})
 
-option (FTK_BUILD_TESTS "Build tests" OFF)
-# option (FTK_BUILD_EXECUTABLES "Build executables" ON)
-# option (FTK_BUILD_APPLICATIONS "Build applications" OFF)
-option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
-option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
 set (FTK_FP_PRECISION "32768" CACHE STRING "Fixed point precision")
 set (FTK_CP_MAX_NUM_VARS "3" CACHE STRING "Number of additional scalar properties for feature points")
 

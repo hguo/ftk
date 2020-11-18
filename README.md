@@ -45,18 +45,10 @@ You may use MPI to accelerate feature tracking with both distributed-parallelism
 $ CC=mpicc CXX=mpicxx cmake -DFTK_USE_MPI=ON
 ```
 
-Use  `mpiexec` to run the executable
-
-```bash
-$ mpiexec -n $NUM_PROCS ftk ...
-```
-
 #### Building with CUDA
 
-In order to build FTK with CUDA, you need to specify the path to the CUDA installation:
-
 ```bash
-$ cmake -DFTK_USE_CUDA=ON -DCUDA_TOOLKIT_ROOT_DIR=$YOUR_CUDA_TOOLKIT_DIR
+$ cmake -DFTK_USE_CUDA=ON -DCMAKE_CUDA_COMPILER=$YOUR_NVCC_COMPILER
 ```
 
 ### Use FTK command line interface
@@ -156,7 +148,11 @@ Use `mpiexec` for distributed execution; use `--nthreads` and `--accelerator` to
 
 ##### MPI
 
-The FTK executable recognizes the option to use multiple processes if `mpiexec` is used.  It is recommended to specify `--nthreads` to avoid over-subscribing resources if multiple processes are on the same computing node.
+The FTK executable recognizes the option to use multiple processes if `mpiexec` is used.  It is recommended to specify `--nthreads` to avoid over-subscribing resources if multiple processes are on the same computing node:
+
+```bash
+$ mpiexec -n $NUM_PROCS ftk --nthreads $NUM_THREADS_PER_PROC ...
+```
 
 ##### POSIX Threads
 
@@ -234,7 +230,7 @@ PyFTK provides synthetic data generators (`pyftk.synthesizers`), feature extract
 The results are trajectories organized in a list: 
 
 ```
-[{'length': 9, 'trace': [{'x': 2.275077079338536, 'y': 2.0, 't': 2.843946435964648, 'type': 'min', 'scalar': -0.7349697808320285}, {'x': 2.3009922790096073, 'y': 2.057205556154771, 't': 3.0, 'type': 'min', 'scalar': -0.7126261556354363}, {'x': 2.316376550504984, 'y': 2.0789601019629704, 't': 3.0789601019629704, 'type': 'min', 'scalar': -0.6994583185227987}, {'x': 2.3396684290296013, 'y': 2.109042720626548, 't': 3.339668429029601, 'type': 'min', 'scalar': -0.6203974444741183}, {'x': 2.4602960605411885, 'y': 2.367439624426215, 't': 4.0, 'type': 'min', 'scalar': -0.502426092806519}, {'x': 2.5836144734591056, 'y': 2.5204553926376145, 't': 4.520455392637614, 'type': 'saddle', 'scalar': -0.3968294787319291}, {'x': 2.587217124155211, 'y': 2.5205274563826645, 't': 4.587217124155211, 'type': 'saddle', 'scalar': -0.37723450315450113}, ...
+[{'length': 9, 'trace': [{'x': 2.275077079338536, 'y': 2.0, 't': 2.843946435964648, 'type': 'min', 'scalar': -0.7349697808320285}, {'x': 2.3009922790096073, 'y': 2.057205556154771, 't': 3.0, 'type': 'min', 'scalar': -0.7126261556354363}, {'x': 2.316376550504984, 'y': 2.0789601019629704, 't': 3.0789601019629704, 'type': 'min', 'scalar': -0.6994583185227987}, {'x': 2.3396684290296013, 'y': 2.109042720626548, 't': 3.339668429029601, 'type': 'min', 'scalar': -0.6203974444741183}, ...
 ```
 
 
@@ -261,9 +257,8 @@ $ tree $FTK_INSTALL_DIR
 │       ├── algorithms
 │       │   ├── bfs.hh
 ...
-│   └── hypermesh
-│       ├── ndarray.hh
-│       ├── regular_mesh.hh
+│   └── mesh
+│       ├── lattice.hh
 ...
 └── lib
     ├── cmake
@@ -298,8 +293,3 @@ $ cmake -DFTK_DIR=$FTK_INSTALL_DIR/lib/cmake
 * CCL: connected component labeling algorithm for building feature tracking algorithms
 * Geometry: utilities to transform connect components to geometry for visualization and analysis
 * Tracking graph: data structures to record births, deaths, merges, and splits of features; visualization algorithms for tracking graphs
-
-## Applications that use FTK
-
-* [vortexfinder2](https://github.com/hguo/vortexfinder2): Vortex finder for time-dependent Ginzburg-Landau superconductor simulation data
-* [libpressio](https://github.com/robertu94/libpressio): A library to abstract between different lossless and lossy compressors
