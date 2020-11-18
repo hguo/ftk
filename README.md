@@ -293,3 +293,11 @@ $ cmake -DFTK_DIR=$FTK_INSTALL_DIR/lib/cmake
 * CCL: connected component labeling algorithm for building feature tracking algorithms
 * Geometry: utilities to transform connect components to geometry for visualization and analysis
 * Tracking graph: data structures to record births, deaths, merges, and splits of features; visualization algorithms for tracking graphs
+
+## Contact
+
+* [Hanqi Guo](http://www.mcs.anl.gov/~hguo/), [hguo@anl.gov](mailto:hguo@anl.gov)
+
+## Reference
+
+Hanqi Guo, David Lenz, Jiayi Xu, Xin Liang, Wenbin He, Iulian R. Grindeanu, Han-Wei Shen, Tom Peterka, Todd Munson, and Ian Foster, "FTK: A High-Dimensional Simplicial Meshing Framework for Robust and Scalable Feature Tracking," [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) [cs.GR], 2020.
