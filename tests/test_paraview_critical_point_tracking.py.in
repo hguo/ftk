@@ -10,6 +10,14 @@ class MainTest(unittest.TestCase):
 
         self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 51)
         self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 1845)
+    
+    def test_paraview_critical_point_tracking_moving_extremum_2d(self):
+        data = MovingExtremum2DSource()
+        myCriticalPointTracker = CriticalPointTracker2D(Input=data)
+        myCriticalPointTracker.UpdatePipeline()
+
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 1)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 269)
 
 if __name__ == '__main__':
     unittest.main()
