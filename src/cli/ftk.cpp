@@ -9,6 +9,7 @@
 #include "ftk/filters/critical_point_tracker_wrapper.hh"
 #include "ftk/filters/contour_tracker_2d_regular.hh"
 #include "ftk/filters/contour_tracker_3d_regular.hh"
+#include "ftk/filters/parallel_vector_tracker_3d_regular.hh"
 #include "ftk/filters/tdgl_vortex_tracker_3d_regular.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"

@@ -41,6 +41,9 @@ struct feature_point_t {
   double vmag() const { // velocity magnitude
     return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
   }
+  
+  double &lambda() {return scalar[0];} // used for paralel vectors, alias scalar[0] for lambda
+  double lambda() const {return scalar[0];}
 
   std::ostream& print(std::ostream& os, const int cpdims, const std::vector<std::string>& scalar_components) const {
     if (cpdims == 2) os << "x=(" << x[0] << ", " << x[1] << "), ";

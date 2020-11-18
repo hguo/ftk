@@ -5,8 +5,10 @@
 #include <ftk/algorithms/cca.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
+#include <ftk/geometry/write_polydata.hh>
 #include <ftk/filters/filter.hh>
-#include <ftk/filters/parallel_vector_curve_set.hh>
+#include <ftk/filters/regular_tracker.hh>
+#include <ftk/filters/parallel_vector_tracker.hh>
 #include <ftk/numeric/parallel_vector_solver3.hh>
 #include <ftk/ndarray/grad.hh>
 #include <deque>
@@ -17,22 +19,19 @@
 
 namespace ftk {
 
-struct parallel_vector_tracker_3d_regular : public filter 
+struct parallel_vector_tracker_3d_regular : public parallel_vector_tracker, public regular_tracker
 {
-  parallel_vector_tracker_3d_regular() : m(4) {};
-  
-  void set_domain(const lattice& l) {domain = l;} // spatial domain
-  void set_array_domain(const lattice& l) {array_domain = l;}
-
+  parallel_vector_tracker_3d_regular(diy::mpi::communicator commm) : 
+    parallel_vector_tracker(comm), regular_tracker(comm, 3), tracker(comm) {};
+  virtual ~parallel_vector_tracker_3d_regular() {}
+ 
   void push_field_data_snapshot(
       const ndarray<double> &v, 
       const ndarray<double> &w, 
       const ndarray<double> &Jv);
 
   void update_timestep();
-  void advance_timestep();
 
-  void initialize();
   void finalize();
   void update() {}
 
@@ -44,19 +43,13 @@ public:
 #endif
 
 protected:
-  simplicial_regular_mesh m;
   typedef simplicial_regular_mesh_element element_t;
-  typedef parallel_vector_point_t pv_t;
-  // std::multimap<element_t, parallel_vector_point_t> discrete_pvs; // discrete parallel vector points
-  std::map<element_t, parallel_vector_point_t> discrete_pvs; // discrete parallel vector points
+  typedef feature_point_t pv_t;
 
-  parallel_vector_curve_set_t traced_pvs;
-  
-  struct field_data_snapshot_t {
-    ndarray<double> v,  w;
-    ndarray<double> Jv; // jacobian of v
-  };
-  std::deque<field_data_snapshot_t> field_data_snapshots;
+  // std::multimap<element_t, feature_point_t> discrete_pvs; // discrete parallel vector points
+  std::map<element_t, feature_point_t> discrete_pvs; // discrete parallel vector points
+
+  feature_curve_set_t traced_pvs;
 
   template <int n, typename T>
   void simplex_values(const element_t &e, 
@@ -67,29 +60,9 @@ private:
 
   void trace_curves();
   void trace_surfaces();
-
-protected:
-  lattice domain, array_domain;
-  int current_timestep = 0;
-  int start_timestep = 0, end_timestep = std::numeric_limits<int>::max();
 };
 
 /////
-inline void parallel_vector_tracker_3d_regular::initialize()
-{
-  // initializing bounds
-  m.set_lb_ub({
-      static_cast<int>(domain.start(0)),
-      static_cast<int>(domain.start(1)),
-      static_cast<int>(domain.start(2)),
-      start_timestep
-    }, {
-      static_cast<int>(domain.size(0)),
-      static_cast<int>(domain.size(1)),
-      static_cast<int>(domain.size(2)),
-      end_timestep
-    });
-}
 
 inline void parallel_vector_tracker_3d_regular::finalize()
 {
@@ -128,28 +101,6 @@ inline void parallel_vector_tracker_3d_regular::update_timestep()
     m.element_for_interval(2, current_timestep, current_timestep+1,
         std::bind(&parallel_vector_tracker_3d_regular::check_simplex, this, _1));
 #endif
-}
-
-inline void parallel_vector_tracker_3d_regular::advance_timestep()
-{
-  update_timestep();
-  if (field_data_snapshots.size() >= 2)
-    field_data_snapshots.pop_front();
-
-  current_timestep ++;
-}
-
-inline void parallel_vector_tracker_3d_regular::push_field_data_snapshot(
-    const ndarray<double>& v,
-    const ndarray<double>& w, 
-    const ndarray<double>& Jv)
-{
-  field_data_snapshot_t snapshot;
-  snapshot.v = v;
-  snapshot.w = w;
-  snapshot.Jv = Jv;
-
-  field_data_snapshots.emplace_back(snapshot);
 }
 
 template <int n/*number of vertices*/, typename T>
@@ -200,7 +151,7 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
 
   // if (ns > 1) return;
   for (int i = 0; i < ns; i ++) {
-    parallel_vector_point_t pv;
+    feature_point_t pv;
 
 #if 1 // check eigsystem
     double Jv[3][3];
@@ -215,16 +166,17 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
     double x[4], v[3], w[3];
     lerp_s2v4(X, mus[i], x);
     lerp_s2v3(V, mus[i], v);
-    lerp_s2v3(W, mus[i], w);
+    // lerp_s2v3(W, mus[i], w);
 
-    for (int i = 0; i < 3; i ++) {
-      pv.x[i] = x[i];
-      pv.v[i] = v[i];
-      pv.w[i] = w[i];
+    for (int j = 0; j < 3; j ++) {
+      pv.x[j] = x[j];
+      pv.v[j] = v[j];
+      // pv.w[i] = w[i];
     }
     
     pv.t = x[3];
-    pv.lambda = lambdas[i];
+    // pv.lambda = lambdas[i];
+    pv.scalar[0] = lambdas[i];
     pv.cond = cond;
     pv.ordinal = e.is_ordinal(m);
     pv.tag = e.to_integer(m);
@@ -243,7 +195,7 @@ inline void parallel_vector_tracker_3d_regular::check_simplex(
   // bool succ = solve_ridge(V, W, lambda, mu, cond);
 
   if (succ) {
-    parallel_vector_point_t pv;
+    feature_point_t pv;
     double x[4], v[3], w[3];
     lerp_s2v4(X, mu, x);
     lerp_s2v3(V, mu, v);
@@ -337,7 +289,7 @@ inline void parallel_vector_tracker_3d_regular::trace_curves()
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
     for (int j = 0; j < linear_graphs.size(); j ++) {
-      parallel_vector_curve_t curve; 
+      feature_curve_t curve;
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         curve.push_back(discrete_pvs[linear_graphs[j][k]]);
       traced_pvs.add(curve);
@@ -392,7 +344,7 @@ inline vtkSmartPointer<vtkPolyData> parallel_vector_tracker_3d_regular::get_disc
     lambdas->SetNumberOfValues(nv);
     size_t i = 0;
     for (const auto &kv : discrete_pvs)
-      lambdas->SetValue(i ++, kv.second.lambda);
+      lambdas->SetValue(i ++, kv.second.lambda());
     lambdas->SetName("lambda");
     polyData->GetPointData()->AddArray(lambdas);
   }
@@ -407,7 +359,8 @@ inline vtkSmartPointer<vtkPolyData> parallel_vector_tracker_3d_regular::get_disc
     v->SetName("v");
     polyData->GetPointData()->AddArray(v);
   }
-  
+ 
+#if 0
   if (1) { // w
     vtkSmartPointer<vtkDoubleArray> w = vtkSmartPointer<vtkDoubleArray>::New();
     w->SetNumberOfComponents(3);
@@ -418,6 +371,7 @@ inline vtkSmartPointer<vtkPolyData> parallel_vector_tracker_3d_regular::get_disc
     w->SetName("w");
     polyData->GetPointData()->AddArray(w);
   }
+#endif
 
   if (1) { // condition numbers
     vtkSmartPointer<vtkDoubleArray> conds = vtkSmartPointer<vtkDoubleArray>::New();
@@ -446,15 +400,15 @@ inline void parallel_vector_tracker_3d_regular::write_discrete_pvs_vtk(const std
 {
   if (is_root_proc()) {
     auto poly = get_discrete_pvs_vtk();
-    write_vtp(filename, poly);
+    write_polydata(filename, poly);
   }
 }
 
 inline void parallel_vector_tracker_3d_regular::write_traced_pvs_vtk(const std::string& filename) const
 {
   if (is_root_proc()) {
-    auto poly = traced_pvs.to_vtp();
-    write_vtp(filename, poly);
+    auto poly = traced_pvs.to_vtp(3, {"lambda"});
+    write_polydata(filename, poly);
   }
 }
 #else
