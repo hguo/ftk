@@ -1,0 +1,9 @@
+import unittest
+from paraview.simple import *
+LoadPlugin("$<TARGET_FILE:FTK>", ns=globals())
+
+myWoven = SpiralWoven2DSource()
+myCriticalPointTracker = CriticalPointTracker2D(Input=myWoven)
+
+myCriticalPointTracker.UpdatePipeline()
+

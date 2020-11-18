@@ -5,6 +5,7 @@
 #include "vtkFloatArray.h"
 #include "vtkPolyData.h"
 #include "vtkPolyLine.h"
+#include "vtkAbstractArray.h"
 #include "vtkCellArray.h"
 #include "vtkImageData.h"
 #include "vtkSphereSource.h"
@@ -89,7 +90,10 @@ int ftkCriticalPointTracker2D::RequestData(
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
   
   if (currentTimestep == 0) { // first timestep
-    vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
+    // vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
+    vtkSmartPointer<vtkAbstractArray> da = input->GetPointData()->GetAbstractArray(InputVariable.c_str());
+    if (!da) da = input->GetPointData()->GetAbstractArray(0);
+
     inputDataComponents = da->GetNumberOfComponents();
     const size_t DW = input->GetDimensions()[0], 
                  DH = input->GetDimensions()[1];
