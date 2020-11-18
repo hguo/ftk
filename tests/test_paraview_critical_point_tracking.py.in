@@ -1,0 +1,15 @@
+import unittest
+from paraview.simple import *
+LoadPlugin("$<TARGET_FILE:FTK>", ns=globals())
+
+class MainTest(unittest.TestCase):
+    def test_paraview_critical_point_tracking_woven(self):
+        myWoven = SpiralWoven2DSource()
+        myCriticalPointTracker = CriticalPointTracker2D(Input=myWoven)
+        myCriticalPointTracker.UpdatePipeline()
+
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 51)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 1845)
+
+if __name__ == '__main__':
+    unittest.main()

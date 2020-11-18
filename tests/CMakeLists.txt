@@ -149,16 +149,16 @@ endif ()
 
 if (PARAVIEW_USE_PYTHON AND Python_FOUND) # testing paraview plugins
   file (GENERATE
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_critical_point_tracking_woven.py
-    INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/test_paraview_critical_point_tracking_woven.py.in)
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_critical_point_tracking.py
+    INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/test_paraview_critical_point_tracking.py.in)
 
   # set (_vtk_build_TEST_FILE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   # paraview_add_test_python(NO_RT DIRECT_DATA ${CMAKE_CURRENT_BINARY_DIR}/test_ftkCriticalPointTracker2D.py)
-  add_test (NAME test_paraview_critical_point_tracker_2d_woven
-    COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_critical_point_tracking_woven.py)
+  add_test (NAME test_paraview_critical_point_tracker_2d
+    COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_critical_point_tracking.py)
 
   set_tests_properties (
-    test_paraview_critical_point_tracker_2d_woven
+    test_paraview_critical_point_tracker_2d
     PROPERTIES
     ENVIRONMENT "PYTHONPATH=${ParaView_PREFIX_PATH}/${PARAVIEW_PYTHONPATH}")
 endif ()
