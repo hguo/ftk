@@ -2,54 +2,26 @@
 #define _FTK_MESH_SIMPLEX_3D_HH
 
 #include <ftk/ftk_config.hh>
-#include <ftk/object.hh>
-#include <ftk/ndarray.hh>
-#include <ftk/numeric/vector_norm.hh>
-#include <ftk/algorithms/bfs.hh>
-#include <ftk/external/diy-ext/serialization.hh>
-#include <set>
-#include <iostream>
-#include <vector>
-
-#if FTK_HAVE_VTK
-#include <vtkDataSet.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkDataArray.h>
-#include <vtkFloatArray.h>
-#include <vtkDoubleArray.h>
-#include <vtkIntArray.h>
-#include <vtkUnsignedIntArray.h>
-#include <vtkUnsignedLongArray.h>
-#include <vtkLongArray.h>
-#include <vtkGenericCell.h>
-#include <vtkDataSetWriter.h>
-#include <vtkXMLUnstructuredGridWriter.h>
-#include <vtkXMLUnstructuredGridReader.h>
-#include <vtkUnstructuredGridReader.h>
-#include <vtkPointData.h>
-#include <vtkPoints2D.h>
-#endif
+#include <ftk/mesh/simplicial_unstructured_mesh.hh>
 
 namespace ftk {
 
 template <typename I=int, typename F=double>
-struct simplicial_unstructured_3d_mesh : public object {
+struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, F> {
   simplicial_unstructured_3d_mesh() {}
 
   simplicial_unstructured_3d_mesh(
       const std::vector<F>& coords, 
       const std::vector<I>& tetrahedra);
 
-  size_t nd() const {return 3;}
+  int nd() const {return 3;}
+  size_t n(int d) const {return 0;} // WIP
 
   void build_edges();
   void build_triangles();
   void build_tetrahedra();
 
 public: // io
-  void from_vtk_unstructured_grid_file(const std::string &filename);
-  void to_vtk_unstructured_grid_file(const std::string& filename) const;
-
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
   void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid);
@@ -89,19 +61,6 @@ public:
 
 //////////
   
-template <typename I, typename F>
-inline void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid_file(const std::string &filename)
-{
-#if FTK_HAVE_VTK
-  vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
-  reader->SetFileName(filename.c_str());
-  reader->Update();
-  from_vtk_unstructured_grid(reader->GetOutput());
-#else
-  fatal("FTK not commpiled with VTK");
-#endif
-}
-
 #if FTK_HAVE_VTK  
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid)
@@ -139,6 +98,15 @@ void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartP
 
   // build_triangles();
   // build_edges();
+}
+
+template <typename I, typename F>
+vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_3d_mesh<I, F>::
+to_vtk_unstructured_grid() const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
+  // TODO
+  return grid;
 }
 #endif
 
