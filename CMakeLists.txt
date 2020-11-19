@@ -136,6 +136,7 @@ if (MPI_FOUND)
   set (CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
   include_directories (${MPI_C_INCLUDE_DIRS})
 else ()
+  set (FTK_HAVE_MPI FALSE)
   # add_definitions (-DDIY_NO_MPI)
 endif ()
 
@@ -179,6 +180,8 @@ endif ()
 if (GMP_FOUND)
   set (FTK_HAVE_GMP TRUE)
   include_directories (${GMP_INCLUDE_DIRS})
+else ()
+  set (FTK_HAVE_GMP FALSE)
 endif ()
 
 if (FTK_USE_MPFR STREQUAL AUTO)
@@ -189,6 +192,8 @@ endif ()
 if (MPFR_FOUND)
   set (FTK_HAVE_MPFR TRUE)
   include_directories (${MPFR_INCLUDE_DIRS})
+else ()
+  set (FTK_HAVE_MPFR FALSE)
 endif ()
 
 if (FTK_USE_GSL STREQUAL AUTO)
@@ -305,7 +310,7 @@ set (FTK_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake
-  PATH_VARS FTK_INCLUDE_DIR FTK_HAVE_VTK
+  PATH_VARS FTK_INCLUDE_DIR 
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FTK
   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake

@@ -5,6 +5,10 @@
 include(CMakeFindDependencyMacro)
 include("${CMAKE_CURRENT_LIST_DIR}/ftkTargets.cmake") 
 
+set (FTK_HAVE_GMP @FTK_HAVE_GMP@)
+set (FTK_HAVE_MPI @FTK_HAVE_MPI@)
+set (FTK_HAVE_VTK @FTK_HAVE_VTK@)
+
 if (@FTK_HAVE_VTK@)
   find_dependency (VTK ${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION})
 endif ()
