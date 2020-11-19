@@ -2,7 +2,8 @@ if (FTK_BUILD_PYFTK)
   include_directories (${PYTHON_INCLUDE_DIRS})
 endif ()
 
-add_subdirectory (cli)
+add_executable (ftk cli/ftk.cpp)
+target_link_libraries (ftk PRIVATE libftk)
 
 set (ftk_sources
   numeric/polynomial_solver.cpp
@@ -24,7 +25,6 @@ if (FTK_HAVE_CUDA)
 endif ()
 
 add_library (libftk SHARED ${ftk_sources} ${ftk_cuda_sources})
-
 target_link_libraries (libftk ${CMAKE_THREAD_LIBS_INIT})
 
 if (FTK_HAVE_ADIOS2)
@@ -95,9 +95,13 @@ endif ()
 #  target_link_libraries (libftk ${PYTHON_LIBRARY})
 #endif ()
 
-install (TARGETS libftk
+install (TARGETS libftk ftk
   EXPORT FTKTargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  # ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+install (EXPORT FTKTargets
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FTK
+  NAMESPACE FTK::)

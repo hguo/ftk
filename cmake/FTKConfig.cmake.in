@@ -2,7 +2,14 @@
 
 @PACKAGE_INIT@
 
-set (FTK_FOUND 1)
-set (FTK_INCLUDE_DIRS "@FTK_INCLUDE_DIR@")
+include(CMakeFindDependencyMacro)
+include("${CMAKE_CURRENT_LIST_DIR}/ftkTargets.cmake") 
+
+if (@FTK_HAVE_VTK@)
+  find_dependency (VTK ${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION})
+endif ()
+
 set (FTK_INCLUDE_DIR "@FTK_INCLUDE_DIR@")
-set (FTK_LIBRARY "@FTK_LIBRARY")
+
+# set (FTK_FOUND 1)
+# set (FTK_LIBRARY "@FTK_LIBRARY@")

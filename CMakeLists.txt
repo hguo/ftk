@@ -305,7 +305,7 @@ set (FTK_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake
-  PATH_VARS FTK_INCLUDE_DIR FTK_ROOT_DIR
+  PATH_VARS FTK_INCLUDE_DIR FTK_HAVE_VTK
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/FTK
   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/FTKConfig.cmake
@@ -318,10 +318,6 @@ if (FTK_BUILD_PYFTK)
 endif ()
 
 add_subdirectory (src)
-
-#if (FTK_BUILD_EXECUTABLES)
-#  add_subdirectory (cli)
-#endif ()
 
 if (FTK_BUILD_PARAVIEW)
   add_subdirectory (paraview)
