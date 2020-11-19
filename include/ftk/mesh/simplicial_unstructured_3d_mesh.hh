@@ -15,7 +15,7 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
       const std::vector<I>& tetrahedra);
 
   int nd() const {return 3;}
-  size_t n(int d) const {return 0;} // WIP
+  size_t n(int d) const;
 
   void build_edges();
   void build_triangles();
@@ -60,7 +60,20 @@ public:
 };
 
 //////////
-  
+template <typename I, typename F>
+size_t simplicial_unstructured_3d_mesh<I, F>::n(int d) const
+{
+  if (d == 0) 
+    return vertex_coords.dim(1);
+  else if (d == 1)
+    return edges.dim(1);
+  else if (d == 2)
+    return triangles.dim(1);
+  else if (d == 3)
+    return tetrahedra.dim(1);
+  else return 0;
+}
+
 #if FTK_HAVE_VTK  
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid)
@@ -105,7 +118,18 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_3d_mesh<I, F>::
 to_vtk_unstructured_grid() const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
-  // TODO
+  vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
+  pts->SetNumberOfPoints(n(0));
+
+  for (int i=0; i<n(0); i++)
+    pts->SetPoint(i, vertex_coords[i*3], vertex_coords[i*3+1], vertex_coords[i*3+2]); 
+
+  for (int i=0; i<n(3); i ++) {
+    vtkIdType ids[4] = {tetrahedra[i*4], tetrahedra[i*4+1], tetrahedra[i*4+2], tetrahedra[i*4+3]};
+    grid->InsertNextCell(VTK_TETRA, 4, ids);
+  }
+
+  grid->SetPoints(pts);
   return grid;
 }
 #endif
