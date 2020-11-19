@@ -52,6 +52,7 @@ public: // io
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
+  void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid);
 #endif
 
 public: 
@@ -85,7 +86,62 @@ public:
   std::map<std::tuple<I, I, I>, int> triangle_id_map;
   std::map<std::tuple<I, I, I, I>, int> tetrahedron_id_map;
 };
+
+//////////
   
+template <typename I, typename F>
+inline void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid_file(const std::string &filename)
+{
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+  from_vtk_unstructured_grid(reader->GetOutput());
+#else
+  fatal("FTK not commpiled with VTK");
+#endif
+}
+
+#if FTK_HAVE_VTK  
+template <typename I, typename F>
+void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid)
+{
+  vtkIdType ncells = grid->GetNumberOfCells();
+  std::vector<int> tets;
+  for (vtkIdType i = 0; i < ncells; i ++) {
+    vtkSmartPointer<vtkCell> cell = grid->GetCell(i);
+    if (cell->GetCellType() == VTK_TETRA) {
+      vtkIdType v[4] = {
+        cell->GetPointId(0), 
+        cell->GetPointId(1), 
+        cell->GetPointId(2),
+        cell->GetPointId(3)
+      };
+      std::sort(v, v+4);
+      for (int j = 0; j < 4; j ++)
+        tets.push_back(v[j]);
+    }
+  }
+  tetrahedra.reshape({4, tets.size()/4});
+  tetrahedra.from_vector(tets);
+
+  vtkIdType npts = grid->GetNumberOfPoints();
+  vertex_coords.reshape({3, size_t(npts)});
+  for (vtkIdType i = 0; i < npts; i ++) {
+    double x[3];
+    grid->GetPoint(i, x);
+    for (int j = 0; j < 3; j ++)
+      vertex_coords(j, i) = x[j];
+  }
+
+  // fprintf(stderr, "#tet=%zu, #pts=%zu\n", 
+  //     tetrahedra.dim(1), vertex_coords.dim(1));
+
+  // build_triangles();
+  // build_edges();
+}
+#endif
+
 }
 
 #endif
