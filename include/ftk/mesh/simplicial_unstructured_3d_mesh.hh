@@ -17,10 +17,6 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
   int nd() const {return 3;}
   size_t n(int d) const;
 
-  void build_edges();
-  void build_triangles();
-  void build_tetrahedra();
-
 public: // io
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
@@ -43,6 +39,13 @@ public:
   void get_coords(I i, F coords[]) const;
 
   const ndarray<F>& get_coords() const {return vertex_coords;}
+
+private:
+  void initialize();
+
+  void build_edges();
+  void build_triangles();
+  void build_tetrahedra();
 
 private: // mesh conn
   ndarray<F> vertex_coords; // 3*n_vert
@@ -68,6 +71,18 @@ public:
 
 //////////
 template <typename I, typename F>
+simplicial_unstructured_3d_mesh<I, F>::simplicial_unstructured_3d_mesh(
+    const std::vector<F>& coords_,
+    const std::vector<I>& tetrahedra_)
+{
+  vertex_coords.copy_vector(coords_);
+  vertex_coords.reshape({3, coords_.size()/3});
+  
+  tetrahedra.copy_vector(tetrahedra_);
+  tetrahedra.reshape({4, tetrahedra_.size()/4});
+}
+
+template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::build_tetrahedra()
 {
   for (auto i = 0; i < n(3); i ++) {
@@ -79,7 +94,6 @@ void simplicial_unstructured_3d_mesh<I, F>::build_tetrahedra()
 
     tetrahedron_id_map[ std::make_tuple(v[0], v[1], v[2], v[3]) ] = i;
   }
-  fprintf(stderr, "#tetrahedra=%zu\n", tetrahedron_id_map.size());
 }
 
 template <typename I, typename F>
@@ -117,8 +131,6 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
     for (const auto tid : map_triangle_side_of[kv.second])
       triangle_side_of[kv.second].insert(tid);
   }
-
-  fprintf(stderr, "#triangles=%zu\n", triangle_id_map.size());
 }
 
 template <typename I, typename F>
@@ -156,8 +168,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
       edges_side_of[kv.second].insert(tid);
   }
 
-  fprintf(stderr, "#edges=%zu\n", edge_id_map.size());
-#if 0
+  /////// 
   vertex_side_of.resize(vertex_coords.dim(1));
   // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dim(1));
 
@@ -171,7 +182,6 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
     vertex_edge_vertex[v0].insert(v1);
     vertex_edge_vertex[v1].insert(v0);
   }
-#endif
 }
 
 template <typename I, typename F>
@@ -220,12 +230,22 @@ void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartP
       vertex_coords(j, i) = x[j];
   }
 
-  // fprintf(stderr, "#tet=%zu, #pts=%zu\n", 
-  //     tetrahedra.dim(1), vertex_coords.dim(1));
+  initialize();
+}
 
+
+template <typename I, typename F>
+void simplicial_unstructured_3d_mesh<I, F>::initialize()
+{
   build_tetrahedra();
   build_triangles();
   build_edges();
+  
+  fprintf(stderr, "3d mesh initialized: #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n", 
+      tetrahedron_id_map.size(),
+      triangle_id_map.size(), 
+      edge_id_map.size(),
+      vertex_edge_vertex.size());
 }
 
 template <typename I, typename F>
