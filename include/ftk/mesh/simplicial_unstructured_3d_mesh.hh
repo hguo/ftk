@@ -1,5 +1,5 @@
-#ifndef _FTK_MESH_SIMPLEX_3D_HH
-#define _FTK_MESH_SIMPLEX_3D_HH
+#ifndef _FTK_MESH_UNSTRUCTURED_3D_HH
+#define _FTK_MESH_UNSTRUCTURED_3D_HH
 
 #include <ftk/ftk_config.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>

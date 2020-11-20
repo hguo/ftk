@@ -1,20 +1,20 @@
-#ifndef _HYPERMESH_simplicial_unstructured_extruded_2d_mesh_HH
-#define _HYPERMESH_simplicial_unstructured_extruded_2d_mesh_HH
+#ifndef _HYPERMESH_simplicial_unstructured_extruded_3d_mesh_HH
+#define _HYPERMESH_simplicial_unstructured_extruded_3d_mesh_HH
 
-#include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_3d_mesh.hh>
 
 namespace ftk {
 
 template <typename I=int, typename F=double>
-struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded from 
-  simplicial_unstructured_extruded_2d_mesh(const simplicial_unstructured_2d_mesh<I, F>& m_) : m(m_) {extrude();}
+struct simplicial_unstructured_extruded_3d_mesh : public object { // extruded from 
+  simplicial_unstructured_extruded_3d_mesh(const simplicial_unstructured_3d_mesh<I, F>& m_) : m(m_) {extrude();}
 
   size_t n(int d) const;
   size_t n_ordinal(int d) const { return m.n(d); }
   size_t n_interval(int d) const;
 
   bool is_ordinal(int d, I i) const {
-    I k = mod(i, n(2));
+    I k = mod(i, n(3));
     return k < n_ordinal(d);
   }
 
@@ -47,19 +47,21 @@ protected:
   static I mod(I val, I m);
 
 private:
-  const simplicial_unstructured_2d_mesh<I, F>& m;
+  const simplicial_unstructured_3d_mesh<I, F>& m;
 
-  ftk::ndarray<I> tets, // {4, n(3)}
+  ftk::ndarray<I> pents,// {5, n(4)}
+                  tets, // {4, n(3)}
                   tris, // {3, n(2)}
                   edges;// {2, n(1)}
 
-  ftk::ndarray<I> tets_sides, // {4, n(3)}
+  ftk::ndarray<I> pents_sides,// {5, n(4)}
+                  tets_sides, // {4, n(3)}
                   tris_sides; // {3, n(2)}
 };
 
 /////
 template <typename I, typename F>
-I simplicial_unstructured_extruded_2d_mesh<I, F>::mod(I v, I m)
+I simplicial_unstructured_extruded_3d_mesh<I, F>::mod(I v, I m)
 {
   I mod = v % m;
   if (v < 0) mod += m;
@@ -67,64 +69,114 @@ I simplicial_unstructured_extruded_2d_mesh<I, F>::mod(I v, I m)
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude() 
+void simplicial_unstructured_extruded_3d_mesh<I, F>::extrude() 
 {
+  // pents
+  pents.reshape({5, n(4)});
+  for (auto i = 0; i < m.n(3); i ++) {
+    I tet[4];
+    m.get_tetrahedron(i, tet);
+
+    pents(0, i) = tet[0]; // type I:   0 1 2 3 3'
+    pents(1, i) = tet[1];
+    pents(2, i) = tet[2];
+    pents(3, i) = tet[3];
+    pents(4, i) = tet[3] + m.n(0);
+
+    pents(0, i+m.n(3)) = tet[0]; // type II:  0 1 2 2'3'
+    pents(1, i+m.n(3)) = tet[1];
+    pents(2, i+m.n(3)) = tet[2];
+    pents(3, i+m.n(3)) = tet[2] + m.n(0);
+    pents(4, i+m.n(3)) = tet[3] + m.n(0);
+
+    pents(0, i+2*m.n(3)) = tet[0]; // type III: 0 1 1'2'3'
+    pents(1, i+2*m.n(3)) = tet[1];
+    pents(2, i+2*m.n(3)) = tet[1] + m.n(0);
+    pents(3, i+2*m.n(3)) = tet[2] + m.n(0);
+    pents(4, i+2*m.n(3)) = tet[3] + m.n(0);
+
+    pents(0, i+3*m.n(3)) = tet[0]; // type IV:  0 0'1'2'3'
+    pents(1, i+3*m.n(3)) = tet[0] + m.n(0);
+    pents(2, i+3*m.n(3)) = tet[1] + m.n(0);
+    pents(3, i+3*m.n(3)) = tet[2] + m.n(0);
+    pents(4, i+3*m.n(3)) = tet[3] + m.n(0);
+  }
+
+  // unique tets
   tets.reshape({4, n(3)});
-  
-  // tets
-  for (auto i = 0; i < m.n(2); i ++) {
+  for (auto i = 0; i < m.n(3); i ++) { // per tetrahedra of the base
+    I tet[4];
+    m.get_tetrahedron(i, tet);
+
+    tets(0, i) = tet[0]; // base
+    tets(1, i) = tet[1];
+    tets(2, i) = tet[2];
+    tets(3, i) = tet[3];
+
+    tets(0, i+m.n(3)) = tet[0]; // 0 1 2 3'
+    tets(1, i+m.n(3)) = tet[1];
+    tets(2, i+m.n(3)) = tet[2];
+    tets(3, i+m.n(3)) = tet[3] + m.n(0);
+
+    tets(0, i+2*m.n(3)) = tet[0]; // 0 1 2'3'
+    tets(1, i+2*m.n(3)) = tet[1];
+    tets(2, i+2*m.n(3)) = tet[2] + m.n(0);
+    tets(3, i+2*m.n(3)) = tet[3] + m.n(0);
+
+    tets(0, i+3*m.n(3)) = tet[0]; // 0 1'2'3'
+    tets(1, i+3*m.n(3)) = tet[1] + m.n(0);
+    tets(2, i+3*m.n(3)) = tet[2] + m.n(0);
+    tets(3, i+3*m.n(3)) = tet[3] + m.n(0);
+  }
+  for (auto i = 0; i < m.n(2); i ++) { // per triangular side of the base
     I tri[3];
     m.get_triangle(i, tri);
-    std::sort(tri, tri+3);
 
-    // tets
-    tets(0, i) = tri[0]; // type I: bottom tet
-    tets(1, i) = tri[1];
-    tets(2, i) = tri[2];
-    tets(3, i) = tri[2] + m.n(0);
+    tets(0, i+4*m.n(3)) = tri[0]; // 0 1 2 2'
+    tets(1, i+4*m.n(3)) = tri[1];
+    tets(2, i+4*m.n(3)) = tri[2];
+    tets(3, i+4*m.n(3)) = tri[2] + m.n(0);
 
-    tets(0, i+m.n(2)) = tri[0]; // type II: center tet
-    tets(1, i+m.n(2)) = tri[1];
-    tets(2, i+m.n(2)) = tri[1] + m.n(0);
-    tets(3, i+m.n(2)) = tri[2] + m.n(0);
-
-    tets(0, i+2*m.n(2)) = tri[0]; // type III: top tet
-    tets(1, i+2*m.n(2)) = tri[0] + m.n(0);
-    tets(2, i+2*m.n(2)) = tri[1] + m.n(0);
-    tets(3, i+2*m.n(2)) = tri[2] + m.n(0);
+    tets(0, i+4*m.n(3)+m.n(2)) = tri[0]; // 0 1 1'2'
+    tets(1, i+4*m.n(3)+m.n(2)) = tri[1];
+    tets(2, i+4*m.n(3)+m.n(2)) = tri[1] + m.n(0);
+    tets(3, i+4*m.n(3)+m.n(2)) = tri[2] + m.n(0);
+    
+    tets(0, i+4*m.n(3)+2*m.n(2)) = tri[0]; // 0 0'1'2'
+    tets(1, i+4*m.n(3)+2*m.n(2)) = tri[0] + m.n(0);
+    tets(2, i+4*m.n(3)+2*m.n(2)) = tri[1] + m.n(0);
+    tets(3, i+4*m.n(3)+2*m.n(2)) = tri[2] + m.n(0);
   }
 
   // unique triangles
-  tris.reshape({3, n(2)}); 
-  for (auto i = 0; i < m.n(2); i ++) { // per prism
+  tris.reshape({3, n(2)});
+  for (auto i = 0; i < m.n(2); i ++) { // per triangular side of the base
     I tri[3];
     m.get_triangle(i, tri);
-    
-    tris(0, i) = tri[0]; // type I: base triangle
+
+    tris(0, i) = tri[0]; // 0 1 2, the base triangle
     tris(1, i) = tri[1];
     tris(2, i) = tri[2];
 
-    std::sort(tri, tri+3); // the following extrusions need sorted vertices
-    tris(0, i + m.n(2)) = tri[0]; // type II: prism lower triangle
-    tris(1, i + m.n(2)) = tri[1];
-    tris(2, i + m.n(2)) = tri[2] + m.n(0);
+    tris(0, i+m.n(2)) = tri[0]; // 0 1 2'
+    tris(1, i+m.n(2)) = tri[1];
+    tris(2, i+m.n(2)) = tri[2] + m.n(0);
     
-    tris(0, i + m.n(2)*2) = tri[0]; // type III: prism upper triangle
-    tris(1, i + m.n(2)*2) = tri[1] + m.n(0);
-    tris(2, i + m.n(2)*2) = tri[2] + m.n(0);
+    tris(0, i+2*m.n(2)) = tri[0]; // 0 1'2'
+    tris(1, i+2*m.n(2)) = tri[1] + m.n(0);
+    tris(2, i+2*m.n(2)) = tri[2] + m.n(0);
   }
-  for (auto i = 0; i < m.n(1); i ++) { // per edge 
-    I v[2];
-    m.get_edge(i, v);
-    if (v[0] > v[1]) std::swap(v[0], v[1]); // sorted
+  for (auto i = 0; i < m.n(1); i ++) { // per edge of the base tet
+    I edge[2];
+    m.get_edge(i, edge);
 
-    tris(0, i + m.n(2)*3) = v[0]; // type IV: edge lower triangle
-    tris(1, i + m.n(2)*3) = v[1];
-    tris(2, i + m.n(2)*3) = v[1] + m.n(0);
-    
-    tris(0, i + m.n(2)*3 + m.n(1)) = v[0]; // type V: edge upper triangle
-    tris(1, i + m.n(2)*3 + m.n(1)) = v[0] + m.n(0);
-    tris(2, i + m.n(2)*3 + m.n(1)) = v[1] + m.n(0);
+    tris(0, i+3*m.n(2)) = edge[0]; // 0 1 1'
+    tris(1, i+3*m.n(2)) = edge[1];
+    tris(2, i+3*m.n(2)) = edge[1] + m.n(0);
+
+    tris(0, i+3*m.n(2)+m.n(1)) = edge[0]; // 0 0'1'
+    tris(1, i+3*m.n(2)+m.n(1)) = edge[0] + m.n(0);
+    tris(2, i+3*m.n(2)+m.n(1)) = edge[1] + m.n(0);
   }
 
   // unique edges
@@ -132,46 +184,47 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude()
   for (auto i = 0; i < m.n(1); i ++) {
     I v[2];
     m.get_edge(i, v);
-    if (v[0] > v[1]) std::swap(v[0], v[1]);
 
-    edges(0, i) = v[0];
+    edges(0, i) = v[0]; // base edge
     edges(1, i) = v[1];
-    
-    edges(0, i+m.n(1)) = v[0];
+
+    edges(0, i+m.n(1)) = v[0]; // 0 1'
     edges(1, i+m.n(1)) = v[1] + m.n(0);
-    
-    edges(0, i+m.n(1)*2) = v[0]; // FIXME: this is not unique.  Being said, this problem won't affect critical point tracking
-    edges(1, i+m.n(1)*2) = v[0] + m.n(0);
+  }
+  for (auto i = 0; i < m.n(0); i ++) {
+    edges(0, i+2*m.n(1)) = i;
+    edges(1, i+2*m.n(1)) = i + m.n(0);
   }
 }
 
 template <typename I, typename F>
-size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n(int d) const
+size_t simplicial_unstructured_extruded_3d_mesh<I, F>::n(int d) const
 {
   if (d == 0) {
     return m.n(0); // unique vertices in each interval
   } else if (d == 1) {
-    return m.n(1) * 3; // unique edges in each interval
+    return 2 * m.n(1) + m.n(0);
   } else if (d == 2) {
-    return m.n(2) // the bottom triangle of the prism
-      + m.n(2) * 2 // two triangles inside prisms
-      + m.n(1) * 2;// unique triangles extruded from each edge
+    return 3 * m.n(2) + 2 * m.n(1);
   } else if (d == 3) { 
-    return 3 * m.n(2); // 3 tets per prism
+    return 4 * m.n(3) + 3 * m.n(2);
+  } else if (d == 4) {
+    return 4 * m.n(3); // 4 pents per prism
   } else return 0;
 }
 
 template <typename I, typename F>
-size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n_interval(int d) const
+size_t simplicial_unstructured_extruded_3d_mesh<I, F>::n_interval(int d) const
 {
-  if (d == 1) return m.n(1)*2;
-  else if (d == 2) return m.n(2)*2 + m.n(1)*2;
-  else if (d == 3) return m.n(2)*3;
+  if (d == 1) return m.n(1) + m.n(0);
+  else if (d == 2) return 2 * m.n(2) + 2 * m.n(1);
+  else if (d == 3) return 3 * m.n(3) + 3 * m.n(2);
+  else if (d == 4) return 4 * m.n(3);
   else return 0;
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f, 
+void simplicial_unstructured_extruded_3d_mesh<I, F>::element_for(int d, std::function<void(I)> f, 
     int xl, int nthreads, bool affinity) const
 {
   parallel_for(n(d), [&](int i) {f(i);}, xl, nthreads, affinity);
@@ -180,7 +233,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::fun
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f, 
+void simplicial_unstructured_extruded_3d_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f, 
     int xl, int nthreads, bool affinity) const
 {
   parallel_for(n_ordinal(d), [&](int i) {
@@ -191,7 +244,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, 
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f, 
+void simplicial_unstructured_extruded_3d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f, 
     int xl, int nthreads, bool affinity) const
 {
   parallel_for(n_interval(d), [&](int i) {
@@ -207,7 +260,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d,
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I verts[]) const
+void simplicial_unstructured_extruded_3d_mesh<I, F>::get_simplex(int d, I k, I verts[]) const
 {
   const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));
   const I offset = t * n(0);
@@ -230,7 +283,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::get_coords(I i, F coords[]) const
+void simplicial_unstructured_extruded_3d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
   const I k = flat_vertex_id(i),
           t = flat_vertex_time(i);
@@ -238,8 +291,9 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_coords(I i, F coords[])
   coords[2] = t;
 }
 
+#if 0
 template <typename I, typename F>
-std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::sides(int d, I k) const 
+std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) const 
 {
   const I i = mod(k, n(d)), t = std::floor((double)k / n(d));
   std::set<I> results;
@@ -341,7 +395,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::sides(int d, I k) co
 }
 
 template <typename I, typename F>
-std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) const 
+std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) const 
 {
   const I i = mod(k, n(d)), t = std::floor((double)k / n(d));
   // fprintf(stderr, "k=%d, i=%d, t=%d, n(d)=%d\n", k, i, t, n(d));
@@ -484,7 +538,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
 }
 
 template <typename I, typename F>
-int simplicial_unstructured_extruded_2d_mesh<I, F>::face_type(I k) const
+int simplicial_unstructured_extruded_3d_mesh<I, F>::face_type(I k) const
 {
   const I i = mod(k, n(2));
 
@@ -495,6 +549,7 @@ int simplicial_unstructured_extruded_2d_mesh<I, F>::face_type(I k) const
   else if (i < 3*m.n(2) + 2*m.n(1)) return 4; // V
   else return -1;
 }
+#endif
 
 }
 
