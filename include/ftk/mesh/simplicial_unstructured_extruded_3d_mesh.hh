@@ -195,6 +195,9 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::extrude()
     edges(0, i+2*m.n(1)) = i;
     edges(1, i+2*m.n(1)) = i + m.n(0);
   }
+
+  fprintf(stderr, "4d mesh initialized, #pent=%zu, #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n", 
+      n(4), n(3), n(2), n(1), n(0));
 }
 
 template <typename I, typename F>
@@ -289,6 +292,31 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::get_coords(I i, F coords[])
           t = flat_vertex_time(i);
   m.get_coords(k, coords);
   coords[2] = t;
+}
+
+template <typename I, typename F>
+std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) const 
+{
+  const I i = mod(k, n(d)), t = std::floor((double)k / n(d));
+  std::set<I> results;
+
+  I v[5];
+  get_simplex(d, i, v);
+
+  if (d == 4) { // currently only pentachrora are supported
+    const int type = i / m.n(3);
+    if (type == 0) { // 0 1 2 3 3'
+      const I ot[4] = {v[0], v[1], v[2], v[3]}; // tet in the original mesh
+      I otid;
+      bool found = m.find_tetrahedra(ot, otid);
+      assert(found);
+
+      results.insert(otid + t*n(3)); // 0 1 2 3
+      results.insert(otid + t*n(3) + m.n(3)); // 0 1 2 3'
+      results.insert(otid + t*n(3) + 2*m.n(3)); // 0 1 2'3'
+      results.insert(otid + t*n(3) + 3*m.n(3)); // 0 1'2'3'
+    }
+  }
 }
 
 #if 0
