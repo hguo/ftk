@@ -2,8 +2,17 @@ if (FTK_BUILD_PYFTK)
   include_directories (${PYTHON_INCLUDE_DIRS})
 endif ()
 
-add_executable (ftk cli/ftk.cpp)
+if (FTK_HAVE_HIPSYCL)
+  set (ftk_sycl_sources
+    filters/critical_point_tracer_2d_regular_sycl.cpp ${ftk_sycl_sources})
+endif ()
+
+add_executable (ftk cli/ftk.cpp ${ftk_sycl_sources})
 target_link_libraries (ftk PRIVATE libftk)
+
+if (FTK_HAVE_HIPSYCL)
+  add_sycl_to_target(TARGET ftk SOURCES ${ftk_sycl_sources})
+endif ()
 
 set (ftk_sources
   numeric/polynomial_solver.cpp

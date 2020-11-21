@@ -52,6 +52,7 @@ ftk_option (PNETCDF "Use parallel-netcdf" FALSE)
 ftk_option (PNG "Use PNG" FALSE)
 ftk_option (Qt5 "Use Qt5" FALSE)
 ftk_option (RocksDB "Use RocksDB" FALSE)
+ftk_option (HIPSYCL "Use hipSYCL" FALSE) # experimental
 ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # experimental
 ftk_option (VTK "Use VTK" FALSE)
 
@@ -256,7 +257,7 @@ if (OpenMP_CXX_FOUND)
 endif ()
 
 if (FTK_USE_CUDA STREQUAL AUTO)
-  enable_language (CUDA OPTIONAL)
+  enable_language (CUDA OPTIONAL) #FIXME: FTK_HAVE_CUDA in AUTO mode
 elseif (FTK_USE_CUDA)
   enable_language (CUDA)
   set (FTK_HAVE_CUDA TRUE)
@@ -267,7 +268,16 @@ endif ()
 #  set (CUDA_NVCC_FLAGS "--expt-relaxed-constexpr")
 #  include_directories (${CUDA_INCLUDE_DIRS})
 #endif ()
-  
+ 
+if (FTK_USE_HIPSYCL STREQUAL AUTO)
+  # TODO
+elseif (FTK_USE_HIPSYCL)
+  find_package (hipsycl REQUIRED)
+  enable_language (SYCL)
+  set (FTK_HAVE_HIPSYCL TRUE)
+  set (FTK_HAVE_SYCL TRUE)
+endif ()
+
 set (Boost_USE_STATIC_LIBS ON)
 set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME OFF)
