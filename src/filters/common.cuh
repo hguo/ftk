@@ -304,7 +304,7 @@ template <int scope>
 __device__ __host__ inline int unit_simplex_offset_4_3(int type, int i, int j);
 
 template <>
-__device__ inline int unit_simplex_offset_4_3<0>(int type, int i, int j)
+__device__ __host__ inline int unit_simplex_offset_4_3<0>(int type, int i, int j)
 {
   static const int unit_simplices_4_3[][4][4] = {
     {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 1, 1}, {0, 1, 1, 1}},
@@ -372,7 +372,7 @@ __device__ inline int unit_simplex_offset_4_3<0>(int type, int i, int j)
 }
 
 template <>
-__device__ inline int unit_simplex_offset_4_3<1>(int type, int i, int j)
+__device__ __host__ inline int unit_simplex_offset_4_3<1>(int type, int i, int j)
 {
   static const int unit_simplices_4_3_ordinal[][4][4] = {
     {{0, 0, 0, 0}, {0, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0}},
@@ -386,7 +386,7 @@ __device__ inline int unit_simplex_offset_4_3<1>(int type, int i, int j)
 }
 
 template <>
-__device__ inline int unit_simplex_offset_4_3<2>(int type, int i, int j)
+__device__ __host__ inline int unit_simplex_offset_4_3<2>(int type, int i, int j)
 {
   static const int unit_simplices_4_3_interval[][4][4] = {
     {{0, 0, 0, 0}, {0, 0, 0, 1}, {0, 0, 1, 1}, {0, 1, 1, 1}},

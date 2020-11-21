@@ -1,7 +1,11 @@
-#include <iostream>
 #include <CL/sycl.hpp>
+#include <vector>
+#include <ftk/ftk_config.hh>
+#include <ftk/mesh/lattice.hh>
+#include "common.cuh"
 
-static int my_sycl_func()
+std::vector<fp_t> check_simplices_cp2t()
 {
-  return 0;
+  std::vector<fp_t> results;
+  return results;
 }
