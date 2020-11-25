@@ -302,6 +302,48 @@ void simplicial_unstructured_3d_mesh<I, F>::get_coords(I i, F coords[]) const
   coords[1] = vertex_coords(1, i);
 }
 
+template <typename I, typename F>
+bool simplicial_unstructured_3d_mesh<I, F>::find_edge(const I v[2], I &i) const
+{
+  const auto it = edge_id_map.find( std::make_tuple(v[0], v[1]) );
+  if (it == edge_id_map.end()) return false;
+  else {
+    i = it->second;
+    assert(edges(0, i) == v[0]);
+    assert(edges(1, i) == v[1]);
+    return true;
+  }
+}
+
+template <typename I, typename F>
+bool simplicial_unstructured_3d_mesh<I, F>::find_triangle(const I v[3], I &i) const
+{
+  const auto it = triangle_id_map.find( std::make_tuple(v[0], v[1], v[2]) );
+  if (it == triangle_id_map.end()) return false;
+  else {
+    i = it->second;
+    assert(triangles(0, i) == v[0]);
+    assert(triangles(1, i) == v[1]);
+    assert(triangles(2, i) == v[2]);
+    return true;
+  }
+}
+
+template <typename I, typename F>
+bool simplicial_unstructured_3d_mesh<I, F>::find_tetrahedron(const I v[4], I &i) const
+{
+  const auto it = tetrahedron_id_map.find( std::make_tuple(v[0], v[1], v[2], v[3]) );
+  if (it == tetrahedron_id_map.end()) return false;
+  else {
+    i = it->second;
+    assert(tetrahedra(0, i) == v[0]);
+    assert(tetrahedra(1, i) == v[1]);
+    assert(tetrahedra(2, i) == v[2]);
+    assert(tetrahedra(3, i) == v[3]);
+    return true;
+  }
+}
+
 }
 
 #endif

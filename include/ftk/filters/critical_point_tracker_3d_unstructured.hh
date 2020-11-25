@@ -30,11 +30,6 @@
 #include <gmpxx.h>
 #endif
 
-#if FTK_HAVE_VTK
-#include <vtkUnsignedIntArray.h>
-#include <vtkVertex.h>
-#endif
-
 namespace ftk {
 
 // typedef critical_point_t<3, double> critical_point_t;
