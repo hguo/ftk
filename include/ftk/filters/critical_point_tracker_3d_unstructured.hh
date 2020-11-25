@@ -62,10 +62,10 @@ protected:
 
   template <int n, typename T> void simplex_values(
       const int verts[n], // vertices
-      T X[n][3], // coordinates
+      T X[n][4], // coordinates
       T f[n][FTK_CP_MAX_NUM_VARS], // scalars
-      T v[n][2], // vectors
-      T J[n][2][2] // jacobians
+      T v[n][3], // vectors
+      T J[n][3][3] // jacobians
   ) const;
 
 protected:
@@ -77,7 +77,7 @@ protected:
 
 template <int n, typename T>
 inline void critical_point_tracker_3d_unstructured::simplex_values(
-    const int verts[n], T X[n][3], T f[n][FTK_CP_MAX_NUM_VARS], T v[n][2], T J[n][2][2]) const
+    const int verts[n], T X[n][4], T f[n][FTK_CP_MAX_NUM_VARS], T v[n][3], T J[n][3][3]) const
 {
   for (int i = 0; i < n; i ++) {
     const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
@@ -89,43 +89,45 @@ inline void critical_point_tracker_3d_unstructured::simplex_values(
       for (int j = 0; j < get_num_scalar_components(); j ++)
         f[i][j] = data.scalar(j, k);
 
-    for (int j = 0; j < 2; j ++) 
+    for (int j = 0; j < 3; j ++) 
       v[i][j] = data.vector(j, k);
 
     if (!data.jacobian.empty())
-      for (int j = 0; j < 2; j ++) 
-        for (int j1 = 0; j1 < 2; j1 ++)
+      for (int j = 0; j < 3; j ++) 
+        for (int j1 = 0; j1 < 3; j1 ++)
           J[i][j][j1] = data.jacobian(j1, j, k);
   }
 }
 
 inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature_point_t& cp)
 {
-#if 0 // WIP
-  int tri[3];
-  m.get_simplex(2, i, tri); 
+  int tet[4];
+  m.get_simplex(3, i, tet); 
 
-  double X[3][3], f[3][FTK_CP_MAX_NUM_VARS], V[3][2], Js[3][2][2];
-  simplex_values<3, double>(tri, X, f, V, Js);
+  double X[4][4], f[4][FTK_CP_MAX_NUM_VARS], V[4][3], Js[4][3][3];
+  simplex_values<4, double>(tet, X, f, V, Js);
+
+  // fprintf(stderr, "tet=%d, %d, %d, %d\n", tet[0], tet[1], tet[2], tet[3]);
+  // print4x3("V", V);
 
 #if FTK_HAVE_GMP
   typedef mpf_class fp_t;
-  fp_t Vf[3][2];
-  for (int k = 0; k < 3; k ++) 
-    for (int j = 0; j < 2; j ++)
+  fp_t Vf[4][3];
+  for (int k = 0; k < 4; k ++) 
+    for (int j = 0; j < 3; j ++)
       Vf[k][j] = V[k][j];
 #else
-  int64_t Vf[3][2];
-  for (int k = 0; k < 3; k ++) 
-    for (int j = 0; j < 2; j ++)
+  int64_t Vf[4][3];
+  for (int k = 0; k < 4; k ++) 
+    for (int j = 0; j < 3; j ++)
       Vf[k][j] = V[k][j] * vector_field_scaling_factor;
 #endif
    
-  bool succ = ftk::robust_critical_point_in_simplex2(Vf, tri);
+  bool succ = ftk::robust_critical_point_in_simplex3(Vf, tet);
   if (!succ) return false;
 
-  double mu[3], x[3];
-  bool succ2 = ftk::inverse_lerp_s2v2(V, mu);
+  double mu[4], x[4];
+  bool succ2 = ftk::inverse_lerp_s3v3(V, mu);
   if (!succ2) { // clamp to normal range
     if (std::isnan(mu[0]) || std::isinf(mu[0])) 
       return false;
@@ -133,33 +135,33 @@ inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature
     else {
       mu[0] = std::max(std::min(1.0, mu[0]), 0.0);
       mu[1] = std::max(std::min(1.0-mu[0], mu[1]), 0.0);
-      mu[2] = 1.0 - mu[0] - mu[1];
-      fprintf(stderr,  "mu =%f, %f, %f\n", mu[0], mu[1], mu[2]);
+      mu[2] = std::max(std::min(1.0-mu[1], mu[2]), 0.0);
+      mu[2] = 1.0 - mu[0] - mu[1] - mu[2];
+      // fprintf(stderr,  "mu =%f, %f, %f\n", mu[0], mu[1], mu[2]);
     }
-    fprintf(stderr,  "mu'=%f, %f, %f\n", mu[0], mu[1], mu[2]);
+    fprintf(stderr,  "mu=%f, %f, %f, %f\n", mu[0], mu[1], mu[2], mu[3]);
   }
-  ftk::lerp_s2v3(X, mu, x);
+  ftk::lerp_s3v4(X, mu, x);
   cp.x[0] = x[0];
   cp.x[1] = x[1];
-  cp.t = x[2];
+  cp.x[2] = x[2];
+  cp.t = x[3];
 
   if (!field_data_snapshots[0].scalar.empty())
     for (int k = 0; k < get_num_scalar_components(); k ++)
-      cp.scalar[k] = f[0][k] * mu[0] + f[1][k] * mu[1] + f[2][k] * mu[2];
+      cp.scalar[k] = f[0][k] * mu[0] + f[1][k] * mu[1] + f[2][k] * mu[2] + f[3][k] * mu[3];
 
   if (!field_data_snapshots[0].jacobian.empty()) {
-    double H[2][2]; // hessian or jacobian
-    ftk::lerp_s2m2x2(Js, mu, H);
+    double H[3][3]; // hessian or jacobian
+    ftk::lerp_s3m3x3(Js, mu, H);
     cp.type = ftk::critical_point_type_3d(H, true);
   }
   
   cp.tag = i;
-  cp.ordinal = m.is_ordinal(2, i);
+  cp.ordinal = m.is_ordinal(3, i);
   cp.timestep = current_timestep;
 
   return true;
-#endif
-  return false;
 }
 
 inline void critical_point_tracker_3d_unstructured::update_timestep()
@@ -187,10 +189,10 @@ inline void critical_point_tracker_3d_unstructured::update_timestep()
     }
   };
 
-  m.element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+  m.element_for_ordinal(3, current_timestep, func, xl, nthreads, enable_set_affinity);
   // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
   if (field_data_snapshots.size() >= 2)
-    m.element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+    m.element_for_interval(3, current_timestep, func, xl, nthreads, enable_set_affinity);
   // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
 
   if (enable_streaming_trajectories) {
