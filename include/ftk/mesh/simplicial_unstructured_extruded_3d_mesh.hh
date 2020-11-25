@@ -323,7 +323,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3)); // 0 1 2 2' type
+        results.insert(otid + t*n(3) + 4*m.n(3)); // 0 1 2 2' type
       }
       // 0 2 3 3'
       { // triangle 023 in original mesh
@@ -331,7 +331,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3)); // 0 1 2 2' type
+        results.insert(otid + t*n(3) + 4*m.n(3)); // 0 1 2 2' type
       }
       // 1 2 3 3'
       { // triangle 123 in original mesh
@@ -339,7 +339,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3)); // 0 1 2 2' type
+        results.insert(otid + t*n(3) + 4*m.n(3)); // 0 1 2 2' type
       }
     } else if (type == 1) { // 0 1 2 2'3'
       // 0 1 2 2'
@@ -348,7 +348,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3)); // 0 1 2 2' type
+        results.insert(otid + t*n(3) + 4*m.n(3)); // 0 1 2 2' type
       }
       // 0 1 2 3'
       // 0 1 2'3'
@@ -367,7 +367,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
+        results.insert(otid + t*n(3) + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
       }
       // 1 2 2'3'
       { // tri 123
@@ -375,7 +375,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
+        results.insert(otid + t*n(3) + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
       }
     } else if (type == 2) { // 0 1 1'2'3'
       // 0 1 1'2'
@@ -384,7 +384,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
+        results.insert(otid + t*n(3) + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
       }
       // 0 1 1'3'
       { // tri 013
@@ -392,7 +392,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
+        results.insert(otid + t*n(3) + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
       }
       // 0 1 2'3'
       // 0 1'2'3'
@@ -411,7 +411,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
+        results.insert(otid + t*n(3) + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
       }
     } else if (type == 3) { // 0 0'1'2'3'
       // 0 0'1'2'
@@ -420,7 +420,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
+        results.insert(otid + t*n(3) + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
       }
       // 0 0'1'3'
       { // tri 013
@@ -428,7 +428,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
+        results.insert(otid + t*n(3) + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
       }
       // 0 0'2'3'
       { // tri 023
@@ -436,7 +436,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
-        results.insert(otid + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
+        results.insert(otid + t*n(3) + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
       }
       // 0 1'2'3'
       // 0'1'2'3'
@@ -644,19 +644,26 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
       bool found = m.find_tetrahedra(v0, otid);
       assert(found);
 
-      // TODO
       if (i < m.n(3)) { // 0 1 2 3
         // t:   0 1 2 3 3' 
+        results.insert(otid + t*n(4));
         // t-1: 0 0'1'2'3'
+        results.insert(otid + (t-1)*n(4) + 3*m.n(3));
       } else if (i < 2*m.n(3)) { // 0 1 2 3'
         // t:   0 1 2 3 3'
+        results.insert(otid + t*n(4));
         // t:   0 1 2 2'3'
+        results.insert(otid + t*n(4) + m.n(3));
       } else if (i < 3*m.n(3)) { // 0 1 2'3'
         // t:   0 1 2 2'3'
+        results.insert(otid + t*n(4) + m.n(3));
         // t:   0 1 1'2'3'
+        results.insert(otid + t*n(4) + 2*m.n(3));
       } else if (i < 4*m.n(3)) { // 0 1'2'3'
         // t:   0 1 1'2'3'
+        results.insert(otid + t*n(4) + 2*m.n(3));
         // t:   0 0'1'2'3'
+        results.insert(otid + t*n(4) + 3*m.n(3));
       }
     } else { // "tri" type
       I vt[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[3], m.n(0))};
