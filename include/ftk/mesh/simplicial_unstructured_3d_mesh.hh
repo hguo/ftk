@@ -385,7 +385,7 @@ inline void simplicial_unstructured_3d_mesh<I, F>::build_smoothing_kernel(const 
       const F w = std::exp(-(d*d) / (2*sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
       // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
       kernel.push_back( std::make_tuple(k, w) );
-      fprintf(stderr, "i=%d, k=%d, %f\n", i, k, w); 
+      // fprintf(stderr, "i=%d, k=%d, %f\n", i, k, w); 
     }
 
     // normalization

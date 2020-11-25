@@ -10,7 +10,7 @@ diy::mpi::environment env;
 
 const std::string mesh_filename = "3d.vtu";
 const int nt = 32;
-const double kernel_size = 0.2;
+const double kernel_size = 2.0;
 
 #if FTK_HAVE_VTK
 TEST_CASE("critical_point_tracking_moving_extremum_3d_unstructured") {
@@ -21,6 +21,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_unstructured") {
   m.build_smoothing_kernel(kernel_size);
 
   ftk::critical_point_tracker_3d_unstructured tracker(world, m);
+  tracker.set_number_of_threads(1);
   tracker.initialize();
 
   for (int i = 0; i < nt; i ++) {

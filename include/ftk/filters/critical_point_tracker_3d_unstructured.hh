@@ -126,8 +126,8 @@ inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature
   bool succ = ftk::robust_critical_point_in_simplex3(Vf, tet);
   if (!succ) return false;
 
-  double mu[4], x[4];
-  bool succ2 = ftk::inverse_lerp_s3v3(V, mu);
+  double mu[4], x[4], cond;
+  bool succ2 = ftk::inverse_lerp_s3v3(V, mu, &cond);
   if (!succ2) { // clamp to normal range
     if (std::isnan(mu[0]) || std::isinf(mu[0])) 
       return false;
@@ -135,7 +135,7 @@ inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature
     else {
       mu[0] = std::max(std::min(1.0, mu[0]), 0.0);
       mu[1] = std::max(std::min(1.0-mu[0], mu[1]), 0.0);
-      mu[2] = std::max(std::min(1.0-mu[1], mu[2]), 0.0);
+      mu[2] = std::max(std::min(1.0-mu[1]-mu[0], mu[2]), 0.0);
       mu[2] = 1.0 - mu[0] - mu[1] - mu[2];
       // fprintf(stderr,  "mu =%f, %f, %f\n", mu[0], mu[1], mu[2]);
     }
