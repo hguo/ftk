@@ -450,6 +450,62 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         results.insert(otid + (t+1)*n(3)); // 0'1'2'3'
       }
     }
+  } else if (d == 3) {
+    const I v0[4] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0))};
+    if (i < 4*m.n(3)) { // "tet" type
+      I otid;
+      bool found = m.find_tetrahedra(v0, otid);
+      assert(found);
+     
+      // TODO
+      if (i < m.n(3)) { // 0 1 2 3
+        // 0 1 2  (in 0 1 2 type), find tri 012
+        // 0 1 3  (in 0 1 2 type), find tri 013
+        // 0 2 3  (in 0 1 2 type), find tri 023
+        // 1 2 3  (in 0 1 2 type), find tri 123
+      } else if (i < 2*m.n(3)) { // 0 1 2 3'
+        // 0 1 2  (in 0 1 2  type), find tri 012
+        // 0 1 3' (in 0 1 2' type), find tri 013
+        // 0 2 3' (in 0 1 2' type), find tri 023
+        // 1 2 3' (in 0 1 2' type), find tri 123
+      } else if (i < 3*m.n(3)) { // 0 1 2'3'
+        // 0 1 2' (in 0 1 2' type), find tri 012
+        // 0 1 3' (in 0 1 2' type), find tri 013
+        // 0 2'3' (in 0 1'2' type), find tri 023
+        // 1 2'3' (in 0 1'2' type), find tri 123
+      } else if (i < 4*m.n(3)) { // 0 1'2'3'
+        // 0 1'2' (in 0 1'2' type), find tri 012
+        // 0 1'3' (in 0 1'2' type), find tri 013
+        // 0 2'3' (in 0 1'2' type), find tri 023
+        // 1'2'3' (in 0 1 2  type), find tri 123 in t+1
+      }
+    } else { // "tri" type
+      I vt[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[3], m.n(0))};
+      if (vt[0] == vt[1])
+        vt[1] = mod(v[2], m.n(0));
+
+      I otid;
+      bool found = m.find_triangle(vt, otid);
+      assert(found);
+
+      // TODO
+      if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
+        // 0 1 2 , in 0 1 2  type, find tri 012
+        // 0 1 2', in 0 1 2' type, find tri 012
+        // 0 2 2', in 0 1 1' type, find edge 02
+        // 1 2 2', in 0 1 1' type, find edge 12
+      } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2'
+        // 0 1 1', in 0 1 1' type, find edge 01
+        // 0 1 2', in 0 1 2' type, find tri 012
+        // 0 1'2', in 0 1'2' type, find tri 012
+        // 1 1'2', in 0 0'1' type, find edge 12
+      } else { // 0 1 1'2'
+        // 0 1 1', in 0 1 1' type, find edge 01
+        // 0 1 2', in 0 1 2' type, find tri 012
+        // 0 1'2', in 0 1'2' type, find tri 012
+        // 1 1'2', in 0 0'1' type, find edge 12
+      }
+    }
   }
 
   return results;
@@ -499,13 +555,13 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
       if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
         // find which tet in the base mesh has the 012 face
         // 0 1 2 2'3'
-        // 0 1 2 3 3'
+        // 0 1 2 3 3' in another prism
       } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2'
         // 0 1 1'2'3'
-        // 0 1 2 2'3'
+        // 0 1 2 2'3' in another prism
       } else { // 0 0'1'2'
         // 0 0'1'2'3'
-        // 0 1 1'2'3'
+        // 0 1 1'2'3' in another prism
       }
     }
   }
