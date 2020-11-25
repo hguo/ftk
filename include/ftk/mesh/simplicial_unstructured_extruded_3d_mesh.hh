@@ -457,53 +457,169 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
       bool found = m.find_tetrahedra(v0, otid);
       assert(found);
      
-      // TODO
+      I tid;
       if (i < m.n(3)) { // 0 1 2 3
         // 0 1 2  (in 0 1 2 type), find tri 012
+        {
+          const I tri[3] = {v0[0], v0[1], v0[2]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2));
+        }
         // 0 1 3  (in 0 1 2 type), find tri 013
+        {
+          const I tri[3] = {v0[0], v0[1], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2));
+        }
         // 0 2 3  (in 0 1 2 type), find tri 023
+        {
+          const I tri[3] = {v0[0], v0[2], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2));
+        }
         // 1 2 3  (in 0 1 2 type), find tri 123
+        {
+          const I tri[3] = {v0[1], v0[2], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2));
+        }
       } else if (i < 2*m.n(3)) { // 0 1 2 3'
         // 0 1 2  (in 0 1 2  type), find tri 012
+        {
+          const I tri[3] = {v0[0], v0[1], v0[2]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2));
+        }
         // 0 1 3' (in 0 1 2' type), find tri 013
+        {
+          const I tri[3] = {v0[0], v0[1], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + m.n(2));
+        }
         // 0 2 3' (in 0 1 2' type), find tri 023
+        {
+          const I tri[3] = {v0[0], v0[2], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + m.n(2));
+        }
         // 1 2 3' (in 0 1 2' type), find tri 123
+        {
+          const I tri[3] = {v0[1], v0[2], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + m.n(2));
+        }
       } else if (i < 3*m.n(3)) { // 0 1 2'3'
         // 0 1 2' (in 0 1 2' type), find tri 012
+        {
+          const I tri[3] = {v0[0], v0[1], v0[2]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + m.n(2));
+        }
         // 0 1 3' (in 0 1 2' type), find tri 013
+        {
+          const I tri[3] = {v0[0], v0[1], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + m.n(2));
+        }
         // 0 2'3' (in 0 1'2' type), find tri 023
+        {
+          const I tri[3] = {v0[0], v0[2], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + 2*m.n(2));
+        }
         // 1 2'3' (in 0 1'2' type), find tri 123
+        {
+          const I tri[3] = {v0[1], v0[2], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + 2*m.n(2));
+        }
       } else if (i < 4*m.n(3)) { // 0 1'2'3'
         // 0 1'2' (in 0 1'2' type), find tri 012
+        {
+          const I tri[3] = {v0[0], v0[1], v0[2]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + 2*m.n(2));
+        }
         // 0 1'3' (in 0 1'2' type), find tri 013
+        {
+          const I tri[3] = {v0[0], v0[1], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + 2*m.n(2));
+        }
         // 0 2'3' (in 0 1'2' type), find tri 023
+        {
+          const I tri[3] = {v0[0], v0[2], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + t*n(2) + 2*m.n(2));
+        }
         // 1'2'3' (in 0 1 2  type), find tri 123 in t+1
+        {
+          const I tri[3] = {v0[1], v0[2], v0[3]};
+          assert( m.find_triangle(tri, tid) );
+          results.insert(tid + (t+1)*n(2));
+        }
       }
     } else { // "tri" type
-      I vt[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[3], m.n(0))};
+      I vt[3] = {v0[0], v0[1], v0[3]};
       if (vt[0] == vt[1])
-        vt[1] = mod(v[2], m.n(0));
+        vt[1] = vt[2];
 
       I otid;
       bool found = m.find_triangle(vt, otid);
       assert(found);
 
-      // TODO
+      I oeid;
       if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
         // 0 1 2 , in 0 1 2  type, find tri 012
+        results.insert(otid + t*n(2));
         // 0 1 2', in 0 1 2' type, find tri 012
+        results.insert(otid + t*n(2) + m.n(2));
         // 0 2 2', in 0 1 1' type, find edge 02
+        {
+          const I edge[2] = {vt[0], vt[1]};
+          assert( m.find_edge(edge, oeid) );
+          results.insert(tid + t*n(2) + 3*m.n(2));
+        }
         // 1 2 2', in 0 1 1' type, find edge 12
+        {
+          const I edge[2] = {vt[1], vt[2]};
+          assert( m.find_edge(edge, oeid) );
+          results.insert(tid + t*n(2) + 3*m.n(2));
+        }
       } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2'
         // 0 1 1', in 0 1 1' type, find edge 01
+        {
+          const I edge[2] = {vt[0], vt[1]};
+          assert( m.find_edge(edge, oeid) );
+          results.insert(tid + t*n(2) + 3*m.n(2));
+        }
         // 0 1 2', in 0 1 2' type, find tri 012
+        results.insert(otid + t*n(2) + m.n(2));
         // 0 1'2', in 0 1'2' type, find tri 012
+        results.insert(otid + t*n(2) + 2*m.n(2));
         // 1 1'2', in 0 0'1' type, find edge 12
+        {
+          const I edge[2] = {vt[1], vt[2]};
+          assert( m.find_edge(edge, oeid) );
+          results.insert(tid + t*n(2) + 3*m.n(2) + m.n(1));
+        }
       } else { // 0 1 1'2'
         // 0 1 1', in 0 1 1' type, find edge 01
+        {
+          const I edge[2] = {vt[0], vt[1]};
+          assert( m.find_edge(edge, oeid) );
+          results.insert(tid + t*n(2) + 3*m.n(2));
+        }
         // 0 1 2', in 0 1 2' type, find tri 012
+        results.insert(otid + t*n(2) + m.n(2));
         // 0 1'2', in 0 1'2' type, find tri 012
+        results.insert(otid + t*n(2) + 2*m.n(2));
         // 1 1'2', in 0 0'1' type, find edge 12
+        {
+          const I edge[2] = {vt[1], vt[2]};
+          assert( m.find_edge(edge, oeid) );
+          results.insert(tid + t*n(2) + 3*m.n(2) + m.n(1));
+        }
       }
     }
   }
