@@ -108,7 +108,7 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::extrude()
     I tet[4];
     m.get_tetrahedron(i, tet);
 
-    tets(0, i) = tet[0]; // base
+    tets(0, i) = tet[0]; // 0 1 2 3, "base"
     tets(1, i) = tet[1];
     tets(2, i) = tet[2];
     tets(3, i) = tet[3];
@@ -451,107 +451,6 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
       }
     }
   }
-}
-
-#if 0
-template <typename I, typename F>
-std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) const 
-{
-  const I i = mod(k, n(d)), t = std::floor((double)k / n(d));
-  std::set<I> results;
-
-  I v[4];
-  get_simplex(3, i, v);
-
-  if (d == 3) {
-    const int type = i / m.n(2);
-    // fprintf(stderr, "tet_type=%d\n", type);
-    if (type == 0) { // bottom 0-1-2-2'
-      // 0-1-2, type I
-      // 0-1-2', type II
-      // 1-2-2', type IV
-      // 0-2-2', type IV
-      {
-        const I ot[3] = {v[0], v[1], v[2]}; // triangle in the orignal mesh
-        I otid; // triangle id in the original mesh
-        bool found = m.find_triangle(ot, otid);
-        assert(found);
-
-        results.insert( otid + t*n(2) );
-        results.insert( otid + t*n(2) + m.n(2) );
-      }
-      {
-        const I oe[2] = {v[1], v[2]};
-        I oeid; // edge id in the orignal mesh
-        bool found = m.find_edge(oe, oeid);
-        assert(found);
-        results.insert( oeid + m.n(2)*3 + t*n(2));
-      }
-      {
-        const I oe[2] = {v[0], v[2]};
-        I oeid; // edge id in the orignal mesh
-        bool found = m.find_edge(oe, oeid);
-        assert(found);
-        results.insert( oeid + m.n(2)*3 + t*n(2));
-      }
-    } else if (type == 1) { // center 0-1-1'-2'
-      // 0-1-2', type II
-      // 0-1'-2', type III
-      // 0-1-1', type IV
-      // 1-1'-2', type V
-      {
-        const I ot[3] = {v[0], v[1], mod(v[3], m.n(0))}; // triangle in the orignal mesh
-        I otid; // triangle id in the original mesh
-        bool found = m.find_triangle(ot, otid);
-        assert(found);
-
-        results.insert( otid + m.n(2) + t*n(2) );
-        results.insert( otid + m.n(2)*2 + t*n(2) );
-      }
-      {
-        const I oe[2] = {v[0], v[1]};
-        I oeid; // edge id in the orignal mesh
-        bool found = m.find_edge(oe, oeid);
-        assert(found);
-        results.insert( oeid + m.n(2)*3 + t*n(2) );
-      }
-      {
-        const I oe[2] = {v[1], mod(v[3], n(0))}; 
-        I oeid; // edge id in the orignal mesh
-        bool found = m.find_edge(oe, oeid);
-        assert(found);
-        results.insert( oeid + m.n(2)*3 + m.n(1) + t*n(2) );
-      }
-    } else if (type == 2) { // top 0-0'-1'-2'
-      // 0-1-2, t+1, type I
-      // 0-1'-2', type III
-      // 0-0'-1', type V
-      // 0-0'-2', type V
-      {
-        const I ot[3] = {v[0], mod(v[2], m.n(0)), mod(v[3], m.n(0))}; // triangle in the orignal mesh
-        I otid; // triangle id in the original mesh
-        bool found = m.find_triangle(ot, otid);
-        assert(found);
-
-        results.insert( otid + (t+1)*n(2) );
-        results.insert( otid + m.n(2)*2 + t*n(2) );
-      }
-      {
-        const I oe[2] = {v[0], mod(v[2], n(0))}; 
-        I oeid; // edge id in the orignal mesh
-        bool found = m.find_edge(oe, oeid);
-        assert(found);
-        results.insert( oeid + m.n(2)*3 + m.n(1) + t*n(2) );
-      }
-      {
-        const I oe[2] = {v[0], mod(v[3], m.n(0))}; 
-        I oeid; // edge id in the orignal mesh
-        bool found = m.find_edge(oe, oeid);
-        assert(found);
-        results.insert( oeid + m.n(2)*3 + m.n(1) + t*n(2) );
-      }
-    }
-  }
 
   return results;
 }
@@ -563,136 +462,51 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
   // fprintf(stderr, "k=%d, i=%d, t=%d, n(d)=%d\n", k, i, t, n(d));
   std::set<I> results;
 
-  if (d == 2) {
-    int v[3];
-    get_simplex(2, k, v);
+  I v[5];
+  get_simplex(d, i, v);
 
-    // fprintf(stderr, "k=%d, i=%d, t=%d, v=%d, %d, %d\n", k, i, t, v[0], v[1], v[2]);
-    // fprintf(stderr, "face=%d,%d type=%d\n", k, i, face_type(k));
-
-    // determine triangle type by id
-    const I v0[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0))};
-    if (i < 3*m.n(2)) {
-      I otid; // triangle id in the original mesh
-      bool found = m.find_triangle(v0, otid); 
-      assert(found);
-      
-      if (i < m.n(2)) { // type I: bottom tet
-        // t-1: 0-0'-1'-2' (type III tet)
-        // t:   0-1-2-2' (type I tet)
-        results.insert( otid + 2*m.n(2) + (t-1)*n(3) );
-        results.insert( otid            + t    *n(3) );
-      } else if (i < 2*m.n(2)) { // type II: prism lower triangle
-        // t:   0-1-2-2' (type I tet)
-        // t:   0-1-1'-2' (type II tet)
-        results.insert( otid          + t*n(3) );
-        results.insert( otid + m.n(2) + t*n(3) );
-      } else { // if (i < 3*m.n(2)) { // type III: prism upper triangle
-        // t:   0-1-1'-2'  (type II tet)
-        // t:   0-0'-1'-2' (type III tet)
-        results.insert( otid +   m.n(2) + t*n(3) );
-        results.insert( otid + 2*m.n(2) + t*n(3) );
-      }
-    } else {
-      I oeid; // edge id in the original mesh
-      I ve[2] = {v0[0], v0[2]};
-      bool found = m.find_edge(ve, oeid);
+  if (d == 3) {
+    const I v0[4] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0))};
+    if (i < 4*m.n(3)) { // "tet" type
+      I otid;
+      bool found = m.find_tetrahedra(v0, otid);
       assert(found);
 
-      const bool lower = i < 3*m.n(2) + m.n(1);
-
-      const auto triangles = m.side_of(1, oeid);
-      for (const auto triangle : triangles) {
-        I vc[3];
-        m.get_triangle(triangle, vc);
-
-        I pos = -1;
-        for (int j = 0; j < 3; j ++)
-          if (vc[j] < ve[0]) pos = 0; // small
-          else if (vc[j] > ve[0] && vc[j] < ve[1]) pos = 1; // middle
-          else if (vc[j] > ve[1]) pos = 2; // large
-        assert(pos != -1);
-
-        if (lower) { //type IV: edge lower triangle
-          if (pos == 0) 
-            results.insert(triangle + t*n(3)); // bottom tet
-          else if (pos == 1)
-            results.insert(triangle + t*n(3)); // bottom tet
-          else if (pos == 2)
-            results.insert(triangle + m.n(2) + t*n(3)); // center tet
-        } else { // type V: edge upper triangle
-          if (pos == 0) 
-            results.insert(triangle + m.n(2) + t*n(3)); // center tet
-          else if (pos == 1)
-            results.insert(triangle + 2*m.n(2) + t*n(3)); // top tet
-          else if (pos == 2)
-            results.insert(triangle + 2*m.n(2) + t*n(3)); // top tet
-        }
+      // TODO
+      if (i < m.n(3)) { // 0 1 2 3
+        // t:   0 1 2 3 3' 
+        // t-1: 0 0'1'2'3'
+      } else if (i < 2*m.n(3)) { // 0 1 2 3'
+        // t:   0 1 2 3 3'
+        // t:   0 1 2 2'3'
+      } else if (i < 3*m.n(3)) { // 0 1 2'3'
+        // t:   0 1 2 2'3'
+        // t:   0 1 1'2'3'
+      } else if (i < 4*m.n(3)) { // 0 1'2'3'
+        // t:   0 1 1'2'3'
+        // t:   0 0'1'2'3'
       }
+    } else { // "tri" type
+      I vt[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[3], m.n(0))};
+      if (vt[0] == vt[1])
+        vt[1] = mod(v[2], m.n(0));
 
-#if 0
-      int tids[2] = {-1}; // triangle ids in array
-      int j = 0;
-      for (auto tri : triangles) {
-        tids[j++] = tri;
+      I otid;
+      bool found = m.find_triangle(vt, otid);
+      assert(found);
 
-        I ve1[2];
-        m.get_edge(oeid, ve1);
-
-        int vv[3];
-        m.get_triangle(tri, vv);
-        fprintf(stderr, "ve=%d, %d, oeid=%d, ve1=%d, %d, vv=%d, %d, %d, tri=%d\n", 
-            ve[0], ve[1], oeid, 
-            ve1[0], ve1[1], 
-            vv[0], vv[1], vv[2], tri);
+      // TODO
+      if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
+        // find which tet in the base mesh has the 012 face
+        // 0 1 2 2'3'
+        // 0 1 2 3 3'
+      } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2'
+        // 0 1 1'2'3'
+        // 0 1 2 2'3'
+      } else { // 0 0'1'2'
+        // 0 0'1'2'3'
+        // 0 1 1'2'3'
       }
-#endif
-
-#if 0
-      // find triangle v0-v1-v2, denote the other triangle as vn-v0-v1
-      if (i < 3*m.n(2) + m.n(1)) { // type IV: edge lower triangle
-        // type II tet for the large triangle
-        // type I tet for the small triangle
-        if (large_triangle >= 0) 
-          results.insert( large_triangle + m.n(2) + t*n(3) );
-        if (small_triangle >= 0) 
-          results.insert( small_triangle          + t*n(3) );
-      } else { // type V: edge upper triangle
-        // type III tet for the large triangle
-        // type II tet for the small triangle
-        if (large_triangle >= 0)
-          results.insert( large_triangle + 2*m.n(2) + t*n(3) );
-        if (small_triangle >= 0) 
-          results.insert( small_triangle +   m.n(2) + t*n(3) );
-      }
-#endif
-    }
-
-
-    // for debug only
-    bool fail = false;
-    for (const auto tet : results) {
-      const auto s = sides(3, tet);
-      if (s.find(k) == s.end()) fail = true;
-    }
-
-    if (fail) {
-      auto tm = [&](I i, int d=0) { return I(std::floor(double(i)/n(d))); };
-
-      fprintf(stderr, "n(d)=%zu, %zu, %zu, %zu\n", n(0), n(1), n(2), n(3));
-      fprintf(stderr, "face=%d(%d): %d(%d), %d(%d), %d(%d)\n", 
-          k, tm(k, 2), v[0], tm(v[0]), v[1], tm(v[1]), v[2], tm(v[2]));
-      for (const auto tet : results) {
-        int v[4];
-        get_simplex(3, tet, v);
-        fprintf(stderr, "--tet=%d(%d): %d(%d), %d(%d), %d(%d), %d(%d)\n",
-          tet, tm(tet, 3), v[0], tm(v[0]), v[1], tm(v[1]), v[2], tm(v[2]), v[3], tm(v[3]));
-        fprintf(stderr, "----sides:");
-        for (auto s : sides(3, tet))
-          fprintf(stderr, "%d ", s);
-        fprintf(stderr, "\n");
-      }
-      assert(false);
     }
   }
 
