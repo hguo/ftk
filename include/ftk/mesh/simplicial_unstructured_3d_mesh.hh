@@ -31,6 +31,10 @@ public:
   void get_triangle(I i, I tri[]) const;
   void get_edge(I i, I edge[]) const;
 
+  bool find_tetrahedron(const I v[4], I& i) const;
+  bool find_triangle(const I v[3], I& i) const;
+  bool find_edge(const I v[2], I& i) const;
+
 public:
   std::set<I> sides(int d, I i) const;
   std::set<I> side_of(int d, I i) const;

@@ -4,6 +4,7 @@
 #include <ftk/filters/critical_point_tracker_2d_regular.hh>
 #include <ftk/filters/critical_point_tracker_3d_regular.hh>
 #include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
+#include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/ndarray/stream.hh>

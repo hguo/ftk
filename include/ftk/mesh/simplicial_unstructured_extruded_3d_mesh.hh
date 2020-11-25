@@ -22,8 +22,6 @@ struct simplicial_unstructured_extruded_3d_mesh : public object { // extruded fr
   I flat_vertex_time(I i) const { return i / m.n(0); }
   I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
 
-  int face_type(I i) const;
-
 public: // element iteration
   void element_for(int d, std::function<void(I)> f, 
       int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
@@ -311,7 +309,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
       { // tet 0123 in original mesh
         const I ot[4] = {v[0], v[1], v[2], v[3]}; // tet in the original mesh
         I otid;
-        bool found = m.find_tetrahedra(ot, otid);
+        bool found = m.find_tetrahedron(ot, otid);
         assert(found);
 
         results.insert(otid + t*n(3)); // 0 1 2 3
@@ -355,7 +353,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
       { // tet 0123
         const I ot[4] = {v[0], v[1], v[2], mod(v[4], m.n(0))}; // tet in the original mesh
         I otid;
-        bool found = m.find_tetrahedra(ot, otid);
+        bool found = m.find_tetrahedron(ot, otid);
         assert(found);
 
         results.insert(otid + t*n(3) + m.n(3)); // 0 1 2 3'
@@ -399,7 +397,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
       { // tet 0123
         const I ot[4] = {v[0], v[1], mod(v[3], m.n(0)), mod(v[4], m.n(0))}; // tet in the original mesh
         I otid;
-        bool found = m.find_tetrahedra(ot, otid);
+        bool found = m.find_tetrahedron(ot, otid);
         assert(found);
 
         results.insert(otid + t*n(3) + 2*m.n(3)); // 0 1 2'3'
@@ -443,7 +441,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
       { // tet 0123
         const I ot[4] = {v[0], mod(v[2], m.n(0)), mod(v[3], m.n(0)), mod(v[4], m.n(0))}; // tet in the original mesh
         I otid;
-        bool found = m.find_tetrahedra(ot, otid);
+        bool found = m.find_tetrahedron(ot, otid);
         assert(found);
 
         results.insert(otid + t*n(3) + 2*m.n(3)); // 0 1 2'3'
@@ -454,7 +452,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
     const I v0[4] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0))};
     if (i < 4*m.n(3)) { // "tet" type
       I otid;
-      bool found = m.find_tetrahedra(v0, otid);
+      bool found = m.find_tetrahedron(v0, otid);
       assert(found);
      
       I tid;
@@ -578,20 +576,20 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         {
           const I edge[2] = {vt[0], vt[1]};
           assert( m.find_edge(edge, oeid) );
-          results.insert(tid + t*n(2) + 3*m.n(2));
+          results.insert(oeid + t*n(2) + 3*m.n(2));
         }
         // 1 2 2', in 0 1 1' type, find edge 12
         {
           const I edge[2] = {vt[1], vt[2]};
           assert( m.find_edge(edge, oeid) );
-          results.insert(tid + t*n(2) + 3*m.n(2));
+          results.insert(oeid + t*n(2) + 3*m.n(2));
         }
       } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2'
         // 0 1 1', in 0 1 1' type, find edge 01
         {
           const I edge[2] = {vt[0], vt[1]};
           assert( m.find_edge(edge, oeid) );
-          results.insert(tid + t*n(2) + 3*m.n(2));
+          results.insert(oeid + t*n(2) + 3*m.n(2));
         }
         // 0 1 2', in 0 1 2' type, find tri 012
         results.insert(otid + t*n(2) + m.n(2));
@@ -601,14 +599,14 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         {
           const I edge[2] = {vt[1], vt[2]};
           assert( m.find_edge(edge, oeid) );
-          results.insert(tid + t*n(2) + 3*m.n(2) + m.n(1));
+          results.insert(oeid + t*n(2) + 3*m.n(2) + m.n(1));
         }
       } else { // 0 1 1'2'
         // 0 1 1', in 0 1 1' type, find edge 01
         {
           const I edge[2] = {vt[0], vt[1]};
           assert( m.find_edge(edge, oeid) );
-          results.insert(tid + t*n(2) + 3*m.n(2));
+          results.insert(oeid + t*n(2) + 3*m.n(2));
         }
         // 0 1 2', in 0 1 2' type, find tri 012
         results.insert(otid + t*n(2) + m.n(2));
@@ -618,7 +616,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         {
           const I edge[2] = {vt[1], vt[2]};
           assert( m.find_edge(edge, oeid) );
-          results.insert(tid + t*n(2) + 3*m.n(2) + m.n(1));
+          results.insert(oeid + t*n(2) + 3*m.n(2) + m.n(1));
         }
       }
     }
@@ -641,7 +639,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
     const I v0[4] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0))};
     if (i < 4*m.n(3)) { // "tet" type
       I otid;
-      bool found = m.find_tetrahedra(v0, otid);
+      bool found = m.find_tetrahedron(v0, otid);
       assert(found);
 
       if (i < m.n(3)) { // 0 1 2 3
@@ -716,20 +714,6 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
 
   return results;
 }
-
-template <typename I, typename F>
-int simplicial_unstructured_extruded_3d_mesh<I, F>::face_type(I k) const
-{
-  const I i = mod(k, n(2));
-
-  if (i < m.n(2)) return 0;  // I
-  else if (i < 2*m.n(2)) return 1; // II
-  else if (i < 3*m.n(2)) return 2; // III 
-  else if (i < 3*m.n(2) + m.n(1)) return 3; // IV
-  else if (i < 3*m.n(2) + 2*m.n(1)) return 4; // V
-  else return -1;
-}
-#endif
 
 }
 
