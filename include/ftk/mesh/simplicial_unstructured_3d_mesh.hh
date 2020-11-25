@@ -16,6 +16,15 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
 
   int nd() const {return 3;}
   size_t n(int d) const;
+  
+  void build_smoothing_kernel(F sigma);
+  void smooth_scalar_gradient_jacobian(
+      const ndarray<F>& f, 
+      const F sigma,
+      ndarray<F>& fs, // smoothed scalar field
+      ndarray<F>& g,  // smoothed gradient field
+      ndarray<F>& j   // smoothed jacobian field
+  ) const; 
 
 public: // io
 #if FTK_HAVE_VTK
@@ -71,6 +80,8 @@ public:
   std::map<std::tuple<I, I>, int> edge_id_map;
   std::map<std::tuple<I, I, I>, int> triangle_id_map;
   std::map<std::tuple<I, I, I, I>, int> tetrahedron_id_map;
+  
+  std::vector<std::vector<std::tuple<I/*vert*/, F/*weight*/>>> smoothing_kernel;
 };
 
 //////////
@@ -342,6 +353,101 @@ bool simplicial_unstructured_3d_mesh<I, F>::find_tetrahedron(const I v[4], I &i)
     assert(tetrahedra(3, i) == v[3]);
     return true;
   }
+}
+
+template <typename I, typename F>
+inline void simplicial_unstructured_3d_mesh<I, F>::build_smoothing_kernel(const F sigma)
+{
+  const F sigma2 = sigma * sigma;
+  const F limit = F(3) * sigma;
+
+  auto neighbors = [&](I i) { return vertex_edge_vertex[i]; };
+  smoothing_kernel.resize(n(0));
+
+  for (auto i = 0; i < n(0); i ++) {
+    std::set<I> set;
+    const F xi[3] = {vertex_coords[i*3], vertex_coords[i*3+1], vertex_coords[i*3+2]};
+    // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
+    auto criteron = [&](I j) {
+      const F xj[3] = {vertex_coords[j*3], vertex_coords[j*3+1], vertex_coords[j*3+2]};
+      if (vector_dist_2norm_3(xi, xj) < limit)
+        return true;
+      else return false;
+    };
+
+    auto operation = [&set](I j) {set.insert(j);};
+    bfs<I, std::set<I>>(i, neighbors, operation, criteron);
+
+    auto &kernel = smoothing_kernel[i];
+    for (auto k : set) {
+      const F xk[3] = {vertex_coords[3*k], vertex_coords[3*k+1], vertex_coords[3*k+2]};
+      const F d = vector_dist_2norm_3(xi, xk);
+      const F w = std::exp(-(d*d) / (2*sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
+      // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
+      kernel.push_back( std::make_tuple(k, w) );
+      fprintf(stderr, "i=%d, k=%d, %f\n", i, k, w); 
+    }
+
+    // normalization
+#if 0
+    F sum = 0;
+    for (int k = 0; k < kernel.size(); k ++)
+      sum += std::get<1>(kernel[k]);
+    for (int k = 0; k < kernel.size(); k ++) {
+      std::get<1>(kernel[k]) /= sum;
+      fprintf(stderr, "i=%d, k=%d, %f\n", i, k, std::get<1>(kernel[k]));// kernel.size());
+    }
+#endif
+  }
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
+    const ndarray<F>& f, const F sigma, 
+    ndarray<F>& scalar, // smoothed scalar field
+    ndarray<F>& grad,  // smoothed gradient field
+    ndarray<F>& J) const // smoothed jacobian field
+{
+  const F sigma2 = sigma * sigma, 
+          sigma4 = sigma2 * sigma2;
+
+  scalar.reshape({n(0)});
+  grad.reshape({3, n(0)});
+  J.reshape({3, 3, n(0)});
+
+  // for (auto i = 0; i < smoothing_kernel.size(); i ++) {
+  this->parallel_for(smoothing_kernel.size(), [&](int i) {
+    for (auto j = 0; j < smoothing_kernel[i].size(); j ++) {
+      auto tuple = smoothing_kernel[i][j];
+      const auto k = std::get<0>(tuple);
+      const auto w = std::get<1>(tuple);
+    
+      const F d[3] = {vertex_coords[k*3] - vertex_coords[i*3], 
+                      vertex_coords[k*3+1] - vertex_coords[i*3+1],
+                      vertex_coords[k*3+2] - vertex_coords[i*3+2]};
+
+      // scalar
+      scalar[i] += f[k] * w;
+
+      // gradient
+      grad(0, i) += - f[k] * w * d[0] / sigma2;
+      grad(1, i) += - f[k] * w * d[1] / sigma2;
+      grad(2, i) += - f[k] * w * d[2] / sigma2;
+
+      // jacobian
+      J(0, 0, i) += (d[0]*d[0] / sigma2 - 1) / sigma2 * f[k] * w;
+      J(0, 1, i) += d[0]*d[1] / sigma4 * f[k] * w;
+      J(0, 2, i) += d[0]*d[2] / sigma4 * f[k] * w;
+
+      J(1, 0, i) += d[0]*d[1] / sigma4 * f[k] * w;
+      J(1, 1, i) += (d[1]*d[1] / sigma2 - 1) / sigma2 * f[k] * w;
+      J(1, 2, i) += d[1]*d[2] / sigma4 * f[k] * w;
+
+      J(2, 0, i) += d[2]*d[0] / sigma4 * f[k] * w;
+      J(2, 1, i) += d[2]*d[1] / sigma4 * f[k] * w;
+      J(2, 2, i) += (d[2]*d[2] / sigma2 - 1) / sigma2 * f[k] * w;
+    }
+  });
 }
 
 }
