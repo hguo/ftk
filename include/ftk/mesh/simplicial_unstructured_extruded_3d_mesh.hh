@@ -551,7 +551,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
       bool found = m.find_triangle(vt, otid);
       assert(found);
 
-      // TODO
+      // TODO: also consider "pos"
       if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
         // find which tet in the base mesh has the 012 face
         // 0 1 2 2'3'
