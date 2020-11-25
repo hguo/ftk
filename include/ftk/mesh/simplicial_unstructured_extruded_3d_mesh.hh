@@ -564,6 +564,31 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         // 0 1 1'2'3' in another prism
       }
     }
+  } else if (d == 2) {
+    // find all two tets in the base mesh that contains tri 012
+    // check "position" too, e,g, 013 in 0123
+    { // type 0 1 2 (or 0'1'2'), pos=0, 1, 2, 3
+      // 0 1 2 3
+      // 0 1 2 3'
+      // 0 1 2 2'
+      // 0 0'1'2', t-1
+    }
+    { // type 0 1 2', pos=0, 1, 2, 3
+      // 0 1 2'3'
+      // 0 1 2 2'
+    }
+    { // type 0 1'2', pos=0, 1, 2, 3
+      // 0 1 1'2'
+      // 0 1'2'3'
+    }
+    // find all triangles in the base mesh that contains edge 01
+    { // type 0 1 1', pos=0, 1, 2
+      // 0 1 1'2'
+      // 0 0'1'2'
+    }
+    { // type 0 0'1', pos=0, 1, 2
+      // 0 0'1'2'
+    }
   }
 
   return results;
