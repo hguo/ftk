@@ -22,6 +22,8 @@ struct simplicial_unstructured_extruded_3d_mesh : public object { // extruded fr
   I flat_vertex_time(I i) const { return i / m.n(0); }
   I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
 
+  int tet_type(I i) const;
+
 public: // element iteration
   void element_for(int d, std::function<void(I)> f, 
       int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
@@ -347,7 +349,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
       }
     } else if (type == 1) { // 0 1 2 2'3'
       // 0 1 2 2'
-      { // tri 01
+      { // tri 012
         const I ot[3] = {v[0], v[1], v[2]};
         I otid;
         bool found = m.find_triangle(ot, otid);
@@ -644,6 +646,9 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
   if (d == 3) {
     const I v0[4] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0))};
     if (i < 4*m.n(3)) { // "tet" type
+      // fprintf(stderr, "TET TYPE!!!, v=%d, %d, %d, %d, v0=%d, %d, %d, %d\n", 
+      //     v[0], v[1], v[2], v[3],
+      //     v0[0], v0[1], v0[2], v0[3]);
       I otid;
       bool found = m.find_tetrahedron(v0, otid);
       assert(found);
@@ -663,6 +668,11 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         results.insert(otid + t*n(4) + m.n(3));
         // t:   0 1 1'2'3'
         results.insert(otid + t*n(4) + 2*m.n(3));
+
+        // fprintf(stderr, "%d, %d\n", 
+        //     otid + t*n(4) + m.n(3),
+        //     otid + t*n(4) + 2*m.n(3));
+
       } else if (i < 4*m.n(3)) { // 0 1'2'3'
         // t:   0 1 1'2'3'
         results.insert(otid + t*n(4) + 2*m.n(3));
@@ -746,6 +756,21 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
   }
 
   return results;
+}
+
+template <typename I, typename F>
+int simplicial_unstructured_extruded_3d_mesh<I, F>::tet_type(I k) const
+{
+  const int d = 3;
+  const I i = mod(k, n(d)), t = std::floor((double)k / n(d));
+
+  if (i < m.n(3)) return 0;
+  else if (i < 2*m.n(3)) return 1;
+  else if (i < 3*m.n(3)) return 2;
+  else if (i < 4*m.n(3)) return 3;
+  else if (i < 4*m.n(3) + m.n(2)) return 4;
+  else if (i < 4*m.n(3) + 2*m.n(2)) return 5;
+  else return 6;
 }
 
 }

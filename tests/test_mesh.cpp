@@ -1,6 +1,23 @@
-#include <ftk/mesh/simplicial_regular_mesh.hh>
+// #include <ftk/mesh/simplicial_regular_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <ftk/ndarray.hh>
 
+int main(int argc, char **argv)
+{
+  diy::mpi::environment env(argc, argv);
+
+  ftk::simplicial_unstructured_3d_mesh<> m;
+  m.from_vtk_unstructured_grid_file("3d.vtu");
+
+  ftk::simplicial_unstructured_extruded_3d_mesh<> m1(m);
+  m1.side_of(3, 814782);
+  fprintf(stderr, "------\n");
+  m1.side_of(3, 814776);
+
+  return 0;
+}
+
+#if 0
 int main(int argc, char **argv)
 {
   const std::string filename(argv[1]);
@@ -13,6 +30,7 @@ int main(int argc, char **argv)
 
   return 0;
 }
+#endif
 
 #if 0
 int main(int argc, char **argv)

@@ -129,6 +129,7 @@ inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature
   double mu[4], x[4], cond;
   bool succ2 = ftk::inverse_lerp_s3v3(V, mu, &cond);
   if (!succ2) { // clamp to normal range
+    // return false;
     if (std::isnan(mu[0]) || std::isinf(mu[0])) 
       return false;
       // mu[0] = mu[1] = mu[2] = 1.0 / 3;
@@ -147,7 +148,7 @@ inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature
   cp.x[2] = x[2];
   cp.t = x[3];
 
-  fprintf(stderr, "X=%f, %f, %f, %f\n", x[0], x[1], x[2], x[3]);
+  fprintf(stderr, "X=%f, %f, %f, %f, tet=%d, tettype=%d\n", x[0], x[1], x[2], x[3], i, m.tet_type(i));
 
   if (!field_data_snapshots[0].scalar.empty())
     for (int k = 0; k < get_num_scalar_components(); k ++)
@@ -228,7 +229,7 @@ inline void critical_point_tracker_3d_unstructured::finalize()
       std::set<int> neighbors;
       const auto cells = m.side_of(3, f);
       fprintf(stderr, "tet=%d\n", f);
-#if 0
+#if 1
       int vf[4];
       m.get_simplex(3, f, vf);
       fprintf(stderr, "tet.simplex=%d, %d, %d, %d\n", vf[0], vf[1], vf[2], vf[3]);
@@ -237,7 +238,7 @@ inline void critical_point_tracker_3d_unstructured::finalize()
       // fprintf(stderr, "tet.sideof#=%zu\n", cells.size());
 #endif
       for (const auto c : cells) {
-#if 0
+#if 1
         fprintf(stderr, "--pent=%d\n", c);
         int vc[5];
         m.get_simplex(4, c, vc);
@@ -245,14 +246,13 @@ inline void critical_point_tracker_3d_unstructured::finalize()
 #endif
         const auto elements = m.sides(4, c);
         for (const auto f1 : elements) {
-          // fprintf(stderr, "----face=%d\n", f1);
           neighbors.insert(f1);
-          // fprintf(stderr, "----tet=%d\n", f1);
+          fprintf(stderr, "----tet=%d\n", f1);
         }
       }
       // fprintf(stderr, "size_neighbors=%zu\n", neighbors.size());
-      for (const auto neighbor : neighbors) 
-        fprintf(stderr, "--neighbor=%d\n", neighbor);
+      // for (const auto neighbor : neighbors) 
+      //   fprintf(stderr, "--neighbor=%d\n", neighbor);
       // assert(neighbors.find(f) != neighbors.end());
       return neighbors;
     };
