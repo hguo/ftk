@@ -280,6 +280,12 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::get_simplex(int d, I k, I v
     verts[1] = tets(1, i) + offset;
     verts[2] = tets(2, i) + offset;
     verts[3] = tets(3, i) + offset;
+  } else if (d == 4) {
+    verts[0] = pents(0, i) + offset;
+    verts[1] = pents(1, i) + offset;
+    verts[2] = pents(2, i) + offset;
+    verts[3] = pents(3, i) + offset;
+    verts[4] = pents(4, i) + offset;
   }
 }
 
@@ -664,6 +670,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         results.insert(otid + t*n(4) + 3*m.n(3));
       }
     } else { // "tri" type
+      // fprintf(stderr, "TRI TYPE!!!\n");
       I otid; // triangle id in the base mesh
       // TODO: also consider "pos"
       if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
@@ -671,10 +678,10 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         assert( m.find_triangle(vt, otid) );
         for (const auto &otetid : m.side_of(2, otid)) {
           I tet[4];
-          assert( m.get_tetrahedron(otetid, tet) );
+          m.get_tetrahedron(otetid, tet);
           bool upper = (vt[0] == tet[0]);
           if (upper)
-            results.insert(otetid + t*n(4) + m.n(0));
+            results.insert(otetid + t*n(4) + m.n(3));
           else // lower
             results.insert(otetid + t*n(4));
         }
@@ -688,12 +695,12 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         // 0 1 2 2'3' in another prism
         for (const auto &otetid : m.side_of(2, otid)) {
           I tet[4];
-          assert( m.get_tetrahedron(otetid, tet) );
+          m.get_tetrahedron(otetid, tet);
           bool upper = (vt[0] == tet[0]);
           if (upper)
-            results.insert(otetid + t*n(4) + 2*m.n(0));
+            results.insert(otetid + t*n(4) + 2*m.n(3));
           else // lower
-            results.insert(otetid + t*n(4) + m.n(0));
+            results.insert(otetid + t*n(4) + m.n(3));
         }
       } else { // 0 0'1'2'
         const I vt[3] = {v0[0], v0[2], v0[3]};
@@ -702,12 +709,12 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         // 0 1 1'2'3' in another prism
         for (const auto &otetid : m.side_of(2, otid)) {
           I tet[4];
-          assert( m.get_tetrahedron(otetid, tet) );
+          m.get_tetrahedron(otetid, tet);
           bool upper = (vt[0] == tet[0]);
           if (upper)
-            results.insert(otetid + t*n(4) + 3*m.n(0));
+            results.insert(otetid + t*n(4) + 3*m.n(3));
           else // lower
-            results.insert(otetid + t*n(4) + 2*m.n(0));
+            results.insert(otetid + t*n(4) + 2*m.n(3));
         }
       }
     }
