@@ -664,25 +664,51 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         results.insert(otid + t*n(4) + 3*m.n(3));
       }
     } else { // "tri" type
-      I vt[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[3], m.n(0))};
-      if (vt[0] == vt[1])
-        vt[1] = mod(v[2], m.n(0));
-
-      I otid;
-      bool found = m.find_triangle(vt, otid);
-      assert(found);
-
+      I otid; // triangle id in the base mesh
       // TODO: also consider "pos"
       if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
+        const I vt[3] = {v0[0], v0[1], v0[2]};
+        assert( m.find_triangle(vt, otid) );
+        for (const auto &otetid : m.side_of(2, otid)) {
+          I tet[4];
+          assert( m.get_tetrahedron(otetid, tet) );
+          bool upper = (vt[0] == tet[0]);
+          if (upper)
+            results.insert(otetid + t*n(4) + m.n(0));
+          else // lower
+            results.insert(otetid + t*n(4));
+        }
         // find which tet in the base mesh has the 012 face
         // 0 1 2 2'3'
         // 0 1 2 3 3' in another prism
       } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2'
+        const I vt[3] = {v0[0], v0[1], v0[3]};
+        assert( m.find_triangle(vt, otid) );
         // 0 1 1'2'3'
         // 0 1 2 2'3' in another prism
+        for (const auto &otetid : m.side_of(2, otid)) {
+          I tet[4];
+          assert( m.get_tetrahedron(otetid, tet) );
+          bool upper = (vt[0] == tet[0]);
+          if (upper)
+            results.insert(otetid + t*n(4) + 2*m.n(0));
+          else // lower
+            results.insert(otetid + t*n(4) + m.n(0));
+        }
       } else { // 0 0'1'2'
+        const I vt[3] = {v0[0], v0[2], v0[3]};
+        assert( m.find_triangle(vt, otid) );
         // 0 0'1'2'3'
         // 0 1 1'2'3' in another prism
+        for (const auto &otetid : m.side_of(2, otid)) {
+          I tet[4];
+          assert( m.get_tetrahedron(otetid, tet) );
+          bool upper = (vt[0] == tet[0]);
+          if (upper)
+            results.insert(otetid + t*n(4) + 3*m.n(0));
+          else // lower
+            results.insert(otetid + t*n(4) + 2*m.n(0));
+        }
       }
     }
   } else if (d == 2) {

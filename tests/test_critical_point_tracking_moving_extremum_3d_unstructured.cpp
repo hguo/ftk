@@ -21,7 +21,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_unstructured") {
   // m.build_smoothing_kernel(kernel_size);
 
   ftk::critical_point_tracker_3d_unstructured tracker(world, m);
-  tracker.set_number_of_threads(1);
+  // tracker.set_number_of_threads(1);
   tracker.initialize();
 
   for (int i = 0; i < nt; i ++) {

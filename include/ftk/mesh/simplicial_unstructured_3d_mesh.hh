@@ -357,6 +357,19 @@ bool simplicial_unstructured_3d_mesh<I, F>::find_tetrahedron(const I v[4], I &i)
 }
 
 template <typename I, typename F>
+std::set<I> simplicial_unstructured_3d_mesh<I, F>::side_of(int d, I i) const
+{
+  if (d == 0)
+    return vertex_side_of[i];
+  else if (d == 1) 
+    return edges_side_of[i];
+  else if (d == 2)
+    return triangle_side_of[i];
+  else 
+    return std::set<I>();
+}
+
+template <typename I, typename F>
 inline void simplicial_unstructured_3d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 {
   const F sigma2 = sigma * sigma;
