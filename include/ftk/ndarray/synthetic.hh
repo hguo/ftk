@@ -320,6 +320,27 @@ ndarray<T> synthetic_moving_extremum_unstructured(
 }
 
 template <typename T, int N>
+ndarray<T> synthetic_moving_extremum_grad_unstructured(
+    const ndarray<T> coords, /* N*n_vert */
+    const std::array<T, N> x0,
+    const std::array<T, N> dir,
+    T t)
+{
+  ndarray<T> V;
+  V.reshape(N, coords.dim(1));
+
+  std::array<T, N> xc;
+  for (int j = 0; j < N; j ++)
+    xc[j] = x0[j] + dir[j] * t;
+
+  for (auto i = 0; i < coords.dim(1); i ++)
+    for (int j = 0; j < N; j ++)
+      V(j, i) += -(coords(j, i) - xc[j]);
+
+  return V;
+}
+
+template <typename T, int N>
 ndarray<T> synthetic_volcano(
     const std::vector<size_t> &shape, 
     const T x0[N],

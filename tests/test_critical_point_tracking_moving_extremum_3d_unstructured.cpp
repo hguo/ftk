@@ -18,13 +18,28 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_unstructured") {
  
   ftk::simplicial_unstructured_3d_mesh<> m;
   m.from_vtk_unstructured_grid_file(mesh_filename);
-  m.build_smoothing_kernel(kernel_size);
+  // m.build_smoothing_kernel(kernel_size);
 
   ftk::critical_point_tracker_3d_unstructured tracker(world, m);
   tracker.set_number_of_threads(1);
   tracker.initialize();
 
   for (int i = 0; i < nt; i ++) {
+    ftk::ndarray<double> grad = ftk::synthetic_moving_extremum_grad_unstructured<double, 3>(
+        m.get_coords(), 
+        {0.0, 0.0, 0.0}, // center
+        {1.0, 1.0, 1.0}, // direction
+        static_cast<double>(i) // time
+    );
+   
+    // write back
+    char filename[1024];
+    sprintf(filename, "moving_extremum-3d-grad-%03d.vtu", i);
+    m.vector_to_vtk_unstructured_grid_data_file(filename, "grad", grad);
+    
+    tracker.push_field_data_snapshot(ftk::ndarray<double>(), grad, ftk::ndarray<double>());
+
+#if 0
     auto data = ftk::synthetic_moving_extremum_unstructured<double, 3>(
         m.get_coords(), 
         {0.0, 0.0, 0.0}, // center
@@ -46,6 +61,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_unstructured") {
 
     scalar.reshape({1, scalar.dim(0)});
     tracker.push_field_data_snapshot(scalar, grad, J);
+#endif
 
     if (i != 0) tracker.advance_timestep();
     else tracker.update_timestep();
