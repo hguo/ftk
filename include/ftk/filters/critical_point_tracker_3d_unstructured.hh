@@ -139,13 +139,15 @@ inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature
       mu[2] = 1.0 - mu[0] - mu[1] - mu[2];
       // fprintf(stderr,  "mu =%f, %f, %f\n", mu[0], mu[1], mu[2]);
     }
-    fprintf(stderr,  "mu=%f, %f, %f, %f\n", mu[0], mu[1], mu[2], mu[3]);
   }
+  
   ftk::lerp_s3v4(X, mu, x);
   cp.x[0] = x[0];
   cp.x[1] = x[1];
   cp.x[2] = x[2];
   cp.t = x[3];
+
+  fprintf(stderr, "X=%f, %f, %f, %f\n", x[0], x[1], x[2], x[3]);
 
   if (!field_data_snapshots[0].scalar.empty())
     for (int k = 0; k < get_num_scalar_components(); k ++)

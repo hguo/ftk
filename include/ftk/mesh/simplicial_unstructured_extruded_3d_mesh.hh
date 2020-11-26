@@ -289,7 +289,7 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::get_coords(I i, F coords[])
   const I k = flat_vertex_id(i),
           t = flat_vertex_time(i);
   m.get_coords(k, coords);
-  coords[2] = t;
+  coords[3] = t;
 }
 
 template <typename I, typename F>

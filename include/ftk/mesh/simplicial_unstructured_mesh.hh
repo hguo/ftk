@@ -162,8 +162,13 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_mesh<I, F>::vector_
   array->SetName(varname.c_str());
   array->SetNumberOfComponents(3); // TODO
   array->SetNumberOfTuples(n(0));
-  for (int i = 0; i<n(0); i ++) {
-    array->SetTuple3(i, vector(0, i), vector(1, i), 0);
+
+  if (vector.dim(0) == 2) {
+    for (int i = 0; i<n(0); i ++)
+      array->SetTuple3(i, vector(0, i), vector(1, i), 0);
+  } else {
+    for (int i = 0; i<n(0); i ++)
+      array->SetTuple3(i, vector(0, i), vector(1, i), vector(2, i));
   }
 
   grid->GetPointData()->AddArray(array);

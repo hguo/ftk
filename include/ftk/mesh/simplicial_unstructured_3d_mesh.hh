@@ -311,6 +311,7 @@ void simplicial_unstructured_3d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
   coords[0] = vertex_coords(0, i);
   coords[1] = vertex_coords(1, i);
+  coords[2] = vertex_coords(2, i);
 }
 
 template <typename I, typename F>
