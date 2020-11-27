@@ -28,7 +28,8 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_unstructured") {
     ftk::ndarray<double> grad = ftk::synthetic_moving_extremum_grad_unstructured<double, 3>(
         m.get_coords(), 
         {0.0, 0.0, 0.0}, // center
-        {0.1, 0.1, 0.1}, // direction
+        // {0.1, 0.1, 0.1}, // direction
+        {1.0, 1.0, 1.0}, // direction
         // {-0.1, 0.1, -0.2}, // direction
         static_cast<double>(i) // time
     );

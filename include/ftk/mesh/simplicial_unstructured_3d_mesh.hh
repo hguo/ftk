@@ -330,10 +330,12 @@ bool simplicial_unstructured_3d_mesh<I, F>::find_edge(const I v[2], I &i) const
 template <typename I, typename F>
 bool simplicial_unstructured_3d_mesh<I, F>::find_triangle(const I v[3], I &i) const
 {
+  i = -1;
   const auto it = triangle_id_map.find( std::make_tuple(v[0], v[1], v[2]) );
   if (it == triangle_id_map.end()) return false;
   else {
     i = it->second;
+    // fprintf(stderr, "found triangle!!! %d\n", i);
     assert(triangles(0, i) == v[0]);
     assert(triangles(1, i) == v[1]);
     assert(triangles(2, i) == v[2]);

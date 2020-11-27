@@ -10,9 +10,25 @@ int main(int argc, char **argv)
   m.from_vtk_unstructured_grid_file("3d.vtu");
 
   ftk::simplicial_unstructured_extruded_3d_mesh<> m1(m);
-  m1.side_of(3, 814782);
-  fprintf(stderr, "------\n");
-  m1.side_of(3, 814776);
+
+  srand(0);
+  for (int k = 0; k < 100000; k ++) {
+    const int i = rand(); // 434318;
+    fprintf(stderr, "tet=%d, type=%d\n", i, m1.tet_type(i));
+    const auto pents = m1.side_of(3, i);
+    for (const auto &pent : pents) {
+      fprintf(stderr, "--pent=%d\n", pent);
+      const auto sides = m1.sides(4, pent);
+      for (const auto &side : sides) {
+        fprintf(stderr, "----side=%d\n", side);
+      }
+
+      if (sides.find(i) == sides.end()) {
+        fprintf(stderr, "fatal error...\n");
+        exit(1);
+      }
+    }
+  }
 
   return 0;
 }
