@@ -228,8 +228,8 @@ inline void critical_point_tracker_3d_unstructured::finalize()
     auto neighbors = [&](int f) {
       std::set<int> neighbors;
       const auto cells = m.side_of(3, f);
+#if 0
       fprintf(stderr, "tet=%d\n", f);
-#if 1
       int vf[4];
       m.get_simplex(3, f, vf);
       fprintf(stderr, "tet.simplex=%d, %d, %d, %d\n", vf[0], vf[1], vf[2], vf[3]);
@@ -238,7 +238,7 @@ inline void critical_point_tracker_3d_unstructured::finalize()
       // fprintf(stderr, "tet.sideof#=%zu\n", cells.size());
 #endif
       for (const auto c : cells) {
-#if 1
+#if 0
         fprintf(stderr, "--pent=%d\n", c);
         int vc[5];
         m.get_simplex(4, c, vc);
@@ -247,7 +247,7 @@ inline void critical_point_tracker_3d_unstructured::finalize()
         const auto elements = m.sides(4, c);
         for (const auto f1 : elements) {
           neighbors.insert(f1);
-          fprintf(stderr, "----tet=%d\n", f1);
+          // fprintf(stderr, "----tet=%d\n", f1);
         }
       }
       // fprintf(stderr, "size_neighbors=%zu\n", neighbors.size());

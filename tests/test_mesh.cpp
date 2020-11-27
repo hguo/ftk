@@ -1,18 +1,20 @@
+#define CATCH_CONFIG_RUNNER
+#include "catch.hh"
 // #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <ftk/ndarray.hh>
 
-int main(int argc, char **argv)
-{
-  diy::mpi::environment env(argc, argv);
+diy::mpi::environment env;
 
+TEST_CASE("mesh_extruded_3d_unstructured") 
+{
   ftk::simplicial_unstructured_3d_mesh<> m;
   m.from_vtk_unstructured_grid_file("3d.vtu");
 
   ftk::simplicial_unstructured_extruded_3d_mesh<> m1(m);
 
   srand(0);
-  for (int k = 0; k < 100000; k ++) {
+  for (int k = 0; k < 1000; k ++) {
     const int i = rand(); // 434318;
     fprintf(stderr, "tet=%d, type=%d\n", i, m1.tet_type(i));
     const auto pents = m1.side_of(3, i);
@@ -23,13 +25,19 @@ int main(int argc, char **argv)
         fprintf(stderr, "----side=%d\n", side);
       }
 
-      if (sides.find(i) == sides.end()) {
-        fprintf(stderr, "fatal error...\n");
-        exit(1);
-      }
+      REQUIRE(sides.find(i) != sides.end());
+      // if (sides.find(i) == sides.end()) {
+      //   fprintf(stderr, "fatal error...\n");
+      //   exit(1);
+      // }
     }
   }
+}
 
+int main(int argc, char **argv)
+{
+  Catch::Session session;
+  session.run(argc, argv);
   return 0;
 }
 

@@ -9,9 +9,6 @@ add_custom_target(copy_test_data ALL
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/data/* ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_executable (test_mesh test_mesh.cpp)
-target_link_libraries (test_mesh libftk)
-
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
 target_link_libraries (test_quadratic_interpolation libftk)
 catch_discover_tests (test_quadratic_interpolation)
@@ -58,6 +55,10 @@ catch_discover_tests (test_inverse_interpolation)
 add_executable (test_io test_io)
 target_link_libraries (test_io libftk)
 catch_discover_tests (test_io)
+
+add_executable (test_mesh test_mesh.cpp)
+target_link_libraries (test_mesh libftk)
+catch_discover_tests (test_mesh)
 
 #add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
 #target_link_libraries (test_critical_point_tracking_woven libftk)

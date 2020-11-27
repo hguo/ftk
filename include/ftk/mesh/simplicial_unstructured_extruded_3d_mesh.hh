@@ -311,10 +311,10 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
 
   if (d == 4) { // currently only pentachrora are supported
     const int type = i / m.n(3);
-    fprintf(stderr, "sides of %d, i=%d, t=%d, type=%d, verts=%d, %d, %d, %d, %d, verts'=%d, %d, %d, %d, %d\n", 
-        k, i, t, type, 
-        v[0], v[1], v[2], v[3], v[4], 
-        mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0)), mod(v[4], m.n(0)) );
+    // fprintf(stderr, "sides of %d, i=%d, t=%d, type=%d, verts=%d, %d, %d, %d, %d, verts'=%d, %d, %d, %d, %d\n", 
+    //     k, i, t, type, 
+    //     v[0], v[1], v[2], v[3], v[4], 
+    //     mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0)), mod(v[4], m.n(0)) );
     if (type == 0) { // 0 1 2 3 3'
       // 0 1 2 3
       // 0 1 2 3'
