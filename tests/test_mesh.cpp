@@ -16,7 +16,10 @@ TEST_CASE("mesh_extruded_3d_unstructured")
   srand(0);
   for (int k = 0; k < 1000; k ++) {
     const int i = rand(); // 434318;
-    fprintf(stderr, "tet=%d, type=%d\n", i, m1.tet_type(i));
+    int tet[4];
+    m1.get_simplex(3, i, tet);
+    fprintf(stderr, "tet=%d, type=%d, tet=%d, %d, %d, %d\n", i, m1.tet_type(i), tet[0], tet[1], tet[2], tet[3]);
+
     const auto pents = m1.side_of(3, i);
     for (const auto &pent : pents) {
       fprintf(stderr, "--pent=%d\n", pent);

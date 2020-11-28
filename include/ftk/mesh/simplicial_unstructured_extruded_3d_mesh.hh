@@ -22,7 +22,8 @@ struct simplicial_unstructured_extruded_3d_mesh : public object { // extruded fr
   I flat_vertex_time(I i) const { return i / m.n(0); }
   I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
 
-  int tet_type(I i) const;
+  int tet_type(I i) const { return simplex_type(3, i); }
+  int simplex_type(int d, I i) const;
 
 public: // element iteration
   void element_for(int d, std::function<void(I)> f, 
@@ -49,6 +50,7 @@ protected:
 private:
   const simplicial_unstructured_3d_mesh<I, F>& m;
 
+#if 0
   ftk::ndarray<I> pents,// {5, n(4)}
                   tets, // {4, n(3)}
                   tris, // {3, n(2)}
@@ -57,6 +59,7 @@ private:
   ftk::ndarray<I> pents_sides,// {5, n(4)}
                   tets_sides, // {4, n(3)}
                   tris_sides; // {3, n(2)}
+#endif
 };
 
 /////
@@ -71,6 +74,9 @@ I simplicial_unstructured_extruded_3d_mesh<I, F>::mod(I v, I m)
 template <typename I, typename F>
 void simplicial_unstructured_extruded_3d_mesh<I, F>::extrude() 
 {
+  fprintf(stderr, "4d mesh initialized, #pent=%zu, #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n", 
+      n(4), n(3), n(2), n(1), n(0));
+#if 0
   // pents
   pents.reshape({5, n(4)});
   for (auto i = 0; i < m.n(3); i ++) {
@@ -195,9 +201,7 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::extrude()
     edges(0, i+2*m.n(1)) = i;
     edges(1, i+2*m.n(1)) = i + m.n(0);
   }
-
-  fprintf(stderr, "4d mesh initialized, #pent=%zu, #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n", 
-      n(4), n(3), n(2), n(1), n(0));
+#endif
 }
 
 template <typename I, typename F>
@@ -267,28 +271,183 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::get_simplex(int d, I k, I v
 {
   const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));
   const I offset = t * n(0);
-  // fprintf(stderr, "d=%d, k=%d, i=%d, t=%d, offset=%d\n", d, k, i, t, offset);
+  const int type = simplex_type(d, i);
+  
+  fprintf(stderr, "d=%d, k=%d, i=%d, t=%d, type=%d, offset=%d\n", d, k, i, t, type, offset);
   if (d == 0) {
-    verts[0] = i + offset;
+    verts[0] = i; // + offset;
   } else if (d == 1) {
-    verts[0] = edges(0, i) + offset;
-    verts[1] = edges(1, i) + offset;
+    if (type < 2) {
+      I edge[2];
+      m.get_edge(i % m.n(1), edge);
+
+      switch (type) {
+        case 0: // 0 1
+          verts[0] = edge[0];
+          verts[1] = edge[1];
+          break;
+
+        case 1: // 0 1'
+          verts[0] = edge[0];
+          verts[1] = edge[1] + m.n(0);
+      }
+    } else {
+      verts[0] = i - 2*m.n(1);
+      verts[1] = i - 2*m.n(1) + m.n(0);
+    }
   } else if (d == 2) {
-    verts[0] = tris(0, i) + offset;
-    verts[1] = tris(1, i) + offset;
-    verts[2] = tris(2, i) + offset;
+    if (type < 3) {
+      I tri[3];
+      m.get_triangle(i % m.n(2), tri);
+      switch (type) {
+        case 0: // 0 1 2
+          verts[0] = tri[0];
+          verts[1] = tri[1];
+          verts[2] = tri[2];
+          break;
+
+        case 1: // 0 1 2'
+          verts[0] = tri[0];
+          verts[1] = tri[1];
+          verts[2] = tri[2] + m.n(0);
+          break;
+
+        case 2: // 0 1'2'
+          verts[0] = tri[0];
+          verts[1] = tri[1] + m.n(0);
+          verts[2] = tri[2] + m.n(0);
+          break;
+
+        default: assert(false);
+      }
+    } else {
+      I edge[2];
+      m.get_edge((i - 3*m.n(2)) % m.n(1), edge);
+      switch (type) {
+        case 3: 
+          verts[0] = edge[0];
+          verts[1] = edge[1];
+          verts[2] = edge[1] + m.n(0);
+          break;
+
+        case 4:
+          verts[0] = edge[0];
+          verts[1] = edge[0] + m.n(0);
+          verts[2] = edge[1] + m.n(0);
+          break;
+
+        default: assert(false);
+      }
+    }
   } else if (d == 3) {
-    verts[0] = tets(0, i) + offset;
-    verts[1] = tets(1, i) + offset;
-    verts[2] = tets(2, i) + offset;
-    verts[3] = tets(3, i) + offset;
+    if (type < 4) {
+      I tet[4];
+      m.get_tetrahedron(i % m.n(3), tet);
+      switch (type) {
+        case 0: // 0 1 2 3, "base"
+          verts[0] = tet[0];
+          verts[1] = tet[1];
+          verts[2] = tet[2];
+          verts[3] = tet[3];
+          break;
+
+        case 1: // 0 1 2 3'
+          verts[0] = tet[0];
+          verts[1] = tet[1];
+          verts[2] = tet[2];
+          verts[3] = tet[3] + m.n(0);
+          break;
+
+        case 2: // 0 1 2'3'
+          verts[0] = tet[0];
+          verts[1] = tet[1];
+          verts[2] = tet[2] + m.n(0);
+          verts[3] = tet[3] + m.n(0);
+          break;
+
+        case 3: // 0 1'2'3'
+          verts[0] = tet[0];
+          verts[1] = tet[1] + m.n(0);
+          verts[2] = tet[2] + m.n(0);
+          verts[3] = tet[3] + m.n(0);
+          break;
+
+        default: 
+          assert(false);
+      }
+    } else {
+      I tri[3];
+      m.get_triangle((i - 4*m.n(3)) % m.n(2), tri);
+      switch (type) {
+        case 4: // 0 1 2 2'
+          verts[0] = tri[0];
+          verts[1] = tri[1];
+          verts[2] = tri[2];
+          verts[3] = tri[2] + m.n(0);
+          break;
+
+        case 5: // 0 1 1'2'
+          verts[0] = tri[0];
+          verts[1] = tri[1];
+          verts[2] = tri[1] + m.n(0);
+          verts[3] = tri[2] + m.n(0);
+          break;
+
+        case 6: // 0 0'1'2'
+          verts[0] = tri[0];
+          verts[1] = tri[0] + m.n(0);
+          verts[2] = tri[1] + m.n(0);
+          verts[3] = tri[2] + m.n(0);
+          break;
+
+        default:
+          assert(false);
+      }
+    }
   } else if (d == 4) {
-    verts[0] = pents(0, i) + offset;
-    verts[1] = pents(1, i) + offset;
-    verts[2] = pents(2, i) + offset;
-    verts[3] = pents(3, i) + offset;
-    verts[4] = pents(4, i) + offset;
+    I tet[4];
+    m.get_tetrahedron(i % m.n(3), tet);
+
+    switch (type) {
+      case 0: // type I:   0 1 2 3 3'
+        verts[0] = tet[0]; 
+        verts[1] = tet[1];
+        verts[2] = tet[2];
+        verts[3] = tet[3];
+        verts[4] = tet[3] + m.n(0);
+        break;
+
+      case 1: // type II:  0 1 2 2'3'
+        verts[0] = tet[0];
+        verts[1] = tet[1];
+        verts[2] = tet[2];
+        verts[3] = tet[2] + m.n(0);
+        verts[4] = tet[3] + m.n(0);
+        break;
+
+      case 2: // type III: 0 1 1'2'3'
+        verts[0] = tet[0];
+        verts[1] = tet[1];
+        verts[2] = tet[1] + m.n(0);
+        verts[3] = tet[2] + m.n(0);
+        verts[4] = tet[3] + m.n(0);
+        break;
+
+      case 3: // type IV:  0 1'1'2'3'
+        verts[0] = tet[0];
+        verts[1] = tet[1] + m.n(0);
+        verts[2] = tet[1] + m.n(0);
+        verts[3] = tet[2] + m.n(0);
+        verts[4] = tet[3] + m.n(0);
+        break;
+
+      default: 
+        assert(false);
+    }
   }
+
+  for (int i = 0; i < d; i ++)
+    verts[i] += offset;
 }
 
 template <typename I, typename F>
@@ -846,18 +1005,42 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
 }
 
 template <typename I, typename F>
-int simplicial_unstructured_extruded_3d_mesh<I, F>::tet_type(I k) const
+int simplicial_unstructured_extruded_3d_mesh<I, F>::simplex_type(int d, I k) const
 {
-  const int d = 3;
   const I i = mod(k, n(d)), t = std::floor((double)k / n(d));
 
-  if (i < m.n(3)) return 0;
-  else if (i < 2*m.n(3)) return 1;
-  else if (i < 3*m.n(3)) return 2;
-  else if (i < 4*m.n(3)) return 3;
-  else if (i < 4*m.n(3) + m.n(2)) return 4;
-  else if (i < 4*m.n(3) + 2*m.n(2)) return 5;
-  else return 6;
+  switch (d) {
+    case 0:
+      return 0;
+
+    case 1: 
+      if (i < m.n(1)) return 0;
+      else if (i < 2*m.n(1)) return 1;
+      else return 2;
+
+    case 2: 
+      if (i < m.n(2)) return 0;
+      else if (i < 2*m.n(2)) return 1;
+      else if (i < 3*m.n(2)) return 2;
+      else if (i < 3*m.n(2) + m.n(1)) return 3;
+      else return 4;
+
+    case 3: 
+      if (i < m.n(3)) return 0;
+      else if (i < 2*m.n(3)) return 1;
+      else if (i < 3*m.n(3)) return 2;
+      else if (i < 4*m.n(3)) return 3;
+      else if (i < 4*m.n(3) + m.n(2)) return 4;
+      else if (i < 4*m.n(3) + 2*m.n(2)) return 5;
+      else return 6;
+
+    case 4:
+      return i / m.n(3);
+
+    default: 
+      assert(false);
+      return -1;
+  }
 }
 
 }
