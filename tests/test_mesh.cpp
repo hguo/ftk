@@ -1,13 +1,12 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hh"
-// #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <ftk/ndarray.hh>
 
 diy::mpi::environment env;
 
-TEST_CASE("mesh_extruded_3d_unstructured") 
-{
+#if FTK_HAVE_VTK
+TEST_CASE("mesh_extruded_3d_unstructured") {
   ftk::simplicial_unstructured_3d_mesh<> m;
   m.from_vtk_unstructured_grid_file("3d.vtu");
 
@@ -36,6 +35,7 @@ TEST_CASE("mesh_extruded_3d_unstructured")
     }
   }
 }
+#endif
 
 int main(int argc, char **argv)
 {
