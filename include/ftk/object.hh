@@ -41,6 +41,7 @@ struct object {
   bool is_root_proc() const {return root_proc == comm.rank();}
 
   static void fatal(const std::string& str) {
+    std::cerr << "FATAL: " << str << std::endl;
     exit(1);
   }
 
