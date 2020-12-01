@@ -18,7 +18,9 @@ struct simplicial_unstructured_2d_mesh : public simplicial_unstructured_mesh<I, 
   simplicial_unstructured_2d_mesh(
       const ndarray<F>& coords_, // 2 * n_vertices
       const ndarray<I>& triangles_) // 3 * n_triangles
-    : vertex_coords(coords_), triangles(triangles_) {build_triangles();}
+    : vertex_coords(coords_), triangles(triangles_) {build_triangles(); build_edges();}
+
+  static simplicial_unstructured_2d_mesh<I, F> from_xgc_mesh_h5(const std::string& filename);
 
   // dimensionality of the mesh
   int nd() const {return 2;}
@@ -456,6 +458,19 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of2(const I v[2]) const
   else return it->second;
 }
 #endif
+
+template <typename I, typename F>
+simplicial_unstructured_2d_mesh<I, F> simplicial_unstructured_2d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename)
+{
+  ftk::ndarray<I> triangles;
+  ftk::ndarray<F> coords;
+
+  triangles.from_h5(filename, "/cell_set[0]/node_connect_list");
+  coords.from_h5(filename, "/coordinates/values");
+  // psi.from_h5(mesh_filename, "psi");
+
+  return simplicial_unstructured_2d_mesh(coords, triangles);
+}
 
 }
 #endif
