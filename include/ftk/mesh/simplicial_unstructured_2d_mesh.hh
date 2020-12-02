@@ -48,6 +48,7 @@ public: // io
   vtkSmartPointer<vtkUnstructuredGrid> to_xgc_slices_3d_vtu(int nphi, int iphi) const;
   vtkSmartPointer<vtkUnstructuredGrid> scalar_to_xgc_slices_3d_vtu(const std::string& varname, const ndarray<F>& data, int nphi, int iphi) const;
   void to_xgc_slices_3d_vtu(const std::string&, int nphi, int iphi) const;
+  void scalar_to_xgc_slices_3d_vtu(const std::string& filename, const std::string& varname, const ndarray<F>& data, int nphi, int iphi) const;
 #endif
   void write_smoothing_kernel(const std::string& filename);
   bool read_smoothing_kernel(const std::string& filename);
@@ -421,6 +422,16 @@ to_xgc_slices_3d_vtu(const std::string& filename, int nphi, int iphi) const
 }
 
 template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::
+scalar_to_xgc_slices_3d_vtu(const std::string& filename, const std::string& varname, const ndarray<F>& scalar, int nphi, int iphi) const
+{
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( scalar_to_xgc_slices_3d_vtu(varname, scalar, nphi, iphi) );
+  writer->Write();
+}
+
+template <typename I, typename F>
 vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::
 to_xgc_slices_3d_vtu(int nphi, int iphi) const
 {
@@ -453,6 +464,31 @@ to_xgc_slices_3d_vtu(int nphi, int iphi) const
   }
 
   grid->SetPoints(pts);
+  return grid;
+}
+
+template <typename I, typename F>
+vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::
+scalar_to_xgc_slices_3d_vtu(const std::string& varname, const ndarray<F>& scalar, int nphi, int iphi) const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = to_xgc_slices_3d_vtu(nphi, iphi);
+
+  vtkSmartPointer<vtkDataArray> array = vtkDoubleArray::New();
+  array->SetName(varname.c_str());
+  array->SetNumberOfComponents(1);
+  array->SetNumberOfTuples(n(0) * nphi * iphi);
+
+  // std::cerr << scalar << std::endl;
+
+  for (int i = 0; i < iphi; i ++) 
+    for (int j = 0; j < nphi; j ++) 
+      for (int k = 0; k < n(0); k ++) {
+        array->SetTuple1((i * nphi + j) * n(0) + k, scalar(j, k));
+      }
+
+  grid->GetPointData()->AddArray(array);
+  grid->GetPointData()->SetActiveScalars(varname.c_str());
+
   return grid;
 }
 #endif
