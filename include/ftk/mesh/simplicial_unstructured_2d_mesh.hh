@@ -44,6 +44,10 @@ public: // io
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
   void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid);
+  
+  vtkSmartPointer<vtkUnstructuredGrid> to_xgc_slices_3d_vtu(int nphi, int iphi) const;
+  vtkSmartPointer<vtkUnstructuredGrid> scalar_to_xgc_slices_3d_vtu(const std::string& varname, const ndarray<F>& data, int nphi, int iphi) const;
+  void to_xgc_slices_3d_vtu(const std::string&, int nphi, int iphi) const;
 #endif
   void write_smoothing_kernel(const std::string& filename);
   bool read_smoothing_kernel(const std::string& filename);
@@ -400,6 +404,52 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_v
   for (int i=0; i<n(2); i ++) {
     vtkIdType ids[3] = {triangles[i*3], triangles[i*3+1], triangles[i*3+2]};
     grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
+  }
+
+  grid->SetPoints(pts);
+  return grid;
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::
+to_xgc_slices_3d_vtu(const std::string& filename, int nphi, int iphi) const
+{
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( to_xgc_slices_3d_vtu(nphi, iphi) );
+  writer->Write();
+}
+
+template <typename I, typename F>
+vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::
+to_xgc_slices_3d_vtu(int nphi, int iphi) const
+{
+  const int np = nphi * iphi;
+  
+  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
+  vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
+  pts->SetNumberOfPoints(n(0) * np);
+ 
+  for (int p = 0; p < np; p ++) {
+    const F phi = p * 2 * M_PI / np;
+    const vtkIdType offset = p * n(0);
+    for (int i=0; i < n(0); i++)
+      pts->SetPoint(offset + i, 
+          vertex_coords[i*2] * cos(phi),
+          vertex_coords[i*2] * sin(phi), 
+          vertex_coords[i*2+1]);
+  }
+ 
+  for (int p = 0; p < np; p ++) {
+    const vtkIdType offset = p * n(0);
+    for (int i=0; i<n(2); i ++) {
+      vtkIdType ids[3] = {
+        offset + triangles[i*3], 
+        offset + triangles[i*3+1], 
+        offset + triangles[i*3+2]
+      };
+      grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
+    }
   }
 
   grid->SetPoints(pts);

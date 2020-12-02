@@ -217,6 +217,20 @@ size_t simplicial_unstructured_3d_mesh<I, F>::n(int d) const
   else return 0;
 }
 
+template <typename I, typename F>
+void simplicial_unstructured_3d_mesh<I, F>::initialize()
+{
+  build_tetrahedra();
+  build_triangles();
+  build_edges();
+  
+  fprintf(stderr, "3d mesh initialized: #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n", 
+      tetrahedron_id_map.size(),
+      triangle_id_map.size(), 
+      edge_id_map.size(),
+      vertex_edge_vertex.size());
+}
+
 #if FTK_HAVE_VTK  
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid)
@@ -250,21 +264,6 @@ void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartP
   }
 
   initialize();
-}
-
-
-template <typename I, typename F>
-void simplicial_unstructured_3d_mesh<I, F>::initialize()
-{
-  build_tetrahedra();
-  build_triangles();
-  build_edges();
-  
-  fprintf(stderr, "3d mesh initialized: #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n", 
-      tetrahedron_id_map.size(),
-      triangle_id_map.size(), 
-      edge_id_map.size(),
-      vertex_edge_vertex.size());
 }
 
 template <typename I, typename F>
