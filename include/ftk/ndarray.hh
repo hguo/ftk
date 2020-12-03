@@ -203,8 +203,9 @@ struct ndarray : object {
   template <int N, typename F=float> // NxN tensor multilinear interpolation
   T lerpt(F x[]) const; 
 
-  ndarray<T> transpose() const; // only works for 2D arrays
-  ndarray<T> transpose(const std::vector<size_t> order) const; // works for general tensors
+
+  ndarray<T> get_transpose() const; // only works for 2D arrays
+  ndarray<T> get_transpose(const std::vector<size_t> order) const; // works for general tensors
 
   template <typename T1>
   void from_array(const ndarray<T1>& array1);
@@ -1098,7 +1099,7 @@ std::ostream& ndarray<T>::print(std::ostream& os) const
 }
 
 template <typename T>
-ndarray<T> ndarray<T>::transpose() const 
+ndarray<T> ndarray<T>::get_transpose() const 
 {
   ndarray<T> a;
   a.reshape(dim(1), dim(0));

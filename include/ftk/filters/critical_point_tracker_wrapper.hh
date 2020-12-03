@@ -348,7 +348,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
   // fprintf(stderr, "mesh loaded., %zu, %zu, %zu\n", m.n(0), m.n(1), m.n(2));
 
   auto push_timestep = [&](int k, const ftk::ndarray<double>& data) {
-    auto dpot = data.transpose();
+    auto dpot = data.get_transpose();
     dpot.reshape(dpot.dim(0));
 
     ftk::ndarray<double> scalar, grad, J;
@@ -368,7 +368,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
   
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     if (j["xgc"].contains("torus") && j["xgc"]["torus"] == true) { // tracking over torus
-      auto dpot = field_data.transpose();
+      auto dpot = field_data.get_transpose();
       for (int k = 0; k < dpot.dim(1); k ++) {
         ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
         m.smooth_scalar_gradient_jacobian(dpot_slice, smoothing_kernel_size, scalar, grad, J);
