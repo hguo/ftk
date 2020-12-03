@@ -483,7 +483,7 @@ scalar_to_xgc_slices_3d_vtu(const std::string& varname, const ndarray<F>& scalar
   for (int i = 0; i < iphi; i ++) 
     for (int j = 0; j < nphi; j ++) 
       for (int k = 0; k < n(0); k ++)
-        array->SetTuple1((i * nphi + j) * n(0) + k, scalar(j, k));
+        array->SetTuple1((i * nphi + j) * n(0) + k, scalar(k, j));
 
   grid->GetPointData()->AddArray(array);
   grid->GetPointData()->SetActiveScalars(varname.c_str());
