@@ -10,6 +10,7 @@
 #include "ftk/filters/contour_tracker_2d_regular.hh"
 #include "ftk/filters/contour_tracker_3d_regular.hh"
 #include "ftk/filters/tdgl_vortex_tracker_3d_regular.hh"
+#include "ftk/filters/xgc_blob_filament_tracker.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
@@ -53,6 +54,7 @@ bool xgc_post_process = false,
 double xgc_smoothing_kernel_size = 0.03;
 
 // tracker and input stream
+std::shared_ptr<tracker> mtracker;
 std::shared_ptr<critical_point_tracker_wrapper> tracker_critical_point;
 std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
@@ -93,11 +95,6 @@ static const std::string
         str_critical_point_type_min("min"),
         str_critical_point_type_max("max"),
         str_critical_point_type_saddle("saddle");
-
-static const std::string
-        str_feature_critical_point("cp"),
-        str_feature_tdgl_vortex("tdgl"),
-        str_feature_isosurface("iso");
 
 static const std::set<std::string>
         set_valid_accelerator({str_none, str_cuda}),
@@ -261,6 +258,26 @@ void execute_threshold_tracker(diy::mpi::communicator comm)
 
   const auto &tg = tracker_threshold->get_tracking_graph();
   tg.generate_dot_file("dot"); // TODO
+}
+
+void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
+{
+  if (xgc_mesh_filename.empty()) 
+    fatal("missing xgc mesh filename");
+ 
+  const auto js = stream->get_json();
+  // ntimesteps = js["n_timesteps"];
+
+  if (comm.rank() == 0) {
+    fprintf(stderr, "SUMMARY\n=============\n");
+    fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
+    fprintf(stderr, "output_format=%s\n", output_format.c_str());
+    fprintf(stderr, "nthreads=%d\n", nthreads);
+    std::cerr << "input=" << js << std::endl;
+    fprintf(stderr, "=============\n");
+  }
+  
+  mtracker.reset(new xgc_blob_filament_tracker(comm));
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
@@ -473,6 +490,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     initialize_contour_tracker(comm); 
   else if (ttype == TRACKER_TDGL_VORTEX)
     initialize_tdgl_tracker(comm);
+  else if (ttype == TRACKER_XGC_BLOB_FILAMENT)
+    initialize_xgc_blob_filament_tracker(comm);
   else 
     fatal(options, "missing or invalid '--feature'");
 

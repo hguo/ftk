@@ -11,7 +11,8 @@ enum {
   TRACKER_CRITICAL_POINT = 1,
   TRACKER_TDGL_VORTEX = 2,
   TRACKER_CONTOUR = 3,
-  TRACKER_CONNECTED_COMPONENTS = 4
+  TRACKER_CONNECTED_COMPONENTS = 4,
+  TRACKER_XGC_BLOB_FILAMENT = 5
 };
 
 struct tracker : public filter
@@ -63,8 +64,10 @@ inline int tracker::str2tracker(const std::string& s)
     return TRACKER_CRITICAL_POINT;
   else if (s == "iso" || s == "isovolume" || s == "isosurface" || s == "isosurfaces")
     return TRACKER_CONTOUR;
-  else if (s == "tdgl" || s == "tdgl_vortex" || s == "tdgl_vortices")
+  else if (s == "tdgl" || s == "tdgl_vortex" || s == "tdgl-vortex" || s == "tdgl_vortices" || s == "tdgl-vortices")
     return TRACKER_TDGL_VORTEX;
+  else if (s == "xgc_blob_filament" || s == "xgc-blob-filament")
+    return TRACKER_XGC_BLOB_FILAMENT;
   else if (s == "cc" || s == "connected_component" || s == "connected_components")
     return TRACKER_CONNECTED_COMPONENTS;
   else return 0;
