@@ -273,7 +273,7 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::get_simplex(int d, I k, I v
   const I offset = t * n(0);
   const int type = simplex_type(d, i);
   
-  fprintf(stderr, "d=%d, k=%d, i=%d, t=%d, type=%d, offset=%d\n", d, k, i, t, type, offset);
+  // fprintf(stderr, "d=%d, k=%d, i=%d, t=%d, type=%d, offset=%d\n", d, k, i, t, type, offset);
   if (d == 0) {
     verts[0] = i; // + offset;
   } else if (d == 1) {
