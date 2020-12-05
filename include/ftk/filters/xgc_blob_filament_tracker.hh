@@ -17,7 +17,9 @@
 namespace ftk {
   
 struct xgc_blob_filament_tracker : public virtual tracker {
-  xgc_blob_filament_tracker(diy::mpi::communicator comm) : tracker(comm) {}
+  xgc_blob_filament_tracker(diy::mpi::communicator comm, 
+      const simplicial_unstructured_2d_mesh<>& m2, 
+      int nphi_, int iphi_);
 
   int cpdims() const { return 3; }
  
@@ -46,9 +48,27 @@ protected:
     ndarray<double> scalar, vector, jacobian;
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
+
+  const int nphi, iphi;
+  const simplicial_unstructured_2d_mesh<>& m2;
+  const simplicial_unstructured_3d_mesh<> m3;
+  const simplicial_unstructured_extruded_3d_mesh<> m4;
 };
 
 /////
+  
+xgc_blob_filament_tracker::xgc_blob_filament_tracker(
+    diy::mpi::communicator comm, 
+    const simplicial_unstructured_2d_mesh<>& m2_, 
+    int nphi_, int iphi_) :
+  tracker(comm),
+  m2(m2_), nphi(nphi_), iphi(iphi_),
+  m3(ftk::simplicial_unstructured_3d_mesh<>::from_xgc_mesh(m2_, nphi_, iphi_)),
+  m4(m3)
+{
+
+}
+
 inline bool xgc_blob_filament_tracker::advance_timestep()
 {
   update_timestep();

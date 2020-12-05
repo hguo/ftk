@@ -268,16 +268,38 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   const auto js = stream->get_json();
   // ntimesteps = js["n_timesteps"];
 
+  // determine nphi and iphi
+  int nphi, iphi;
+  const std::string filename0 = js["filenames"][0];
+  const std::string varname = js["variables"][0];
+  const auto array_nphi = ndarray<int>::read_h5(filename0, "/nphi");
+  const auto array_iphi = ndarray<int>::read_h5(filename0, "/iphi");
+
+  if (array_nphi.size()) {
+    nphi = array_nphi[0];
+  } else { // determine nphi based on data array
+    const auto data = ndarray<double>::read_h5(filename0, varname);
+    nphi = data.dim(0);
+  }
+
+  if (array_iphi.size()) {
+    iphi = std::max(array_iphi[0], 1);
+  } else 
+    iphi = 1;
+
   if (comm.rank() == 0) {
     fprintf(stderr, "SUMMARY\n=============\n");
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
+    fprintf(stderr, "nphi=%d, iphi=%d\n", nphi, iphi);
     fprintf(stderr, "output_format=%s\n", output_format.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
     std::cerr << "input=" << js << std::endl;
     fprintf(stderr, "=============\n");
   }
   
-  mtracker.reset(new xgc_blob_filament_tracker(comm));
+  auto m2 = simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  mtracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi));
+  mtracker->initialize();
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)

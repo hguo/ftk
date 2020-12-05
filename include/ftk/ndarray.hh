@@ -83,6 +83,7 @@ struct ndarray : object {
   size_t nd() const {return dims.size();}
   size_t dim(size_t i) const {return dims[i];}
   size_t shape(size_t i) const {return dim(i);}
+  size_t size() const {return p.size();}
   size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
   bool empty() const  {return p.empty();}
   const std::vector<size_t> &shape() const {return dims;}
@@ -243,10 +244,11 @@ public: // i/o for vtk image data
 #endif
 
 public: // i/o for hdf5
-  void from_h5(const std::string& filename, const std::string& name); 
+  static ndarray<T> read_h5(const std::string& filename, const std::string& name);
+  bool from_h5(const std::string& filename, const std::string& name); 
 #if FTK_HAVE_HDF5
-  void from_h5(hid_t fid, const std::string& name);
-  void from_h5(hid_t did);
+  bool from_h5(hid_t fid, const std::string& name);
+  bool from_h5(hid_t did);
 
   static hid_t h5_mem_type_id();
 #endif
@@ -956,25 +958,39 @@ inline void ndarray<T>::copy_to_cuda_device()
 #endif
 }
 
+template <typename T>
+ndarray<T> ndarray<T>::read_h5(const std::string& filename, const std::string& name)
+{
+  ndarray<T> array;
+  array.from_h5(filename, name);
+  return array;
+}
+
 #if FTK_HAVE_HDF5
 template <typename T>
-inline void ndarray<T>::from_h5(const std::string& filename, const std::string& name)
+inline bool ndarray<T>::from_h5(const std::string& filename, const std::string& name)
 {
   auto fid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  from_h5(fid, name);
-  H5Fclose(fid);
+  if (fid < 0) return false; else {
+    bool succ = from_h5(fid, name);
+    H5Fclose(fid);
+    return succ;
+  }
 }
 
 template <typename T>
-inline void ndarray<T>::from_h5(hid_t fid, const std::string& name)
+inline bool ndarray<T>::from_h5(hid_t fid, const std::string& name)
 {
   auto did = H5Dopen2(fid, name.c_str(), H5P_DEFAULT);
-  from_h5(did);
-  H5Dclose(did);
+  if (did < 0) return false; else {
+    bool succ = from_h5(did);
+    H5Dclose(did);
+    return succ;
+  }
 }
 
 template <typename T>
-inline void ndarray<T>::from_h5(hid_t did)
+inline bool ndarray<T>::from_h5(hid_t did)
 {
   auto sid = H5Dget_space(did);
   const int h5ndims = H5Sget_simple_extent_ndims(sid);
@@ -988,6 +1004,8 @@ inline void ndarray<T>::from_h5(hid_t did)
   reshape(dims);
   
   H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
+
+  return true;
 }
 
 template <> inline hid_t ndarray<double>::h5_mem_type_id() { return H5T_NATIVE_DOUBLE; }
