@@ -966,18 +966,23 @@ ndarray<T> ndarray<T>::read_h5(const std::string& filename, const std::string& n
   return array;
 }
 
-#if FTK_HAVE_HDF5
 template <typename T>
 inline bool ndarray<T>::from_h5(const std::string& filename, const std::string& name)
 {
+#if FTK_HAVE_HDF5
   auto fid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   if (fid < 0) return false; else {
     bool succ = from_h5(fid, name);
     H5Fclose(fid);
     return succ;
   }
+#else 
+  fprintf(stderr, "[FTK] fatal: FTK not compiled with HDF5.\n");
+  assert(false);
+#endif
 }
 
+#if FTK_HAVE_HDF5
 template <typename T>
 inline bool ndarray<T>::from_h5(hid_t fid, const std::string& name)
 {
@@ -1011,13 +1016,6 @@ inline bool ndarray<T>::from_h5(hid_t did)
 template <> inline hid_t ndarray<double>::h5_mem_type_id() { return H5T_NATIVE_DOUBLE; }
 template <> inline hid_t ndarray<float>::h5_mem_type_id() { return H5T_NATIVE_FLOAT; }
 template <> inline hid_t ndarray<int>::h5_mem_type_id() { return H5T_NATIVE_INT; }
-#else
-template <typename T>
-inline void ndarray<T>::from_h5(const std::string& filename, const std::string& name)
-{
-  fprintf(stderr, "[FTK] fatal: FTK not compiled with HDF5.\n");
-  assert(false);
-}
 #endif
 
 template <typename T>
