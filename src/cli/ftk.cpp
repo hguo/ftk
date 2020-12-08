@@ -309,6 +309,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
   tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi));
+  tracker->set_number_of_threads(nthreads);
   tracker->initialize();
 
   stream->set_callback([&](int k, const ndarray<double> &data) {

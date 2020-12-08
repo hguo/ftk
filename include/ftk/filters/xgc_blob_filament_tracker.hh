@@ -211,7 +211,7 @@ void xgc_blob_filament_tracker::simplex_values(
     f[k] = data.scalar[v3];
 
     v[k][0] = data.vector[v3*2];
-    v[k][0] = data.vector[v3*2+1];
+    v[k][1] = data.vector[v3*2+1];
 
     j[k][0][0] = data.jacobian[v3*4];
     j[k][0][1] = data.jacobian[v3*4+1];
