@@ -18,7 +18,7 @@ namespace ftk {
   
 struct xgc_blob_filament_tracker : public virtual tracker {
   xgc_blob_filament_tracker(diy::mpi::communicator comm, 
-      const simplicial_unstructured_2d_mesh<>& m2, 
+      std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2, 
       int nphi_, int iphi_);
 
   int cpdims() const { return 3; }
@@ -31,7 +31,16 @@ struct xgc_blob_filament_tracker : public virtual tracker {
   }
   void update() {}
   void finalize() {}
-  
+ 
+public:
+  static std::shared_ptr<xgc_blob_filament_tracker> from_augmented_mesh_file(diy::mpi::communicator comm, const std::string& filename);
+  void to_augmented_mesh_file(const std::string& filename);
+ 
+  std::shared_ptr<simplicial_unstructured_2d_mesh<>> get_m2() { return m2; }
+
+protected:
+  xgc_blob_filament_tracker(diy::mpi::communicator comm) : tracker(comm) {}
+
 public:
   void update_timestep();
   bool advance_timestep();
@@ -65,10 +74,15 @@ protected:
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
-  const int nphi, iphi;
-  const simplicial_unstructured_2d_mesh<>& m2;
-  const simplicial_unstructured_3d_mesh<> m3;
-  const simplicial_unstructured_extruded_3d_mesh<> m4;
+  int nphi, iphi;
+
+  std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2;
+  std::shared_ptr<simplicial_unstructured_3d_mesh<>> m3;
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
+
+  // const simplicial_unstructured_2d_mesh<>& m2;
+  // const simplicial_unstructured_3d_mesh<> m3;
+  // const simplicial_unstructured_extruded_3d_mesh<> m4;
   
 protected:
   std::map<int, feature_point_t> discrete_critical_points;
@@ -78,12 +92,12 @@ protected:
   
 xgc_blob_filament_tracker::xgc_blob_filament_tracker(
     diy::mpi::communicator comm, 
-    const simplicial_unstructured_2d_mesh<>& m2_, 
+    std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2_, 
     int nphi_, int iphi_) :
   tracker(comm),
   m2(m2_), nphi(nphi_), iphi(iphi_),
-  m3(ftk::simplicial_unstructured_3d_mesh<>::from_xgc_mesh(m2_, nphi_, iphi_)),
-  m4(m3)
+  m3(ftk::simplicial_unstructured_3d_mesh<>::from_xgc_mesh(*m2_, nphi_, iphi_)),
+  m4(new ftk::simplicial_unstructured_extruded_3d_mesh<>(*m3))
 {
 
 }
@@ -116,8 +130,8 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
   for (size_t i = 0; i < nphi; i ++) {
     ftk::ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
-    m2.smooth_scalar_gradient_jacobian(slice, 0.03/*FIXME*/, f, grad, j);
-    for (size_t k = 0; k < m2.n(0); k ++) {
+    m2->smooth_scalar_gradient_jacobian(slice, 0.03/*FIXME*/, f, grad, j);
+    for (size_t k = 0; k < m2->n(0); k ++) {
       F(k, i) = f(k);
       G(0, k, i) = grad(0, k);
       G(1, k, i) = grad(1, k);
@@ -156,9 +170,9 @@ inline void xgc_blob_filament_tracker::update_timestep()
     }
   };
 
-  m4.element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+  m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
   if (field_data_snapshots.size() >= 2)
-    m4.element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+    m4->element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
 }
 
 inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
@@ -196,14 +210,14 @@ void xgc_blob_filament_tracker::simplex_values(
     T v[n][2],
     T j[n][2][2])
 {
-  m4.get_simplex(n-1, i, verts);
+  m4->get_simplex(n-1, i, verts);
   for (int k = 0; k < n; k ++) {
-    t[k] = m4.flat_vertex_time(verts[k]);
-    const int v3 = verts[k] % m3.n(0);
-    const int v2 = v3 % m2.n(0);
-    p[k] = v3 / m2.n(0); // poloidal plane
+    t[k] = m4->flat_vertex_time(verts[k]);
+    const int v3 = verts[k] % m3->n(0);
+    const int v2 = v3 % m2->n(0);
+    p[k] = v3 / m2->n(0); // poloidal plane
 
-    m2.get_coords(v2, rz[k]);
+    m2->get_coords(v2, rz[k]);
 
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
     const auto &data = field_data_snapshots[iv];
@@ -220,6 +234,48 @@ void xgc_blob_filament_tracker::simplex_values(
   }
 }
 
+inline /*static*/ std::shared_ptr<xgc_blob_filament_tracker>
+xgc_blob_filament_tracker::from_augmented_mesh_file(
+    diy::mpi::communicator comm, const std::string &filename)
+{
+  FILE *fp = fopen(filename.c_str(), "rb");
+  assert(fp);
+  diy::detail::FileBuffer bb(fp);
+
+  std::shared_ptr<xgc_blob_filament_tracker> tracker(
+      new xgc_blob_filament_tracker(comm));
+
+  diy::load(bb, tracker->nphi);
+  diy::load(bb, tracker->iphi);
+
+  tracker->m2.reset(new simplicial_unstructured_2d_mesh<>);
+  diy::load(bb, *tracker->m2);
+
+  tracker->m3.reset(new simplicial_unstructured_3d_mesh<>);
+  diy::load(bb, *tracker->m3);
+
+  tracker->m4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*tracker->m3));
+
+  fclose(fp);
+  return tracker;
 }
+
+inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string& filename)
+{
+  if (!is_root_proc()) return;
+
+  FILE *fp = fopen(filename.c_str(), "wb");
+  assert(fp);
+  diy::detail::FileBuffer bb(fp);
+
+  diy::save(bb, nphi);
+  diy::save(bb, iphi);
+  diy::save(bb, *m2);
+  diy::save(bb, *m3);
+
+  fclose(fp);
+}
+
+} // namespace ftk
 
 #endif

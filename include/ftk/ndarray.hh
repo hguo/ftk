@@ -72,6 +72,8 @@ namespace ftk {
 
 template <typename T>
 struct ndarray : object {
+  friend class diy::Serialization<ndarray<T>>;
+
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshape(dims);}
   ndarray(const lattice& l) {reshape(l.sizes());}
@@ -319,9 +321,8 @@ public: // statistics & misc
 
 private:
   std::vector<size_t> dims, s;
-  std::vector<T> p;
-
   size_t ncd = 0; // Number of dimensions for components.  For 3D vector field, nd=4, ncd=1.  For 3D jacobian field, nd=5, ncd=2
+  std::vector<T> p;
     
 #if 0 // FTK_HAVE_CUDA
   // arrays on GPU
@@ -1321,6 +1322,26 @@ ndarray<T> ndarray<T>::perturb(const T sigma) const
   return result;
 }
 
-}
+} // namespace ftk
+
+///////// serialization
+
+namespace diy {
+  template <typename T> struct Serialization<ftk::ndarray<T>> {
+    static void save(diy::BinaryBuffer& bb, const ftk::ndarray<T>& a) {
+      diy::save(bb, a.dims);
+      diy::save(bb, a.s);
+      diy::save(bb, a.ncd);
+      diy::save(bb, a.p);
+    }
+   
+    static void load(diy::BinaryBuffer& bb, ftk::ndarray<T>& a) {
+      diy::load(bb, a.dims);
+      diy::load(bb, a.s);
+      diy::load(bb, a.ncd);
+      diy::load(bb, a.p);
+    }
+  };
+} // namespace diy
 
 #endif

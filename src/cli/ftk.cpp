@@ -47,6 +47,7 @@ double threshold = 0.0;
 
 // xgc specific
 std::string xgc_mesh_filename, 
+  xgc_augmented_mesh_filename,
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_write_back_filename;
 bool xgc_post_process = false, 
@@ -115,6 +116,11 @@ static void fatal(const std::string& str) {
 void warn(const std::string& str) {
   std::cerr << "WARN: " << str << std::endl;
 };
+
+bool file_exists(const std::string& filename) {
+  std::ifstream f(filename);
+  return f.good();
+}
 
 static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 {
@@ -297,6 +303,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   if (comm.rank() == 0) {
     fprintf(stderr, "SUMMARY\n=============\n");
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
+    fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d\n", nphi, iphi);
     fprintf(stderr, "output_format=%s\n", output_format.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
@@ -304,11 +311,20 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     fprintf(stderr, "=============\n");
   }
   
-  auto m2 = simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-  m2.read_smoothing_kernel(xgc_smoothing_kernel_filename);
-
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
-  tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi));
+ 
+  if (file_exists(xgc_augmented_mesh_filename)) { // load augmented mesh
+    tracker = ftk::xgc_blob_filament_tracker::from_augmented_mesh_file(comm, xgc_augmented_mesh_filename);
+  } else {
+    auto m2 = simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+    tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi));
+
+    if (!xgc_augmented_mesh_filename.empty()) // write augmented mesh
+      tracker->to_augmented_mesh_file(xgc_augmented_mesh_filename);
+  }
+    
+  tracker->get_m2()->read_smoothing_kernel(xgc_smoothing_kernel_filename);
+
   tracker->set_number_of_threads(nthreads);
   tracker->initialize();
 
@@ -483,6 +499,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("xgc-torus", "XGC: track over poloidal planes", cxxopts::value<bool>(xgc_torus))
     ("xgc-write-back", "XGC: write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("xgc-post-process", "XGC: enable post-processing", cxxopts::value<bool>(xgc_post_process))
+    ("xgc-augmented-mesh", "XGC: read/write augmented mesh", cxxopts::value<std::string>(xgc_augmented_mesh_filename))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_pattern))
     ("output-type", "Output type {discrete|traced|sliced|intercepted}, by default traced", 

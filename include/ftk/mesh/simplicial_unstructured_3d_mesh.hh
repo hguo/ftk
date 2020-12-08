@@ -9,6 +9,8 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, F> {
+  friend class diy::Serialization<simplicial_unstructured_3d_mesh<I, F>>;
+  
   simplicial_unstructured_3d_mesh() {}
 
   simplicial_unstructured_3d_mesh(
@@ -33,8 +35,8 @@ public: // io
   void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid);
 #endif
 
-  static simplicial_unstructured_3d_mesh<I, F> from_xgc_mesh_h5(const std::string& mesh_filename, int nphi, int iphi);
-  static simplicial_unstructured_3d_mesh<I, F> from_xgc_mesh(const simplicial_unstructured_2d_mesh<I, F> &m2, int nphi, int iphi);
+  static std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> from_xgc_mesh_h5(const std::string& mesh_filename, int nphi, int iphi);
+  static std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> from_xgc_mesh(const simplicial_unstructured_2d_mesh<I, F> &m2, int nphi, int iphi);
 
 public: 
   void element_for(int d, std::function<void(I)> f);
@@ -470,49 +472,87 @@ void simplicial_unstructured_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
 }
 
 template <typename I, typename F>
-simplicial_unstructured_3d_mesh<I, F> simplicial_unstructured_3d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename, int nphi, int iphi)
+std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename, int nphi, int iphi)
 {
-  simplicial_unstructured_2d_mesh<I, F> m2 = simplicial_unstructured_2d_mesh<I, F>::from_xgc_mesh_h5(filename);
-  return from_xgc_mesh(m2, nphi, iphi);
+  auto m2 = simplicial_unstructured_2d_mesh<I, F>::from_xgc_mesh_h5(filename);
+  return from_xgc_mesh(*m2, nphi, iphi);
   // m.build_edges();
 }
   
 template <typename I, typename F>
-simplicial_unstructured_3d_mesh<I, F> simplicial_unstructured_3d_mesh<I, F>::from_xgc_mesh(const simplicial_unstructured_2d_mesh<I, F> &m2, int nphi, int iphi)
+std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3d_mesh<I, F>::from_xgc_mesh(const simplicial_unstructured_2d_mesh<I, F> &m2, int nphi, int iphi)
 {
   simplicial_unstructured_extruded_2d_mesh<I, F> m3(m2);
-  simplicial_unstructured_3d_mesh m;
+  std::shared_ptr<simplicial_unstructured_3d_mesh<>> m(new simplicial_unstructured_3d_mesh<>);
  
   const int np = iphi * nphi;
   const int n0 = m2.n(0);
   const int nn = n0 * np; // nnodes
   const auto &coords = m2.get_coords();
 
-  m.vertex_coords.reshape(3, nn);
+  m->vertex_coords.reshape(3, nn);
   for (int i = 0; i < np; i ++) {
     const F phi = i * 2 * M_PI / np;
     for (int k = 0; k < n0; k ++) {
       const int offset = i*n0+k;
 
-      m.vertex_coords(0, offset) = coords(0, k) * cos(phi);
-      m.vertex_coords(1, offset) = coords(0, k) * sin(phi);
-      m.vertex_coords(2, offset) = coords(1, k);
+      m->vertex_coords(0, offset) = coords(0, k) * cos(phi);
+      m->vertex_coords(1, offset) = coords(0, k) * sin(phi);
+      m->vertex_coords(2, offset) = coords(1, k);
     }
   }
   
-  m.tetrahedra.reshape(4, (m3.n(3) * np));
+  m->tetrahedra.reshape(4, (m3.n(3) * np));
   for (int k = 0; k < m3.n(3) * np; k ++) {
     I tet[4];
     m3.get_simplex(3, k, tet);
 
     for (int j = 0; j < 4; j ++)
-      m.tetrahedra(j, k) = tet[j] % nn;
+      m->tetrahedra(j, k) = tet[j] % nn;
   }
 
-  m.initialize();
+  m->initialize();
   return m;
 }
 
-}
+} // namespace ftk
+
+///////// serialization
+
+namespace diy {
+  template <typename I, typename F> struct Serialization<ftk::simplicial_unstructured_3d_mesh<I, F>> {
+    static void save(diy::BinaryBuffer& bb, const ftk::simplicial_unstructured_3d_mesh<I, F>& m) {
+      diy::save(bb, m.vertex_coords);
+      diy::save(bb, m.vertex_side_of);
+      diy::save(bb, m.vertex_edge_vertex);
+      diy::save(bb, m.edges);
+      diy::save(bb, m.edges_side_of);
+      diy::save(bb, m.triangles);
+      diy::save(bb, m.triangle_sides);
+      diy::save(bb, m.triangle_side_of);
+      diy::save(bb, m.tetrahedra);
+      diy::save(bb, m.tetrahedra_sides);
+      diy::save(bb, m.edge_id_map);
+      diy::save(bb, m.triangle_id_map);
+      diy::save(bb, m.tetrahedron_id_map);
+    }
+   
+    static void load(diy::BinaryBuffer& bb, ftk::simplicial_unstructured_3d_mesh<I, F>& m) {
+      diy::load(bb, m.vertex_coords);
+      diy::load(bb, m.vertex_side_of);
+      diy::load(bb, m.vertex_edge_vertex);
+      diy::load(bb, m.edges);
+      diy::load(bb, m.edges_side_of);
+      diy::load(bb, m.triangles);
+      diy::load(bb, m.triangle_sides);
+      diy::load(bb, m.triangle_side_of);
+      diy::load(bb, m.tetrahedra);
+      diy::load(bb, m.tetrahedra_sides);
+      diy::load(bb, m.edge_id_map);
+      diy::load(bb, m.triangle_id_map);
+      diy::load(bb, m.tetrahedron_id_map);
+    }
+  };
+} // namespace diy
 
 #endif

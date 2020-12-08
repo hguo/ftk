@@ -9,6 +9,8 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct simplicial_unstructured_2d_mesh : public simplicial_unstructured_mesh<I, F> { // 2D triangular mesh
+  friend class diy::Serialization<simplicial_unstructured_2d_mesh<I, F>>;
+
   simplicial_unstructured_2d_mesh() {}
 
   simplicial_unstructured_2d_mesh(
@@ -20,7 +22,7 @@ struct simplicial_unstructured_2d_mesh : public simplicial_unstructured_mesh<I, 
       const ndarray<I>& triangles_) // 3 * n_triangles
     : vertex_coords(coords_), triangles(triangles_) {build_triangles(); build_edges();}
 
-  static simplicial_unstructured_2d_mesh<I, F> from_xgc_mesh_h5(const std::string& filename);
+  static std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
 
   // dimensionality of the mesh
   int nd() const {return 2;}
@@ -90,6 +92,7 @@ public: // additional mesh info
 private:
   std::vector<std::vector<std::tuple<I/*vert*/, F/*weight*/>>> smoothing_kernel;
 };
+
 
 /////////
 
@@ -545,7 +548,7 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of2(const I v[2]) const
 #endif
 
 template <typename I, typename F>
-simplicial_unstructured_2d_mesh<I, F> simplicial_unstructured_2d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename)
+std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> simplicial_unstructured_2d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename)
 {
   ftk::ndarray<I> triangles;
   ftk::ndarray<F> coords;
@@ -554,8 +557,41 @@ simplicial_unstructured_2d_mesh<I, F> simplicial_unstructured_2d_mesh<I, F>::fro
   coords.from_h5(filename, "/coordinates/values");
   // psi.from_h5(mesh_filename, "psi");
 
-  return simplicial_unstructured_2d_mesh(coords, triangles);
+  return std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>>(
+      new simplicial_unstructured_2d_mesh<I, F>(coords, triangles));
 }
 
-}
+} // namespace ftk
+
+///////// serialization
+
+namespace diy {
+  template <typename I, typename F> struct Serialization<ftk::simplicial_unstructured_2d_mesh<I, F>> {
+    static void save(diy::BinaryBuffer& bb, const ftk::simplicial_unstructured_2d_mesh<I, F>& m) {
+      diy::save(bb, m.vertex_coords);
+      diy::save(bb, m.vertex_side_of);
+      diy::save(bb, m.vertex_edge_vertex);
+      diy::save(bb, m.edges);
+      diy::save(bb, m.edges_side_of);
+      diy::save(bb, m.triangles);
+      diy::save(bb, m.triangle_sides);
+      diy::save(bb, m.edge_id_map);
+      diy::save(bb, m.triangle_id_map);
+    }
+   
+    static void load(diy::BinaryBuffer& bb, ftk::simplicial_unstructured_2d_mesh<I, F>& m) {
+      diy::load(bb, m.vertex_coords);
+      diy::load(bb, m.vertex_side_of);
+      diy::load(bb, m.vertex_edge_vertex);
+      diy::load(bb, m.edges);
+      diy::load(bb, m.edges_side_of);
+      diy::load(bb, m.triangles);
+      diy::load(bb, m.triangle_sides);
+      diy::load(bb, m.edge_id_map);
+      diy::load(bb, m.triangle_id_map);
+    }
+  };
+} // namespace diy
+
+
 #endif
