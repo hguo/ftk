@@ -272,6 +272,12 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   int nphi, iphi;
   const std::string filename0 = js["filenames"][0];
   const std::string varname = js["variables"][0];
+    
+  const auto data0 = ndarray<double>::read_h5(filename0, varname);
+  nphi = data0.dim(0);
+  iphi = 1;
+
+#if 0
   const auto array_nphi = ndarray<int>::read_h5(filename0, "/nphi");
   const auto array_iphi = ndarray<int>::read_h5(filename0, "/iphi");
 
@@ -286,6 +292,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     iphi = std::max(array_iphi[0], 1);
   } else 
     iphi = 1;
+#endif
 
   if (comm.rank() == 0) {
     fprintf(stderr, "SUMMARY\n=============\n");
@@ -298,8 +305,22 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   }
   
   auto m2 = simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-  mtracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi));
-  mtracker->initialize();
+  m2.read_smoothing_kernel(xgc_smoothing_kernel_filename);
+
+  std::shared_ptr<xgc_blob_filament_tracker> tracker;
+  tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi));
+  tracker->initialize();
+
+  stream->set_callback([&](int k, const ndarray<double> &data) {
+    tracker->push_field_data_snapshot(data);
+
+    if (k != 0) tracker->advance_timestep();
+    if (k == stream->n_timesteps() - 1) tracker->update_timestep();
+  });
+
+  stream->start();
+  stream->finish();
+  tracker->finalize();
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
