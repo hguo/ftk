@@ -172,7 +172,6 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   // print3x2("rz", rz);
   // print3x2("v", v);
 
-  return false;
   for (int k = 0; k < 3; k ++) 
     for (int l = 0; l < 2; l ++) 
       vf[k][l] = factor * v[k][l];
@@ -197,7 +196,7 @@ void xgc_blob_filament_tracker::simplex_values(
     T v[n][2],
     T j[n][2][2])
 {
-  m4.get_simplex(n, i, verts);
+  m4.get_simplex(n-1, i, verts);
   for (int k = 0; k < n; k ++) {
     t[k] = m4.flat_vertex_time(verts[k]);
     const int v3 = verts[k] % m3.n(0);
@@ -208,7 +207,7 @@ void xgc_blob_filament_tracker::simplex_values(
 
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
     const auto &data = field_data_snapshots[iv];
-#if 0
+    
     f[k] = data.scalar[v3];
 
     v[k][0] = data.vector[v3*2];
@@ -218,7 +217,6 @@ void xgc_blob_filament_tracker::simplex_values(
     j[k][0][1] = data.jacobian[v3*4+1];
     j[k][1][0] = data.jacobian[v3*4+2];
     j[k][1][1] = data.jacobian[v3*4+3];
-#endif
   }
 }
 
