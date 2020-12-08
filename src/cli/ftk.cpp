@@ -338,6 +338,8 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   stream->start();
   stream->finish();
   tracker->finalize();
+
+  tracker->write_critical_points_vtp(output_pattern);
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)

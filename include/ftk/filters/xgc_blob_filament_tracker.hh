@@ -83,7 +83,14 @@ protected:
   // const simplicial_unstructured_2d_mesh<>& m2;
   // const simplicial_unstructured_3d_mesh<> m3;
   // const simplicial_unstructured_extruded_3d_mesh<> m4;
-  
+ 
+public:
+  void write_critical_points_vtp(const std::string& filename) const;
+
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_critical_points_vtp() const;
+#endif
+
 protected:
   std::map<int, feature_point_t> discrete_critical_points;
 };
@@ -275,6 +282,42 @@ inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string&
 
   fclose(fp);
 }
+
+inline void xgc_blob_filament_tracker::write_critical_points_vtp(const std::string& filename) const
+{
+#if FTK_HAVE_VTK
+  if (comm.rank() == get_root_proc()) {
+    auto poly = get_critical_points_vtp();
+    write_polydata(filename, poly);
+  }
+#else
+  fatal("FTK not compiled with VTK.");
+#endif
+}
+
+#if FTK_HAVE_VTK
+inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_critical_points_vtp() const
+{
+  vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+  
+  vtkIdType pid[1];
+  
+  // const auto critical_points = get_critical_points();
+  for (const auto &kv : discrete_critical_points) {
+    const auto &cp = kv.second;
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; // TODO: time
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  poly->SetPoints(points);
+  poly->SetVerts(vertices);
+
+  return poly;
+}
+#endif
 
 } // namespace ftk
 
