@@ -446,7 +446,7 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::get_simplex(int d, I k, I v
     }
   }
 
-  for (int i = 0; i < d; i ++)
+  for (int i = 0; i < d+1; i ++)
     verts[i] += offset;
 }
 
