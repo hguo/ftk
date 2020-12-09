@@ -30,7 +30,7 @@ struct xgc_blob_filament_tracker : public virtual tracker {
     field_data_snapshots.clear();
   }
   void update() {}
-  void finalize() {}
+  void finalize();
  
 public:
   static std::shared_ptr<xgc_blob_filament_tracker> from_augmented_mesh_file(diy::mpi::communicator comm, const std::string& filename);
@@ -63,7 +63,7 @@ protected:
       int verts[n],
       int t[n],
       int p[n],
-      T rz[n][2], 
+      T rzpt[n][4], 
       T f[n], // scalars
       T v[n][2], // vectors
       T j[n][2][2]); // jacobians
@@ -135,6 +135,7 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
   G.reshape(2, scalar.dim(0), scalar.dim(1));
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
   for (size_t i = 0; i < nphi; i ++) {
+    // fprintf(stderr, "smoothing slice %zu\n", i);
     ftk::ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
     m2->smooth_scalar_gradient_jacobian(slice, 0.03/*FIXME*/, f, grad, j);
@@ -185,11 +186,11 @@ inline void xgc_blob_filament_tracker::update_timestep()
 inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3], t[3], p[3];
-  double rz[3][2], f[3], v[3][2], j[3][2][2];
+  double rzpt[3][4], f[3], v[3][2], j[3][2][2];
   long long vf[3][2];
   const long long factor = 1 << 15; // WIP
 
-  simplex_values<3, double>(i, tri, t, p, rz, f, v, j);
+  simplex_values<3, double>(i, tri, t, p, rzpt, f, v, j);
   // print3x2("rz", rz);
   // print3x2("v", v);
 
@@ -198,12 +199,39 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
       vf[k][l] = factor * v[k][l];
 
   bool succ = ftk::robust_critical_point_in_simplex2(vf, tri);
-  if (succ) {
-    fprintf(stderr, "succ\n");
-    return true;
-  }
+  if (!succ) return false;
 
-  return false;
+  double mu[3], x[4];
+  bool succ2 = ftk::inverse_lerp_s2v2(v, mu);
+  ftk::clamp_barycentric<3>(mu);
+
+  ftk::lerp_s2v4(rzpt, mu, x);
+  for (int k = 0; k < 3; k ++)
+    cp.x[k] = x[k];
+  cp.t = x[3];
+
+  cp.scalar[0] = f[0] * mu[0] + f[1] * mu[1] + f[2] * mu[2];
+
+  double h[2][2];
+  ftk::lerp_s2m2x2(j, mu, h);
+  cp.type = ftk::critical_point_type_2d(h, true);
+
+  cp.tag = i;
+  cp.ordinal = m4->is_ordinal(2, i);
+  cp.timestep = current_timestep;
+
+  fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, type=%d\n", 
+      mu[0], mu[1], mu[2], 
+      x[0], x[1], x[2], x[3], cp.type);
+  
+  return true;
+}
+
+void xgc_blob_filament_tracker::finalize()
+{
+  if (is_root_proc()) {
+    fprintf(stderr, "ncps=%zu\n", discrete_critical_points.size());
+  }
 }
 
 template<int n, typename T>
@@ -212,7 +240,7 @@ void xgc_blob_filament_tracker::simplex_values(
     int verts[n],
     int t[n], // time
     int p[n], // poloidal
-    T rz[n][2], 
+    T rzpt[n][4], 
     T f[n],
     T v[n][2],
     T j[n][2][2])
@@ -224,7 +252,9 @@ void xgc_blob_filament_tracker::simplex_values(
     const int v2 = v3 % m2->n(0);
     p[k] = v3 / m2->n(0); // poloidal plane
 
-    m2->get_coords(v2, rz[k]);
+    m2->get_coords(v2, rzpt[k]);
+    rzpt[k][2] = p[k];
+    rzpt[k][3] = t[k];
 
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
     const auto &data = field_data_snapshots[iv];
@@ -238,6 +268,20 @@ void xgc_blob_filament_tracker::simplex_values(
     j[k][0][1] = data.jacobian[v3*4+1];
     j[k][1][0] = data.jacobian[v3*4+2];
     j[k][1][1] = data.jacobian[v3*4+3];
+  }
+
+  bool b0 = false, b1 = false;
+  for (int k = 0; k < n; k ++) {
+    if (p[k] == 0)
+      b0 = true;
+    else if (p[k] == nphi-1)
+      b1 = true;
+  }
+  if (b0 && b1) { // periodical
+    // fprintf(stderr, "periodical.\n");
+    for (int k = 0; k < n; k ++)
+      if (p[k] == 0)
+        rzpt[k][2] += nphi;
   }
 }
 

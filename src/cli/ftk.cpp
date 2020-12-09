@@ -329,7 +329,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   tracker->initialize();
 
   stream->set_callback([&](int k, const ndarray<double> &data) {
-    tracker->push_field_data_snapshot(data);
+    tracker->push_field_data_snapshot(data.get_transpose());
 
     if (k != 0) tracker->advance_timestep();
     if (k == stream->n_timesteps() - 1) tracker->update_timestep();

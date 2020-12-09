@@ -21,7 +21,7 @@ inline T clamp(T x, T a, T b)
 
 template <int n, typename T>
 __device__ __host__
-inline void clamp_barycentric(T x[3])
+inline void clamp_barycentric(T x[])
 {
   T sum = 0.0;
   for (int i = 0; i < n; i ++) {
