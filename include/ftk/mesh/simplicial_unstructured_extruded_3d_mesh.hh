@@ -468,7 +468,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
   I v[5];
   get_simplex(d, i, v);
 
-  if (d == 4) { // currently only pentachrora are supported
+  if (d == 4) { // currently only pentachrora and tetrahedra are supported
     const int type = i / m.n(3);
     // fprintf(stderr, "sides of %d, i=%d, t=%d, type=%d, verts=%d, %d, %d, %d, %d, verts'=%d, %d, %d, %d, %d\n", 
     //     k, i, t, type, 
@@ -974,7 +974,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         }
       }
     }
-  } else if (d == 2) {
+  } else if (d == 2) { // WIP
     // find all two tets in the base mesh that contains tri 012
     // check "position" too, e,g, 013 in 0123
     { // type 0 1 2 (or 0'1'2'), pos=0, 1, 2, 3
