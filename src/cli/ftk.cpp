@@ -29,6 +29,7 @@ std::string archived_intersections_filename, // archived_discrete_critical_point
 std::string accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
+bool affinity = false;
 bool verbose = false, timing = false, help = false;
 int nblocks; 
 bool enable_streaming_trajectories = false, 
@@ -512,6 +513,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<int>(intercept_length)->default_value("2"))
     ("type-filter", "Type filter: ane single or a combination of critical point types, e.g. `min', `max', `saddle', `min|max'",
      cxxopts::value<std::string>(type_filter_str))
+    ("affinity", "Enable thread affinity", 
+     cxxopts::value<bool>(affinity))
     ("nthreads", "Number of threads", 
      cxxopts::value<int>(nthreads))
     ("timing", "Enable timing", 
