@@ -85,14 +85,24 @@ protected:
   // const simplicial_unstructured_extruded_3d_mesh<> m4;
  
 public:
-  void write_critical_points_vtp(const std::string& filename) const;
+  void build_critical_surfaces();
+
+public:
+  void write_intersections_binary(const std::string& filename) const;
+  void write_intersections_vtp(const std::string& filename) const;
+
+  void read_intersections_binary(const std::string& filename);
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_critical_points_vtp() const;
+  vtkSmartPointer<vtkPolyData> get_intersections_vtp(bool torus = false) const;
+  vtkSmartPointer<vtkPolyData> get_critical_line_vtp(bool torus = false) const;
+  vtkSmartPointer<vtkPolyData> get_critical_surfaces_vtp(bool torus = false) const;
 #endif
 
 protected:
-  std::map<int, feature_point_t> discrete_critical_points;
+  std::map<int, feature_point_t> intersections;
+  std::set<int> related_cells;
+  feature_surface_t surfaces;
 };
 
 /////
@@ -169,12 +179,33 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
 inline void xgc_blob_filament_tracker::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+  
+  auto get_related_cels = [&](int i) {
+    std::set<int> my_related_cells;
+    
+    auto tets = m4->side_of(2, i);
+    for (auto tet : tets) {
+      if (1) { // TODO: if valid tet
+        auto pents = m4->side_of(3, tet);
+        for (auto pent : pents)
+          if (1) // TODO if valid pent
+            my_related_cells.insert(pent);
+      }
+    }
+
+    return my_related_cells;
+  };
 
   auto func = [&](int i) {
     feature_point_t cp;
     if (check_simplex(i, cp)) {
-      std::lock_guard<std::mutex> guard(mutex);
-        discrete_critical_points[i] = cp;
+      // std::set<int> my_related_cells = get_related_cels(i);
+
+      {
+        std::lock_guard<std::mutex> guard(mutex);
+        intersections[i] = cp;
+        // related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      }
     }
   };
 
@@ -230,8 +261,13 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
 void xgc_blob_filament_tracker::finalize()
 {
+  diy::mpi::gather(comm, intersections, intersections, get_root_proc());
+  diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
+  
   if (is_root_proc()) {
-    fprintf(stderr, "ncps=%zu\n", discrete_critical_points.size());
+    fprintf(stderr, "#intersections=%zu, #related_cells=%zu\n", 
+        intersections.size(), related_cells.size());
+    build_critical_surfaces();
   }
 }
 
@@ -286,6 +322,72 @@ void xgc_blob_filament_tracker::simplex_values(
   }
 }
 
+inline void xgc_blob_filament_tracker::build_critical_surfaces()
+{
+  fprintf(stderr, "building critical surfaces...\n");
+
+  int i = 0;
+  for (auto &kv : intersections) {
+    kv.second.id = i ++;
+    surfaces.pts.push_back(kv.second);
+  }
+
+  std::mutex my_mutex;
+  auto add_tri = [&](int i0, int i1, int i2) {
+    std::lock_guard<std::mutex> guard(my_mutex);
+    surfaces.tris.push_back({i0, i1, i2});
+  };
+
+  // parallel_for<int>(related_cells, [&](const int e) {
+  for (int timestep = 0; timestep < current_timestep; timestep ++) {
+    fprintf(stderr, "pass II, timestep=%d\n", timestep);
+    m4->element_for_ordinal(4, timestep, [&](int e) {
+      int count = 0;
+      int ids[6];
+
+      std::set<int> unique_tris;
+      for (auto tet : m4->sides(4, e))
+        for (auto tri : m4->sides(3, tet))
+          unique_tris.insert(tri);
+
+      // fprintf(stderr, "#unique_tris=%zu\n", unique_tris.size());
+
+      for (auto tri : unique_tris)
+        if (intersections.find(tri) != intersections.end())
+          ids[count ++] = intersections[tri].id;
+
+      if (count == 0) return;
+      else if (count == 3) {
+        add_tri(ids[0], ids[1], ids[2]);
+      } else if (count == 4) {
+        // std::lock_guard<std::mutex> guard(my_mutex);
+        // surfaces.quads.push_back({ids[0], ids[1], ids[2], ids[3]});
+        add_tri(ids[0], ids[1], ids[2]);
+        add_tri(ids[0], ids[1], ids[3]);
+        add_tri(ids[0], ids[2], ids[3]);
+        add_tri(ids[1], ids[2], ids[3]);
+      } else if (count == 5) {
+        // std::lock_guard<std::mutex> guard(my_mutex);
+        // surfaces.pentagons.push_back({ids[0], ids[1], ids[2], ids[3], ids[4]});
+        add_tri(ids[0], ids[1], ids[2]);
+        add_tri(ids[0], ids[1], ids[3]);
+        add_tri(ids[0], ids[1], ids[4]);
+        add_tri(ids[0], ids[2], ids[3]);
+        add_tri(ids[0], ids[2], ids[4]);
+        add_tri(ids[0], ids[3], ids[4]);
+        add_tri(ids[1], ids[2], ids[3]);
+        add_tri(ids[1], ids[2], ids[4]);
+        add_tri(ids[2], ids[3], ids[4]);
+      } else {
+        fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
+      }
+    }, FTK_XL_PTHREAD, nthreads, enable_set_affinity);
+  }
+
+  surfaces.relabel();
+  fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.tris.size());
+}
+
 inline /*static*/ std::shared_ptr<xgc_blob_filament_tracker>
 xgc_blob_filament_tracker::from_augmented_mesh_file(
     diy::mpi::communicator comm, const std::string &filename)
@@ -328,11 +430,23 @@ inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string&
   fclose(fp);
 }
 
-inline void xgc_blob_filament_tracker::write_critical_points_vtp(const std::string& filename) const
+inline void xgc_blob_filament_tracker::write_intersections_binary(const std::string& filename) const
+{
+  if (is_root_proc())
+    diy::serializeToFile(intersections, filename);
+}
+
+inline void xgc_blob_filament_tracker::read_intersections_binary(const std::string& filename)
+{
+  if (is_root_proc())
+    diy::unserializeFromFile(filename, intersections);
+}
+
+inline void xgc_blob_filament_tracker::write_intersections_vtp(const std::string& filename) const
 {
 #if FTK_HAVE_VTK
   if (comm.rank() == get_root_proc()) {
-    auto poly = get_critical_points_vtp();
+    auto poly = get_intersections_vtp();
     write_polydata(filename, poly);
   }
 #else
@@ -341,7 +455,7 @@ inline void xgc_blob_filament_tracker::write_critical_points_vtp(const std::stri
 }
 
 #if FTK_HAVE_VTK
-inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_critical_points_vtp() const
+inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_intersections_vtp(bool torus) const
 {
   vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -349,8 +463,8 @@ inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_critical_poin
   
   vtkIdType pid[1];
   
-  // const auto critical_points = get_critical_points();
-  for (const auto &kv : discrete_critical_points) {
+  // const auto intersections = get_intersections();
+  for (const auto &kv : intersections) {
     const auto &cp = kv.second;
     double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; // TODO: time
     pid[0] = points->InsertNextPoint(p);
