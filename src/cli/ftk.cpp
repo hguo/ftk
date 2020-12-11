@@ -322,8 +322,14 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     if (!xgc_augmented_mesh_filename.empty()) // write augmented mesh
       tracker->to_augmented_mesh_file(xgc_augmented_mesh_filename);
   }
-    
-  tracker->get_m2()->read_smoothing_kernel(xgc_smoothing_kernel_filename);
+   
+  if (file_exists(xgc_smoothing_kernel_filename))
+    tracker->get_m2()->read_smoothing_kernel(xgc_smoothing_kernel_filename);
+  else {
+    auto m2 = tracker->get_m2();
+    m2->build_smoothing_kernel(xgc_smoothing_kernel_size);
+    m2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
+  }
 
   tracker->set_number_of_threads(nthreads);
   tracker->initialize();
