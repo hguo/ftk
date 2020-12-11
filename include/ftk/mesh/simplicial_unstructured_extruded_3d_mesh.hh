@@ -10,7 +10,7 @@ struct simplicial_unstructured_extruded_3d_mesh : public object { // extruded fr
   simplicial_unstructured_extruded_3d_mesh(const simplicial_unstructured_3d_mesh<I, F>& m_) : m(m_) {extrude();}
 
   size_t n(int d) const;
-  size_t n_ordinal(int d) const { return m.n(d); }
+  size_t n_ordinal(int d) const { if (d == 4) return m.n(3)*4; else return m.n(d); }
   size_t n_interval(int d) const;
 
   bool is_ordinal(int d, I i) const {
@@ -468,7 +468,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
   I v[5];
   get_simplex(d, i, v);
 
-  if (d == 4) { // currently only pentachrora are supported
+  if (d == 4) { // currently only pentachrora and tetrahedra are supported
     const int type = i / m.n(3);
     // fprintf(stderr, "sides of %d, i=%d, t=%d, type=%d, verts=%d, %d, %d, %d, %d, verts'=%d, %d, %d, %d, %d\n", 
     //     k, i, t, type, 
@@ -974,29 +974,47 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         }
       }
     }
-  } else if (d == 2) {
-    // find all two tets in the base mesh that contains tri 012
+  } else if (d == 2) { // WIP
+    // find all tets in the base mesh that contains tri 012
     // check "position" too, e,g, 013 in 0123
-    { // type 0 1 2 (or 0'1'2'), pos=0, 1, 2, 3
+    const I v0[3] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0))};
+    I otid, oeid;
+
+    if (i < m.n(2)) { // type 0 1 2 (or 0'1'2'), pos=0, 1, 2, 3
+      bool found = m.find_triangle(v0, otid);
+      assert(found);
+      const auto tets0 = m.side_of(2, otid);
+      // TODO:
       // 0 1 2 3
       // 0 1 2 3'
       // 0 1 2 2'
       // 0 0'1'2', t-1
-    }
-    { // type 0 1 2', pos=0, 1, 2, 3
+    } else if (i < 2*m.n(2)) { // type 0 1 2', pos=0, 1, 2, 3
+      bool found = m.find_triangle(v0, otid);
+      assert(found);
+      const auto tets0 = m.side_of(2, otid);
+      // TODO: 
       // 0 1 2'3'
       // 0 1 2 2'
-    }
-    { // type 0 1'2', pos=0, 1, 2, 3
+    } else if (i < 3*m.n(2)) { // type 0 1'2', pos=0, 1, 2, 3
+      bool found = m.find_triangle(v0, otid);
+      assert(found);
+      const auto tets0 = m.side_of(2, otid);
+      // TODO:
       // 0 1 1'2'
       // 0 1'2'3'
-    }
-    // find all triangles in the base mesh that contains edge 01
-    { // type 0 1 1', pos=0, 1, 2
+    } else if (i < 3*m.n(2) + m.n(1)) { // find all triangles in the base mesh that contains edge 01 // type 0 1 1', pos=0, 1, 2
+      const I ve[2] = {v0[0], v0[1]};
+      bool found = m.find_edge(ve, oeid);
+      assert(found);
+      const auto tris0 = m.side_of(1, oeid);
       // 0 1 1'2'
       // 0 0'1'2'
-    }
-    { // type 0 0'1', pos=0, 1, 2
+    } else { // type 0 0'1', pos=0, 1, 2
+      const I ve[2] = {v0[0], v0[1]};
+      bool found = m.find_edge(ve, oeid);
+      assert(found);
+      const auto tris0 = m.side_of(1, oeid);
       // 0 0'1'2'
     }
   }
