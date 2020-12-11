@@ -328,18 +328,25 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   tracker->set_number_of_threads(nthreads);
   tracker->initialize();
 
-  stream->set_callback([&](int k, const ndarray<double> &data) {
-    tracker->push_field_data_snapshot(data.get_transpose());
+  if (archived_intersections_filename.empty() || !file_exists(archived_intersections_filename)) {
+    stream->set_callback([&](int k, const ndarray<double> &data) {
+      tracker->push_field_data_snapshot(data.get_transpose());
 
-    if (k != 0) tracker->advance_timestep();
-    if (k == stream->n_timesteps() - 1) tracker->update_timestep();
-  });
+      if (k != 0) tracker->advance_timestep();
+      if (k == stream->n_timesteps() - 1) tracker->update_timestep();
+    });
 
-  stream->start();
-  stream->finish();
+    stream->start();
+    stream->finish();
+  } else {
+    tracker->read_intersections_binary( archived_intersections_filename );
+    tracker->set_current_timestep(stream->n_timesteps() - 1);
+  }
+
+  if (!archived_intersections_filename.empty() && !file_exists(archived_intersections_filename))
+    tracker->write_intersections_binary(output_pattern);
+
   tracker->finalize();
-
-  tracker->write_critical_points_vtp(output_pattern);
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)

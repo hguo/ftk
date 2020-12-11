@@ -10,7 +10,7 @@ struct simplicial_unstructured_extruded_3d_mesh : public object { // extruded fr
   simplicial_unstructured_extruded_3d_mesh(const simplicial_unstructured_3d_mesh<I, F>& m_) : m(m_) {extrude();}
 
   size_t n(int d) const;
-  size_t n_ordinal(int d) const { return m.n(d); }
+  size_t n_ordinal(int d) const { if (d == 4) return m.n(3)*4; else return m.n(d); }
   size_t n_interval(int d) const;
 
   bool is_ordinal(int d, I i) const {
