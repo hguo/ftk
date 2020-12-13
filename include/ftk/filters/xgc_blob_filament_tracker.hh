@@ -265,14 +265,14 @@ void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
 {
   std::lock_guard<std::mutex> guard(mutex);
   // tri_count ++;
-  fprintf(stderr, "pushing %d, %d, %d, count=%zu\n", i0, i1, i2, surfaces.tris.size()); // , tri_count);
+  // fprintf(stderr, "pushing %d, %d, %d, count=%zu\n", i0, i1, i2, surfaces.tris.size()); // , tri_count);
   surfaces.tris.push_back({i0, i1, i2});
 }
 
 void xgc_blob_filament_tracker::check_penta(int e)
 {
   int count = 0;
-  int ids[6];
+  int ids[20]; // some large buffer
 
   std::set<int> unique_tris;
   for (auto tet : m4->sides(4, e))
