@@ -241,25 +241,33 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
 template <typename I, typename F>
 inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 {
+  fprintf(stderr, "building smoothing kernel...\n");
+
   const F sigma2 = sigma * sigma;
   const F limit = F(3) * sigma;
 
   auto neighbors = [&](I i) { return vertex_edge_vertex[i]; };
   smoothing_kernel.resize(n(0));
 
-  for (auto i = 0; i < n(0); i ++) {
+  // for (auto i = 0; i < n(0); i ++) {
+  object::parallel_for(n(0), [&](int i) {
     std::set<I> set;
     const F xi[2] = {vertex_coords[i*2], vertex_coords[i*2+1]};
-    // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
+
     auto criteron = [&](I j) {
       const F xj[2] = {vertex_coords[j*2], vertex_coords[j*2+1]};
-      if (vector_dist_2norm_2(xi, xj) < limit)
+      if (vector_dist_2norm_2(xi, xj) < limit) {
+        // fprintf(stderr, "%d (%f, %f) add %d (%f, %f)\n", i, xi[0], xi[1], j, xj[0], xj[1]);
+        // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
         return true;
+      }
       else return false;
     };
 
     auto operation = [&set](I j) {set.insert(j);};
+    // fprintf(stderr, "bfs for node %d...\n", i);
     bfs<I, std::set<I>>(i, neighbors, operation, criteron);
+    // fprintf(stderr, "bfs for node %d done.\n", i);
 
     auto &kernel = smoothing_kernel[i];
     for (auto k : set) {
@@ -268,7 +276,7 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
       const F w = std::exp(-(d*d) / (2*sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
       // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
       kernel.push_back( std::make_tuple(k, w) );
-      fprintf(stderr, "i=%d, k=%d, %f\n", i, k, w); 
+      // fprintf(stderr, "i=%d, k=%d, %f\n", i, k, w); 
     }
 
     // normalization
@@ -281,7 +289,7 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
       fprintf(stderr, "i=%d, k=%d, %f\n", i, k, std::get<1>(kernel[k]));// kernel.size());
     }
 #endif
-  }
+  });
 }
 
 template <typename I, typename F>
@@ -498,6 +506,7 @@ scalar_to_xgc_slices_3d_vtu(const std::string& varname, const ndarray<F>& scalar
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::write_smoothing_kernel(const std::string& f)
 {
+  fprintf(stderr, "writing smoothing kernel...\n");
   diy::serializeToFile(smoothing_kernel, f);
 }
 
