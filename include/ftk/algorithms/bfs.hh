@@ -19,18 +19,20 @@ void bfs(
   std::set<Node> visited;
   std::queue<Node> Q;
   Q.push(seed);
+  visited.insert(seed);
 
   while (!Q.empty()) {
     Node current = Q.front();
     Q.pop();
-    visited.insert(current);
 
     operation(current);
 
     for (auto n : neighbors(current)) {
-      if (visited.find(n) == visited.end() && criterion(n)) {
-        Q.push(n);
-      }
+      if (visited.find(n) == visited.end())
+        if (criterion(n)) {
+          visited.insert(n);
+          Q.push(n);
+        }
     }
   }
 }
