@@ -123,6 +123,8 @@ bool file_exists(const std::string& filename) {
   return f.good();
 }
 
+bool file_not_exists(const std::string& filename) { return !file_exists(filename); }
+
 static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 {
   j_tracker["output"] = output_pattern;
@@ -306,6 +308,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
     fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d\n", nphi, iphi);
+    fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
     fprintf(stderr, "output_format=%s\n", output_format.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
     std::cerr << "input=" << js << std::endl;
@@ -335,7 +338,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   tracker->set_number_of_threads(nthreads);
   tracker->initialize();
 
-  if (archived_intersections_filename.empty() || !file_exists(archived_intersections_filename)) {
+  if (archived_intersections_filename.empty() || file_not_exists(archived_intersections_filename)) {
     stream->set_callback([&](int k, const ndarray<double> &data) {
       tracker->push_field_data_snapshot(data.get_transpose());
 
@@ -346,12 +349,15 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     stream->start();
     stream->finish();
   } else {
+    fprintf(stderr, "reading archived intersections..\n");
     tracker->read_intersections_binary( archived_intersections_filename );
     tracker->set_current_timestep(stream->n_timesteps() - 1);
   }
 
-  if (!archived_intersections_filename.empty() && !file_exists(archived_intersections_filename))
-    tracker->write_intersections_binary(output_pattern);
+  if ((!archived_intersections_filename.empty()) && file_not_exists(archived_intersections_filename)) {
+    fprintf(stderr, "writing archived intersections..\n");
+    tracker->write_intersections_binary(archived_intersections_filename);
+  }
 
   tracker->finalize();
 }

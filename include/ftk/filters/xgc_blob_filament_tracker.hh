@@ -56,6 +56,8 @@ public:
  
 protected:
   bool check_simplex(int, feature_point_t& cp);
+  void check_penta(int);
+  void add_penta_tri(int, int, int);
  
   template <int n, typename T>
   void simplex_values(
@@ -259,6 +261,56 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   return true;
 }
 
+void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
+{
+  std::lock_guard<std::mutex> guard(mutex);
+  // tri_count ++;
+  fprintf(stderr, "pushing %d, %d, %d, count=%zu\n", i0, i1, i2, surfaces.tris.size()); // , tri_count);
+  surfaces.tris.push_back({i0, i1, i2});
+}
+
+void xgc_blob_filament_tracker::check_penta(int e)
+{
+  int count = 0;
+  int ids[6];
+
+  std::set<int> unique_tris;
+  for (auto tet : m4->sides(4, e))
+    for (auto tri : m4->sides(3, tet))
+      unique_tris.insert(tri);
+
+  for (auto tri : unique_tris)
+    if (intersections.find(tri) != intersections.end())
+      ids[count ++] = intersections[tri].id;
+
+  if (count == 0) return;
+  else if (count == 3) {
+    // std::lock_guard<std::mutex> guard(my_mutex);
+    add_penta_tri(ids[0], ids[1], ids[2]);
+  } else if (count == 4) {
+    // std::lock_guard<std::mutex> guard(my_mutex);
+    // surfaces.quads.push_back({ids[0], ids[1], ids[2], ids[3]});
+    add_penta_tri(ids[0], ids[1], ids[2]);
+    add_penta_tri(ids[0], ids[1], ids[3]);
+    add_penta_tri(ids[0], ids[2], ids[3]);
+    add_penta_tri(ids[1], ids[2], ids[3]);
+  } else if (count == 5) {
+    // std::lock_guard<std::mutex> guard(my_mutex);
+    // surfaces.pentagons.push_back({ids[0], ids[1], ids[2], ids[3], ids[4]});
+    add_penta_tri(ids[0], ids[1], ids[2]);
+    add_penta_tri(ids[0], ids[1], ids[3]);
+    add_penta_tri(ids[0], ids[1], ids[4]);
+    add_penta_tri(ids[0], ids[2], ids[3]);
+    add_penta_tri(ids[0], ids[2], ids[4]);
+    add_penta_tri(ids[0], ids[3], ids[4]);
+    add_penta_tri(ids[1], ids[2], ids[3]);
+    add_penta_tri(ids[1], ids[2], ids[4]);
+    add_penta_tri(ids[2], ids[3], ids[4]);
+  } else {
+    // fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
+  }
+}
+
 void xgc_blob_filament_tracker::finalize()
 {
   diy::mpi::gather(comm, intersections, intersections, get_root_proc());
@@ -332,60 +384,19 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
     surfaces.pts.push_back(kv.second);
   }
 
-  std::mutex my_mutex;
-  auto add_tri = [&](int i0, int i1, int i2) {
-    std::lock_guard<std::mutex> guard(my_mutex);
-    surfaces.tris.push_back({i0, i1, i2});
-  };
+  int tri_count = 0;
 
   // parallel_for<int>(related_cells, [&](const int e) {
   for (int timestep = 0; timestep < current_timestep; timestep ++) {
     fprintf(stderr, "pass II, timestep=%d\n", timestep);
-    m4->element_for_ordinal(4, timestep, [&](int e) {
-      int count = 0;
-      int ids[6];
-
-      std::set<int> unique_tris;
-      for (auto tet : m4->sides(4, e))
-        for (auto tri : m4->sides(3, tet))
-          unique_tris.insert(tri);
-
-      // fprintf(stderr, "#unique_tris=%zu\n", unique_tris.size());
-
-      for (auto tri : unique_tris)
-        if (intersections.find(tri) != intersections.end())
-          ids[count ++] = intersections[tri].id;
-
-      if (count == 0) return;
-      else if (count == 3) {
-        add_tri(ids[0], ids[1], ids[2]);
-      } else if (count == 4) {
-        // std::lock_guard<std::mutex> guard(my_mutex);
-        // surfaces.quads.push_back({ids[0], ids[1], ids[2], ids[3]});
-        add_tri(ids[0], ids[1], ids[2]);
-        add_tri(ids[0], ids[1], ids[3]);
-        add_tri(ids[0], ids[2], ids[3]);
-        add_tri(ids[1], ids[2], ids[3]);
-      } else if (count == 5) {
-        // std::lock_guard<std::mutex> guard(my_mutex);
-        // surfaces.pentagons.push_back({ids[0], ids[1], ids[2], ids[3], ids[4]});
-        add_tri(ids[0], ids[1], ids[2]);
-        add_tri(ids[0], ids[1], ids[3]);
-        add_tri(ids[0], ids[1], ids[4]);
-        add_tri(ids[0], ids[2], ids[3]);
-        add_tri(ids[0], ids[2], ids[4]);
-        add_tri(ids[0], ids[3], ids[4]);
-        add_tri(ids[1], ids[2], ids[3]);
-        add_tri(ids[1], ids[2], ids[4]);
-        add_tri(ids[2], ids[3], ids[4]);
-      } else {
-        fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
-      }
-    }, FTK_XL_PTHREAD, nthreads, enable_set_affinity);
+    m4->element_for_ordinal(4, timestep, 
+        std::bind(&xgc_blob_filament_tracker::check_penta, this, std::placeholders::_1), 
+        FTK_XL_PTHREAD, nthreads, enable_set_affinity);
   }
 
   surfaces.relabel();
-  fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.tris.size());
+  fprintf(stderr, "#pts=%zu, #tri=%zu, #tri_count=%d\n", 
+      surfaces.pts.size(), surfaces.tris.size(), tri_count);
 }
 
 inline /*static*/ std::shared_ptr<xgc_blob_filament_tracker>
