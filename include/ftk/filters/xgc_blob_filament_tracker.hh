@@ -276,19 +276,23 @@ void xgc_blob_filament_tracker::check_penta(int e)
   int ids[20]; // some large buffer
 
   std::set<int> unique_tris;
-  // fprintf(stderr, "penta %d\n", e);
-  for (auto tet : m4->sides(4, e)) {
-    // fprintf(stderr, "--tet %d, tet_type=%d\n", tet, m4->simplex_type(3, tet));
-    for (auto tri : m4->sides(3, tet)) {
-      // fprintf(stderr, "----tri %d, tri_type=%d\n", tri, m4->simplex_type(2, tri));
+  for (auto tet : m4->sides(4, e))
+    for (auto tri : m4->sides(3, tet))
       unique_tris.insert(tri);
-    }
-  }
+  
+  // sanity check
   assert( unique_tris.size() == 10 );
-
-  // fprintf(stderr, "#unique_tris=%zu\n", unique_tris.size());
-  // for (auto tri : unique_tris) 
-  //   fprintf(stderr, "--tri %d\n", tri);
+  if (unique_tris.size() != 10) { 
+    fprintf(stderr, "penta %d\n", e);
+    for (auto tet : m4->sides(4, e)) {
+      fprintf(stderr, "--tet %d, tet_type=%d\n", tet, m4->simplex_type(3, tet));
+      for (auto tri : m4->sides(3, tet))
+        fprintf(stderr, "----tri %d, tri_type=%d\n", tri, m4->simplex_type(2, tri));
+    }
+    fprintf(stderr, "#unique_tris=%zu\n", unique_tris.size());
+    for (auto tri : unique_tris) 
+      fprintf(stderr, "--tri %d\n", tri);
+  }
 
   for (auto tri : unique_tris)
     if (intersections.find(tri) != intersections.end())
