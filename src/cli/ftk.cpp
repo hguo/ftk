@@ -15,7 +15,7 @@
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
- 
+
 using namespace ftk;
 
 // global variables
@@ -308,6 +308,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
     fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d\n", nphi, iphi);
+    fprintf(stderr, "write_back_filename=%s\n", xgc_write_back_filename.c_str());
     fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
     fprintf(stderr, "output_format=%s\n", output_format.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
@@ -340,7 +341,15 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 
   if (archived_intersections_filename.empty() || file_not_exists(archived_intersections_filename)) {
     stream->set_callback([&](int k, const ndarray<double> &data) {
-      tracker->push_field_data_snapshot(data.get_transpose());
+      auto scalar = data.get_transpose();
+#if FTK_HAVE_VTK
+      if (xgc_write_back_filename.length()) {
+        auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
+        tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi);
+      }
+#endif
+
+      tracker->push_field_data_snapshot(scalar);
 
       if (k != 0) tracker->advance_timestep();
       if (k == stream->n_timesteps() - 1) tracker->update_timestep();
@@ -360,6 +369,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   }
 
   tracker->finalize();
+  tracker->write_surfaces(output_pattern, output_format, true);
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)

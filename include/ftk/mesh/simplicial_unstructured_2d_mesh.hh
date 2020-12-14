@@ -499,6 +499,7 @@ scalar_to_xgc_slices_3d_vtu(const std::string& varname, const ndarray<F>& scalar
   grid->GetPointData()->AddArray(array);
   grid->GetPointData()->SetActiveScalars(varname.c_str());
 
+  // grid->PrintSelf(std::cerr, vtkIndent(2));
   return grid;
 }
 #endif

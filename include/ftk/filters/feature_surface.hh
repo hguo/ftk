@@ -363,6 +363,7 @@ void feature_surface_t::save(const std::string& filename, std::string format) co
     diy::serializeToFile(*this, filename);
   } else {
 #if FTK_HAVE_VTK
+    fprintf(stderr, "writing polydata, #pts=%zu, #tris=%zu\n", pts.size(), tris.size());
     write_polydata(filename, to_vtp(), format);
 #else
     fprintf(stderr, "unsupported file format\n");
