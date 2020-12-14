@@ -744,38 +744,42 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         }
       }
     } else { // "tri" type
-      I vt[3] = {v0[0], v0[1], v0[3]};
-      if (vt[0] == vt[1])
-        vt[1] = vt[2];
+      // I vt[3] = {v0[0], v0[1], v0[3]};
+      // if (vt[0] == vt[1])
+      //   vt[1] = vt[2];
 
-      I otid;
-      bool found = m.find_triangle(vt, otid);
-      assert(found);
-
-      I oeid;
+      I otid, oeid;
       if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
+        I vt[3] = {v0[0], v0[1], v0[2]};
+        bool found = m.find_triangle(vt, otid);
+        assert(found);
+
         // 0 1 2 , in 0 1 2  type, find tri 012
         results.insert(otid + t*n(2));
         // 0 1 2', in 0 1 2' type, find tri 012
         results.insert(otid + t*n(2) + m.n(2));
         // 0 2 2', in 0 1 1' type, find edge 02
         {
-          const I edge[2] = {vt[0], vt[1]};
+          const I edge[2] = {v0[0], v0[2]};
           bool found = m.find_edge(edge, oeid);
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2));
         }
         // 1 2 2', in 0 1 1' type, find edge 12
         {
-          const I edge[2] = {vt[1], vt[2]};
+          const I edge[2] = {v0[1], v0[2]};
           bool found = m.find_edge(edge, oeid);
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2));
         }
       } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2'
+        I vt[3] = {v0[0], v0[1], v0[3]};
+        bool found = m.find_triangle(vt, otid);
+        assert(found);
+        
         // 0 1 1', in 0 1 1' type, find edge 01
         {
-          const I edge[2] = {vt[0], vt[1]};
+          const I edge[2] = {v0[0], v0[1]};
           bool found = m.find_edge(edge, oeid);
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2));
@@ -786,15 +790,19 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         results.insert(otid + t*n(2) + 2*m.n(2));
         // 1 1'2', in 0 0'1' type, find edge 12
         {
-          const I edge[2] = {vt[1], vt[2]};
+          const I edge[2] = {v0[1], v0[3]};
           bool found = m.find_edge(edge, oeid);
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2) + m.n(1));
         }
-      } else { // 0 1 1'2'
+      } else { // 0 0'1'2'
+        I vt[3] = {v0[0], v0[1], v0[3]};
+        bool found = m.find_triangle(vt, otid);
+        assert(found);
+        
         // 0 1 1', in 0 1 1' type, find edge 01
         {
-          const I edge[2] = {vt[0], vt[1]};
+          const I edge[2] = {v0[0], v0[2]};
           bool found = m.find_edge(edge, oeid);
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2));
@@ -805,7 +813,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         results.insert(otid + t*n(2) + 2*m.n(2));
         // 1 1'2', in 0 0'1' type, find edge 12
         {
-          const I edge[2] = {vt[1], vt[2]};
+          const I edge[2] = {v0[2], v0[3]};
           bool found = m.find_edge(edge, oeid);
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2) + m.n(1));
