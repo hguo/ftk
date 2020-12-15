@@ -413,7 +413,7 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
     fprintf(stderr, "pass II, timestep=%d\n", timestep);
     m4->element_for_ordinal(4, timestep, 
         std::bind(&xgc_blob_filament_tracker::check_penta, this, std::placeholders::_1), 
-        FTK_XL_PTHREAD, nthreads, enable_set_affinity);
+        xl, nthreads, enable_set_affinity);
   }
 
   surfaces.relabel();

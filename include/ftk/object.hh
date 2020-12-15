@@ -93,6 +93,7 @@ struct object {
 #endif
     } else if (accelerator == FTK_XL_TBB) {
 #if FTK_HAVE_TBB
+      fprintf(stderr, "executing parallel_for with tbb...\n");
       tbb::parallel_for(tbb::blocked_range<size_t>(0, ntasks),
           [=](const tbb::blocked_range<size_t>& r) {
             for (size_t i = r.begin(); i != r.end(); ++ i) 

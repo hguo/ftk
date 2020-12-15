@@ -19,9 +19,10 @@ struct filter : public object {
   virtual void update() = 0;
   virtual void reset() {};
 
+  void use_accelerator(const std::string& acc);
   void use_accelerator(int i) {
     xl = i;
-    if (xl == FTK_XL_OPENMP || xl == FTK_XL_SYCL || xl == FTK_XL_TBB || xl == FTK_XL_KOKKOS_CUDA) {
+    if (xl == FTK_XL_OPENMP || xl == FTK_XL_SYCL || xl == FTK_XL_KOKKOS_CUDA) {
       warn("Accelerator not available.  Using FTK_XL_NONE.");
       xl = FTK_XL_NONE;
     }
@@ -52,6 +53,16 @@ protected:
 
   std::mutex mutex;
 };
+
+////
+void filter::use_accelerator(const std::string& acc)
+{
+  if (acc == "cuda") use_accelerator(FTK_XL_CUDA);
+  else if (acc == "openmp") use_accelerator(FTK_XL_OPENMP);
+  else if (acc == "tbb") use_accelerator(FTK_XL_TBB);
+  else if (acc == "sycl") use_accelerator(FTK_XL_SYCL);
+  else use_accelerator(FTK_XL_NONE);
+}
 
 }
 
