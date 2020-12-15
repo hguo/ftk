@@ -470,15 +470,6 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
 
   if (d == 4) { // currently only pentachrora and tetrahedra are supported
     const int type = i / m.n(3);
-    // if (i == 10814880)
-    //   fprintf(stderr, "sides of %d, i=%d, t=%d, type=%d, verts=%d, %d, %d, %d, %d, verts'=%d, %d, %d, %d, %d\n", 
-    //       k, i, t, type, 
-    //       v[0], v[1], v[2], v[3], v[4], 
-    //       mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0)), mod(v[4], m.n(0)) );
-    // fprintf(stderr, "sides of %d, i=%d, t=%d, type=%d, verts=%d, %d, %d, %d, %d, verts'=%d, %d, %d, %d, %d\n", 
-    //     k, i, t, type, 
-    //     v[0], v[1], v[2], v[3], v[4], 
-    //     mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0)), mod(v[4], m.n(0)) );
     if (type == 0) { // 0 1 2 3 3'
       // 0 1 2 3
       // 0 1 2 3'
@@ -587,23 +578,6 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         assert(found);
         results.insert(otid + t*n(3) + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
       }
-#if 0
-      if (i == 10814880) {
-        for (auto tet : results) {
-          I verts[4];
-          get_simplex(3, tet, verts);
-          fprintf(stderr, "---tet=%d, verts=%d, %d, %d, %d\n", 
-              tet, verts[0], verts[1], verts[2], verts[3]);
-          for (auto tri : sides(3, tet)) {
-            I verts[3];
-            get_simplex(2, tri, verts);
-            fprintf(stderr, "------tri=%d, verts=%d, %d, %d\n", 
-                tri, verts[0], verts[1], verts[2]);
-          }
-        }
-        // exit(1);
-      }
-#endif
     } else if (type == 3) { // 0 0'1'2'3'
       // 0 0'1'2'
       { // tri 012
