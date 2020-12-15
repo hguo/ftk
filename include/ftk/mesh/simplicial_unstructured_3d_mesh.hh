@@ -508,7 +508,11 @@ std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3
     m3.get_simplex(3, k, tet);
 
     for (int j = 0; j < 4; j ++)
-      m->tetrahedra(j, k) = tet[j] % nn;
+      tet[j] = tet[j] % nn;
+    std::sort(tet, tet+4);
+
+    for (int j = 0; j < 4; j ++)
+      m->tetrahedra(j, k) = tet[j]; // % nn;
   }
 
   m->initialize();

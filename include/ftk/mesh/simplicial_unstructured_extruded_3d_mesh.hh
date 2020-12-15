@@ -180,7 +180,7 @@ void simplicial_unstructured_extruded_3d_mesh<I, F>::extrude()
     tris(1, i+3*m.n(2)) = edge[1];
     tris(2, i+3*m.n(2)) = edge[1] + m.n(0);
 
-    tris(0, i+3*m.n(2)+m.n(1)) = edge[0]; // 0 0'1'
+    tris(0, i+3*m.n(2)+m.n(1)) = edge[0]; // 0 0'1' // tri_type==4
     tris(1, i+3*m.n(2)+m.n(1)) = edge[0] + m.n(0);
     tris(2, i+3*m.n(2)+m.n(1)) = edge[1] + m.n(0);
   }
@@ -470,6 +470,11 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
 
   if (d == 4) { // currently only pentachrora and tetrahedra are supported
     const int type = i / m.n(3);
+    // if (i == 10814880)
+    //   fprintf(stderr, "sides of %d, i=%d, t=%d, type=%d, verts=%d, %d, %d, %d, %d, verts'=%d, %d, %d, %d, %d\n", 
+    //       k, i, t, type, 
+    //       v[0], v[1], v[2], v[3], v[4], 
+    //       mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0)), mod(v[4], m.n(0)) );
     // fprintf(stderr, "sides of %d, i=%d, t=%d, type=%d, verts=%d, %d, %d, %d, %d, verts'=%d, %d, %d, %d, %d\n", 
     //     k, i, t, type, 
     //     v[0], v[1], v[2], v[3], v[4], 
@@ -556,7 +561,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         results.insert(otid + t*n(3) + 4*m.n(3) + m.n(2)); // 0 1 1'2' type
       }
       // 0 1 1'3'
-      { // tri 013
+      { // tri 013 
         const I ot[3] = {v[0], v[1], mod(v[4], m.n(0))};
         I otid;
         bool found = m.find_triangle(ot, otid);
@@ -575,12 +580,29 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         results.insert(otid + t*n(3) + 3*m.n(3)); // 0 1'2'3'
       }
       // 1 1'2'3'
-      { // tri 123
+      { // tri 123 
         const I ot[3] = {v[1], mod(v[3], m.n(0)), mod(v[4], m.n(0))};
         I otid;
         bool found = m.find_triangle(ot, otid);
         assert(found);
         results.insert(otid + t*n(3) + 4*m.n(3) + 2*m.n(2)); // 0 0'1'2' type
+      }
+#if 0
+      if (i == 10814880) {
+        for (auto tet : results) {
+          I verts[4];
+          get_simplex(3, tet, verts);
+          fprintf(stderr, "---tet=%d, verts=%d, %d, %d, %d\n", 
+              tet, verts[0], verts[1], verts[2], verts[3]);
+          for (auto tri : sides(3, tet)) {
+            I verts[3];
+            get_simplex(2, tri, verts);
+            fprintf(stderr, "------tri=%d, verts=%d, %d, %d\n", 
+                tri, verts[0], verts[1], verts[2]);
+          }
+        }
+        // exit(1);
+#endif
       }
     } else if (type == 3) { // 0 0'1'2'3'
       // 0 0'1'2'
@@ -620,7 +642,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
       }
     }
   } else if (d == 3) {
-    const I v0[4] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0))};
+    I v0[4] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0))};
     if (i < 4*m.n(3)) { // "tet" type
       I otid;
       bool found = m.find_tetrahedron(v0, otid);
@@ -685,7 +707,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
           assert(found);
           results.insert(tid + t*n(2) + m.n(2));
         }
-      } else if (i < 3*m.n(3)) { // 0 1 2'3'
+      } else if (i < 3*m.n(3)) { // 0 1 2'3' // tet_type==2
         // 0 1 2' (in 0 1 2' type), find tri 012
         {
           const I tri[3] = {v0[0], v0[1], v0[2]};
@@ -700,20 +722,21 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
           assert(found);
           results.insert(tid + t*n(2) + m.n(2));
         }
-        // 0 2'3' (in 0 1'2' type), find tri 023  FIXME: may be wrong
+        // 0 2'3' (in 0 1'2' type), find tri 023  
         {
           const I tri[3] = {v0[0], v0[2], v0[3]};
-          assert( m.find_triangle(tri, tid) );
+          bool found = m.find_triangle(tri, tid);
+          assert(found);
           results.insert(tid + t*n(2) + 2*m.n(2));
         }
-        // 1 2'3' (in 0 1'2' type), find tri 123  FIXME: may be wrong
+        // 1 2'3' (in 0 1'2' type), find tri 123  
         {
           const I tri[3] = {v0[1], v0[2], v0[3]};
           bool found = m.find_triangle(tri, tid);
           assert(found);
           results.insert(tid + t*n(2) + 2*m.n(2));
         }
-      } else if (i < 4*m.n(3)) { // 0 1'2'3'
+      } else if (i < 4*m.n(3)) { // 0 1'2'3' // tet_type==3
         // 0 1'2' (in 0 1'2' type), find tri 012
         {
           const I tri[3] = {v0[0], v0[1], v0[2]};
@@ -772,7 +795,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2));
         }
-      } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2'
+      } else if (i < 4*m.n(3) + 2*m.n(2)) { // 0 1 1'2' // tet_type==5
         I vt[3] = {v0[0], v0[1], v0[3]};
         bool found = m.find_triangle(vt, otid);
         assert(found);
@@ -787,7 +810,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
         // 0 1 2', in 0 1 2' type, find tri 012
         results.insert(otid + t*n(2) + m.n(2));
         // 0 1'2', in 0 1'2' type, find tri 012
-        results.insert(otid + t*n(2) + 2*m.n(2)); // FIXME: may be wrong
+        results.insert(otid + t*n(2) + 2*m.n(2)); 
         // 1 1'2', in 0 0'1' type, find edge 12
         {
           const I edge[2] = {v0[1], v0[3]};
@@ -795,7 +818,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2) + m.n(1));
         }
-      } else { // 0 0'1'2'
+      } else { // 0 0'1'2' // tet_type==6
         I vt[3] = {v0[0], v0[2], v0[3]};
         bool found = m.find_triangle(vt, otid);
         if (!found) {
@@ -804,25 +827,25 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
               vt[0], vt[1], vt[2]);
         }
         assert(found);
-        
-        // 0 1 1', in 0 1 1' type, find edge 01
+      
+        // 0 0'1', in 0 0'1' type, find edge 01
         {
           const I edge[2] = {v0[0], v0[2]};
           bool found = m.find_edge(edge, oeid);
           assert(found);
-          results.insert(oeid + t*n(2) + 3*m.n(2));
+          results.insert(oeid + t*n(2) + 3*m.n(2) + m.n(1));
         }
-        // 0 1 2', in 0 1 2' type, find tri 012
-        results.insert(otid + t*n(2) + m.n(2));
-        // 0 1'2', in 0 1'2' type, find tri 012
-        results.insert(otid + t*n(2) + 2*m.n(2));
-        // 1 1'2', in 0 0'1' type, find edge 12
+        // 0 0'2', in 0 0'1' type, find edge 02
         {
-          const I edge[2] = {v0[2], v0[3]};
+          const I edge[2] = {v0[0], v0[3]};
           bool found = m.find_edge(edge, oeid);
           assert(found);
           results.insert(oeid + t*n(2) + 3*m.n(2) + m.n(1));
         }
+        // 0 1'2', in 0 1'2' type, find tri 012
+        results.insert(otid + t*n(2) + 2*m.n(2));
+        // 0'1'2', in 0 1 2  type in t+1, find tr 012
+        results.insert(otid + (t+1)*n(2));
       }
     }
   }
