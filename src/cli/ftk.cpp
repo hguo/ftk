@@ -13,6 +13,7 @@
 #include "ftk/filters/xgc_blob_filament_tracker.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
+#include "ftk/utils/file_exists.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
 
@@ -117,13 +118,6 @@ static void fatal(const std::string& str) {
 void warn(const std::string& str) {
   std::cerr << "WARN: " << str << std::endl;
 };
-
-bool file_exists(const std::string& filename) {
-  std::ifstream f(filename);
-  return f.good();
-}
-
-bool file_not_exists(const std::string& filename) { return !file_exists(filename); }
 
 static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 {
