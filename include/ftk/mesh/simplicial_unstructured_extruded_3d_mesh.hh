@@ -602,8 +602,8 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::sides(int d, I k) co
           }
         }
         // exit(1);
-#endif
       }
+#endif
     } else if (type == 3) { // 0 0'1'2'3'
       // 0 0'1'2'
       { // tri 012

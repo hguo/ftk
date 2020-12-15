@@ -281,6 +281,7 @@ void xgc_blob_filament_tracker::check_penta(int e)
       unique_tris.insert(tri);
   
   // sanity check
+#if 0
   if (unique_tris.size() != 10) { 
     fprintf(stderr, "penta %d, penta_type=%d\n", e, m4->simplex_type(4, e));
     for (auto tet : m4->sides(4, e)) {
@@ -292,6 +293,7 @@ void xgc_blob_filament_tracker::check_penta(int e)
     for (auto tri : unique_tris) 
       fprintf(stderr, "--tri %d\n", tri);
   }
+#endif
   assert( unique_tris.size() == 10 );
 
   for (auto tri : unique_tris)
