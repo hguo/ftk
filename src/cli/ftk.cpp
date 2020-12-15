@@ -310,6 +310,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     fprintf(stderr, "nphi=%d, iphi=%d\n", nphi, iphi);
     fprintf(stderr, "write_back_filename=%s\n", xgc_write_back_filename.c_str());
     fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
+    fprintf(stderr, "archived_traced_filename=%s, exists=%d\n", archived_traced_filename.c_str(), file_exists(archived_traced_filename));
     fprintf(stderr, "output_format=%s\n", output_format.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
     std::cerr << "input=" << js << std::endl;
@@ -340,38 +341,51 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   tracker->set_number_of_threads(nthreads);
   tracker->initialize();
 
-  if (archived_intersections_filename.empty() || file_not_exists(archived_intersections_filename)) {
-    stream->set_callback([&](int k, const ndarray<double> &data) {
-      auto scalar = data.get_transpose();
+  if (archived_traced_filename.length() > 0 && file_exists(archived_traced_filename)) {
+    tracker->read_surfaces(archived_traced_filename);
+  } else {
+    if (archived_intersections_filename.empty() || file_not_exists(archived_intersections_filename)) {
+      stream->set_callback([&](int k, const ndarray<double> &data) {
+        auto scalar = data.get_transpose();
 #if FTK_HAVE_VTK
-      if (xgc_write_back_filename.length()) {
-        auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
-        tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi);
-      }
+        if (xgc_write_back_filename.length()) {
+          auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
+          tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi);
+        }
 #endif
 
-      tracker->push_field_data_snapshot(scalar);
+        tracker->push_field_data_snapshot(scalar);
 
-      if (k != 0) tracker->advance_timestep();
-      if (k == stream->n_timesteps() - 1) tracker->update_timestep();
-    });
+        if (k != 0) tracker->advance_timestep();
+        if (k == stream->n_timesteps() - 1) tracker->update_timestep();
+      });
 
-    stream->start();
-    stream->finish();
-  } else {
-    fprintf(stderr, "reading archived intersections..\n");
-    tracker->read_intersections_binary( archived_intersections_filename );
-    tracker->set_current_timestep(stream->n_timesteps() - 1);
+      stream->start();
+      stream->finish();
+    } else {
+      fprintf(stderr, "reading archived intersections..\n");
+      tracker->read_intersections_binary( archived_intersections_filename );
+      tracker->set_current_timestep(stream->n_timesteps() - 1);
+    }
+
+    if ((!archived_intersections_filename.empty()) && file_not_exists(archived_intersections_filename)) {
+      fprintf(stderr, "writing archived intersections..\n");
+      tracker->write_intersections_binary(archived_intersections_filename);
+    }
+    tracker->finalize();
+
+    if (archived_traced_filename.length() > 0) {
+      fprintf(stderr, "writing archived traced intersections..\n");
+      tracker->write_surfaces(archived_intersections_filename, "binary");
+    }
   }
 
-  if ((!archived_intersections_filename.empty()) && file_not_exists(archived_intersections_filename)) {
-    fprintf(stderr, "writing archived intersections..\n");
-    tracker->write_intersections_binary(archived_intersections_filename);
-  }
-
-  tracker->finalize();
-  // tracker->write_surfaces(output_pattern, output_format, true);
-  tracker->write_sliced(output_pattern, output_format, true);
+  if (output_type == "intersections")
+    tracker->write_intersections(output_pattern);
+  else if (output_type == "sliced")
+    tracker->write_sliced(output_pattern, output_format, true);
+  else 
+    tracker->write_surfaces(output_pattern, output_format, true);
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)

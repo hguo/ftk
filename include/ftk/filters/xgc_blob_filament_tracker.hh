@@ -91,10 +91,12 @@ public:
 
 public:
   void write_intersections_binary(const std::string& filename) const;
-  void write_intersections_vtp(const std::string& filename) const;
+  void write_intersections(const std::string& filename, std::string format="") const;
   void read_intersections_binary(const std::string& filename);
   
   void write_surfaces(const std::string& filename, std::string format="", bool torus=true) const;
+  void read_surfaces(const std::string& filename, std::string format="");
+
   void write_sliced(const std::string& filename, std::string format="", bool torus=true) const;
 
 #if FTK_HAVE_VTK
@@ -475,14 +477,16 @@ inline void xgc_blob_filament_tracker::read_intersections_binary(const std::stri
 
 inline void xgc_blob_filament_tracker::write_surfaces(const std::string& filename, std::string format, bool torus) const 
 {
+  if (is_root_proc()) 
+    surfaces.save(filename, format);
+}
+
+inline void xgc_blob_filament_tracker::read_surfaces(const std::string& filename, std::string format)
+{
   if (!is_root_proc()) return;
- 
-#if FTK_HAVE_VTK
-  auto poly = get_critical_surfaces_vtp(torus);
-  write_polydata(filename, poly);
-#else
-  fatal("FTK not compiled with VTK.");
-#endif
+
+  surfaces.load(filename, format);
+  fprintf(stderr, "readed surfaces #pts=%zu, #tris=%zu\n", surfaces.pts.size(), surfaces.tris.size());
 }
 
 inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, std::string format, bool torus) const
@@ -500,7 +504,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
   }
 }
 
-inline void xgc_blob_filament_tracker::write_intersections_vtp(const std::string& filename) const
+inline void xgc_blob_filament_tracker::write_intersections(const std::string& filename, std::string format) const
 {
 #if FTK_HAVE_VTK
   if (comm.rank() == get_root_proc()) {

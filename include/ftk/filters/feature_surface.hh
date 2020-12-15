@@ -359,7 +359,7 @@ void feature_surface_t::load(const std::string& filename, std::string format)
 void feature_surface_t::save(const std::string& filename, std::string format) const
 {
   const int fmt = file_extension(filename, format);
-  if (fmt == FILE_EXT_BIN) {
+  if (fmt == FILE_EXT_BIN || fmt == FILE_EXT_NULL) {
     diy::serializeToFile(*this, filename);
   } else {
 #if FTK_HAVE_VTK
