@@ -95,11 +95,14 @@ public:
   void read_intersections_binary(const std::string& filename);
   
   void write_surfaces(const std::string& filename, std::string format="", bool torus=true) const;
+  void write_sliced(const std::string& filename, std::string format="", bool torus=true) const;
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp(bool torus = true) const;
   vtkSmartPointer<vtkPolyData> get_critical_line_vtp(bool torus = true) const;
   vtkSmartPointer<vtkPolyData> get_critical_surfaces_vtp(bool torus = true) const;
+
+  vtkSmartPointer<vtkPolyData> transform_vtp_coordinates(vtkSmartPointer<vtkPolyData>) const;
 #endif
 
 protected:
@@ -482,6 +485,21 @@ inline void xgc_blob_filament_tracker::write_surfaces(const std::string& filenam
 #endif
 }
 
+inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, std::string format, bool torus) const
+{
+  if (!is_root_proc()) return;
+
+  for (int i = 0; i < end_timestep; i ++) { // TODO
+    auto sliced = surfaces.slice_time(i);
+    fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
+
+    auto poly = sliced.to_vtp(3, std::vector<std::string>());
+    
+    const auto filename = ndarray_writer<double>::filename(pattern, i);
+    write_polydata(filename, transform_vtp_coordinates(poly));
+  }
+}
+
 inline void xgc_blob_filament_tracker::write_intersections_vtp(const std::string& filename) const
 {
 #if FTK_HAVE_VTK
@@ -522,6 +540,27 @@ inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_intersections
   poly->SetPoints(points);
   poly->SetVerts(vertices);
 
+  return poly;
+}
+  
+vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::transform_vtp_coordinates(vtkSmartPointer<vtkPolyData> poly) const
+{
+  const int np = nphi * iphi;
+  
+  vtkSmartPointer<vtkPoints> pts = poly->GetPoints();
+  for (auto i = 0; i < pts->GetNumberOfPoints(); i ++) {
+    double rzp[3], xyz[3];
+    pts->GetPoint(i, rzp);
+
+    const double phi = rzp[2] * 2 * M_PI / np;
+    xyz[0] = rzp[0] * cos(phi);
+    xyz[1] = rzp[0] * sin(phi);
+    xyz[2] = rzp[1];
+
+    pts->SetPoint(i, xyz);
+  }
+  
+  poly->SetPoints(pts);
   return poly;
 }
 

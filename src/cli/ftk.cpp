@@ -275,7 +275,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     fatal("missing xgc mesh filename");
  
   const auto js = stream->get_json();
-  // ntimesteps = js["n_timesteps"];
+  const int ntimesteps = js["n_timesteps"];
 
   // determine nphi and iphi
   int nphi, iphi;
@@ -336,6 +336,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     m2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
   }
 
+  tracker->set_end_timestep(ntimesteps - 1);
   tracker->set_number_of_threads(nthreads);
   tracker->initialize();
 
@@ -369,7 +370,8 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   }
 
   tracker->finalize();
-  tracker->write_surfaces(output_pattern, output_format, true);
+  // tracker->write_surfaces(output_pattern, output_format, true);
+  tracker->write_sliced(output_pattern, output_format, true);
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
