@@ -511,6 +511,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
 {
   if (!is_root_proc()) return;
 
+#if FTK_HAVE_VTK
   for (int i = 0; i < end_timestep; i ++) { // TODO
     auto sliced = surfaces.slice_time(i);
     fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
@@ -520,6 +521,9 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
     const auto filename = ndarray_writer<double>::filename(pattern, i);
     write_polydata(filename, transform_vtp_coordinates(poly));
   }
+#else
+  fatal("FTK not compiled with VTK.");
+#endif
 }
 
 inline void xgc_blob_filament_tracker::write_intersections(const std::string& filename, std::string format) const
