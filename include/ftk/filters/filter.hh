@@ -55,7 +55,7 @@ protected:
 };
 
 ////
-void filter::use_accelerator(const std::string& acc)
+inline void filter::use_accelerator(const std::string& acc)
 {
   if (acc == "cuda") use_accelerator(FTK_XL_CUDA);
   else if (acc == "openmp") use_accelerator(FTK_XL_OPENMP);
