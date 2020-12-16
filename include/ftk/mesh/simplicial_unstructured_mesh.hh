@@ -6,7 +6,7 @@
 #include <ftk/ndarray.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/algorithms/bfs.hh>
-#include <ftk/external/diy-ext/serialization.hh>
+#include <ftk/utils/serialization.hh>
 #include <set>
 #include <iostream>
 #include <vector>

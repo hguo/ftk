@@ -20,8 +20,7 @@
 #include <ftk/ndarray/writer.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/filters/contour_tracker_regular.hh>
-#include <ftk/external/diy/serialization.hpp>
-#include <ftk/external/diy-ext/gather.hh>
+#include <ftk/utils/gather.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkUnstructuredGrid.h>

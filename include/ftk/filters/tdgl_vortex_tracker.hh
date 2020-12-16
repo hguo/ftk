@@ -9,8 +9,7 @@
 #include <ftk/filters/feature_volume.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
-#include <ftk/external/diy/serialization.hpp>
-#include <ftk/external/diy-ext/gather.hh>
+#include <ftk/utils/gather.hh>
 #include <ftk/io/tdgl.hh>
 #include <iomanip>
 

@@ -23,8 +23,7 @@
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
-#include <ftk/external/diy/serialization.hpp>
-#include <ftk/external/diy-ext/gather.hh>
+#include <ftk/utils/gather.hh>
 
 #if FTK_HAVE_GMP
 #include <gmpxx.h>

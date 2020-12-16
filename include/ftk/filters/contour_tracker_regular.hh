@@ -5,7 +5,7 @@
 #include <ftk/mesh/lattice_partitioner.hh>
 #include <ftk/filters/contour_tracker.hh>
 #include <ftk/filters/regular_tracker.hh>
-#include <ftk/external/diy-ext/gather.hh>
+#include <ftk/utils/gather.hh>
 
 namespace ftk {
 

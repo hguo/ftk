@@ -1,10 +1,15 @@
 #ifndef _DIY_EXT
 #define _DIY_EXT
 
+#include <ftk/ftk_config.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/diy/storage.hpp>
 #include <cassert>
 #include <cstring>
+
+#if FTK_HAVE_TBB
+#include <tbb/concurrent_hash_map.h>
+#endif
 
 namespace diy {
   struct StringBuffer : public BinaryBuffer {
@@ -70,6 +75,32 @@ namespace diy {
     fclose(fp);
     return true;
   }
+
+#if FTK_HAVE_TBB
+  template <typename Key, typename T, typename HashCompare, typename A>
+  struct Serialization<tbb::interface5::concurrent_hash_map<Key, T, HashCompare, A>> {
+    typedef tbb::interface5::concurrent_hash_map<Key, T, HashCompare, A> hash_map;
+    
+    static void save(BinaryBuffer& bb, const hash_map& m) {
+      size_t s = m.size();
+      diy::save(bb, s);
+      for (typename hash_map::const_iterator it = m.begin(); it != m.end(); it ++)
+        diy::save(bb, *it);
+    }
+
+    static void load(BinaryBuffer& bb, hash_map& m) {
+      size_t s;
+      diy::load(bb, s);
+      for (size_t i = 0; i < s; i ++) {
+        Key k;
+        T v;
+        diy::load(bb, k);
+        diy::load(bb, v);
+        m.insert(std::make_pair(k, v));
+      }
+    }
+  };
+#endif
 }
 
 #endif

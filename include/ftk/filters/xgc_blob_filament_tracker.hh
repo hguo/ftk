@@ -9,10 +9,13 @@
 #include <ftk/filters/feature_volume.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
-#include <ftk/external/diy/serialization.hpp>
-#include <ftk/external/diy-ext/gather.hh>
+#include <ftk/utils/gather.hh>
 #include <ftk/io/tdgl.hh>
 #include <iomanip>
+
+#if FTK_HAVE_TBB
+#include <tbb/concurrent_hash_map.h>
+#endif
 
 namespace ftk {
   
@@ -108,7 +111,11 @@ public:
 #endif
 
 protected:
+#if FTK_HAVE_TBB
+  tbb::concurrent_hash_map<int, feature_point_t> intersections;
+#else
   std::map<int, feature_point_t> intersections;
+#endif
   std::set<int> related_cells;
   feature_surface_t surfaces;
 };
@@ -209,11 +216,14 @@ inline void xgc_blob_filament_tracker::update_timestep()
     if (check_simplex(i, cp)) {
       // std::set<int> my_related_cells = get_related_cels(i);
 
-      {
-        std::lock_guard<std::mutex> guard(mutex);
-        intersections[i] = cp;
-        // related_cells.insert(my_related_cells.begin(), my_related_cells.end());
-      }
+#if FTK_HAVE_TBB
+      // intersections.insert(std::make_pair<int, feature_point_t>(i, cp));
+      intersections.insert({i, cp});
+#else
+      std::lock_guard<std::mutex> guard(mutex);
+      intersections[i] = cp;
+      // related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+#endif
     }
   };
 
@@ -301,9 +311,17 @@ void xgc_blob_filament_tracker::check_penta(int e)
 #endif
   assert( unique_tris.size() == 10 );
 
-  for (auto tri : unique_tris)
+  for (auto tri : unique_tris) {
+#if FTK_HAVE_TBB
+    tbb::concurrent_hash_map<int, feature_point_t>::const_accessor it;
+    bool found = intersections.find(it, tri);
+    if (found)
+      ids[count ++] = it->second.id;
+#else
     if (intersections.find(tri) != intersections.end())
       ids[count ++] = intersections[tri].id;
+#endif
+  }
 
   if (count == 0) return;
   else if (count == 3) {
@@ -335,8 +353,8 @@ void xgc_blob_filament_tracker::check_penta(int e)
 
 void xgc_blob_filament_tracker::finalize()
 {
-  diy::mpi::gather(comm, intersections, intersections, get_root_proc());
-  diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
+  // diy::mpi::gather(comm, intersections, intersections, get_root_proc()); // TODO
+  // diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
   
   if (is_root_proc()) {
     fprintf(stderr, "#intersections=%zu, #related_cells=%zu\n", 
@@ -466,13 +484,13 @@ inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string&
 inline void xgc_blob_filament_tracker::write_intersections_binary(const std::string& filename) const
 {
   if (is_root_proc())
-    diy::serializeToFile(intersections, filename);
+    diy::serializeToFile(intersections, filename); // TODO: TBB
 }
 
 inline void xgc_blob_filament_tracker::read_intersections_binary(const std::string& filename)
 {
   if (is_root_proc())
-    diy::unserializeFromFile(filename, intersections);
+    diy::unserializeFromFile(filename, intersections); // TODO: TBB
 }
 
 inline void xgc_blob_filament_tracker::write_surfaces(const std::string& filename, std::string format, bool torus) const 

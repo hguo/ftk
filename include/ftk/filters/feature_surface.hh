@@ -8,7 +8,7 @@
 #include <ftk/utils/file_extensions.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/write_polydata.hh>
-#include <ftk/external/diy-ext/serialization.hh>
+#include <ftk/utils/serialization.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkDoubleArray.h>

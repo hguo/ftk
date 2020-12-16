@@ -2,7 +2,7 @@
 #define _DIYEXT_GATHER_HH
 
 #include <ftk/external/diy/mpi.hpp>
-#include <ftk/external/diy-ext/serialization.hh>
+#include <ftk/utils/serialization.hh>
 
 namespace diy { namespace mpi {
 
