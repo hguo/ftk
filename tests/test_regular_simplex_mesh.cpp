@@ -2,7 +2,7 @@
 #include <ftk/basic/duf.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/mesh/lattice_partitioner.hh>
-#include <ftk/external/diy-ext/gather.hh>
+#include <ftk/utils/gather.hh>
 
 int main(int argc, char **argv)
 {
