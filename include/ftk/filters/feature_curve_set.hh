@@ -214,30 +214,38 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
   vtkSmartPointer<vtkCellArray> lines = vtkCellArray::New();
   vtkSmartPointer<vtkCellArray> verts = vtkCellArray::New();
 
+  auto pt2coords = [tfactor, cpdims](const feature_point_t& p) {
+    return std::array<double, 3>{p.x[0], p.x[1], cpdims == 2 ? p.t * tfactor : p.x[2]};
+  };
+
   foreach([&](const feature_curve_t& curve) {
     for (auto i = 0; i < curve.size(); i ++) {
-      double p[3] = {curve[i][0], curve[i][1], cpdims == 2 ? curve[i].t * tfactor : curve[i][2]};
-      points->InsertNextPoint(p);
+      const auto p = pt2coords(curve[i]);
+      points->InsertNextPoint(p[0], p[1], p[2]);
+    }
+    if (curve.loop) {
+      const auto p = pt2coords(curve[0]);
+      points->InsertNextPoint(p[0], p[1], p[2]);
     }
   });
 
   size_t nv = 0;
   foreach([&](const feature_curve_t& curve) {
-    if (curve.empty()) { // skip
-    } else if (curve.size() < 2) { // isolated vertex
-      vtkSmartPointer<vtkVertex> obj = vtkVertex::New();
-      obj->GetPointIds()->SetNumberOfIds(curve.size());
-      for (int i = 0; i < curve.size(); i ++)
-        obj->GetPointIds()->SetId(i, i+nv);
+    if (curve.empty()) return;
+
+    const auto npts = curve.loop ? curve.size()+1 : curve.size();
+    
+    vtkSmartPointer<vtkPolyLine> obj = vtkPolyLine::New();
+    obj->GetPointIds()->SetNumberOfIds(npts);
+    for (int i = 0; i < npts; i ++)
+      obj->GetPointIds()->SetId(i, i+nv);
+
+    if (curve.size() < 2) // isolated vertex
       verts->InsertNextCell(obj);
-    } else { // lines
-      vtkSmartPointer<vtkPolyLine> obj = vtkPolyLine::New();
-      obj->GetPointIds()->SetNumberOfIds(curve.size());
-      for (int i = 0; i < curve.size(); i ++)
-        obj->GetPointIds()->SetId(i, i+nv);
+    else 
       lines->InsertNextCell(obj);
-    }
-    nv += curve.size();
+
+    nv += npts;
   });
  
   polyData->SetPoints(points);
@@ -262,7 +270,8 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     ids->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](int id, const feature_curve_t& curve) {
-      for (auto j = 0; j < curve.size(); j ++)
+      const auto npts = curve.loop ? curve.size()+1 : curve.size();
+      for (auto j = 0; j < npts; j ++)
         ids->SetValue(i ++, id);
     });
     ids->SetName("id");
@@ -275,7 +284,8 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     vels->SetNumberOfTuples(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
-      for (auto j = 0; j < curve.size(); j ++)
+      const auto npts = curve.loop ? curve.size()+1 : curve.size();
+      for (auto j = 0; j < npts; j ++)
         vels->SetTuple3(i ++, curve[j].v[0], curve[j].v[1], curve[j].v[2]);
     });
     vels->SetName("velocity");
@@ -287,7 +297,8 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     time->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
-      for (auto j = 0; j < curve.size(); j ++)
+      const auto npts = curve.loop ? curve.size()+1 : curve.size();
+      for (auto j = 0; j < npts; j ++)
         time->SetValue(i ++, curve[j].t);
     });
     time->SetName("time");
@@ -299,7 +310,8 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     conds->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
-      for (auto j = 0; j < curve.size(); j ++)
+      const auto npts = curve.loop ? curve.size()+1 : curve.size();
+      for (auto j = 0; j < npts; j ++)
         conds->SetValue(i ++, curve[j].cond);
     });
     conds->SetName("cond");
@@ -313,7 +325,8 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     scalar->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
-      for (auto j = 0; j < curve.size(); j ++)
+      const auto npts = curve.loop ? curve.size()+1 : curve.size();
+      for (auto j = 0; j < npts; j ++)
         scalar->SetValue(i ++, curve[j].scalar[k]);
     });
     scalar->SetName(scalar_components[k].c_str());

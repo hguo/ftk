@@ -114,7 +114,7 @@ template <typename NodeType>
 bool is_loop(const std::vector<NodeType>& linear_graph, std::function<std::set<NodeType>(NodeType)> neighbors)
 {
   if (linear_graph.size() == 0) return false;
-  else if (linear_graph.size() == 1) return true;
+  else if (linear_graph.size() == 1) return false; // true;
   else {
     const auto front_neighbors = neighbors(linear_graph.front());
     return front_neighbors.find(linear_graph.back()) != front_neighbors.end();

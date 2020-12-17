@@ -331,6 +331,8 @@ inline feature_curve_set_t feature_surface_t::slice_time(int t) const
     auto linear_graphs = connected_component_to_linear_components<int>(component, [&](int i) {return links[i];});
     for (int j = 0; j < linear_graphs.size(); j ++) {
       feature_curve_t traj;
+      traj.loop = is_loop<int>(linear_graphs[j], [&](int i) {return links[i];});
+      
       for (int k = 0; k < linear_graphs[j].size(); k ++)
         traj.push_back(mypts[linear_graphs[j][k]]);
       curve_set.add(traj); // , traj[0].id);
