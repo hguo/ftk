@@ -9,7 +9,7 @@ class MainTest(unittest.TestCase):
         myCriticalPointTracker.UpdatePipeline()
 
         self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 51)
-        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 1845)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 1846)
     
     def test_paraview_critical_point_tracking_moving_extremum_2d(self):
         data = MovingExtremum2DSource()
