@@ -14,7 +14,7 @@ struct simplicial_unstructured_extruded_3d_mesh : public object { // extruded fr
   size_t n_interval(int d) const;
 
   bool is_ordinal(int d, I i) const {
-    I k = mod(i, n(3));
+    I k = mod(i, n(d));
     return k < n_ordinal(d);
   }
 
