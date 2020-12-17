@@ -993,6 +993,11 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
     if (i < m.n(2)) { // type 0 1 2 (or 0'1'2'), pos=0, 1, 2, 3
       bool found = m.find_triangle(v0, otid);
       assert(found);
+
+      for (auto otetid : m.side_of(2, otid)) {
+
+      }
+
       const auto tets0 = m.side_of(2, otid);
       // TODO:
       // 0 1 2 3

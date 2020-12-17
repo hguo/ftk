@@ -370,7 +370,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 
     if (archived_traced_filename.length() > 0) {
       fprintf(stderr, "writing archived traced intersections..\n");
-      tracker->write_surfaces(archived_intersections_filename, "binary");
+      tracker->write_surfaces(archived_traced_filename, "binary");
     }
   }
 
