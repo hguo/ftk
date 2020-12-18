@@ -95,6 +95,7 @@ struct ndarray : object {
 
   lattice get_lattice() const;
 
+  void fill(T value); //! fill with a constant value
   void fill(const std::vector<T>& values); //! fill values with std::vector
   void fill(const std::vector<std::vector<T>>& values); //! fill values
 
@@ -377,6 +378,12 @@ template <typename T>
 lattice ndarray<T>::get_lattice() const {
   std::vector<size_t> st(nd(), 0), sz(dims);
   return lattice(st, sz);
+}
+
+template <typename T>
+void ndarray<T>::fill(T v)
+{
+  std::fill(p.begin(), p.end(), v);
 }
 
 template <typename T>

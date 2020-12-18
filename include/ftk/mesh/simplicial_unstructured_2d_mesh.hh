@@ -73,6 +73,8 @@ public: // mesh access
 
   const ndarray<F>& get_coords() const {return vertex_coords;}
 
+  const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
+
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
   std::vector<std::set<I>> vertex_side_of;
@@ -120,8 +122,11 @@ size_t simplicial_unstructured_2d_mesh<I, F>::n(int d) const
 }
 
 template <typename I, typename F>
-bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v[2], I &i) const
+bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v_[2], I &i) const
 {
+  I v[2] = {v_[0], v_[1]};
+  if (v[0] > v[1]) std::swap(v[0], v[1]);
+
   const auto it = edge_id_map.find( std::make_tuple(v[0], v[1]) );
   if (it == edge_id_map.end()) return false;
   else {
