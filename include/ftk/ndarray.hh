@@ -76,6 +76,7 @@ struct ndarray : object {
 
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshape(dims);}
+  ndarray(const std::vector<size_t> &dims, T val) {reshape(dims, val);}
   ndarray(const lattice& l) {reshape(l.sizes());}
   ndarray(const T *a, const std::vector<size_t> &shape);
 

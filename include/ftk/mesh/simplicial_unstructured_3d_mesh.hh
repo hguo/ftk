@@ -30,6 +30,7 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
   ) const; 
 
 public: // io
+  void to_vtu_file(const std::string& filename);
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
   void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid);
@@ -231,6 +232,19 @@ void simplicial_unstructured_3d_mesh<I, F>::initialize()
       triangle_id_map.size(), 
       edge_id_map.size(),
       vertex_edge_vertex.size());
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_3d_mesh<I, F>::to_vtu_file(const std::string& filename)
+{
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( to_vtk_unstructured_grid() );
+  writer->Write();
+#else
+  fatal("FTK not compiled with VTK");
+#endif
 }
 
 #if FTK_HAVE_VTK  

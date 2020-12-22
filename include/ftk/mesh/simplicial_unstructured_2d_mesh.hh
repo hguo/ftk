@@ -140,8 +140,11 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v_[2], I &i) const
 }
 
 template <typename I, typename F>
-bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v[3], I &i) const
+bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v_[3], I &i) const
 {
+  int v[3] = {v_[0], v_[1], v_[2]};
+  std::sort(v, v+3);
+
   const auto it = triangle_id_map.find( std::make_tuple(v[0], v[1], v[2]) );
   if (it == triangle_id_map.end()) return false;
   else {
