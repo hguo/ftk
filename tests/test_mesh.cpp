@@ -35,6 +35,38 @@ TEST_CASE("mesh_extruded_3d_unstructured") {
     }
   }
 }
+
+TEST_CASE("mesh_extruded_2d_unstructured") {
+  ftk::simplicial_unstructured_2d_mesh<> m;
+  m.from_vtk_unstructured_grid_file("1x1.vtu");
+
+  ftk::simplicial_unstructured_extruded_2d_mesh<> m1(m);
+
+  srand(0);
+  for (int k = 0; k < 1000; k ++) {
+    const int i = rand();
+    int tri[4];
+    m1.get_simplex(2, i, tri);
+    fprintf(stderr, "tri=%d, type=%d, tri=%d, %d, %d\n", 
+        i, m1.face_type(i),
+        tri[0], tri[1], tri[2]);
+
+    const auto tets = m1.side_of(2, i);
+    for (const auto &tet : tets) {
+      fprintf(stderr, "--tet=%d\n", tet);
+      const auto sides = m1.sides(3, tet);
+      for (const auto &side : sides) {
+        fprintf(stderr, "----side=%d\n", side);
+      }
+
+      REQUIRE(sides.find(i) != sides.end());
+      // if (sides.find(i) == sides.end()) {
+      //   fprintf(stderr, "fatal error...\n");
+      //   exit(1);
+      // }
+    }
+  }
+}
 #endif
 
 int main(int argc, char **argv)
