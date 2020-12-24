@@ -7,6 +7,7 @@ include(GNUInstallDirs)
 # include (ExternalProject)
 
 option (FTK_BUILD_TESTS "Build tests" OFF)
+option (FTK_BUILD_TESTS_XGC "Build XGC-specific tests" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
 option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
 

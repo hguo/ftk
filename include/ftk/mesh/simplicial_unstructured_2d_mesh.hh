@@ -64,10 +64,12 @@ public: // mesh access
 
   // std::set<I> side_of2(const I v[2]) const;
 
+  void get_simplex(int d, I i, I v[]) const;
   void get_triangle(I i, I tri[]) const;
   void get_edge(I i, I edge[]) const;
   void get_coords(I i, F coords[]) const;
 
+  bool find_simplex(int d, const I v[], I& i) const;
   bool find_edge(const I v[2], I& i) const;
   bool find_triangle(const I v[3], I& i) const;
 
@@ -119,6 +121,21 @@ size_t simplicial_unstructured_2d_mesh<I, F>::n(int d) const
   } else if (d == 2)
     return triangles.dim(1);
   else return 0;
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::get_simplex(int d, I i, I v[]) const
+{
+  if (d == 1) get_edge(i, v);
+  else if (d == 2) get_triangle(i, v);
+}
+
+template <typename I, typename F>
+bool simplicial_unstructured_2d_mesh<I, F>::find_simplex(int d, const I v[3], I& i) const
+{
+  if (d == 1) return find_edge(v, i);
+  else if (d == 2) return find_triangle(v, i);
+  return false;
 }
 
 template <typename I, typename F>

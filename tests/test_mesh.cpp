@@ -67,6 +67,58 @@ TEST_CASE("mesh_extruded_2d_unstructured") {
     }
   }
 }
+
+TEST_CASE("mesh_extruded_2d_unstructured_find") {
+  ftk::simplicial_unstructured_2d_mesh<> m;
+  m.from_vtk_unstructured_grid_file("1x1.vtu");
+
+  ftk::simplicial_unstructured_extruded_2d_mesh<> m1(m);
+
+  srand(0);
+  for (int k = 0; k < 1000; k ++) {
+    const int d = 1 + rand() % 3;
+    const int i = rand() % m1.n(d);
+
+    int verts[4] = {0};
+    m1.get_simplex(d, i, verts);
+
+    fprintf(stderr, "get %d-simplex %d: %d, %d, %d, %d\n", 
+        d, i, verts[0], verts[1], verts[2], verts[3]);
+
+    int i1;
+    bool succ = m1.find_simplex(d, verts, i1);
+    fprintf(stderr, "find %d-simplex %d: %d, %d, %d, %d, succ=%d\n",
+        d, i1, verts[0], verts[1], verts[2], verts[3], succ);
+
+    REQUIRE(succ);
+    REQUIRE(i == i1);
+  }
+}
+
+TEST_CASE("mesh_2d_unstructured_find") {
+  ftk::simplicial_unstructured_2d_mesh<> m;
+  m.from_vtk_unstructured_grid_file("1x1.vtu");
+
+  srand(0);
+  for (int k = 0; k < 1000; k ++) {
+    const int d = 1 + rand() % 2;
+    const int i = rand() % m.n(d);
+
+    int verts[3] = {0};
+    m.get_simplex(d, i, verts);
+
+    fprintf(stderr, "get %d-simplex %d: %d, %d, %d\n", 
+        d, i, verts[0], verts[1], verts[2]);
+
+    int i1;
+    bool succ = m.find_simplex(d, verts, i1);
+    fprintf(stderr, "find %d-simplex %d: %d, %d, %d, succ=%d\n",
+        d, i1, verts[0], verts[1], verts[2], succ);
+
+    REQUIRE(succ);
+    REQUIRE(i == i1);
+  }
+}
 #endif
 
 int main(int argc, char **argv)

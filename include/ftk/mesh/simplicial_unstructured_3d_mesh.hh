@@ -18,7 +18,7 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
       const std::vector<I>& tetrahedra);
 
   int nd() const {return 3;}
-  size_t n(int d) const;
+  virtual size_t n(int d) const;
   
   void build_smoothing_kernel(F sigma);
   void smooth_scalar_gradient_jacobian(
@@ -40,9 +40,9 @@ public: // io
   static std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> from_xgc_mesh(const simplicial_unstructured_2d_mesh<I, F> &m2, int nphi, int iphi);
 
 public: 
-  void element_for(int d, std::function<void(I)> f);
+  virtual void element_for(int d, std::function<void(I)> f) {} // TODO
 
-public:
+private: // use get_simplex() and find_simplex instead
   void get_tetrahedron(I i, I tet[]) const;
   void get_triangle(I i, I tri[]) const;
   void get_edge(I i, I edge[]) const;
@@ -52,13 +52,14 @@ public:
   bool find_edge(const I v[2], I& i) const;
 
 public:
-  std::set<I> sides(int d, I i) const;
-  std::set<I> side_of(int d, I i) const;
+  virtual std::set<I> sides(int d, I i) const { return std::set<int>(); } // TODO
+  virtual std::set<I> side_of(int d, I i) const;
 
-  void get_simplex(int d, I i, I simplex[]) const;
-  void get_coords(I i, F coords[]) const;
+  virtual void get_simplex(int d, I i, I simplex[]) const;
+  virtual bool find_simplex(int d, const I verts[], I& i) const;
+  virtual void get_coords(I i, F coords[]) const;
 
-  const ndarray<F>& get_coords() const {return vertex_coords;}
+  virtual const ndarray<F>& get_coords() const {return vertex_coords;}
 
 private:
   void initialize();
@@ -302,6 +303,23 @@ to_vtk_unstructured_grid() const
   return grid;
 }
 #endif
+
+template <typename I, typename F>
+void simplicial_unstructured_3d_mesh<I, F>::get_simplex(int d, I i, I v[]) const
+{
+  if (d == 3) get_tetrahedron(i, v);
+  else if (d == 2) get_triangle(i, v);
+  else if (d == 1) get_edge(i, v);
+}
+
+template <typename I, typename F>
+bool simplicial_unstructured_3d_mesh<I, F>::find_simplex(int d, const I v[], I &i) const
+{
+  if (d == 3) return find_tetrahedron(v, i);
+  else if (d == 2) return find_triangle(v, i);
+  else if (d == 1) return find_edge(v, i);
+  else return false;
+}
 
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::get_tetrahedron(I i, I tet[]) const

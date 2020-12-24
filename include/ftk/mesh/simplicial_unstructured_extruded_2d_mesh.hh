@@ -40,6 +40,8 @@ public: // mesh access
 
   void get_simplex(int d, I i, I verts[]) const;
   void get_coords(I i, F coords[]) const;
+
+  bool find_simplex(int d, I v[], I &i) const;
   
 protected:
   void extrude();
@@ -139,10 +141,14 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude()
     
     edges(0, i+m.n(1)) = v[0];
     edges(1, i+m.n(1)) = v[1] + m.n(0);
-    
-    edges(0, i+m.n(1)*2) = v[0]; // FIXME: this is not unique.  Being said, this problem won't affect critical point tracking
-    edges(1, i+m.n(1)*2) = v[0] + m.n(0);
   }
+  for (auto i = 0; i < m.n(0); i ++) {
+    edges(0, i+m.n(1)*2) = i; 
+    edges(1, i+m.n(1)*2) = i + m.n(0);
+  }
+
+  fprintf(stderr, "3d mesh initialized, #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n",
+      n(3), n(2), n(1), n(0));
 }
 
 template <typename I, typename F>
@@ -151,7 +157,7 @@ size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n(int d) const
   if (d == 0) {
     return m.n(0); // unique vertices in each interval
   } else if (d == 1) {
-    return m.n(1) * 3; // unique edges in each interval
+    return m.n(1) * 2 + m.n(0); // unique edges in each interval
   } else if (d == 2) {
     return m.n(2) // the bottom triangle of the prism
       + m.n(2) * 2 // two triangles inside prisms
@@ -164,7 +170,7 @@ size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n(int d) const
 template <typename I, typename F>
 size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n_interval(int d) const
 {
-  if (d == 1) return m.n(1)*2;
+  if (d == 1) return m.n(1) + m.n(0); // return m.n(1)*2;
   else if (d == 2) return m.n(2)*2 + m.n(1)*2;
   else if (d == 3) return m.n(2)*3;
   else return 0;
@@ -247,7 +253,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::sides(int d, I k) co
   I v[4];
   get_simplex(3, i, v);
 
-  if (d == 3) {
+  if (d == 3) { // currently only support d==3
     const int type = i / m.n(2);
     // fprintf(stderr, "tet_type=%d\n", type);
     if (type == 0) { // bottom 0-1-2-2'
@@ -347,7 +353,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
   // fprintf(stderr, "k=%d, i=%d, t=%d, n(d)=%d\n", k, i, t, n(d));
   std::set<I> results;
 
-  if (d == 2) {
+  if (d == 2) { // currently only support d==2
     int v[3];
     get_simplex(2, k, v);
 
@@ -494,6 +500,88 @@ int simplicial_unstructured_extruded_2d_mesh<I, F>::face_type(I k) const
   else if (i < 3*m.n(2) + m.n(1)) return 3; // IV
   else if (i < 3*m.n(2) + 2*m.n(1)) return 4; // V
   else return -1;
+}
+
+template <typename I, typename F>
+bool simplicial_unstructured_extruded_2d_mesh<I, F>::find_simplex(int d, I v[], I &id) const
+{
+  I v0[d+1];
+  int t[d+1], t0[d+1], mint = std::numeric_limits<int>::max();
+  std::set<I> vset;
+
+  for (int i = 0; i < d+1; i ++) {
+    v0[i] = flat_vertex_id(v[i]);
+    t[i] = flat_vertex_time(v[i]);
+    mint = std::min(mint, t[i]);
+    vset.insert(v0[i]);
+  }
+  // fprintf(stderr, "***** mint=%d, t=%d, %d, %d, %d, v0=%d, %d, %d, %d\n", 
+  //     mint, t[0], 
+  //     t[1], t[2], t[3], 
+  //     v0[0], v0[1], v0[2], v0[3]);
+
+  for (int i = 0; i < d+1; i ++)
+    t0[i] = t[i] - mint;
+    
+  int w[4];
+  int k = 0;
+  for (auto v : vset) 
+    w[k++] = v;
+
+  if (d == 3) {
+    if (!m.find_triangle(w, id)) return false;
+    if (t0[1] == 0 && t0[2] == 0) // type I
+    {} // nothing to do
+    else if (t0[1] == 0 && t0[2] == 1) // type II
+      id += m.n(2);
+    else if (t0[1] == 1 && t0[2] == 1) // type III
+      id += 2*m.n(2);
+    else {
+      fprintf(stderr, "FAAAATAL: v=%d, %d, %d, %d, v0=%d, %d, %d, %d, t0=%d, %d, %d, %d\n", 
+          v[0], v[1], v[2], v[3], 
+          v0[0], v0[1], v0[2], v0[3],
+          t0[0], t0[1], t0[2], t0[3]);
+      assert(false);
+    }
+    id += mint * n(3);
+    return true;
+  } else if (d == 2) {
+    if (vset.size() == 3) {
+      if (!m.find_triangle(w, id)) return false;
+      if (t0[1] == 0 && t0[2] == 0) // type I
+      {} // nothing to do
+      else if (t0[1] == 0 && t0[2] == 1) // type II
+        id += m.n(2);
+      else if (t0[1] == 1 && t0[2] == 1) // type III
+        id += 2*m.n(2);
+      else assert(false);
+    } else if (vset.size() == 2) {
+      if (!m.find_edge(w, id)) return false;
+      if (t0[1] == 0) // type IV
+        id += 3*m.n(2);
+      else if (t0[1] == 1) // type V
+        id += 3*m.n(2) + m.n(1);
+      else assert(false);
+    } else assert(false);
+    id += mint * n(2);
+    return true;
+  } else if (d == 1) {
+    if (vset.size() == 2) {
+      if (!m.find_edge(w, id)) return false;
+      // fprintf(stderr, "***** t0=%d, %d, w=%d, %d, id=%d\n", t0[0], t0[1], w[0], w[1], id);
+
+      if (t0[1] == 0) // type I
+      {} // nothing to do
+      else if (t0[1] == 1) // type II
+        id += m.n(1);
+      else assert(false);
+    } else if (vset.size() == 1) 
+      id = *vset.begin() + m.n(1)*2;
+    else assert(false);
+    id += mint * n(1);
+    return true;
+  }
+  return false;
 }
 
 }

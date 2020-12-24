@@ -316,12 +316,23 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     tracker = ftk::xgc_blob_filament_tracker::from_augmented_mesh_file(comm, xgc_augmented_mesh_filename);
   } else {
     auto m2 = simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-    tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi));
+    std::shared_ptr<ftk::xgc_3d_mesh<>> mx(new ftk::xgc_3d_mesh<>(m2, nphi, iphi));
+
+#if 0
+    int tet[4] = {56783, 911470, 911482, 911483};
+    int id = -1;
+    bool found = mx->find_simplex(3, tet, id);
+    fprintf(stderr, "%d, %d\n", found, id);
+    exit(1);
+#endif
+
+    // tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi)); // WIP
+    tracker.reset(new xgc_blob_filament_tracker(comm, mx));
 
     if (!xgc_augmented_mesh_filename.empty()) // write augmented mesh
       tracker->to_augmented_mesh_file(xgc_augmented_mesh_filename);
   }
-   
+  
   if (file_exists(xgc_smoothing_kernel_filename))
     tracker->get_m2()->read_smoothing_kernel(xgc_smoothing_kernel_filename);
   else {
@@ -344,7 +355,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 #if FTK_HAVE_VTK
         if (xgc_write_back_filename.length()) {
           auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
-          tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi);
+          // tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi); // WIP
         }
 #endif
 

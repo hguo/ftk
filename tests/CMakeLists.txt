@@ -60,6 +60,10 @@ add_executable (test_mesh test_mesh.cpp)
 target_link_libraries (test_mesh libftk)
 catch_discover_tests (test_mesh)
 
+add_executable (test_xgc_mesh test_xgc_mesh.cpp)
+target_link_libraries (test_xgc_mesh libftk)
+catch_discover_tests (test_xgc_mesh)
+
 #add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)
 #target_link_libraries (test_critical_point_tracking_woven libftk)
 

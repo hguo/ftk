@@ -10,7 +10,7 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/utils/gather.hh>
-#include <ftk/io/tdgl.hh>
+#include <ftk/mesh/xgc_3d_mesh.hh>
 #include <iomanip>
 
 #if FTK_HAVE_TBB
@@ -20,9 +20,12 @@
 namespace ftk {
   
 struct xgc_blob_filament_tracker : public virtual tracker {
-  xgc_blob_filament_tracker(diy::mpi::communicator comm, 
-      std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2, 
-      int nphi_, int iphi_);
+  xgc_blob_filament_tracker(diy::mpi::communicator comm,
+      std::shared_ptr<xgc_3d_mesh<>> mx);
+
+  // xgc_blob_filament_tracker(diy::mpi::communicator comm, 
+  //     std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2, 
+  //     int nphi_, int iphi_);
 
   int cpdims() const { return 3; }
  
@@ -81,13 +84,9 @@ protected:
 
   int nphi, iphi;
 
-  std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2;
-  std::shared_ptr<simplicial_unstructured_3d_mesh<>> m3;
+  std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2; // from mx3
+  std::shared_ptr<xgc_3d_mesh<>> mx3;
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
-
-  // const simplicial_unstructured_2d_mesh<>& m2;
-  // const simplicial_unstructured_3d_mesh<> m3;
-  // const simplicial_unstructured_extruded_3d_mesh<> m4;
  
 public:
   void build_critical_surfaces();
@@ -121,15 +120,14 @@ protected:
 };
 
 /////
-  
+
 xgc_blob_filament_tracker::xgc_blob_filament_tracker(
     diy::mpi::communicator comm, 
-    std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2_, 
-    int nphi_, int iphi_) :
+    std::shared_ptr<xgc_3d_mesh<>> mx_) :
   tracker(comm),
-  m2(m2_), nphi(nphi_), iphi(iphi_),
-  m3(ftk::simplicial_unstructured_3d_mesh<>::from_xgc_mesh(*m2_, nphi_, iphi_)),
-  m4(new ftk::simplicial_unstructured_extruded_3d_mesh<>(*m3))
+  m2(mx_->get_m2()),
+  mx3(mx_),
+  m4(new ftk::simplicial_unstructured_extruded_3d_mesh<>(*mx3))
 {
 
 }
@@ -159,6 +157,7 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
   F.reshape(scalar);
   G.reshape(2, scalar.dim(0), scalar.dim(1));
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
+  
   for (size_t i = 0; i < nphi; i ++) {
     // fprintf(stderr, "smoothing slice %zu\n", i);
     ftk::ndarray<double> f, grad, j;
@@ -194,7 +193,7 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
 inline void xgc_blob_filament_tracker::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
-  
+ 
   auto get_related_cels = [&](int i) {
     std::set<int> my_related_cells;
     
@@ -240,6 +239,8 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   const long long factor = 1 << 15; // WIP
 
   simplex_values<3, double>(i, tri, t, p, rzpt, f, v, j);
+  // fprintf(stderr, "%d, tri=%d, %d, %d\n", i, tri[0], tri[1], tri[2]);
+
   // print3x2("rz", rz);
   // print3x2("v", v);
 
@@ -266,7 +267,7 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.type = ftk::critical_point_type_2d(h, true);
 
   cp.tag = i;
-  cp.ordinal = m4->is_ordinal(2, i);
+  cp.ordinal = m4->is_ordinal(2, i); 
   cp.timestep = current_timestep;
 
   // fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
@@ -289,7 +290,7 @@ void xgc_blob_filament_tracker::check_penta(int e)
 {
   int count = 0;
   int ids[20]; // some large buffer
-
+  
   std::set<int> unique_tris;
   for (auto tet : m4->sides(4, e))
     for (auto tri : m4->sides(3, tet))
@@ -377,7 +378,7 @@ void xgc_blob_filament_tracker::simplex_values(
   m4->get_simplex(n-1, i, verts);
   for (int k = 0; k < n; k ++) {
     t[k] = verts[k] / m4->n(0); // m4->flat_vertex_time(verts[k]);
-    const int v3 = verts[k] % m3->n(0);
+    const int v3 = verts[k] % mx3->n(0);
     const int v2 = v3 % m2->n(0);
     p[k] = v3 / m2->n(0); // poloidal plane
 
@@ -425,7 +426,6 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
   }
 
   int tri_count = 0;
-
   // parallel_for<int>(related_cells, [&](const int e) {
   for (int timestep = 0; timestep < current_timestep; timestep ++) {
     fprintf(stderr, "pass II, timestep=%d\n", timestep);
@@ -452,7 +452,7 @@ xgc_blob_filament_tracker::from_augmented_mesh_file(
 
   diy::load(bb, tracker->nphi);
   diy::load(bb, tracker->iphi);
-
+#if 0 // WIP
   tracker->m2.reset(new simplicial_unstructured_2d_mesh<>);
   diy::load(bb, *tracker->m2);
 
@@ -460,7 +460,7 @@ xgc_blob_filament_tracker::from_augmented_mesh_file(
   diy::load(bb, *tracker->m3);
 
   tracker->m4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*tracker->m3));
-
+#endif
   fclose(fp);
   return tracker;
 }
@@ -475,8 +475,8 @@ inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string&
 
   diy::save(bb, nphi);
   diy::save(bb, iphi);
-  diy::save(bb, *m2);
-  diy::save(bb, *m3);
+  // diy::save(bb, *m2); // WIP
+  // diy::save(bb, *m3); // WIP
 
   fclose(fp);
 }
