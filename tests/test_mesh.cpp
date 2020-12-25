@@ -36,7 +36,7 @@ TEST_CASE("mesh_extruded_3d_unstructured_pent_sides") {
   }
 }
 
-#if 0
+#if 1
 TEST_CASE("mesh_extruded_3d_unstructured_tet_sides") {
   ftk::simplicial_unstructured_3d_mesh<> m;
   m.from_vtk_unstructured_grid_file("3d.vtu");
@@ -45,19 +45,24 @@ TEST_CASE("mesh_extruded_3d_unstructured_tet_sides") {
 
   srand(0);
   for (int k = 0; k < 1000; k ++) {
-    const int i = rand();
+    const int i = rand() % 100000000; // have to limit to prevent integer overflow
     int tri[4];
     m1.get_simplex(2, i, tri);
-    fprintf(stderr, "tri=%d: %d, %d, %d\n", 
-        i, // m1.face_type(i),
-        tri[0], tri[1], tri[2]);
+    fprintf(stderr, "tri=%d: %d, %d, %d, type=%d\n", 
+        i, 
+        tri[0], tri[1], tri[2], 
+        m1.simplex_type(2, i));
 
     const auto tets = m1.side_of(2, i);
     for (const auto &tet : tets) {
-      fprintf(stderr, "--tet=%d\n", tet);
+      int tetverts[4];
+      m1.get_simplex(3, tet, tetverts);
+      fprintf(stderr, "--tet=%d: %d, %d, %d, %d, type=%d\n", tet, tetverts[0], tetverts[1], tetverts[2], tetverts[3], m1.simplex_type(3, tet));
       const auto sides = m1.sides(3, tet);
       for (const auto &side : sides) {
-        fprintf(stderr, "----side=%d\n", side);
+        int triverts[3];
+        m1.get_simplex(2, side, triverts);
+        fprintf(stderr, "----side=%d: %d, %d, %d, type=%d\n", side, triverts[0], triverts[1], triverts[2], m1.simplex_type(2, side));
       }
 
       REQUIRE(sides.find(i) != sides.end());

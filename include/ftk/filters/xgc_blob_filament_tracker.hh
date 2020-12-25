@@ -209,15 +209,14 @@ inline void xgc_blob_filament_tracker::update_timestep()
   auto func = [&](int i) {
     feature_point_t cp;
     if (check_simplex(i, cp)) {
-      // std::set<int> my_related_cells = get_related_cels(i);
+      std::set<int> my_related_cells = get_related_cels(i);
 
 #if FTK_HAVE_TBB
-      // intersections.insert(std::make_pair<int, feature_point_t>(i, cp));
       intersections.insert({i, cp});
 #else
       std::lock_guard<std::mutex> guard(mutex);
       intersections[i] = cp;
-      // related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      related_cells.insert(my_related_cells.begin(), my_related_cells.end());
 #endif
     }
   };
@@ -266,10 +265,10 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.ordinal = m4->is_ordinal(2, i); 
   cp.timestep = current_timestep;
 
-  fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
-      mu[0], mu[1], mu[2], 
-      x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
-      t[0], t[1], t[2]);
+  // fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
+  //     mu[0], mu[1], mu[2], 
+  //     x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
+  //     t[0], t[1], t[2]);
   
   return true;
 }
@@ -284,6 +283,15 @@ void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
 
 void xgc_blob_filament_tracker::check_penta(int e)
 {
+  // check if penta is valid
+  int pent[5];
+  m4->get_simplex(4, e, pent);
+  const int ft = m4->flat_vertex_time( pent[4] );
+  // fprintf(stderr, "ft=%d, end_timestep=%d\n", 
+  //     ft, end_timestep);
+  if (ft < 0/*start_timestep*/ || ft >= end_timestep)
+    return;
+
   int count = 0;
   int ids[20]; // some large buffer
   
@@ -350,8 +358,8 @@ void xgc_blob_filament_tracker::check_penta(int e)
 
 void xgc_blob_filament_tracker::finalize()
 {
-  // diy::mpi::gather(comm, intersections, intersections, get_root_proc()); // TODO
-  // diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
+  diy::mpi::gather(comm, intersections, intersections, get_root_proc()); // TODO
+  diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
   
   if (is_root_proc()) {
     fprintf(stderr, "#intersections=%zu, #related_cells=%zu\n", 
@@ -422,13 +430,18 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
   }
 
   int tri_count = 0;
-  // parallel_for<int>(related_cells, [&](const int e) {
+#if 0 // for all 4-simplicies
   for (int timestep = 0; timestep < current_timestep; timestep ++) {
     fprintf(stderr, "pass II, timestep=%d\n", timestep);
     m4->element_for_ordinal(4, timestep, 
         std::bind(&xgc_blob_filament_tracker::check_penta, this, std::placeholders::_1), 
         xl, nthreads, enable_set_affinity);
   }
+#else // for all related 4-simplicies
+  parallel_for<int>(related_cells, [&](const int e) {
+    check_penta(e);
+  }, xl, nthreads, enable_set_affinity);
+#endif
 
   surfaces.relabel();
   fprintf(stderr, "#pts=%zu, #tri=%zu, #tri_count=%d\n", 

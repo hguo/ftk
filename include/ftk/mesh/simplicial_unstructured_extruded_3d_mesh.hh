@@ -1029,7 +1029,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
             I otri[3] = {tet[0], tet[2], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
-            results.insert(otriid + t*n(3) + 3*m.n(3));
+            results.insert(otriid + t*n(3) + 4*m.n(3));
           }
         } else if (pos == 2) { // 0 1 a 2, equil. 013 in 0123-0'1'2'3'
           // 0 1 2 3
@@ -1040,7 +1040,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
             I otri[3] = {tet[0], tet[1], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
-            results.insert(otriid + t*n(3) + 3*m.n(3));
+            results.insert(otriid + t*n(3) + 4*m.n(3));
           }
         } else if (pos == 3) { // 0 1 2 a, equil. 012 in 0123-0'1'2'3'
           // 0 1 2 3
@@ -1051,12 +1051,18 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
             I otri[3] = {tet[0], tet[1], tet[2]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
-            results.insert(otriid + t*n(3) + 3*m.n(3));
+            results.insert(otriid + t*n(3) + 4*m.n(3));
           }
           // 0 1 2 3'
           results.insert(otetid + t*n(3) + m.n(3));
-          // 0 0'1'2' (t+1)
-          results.insert(otetid + (t-1)*n(3) + 3*m.n(3));
+          // 0 0'1'2' (t-1, 0 0'1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[2]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + (t-1)*n(3) + 4*m.n(3) + 2*m.n(2));
+          }
         }
       }
     } else if (i < 2*m.n(2)) { // type 0 1 2', pos=0, 1, 2, 3
@@ -1138,7 +1144,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         int pos = position23(v0, tet);
         if (pos == 0) { // 1 2'3' in tet-prism
           // 0 1 2'3'
-          results.insert(otetid + t*n(3) + m.n(3));
+          results.insert(otetid + t*n(3) + 2*m.n(3));
           // 1 1'2'3' (0 0'1'2' type)
           {
             int otriid;
