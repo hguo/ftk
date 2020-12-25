@@ -1018,7 +1018,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
                         // equiv to find 123 in 0123-0'1'2'3'
           // 0 1 2 3
           results.insert(otetid + t*n(3));
-          // 0 1'2'3' (t+1)
+          // 0 1'2'3' (t-1)
           results.insert(otetid + (t-1)*n(3) + 3*m.n(3));
         } else if (pos == 1) { // 0 a 1 2, equil. 023 in 0123-0'1'2'3'
           // 0 1 2 3
@@ -1230,7 +1230,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         }
       }
     } else { // type 0 0'1', pos=0, 1, 2
-      const I ve[2] = {v0[0], v0[1]};
+      const I ve[2] = {v0[0], v0[2]};
       bool found = m.find_simplex(1, ve, oeid);
       assert(found);
 
