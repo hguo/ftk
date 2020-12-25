@@ -29,8 +29,6 @@ struct xgc_blob_filament_tracker : public virtual tracker {
 
   int cpdims() const { return 3; }
  
-  void set_nphi_iphi(int nphi, int iphi);
-
   void initialize() {}
   void reset() {
     field_data_snapshots.clear();
@@ -81,8 +79,6 @@ protected:
     ndarray<double> scalar, vector, jacobian;
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
-
-  int nphi, iphi;
 
   std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2; // from mx3
   std::shared_ptr<xgc_3d_mesh<>> mx3;
@@ -158,7 +154,7 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
   G.reshape(2, scalar.dim(0), scalar.dim(1));
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
   
-  for (size_t i = 0; i < nphi; i ++) {
+  for (size_t i = 0; i < mx3->get_nphi(); i ++) {
     // fprintf(stderr, "smoothing slice %zu\n", i);
     ftk::ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
@@ -270,10 +266,10 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.ordinal = m4->is_ordinal(2, i); 
   cp.timestep = current_timestep;
 
-  // fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
-  //     mu[0], mu[1], mu[2], 
-  //     x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
-  //     t[0], t[1], t[2]);
+  fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
+      mu[0], mu[1], mu[2], 
+      x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
+      t[0], t[1], t[2]);
   
   return true;
 }
@@ -404,14 +400,14 @@ void xgc_blob_filament_tracker::simplex_values(
   for (int k = 0; k < n; k ++) {
     if (p[k] == 0)
       b0 = true;
-    else if (p[k] == nphi-1)
+    else if (p[k] == mx3->get_nphi()-1)
       b1 = true;
   }
   if (b0 && b1) { // periodical
     // fprintf(stderr, "periodical.\n");
     for (int k = 0; k < n; k ++)
       if (p[k] == 0)
-        rzpt[k][2] += nphi;
+        rzpt[k][2] += mx3->get_nphi();
   }
 }
 
@@ -450,9 +446,10 @@ xgc_blob_filament_tracker::from_augmented_mesh_file(
   std::shared_ptr<xgc_blob_filament_tracker> tracker(
       new xgc_blob_filament_tracker(comm));
 
+#if 0 // WIP
   diy::load(bb, tracker->nphi);
   diy::load(bb, tracker->iphi);
-#if 0 // WIP
+  
   tracker->m2.reset(new simplicial_unstructured_2d_mesh<>);
   diy::load(bb, *tracker->m2);
 
@@ -467,6 +464,7 @@ xgc_blob_filament_tracker::from_augmented_mesh_file(
 
 inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string& filename)
 {
+#if 0 // WIP
   if (!is_root_proc()) return;
 
   FILE *fp = fopen(filename.c_str(), "wb");
@@ -479,6 +477,7 @@ inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string&
   // diy::save(bb, *m3); // WIP
 
   fclose(fp);
+#endif
 }
 
 inline void xgc_blob_filament_tracker::write_intersections_binary(const std::string& filename) const
@@ -541,7 +540,7 @@ inline void xgc_blob_filament_tracker::write_intersections(const std::string& fi
 #if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_intersections_vtp(bool torus) const
 {
-  const int np = nphi * iphi;
+  const int np = mx3->np();
 
   vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -571,7 +570,7 @@ inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_intersections
   
 vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::transform_vtp_coordinates(vtkSmartPointer<vtkPolyData> poly) const
 {
-  const int np = nphi * iphi;
+  const int np = mx3->np();
   
   vtkSmartPointer<vtkPoints> pts = poly->GetPoints();
   for (auto i = 0; i < pts->GetNumberOfPoints(); i ++) {

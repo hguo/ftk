@@ -16,6 +16,12 @@ struct xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   size_t n(int d) const;
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
 
+  void set_nphi_iphi(int n, int i) {nphi = n; iphi = i;}
+
+  int get_nphi() const {return nphi;}
+  int get_iphi() const {return iphi;}
+  int get_vphi() const {return vphi;}
+
 public: 
   void element_for(int d, std::function<void(I)> f) {} // TODO
   
