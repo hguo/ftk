@@ -836,6 +836,36 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
 
   I v[5];
   get_simplex(d, i, v);
+  
+  auto position12 = [](const I edge[2], const I tri[3]) { // edgie is a side of tri
+    for (int i = 0; i < 3; i ++) {
+      bool f = false;
+      for (int j = 0; j < 2; j ++)
+        if (tri[i] == edge[j]) {
+          f = true;
+          break;
+        }
+      if (!f) return i;
+    }
+    assert(false);
+    return -1;
+  };
+      
+  auto position23 = [](const I tri[3], const I tet[4]) { // tri is a side of tet
+    // fprintf(stderr, "TRI=%d, %d, %d, TET=%d, %d, %d, %d\n", tri[0], tri[1], tri[2], tet[0], tet[1], tet[2], tet[3]);
+    for (int i = 0; i < 4; i ++) {
+      bool f = false;
+      for (int j = 0; j < 3; j ++)
+        if (tet[i] == tri[j]) {
+          f = true;
+          break;
+        }
+      if (!f) return i;
+    }
+    assert(false);
+    return -1;
+  };
+      
 
   if (d == 3) {
     const I v0[4] = {mod(v[0], m.n(0)), mod(v[1], m.n(0)), mod(v[2], m.n(0)), mod(v[3], m.n(0))};
@@ -877,21 +907,6 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
       // fprintf(stderr, "TRI TYPE!!!\n");
       I otid; // triangle id in the base mesh
      
-      auto position = [](const I tri[3], const I tet[4]) { // tri is a side of tet
-        // fprintf(stderr, "TRI=%d, %d, %d, TET=%d, %d, %d, %d\n", tri[0], tri[1], tri[2], tet[0], tet[1], tet[2], tet[3]);
-        for (int i = 0; i < 4; i ++) {
-          bool f = false;
-          for (int j = 0; j < 3; j ++)
-            if (tet[i] == tri[j]) {
-              f = true;
-              break;
-            }
-          if (!f) return i;
-        }
-        assert(false);
-        return -1;
-      };
-      
       if (i < 4*m.n(3) + m.n(2)) { // 0 1 2 2'
         const I vt[3] = {v0[0], v0[1], v0[2]};
         bool found = m.find_simplex(2, vt, otid);
@@ -900,7 +915,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         for (const auto &otetid : m.side_of(2, otid)) {
           I tet[4];
           m.get_simplex(3, otetid, tet);
-          int pos = position(vt, tet);
+          int pos = position23(vt, tet);
 
           // fprintf(stderr, "POS=%d\n", pos);
 
@@ -941,7 +956,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           I tet[4];
           m.get_simplex(3, otetid, tet);
           
-          int pos = position(vt, tet);
+          int pos = position23(vt, tet);
           // fprintf(stderr, "POS=%d\n", pos);
 
           if (pos == 0) 
@@ -963,7 +978,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           I tet[4];
           m.get_simplex(3, otetid, tet);
           
-          int pos = position(vt, tet);
+          int pos = position23(vt, tet);
           // fprintf(stderr, "POS=%d\n", pos);
 
           if (pos == 0) 
@@ -995,42 +1010,246 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
       assert(found);
 
       for (auto otetid : m.side_of(2, otid)) {
+        I tet[4];
+        m.get_simplex(3, otetid, tet);
 
+        int pos = position23(v0, tet);
+        if (pos == 0) { // a 0 1 2 in base mesh, find all tets that contains 012 or 0'1'2' in the a012--a'0'1'2' prism
+                        // equiv to find 123 in 0123-0'1'2'3'
+          // 0 1 2 3
+          results.insert(otetid + t*n(3));
+          // 0 1'2'3' (t+1)
+          results.insert(otetid + (t-1)*n(3) + 3*m.n(3));
+        } else if (pos == 1) { // 0 a 1 2, equil. 023 in 0123-0'1'2'3'
+          // 0 1 2 3
+          results.insert(otetid + t*n(3));
+          // 0 2 3 3' (0 1 2 2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[2], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 3*m.n(3));
+          }
+        } else if (pos == 2) { // 0 1 a 2, equil. 013 in 0123-0'1'2'3'
+          // 0 1 2 3
+          results.insert(otetid + t*n(3));
+          // 0 1 3 3' (0 1 2 2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 3*m.n(3));
+          }
+        } else if (pos == 3) { // 0 1 2 a, equil. 012 in 0123-0'1'2'3'
+          // 0 1 2 3
+          results.insert(otetid + t*n(3));
+          // 0 1 2 2' (0 1 2 2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[2]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 3*m.n(3));
+          }
+          // 0 1 2 3'
+          results.insert(otetid + t*n(3) + m.n(3));
+          // 0 0'1'2' (t+1)
+          results.insert(otetid + (t-1)*n(3) + 3*m.n(3));
+        }
       }
-
-      const auto tets0 = m.side_of(2, otid);
-      // TODO:
-      // 0 1 2 3
-      // 0 1 2 3'
-      // 0 1 2 2'
-      // 0 0'1'2', t-1
     } else if (i < 2*m.n(2)) { // type 0 1 2', pos=0, 1, 2, 3
       bool found = m.find_simplex(2, v0, otid);
       assert(found);
-      const auto tets0 = m.side_of(2, otid);
-      // TODO: 
-      // 0 1 2'3'
-      // 0 1 2 2'
+
+      for (auto otetid : m.side_of(2, otid)) {
+        I tet[4];
+        m.get_simplex(3, otetid, tet);
+
+        int pos = position23(v0, tet);
+        if (pos == 0) { // a 0 1 2 in base mesh, find all tets that contains 012' in the a012--a'0'1'2' prism
+                        // equiv 123' in 0123-0'1'2'3'
+          // 0 1 2 3'
+          results.insert(otetid + t*n(3) + m.n(3));
+          // 1 2 2'3' (0 1 1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[1], tet[2], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+          }
+        } else if (pos == 1) { // 0 a 1 2, find 012', equiv to finding 023' in 0123-0'1'2'3'
+          // 0 1 2 3'
+          results.insert(otetid + t*n(3) + m.n(3));
+          // 0 2 2'3' (0 1 1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[2], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+          }
+        } else if (pos == 2) { // 0 1 a 2, equiv to finding 013' in 0123-0'1'2'3'
+          // 0 1 1'3' (0 1 1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+          }
+          // 0 1 3 3' (0 1 2 2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3));
+          }
+        } else if (pos == 3) { // 0 1 2 a, equiv to finding 012' in 0123-0'1'2'3'
+          // 0 1 2 2' (0 1 2 2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[2]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3));
+          }
+          // 0 1 1'2' (0 1 1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[2]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+          }
+        }
+      }
     } else if (i < 3*m.n(2)) { // type 0 1'2', pos=0, 1, 2, 3
       bool found = m.find_simplex(2, v0, otid);
       assert(found);
-      const auto tets0 = m.side_of(2, otid);
-      // TODO:
-      // 0 1 1'2'
-      // 0 1'2'3'
+      
+      for (auto otetid : m.side_of(2, otid)) {
+        I tet[4];
+        m.get_simplex(3, otetid, tet);
+
+        int pos = position23(v0, tet);
+        if (pos == 0) { // 1 2'3' in tet-prism
+          // 0 1 2'3'
+          results.insert(otetid + t*n(3) + m.n(3));
+          // 1 1'2'3' (0 0'1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[1], tet[2], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + 2*m.n(2));
+          }
+          // 1 2 2'3' (0 1 1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[1], tet[2], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+          }
+        } else if (pos == 1) { // 0 2'3' in tet-prism
+          // 0 1 2'3'
+          results.insert(otetid + t*n(3) + 2*m.n(3));
+          // 0 1'2'3'
+          results.insert(otetid + t*n(3) + 3*m.n(3));
+          // 0 2 2'3' (0 1 1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[2], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+          }
+        } else if (pos == 2) { // 0 1'3' in tet-prism
+          // 0 1 1'3' (0 1 1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+          }
+          // 0 0'1'3' (0 0'1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[3]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + 2*m.n(2));
+          }
+          // 0 1'2'3'
+          results.insert(otetid + t*n(3) + 3*m.n(3));
+        } else if (pos == 3) { // 0 1'2' in tet-prism
+          // 0 0'1'2' (0 0'1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[2]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + 2*m.n(2));
+          }
+          // 0 1 1'2' (0 1 1'2' type)
+          {
+            int otriid;
+            I otri[3] = {tet[0], tet[1], tet[2]};
+            bool succ = m.find_simplex(2, otri, otriid);
+            assert(succ);
+            results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+          }
+          // 0 1'2'3'
+          results.insert(otetid + t*n(3) + 3*m.n(3));
+        }
+      }
     } else if (i < 3*m.n(2) + m.n(1)) { // find all triangles in the base mesh that contains edge 01 // type 0 1 1', pos=0, 1, 2
       const I ve[2] = {v0[0], v0[1]};
       bool found = m.find_simplex(1, ve, oeid);
       assert(found);
-      const auto tris0 = m.side_of(1, oeid);
-      // 0 1 1'2'
-      // 0 0'1'2'
+
+      for (const auto otriid : m.side_of(1, oeid)) {
+        I tri[3];
+        m.get_simplex(2, otriid, tri);
+
+        const int pos = position12(ve, tri);
+        if (pos == 0) { // 1 2 2'
+          // 0 1 2 2'
+          results.insert(otriid + t*n(3) + 4*m.n(3));
+        } else if (pos == 1) { // 0 2 2'
+          // 0 1 2 2'
+          results.insert(otriid + t*n(3) + 4*m.n(3));
+        } else if (pos == 2) { // 0 1 1'
+          // 0 1 1'2'
+          results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+        }
+      }
     } else { // type 0 0'1', pos=0, 1, 2
       const I ve[2] = {v0[0], v0[1]};
       bool found = m.find_simplex(1, ve, oeid);
       assert(found);
-      const auto tris0 = m.side_of(1, oeid);
-      // 0 0'1'2'
+
+      for (const auto otriid : m.side_of(1, oeid)) {
+        I tri[3];
+        m.get_simplex(2, otriid, tri);
+
+        const int pos = position12(ve, tri);
+        if (pos == 0) { // 1 1'2'
+          // 0 1 1'2'
+          results.insert(otriid + t*n(3) + 4*m.n(3) + m.n(2));
+        } else if (pos == 1) { // 0 0'2'
+          // 0 0'1'2'
+          results.insert(otriid + t*n(3) + 4*m.n(3) + 2*m.n(2));
+        } else if (pos == 2) { // 0 0'1'
+          // 0 0'1'2'
+          results.insert(otriid + t*n(3) + 4*m.n(3) + 2*m.n(2));
+        }
+      }
     }
   }
 
