@@ -22,7 +22,8 @@ struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded fr
   I flat_vertex_time(I i) const { return i / m.n(0); }
   I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
 
-  int face_type(I i) const;
+  int face_type(I i) const; // legacy
+  int simplex_type(int d, I i) const;
 
 public: // element iteration
   void element_for(int d, std::function<void(I)> f, 
@@ -54,9 +55,6 @@ private:
   ftk::ndarray<I> tets, // {4, n(3)}
                   tris, // {3, n(2)}
                   edges;// {2, n(1)}
-
-  ftk::ndarray<I> tets_sides, // {4, n(3)}
-                  tris_sides; // {3, n(2)}
 };
 
 /////
@@ -71,6 +69,10 @@ I simplicial_unstructured_extruded_2d_mesh<I, F>::mod(I v, I m)
 template <typename I, typename F>
 void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude() 
 {
+  fprintf(stderr, "3d mesh initialized, #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n",
+      n(3), n(2), n(1), n(0));
+
+#if 0
   tets.reshape({4, n(3)});
   
   // tets
@@ -146,9 +148,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude()
     edges(0, i+m.n(1)*2) = i; 
     edges(1, i+m.n(1)*2) = i + m.n(0);
   }
-
-  fprintf(stderr, "3d mesh initialized, #tet=%zu, #tri=%zu, #edge=%zu, #vert=%zu\n",
-      n(3), n(2), n(1), n(0));
+#endif
 }
 
 template <typename I, typename F>
@@ -217,6 +217,110 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
 {
   const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));
   const I offset = t * n(0);
+  const int type = simplex_type(d, i);
+
+  if (d == 0) {
+    verts[0] = i; // + offset;
+  } else if (d == 1) {
+    if (type < 2) {
+      I edge[2];
+      m.get_simplex(1, i % m.n(1), edge);
+
+      switch (type) {
+        case 0: // 0 1
+          verts[0] = edge[0];
+          verts[1] = edge[1];
+          break;
+
+        case 1: // 0 1'
+          verts[0] = edge[0];
+          verts[1] = edge[1] + m.n(0);
+      }
+    } else {
+      verts[0] = i - 2*m.n(1);
+      verts[1] = i - 2*m.n(1) + m.n(0);
+    }
+  } else if (d == 2) {
+    if (type < 3) {
+      I tri[3];
+      m.get_simplex(2, i % m.n(2), tri);
+      switch (type) {
+        case 0: // 0 1 2
+          verts[0] = tri[0];
+          verts[1] = tri[1];
+          verts[2] = tri[2];
+          break;
+
+        case 1: // 0 1 2'
+          verts[0] = tri[0];
+          verts[1] = tri[1];
+          verts[2] = tri[2] + m.n(0);
+          break;
+
+        case 2: // 0 1'2'
+          verts[0] = tri[0];
+          verts[1] = tri[1] + m.n(0);
+          verts[2] = tri[2] + m.n(0);
+          break;
+
+        default: assert(false);
+      }
+    } else {
+      I edge[2];
+      m.get_simplex(1, (i - 3*m.n(2)) % m.n(1), edge);
+      switch (type) {
+        case 3: 
+          verts[0] = edge[0];
+          verts[1] = edge[1];
+          verts[2] = edge[1] + m.n(0);
+          break;
+
+        case 4:
+          verts[0] = edge[0];
+          verts[1] = edge[0] + m.n(0);
+          verts[2] = edge[1] + m.n(0);
+          break;
+
+        default: assert(false);
+      }
+    }
+  } else if (d == 3) {
+    I tri[3];
+    m.get_simplex(2, i % m.n(2), tri);
+
+    switch (type) {
+      case 0: // type I: 0 1 2 2'
+        verts[0] = tri[0];
+        verts[1] = tri[1];
+        verts[2] = tri[2];
+        verts[3] = tri[2] + m.n(0);
+        break;
+
+      case 1: // type II: 0 1 1'2'
+        verts[0] = tri[0];
+        verts[1] = tri[1];
+        verts[2] = tri[1] + m.n(0);
+        verts[3] = tri[2] + m.n(0);
+        break;
+      
+      case 2: // type III: 0 0'1'2'
+        verts[0] = tri[0];
+        verts[1] = tri[0] + m.n(0);
+        verts[2] = tri[1] + m.n(0);
+        verts[3] = tri[2] + m.n(0);
+        break;
+
+      default:
+        assert(false);
+    }
+  }
+  
+  for (int i = 0; i < d+1; i ++)
+    verts[i] += offset;
+
+#if 0
+  const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));
+  const I offset = t * n(0);
   // fprintf(stderr, "d=%d, k=%d, i=%d, t=%d, offset=%d\n", d, k, i, t, offset);
   if (d == 0) {
     verts[0] = i + offset;
@@ -233,6 +337,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
     verts[2] = tets(2, i) + offset;
     verts[3] = tets(3, i) + offset;
   }
+#endif
 }
 
 template <typename I, typename F>
@@ -492,6 +597,8 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
 template <typename I, typename F>
 int simplicial_unstructured_extruded_2d_mesh<I, F>::face_type(I k) const
 {
+  return simplex_type(2, k);
+#if 0
   const I i = mod(k, n(2));
 
   if (i < m.n(2)) return 0;  // I
@@ -500,6 +607,37 @@ int simplicial_unstructured_extruded_2d_mesh<I, F>::face_type(I k) const
   else if (i < 3*m.n(2) + m.n(1)) return 3; // IV
   else if (i < 3*m.n(2) + 2*m.n(1)) return 4; // V
   else return -1;
+#endif
+}
+
+template <typename I, typename F>
+int simplicial_unstructured_extruded_2d_mesh<I, F>::simplex_type(int d, I k) const
+{
+  const I i = mod(k, n(d)), t = std::floor((double)k / n(d));
+
+  switch (d) {
+    case 0:
+      return 0;
+
+    case 1: 
+      if (i < m.n(1)) return 0;
+      else if (i < 2*m.n(1)) return 1;
+      else return 2;
+
+    case 2: 
+      if (i < m.n(2)) return 0;
+      else if (i < 2*m.n(2)) return 1;
+      else if (i < 3*m.n(2)) return 2;
+      else if (i < 3*m.n(2) + m.n(1)) return 3;
+      else return 4;
+
+    case 3:
+      return i / m.n(2);
+
+    default: 
+      assert(false);
+      return -1;
+  }
 }
 
 template <typename I, typename F>
