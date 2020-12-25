@@ -283,14 +283,13 @@ void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
 
 void xgc_blob_filament_tracker::check_penta(int e)
 {
-  // check if penta is valid
-  int pent[5];
-  m4->get_simplex(4, e, pent);
-  const int ft = m4->flat_vertex_time( pent[4] );
-  // fprintf(stderr, "ft=%d, end_timestep=%d\n", 
-  //     ft, end_timestep);
-  if (ft < 0/*start_timestep*/ || ft >= end_timestep)
-    return;
+  int penta[5], t[5];
+  m4->get_simplex(4, e, penta);
+  for (int i = 0; i < 5; i ++) {
+    t[i] = m4->flat_vertex_time(penta[i]);
+    if (t[i] < 0 || t[i] >= end_timestep)
+      return;
+  }
 
   int count = 0;
   int ids[20]; // some large buffer
@@ -352,7 +351,10 @@ void xgc_blob_filament_tracker::check_penta(int e)
     add_penta_tri(ids[1], ids[2], ids[4]);
     add_penta_tri(ids[2], ids[3], ids[4]);
   } else {
-    fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
+    fprintf(stderr, "irregular count=%d, penta=%d: %d, %d, %d, %d, %d, t=%d, %d, %d, %d, %d\n", 
+        count, e, 
+        penta[0], penta[1], penta[2], penta[3], penta[4], 
+        t[0], t[1], t[2], t[3], t[4]); // WIP: triangulation
   }
 }
 
