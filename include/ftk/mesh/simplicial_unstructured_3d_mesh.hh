@@ -244,7 +244,7 @@ void simplicial_unstructured_3d_mesh<I, F>::to_vtu_file(const std::string& filen
   writer->SetInputData( to_vtk_unstructured_grid() );
   writer->Write();
 #else
-  fatal("FTK not compiled with VTK");
+  this->fatal("FTK not compiled with VTK");
 #endif
 }
 
