@@ -317,7 +317,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     tracker = ftk::xgc_blob_filament_tracker::from_augmented_mesh_file(comm, xgc_augmented_mesh_filename);
   } else {
     auto m2 = simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-    std::shared_ptr<ftk::xgc_3d_mesh<>> mx(new ftk::xgc_3d_mesh<>(m2, nphi, iphi, xgc_vphi));
+    std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi, xgc_vphi));
 
     // tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi)); // WIP
     tracker.reset(new xgc_blob_filament_tracker(comm, mx));

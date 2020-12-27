@@ -7,9 +7,9 @@
 namespace ftk {
 
 template <typename I=int, typename F=double>
-struct xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
-  xgc_3d_mesh(std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1);
-  // xgc_3d_mesh(const std::string& mesh_filename);
+struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
+  simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1);
+  // simplicial_xgc_3d_mesh(const std::string& mesh_filename);
 
   std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> get_m2() const {return m2;}
 
@@ -51,7 +51,7 @@ private: // backend meshes
 //
 
 template <typename I, typename F>
-xgc_3d_mesh<I, F>::xgc_3d_mesh(
+simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
     std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2_, 
     int nphi_, int iphi_, int vphi_) :
   m2(m2_),
@@ -62,13 +62,13 @@ xgc_3d_mesh<I, F>::xgc_3d_mesh(
 }
 
 template <typename I, typename F>
-size_t xgc_3d_mesh<I, F>::n(int d) const
+size_t simplicial_xgc_3d_mesh<I, F>::n(int d) const
 {
   return m3->n(d) * np();
 }
 
 template <typename I, typename F>
-void xgc_3d_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
+void simplicial_xgc_3d_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
 {
   // fprintf(stderr, "trying to get %d-simplex %d(%d)\n", d, i, transform(d, i));
 
@@ -79,7 +79,7 @@ void xgc_3d_mesh<I, F>::get_simplex(int d, I i, I verts[]) const
 }
 
 template <typename I, typename F>
-bool xgc_3d_mesh<I, F>::find_simplex(int d, const I v[], I& i) const
+bool simplicial_xgc_3d_mesh<I, F>::find_simplex(int d, const I v[], I& i) const
 {
   I verts[d+1];
   int t[d+1];
@@ -114,14 +114,14 @@ bool xgc_3d_mesh<I, F>::find_simplex(int d, const I v[], I& i) const
 }
 
 template <typename I, typename F>
-I xgc_3d_mesh<I, F>::transform(int d, I i) const
+I simplicial_xgc_3d_mesh<I, F>::transform(int d, I i) const
 {
   while (i < 0) i += n(d);
   return i % n(d);
 }
 
 template <typename I, typename F>
-std::set<I> xgc_3d_mesh<I, F>::sides(int d, I i) const 
+std::set<I> simplicial_xgc_3d_mesh<I, F>::sides(int d, I i) const 
 {
   std::set<I> results;
   for (auto j : m3->sides(d, transform(d, i))) 
@@ -131,7 +131,7 @@ std::set<I> xgc_3d_mesh<I, F>::sides(int d, I i) const
 }
 
 template <typename I, typename F>
-std::set<I> xgc_3d_mesh<I, F>::side_of(int d, I i) const 
+std::set<I> simplicial_xgc_3d_mesh<I, F>::side_of(int d, I i) const 
 {
   std::set<I> results;
   for (auto j : m3->side_of(d, transform(d, i))) 

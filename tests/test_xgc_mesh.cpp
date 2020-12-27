@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hh"
 #include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
-#include <ftk/mesh/xgc_3d_mesh.hh>
+#include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/ndarray.hh>
 
 diy::mpi::environment env;
@@ -12,7 +12,7 @@ const std::string xgc_mesh_filename = "xgc.mesh.h5";
 #if FTK_HAVE_HDF5
 TEST_CASE("mesh_3d_xgc_sides") {
   auto m2 = ftk::simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-  std::shared_ptr<ftk::xgc_3d_mesh<>> mx(new ftk::xgc_3d_mesh<>(m2, nphi, iphi));
+  std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi));
 
   srand(0);
   for (int k = 0; k < 1000; k ++) {
@@ -42,7 +42,7 @@ TEST_CASE("mesh_3d_xgc_sides") {
 
 TEST_CASE("mesh_3d_xgc_find") {
   auto m2 = ftk::simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-  std::shared_ptr<ftk::xgc_3d_mesh<>> mx(new ftk::xgc_3d_mesh<>(m2, nphi, iphi));
+  std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi));
 
   srand(0);
   for (int k = 0; k < 1000; k ++) {

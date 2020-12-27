@@ -10,7 +10,7 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/utils/gather.hh>
-#include <ftk/mesh/xgc_3d_mesh.hh>
+#include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <iomanip>
 
 #if FTK_HAVE_TBB
@@ -21,7 +21,7 @@ namespace ftk {
   
 struct xgc_blob_filament_tracker : public virtual tracker {
   xgc_blob_filament_tracker(diy::mpi::communicator comm,
-      std::shared_ptr<xgc_3d_mesh<>> mx);
+      std::shared_ptr<simplicial_xgc_3d_mesh<>> mx);
 
   // xgc_blob_filament_tracker(diy::mpi::communicator comm, 
   //     std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2, 
@@ -81,7 +81,7 @@ protected:
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
   std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2; // from mx3
-  std::shared_ptr<xgc_3d_mesh<>> mx3;
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> mx3;
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
  
 public:
@@ -119,7 +119,7 @@ protected:
 
 xgc_blob_filament_tracker::xgc_blob_filament_tracker(
     diy::mpi::communicator comm, 
-    std::shared_ptr<xgc_3d_mesh<>> mx_) :
+    std::shared_ptr<simplicial_xgc_3d_mesh<>> mx_) :
   tracker(comm),
   m2(mx_->get_m2()),
   mx3(mx_),
