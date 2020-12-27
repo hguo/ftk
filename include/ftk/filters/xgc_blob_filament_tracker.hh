@@ -16,6 +16,7 @@
 
 #if FTK_HAVE_TBB
 #include <tbb/concurrent_hash_map.h>
+#include <tbb/concurrent_unordered_set.h>
 #endif
 
 namespace ftk {
@@ -106,10 +107,11 @@ public:
 protected:
 #if FTK_HAVE_TBB
   tbb::concurrent_hash_map<int, feature_point_t> intersections;
+  tbb::concurrent_unordered_set<int> related_cells;
 #else
   std::map<int, feature_point_t> intersections;
-#endif
   std::set<int> related_cells;
+#endif
   feature_surface_t surfaces;
 };
 
@@ -209,13 +211,14 @@ inline void xgc_blob_filament_tracker::update_timestep()
     if (check_simplex(i, cp)) {
       std::set<int> my_related_cells = get_related_cels(i);
 
-#if FTK_HAVE_TBB
-      intersections.insert({i, cp});
-#else
-      std::lock_guard<std::mutex> guard(mutex);
-      intersections[i] = cp;
-      related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      {
+#if !FTK_HAVE_TBB
+        std::lock_guard<std::mutex> guard(mutex);
 #endif
+
+        intersections.insert({i, cp});
+        related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      }
     }
   };
 

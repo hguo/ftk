@@ -9,6 +9,7 @@
 
 #if FTK_HAVE_TBB
 #include <tbb/concurrent_hash_map.h>
+#include <tbb/concurrent_unordered_set.h>
 #endif
 
 namespace diy {
@@ -99,6 +100,32 @@ namespace diy {
         m.insert(std::make_pair(k, v));
       }
     }
+  };
+
+  template <typename Key,
+          typename Hasher, // = tbb::tbb_hash<Key>,
+          typename Equality, //  = std::equal_to<Key>,
+          typename Allocator> //  = tbb::tbb_allocator<Key>
+  struct Serialization<tbb::interface5::concurrent_unordered_set<Key, Hasher, Equality, Allocator>> {
+    typedef tbb::interface5::concurrent_unordered_set<Key, Hasher, Equality, Allocator> unordered_set;
+    
+    static void save(BinaryBuffer& bb, const unordered_set& m) {
+      size_t s = m.size();
+      diy::save(bb, s);
+      for (const auto &k : m)
+        diy::save(bb, k);
+    }
+
+    static void load(BinaryBuffer& bb, unordered_set& m) {
+      size_t s;
+      diy::load(bb, s);
+      for (size_t i = 0; i < s; i ++) {
+        Key k;
+        diy::load(bb, k);
+        m.insert(k);
+      }
+    }
+
   };
 #endif
 }

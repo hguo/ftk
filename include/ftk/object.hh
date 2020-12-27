@@ -106,8 +106,8 @@ struct object {
       fatal("Unsupported accelerator");
   }
 
-  template <typename T>
-  static void parallel_for(const std::set<T>& set, std::function<void(const T&)> f, 
+  template <typename T, typename Container=std::set<T>>
+  static void parallel_for(const Container& set, std::function<void(const T&)> f, 
       int xl, int nthreads, bool affinity) {
     std::vector<T> vector(set.size());
     std::copy(set.begin(), set.end(), vector.begin());
