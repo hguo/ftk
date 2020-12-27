@@ -49,7 +49,7 @@ double threshold = 0.0;
 
 // xgc specific
 std::string xgc_mesh_filename, 
-  xgc_augmented_mesh_filename,
+  // xgc_augmented_mesh_filename,
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_write_back_filename;
 bool xgc_post_process = false, 
@@ -300,7 +300,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   if (comm.rank() == 0) {
     fprintf(stderr, "SUMMARY\n=============\n");
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
-    fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
+    // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", nphi, iphi, xgc_vphi);
     fprintf(stderr, "write_back_filename=%s\n", xgc_write_back_filename.c_str());
     fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
@@ -312,18 +312,21 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   }
   
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
- 
+
+#if 0
   if (file_exists(xgc_augmented_mesh_filename)) { // load augmented mesh
     tracker = ftk::xgc_blob_filament_tracker::from_augmented_mesh_file(comm, xgc_augmented_mesh_filename);
   } else {
+#endif
+  {
     auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
     std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi, xgc_vphi));
 
     // tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi)); // WIP
     tracker.reset(new xgc_blob_filament_tracker(comm, mx));
 
-    if (!xgc_augmented_mesh_filename.empty()) // write augmented mesh
-      tracker->to_augmented_mesh_file(xgc_augmented_mesh_filename);
+    // if (!xgc_augmented_mesh_filename.empty()) // write augmented mesh
+    //   tracker->to_augmented_mesh_file(xgc_augmented_mesh_filename);
   }
   
   if (file_exists(xgc_smoothing_kernel_filename))
@@ -546,7 +549,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("xgc-torus", "XGC: track over poloidal planes", cxxopts::value<bool>(xgc_torus))
     ("xgc-write-back", "XGC: write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("xgc-post-process", "XGC: enable post-processing", cxxopts::value<bool>(xgc_post_process))
-    ("xgc-augmented-mesh", "XGC: read/write augmented mesh", cxxopts::value<std::string>(xgc_augmented_mesh_filename))
+    // ("xgc-augmented-mesh", "XGC: read/write augmented mesh", cxxopts::value<std::string>(xgc_augmented_mesh_filename))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_pattern))
     ("output-type", "Output type {discrete|traced|sliced|intercepted}, by default traced", 

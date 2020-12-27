@@ -38,9 +38,6 @@ struct xgc_blob_filament_tracker : public virtual tracker {
   void finalize();
  
 public:
-  static std::shared_ptr<xgc_blob_filament_tracker> from_augmented_mesh_file(diy::mpi::communicator comm, const std::string& filename);
-  void to_augmented_mesh_file(const std::string& filename);
- 
   std::shared_ptr<simplicial_unstructured_2d_mesh<>> get_m2() { return m2; }
 
 protected:
@@ -451,6 +448,7 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
       surfaces.pts.size(), surfaces.tris.size(), tri_count);
 }
 
+#if 0 // legacy code, to be removed later
 inline /*static*/ std::shared_ptr<xgc_blob_filament_tracker>
 xgc_blob_filament_tracker::from_augmented_mesh_file(
     diy::mpi::communicator comm, const std::string &filename)
@@ -462,7 +460,6 @@ xgc_blob_filament_tracker::from_augmented_mesh_file(
   std::shared_ptr<xgc_blob_filament_tracker> tracker(
       new xgc_blob_filament_tracker(comm));
 
-#if 0 // WIP
   diy::load(bb, tracker->nphi);
   diy::load(bb, tracker->iphi);
   
@@ -473,14 +470,12 @@ xgc_blob_filament_tracker::from_augmented_mesh_file(
   diy::load(bb, *tracker->m3);
 
   tracker->m4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*tracker->m3));
-#endif
   fclose(fp);
   return tracker;
 }
 
 inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string& filename)
 {
-#if 0 // WIP
   if (!is_root_proc()) return;
 
   FILE *fp = fopen(filename.c_str(), "wb");
@@ -493,8 +488,8 @@ inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string&
   // diy::save(bb, *m3); // WIP
 
   fclose(fp);
-#endif
 }
+#endif
 
 inline void xgc_blob_filament_tracker::write_intersections_binary(const std::string& filename) const
 {
