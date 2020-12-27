@@ -6,8 +6,8 @@
 
 namespace diy { namespace mpi {
 
-template <typename K, typename V> // merging an std::map to root using gather
-inline void gather(const communicator& comm, const std::map<K, V>& in, std::map<K, V> &out, int root)
+template <typename Map> // merging an std::map or tbb::concurrent_hash_map to root using gather
+inline void gather(const communicator& comm, const Map& in, Map &out, int root)
 {
 #if FTK_HAVE_MPI
   // serialize input map
@@ -45,7 +45,7 @@ inline void gather(const communicator& comm, const std::map<K, V>& in, std::map<
     out = in;
     StringBuffer sb(buffer);
     while (sb) {
-      std::map<K, V> map;
+      Map map;
       load(sb, map);
       for (const auto &kv : map)
         out.insert(kv);
@@ -100,7 +100,8 @@ inline void gather(const communicator& comm, const std::set<T>& in, std::set<T>&
 #endif
 }
 
-}
-}
+
+} // namespace diy::mpi
+} // namespace diy
 
 #endif
