@@ -55,6 +55,7 @@ std::string xgc_mesh_filename,
 bool xgc_post_process = false, 
      xgc_torus = false;
 double xgc_smoothing_kernel_size = 0.03;
+int xgc_vphi = 1;
 
 // tracker and input stream
 std::shared_ptr<tracker> mtracker;
@@ -277,7 +278,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     
   const auto data0 = ndarray<double>::read_h5(filename0, varname);
   nphi = data0.dim(0);
-  iphi = 1;
+  iphi = 1; // TODO
 
 #if 0
   const auto array_nphi = ndarray<int>::read_h5(filename0, "/nphi");
@@ -300,7 +301,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     fprintf(stderr, "SUMMARY\n=============\n");
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
     fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
-    fprintf(stderr, "nphi=%d, iphi=%d\n", nphi, iphi);
+    fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", nphi, iphi, xgc_vphi);
     fprintf(stderr, "write_back_filename=%s\n", xgc_write_back_filename.c_str());
     fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
     fprintf(stderr, "archived_traced_filename=%s, exists=%d\n", archived_traced_filename.c_str(), file_exists(archived_traced_filename));
@@ -316,15 +317,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     tracker = ftk::xgc_blob_filament_tracker::from_augmented_mesh_file(comm, xgc_augmented_mesh_filename);
   } else {
     auto m2 = simplicial_unstructured_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-    std::shared_ptr<ftk::xgc_3d_mesh<>> mx(new ftk::xgc_3d_mesh<>(m2, nphi, iphi));
-
-#if 0
-    int tet[4] = {56783, 911470, 911482, 911483};
-    int id = -1;
-    bool found = mx->find_simplex(3, tet, id);
-    fprintf(stderr, "%d, %d\n", found, id);
-    exit(1);
-#endif
+    std::shared_ptr<ftk::xgc_3d_mesh<>> mx(new ftk::xgc_3d_mesh<>(m2, nphi, iphi, xgc_vphi));
 
     // tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi)); // WIP
     tracker.reset(new xgc_blob_filament_tracker(comm, mx));
@@ -547,6 +540,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("archived-intersections", "Archived discrete intersections", cxxopts::value<std::string>(archived_intersections_filename))
     ("archived-traced", "Archived traced results", cxxopts::value<std::string>(archived_traced_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
+    ("xgc-vphi", "XGC number of virtual poloidal planes", cxxopts::value<int>(xgc_vphi)->default_value("1"))
     ("xgc-smoothing-kernel-file", "XGC: smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC: smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
     ("xgc-torus", "XGC: track over poloidal planes", cxxopts::value<bool>(xgc_torus))

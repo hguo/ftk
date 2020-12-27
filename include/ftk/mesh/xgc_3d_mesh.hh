@@ -17,10 +17,13 @@ struct xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
 
   void set_nphi_iphi(int n, int i) {nphi = n; iphi = i;}
+  void set_vphi(int v) { vphi = v; }
 
   int get_nphi() const {return nphi;}
   int get_iphi() const {return iphi;}
   int get_vphi() const {return vphi;}
+
+  bool is_poloidal(int d, I i) const { return m3->is_ordinal(d, i); }
 
 public: 
   void element_for(int d, std::function<void(I)> f) {} // TODO
