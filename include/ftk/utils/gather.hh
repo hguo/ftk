@@ -6,8 +6,8 @@
 
 namespace diy { namespace mpi {
 
-template <typename Map> // merging an std::map or tbb::concurrent_hash_map to root using gather
-inline void gather(const communicator& comm, const Map& in, Map &out, int root)
+template <typename Map> // Map = std::map, std::set, tbb::concurrent_hash_map
+inline void gather(const communicator& comm, const Map& in, Map &out, int root) // merging a map/set to root using gather
 {
 #if FTK_HAVE_MPI
   // serialize input map
@@ -55,51 +55,6 @@ inline void gather(const communicator& comm, const Map& in, Map &out, int root)
   out = in;
 #endif
 }
-
-template <typename T>
-inline void gather(const communicator& comm, const std::set<T>& in, std::set<T>& out, int root)
-{
-#if FTK_HAVE_MPI
-  std::string serialized_in;
-  if (comm.rank() != root)
-    serializeToString(in, serialized_in);
-
-  int length_serialized_in = serialized_in.size();
-  std::vector<int> all_length_serialized_in(comm.size(), 0);
-  MPI_Gather(&length_serialized_in, 1, MPI_INT, 
-      &all_length_serialized_in[0], 1, MPI_INT,
-      root, comm);
-
-  std::string buffer;
-  std::vector<int> displs;
-  if (comm.rank() == root) {
-    buffer.resize(std::accumulate(
-          all_length_serialized_in.begin(), 
-          all_length_serialized_in.end(), 0));
-
-    displs.resize(all_length_serialized_in.size(), 0);
-    for (int i = 1; i < comm.size(); i ++)
-      displs[i] = displs[i-1] + all_length_serialized_in[i-1];
-  }
-
-  MPI_Gatherv(serialized_in.data(), serialized_in.size(), MPI_CHAR,
-      &buffer[0], all_length_serialized_in.data(), displs.data(), MPI_CHAR, 
-      root, comm);
-
-  if (comm.rank() == root) {
-    out = in;
-    StringBuffer sb(buffer);
-    while (sb) {
-      std::set<T> set;
-      load(sb, set);
-      out.insert(set.begin(), set.end());
-    }
-  }
-#else
-  out = in;
-#endif
-}
-
 
 } // namespace diy::mpi
 } // namespace diy
