@@ -8,10 +8,10 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
-  simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1);
+  simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1);
   // simplicial_xgc_3d_mesh(const std::string& mesh_filename);
 
-  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> get_m2() const {return m2;}
+  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> get_m2() const {return m2;}
 
   size_t n(int d) const;
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
@@ -44,7 +44,7 @@ public:
 
 private: // backend meshes
   int nphi, iphi, vphi;
-  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2;
+  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2;
   std::shared_ptr<simplicial_unstructured_extruded_2d_mesh<I, F>> m3;
 };
 ///////
@@ -52,7 +52,7 @@ private: // backend meshes
 
 template <typename I, typename F>
 simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
-    std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2_, 
+    std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, 
     int nphi_, int iphi_, int vphi_) :
   m2(m2_),
   m3(new simplicial_unstructured_extruded_2d_mesh<I, F>(*m2_)),

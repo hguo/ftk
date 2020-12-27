@@ -78,8 +78,8 @@ protected:
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
-  std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2; // from mx3
-  std::shared_ptr<simplicial_xgc_3d_mesh<>> mx3;
+  std::shared_ptr<simplicial_xgc_2d_mesh<>> m2; 
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3;
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
  
 public:
@@ -117,11 +117,11 @@ protected:
 
 xgc_blob_filament_tracker::xgc_blob_filament_tracker(
     diy::mpi::communicator comm, 
-    std::shared_ptr<simplicial_xgc_3d_mesh<>> mx_) :
+    std::shared_ptr<simplicial_xgc_3d_mesh<>> mx) :
   tracker(comm),
-  m2(mx_->get_m2()),
-  mx3(mx_),
-  m4(new ftk::simplicial_unstructured_extruded_3d_mesh<>(*mx3))
+  m2(mx->get_m2()),
+  m3(mx),
+  m4(new ftk::simplicial_unstructured_extruded_3d_mesh<>(*m3))
 {
 
 }
@@ -152,7 +152,7 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
   G.reshape(2, scalar.dim(0), scalar.dim(1));
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
   
-  for (size_t i = 0; i < mx3->get_nphi(); i ++) {
+  for (size_t i = 0; i < m3->get_nphi(); i ++) {
     // fprintf(stderr, "smoothing slice %zu\n", i);
     ftk::ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
@@ -382,7 +382,7 @@ void xgc_blob_filament_tracker::simplex_values(
   m4->get_simplex(n-1, i, verts);
   for (int k = 0; k < n; k ++) {
     t[k] = verts[k] / m4->n(0); // m4->flat_vertex_time(verts[k]);
-    const int v3 = verts[k] % mx3->n(0);
+    const int v3 = verts[k] % m3->n(0);
     const int v2 = v3 % m2->n(0);
     p[k] = v3 / m2->n(0); // poloidal plane
 
@@ -408,14 +408,14 @@ void xgc_blob_filament_tracker::simplex_values(
   for (int k = 0; k < n; k ++) {
     if (p[k] == 0)
       b0 = true;
-    else if (p[k] == mx3->get_nphi()-1)
+    else if (p[k] == m3->get_nphi()-1)
       b1 = true;
   }
   if (b0 && b1) { // periodical
     // fprintf(stderr, "periodical.\n");
     for (int k = 0; k < n; k ++)
       if (p[k] == 0)
-        rzpt[k][2] += mx3->get_nphi();
+        rzpt[k][2] += m3->get_nphi();
   }
 }
 
@@ -551,7 +551,7 @@ inline void xgc_blob_filament_tracker::write_intersections(const std::string& fi
 #if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_intersections_vtp(bool torus) const
 {
-  const int np = mx3->np();
+  const int np = m3->np();
 
   vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -581,7 +581,7 @@ inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_intersections
   
 vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::transform_vtp_coordinates(vtkSmartPointer<vtkPolyData> poly) const
 {
-  const int np = mx3->np();
+  const int np = m3->np();
   
   vtkSmartPointer<vtkPoints> pts = poly->GetPoints();
   for (auto i = 0; i < pts->GetNumberOfPoints(); i ++) {
