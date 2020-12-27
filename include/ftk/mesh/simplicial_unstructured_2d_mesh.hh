@@ -22,8 +22,6 @@ struct simplicial_unstructured_2d_mesh : public simplicial_unstructured_mesh<I, 
       const ndarray<I>& triangles_) // 3 * n_triangles
     : vertex_coords(coords_), triangles(triangles_) {build_triangles(); build_edges();}
 
-  static std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
-
   // dimensionality of the mesh
   int nd() const {return 2;}
 
@@ -47,10 +45,6 @@ public: // io
   vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
   void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid);
   
-  vtkSmartPointer<vtkUnstructuredGrid> to_xgc_slices_3d_vtu(int nphi, int iphi) const;
-  vtkSmartPointer<vtkUnstructuredGrid> scalar_to_xgc_slices_3d_vtu(const std::string& varname, const ndarray<F>& data, int nphi, int iphi) const;
-  void to_xgc_slices_3d_vtu(const std::string&, int nphi, int iphi) const;
-  void scalar_to_xgc_slices_3d_vtu(const std::string& filename, const std::string& varname, const ndarray<F>& data, int nphi, int iphi) const;
 #endif
   void write_smoothing_kernel(const std::string& filename);
   bool read_smoothing_kernel(const std::string& filename);
@@ -447,86 +441,6 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_v
   return grid;
 }
 
-template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::
-to_xgc_slices_3d_vtu(const std::string& filename, int nphi, int iphi) const
-{
-  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
-  writer->SetFileName(filename.c_str());
-  writer->SetInputData( to_xgc_slices_3d_vtu(nphi, iphi) );
-  writer->Write();
-}
-
-template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::
-scalar_to_xgc_slices_3d_vtu(const std::string& filename, const std::string& varname, const ndarray<F>& scalar, int nphi, int iphi) const
-{
-  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
-  writer->SetFileName(filename.c_str());
-  writer->SetInputData( scalar_to_xgc_slices_3d_vtu(varname, scalar, nphi, iphi) );
-  writer->Write();
-}
-
-template <typename I, typename F>
-vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::
-to_xgc_slices_3d_vtu(int nphi, int iphi) const
-{
-  const int np = nphi * iphi;
-  
-  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
-  vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
-  pts->SetNumberOfPoints(n(0) * np);
- 
-  for (int p = 0; p < np; p ++) {
-    const F phi = p * 2 * M_PI / np;
-    const vtkIdType offset = p * n(0);
-    for (int i=0; i < n(0); i++)
-      pts->SetPoint(offset + i, 
-          vertex_coords[i*2] * cos(phi),
-          vertex_coords[i*2] * sin(phi), 
-          vertex_coords[i*2+1]);
-  }
- 
-  for (int p = 0; p < np; p ++) {
-    const vtkIdType offset = p * n(0);
-    for (int i=0; i<n(2); i ++) {
-      vtkIdType ids[3] = {
-        offset + triangles[i*3], 
-        offset + triangles[i*3+1], 
-        offset + triangles[i*3+2]
-      };
-      grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
-    }
-  }
-
-  grid->SetPoints(pts);
-  return grid;
-}
-
-template <typename I, typename F>
-vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::
-scalar_to_xgc_slices_3d_vtu(const std::string& varname, const ndarray<F>& scalar, int nphi, int iphi) const
-{
-  vtkSmartPointer<vtkUnstructuredGrid> grid = to_xgc_slices_3d_vtu(nphi, iphi);
-
-  vtkSmartPointer<vtkDataArray> array = vtkDoubleArray::New();
-  array->SetName(varname.c_str());
-  array->SetNumberOfComponents(1);
-  array->SetNumberOfTuples(n(0) * nphi * iphi);
-
-  // std::cerr << scalar << std::endl;
-
-  for (int i = 0; i < iphi; i ++) 
-    for (int j = 0; j < nphi; j ++) 
-      for (int k = 0; k < n(0); k ++)
-        array->SetTuple1((i * nphi + j) * n(0) + k, scalar(k, j));
-
-  grid->GetPointData()->AddArray(array);
-  grid->GetPointData()->SetActiveScalars(varname.c_str());
-
-  // grid->PrintSelf(std::cerr, vtkIndent(2));
-  return grid;
-}
 #endif
 
 template <typename I, typename F>
@@ -581,20 +495,6 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of2(const I v[2]) const
   else return it->second;
 }
 #endif
-
-template <typename I, typename F>
-std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> simplicial_unstructured_2d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename)
-{
-  ftk::ndarray<I> triangles;
-  ftk::ndarray<F> coords;
-
-  triangles.from_h5(filename, "/cell_set[0]/node_connect_list");
-  coords.from_h5(filename, "/coordinates/values");
-  // psi.from_h5(mesh_filename, "psi");
-
-  return std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>>(
-      new simplicial_unstructured_2d_mesh<I, F>(coords, triangles));
-}
 
 } // namespace ftk
 

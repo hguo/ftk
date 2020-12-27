@@ -10,6 +10,7 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/utils/gather.hh>
+#include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <iomanip>
 
