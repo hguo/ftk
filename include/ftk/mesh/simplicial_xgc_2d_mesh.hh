@@ -16,6 +16,8 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
 
   static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
 
+  I nextnode(I i) const { return nextnodes[i]; }
+
 public:
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_xgc_slices_3d_vtu(int nphi, int iphi) const;

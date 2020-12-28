@@ -23,6 +23,7 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   int get_iphi() const {return iphi;}
   int get_vphi() const {return vphi;}
 
+  bool is_poloidal(int p) const { return p % vphi == 0; }
   bool is_poloidal(int d, I i) const { return m3->is_ordinal(d, i); }
 
 public: 
@@ -32,15 +33,14 @@ public:
   void get_simplex(int d, I i, I verts[]) const;
   bool find_simplex(int d, const I v[], I& i) const;
   
-  void get_coords(I i, F coords[]) const {}
+  void get_coords_rzp(I i, F coords[]) const { return m3->get_coords(i, coords); }
+  void get_coords_xyz(I i, F coords[]) const;
  
 public:
   std::set<I> sides(int d, I i) const;
   std::set<I> side_of(int d, I i) const;
 
   I transform(int d, I i) const;
-
-  // const ndarray<F>& get_coords() const {}; // {return vertex_coords;}
 
 private: // backend meshes
   int nphi, iphi, vphi;

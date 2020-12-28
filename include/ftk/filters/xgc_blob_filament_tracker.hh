@@ -266,10 +266,10 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.ordinal = m4->is_ordinal(2, i); 
   cp.timestep = current_timestep;
 
-  // fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
-  //     mu[0], mu[1], mu[2], 
-  //     x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
-  //     t[0], t[1], t[2]);
+  fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
+      mu[0], mu[1], mu[2], 
+      x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
+      t[0], t[1], t[2]);
   
   return true;
 }
@@ -382,44 +382,90 @@ void xgc_blob_filament_tracker::simplex_values(
     T v[n][2],
     T j[n][2][2])
 {
+  const int m2n0 = m2->n(0), m3n0 = m3->n(0);
+  const int nphi = m3->get_nphi(), 
+            iphi = m3->get_iphi(),
+            vphi = m3->get_vphi();
+  const int n0ivphi = m2n0 * vphi * nphi;
+
   m4->get_simplex(n-1, i, verts);
   for (int k = 0; k < n; k ++) {
     t[k] = verts[k] / m4->n(0); // m4->flat_vertex_time(verts[k]);
-    const int v3 = verts[k] % m3->n(0);
-    const int v2 = v3 % m2->n(0);
-    p[k] = v3 / m2->n(0); // poloidal plane
+    const int v3 = verts[k] % m3->n(0); // vertex id in m3 mesh
+    const int v2 = v3 % m2->n(0); // vertex id in m2 mesh
+    p[k] = v3 / m2->n(0); // poloidal plane coords
 
-    m2->get_coords(v2, rzpt[k]);
-    rzpt[k][2] = p[k];
-    rzpt[k][3] = t[k];
-
+    // if (m3->is_poloidal(p[k])) fprintf(stderr, "non-poloidal virtual plane\n");
+  
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
     const auto &data = field_data_snapshots[iv];
-    
-    f[k] = data.scalar[v3];
+   
+    const int dp0 = p[k] / iphi / vphi, // plane id in the density array
+              dp1 = dp0 + 1; // (dp0 + 1) % nphi;
+    const int vc0 = v2 + dp0 * m2n0;
+   
+    m3->get_coords_rzp(v3, rzpt[k]);
+    rzpt[k][3] = t[k];
 
-    v[k][0] = data.vector[v3*2];
-    v[k][1] = data.vector[v3*2+1];
+    // if (m3->is_poloidal(p[k])) {
+    if (p[k] % vphi == 0) { // poloidal
+    // if (1) { 
+      f[k] = data.scalar[vc0];
 
-    j[k][0][0] = data.jacobian[v3*4];
-    j[k][0][1] = data.jacobian[v3*4+1];
-    j[k][1][0] = data.jacobian[v3*4+2];
-    j[k][1][1] = data.jacobian[v3*4+3];
+      v[k][0] = data.vector[vc0*2];
+      v[k][1] = data.vector[vc0*2+1];
+
+      j[k][0][0] = data.jacobian[vc0*4];
+      j[k][0][1] = data.jacobian[vc0*4+1];
+      j[k][1][0] = data.jacobian[vc0*4+2];
+      j[k][1][1] = data.jacobian[vc0*4+3];
+    } else { // virtual polodal plane, using linear interpolation
+      int next = m2->nextnode(v2);
+      const int vc1 = next + (dp1 % nphi) * m2n0;
+      const T beta = T(p[k]) / iphi / vphi - dp0, 
+              alpha = T(1) - beta;
+      
+      f[k] = alpha * data.scalar[vc0] + beta * data.scalar[vc1];
+
+      v[k][0] = alpha * data.vector[vc0*2] + beta * data.vector[vc1*2];
+      v[k][1] = alpha * data.vector[vc0*2+1] + beta * data.vector[vc1*2+1];
+
+      j[k][0][0] = alpha * data.jacobian[vc0*4] + beta * data.jacobian[vc1*4];
+      j[k][0][1] = alpha * data.jacobian[vc0*4+1] + beta * data.jacobian[vc1*4+1];
+      j[k][1][0] = alpha * data.jacobian[vc0*4+2] + beta * data.jacobian[vc1*4+2];
+      j[k][1][1] = alpha * data.jacobian[vc0*4+3] + beta * data.jacobian[vc1*4+3];
+
+#if 0
+      T rzp0[3], rzp1[3];
+      m3->get_coords_rzp(v2 + dp0 * m2n0 * iphi * vphi, rzp0);
+      m3->get_coords_rzp(next + dp1 * m2n0 * iphi * vphi, rzp1);
+      if (dp1 == nphi) { // the next plane is in the next period
+        // rzp1[2] += nphi * iphi * vphi;
+        // fprintf(stderr, "alpha=%f, beta=%f, dp0=%d, dp1=%d, p0=%f, p1=%f\n", alpha, beta, 
+        //     dp0, dp1, rzp0[2], rzp1[2]);
+      }
+
+      for (int j = 0; j < 3; j ++)
+        rzpt[k][j] = alpha * rzp0[j] + beta * rzp1[j];
+#endif
+    }
   }
 
+#if 1
   bool b0 = false, b1 = false;
   for (int k = 0; k < n; k ++) {
     if (p[k] == 0)
       b0 = true;
-    else if (p[k] == m3->get_nphi()-1)
+    else if (p[k] == m3->np()-1) 
       b1 = true;
   }
   if (b0 && b1) { // periodical
     // fprintf(stderr, "periodical.\n");
     for (int k = 0; k < n; k ++)
       if (p[k] == 0)
-        rzpt[k][2] += m3->get_nphi();
+        rzpt[k][2] += m3->np()-1;
   }
+#endif
 }
 
 inline void xgc_blob_filament_tracker::build_critical_surfaces()
@@ -533,6 +579,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
     
     const auto filename = ndarray_writer<double>::filename(pattern, i);
     write_polydata(filename, transform_vtp_coordinates(poly));
+    // write_polydata(filename, poly);
   }
 #else
   fatal("FTK not compiled with VTK.");
