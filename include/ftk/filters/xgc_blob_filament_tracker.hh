@@ -408,8 +408,8 @@ void xgc_blob_filament_tracker::simplex_values(
     rzpt[k][3] = t[k];
 
     // if (m3->is_poloidal(p[k])) {
-    if (p[k] % vphi == 0) { // poloidal
-    // if (1) { 
+    // if (p[k] % vphi == 0) { // poloidal
+    if (1) { 
       f[k] = data.scalar[vc0];
 
       v[k][0] = data.vector[vc0*2];

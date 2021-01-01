@@ -55,7 +55,7 @@ std::string xgc_mesh_filename,
 bool xgc_post_process = false, 
      xgc_torus = false;
 double xgc_smoothing_kernel_size = 0.03;
-int xgc_vphi = 1;
+int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
 
 // tracker and input stream
 std::shared_ptr<tracker> mtracker;
@@ -263,7 +263,7 @@ void execute_threshold_tracker(diy::mpi::communicator comm)
   tg.generate_dot_file("dot"); // TODO
 }
 
-void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
+void initialize_xgc(diy::mpi::communicator comm)
 {
   if (xgc_mesh_filename.empty()) 
     fatal("missing xgc mesh filename");
@@ -272,13 +272,12 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   const int ntimesteps = js["n_timesteps"];
 
   // determine nphi and iphi
-  int nphi, iphi;
   const std::string filename0 = js["filenames"][0];
   const std::string varname = js["variables"][0];
     
   const auto data0 = ndarray<double>::read_h5(filename0, varname);
-  nphi = data0.dim(0);
-  iphi = 1; // TODO
+  xgc_nphi = data0.dim(0);
+  xgc_iphi = 1; // TODO
 
 #if 0
   const auto array_nphi = ndarray<int>::read_h5(filename0, "/nphi");
@@ -301,7 +300,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     fprintf(stderr, "SUMMARY\n=============\n");
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
-    fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", nphi, iphi, xgc_vphi);
+    fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
     fprintf(stderr, "write_back_filename=%s\n", xgc_write_back_filename.c_str());
     fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
     fprintf(stderr, "archived_traced_filename=%s, exists=%d\n", archived_traced_filename.c_str(), file_exists(archived_traced_filename));
@@ -310,6 +309,11 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     std::cerr << "input=" << js << std::endl;
     fprintf(stderr, "=============\n");
   }
+}
+
+void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
+{
+  initialize_xgc(comm);
   
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
 
@@ -320,7 +324,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 #endif
   {
     auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-    std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi, xgc_vphi));
+    std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
 
     // tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi)); // WIP
     tracker.reset(new xgc_blob_filament_tracker(comm, mx));
