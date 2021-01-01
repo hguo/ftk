@@ -11,6 +11,7 @@
 #include "ftk/filters/contour_tracker_3d_regular.hh"
 #include "ftk/filters/tdgl_vortex_tracker_3d_regular.hh"
 #include "ftk/filters/xgc_blob_filament_tracker.hh"
+#include "ftk/filters/xgc_blob_threshold_tracker.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/utils/file_exists.hh"
@@ -391,6 +392,17 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     tracker->write_sliced(output_pattern, output_format, true);
   else 
     tracker->write_surfaces(output_pattern, output_format, true);
+}
+
+void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
+{
+  initialize_xgc(comm);
+
+  std::shared_ptr<xgc_blob_threshold_tracker> tracker;
+    
+  auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
+  tracker.reset(new xgc_blob_threshold_tracker(comm, mx));
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
