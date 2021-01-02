@@ -20,7 +20,7 @@ struct xgc_blob_threshold_tracker : public xgc_tracker {
   
   void initialize() {}
   void update() {}
-  void finalize() {}
+  void finalize();
 
   void update_timestep();
 
@@ -53,6 +53,12 @@ inline void xgc_blob_threshold_tracker::update_timestep()
     }
   }
   // m3->element_for(0, current_timestep, func, xl, nthreads, enable_set_affinity);
+  
+  fprintf(stderr, "%zu\n", uf.parents.size());
+}
+
+inline void xgc_blob_threshold_tracker::finalize()
+{
 }
 
 }

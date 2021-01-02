@@ -146,14 +146,15 @@ std::set<I> simplicial_xgc_3d_mesh<I, F>::side_of(int d, I i) const
 template <typename I, typename F>
 std::set<I> simplicial_xgc_3d_mesh<I, F>::get_vertex_edge_vertex_nextnodes(I i) const
 {
-  const int t = i / m2->n(0);
-  const I i0 = i % m2->n(0);
+  const int m2n0 = m2->n(0);
+  const int t = i / m2n0;
+  const I i0 = i % m2n0;
 
   std::set<I> set2 = m2->get_vertex_edge_vertex(i0);
   std::set<I> set3;
   for (const auto j : set2)
-    set3.insert( transform(t, j) );
-  set3.insert( transform((t+1) % np(), m2->nextnode(i0)) ); // assuming vphi=1
+    set3.insert( j + t * m2n0 );
+  set3.insert( (m2->nextnode(i0) + (t+1) * m2n0) % n(0) ); // assuming vphi=1
 
   return set3;
 }
