@@ -26,6 +26,8 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   bool is_poloidal(int p) const { return p % vphi == 0; }
   bool is_poloidal(int d, I i) const { return m3->is_ordinal(d, i); }
 
+  std::set<I> get_vertex_edge_vertex_nextnodes(I i) const;
+
 public: 
   void element_for(int d, std::function<void(I)> f) {} // TODO
   
@@ -139,6 +141,21 @@ std::set<I> simplicial_xgc_3d_mesh<I, F>::side_of(int d, I i) const
     // results.insert(j % n(d+1));
     // results.insert(j); 
   return results;
+}
+
+template <typename I, typename F>
+std::set<I> simplicial_xgc_3d_mesh<I, F>::get_vertex_edge_vertex_nextnodes(I i) const
+{
+  const int t = i / m2->n(0);
+  const I i0 = i % m2->n(0);
+
+  std::set<I> set2 = m2->get_vertex_edge_vertex(i0);
+  std::set<I> set3;
+  for (const auto j : set2)
+    set3.insert( transform(t, j) );
+  set3.insert( transform((t+1) % np(), m2->nextnode(i0)) ); // assuming vphi=1
+
+  return set3;
 }
 
 }
