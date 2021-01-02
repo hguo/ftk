@@ -302,6 +302,7 @@ void initialize_xgc(diy::mpi::communicator comm)
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
+    fprintf(stderr, "threshold=%f\n", threshold);
     fprintf(stderr, "write_back_filename=%s\n", xgc_write_back_filename.c_str());
     fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
     fprintf(stderr, "archived_traced_filename=%s, exists=%d\n", archived_traced_filename.c_str(), file_exists(archived_traced_filename));
@@ -403,6 +404,21 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
   auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
   std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
   tracker.reset(new xgc_blob_threshold_tracker(comm, mx));
+  tracker->set_threshold( threshold );
+  tracker->initialize();
+
+  stream->set_callback([&](int k, const ndarray<double> &data) {
+    auto scalar = data.get_transpose();
+    tracker->push_field_data_snapshot(scalar);
+
+    if (k != 0) tracker->advance_timestep();
+    if (k == stream->n_timesteps() - 1) tracker->update_timestep();
+  });
+
+  stream->start();
+  stream->finish();
+
+  tracker->finalize();
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
@@ -553,6 +569,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("spatial-smoothing-kernel", "Spatial smoothing kernel bandwidth", cxxopts::value<double>())
     ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>())
     ("perturbation", "Gaussian perturbation sigma", cxxopts::value<double>())
+    ("threshold", "Threshold", cxxopts::value<double>(threshold))
     ("m,mesh", "Input mesh file (will shadow arguments including width, height, depth)", cxxopts::value<std::string>())
     ("nblocks", "Number of total blocks", cxxopts::value<int>(nblocks))
     // ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
@@ -621,6 +638,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     initialize_tdgl_tracker(comm);
   else if (ttype == TRACKER_XGC_BLOB_FILAMENT)
     initialize_xgc_blob_filament_tracker(comm);
+  else if (ttype == TRACKER_XGC_BLOB_THRESHOLD)
+    initialize_xgc_blob_threshold_tracker(comm);
   else 
     fatal(options, "missing or invalid '--feature'");
 
