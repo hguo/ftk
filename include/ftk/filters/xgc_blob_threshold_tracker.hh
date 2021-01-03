@@ -27,9 +27,9 @@ struct xgc_blob_threshold_tracker : public xgc_tracker {
   void push_field_data_snapshot(const ndarray<double> &scalar);
 
 public:
-  void write_sliced(const std::string& filename) const;
+  void write_sliced(int t, const std::string& pattern) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
+  vtkSmartPointer<vtkUnstructuredGrid> sliced_to_vtu(int t) const;
 #endif
 
 protected:
@@ -49,13 +49,17 @@ inline void xgc_blob_threshold_tracker::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
 
+  const int m3n0 = m3->n(0);
   const auto &scalar = field_data_snapshots[0].scalar;
-  for (int i = 0; i < m3->n(0); i ++) {
+  for (int i = 0; i < m3n0; i ++) {
     if (scalar[i] < threshold) continue;
 
     for (const auto j : m3->get_vertex_edge_vertex_nextnodes(i)) {
-      if (scalar[j] >= threshold) 
-        uf.unite(i, j);
+      if (scalar[j] >= threshold) {
+        int ei = i + current_timestep * m3n0,
+            ej = j + current_timestep * m3n0;
+        uf.unite(ei, ej);
+      }
     }
   }
   // m3->element_for(0, current_timestep, func, xl, nthreads, enable_set_affinity);
@@ -67,12 +71,14 @@ inline void xgc_blob_threshold_tracker::finalize()
 {
 }
 
-void xgc_blob_threshold_tracker::write_sliced(const std::string& filename) const
+void xgc_blob_threshold_tracker::write_sliced(int t, const std::string& pattern) const
 {
+  const std::string filename = ndarray_writer<double>::filename(pattern, t);
+
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(filename.c_str());
-  writer->SetInputData( to_vtu() );
+  writer->SetInputData( sliced_to_vtu(t) );
   writer->Write();
 #else
   fatal("FTK not compiled with VTK.");
@@ -80,12 +86,13 @@ void xgc_blob_threshold_tracker::write_sliced(const std::string& filename) const
 }
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::to_vtu() const
+vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu(int t) const
 {
   ndarray<int> array({m3->n(0)}, -1);
   for (int i = 0; i < m3->n(0); i ++) {
-    if (uf.exists(i)) 
-      array[i] = uf.find(i);
+    const int e = i + t * m3->n(0);
+    if (uf.exists(e)) 
+      array[i] = uf.find(e);
   }
 
   auto grid = m3->to_vtu_slices();

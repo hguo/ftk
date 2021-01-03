@@ -413,13 +413,15 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
     if (k != 0) tracker->advance_timestep();
     if (k == stream->n_timesteps() - 1) tracker->update_timestep();
+
+    if (k > 0)
+      tracker->write_sliced(k-1, output_pattern);
   });
 
   stream->start();
   stream->finish();
 
   tracker->finalize();
-  tracker->write_sliced(output_pattern);
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
