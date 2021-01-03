@@ -32,12 +32,9 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
 public: // io
   void to_vtu_file(const std::string& filename);
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
-  void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid);
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
+  void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid);
 #endif
-
-  static std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> from_xgc_mesh_h5(const std::string& mesh_filename, int nphi, int iphi);
-  static std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> from_xgc_mesh(const simplicial_unstructured_2d_mesh<I, F> &m2, int nphi, int iphi);
 
 public: 
   virtual void element_for(int d, std::function<void(I)> f) {} // TODO
@@ -241,7 +238,7 @@ void simplicial_unstructured_3d_mesh<I, F>::to_vtu_file(const std::string& filen
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(filename.c_str());
-  writer->SetInputData( to_vtk_unstructured_grid() );
+  writer->SetInputData( to_vtu() );
   writer->Write();
 #else
   this->fatal("FTK not compiled with VTK");
@@ -250,7 +247,7 @@ void simplicial_unstructured_3d_mesh<I, F>::to_vtu_file(const std::string& filen
 
 #if FTK_HAVE_VTK  
 template <typename I, typename F>
-void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid)
+void simplicial_unstructured_3d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid)
 {
   vtkIdType ncells = grid->GetNumberOfCells();
   std::vector<int> tets;
@@ -285,7 +282,7 @@ void simplicial_unstructured_3d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartP
 
 template <typename I, typename F>
 vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_3d_mesh<I, F>::
-to_vtk_unstructured_grid() const
+to_vtu() const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
@@ -501,54 +498,6 @@ void simplicial_unstructured_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
       J(2, 2, i) += (d[2]*d[2] / sigma2 - 1) / sigma2 * f[k] * w;
     }
   });
-}
-
-template <typename I, typename F>
-std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename, int nphi, int iphi)
-{
-  auto m2 = simplicial_unstructured_2d_mesh<I, F>::from_xgc_mesh_h5(filename);
-  return from_xgc_mesh(*m2, nphi, iphi);
-  // m.build_edges();
-}
-  
-template <typename I, typename F>
-std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3d_mesh<I, F>::from_xgc_mesh(const simplicial_unstructured_2d_mesh<I, F> &m2, int nphi, int iphi)
-{
-  simplicial_unstructured_extruded_2d_mesh<I, F> m3(m2);
-  std::shared_ptr<simplicial_unstructured_3d_mesh<>> m(new simplicial_unstructured_3d_mesh<>);
- 
-  const int np = iphi * nphi;
-  const int n0 = m2.n(0);
-  const int nn = n0 * np; // nnodes
-  const auto &coords = m2.get_coords();
-
-  m->vertex_coords.reshape(3, nn);
-  for (int i = 0; i < np; i ++) {
-    const F phi = i * 2 * M_PI / np;
-    for (int k = 0; k < n0; k ++) {
-      const int offset = i*n0+k;
-
-      m->vertex_coords(0, offset) = coords(0, k) * cos(phi);
-      m->vertex_coords(1, offset) = coords(0, k) * sin(phi);
-      m->vertex_coords(2, offset) = coords(1, k);
-    }
-  }
-  
-  m->tetrahedra.reshape(4, (m3.n(3) * np));
-  for (int k = 0; k < m3.n(3) * np; k ++) {
-    I tet[4];
-    m3.get_simplex(3, k, tet);
-
-    for (int j = 0; j < 4; j ++)
-      tet[j] = tet[j] % nn;
-    std::sort(tet, tet+4);
-
-    for (int j = 0; j < 4; j ++)
-      m->tetrahedra(j, k) = tet[j]; // % nn;
-  }
-
-  m->initialize();
-  return m;
 }
 
 } // namespace ftk

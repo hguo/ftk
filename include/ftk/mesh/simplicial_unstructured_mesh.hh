@@ -55,8 +55,8 @@ public: // io
   // vtkSmartPointer<vtkUnstructuredGrid> scalars_to_vtk_unstructured_grid_data(
   //     const std::vector<std::string>& varname, const std::vector<ndarray<F>>& scalar) const;
 
-  virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const = 0;
-  virtual void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid) = 0;
+  virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const = 0;
+  virtual void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid) = 0;
 #endif
 };
 
@@ -68,7 +68,7 @@ void simplicial_unstructured_mesh<I, F>::from_legacy_vtk_file(const std::string&
   vtkSmartPointer<vtkUnstructuredGridReader> reader = vtkUnstructuredGridReader::New();
   reader->SetFileName(filename.c_str());
   reader->Update();
-  from_vtk_unstructured_grid(reader->GetOutput());
+  from_vtu(reader->GetOutput());
 #else
   fatal("FTK not compiled with VTK");
 #endif
@@ -81,7 +81,7 @@ void simplicial_unstructured_mesh<I, F>::from_vtk_unstructured_grid_file(const s
   vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
   reader->SetFileName(filename.c_str());
   reader->Update();
-  from_vtk_unstructured_grid(reader->GetOutput());
+  from_vtu(reader->GetOutput());
 #else
   fatal("FTK not compiled with VTK");
 #endif
@@ -93,7 +93,7 @@ void simplicial_unstructured_mesh<I, F>::to_vtk_unstructured_grid_file(const std
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(filename.c_str());
-  writer->SetInputData( to_vtk_unstructured_grid() );
+  writer->SetInputData( to_vtu() );
   writer->Write();
 #else
   fatal("FTK not compiled with VTK");
@@ -137,7 +137,7 @@ template <typename I, typename F>
 vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_mesh<I, F>::scalar_to_vtk_unstructured_grid_data(
     const std::string& varname, const ndarray<F>& scalar) const
 {
-  vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtk_unstructured_grid();
+  vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtu();
 
   vtkSmartPointer<vtkDataArray> array = vtkDoubleArray::New();
   array->SetName(varname.c_str());
@@ -156,7 +156,7 @@ template <typename I, typename F>
 vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_mesh<I, F>::vector_to_vtk_unstructured_grid_data(
     const std::string& varname, const ndarray<F>& vector) const
 {
-  vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtk_unstructured_grid();
+  vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtu();
 
   vtkSmartPointer<vtkDataArray> array = vtkDoubleArray::New();
   array->SetName(varname.c_str());

@@ -42,8 +42,8 @@ struct simplicial_unstructured_2d_mesh : public simplicial_unstructured_mesh<I, 
 
 public: // io
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtk_unstructured_grid() const;
-  void from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid);
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
+  void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid);
   
 #endif
   void write_smoothing_kernel(const std::string& filename);
@@ -394,7 +394,7 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i) const
 
 #if FTK_HAVE_VTK
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartPointer<vtkUnstructuredGrid> grid)
+void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid)
 {
   vtkIdType ncells = grid->GetNumberOfCells();
   std::vector<int> m_triangles;
@@ -424,7 +424,7 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtk_unstructured_grid(vtkSmartP
 }
 
 template <typename I, typename F>
-vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_vtk_unstructured_grid() const
+vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_vtu() const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
