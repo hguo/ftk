@@ -27,7 +27,7 @@ struct xgc_blob_threshold_tracker : public xgc_tracker {
   void push_field_data_snapshot(const ndarray<double> &scalar);
 
 public:
-  void write_sliced_vtu(const std::string& filename) const;
+  void write_sliced(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
 #endif
@@ -60,17 +60,34 @@ inline void xgc_blob_threshold_tracker::update_timestep()
   }
   // m3->element_for(0, current_timestep, func, xl, nthreads, enable_set_affinity);
   
-  fprintf(stderr, "%zu\n", uf.parents.size());
+  fprintf(stderr, "%zu\n", uf.size());
 }
 
 inline void xgc_blob_threshold_tracker::finalize()
 {
 }
 
+void xgc_blob_threshold_tracker::write_sliced(const std::string& filename) const
+{
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( to_vtu() );
+  writer->Write();
+}
+
 #if FTK_HAVE_VTK
 vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::to_vtu() const
 {
-  // TODO
+  ndarray<int> array({m3->n(0)}, -1);
+  for (int i = 0; i < m3->n(0); i ++) {
+    if (uf.exists(i)) 
+      array[i] = uf.find(i);
+  }
+
+  auto grid = m3->to_vtu_slices();
+  grid->GetPointData()->AddArray( array.to_vtk_data_array() );
+
+  return grid;
 }
 #endif
 

@@ -9,14 +9,18 @@ namespace ftk {
 template <typename T>
 struct duf {
   void unite(T, T);
-  T find(T);
+  T find(T) const;
+  
+  size_t size() const { return parents.size(); }
+  bool exists(T i) const { return parents.find(i) != parents.end(); }
 
   std::function<int(T)> pid = [](int){return 0;};
 
   void exchange();
 
-  std::map<T, T> parents; // pointer to the parent in the local process
-  std::map<T, size_t> sz;
+private:
+  mutable std::map<T, T> parents; // pointer to the parent in the local process
+  mutable std::map<T, size_t> sz;
 };
 
 //////
@@ -31,7 +35,7 @@ void duf<T>::unite(T i, T j)
 }
 
 template <typename T>
-T duf<T>::find(T i)
+T duf<T>::find(T i) const
 {
   if (parents.find(i) == parents.end()) { // if i does not exist, insert i to the graph and return i as the root
     parents[i] = i;

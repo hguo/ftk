@@ -419,6 +419,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
   stream->finish();
 
   tracker->finalize();
+  tracker->write_sliced(output_pattern);
 }
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)

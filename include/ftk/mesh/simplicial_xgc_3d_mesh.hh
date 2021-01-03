@@ -173,7 +173,7 @@ void simplicial_xgc_3d_mesh<I, F>::to_vtu_slices_file(const std::string& filenam
 {
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(filename.c_str());
-  writer->SetInputData( to_xgc_slices_3d_vtu(nphi, iphi) );
+  writer->SetInputData( to_vtu_slices() );
   writer->Write();
 }
 
@@ -197,24 +197,27 @@ to_vtu_slices() const
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
   pts->SetNumberOfPoints(m3n0);
- 
+
+  const auto &vertex_coords = m2->get_coords();
+  const auto &triangles = m2->get_triangles();
+
   for (int p = 0; p < np(); p ++) {
     const F phi = p * 2 * M_PI / np();
     const vtkIdType offset = p * m2n0;
     for (int i=0; i < m2n0; i ++) 
       pts->SetPoint(offset + i, 
-          this->vertex_coords[i*2] * cos(phi),
-          this->vertex_coords[i*2] * sin(phi), 
-          this->vertex_coords[i*2+1]);
+          vertex_coords[i*2] * cos(phi),
+          vertex_coords[i*2] * sin(phi), 
+          vertex_coords[i*2+1]);
   }
  
   for (int p = 0; p < np(); p ++) {
     const vtkIdType offset = p * m2n0;
     for (int i=0; i<m2->n(2); i ++) {
       vtkIdType ids[3] = {
-        offset + this->triangles[i*3], 
-        offset + this->triangles[i*3+1], 
-        offset + this->triangles[i*3+2]
+        offset + triangles[i*3], 
+        offset + triangles[i*3+1], 
+        offset + triangles[i*3+2]
       };
       grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
     }

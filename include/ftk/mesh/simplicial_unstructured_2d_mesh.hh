@@ -68,6 +68,7 @@ public: // mesh access
   bool find_triangle(const I v[3], I& i) const;
 
   const ndarray<F>& get_coords() const {return vertex_coords;}
+  const ndarray<I>& get_triangles() const {return triangles;}
 
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
 
