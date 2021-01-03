@@ -62,7 +62,15 @@ inline void xgc_blob_threshold_tracker::update_timestep()
       }
     }
   }
-  // m3->element_for(0, current_timestep, func, xl, nthreads, enable_set_affinity);
+
+  if (field_data_snapshots.size() >= 2) {
+    const auto &scalar1 = field_data_snapshots[1].scalar;
+    for (int i = 0; i < m3n0; i ++) {
+      if (scalar[i] < threshold || scalar1[i] < threshold) continue;
+      else
+        uf.unite(i + current_timestep * m3n0, i + (current_timestep+1) * m3n0);
+    }
+  }
   
   fprintf(stderr, "%zu\n", uf.size());
 }
