@@ -26,6 +26,12 @@ struct xgc_blob_threshold_tracker : public xgc_tracker {
 
   void push_field_data_snapshot(const ndarray<double> &scalar);
 
+public:
+  void write_sliced_vtu(const std::string& filename) const;
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
+#endif
+
 protected:
   double threshold = 0.0;
   duf<int> uf;
@@ -60,6 +66,13 @@ inline void xgc_blob_threshold_tracker::update_timestep()
 inline void xgc_blob_threshold_tracker::finalize()
 {
 }
+
+#if FTK_HAVE_VTK
+vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::to_vtu() const
+{
+  // TODO
+}
+#endif
 
 }
 
