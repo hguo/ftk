@@ -16,11 +16,10 @@ struct duf {
 
   std::function<int(T)> pid = [](int){return 0;};
 
-  void exchange();
+  // void exchange();
 
 private:
   mutable std::map<T, T> parents; // pointer to the parent in the local process
-  mutable std::map<T, size_t> sz;
 };
 
 //////
@@ -49,6 +48,7 @@ T duf<T>::find(T i) const
   }
 }
 
+#if 0
 template <typename T>
 void duf<T>::exchange()
 {
@@ -57,8 +57,8 @@ void duf<T>::exchange()
     if (kv.first == find(kv.second))
       local_roots.insert(kv.first);
   }
-  
 }
+#endif
 
 }
 

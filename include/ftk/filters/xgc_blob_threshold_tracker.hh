@@ -69,10 +69,14 @@ inline void xgc_blob_threshold_tracker::finalize()
 
 void xgc_blob_threshold_tracker::write_sliced(const std::string& filename) const
 {
+#if FTK_HAVE_VTK
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(filename.c_str());
   writer->SetInputData( to_vtu() );
   writer->Write();
+#else
+  fatal("FTK not compiled with VTK.");
+#endif
 }
 
 #if FTK_HAVE_VTK
