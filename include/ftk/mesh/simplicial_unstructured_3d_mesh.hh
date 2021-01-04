@@ -288,15 +288,27 @@ to_vtu() const
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
   pts->SetNumberOfPoints(n(0));
 
-  for (int i=0; i<n(0); i++)
-    pts->SetPoint(i, vertex_coords[i*3], vertex_coords[i*3+1], vertex_coords[i*3+2]); 
+  // fprintf(stderr, "converting to vtu, n0=%zu, n3=%zu\n", n(0), n(3));
 
-  for (int i=0; i<n(3); i ++) {
-    vtkIdType ids[4] = {tetrahedra[i*4], tetrahedra[i*4+1], tetrahedra[i*4+2], tetrahedra[i*4+3]};
+  for (I i=0; i < n(0); i++) {
+    // pts->SetPoint(i, vertex_coords[i*3], vertex_coords[i*3+1], vertex_coords[i*3+2]); 
+    F coords[3];
+    get_coords(i, coords);
+    pts->SetPoint(i, coords[0], coords[1], coords[2]);
+  }
+
+  for (int i=0; i < n(3); i ++) {
+    // vtkIdType ids[4] = {tetrahedra[i*4], tetrahedra[i*4+1], tetrahedra[i*4+2], tetrahedra[i*4+3]};
+    I tet[4];
+    get_simplex(3, i, tet);
+    vtkIdType ids[4] = {tet[0], tet[1], tet[2], tet[3]};
+    // fprintf(stderr, "adding tet %d: %d, %d, %d, %d\n", i, tet[0], tet[1], tet[2], tet[3]);
     grid->InsertNextCell(VTK_TETRA, 4, ids);
   }
 
   grid->SetPoints(pts);
+  grid->PrintSelf(std::cerr, vtkIndent(2));
+
   return grid;
 }
 #endif

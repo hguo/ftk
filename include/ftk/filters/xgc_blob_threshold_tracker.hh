@@ -27,9 +27,11 @@ struct xgc_blob_threshold_tracker : public xgc_tracker {
   void push_field_data_snapshot(const ndarray<double> &scalar);
 
 public:
+  ndarray<int> get_sliced(int t) const;
   void write_sliced(int t, const std::string& pattern) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> sliced_to_vtu(int t) const;
+  vtkSmartPointer<vtkUnstructuredGrid> sliced_to_vtu_slices(int t) const;
+  vtkSmartPointer<vtkUnstructuredGrid> sliced_to_vtu_solid(int t) const;
 #endif
 
 protected:
@@ -86,15 +88,15 @@ void xgc_blob_threshold_tracker::write_sliced(int t, const std::string& pattern)
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(filename.c_str());
-  writer->SetInputData( sliced_to_vtu(t) );
+  // writer->SetInputData( sliced_to_vtu_slices(t) );
+  writer->SetInputData( sliced_to_vtu_solid(t) );
   writer->Write();
 #else
   fatal("FTK not compiled with VTK.");
 #endif
 }
 
-#if FTK_HAVE_VTK
-vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu(int t) const
+ndarray<int> xgc_blob_threshold_tracker::get_sliced(int t) const
 {
   ndarray<int> array({m3->n(0)}, -1);
   for (int i = 0; i < m3->n(0); i ++) {
@@ -102,10 +104,21 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu(i
     if (uf.exists(e)) 
       array[i] = uf.find(e);
   }
+  return array;
+}
 
+#if FTK_HAVE_VTK
+vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_slices(int t) const
+{
   auto grid = m3->to_vtu_slices();
-  grid->GetPointData()->AddArray( array.to_vtk_data_array() );
+  grid->GetPointData()->AddArray( get_sliced(t).to_vtk_data_array() );
+  return grid;
+}
 
+vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_solid(int t) const
+{
+  auto grid = m3->to_vtu_solid();
+  grid->GetPointData()->AddArray( get_sliced(t).to_vtk_data_array() );
   return grid;
 }
 #endif

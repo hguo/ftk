@@ -37,6 +37,7 @@ public:
   
   void get_coords_rzp(I i, F coords[]) const { return m3->get_coords(i, coords); }
   void get_coords_xyz(I i, F coords[]) const;
+  void get_coords(I i, F coords[]) const { get_coords_xyz(i, coords); }
  
 public:
   std::set<I> sides(int d, I i) const;
@@ -166,6 +167,18 @@ std::set<I> simplicial_xgc_3d_mesh<I, F>::get_vertex_edge_vertex_nextnodes(I i) 
   set3.insert( (m2->nextnode(i0) + (t+1) * m2n0) % n(0) ); // assuming vphi=1
 
   return set3;
+}
+
+template <typename I, typename F>
+void simplicial_xgc_3d_mesh<I, F>::get_coords_xyz(I i, F coords[]) const
+{
+  F rzp[3];
+  get_coords_rzp(i, rzp);
+
+  const F phi = rzp[2] * 2 * M_PI / np();
+  coords[0] = rzp[0] * cos(phi);
+  coords[1] = rzp[0] * sin(phi);
+  coords[2] = rzp[1];
 }
 
 #if FTK_HAVE_VTK
