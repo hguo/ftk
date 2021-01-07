@@ -13,7 +13,7 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
 
   std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> get_m2() const {return m2;}
 
-  size_t n(int d) const;
+  virtual size_t n(int d) const;
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
 
   void set_nphi_iphi(int n, int i) {nphi = n; iphi = i;}
@@ -32,29 +32,30 @@ public:
   void element_for(int d, std::function<void(I)> f) {} // TODO
   
 public:
-  void get_simplex(int d, I i, I verts[]) const;
-  bool find_simplex(int d, const I v[], I& i) const;
+  virtual void get_simplex(int d, I i, I verts[]) const;
+  virtual bool find_simplex(int d, const I v[], I& i) const;
   
   void get_coords_rzp(I i, F coords[]) const { return m3->get_coords(i, coords); }
   void get_coords_xyz(I i, F coords[]) const;
   void get_coords(I i, F coords[]) const { get_coords_xyz(i, coords); }
  
 public:
-  std::set<I> sides(int d, I i) const;
-  std::set<I> side_of(int d, I i) const;
+  virtual std::set<I> sides(int d, I i) const;
+  virtual std::set<I> side_of(int d, I i) const;
 
   I transform(int d, I i) const;
 
 public: // vtk
   void to_vtu_slices_file(const std::string& filename) const;
   void scalar_to_vtu_slices_file(const std::string& filename, const std::string& varname, const ndarray<F>& data) const;
+  void to_vtu_solid_file(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu_slices() const;
   vtkSmartPointer<vtkUnstructuredGrid> scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& data) const;
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtu_solid() const { return this->to_vtu(); }
+  virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtu_solid() const { return this->to_vtu(); }
 #endif
 
-private: // backend meshes
+protected: // backend meshes
   int nphi, iphi, vphi;
   std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2;
   std::shared_ptr<simplicial_unstructured_extruded_2d_mesh<I, F>> m3;

@@ -30,7 +30,10 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
   ) const; 
 
 public: // io
-  void to_vtu_file(const std::string& filename);
+  static std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> from_file(const std::string& filename);
+  void to_file(const std::string &filename) const;
+
+  void to_vtu_file(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
   void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid);
@@ -233,7 +236,7 @@ void simplicial_unstructured_3d_mesh<I, F>::initialize()
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_3d_mesh<I, F>::to_vtu_file(const std::string& filename)
+void simplicial_unstructured_3d_mesh<I, F>::to_vtu_file(const std::string& filename) const
 {
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
@@ -312,6 +315,35 @@ to_vtu() const
   return grid;
 }
 #endif
+
+template <typename I, typename F>
+std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3d_mesh<I, F>::from_file(const std::string& filename)
+{
+  std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> m(new simplicial_unstructured_3d_mesh<>);
+  if (ends_with_lower(filename, "vtu")) {
+#if FTK_HAVE_VTK
+    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
+    reader->SetFileName( filename.c_str() );
+    reader->Update();
+    m->from_vtu( reader->GetOutput() );
+#else
+    fatal("FTK not compiled with VTK");
+#endif
+  } else {
+    diy::unserializeFromFile(filename, *m);
+  }
+  return m;
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_3d_mesh<I, F>::to_file(const std::string& filename) const
+{
+  if (ends_with_lower(filename, "vtu")) {
+    to_vtu_file(filename);
+  } else {
+    diy::serializeToFile(*this, filename);
+  }
+}
 
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::get_simplex(int d, I i, I v[]) const

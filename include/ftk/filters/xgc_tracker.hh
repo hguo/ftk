@@ -12,6 +12,7 @@
 #include <ftk/utils/gather.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
+#include <ftk/mesh/simplicial_xgc_3dff_mesh.hh>
 #include <iomanip>
 
 namespace ftk {
@@ -24,7 +25,8 @@ struct xgc_tracker : public tracker {
 
 public:
   std::shared_ptr<simplicial_unstructured_2d_mesh<>> get_m2() { return m2; }
-  
+  void initialize_ff_mesh(const std::string& filename) { mf3.reset(new simplicial_xgc_3dff_mesh<>(m2, m3->get_nphi(), m3->get_iphi(), m3->get_vphi()) ); mf3->initialize_ff_mesh(filename); }
+
 public:
   virtual void push_field_data_snapshot(const ndarray<double> &scalar);
   void push_field_data_snapshot(
@@ -43,8 +45,10 @@ protected:
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
   std::shared_ptr<simplicial_xgc_2d_mesh<>> m2; 
-  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3;
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3; 
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
+  
+  std::shared_ptr<simplicial_xgc_3dff_mesh<>> mf3; // field following 3d mesh
 };
 
 //////

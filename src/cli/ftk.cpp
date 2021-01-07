@@ -50,6 +50,7 @@ double threshold = 0.0;
 
 // xgc specific
 std::string xgc_mesh_filename, 
+  xgc_ff_mesh_filename,
   // xgc_augmented_mesh_filename,
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_write_back_filename;
@@ -300,6 +301,7 @@ void initialize_xgc(diy::mpi::communicator comm)
   if (comm.rank() == 0) {
     fprintf(stderr, "SUMMARY\n=============\n");
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
+    fprintf(stderr, "xgc_ff_mesh=%s\n", xgc_ff_mesh_filename.c_str());
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
     fprintf(stderr, "threshold=%f\n", threshold);
@@ -318,6 +320,9 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   initialize_xgc(comm);
   
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
+
+  if (file_exists(xgc_ff_mesh_filename))
+    tracker->initialize_ff_mesh( xgc_ff_mesh_filename );
 
 #if 0
   if (file_exists(xgc_augmented_mesh_filename)) { // load augmented mesh
@@ -579,6 +584,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("archived-intersections", "Archived discrete intersections", cxxopts::value<std::string>(archived_intersections_filename))
     ("archived-traced", "Archived traced results", cxxopts::value<std::string>(archived_traced_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
+    ("xgc-ff-mesh", "XGC field following mesh file", cxxopts::value<std::string>(xgc_ff_mesh_filename))
     ("xgc-vphi", "XGC number of virtual poloidal planes", cxxopts::value<int>(xgc_vphi)->default_value("1"))
     ("xgc-smoothing-kernel-file", "XGC: smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC: smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
