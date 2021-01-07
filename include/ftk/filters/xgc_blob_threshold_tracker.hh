@@ -32,6 +32,7 @@ public:
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> sliced_to_vtu_slices(int t) const;
   vtkSmartPointer<vtkUnstructuredGrid> sliced_to_vtu_solid(int t) const;
+  // vtkSmartPointer<vtkUnstructuredGrid> sliced_to_vtu_partial_solid(int t) const;
 #endif
 
 protected:
@@ -121,6 +122,10 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
   grid->GetPointData()->AddArray( get_sliced(t).to_vtk_data_array() );
   return grid;
 }
+
+// vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_partial_solid(int t) const
+// {
+// }
 #endif
 
 }

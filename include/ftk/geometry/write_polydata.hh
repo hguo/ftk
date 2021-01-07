@@ -6,6 +6,8 @@
 
 #if FTK_HAVE_VTK
 #include <vtkSmartPointer.h>
+#include <vtkPoints.h>
+#include <vtkPolyData.h>
 #include <vtkPolyDataWriter.h>
 #include <vtkXMLPolyDataWriter.h>
 

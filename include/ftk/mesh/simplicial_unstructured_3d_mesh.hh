@@ -307,7 +307,7 @@ to_vtu() const
   }
 
   grid->SetPoints(pts);
-  grid->PrintSelf(std::cerr, vtkIndent(2));
+  // grid->PrintSelf(std::cerr, vtkIndent(2));
 
   return grid;
 }

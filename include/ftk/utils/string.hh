@@ -4,6 +4,7 @@
 #include <ftk/ftk_config.hh>
 #include <string>
 #include <algorithm>
+#include <regex>
 #include <cctype>
 
 namespace ftk {
