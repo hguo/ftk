@@ -33,6 +33,7 @@ protected:
 template <typename I, typename F>
 void simplicial_xgc_3dff_mesh<I, F>::initialize_ff_mesh( const std::string& filename )
 {
+  fprintf(stderr, "initialize ff mesh from file %s\n", filename.c_str());
   if (file_exists(filename))
     read_ff_mesh(filename);
   else {
@@ -51,10 +52,18 @@ size_t simplicial_xgc_3dff_mesh<I, F>::n(int d) const {
 template <typename I, typename F>
 void simplicial_xgc_3dff_mesh<I, F>::get_simplex(int d, I i, I verts[]) const {
   if (d == 3) {
-    um->get_simplex(3, this->transform(d, i), verts);
-    for (int i = 0; i < d+1; i ++)
-      verts[i] = this->transform(0, verts[i]);
+    I j = i % um->n(3);
+    I t = i / um->n(3);
+    um->get_simplex(3, j, verts);
+
+    for (int i = 0; i < d+1; i ++) 
+      verts[i] = (t * this->m2->n(0) + verts[i]) % n(0);
+
+    // um->get_simplex(3, this->transform(d, i), verts);
+    // for (int i = 0; i < d+1; i ++)
+    //   verts[i] = this->transform(0, verts[i]);
     std::sort(verts, verts+d+1);
+    // fprintf(stderr, "j=%d, t=%d, verts=%d, %d, %d, %d\n", j, t, verts[0], verts[1], verts[2], verts[3]);
   } 
   // TODO: 1- and 2-simplicies
 }

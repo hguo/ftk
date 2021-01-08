@@ -118,8 +118,12 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
 
 vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_solid(int t) const
 {
-  auto grid = m3->to_vtu_solid();
+  vtkSmartPointer<vtkUnstructuredGrid> grid;
+  if (mf3) grid = mf3->to_vtu_solid();
+  else grid = m3->to_vtu_solid();
+
   grid->GetPointData()->AddArray( get_sliced(t).to_vtk_data_array() );
+  // grid->PrintSelf(std::cerr, vtkIndent(2));
   return grid;
 }
 

@@ -321,9 +321,6 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
 
-  if (file_exists(xgc_ff_mesh_filename))
-    tracker->initialize_ff_mesh( xgc_ff_mesh_filename );
-
 #if 0
   if (file_exists(xgc_augmented_mesh_filename)) { // load augmented mesh
     tracker = ftk::xgc_blob_filament_tracker::from_augmented_mesh_file(comm, xgc_augmented_mesh_filename);
@@ -405,10 +402,12 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
   initialize_xgc(comm);
 
   std::shared_ptr<xgc_blob_threshold_tracker> tracker;
-    
+  
   auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
   std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
   tracker.reset(new xgc_blob_threshold_tracker(comm, mx));
+  if (file_exists(xgc_ff_mesh_filename))
+    tracker->initialize_ff_mesh( xgc_ff_mesh_filename );
   tracker->set_threshold( threshold );
   tracker->initialize();
 
