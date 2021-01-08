@@ -328,7 +328,7 @@ std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3
     reader->Update();
     m->from_vtu( reader->GetOutput() );
 #else
-    this->fatal("FTK not compiled with VTK");
+    object::fatal("FTK not compiled with VTK");
 #endif
   } else {
     diy::unserializeFromFile(filename, *m);
