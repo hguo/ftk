@@ -4,6 +4,7 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
+#include <ftk/utils/string.hh>
 
 namespace ftk {
 
@@ -327,7 +328,7 @@ std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3
     reader->Update();
     m->from_vtu( reader->GetOutput() );
 #else
-    fatal("FTK not compiled with VTK");
+    this->fatal("FTK not compiled with VTK");
 #endif
   } else {
     diy::unserializeFromFile(filename, *m);
