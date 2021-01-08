@@ -7,6 +7,10 @@
 #include <ftk/tracking_graph/tracking_graph.hh>
 #include <ftk/basic/duf.hh>
 
+#if FTK_HAVE_VTK
+#include <vtkThreshold.h>
+#endif
+
 namespace ftk {
 
 struct xgc_blob_threshold_tracker : public xgc_tracker {
@@ -122,9 +126,25 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
   if (mf3) grid = mf3->to_vtu_solid();
   else grid = m3->to_vtu_solid();
 
-  grid->GetPointData()->AddArray( get_sliced(t).to_vtk_data_array() );
+  auto ids = get_sliced(t).to_vtk_data_array();
+  ids->SetName("id");
+  grid->GetPointData()->AddArray( ids );
+
+  auto scalar = field_data_snapshots[0].scalar.to_vtk_data_array();
+  scalar->SetName("scalar");
+  grid->GetPointData()->AddArray( scalar );
+
   // grid->PrintSelf(std::cerr, vtkIndent(2));
+  
   return grid;
+ 
+#if 0
+  vtkSmartPointer<vtkThreshold> th = vtkThreshold::New();
+  th->ThresholdByUpper(0);
+  th->SetInputData(grid);
+  th->Update();
+  return th->GetOutput();
+#endif
 }
 
 // vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_partial_solid(int t) const
