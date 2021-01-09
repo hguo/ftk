@@ -28,6 +28,8 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
 
   std::set<I> get_vertex_edge_vertex_nextnodes(I i) const;
 
+  ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
+
 public: 
   void element_for(int d, std::function<void(I)> f) {} // TODO
   
@@ -198,7 +200,7 @@ scalar_to_vtu_slices_file(const std::string& filename, const std::string& varnam
 {
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(filename.c_str());
-  writer->SetInputData( scalar_to_xgc_slices_3d_vtu(varname, scalar) );
+  writer->SetInputData( scalar_to_vtu_slices(varname, scalar) );
   writer->Write();
 }
 
@@ -247,7 +249,9 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_xgc_3d_mesh<I, F>::
 scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& scalar) const 
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtu_slices();
-  vtkSmartPointer<vtkDataArray> array = scalar.to_vtk_data_array();
+  vtkSmartPointer<vtkDataArray> array = vphi == 1 ? 
+    scalar.to_vtk_data_array() : 
+    interpolate(scalar).to_vtk_data_array();
   
   array->SetName(varname.c_str());
   grid->GetPointData()->AddArray(array);
@@ -257,6 +261,35 @@ scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& scalar) const
   return grid;
 }
 #endif // HAVE_FTK
+
+template <typename I, typename F>
+ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) const
+{
+  const int m2n0 = m2->n(0), 
+            nvphi = nphi * vphi;
+  ndarray<F> f;
+  f.reshape(m2n0, nvphi);
+
+  for (int i = 0; i < nvphi; i ++) {
+    if (i % vphi == 0) { // non-virtual plane, just copy the values
+      const int p = i / vphi;
+      for (int j = 0; j < m2n0; j ++)
+        f[m2n0 * i + j] = scalar[m2n0 * p + j];
+    } else {
+      const int p0 = i / vphi, p1 = (p0 + 1) % nphi;
+      const F beta = F(i) / vphi - p0, alpha = F(1) - beta;
+      // fprintf(stderr, "p0=%d, p1=%d, alpha=%f, beta=%f\n", p0, p1, alpha, beta);
+      for (int j = 0; j < m2n0; j ++) {
+        const int next = m2->nextnode(j);
+        F f0 = scalar[m2n0 * p0 + j], 
+          f1 = scalar[m2n0 * p1 + next];
+
+        f[m2n0 * i + j] = alpha * f0 + beta * f1;
+      }
+    }
+  }
+  return f;
+}
 
 }
 

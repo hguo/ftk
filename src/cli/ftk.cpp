@@ -359,6 +359,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 #if FTK_HAVE_VTK
         if (xgc_write_back_filename.length()) {
           auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
+          // mx->scalar_to_vtu_slices_file(filename, "scalar", scalar);
           // tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi); // WIP
         }
 #endif
@@ -415,11 +416,20 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
     auto scalar = data.get_transpose();
     tracker->push_field_data_snapshot(scalar);
 
+#if FTK_HAVE_VTK
+    if (xgc_write_back_filename.length()) {
+      auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
+      mx->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+    }
+#endif
+#if 0 // only testing write-backs for now
     if (k != 0) tracker->advance_timestep();
     if (k == stream->n_timesteps() - 1) tracker->update_timestep();
 
     if (k > 0)
       tracker->write_sliced(k-1, output_pattern);
+#endif      
+    // mx->scalar_to_vtu_slices_file(filename, "scalar", scalar);
   });
 
   stream->start();
