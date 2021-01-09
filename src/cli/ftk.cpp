@@ -51,6 +51,7 @@ double threshold = 0.0;
 // xgc specific
 std::string xgc_mesh_filename, 
   xgc_ff_mesh_filename,
+  xgc_bfield_filename,
   // xgc_augmented_mesh_filename,
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_write_back_filename;
@@ -301,6 +302,7 @@ void initialize_xgc(diy::mpi::communicator comm)
   if (comm.rank() == 0) {
     fprintf(stderr, "SUMMARY\n=============\n");
     fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
+    fprintf(stderr, "xgc_bfield=%s\n", xgc_bfield_filename.c_str());
     fprintf(stderr, "xgc_ff_mesh=%s\n", xgc_ff_mesh_filename.c_str());
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
@@ -405,6 +407,11 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
   std::shared_ptr<xgc_blob_threshold_tracker> tracker;
   
   auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  if (xgc_bfield_filename.length() > 0) {
+    m2->read_bfield_h5(xgc_bfield_filename);
+    // m2->array_to_vtu("bfield.vtu", "B", m2->get_bfield());
+  }
+
   std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
   tracker.reset(new xgc_blob_threshold_tracker(comm, mx));
   if (file_exists(xgc_ff_mesh_filename))
@@ -593,6 +600,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("archived-intersections", "Archived discrete intersections", cxxopts::value<std::string>(archived_intersections_filename))
     ("archived-traced", "Archived traced results", cxxopts::value<std::string>(archived_traced_filename))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
+    ("xgc-bfield", "XGC bfield file", cxxopts::value<std::string>(xgc_bfield_filename))
     ("xgc-ff-mesh", "XGC field following mesh file", cxxopts::value<std::string>(xgc_ff_mesh_filename))
     ("xgc-vphi", "XGC number of virtual poloidal planes", cxxopts::value<int>(xgc_vphi)->default_value("1"))
     ("xgc-smoothing-kernel-file", "XGC: smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))

@@ -44,8 +44,12 @@ public: // io
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
   void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid);
-  
 #endif
+  void to_vtu(const std::string& filename) const;
+
+  template <typename T>
+  void array_to_vtu(const std::string& filename, const std::string& varname, const ndarray<T>&) const;
+
   void write_smoothing_kernel(const std::string& filename);
   bool read_smoothing_kernel(const std::string& filename);
 
@@ -71,6 +75,10 @@ public: // mesh access
   const ndarray<I>& get_triangles() const {return triangles;}
 
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
+
+public: // point locator and misc
+  I nearest(F x[]) const; // locate which point is nearest to x
+  I locate(F x[]) const; // locate which triangle contains x
 
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
@@ -441,8 +449,27 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_v
   grid->SetPoints(pts);
   return grid;
 }
-
 #endif
+
+template <typename I, typename F>
+template <typename T>
+void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(const std::string& filename, const std::string& varname, const ndarray<T>& array) const
+{
+#if FTK_HAVE_VTK
+  auto grid = to_vtu();
+  auto data = array.to_vtk_data_array(varname);
+
+  grid->GetPointData()->AddArray(data);
+  grid->GetPointData()->SetActiveScalars(varname.c_str());
+
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName( filename.c_str() );
+  writer->SetInputData( grid );
+  writer->Write();
+#else
+  fatal("FTK not compiled with VTK.");
+#endif
+}
 
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::write_smoothing_kernel(const std::string& f)
@@ -484,6 +511,23 @@ void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
   coords[0] = vertex_coords(0, i);
   coords[1] = vertex_coords(1, i);
+}
+
+template <typename I, typename F>
+I simplicial_unstructured_2d_mesh<I, F>::nearest(F x[]) const
+{
+  // brute-force search, for now
+  F mindist = std::numeric_limits<F>::max();
+  I imindist;
+  for (int i = 0; i < n(0); i ++) {
+    F y[2] = {vertex_coords[2*i], vertex_coords[2*i+1]};
+    F dist = vector_dist_2norm_2(x, y);
+    if (mindist > dist) { 
+      mindist = dist;
+      imindist = i;
+    }
+  }
+  return imindist;
 }
 
 #if 0

@@ -243,8 +243,9 @@ public: // i/o for vtk image data
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
-  vtkSmartPointer<vtkImageData> to_vtk_image_data(bool multicomponent=false) const;
-  vtkSmartPointer<vtkDataArray> to_vtk_data_array(bool multicomponent=false) const;
+  vtkSmartPointer<vtkImageData> to_vtk_image_data(bool multicomponent=false) const; // to be deprecated
+  vtkSmartPointer<vtkDataArray> to_vtk_data_array(bool multicomponent) const; // to be deprecated
+  vtkSmartPointer<vtkDataArray> to_vtk_data_array(const std::string varname) const; 
 #endif
 
 public: // i/o for hdf5
@@ -537,8 +538,29 @@ inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, bool
   writer->Write();
 }
 
-template<typename T>
-inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(bool multicomponent) const
+template <typename T>
+inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::string varname) const
+{
+  vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
+  d->SetName( varname.c_str() );
+
+  if (ncd == 1) {
+    d->SetNumberOfComponents(shape(0));
+    d->SetNumberOfTuples( std::accumulate(dims.begin()+1, dims.end(), 1, std::multiplies<size_t>()) );
+  }
+  else if (ncd == 0) {
+    d->SetNumberOfComponents(1);
+    d->SetNumberOfTuples(nelem());
+  } else {
+    fatal("Only support one dimension for components");
+  }
+  memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * p.size()); // nelem());
+  return d;
+}
+
+
+template<typename T> // to be deprecated
+inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(bool multicomponent) const 
 {
   vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
   if (multicomponent) d->SetName("vector");

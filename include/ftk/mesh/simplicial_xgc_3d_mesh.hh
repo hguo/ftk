@@ -250,10 +250,9 @@ scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& scalar) const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtu_slices();
   vtkSmartPointer<vtkDataArray> array = vphi == 1 ? 
-    scalar.to_vtk_data_array() : 
-    interpolate(scalar).to_vtk_data_array();
+    scalar.to_vtk_data_array(varname) : 
+    interpolate(scalar).to_vtk_data_array(varname);
   
-  array->SetName(varname.c_str());
   grid->GetPointData()->AddArray(array);
   grid->GetPointData()->SetActiveScalars(varname.c_str());
 
@@ -278,13 +277,21 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
     } else {
       const int p0 = i / vphi, p1 = (p0 + 1) % nphi;
       const F beta = F(i) / vphi - p0, alpha = F(1) - beta;
-      // fprintf(stderr, "p0=%d, p1=%d, alpha=%f, beta=%f\n", p0, p1, alpha, beta);
+      fprintf(stderr, "p0=%d, p1=%d, alpha=%f, beta=%f\n", p0, p1, alpha, beta);
       for (int j = 0; j < m2n0; j ++) {
         const int next = m2->nextnode(j);
+        F xcur[2], xnext[2], x[2];
+        m2->get_coords(j, xcur);
+        m2->get_coords(next, xnext);
+
+        x[0] = alpha * xcur[0] + beta * xnext[0];
+        x[1] = alpha * xcur[1] + beta * xnext[1];
+        const int k = m2->nearest(x);
+
         F f0 = scalar[m2n0 * p0 + j], 
           f1 = scalar[m2n0 * p1 + next];
 
-        f[m2n0 * i + j] = alpha * f0 + beta * f1;
+        f[m2n0 * i + k] = alpha * f0 + beta * f1;
       }
     }
   }

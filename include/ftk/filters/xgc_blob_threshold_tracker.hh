@@ -116,7 +116,7 @@ ndarray<int> xgc_blob_threshold_tracker::get_sliced(int t) const
 vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_slices(int t) const
 {
   auto grid = m3->to_vtu_slices();
-  grid->GetPointData()->AddArray( get_sliced(t).to_vtk_data_array() );
+  grid->GetPointData()->AddArray( get_sliced(t).to_vtk_data_array("id") );
   return grid;
 }
 
@@ -126,12 +126,10 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
   if (mf3) grid = mf3->to_vtu_solid();
   else grid = m3->to_vtu_solid();
 
-  auto ids = get_sliced(t).to_vtk_data_array();
-  ids->SetName("id");
+  auto ids = get_sliced(t).to_vtk_data_array("id");
   grid->GetPointData()->AddArray( ids );
 
-  auto scalar = field_data_snapshots[0].scalar.to_vtk_data_array();
-  scalar->SetName("scalar");
+  auto scalar = field_data_snapshots[0].scalar.to_vtk_data_array("scalar");
   grid->GetPointData()->AddArray( scalar );
 
   // grid->PrintSelf(std::cerr, vtkIndent(2));
