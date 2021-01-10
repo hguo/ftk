@@ -20,28 +20,22 @@ protected:
       for (int j = 0; j < 4; j ++) 
         if (children[j])
           delete children[j];
-      for (auto p : elements)
-        delete p;
     }
 
     quad_node *parent = NULL;
     quad_node *children[4] = {NULL};
     AABB<F> aabb;
-    std::vector<AABB<F>*> elements;
+    std::vector<AABB<F>> elements; // valid only for leaf nodes
 
-    bool is_leaf() const {
-      return elements.size() > 0;
-      // return children[0] == NULL && children[1] == NULL 
-      //   && children[2] == NULL && children[3] == NULL;
-    }
+    bool is_leaf() const { return elements.size() > 0; }
 
     void update_bounds() {
       for (int i=0; i<elements.size(); i++) {
-        AABB<F> *aabb1 = elements[i];
-        aabb.A[0] = std::min(aabb.A[0], aabb1->A[0]);
-        aabb.A[1] = std::min(aabb.A[1], aabb1->A[1]);
-        aabb.B[0] = std::max(aabb.B[0], aabb1->B[0]);
-        aabb.B[1] = std::max(aabb.B[1], aabb1->B[1]);
+        auto &aabb1 = elements[i];
+        aabb.A[0] = std::min(aabb.A[0], aabb1.A[0]);
+        aabb.A[1] = std::min(aabb.A[1], aabb1.A[1]);
+        aabb.B[0] = std::max(aabb.B[0], aabb1.B[0]);
+        aabb.B[1] = std::max(aabb.B[1], aabb1.B[1]);
       }
       aabb.update_centroid();
     }
@@ -50,7 +44,7 @@ protected:
       fprintf(stderr, "parent=%p, A={%f, %f}, B={%f, %f}, centroid={%f, %f}, children={%p, %p, %p, %p}, element=%d\n", 
           parent, aabb.A[0], aabb.A[1], aabb.B[0], aabb.B[1], aabb.C[0], aabb.C[1], 
           children[0], children[1], children[2], children[3], 
-          elements.empty() ? -1 : elements[0]->id);
+          elements.empty() ? -1 : elements[0].id);
     }
   } *root = NULL;
 
@@ -76,7 +70,7 @@ I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], const quad_no
   
   if (q->aabb.contains(x)) {
     if (q->is_leaf()) {
-      const int id = q->elements[0]->id;
+      const int id = q->elements[0].id;
       const int i0 = conn[id*3], i1 = conn[id*3+1], i2 = conn[id*3+2];
       int succ = inside_triangle(x, &coords[i0*2], &coords[i1*2], &coords[i2*2], mu);
       if (succ) {
@@ -96,7 +90,7 @@ I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], const quad_no
 }
 
 template <typename I, typename F>
-void point_locator_2d_quad<I, F>::subdividequad_node(quad_node *q) 
+void point_locator_2d_quad<I, F>::subdivide_quad_node(quad_node *q) 
 {
   if (q->elements.size() <= 1) {
     q->update_bounds();
@@ -139,7 +133,7 @@ void point_locator_2d_quad<I, F>::subdividequad_node(quad_node *q)
 
   for (int i=0; i<q->elements.size(); i++) {
     for (int j=0; j<4; j++) {
-      if (q->children[j]->aabb.contains(q->elements[i]->C)) {
+      if (q->children[j]->aabb.contains(q->elements[i].C)) {
         q->children[j]->elements.push_back(q->elements[i]);
         break;
       }
@@ -205,10 +199,10 @@ void point_locator_2d_quad<I, F>::initialize()
     triangles[i].B[1] = max3(y0, y1, y2);
     triangles[i].id = i;
 
-    root->elements.push_back(&triangles[i]);
+    root->elements.push_back(triangles[i]);
   }
 
-  subdividequad_node(root);
+  subdivide_quad_node(root);
   // traversequad_node(root);
   
 #if 0
