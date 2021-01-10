@@ -7,12 +7,13 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct point_locator_2d_quad : public point_locator_2d<I, F> {
-  point_locator_2d_quad(std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m) 
+  point_locator_2d_quad(const simplicial_unstructured_2d_mesh<I, F> &m) 
     : point_locator_2d<I, F>(m) { initialize(); }
   virtual ~point_locator_2d_quad();
 
   void initialize();
-  I locate(const F x[], F mu[]) const { return locate_point_recursive(x, root, mu); }
+  // I locate(const F x[], F mu[]) const { return locate_point_recursive(x, root, mu); }
+  I locate(const F x[], F mu[]) const { return locate_point_nonrecursive(x, mu); }
 
 protected:
   struct quad_node {
@@ -32,6 +33,7 @@ protected:
 
   static bool inside_triangle(const F p[], const F p1[], const F p2[], const F p3[], F mu[]);
   I locate_point_recursive(const F x[], const quad_node *q, F mu[]) const;
+  I locate_point_nonrecursive(const F x[], F mu[]) const;
 };
 
 /////  
@@ -42,11 +44,54 @@ point_locator_2d_quad<I, F>::~point_locator_2d_quad()
 }
 
 template <typename I, typename F>
+I point_locator_2d_quad<I, F>::locate_point_nonrecursive(const F x[], F mu[]) const
+{
+  // typedef std::chrono::high_resolution_clock clock;
+  // auto t0 = clock::now();
+ 
+  const ndarray<F> &coords = this->m2.get_coords();
+  const ndarray<I> &conn = this->m2.get_triangles();
+  
+  // auto t1 = clock::now();
+
+  std::stack<quad_node*> S;
+  S.push(root);
+
+  while (!S.empty()) {
+    quad_node *q = S.top();
+    S.pop();
+
+    // fprintf(stderr, "checking %p\n", q);
+    
+    if (q->is_leaf()) {
+      const int id = q->elements[0].id;
+      const int i0 = conn[id*3], i1 = conn[id*3+1], i2 = conn[id*3+2];
+      int succ = inside_triangle(x, &coords[i0*2], &coords[i1*2], &coords[i2*2], mu);
+      if (succ) {
+        // auto t2 = clock::now();
+        // float tt0 = std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0).count();
+        // float tt1 = std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count();
+        // fprintf(stderr, "tt0=%f, tt1=%f\n", tt0, tt1);
+        return id;
+      }
+    } else if (q->aabb.contains(x)) {
+      for (int j=0; j<4; j++)
+        if (q->children[j] != NULL)
+          S.push(q->children[j]);
+    }
+  }
+  
+  return -1;
+}
+
+template <typename I, typename F>
 I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], const quad_node *q, F mu[]) const
 {
+  // fprintf(stderr, "locating %f, %f in node %p\n", x[0], x[1], q);
+
   auto m2 = this->m2;
-  const auto &coords = m2->get_coords();
-  const auto &conn = m2->get_triangles();
+  const auto &coords = m2.get_coords();
+  const auto &conn = m2.get_triangles();
   
   if (q->aabb.contains(x)) {
     if (q->is_leaf()) {
@@ -180,13 +225,13 @@ template <typename I, typename F>
 void point_locator_2d_quad<I, F>::initialize()
 {
   auto m2 = this->m2;
-  const auto &coords = m2->get_coords();
-  const auto &conn = m2->get_triangles();
+  const auto &coords = m2.get_coords();
+  const auto &conn = m2.get_triangles();
   root = new quad_node;
 
   // global bounds
   AABB<F> &aabb = root->aabb;
-  for (int i = 0; i < m2->n(0); i ++) {
+  for (int i = 0; i < m2.n(0); i ++) {
     aabb.A[0] = std::min(aabb.A[0], coords[2*i]);
     aabb.A[1] = std::min(aabb.A[1], coords[2*i+1]);
     aabb.B[0] = std::max(aabb.B[0], coords[2*i]);
@@ -195,8 +240,8 @@ void point_locator_2d_quad<I, F>::initialize()
   aabb.update_centroid();
   // aabb.print();
 
-  std::vector<AABB<F>> triangles(m2->n(2));
-  for (int i=0; i<m2->n(2); i++) {
+  std::vector<AABB<F>> triangles(m2.n(2));
+  for (int i=0; i<m2.n(2); i++) {
     const int i0 = conn[i*3], i1 = conn[i*3+1], i2 = conn[i*3+2];
     double x0 = coords[i0*2], x1 = coords[i1*2], x2 = coords[i2*2], 
            y0 = coords[i0*2+1], y1 = coords[i1*2+1], y2 = coords[i2*2+1];

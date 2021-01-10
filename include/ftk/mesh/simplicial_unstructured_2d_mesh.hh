@@ -10,7 +10,9 @@ namespace ftk {
 template <typename I, typename F> struct point_locator_2d;
 
 template <typename I=int, typename F=double>
-struct simplicial_unstructured_2d_mesh : public simplicial_unstructured_mesh<I, F> { // 2D triangular mesh
+struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
+  public simplicial_unstructured_mesh<I, F>
+{ 
   friend class point_locator_2d<I, F>;
   friend class diy::Serialization<simplicial_unstructured_2d_mesh<I, F>>;
 
@@ -83,6 +85,9 @@ public: // point locator and misc
   I nearest(F x[]) const; // locate which point is nearest to x
   I locate(F x[]) const; // locate which triangle contains x
 
+protected:
+  mutable std::shared_ptr<point_locator_2d<I, F>> locator;
+
 private: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
   std::vector<std::set<I>> vertex_side_of;
@@ -94,8 +99,6 @@ private: // mesh connectivities
 
   ndarray<I> triangles; // 3 * n_triangles
   ndarray<I> triangle_sides; // 3 * n_triangles
-
-  std::shared_ptr<point_locator_2d<I, F>> locator;
 
 public: // additional mesh info
   std::map<std::tuple<I, I>, int> edge_id_map;

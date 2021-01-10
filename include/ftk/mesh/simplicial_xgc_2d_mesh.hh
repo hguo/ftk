@@ -4,6 +4,8 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/point_locator_2d_quad.hh>
+#include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/print.hh>
 
 namespace ftk {
 
@@ -20,6 +22,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
 
   I nextnode(I i) const { return nextnodes[i]; }
 
+  const ndarray<I>& get_nextnodes() const { return nextnodes; }
   const ndarray<F>& get_bfield() const { return bfield; }
   const ndarray<F>& get_psifield() const { return psifield; }
 
@@ -66,16 +69,23 @@ void simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end) const
     F B[3];
     bool succ = eval_b(rzp, B);
 
-    const F r = rzp[0], z = rzp[1], phi = rzp[2];
-    rzp[0] += delta * r * B[0] / B[2];
-    rzp[1] += delta * r * B[1] / B[2];
+    if (succ) {
+      const F r = rzp[0], z = rzp[1], phi = rzp[2];
+      rzp[0] += delta * r * B[0] / B[2];
+      rzp[1] += delta * r * B[1] / B[2];
+    }
+    rzp[2] += delta;
+    // fprintf(stderr, "integrating %f, %f, %f\n", rzp[0], rzp[1], rzp[2]);
   }
 }
 
 template <typename I, typename F>
 bool simplicial_xgc_2d_mesh<I, F>::eval_b(const F x[], F b[]) const
 {
-  if (!this->locator) this->locator.reset( new point_locator_2d_quad<I, F>(this) );
+  if (!(this->locator)) {
+    fprintf(stderr, "creating point locator...\n");
+    this->locator.reset( new point_locator_2d_quad<I, F>(*this) );
+  }
 
   F mu[3];
   I tid = this->locator->locate(x, mu);
@@ -85,11 +95,15 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_b(const F x[], F b[]) const
   } else {
     F B[3][3];
     I tri[3];
-    get_simplex(2, tid, tri);
+    this->get_simplex(2, tid, tri);
     for (int i = 0; i < 3; i ++) 
       for (int j = 0; j < 3; j ++) 
-        B[j][i] = bfield(j, tri[i]);
+        B[i][j] = bfield(j, tri[i]);
     lerp_s2v3(B, mu, b);
+    
+    // print3x3("B", B);
+    // fprintf(stderr, "mu=%f, %f, %f, b=%f, %f, %f\n", 
+    //     mu[0], mu[1], mu[2], b[0], b[1], b[2]);
     return true;
   }
 }

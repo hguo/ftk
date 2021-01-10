@@ -9,7 +9,7 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct point_locator_2d {
-  point_locator_2d(std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m) : m2(m) {}
+  point_locator_2d(const simplicial_unstructured_2d_mesh<I, F>& m) : m2(m) {}
 
   virtual void initialize() = 0;
   virtual I locate(const F x[], F mu[]) const = 0;
@@ -17,7 +17,7 @@ struct point_locator_2d {
   I locate(const F x[]) const { F mu[3]; return locate(x, mu);  }
 
 protected:
-  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2;
+  const simplicial_unstructured_2d_mesh<I, F>& m2;
 };
 
 }
