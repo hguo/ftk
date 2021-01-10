@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
+#include <ftk/mesh/point_locator_2d_quad.hh>
 
 namespace ftk {
 

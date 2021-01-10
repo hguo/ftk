@@ -412,6 +412,8 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
     // m2->array_to_vtu("bfield.vtu", "B", m2->get_bfield());
   }
 
+  std::shared_ptr<ftk::point_locator_2d<>> locator(new ftk::point_locator_2d_quad<>(m2));
+
   std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
   tracker.reset(new xgc_blob_threshold_tracker(comm, mx));
   if (file_exists(xgc_ff_mesh_filename))
