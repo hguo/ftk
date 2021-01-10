@@ -16,39 +16,19 @@ struct point_locator_2d_quad : public point_locator_2d<I, F> {
 
 protected:
   struct quad_node {
-    ~quad_node() { 
-      for (int j = 0; j < 4; j ++) 
-        if (children[j])
-          delete children[j];
-    }
-
     quad_node *parent = NULL;
     quad_node *children[4] = {NULL};
     AABB<F> aabb;
     std::vector<AABB<F>> elements; // valid only for leaf nodes
 
+    ~quad_node();
     bool is_leaf() const { return elements.size() > 0; }
-
-    void update_bounds() {
-      for (int i=0; i<elements.size(); i++) {
-        auto &aabb1 = elements[i];
-        aabb.A[0] = std::min(aabb.A[0], aabb1.A[0]);
-        aabb.A[1] = std::min(aabb.A[1], aabb1.A[1]);
-        aabb.B[0] = std::max(aabb.B[0], aabb1.B[0]);
-        aabb.B[1] = std::max(aabb.B[1], aabb1.B[1]);
-      }
-      aabb.update_centroid();
-    }
-
-    void print() const {
-      fprintf(stderr, "parent=%p, A={%f, %f}, B={%f, %f}, centroid={%f, %f}, children={%p, %p, %p, %p}, element=%d\n", 
-          parent, aabb.A[0], aabb.A[1], aabb.B[0], aabb.B[1], aabb.C[0], aabb.C[1], 
-          children[0], children[1], children[2], children[3], 
-          elements.empty() ? -1 : elements[0].id);
-    }
+    void update_bounds();
+    void subdivide();
+    void print() const;
   } *root = NULL;
 
-  void subdividequad_node(quad_node*);
+  // void subdivide_quad_node(quad_node*);
 
   static bool inside_triangle(const F p[], const F p1[], const F p2[], const F p3[], F mu[]);
   I locate_point_recursive(const F x[], const quad_node *q, F mu[]) const;
@@ -90,66 +70,96 @@ I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], const quad_no
 }
 
 template <typename I, typename F>
-void point_locator_2d_quad<I, F>::subdivide_quad_node(quad_node *q) 
+point_locator_2d_quad<I, F>::quad_node::~quad_node() 
 {
-  if (q->elements.size() <= 1) {
-    q->update_bounds();
+  for (int j = 0; j < 4; j ++) 
+    if (children[j])
+      delete children[j];
+}
+
+template <typename I, typename F>
+void point_locator_2d_quad<I, F>::quad_node::print() const
+{
+  fprintf(stderr, "parent=%p, A={%f, %f}, B={%f, %f}, centroid={%f, %f}, children={%p, %p, %p, %p}, element=%d\n", 
+      parent, aabb.A[0], aabb.A[1], aabb.B[0], aabb.B[1], aabb.C[0], aabb.C[1], 
+      children[0], children[1], children[2], children[3], 
+      elements.empty() ? -1 : elements[0].id);
+}
+
+template <typename I, typename F>
+void point_locator_2d_quad<I, F>::quad_node::update_bounds() 
+{
+  for (int i=0; i<elements.size(); i++) {
+    auto &aabb1 = elements[i];
+    aabb.A[0] = std::min(aabb.A[0], aabb1.A[0]);
+    aabb.A[1] = std::min(aabb.A[1], aabb1.A[1]);
+    aabb.B[0] = std::max(aabb.B[0], aabb1.B[0]);
+    aabb.B[1] = std::max(aabb.B[1], aabb1.B[1]);
+  }
+  aabb.update_centroid();
+}
+
+template <typename I, typename F>
+void point_locator_2d_quad<I, F>::quad_node::subdivide() 
+{
+  if (elements.size() <= 1) {
+    update_bounds();
     return;
   }
 
   // fprintf(stderr, "subdividing %p, parent=%p, #elements=%zu\n", q, q->parent, q->elements.size());
   for (int j=0; j<4; j++) {
-    q->children[j] = new quad_node;
-    q->children[j]->parent = q;
+    children[j] = new quad_node;
+    children[j]->parent = this;
   }
 
   // left-bottom
-  q->children[0]->aabb.A[0] = q->aabb.A[0];
-  q->children[0]->aabb.A[1] = q->aabb.A[1];
-  q->children[0]->aabb.B[0] = q->aabb.C[0];
-  q->children[0]->aabb.B[1] = q->aabb.C[1];
-  q->children[0]->aabb.update_centroid();
+  children[0]->aabb.A[0] = aabb.A[0];
+  children[0]->aabb.A[1] = aabb.A[1];
+  children[0]->aabb.B[0] = aabb.C[0];
+  children[0]->aabb.B[1] = aabb.C[1];
+  children[0]->aabb.update_centroid();
  
   // right-bottom
-  q->children[1]->aabb.A[0] = q->aabb.C[0];
-  q->children[1]->aabb.A[1] = q->aabb.A[1];
-  q->children[1]->aabb.B[0] = q->aabb.B[0];
-  q->children[1]->aabb.B[1] = q->aabb.C[1];
-  q->children[1]->aabb.update_centroid();
+  children[1]->aabb.A[0] = aabb.C[0];
+  children[1]->aabb.A[1] = aabb.A[1];
+  children[1]->aabb.B[0] = aabb.B[0];
+  children[1]->aabb.B[1] = aabb.C[1];
+  children[1]->aabb.update_centroid();
   
   // right-top
-  q->children[2]->aabb.A[0] = q->aabb.C[0];
-  q->children[2]->aabb.A[1] = q->aabb.C[1];
-  q->children[2]->aabb.B[0] = q->aabb.B[0];
-  q->children[2]->aabb.B[1] = q->aabb.B[1];
-  q->children[2]->aabb.update_centroid();
+  children[2]->aabb.A[0] = aabb.C[0];
+  children[2]->aabb.A[1] = aabb.C[1];
+  children[2]->aabb.B[0] = aabb.B[0];
+  children[2]->aabb.B[1] = aabb.B[1];
+  children[2]->aabb.update_centroid();
   
   // left-top
-  q->children[3]->aabb.A[0] = q->aabb.A[0];
-  q->children[3]->aabb.A[1] = q->aabb.C[1];
-  q->children[3]->aabb.B[0] = q->aabb.C[0];
-  q->children[3]->aabb.B[1] = q->aabb.B[1];
-  q->children[3]->aabb.update_centroid();
+  children[3]->aabb.A[0] = aabb.A[0];
+  children[3]->aabb.A[1] = aabb.C[1];
+  children[3]->aabb.B[0] = aabb.C[0];
+  children[3]->aabb.B[1] = aabb.B[1];
+  children[3]->aabb.update_centroid();
 
-  for (int i=0; i<q->elements.size(); i++) {
-    for (int j=0; j<4; j++) {
-      if (q->children[j]->aabb.contains(q->elements[i].C)) {
-        q->children[j]->elements.push_back(q->elements[i]);
+  for (int i = 0; i < elements.size(); i++) {
+    for (int j = 0; j < 4; j ++) {
+      if (children[j]->aabb.contains(elements[i].C)) {
+        children[j]->elements.push_back(elements[i]);
         break;
       }
     }
   }
 
-  if (q->parent != NULL) 
-    q->update_bounds();
-  q->elements.clear();
+  if (parent != NULL) 
+    update_bounds();
+  elements.clear();
 
   for (int j=0; j<4; j++) {
-    if (q->children[j]->elements.empty()) {
-      delete q->children[j];
-      q->children[j] = NULL;
+    if (children[j]->elements.empty()) {
+      delete children[j];
+      children[j] = NULL;
     } else {
-      subdividequad_node(q->children[j]);
+      children[j]->subdivide();
     }
   }
 }
@@ -202,7 +212,8 @@ void point_locator_2d_quad<I, F>::initialize()
     root->elements.push_back(triangles[i]);
   }
 
-  subdivide_quad_node(root);
+  root->subdivide();
+  // subdivide_quad_node(root);
   // traversequad_node(root);
   
 #if 0
