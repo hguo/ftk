@@ -22,7 +22,7 @@ struct AABB {
     B[2] = {-std::numeric_limits<T>::max(), -std::numeric_limits<T>::max()};
   T C[2] = {0, 0}; // centroid
 
-  bool contains(const T X[]) {
+  bool contains(const T X[]) const {
     return X[0] >= A[0] && X[0] < B[0] && X[1] >= A[1] && X[1] < B[1];
   }
 

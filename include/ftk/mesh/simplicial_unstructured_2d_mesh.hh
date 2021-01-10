@@ -472,7 +472,7 @@ void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(const std::string& file
   writer->SetInputData( grid );
   writer->Write();
 #else
-  fatal("FTK not compiled with VTK.");
+  this->fatal("FTK not compiled with VTK.");
 #endif
 }
 

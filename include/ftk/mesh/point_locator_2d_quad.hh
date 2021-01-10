@@ -12,7 +12,7 @@ struct point_locator_2d_quad : public point_locator_2d<I, F> {
   virtual ~point_locator_2d_quad();
 
   void initialize();
-  I locate(const F x[]) const { return locate_point_recursive(x, root); }
+  I locate(const F x[], F mu[]) const { return locate_point_recursive(x, root, mu); }
 
 protected:
   struct quad_node {
@@ -56,8 +56,8 @@ protected:
 
   void subdividequad_node(quad_node*);
 
-  static bool inside_triangle(const F p[], const F p1[], const F p2[], const F p3[]);
-  I locate_point_recursive(const F x[], quad_node *q) const;
+  static bool inside_triangle(const F p[], const F p1[], const F p2[], const F p3[], F mu[]);
+  I locate_point_recursive(const F x[], const quad_node *q, F mu[]) const;
 };
 
 /////  
@@ -68,7 +68,7 @@ point_locator_2d_quad<I, F>::~point_locator_2d_quad()
 }
 
 template <typename I, typename F>
-I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], quad_node *q) const
+I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], const quad_node *q, F mu[]) const
 {
   auto m2 = this->m2;
   const auto &coords = m2->get_coords();
@@ -78,7 +78,7 @@ I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], quad_node *q)
     if (q->is_leaf()) {
       const int id = q->elements[0]->id;
       const int i0 = conn[id*3], i1 = conn[id*3+1], i2 = conn[id*3+2];
-      int succ = inside_triangle(x, &coords[i0*2], &coords[i1*2], &coords[i2*2]);
+      int succ = inside_triangle(x, &coords[i0*2], &coords[i1*2], &coords[i2*2], mu);
       if (succ) {
         // fprintf(stderr, "leaf node %d contains! triangle check=%d\n", id, result);
         return id;
@@ -86,7 +86,7 @@ I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], quad_node *q)
     } else {
       for (int j=0; j<4; j++) {
         if (q->children[j] != NULL) {
-          int result = locate_point_recursive(x, q->children[j]);
+          int result = locate_point_recursive(x, q->children[j], mu);
           if (result >= 0) return result;
         }
       }
@@ -161,15 +161,15 @@ void point_locator_2d_quad<I, F>::subdividequad_node(quad_node *q)
 }
 
 template <typename I, typename F>
-bool point_locator_2d_quad<I, F>::inside_triangle(const F p[], const F p1[], const F p2[], const F p3[])
+bool point_locator_2d_quad<I, F>::inside_triangle(const F p[], const F p1[], const F p2[], const F p3[], F mu[])
 {
-  F alpha = ((p2[1] - p3[1])*(p[0] - p3[0]) + (p3[0] - p2[0])*(p[1] - p3[1])) /
-            ((p2[1] - p3[1])*(p1[0] - p3[0]) + (p3[0] - p2[0])*(p1[1] - p3[1]));
-  F beta  = ((p3[1] - p1[1])*(p[0] - p3[0]) + (p1[0] - p3[0])*(p[1] - p3[1])) /
-            ((p2[1] - p3[1])*(p1[0] - p3[0]) + (p3[0] - p2[0])*(p1[1] - p3[1]));
-  F gamma = 1.0 - alpha - beta;
+  mu[0] = ((p2[1] - p3[1])*(p[0] - p3[0]) + (p3[0] - p2[0])*(p[1] - p3[1])) /
+          ((p2[1] - p3[1])*(p1[0] - p3[0]) + (p3[0] - p2[0])*(p1[1] - p3[1]));
+  mu[1] = ((p3[1] - p1[1])*(p[0] - p3[0]) + (p1[0] - p3[0])*(p[1] - p3[1])) /
+          ((p2[1] - p3[1])*(p1[0] - p3[0]) + (p3[0] - p2[0])*(p1[1] - p3[1]));
+  mu[2] = 1.0 - mu[0] - mu[1]; 
   // fprintf(stderr, "barycentric: %f, %f, %f\n", alpha, beta, gamma);
-  return alpha >= 0 && beta >= 0 && gamma >= 0;
+  return mu[0] >= 0 && mu[1] >= 0 && mu[2] >= 0;
 }
 
 template <typename I, typename F>
