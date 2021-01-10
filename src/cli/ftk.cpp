@@ -412,7 +412,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
     // m2->array_to_vtu("bfield.vtu", "B", m2->get_bfield());
   }
 
-  std::shared_ptr<ftk::point_locator_2d<>> locator(new ftk::point_locator_2d_quad<>(m2));
+  // std::shared_ptr<ftk::point_locator_2d<>> locator(new ftk::point_locator_2d_quad<>(m2));
   // const double x[2] = {2.3, -0.4};
   // fprintf(stderr, "locator test: %d\n", locator->locate(x));
 

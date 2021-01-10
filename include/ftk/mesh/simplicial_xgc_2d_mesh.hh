@@ -23,6 +23,12 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   const ndarray<F>& get_bfield() const { return bfield; }
   const ndarray<F>& get_psifield() const { return psifield; }
 
+  bool eval_b(const F x[], F b[]) const; // get magnetic field value at x
+  bool eval_f(const F rzp[3], F f[2]) const;
+  F eval_psi(const F x[]) const; // get psi value at x
+
+  void magnetic_map(F rzp[3], F phi_end) const;
+
 protected:
   ndarray<F> psifield, bfield;
   ndarray<I> nextnodes;
@@ -47,6 +53,45 @@ void simplicial_xgc_2d_mesh<I, F>::read_bfield_h5(const std::string& filename)
   bfield.from_h5(filename, "/node_data[0]/values");
   bfield.set_multicomponents();
   // std::cerr << bfield.shape() << std::endl;
+}
+
+template <typename I, typename F>
+void simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end) const
+{
+  const int nsteps = 1000; // TODO
+  const F delta = (phi_end - rzp[2]) / nsteps;
+
+  // rk1
+  for (int k = 0; k < nsteps; k ++) {
+    F B[3];
+    bool succ = eval_b(rzp, B);
+
+    const F r = rzp[0], z = rzp[1], phi = rzp[2];
+    rzp[0] += delta * r * B[0] / B[2];
+    rzp[1] += delta * r * B[1] / B[2];
+  }
+}
+
+template <typename I, typename F>
+bool simplicial_xgc_2d_mesh<I, F>::eval_b(const F x[], F b[]) const
+{
+  if (!this->locator) this->locator.reset( new point_locator_2d_quad<I, F>(this) );
+
+  F mu[3];
+  I tid = this->locator->locate(x, mu);
+  if (tid < 0) {
+    b[0] = b[1] = b[2] = F(0); 
+    return false;
+  } else {
+    F B[3][3];
+    I tri[3];
+    get_simplex(2, tid, tri);
+    for (int i = 0; i < 3; i ++) 
+      for (int j = 0; j < 3; j ++) 
+        B[j][i] = bfield(j, tri[i]);
+    lerp_s2v3(B, mu, b);
+    return true;
+  }
 }
 
 template <typename I, typename F>
