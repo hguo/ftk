@@ -266,6 +266,8 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
 {
   const int m2n0 = m2->n(0), 
             nvphi = nphi * vphi;
+  const F dphi = 2 * M_PI / (nphi * iphi);
+
   ndarray<F> f;
   f.reshape(m2n0, nvphi);
 
@@ -279,6 +281,36 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
       const F beta = F(i) / vphi - p0, alpha = F(1) - beta;
       fprintf(stderr, "p0=%d, p1=%d, alpha=%f, beta=%f\n", p0, p1, alpha, beta);
       for (int j = 0; j < m2n0; j ++) {
+        F rzp0[3], rzp1[3];
+        F mu0[3], mu1[3];
+        I tri0[3], tri1[3];
+
+        // backward integration
+        m2->get_coords(j, rzp0);
+        rzp0[2] = alpha * dphi;
+        m2->magnetic_map(rzp0, 0);
+        I tid0 = m2->locate(rzp0, mu0);
+        if (tid0 < 0) continue; // invalid triangle
+       
+        // forward integration
+        m2->get_coords(j, rzp1);
+        rzp1[2] = alpha * dphi;
+        m2->magnetic_map(rzp1, dphi);
+        I tid1 = m2->locate(rzp1, mu1);
+        if (tid1 < 0) continue; // invalid triangle
+
+        F f0 = 0, f1 = 0;
+        m2->get_simplex(2, tid0, tri0);
+        for (int k = 0; k < 3; k ++)
+          f0 += mu0[k] * scalar[m2n0 * p0 + tri0[k]];
+        
+        m2->get_simplex(2, tid1, tri1);
+        for (int k = 0; k < 3; k ++)
+          f1 += mu1[k] * scalar[m2n0 * p1 + tri1[k]];
+        
+        f[m2n0 * i + j] = alpha * f0 + beta * f1;
+
+#if 0
         const int next = m2->nextnode(j);
         F xcur[2], xnext[2], x[2];
         m2->get_coords(j, xcur);
@@ -292,6 +324,7 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
           f1 = scalar[m2n0 * p1 + next];
 
         f[m2n0 * i + k] = alpha * f0 + beta * f1;
+#endif
       }
     }
   }

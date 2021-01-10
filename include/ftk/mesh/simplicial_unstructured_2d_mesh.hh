@@ -83,7 +83,8 @@ public: // mesh access
 
 public: // point locator and misc
   I nearest(F x[]) const; // locate which point is nearest to x
-  I locate(F x[]) const; // locate which triangle contains x
+  // I locate(F x[]) const; // locate which triangle contains x
+  I locate(F x[], F mu[]) const { return locator->locate(x, mu); } // locate which triangle contains x and get the barycentric coordinates of x
 
 protected:
   mutable std::shared_ptr<point_locator_2d<I, F>> locator;
