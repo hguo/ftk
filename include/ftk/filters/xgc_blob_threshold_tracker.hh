@@ -59,10 +59,10 @@ inline void xgc_blob_threshold_tracker::update_timestep()
   const int m3n0 = m3->n(0);
   const auto &scalar = field_data_snapshots[0].scalar;
   for (int i = 0; i < m3n0; i ++) {
-    if (scalar[i] < threshold) continue;
-
-    for (const auto j : m3->get_vertex_edge_vertex_nextnodes(i)) {
-      if (scalar[j] >= threshold) {
+    if (m3->interpolate(scalar, i) < threshold) continue;
+    // for (const auto j : m3->get_vertex_edge_vertex_nextnodes(i)) {
+    for (const auto j : m3->get_vertex_edge_vertex(i)) {
+      if (m3->interpolate(scalar, j) >= threshold) {
         int ei = i + current_timestep * m3n0,
             ej = j + current_timestep * m3n0;
         uf.unite(ei, ej);
@@ -73,7 +73,8 @@ inline void xgc_blob_threshold_tracker::update_timestep()
   if (field_data_snapshots.size() >= 2) {
     const auto &scalar1 = field_data_snapshots[1].scalar;
     for (int i = 0; i < m3n0; i ++) {
-      if (scalar[i] < threshold || scalar1[i] < threshold) continue;
+      // if (scalar[i] < threshold || scalar1[i] < threshold) continue;
+      if (m3->interpolate(scalar, i) < threshold || m3->interpolate(scalar1, i) < threshold) continue;
       else
         uf.unite(i + current_timestep * m3n0, i + (current_timestep+1) * m3n0);
     }

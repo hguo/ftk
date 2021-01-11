@@ -436,7 +436,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
       mx->scalar_to_vtu_slices_file(filename, "scalar", scalar);
     }
 #endif
-#if 0 // only testing write-backs for now
+#if 1 // only testing write-backs for now
     if (k != 0) tracker->advance_timestep();
     if (k == stream->n_timesteps() - 1) tracker->update_timestep();
 

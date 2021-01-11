@@ -32,7 +32,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   bool eval_f(const F rzp[3], F f[2]) const;
   F eval_psi(const F x[]) const; // get psi value at x
 
-  void magnetic_map(F rzp[3], F phi_end) const;
+  void magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
 
 protected:
   ndarray<F> psifield, bfield;
@@ -61,9 +61,8 @@ void simplicial_xgc_2d_mesh<I, F>::read_bfield_h5(const std::string& filename)
 }
 
 template <typename I, typename F>
-void simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end) const
+void simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps) const
 {
-  const int nsteps = 1000; // TODO
   const F delta = (phi_end - rzp[2]) / nsteps;
 
   // rk1

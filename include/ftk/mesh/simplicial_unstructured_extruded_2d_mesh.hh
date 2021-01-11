@@ -43,7 +43,9 @@ public: // mesh access
   void get_coords(I i, F coords[]) const;
 
   bool find_simplex(int d, I v[], I &i) const;
-  
+ 
+  std::set<I> get_vertex_edge_vertex(I i) const;
+
 protected:
   void extrude();
 
@@ -638,6 +640,22 @@ int simplicial_unstructured_extruded_2d_mesh<I, F>::simplex_type(int d, I k) con
       assert(false);
       return -1;
   }
+}
+
+template <typename I, typename F>
+std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::get_vertex_edge_vertex(I i) const
+{
+  const I k = flat_vertex_id(i),
+          t = flat_vertex_time(i);
+
+  std::set<I> verts0 = m.get_vertex_edge_vertex(k);
+  std::set<I> verts;
+  for (const auto v0 : verts0)
+    verts.insert( t * m.n(0) + v0 ); // neighbors in the same timestep
+  verts.insert( (t+1) * m.n(0) + k );
+  verts.insert( (t-1) * m.n(0) + k );
+
+  return verts;
 }
 
 template <typename I, typename F>

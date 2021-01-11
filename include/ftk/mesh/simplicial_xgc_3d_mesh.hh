@@ -26,6 +26,7 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   bool is_poloidal(int p) const { return p % vphi == 0; }
   bool is_poloidal(int d, I i) const { return m3->is_ordinal(d, i); }
 
+  std::set<I> get_vertex_edge_vertex(I i) const;
   std::set<I> get_vertex_edge_vertex_nextnodes(I i) const;
 
 public: 
@@ -63,6 +64,7 @@ public:
  
   void initialize_interpolants();
   ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
+  F interpolate(const ndarray<F>& scalar, I i); // interpolate scalar value
 
   const interpolant_t& get_interpolant(int v /*virtual plane id*/, I i/*vertex id*/) const { return interpolants[v][i]; }
   
@@ -166,6 +168,16 @@ std::set<I> simplicial_xgc_3d_mesh<I, F>::side_of(int d, I i) const
     // results.insert(j % n(d+1));
     // results.insert(j); 
   return results;
+}
+
+template <typename I, typename F>
+std::set<I> simplicial_xgc_3d_mesh<I, F>::get_vertex_edge_vertex(I i) const
+{
+  const std::set<I> verts0 = m2->get_vertex_edge_vertex(i);
+  std::set<I> verts;
+  for (const auto v : verts0)
+    verts.insert( transform(0, v) );
+  return verts;
 }
 
 template <typename I, typename F>
@@ -276,6 +288,8 @@ scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& scalar) const
 template <typename I, typename F>
 void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants()
 {
+  if (vphi == 1) return;
+
   const I m2n0 = m2->n(0);
   const F dphi = 2 * M_PI / (nphi * iphi);
  
@@ -291,7 +305,7 @@ void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants()
         
       // backward integration
       m2->get_coords(i, rzp0);
-      rzp0[2] = alpha * dphi;
+      rzp0[2] = beta * dphi;
       m2->magnetic_map(rzp0, 0);
       I tid0 = m2->locate(rzp0, l.mu0);
       if (tid0 < 0) { // invalid triangle
@@ -303,7 +317,7 @@ void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants()
      
       // forward integration
       m2->get_coords(i, rzp1);
-      rzp1[2] = alpha * dphi;
+      rzp1[2] = beta * dphi;
       m2->magnetic_map(rzp1, dphi);
       I tid1 = m2->locate(rzp1, l.mu1);
       if (tid1 < 0) { // invalid triangle
@@ -315,6 +329,30 @@ void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants()
     });
   }
   fprintf(stderr, "interpolants initialized.\n");
+}
+
+template <typename I, typename F>
+F simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar, I i) // interpoloate scalar value
+{
+  const int m2n0 = m2->n(0);
+  const int p = i / m2n0; // poloidal plane id
+
+  if (p % vphi == 0) { // non-virtual plane
+    const int j = i / vphi;
+    return scalar[j];
+  } else { // virtual plane
+    const int p0 = p / vphi, p1 = (p0 + 1) % nphi;
+    const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
+    const interpolant_t& l = interpolants[p % vphi][i % m2n0];
+
+    F f0 = 0, f1 = 0;
+    for (int k = 0; k < 3; k ++) {
+      f0 += l.mu0[k] * scalar[m2n0 * p0 + l.tri0[k]];
+      f1 += l.mu1[k] * scalar[m2n0 * p1 + l.tri1[k]];
+    }
+
+    return alpha * f0 + beta * f1;
+  }
 }
 
 template <typename I, typename F>
@@ -335,7 +373,7 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
     } else {
       const int p0 = i / vphi, p1 = (p0 + 1) % nphi;
       const F beta = F(i) / vphi - p0, alpha = F(1) - beta;
-      fprintf(stderr, "p0=%d, p1=%d, alpha=%f, beta=%f\n", p0, p1, alpha, beta);
+      // fprintf(stderr, "p0=%d, p1=%d, alpha=%f, beta=%f\n", p0, p1, alpha, beta);
       const std::vector<interpolant_t>& ls = interpolants[i % vphi];
 
       for (int j = 0; j < m2n0; j ++) {
