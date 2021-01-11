@@ -173,9 +173,8 @@ std::set<I> simplicial_xgc_3d_mesh<I, F>::side_of(int d, I i) const
 template <typename I, typename F>
 std::set<I> simplicial_xgc_3d_mesh<I, F>::get_vertex_edge_vertex(I i) const
 {
-  const std::set<I> verts0 = m2->get_vertex_edge_vertex(i);
   std::set<I> verts;
-  for (const auto v : verts0)
+  for (const auto v : m2->get_vertex_edge_vertex(i))
     verts.insert( transform(0, v) );
   return verts;
 }
