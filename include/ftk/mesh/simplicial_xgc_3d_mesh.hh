@@ -28,8 +28,6 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
 
   std::set<I> get_vertex_edge_vertex_nextnodes(I i) const;
 
-  ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
-
 public: 
   void element_for(int d, std::function<void(I)> f) {} // TODO
   
@@ -56,6 +54,20 @@ public: // vtk
   vtkSmartPointer<vtkUnstructuredGrid> scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& data) const;
   virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtu_solid() const { return this->to_vtu(); }
 #endif
+
+public:
+  struct interpolant_t { // poloidal interpolants
+    I tri0[3], tri1[3];
+    F mu0[3], mu1[3];
+  };
+ 
+  void initialize_interpolants();
+  ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
+
+  const interpolant_t& get_interpolant(int v /*virtual plane id*/, I i/*vertex id*/) const { return interpolants[v][i]; }
+  
+protected:
+  std::vector<std::vector<interpolant_t>> interpolants;
 
 protected: // backend meshes
   int nphi, iphi, vphi;
@@ -262,6 +274,50 @@ scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& scalar) const
 #endif // HAVE_FTK
 
 template <typename I, typename F>
+void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants()
+{
+  const I m2n0 = m2->n(0);
+  const F dphi = 2 * M_PI / (nphi * iphi);
+ 
+  fprintf(stderr, "initializing interpolants...\n");
+  interpolants.resize(vphi);
+  for (int v = 1; v < vphi; v ++) {
+    interpolants[v].resize(m2n0);
+    const F beta = F(v) / vphi, alpha = F(1) - beta;
+    this->parallel_for(m2n0, [&](int i) {
+    // for (I i = 0; i < m2n0; i ++) {
+      interpolant_t &l = interpolants[v][i];
+      F rzp0[3], rzp1[3];
+        
+      // backward integration
+      m2->get_coords(i, rzp0);
+      rzp0[2] = alpha * dphi;
+      m2->magnetic_map(rzp0, 0);
+      I tid0 = m2->locate(rzp0, l.mu0);
+      if (tid0 < 0) { // invalid triangle
+        l.tri0[0] = l.tri0[1] = l.tri0[2] = m2->nearest(rzp0);
+        l.mu0[0] = l.mu0[1] = l.mu0[2] = F(1) / 3;
+      } else {
+        m2->get_simplex(2, tid0, l.tri0);
+      }
+     
+      // forward integration
+      m2->get_coords(i, rzp1);
+      rzp1[2] = alpha * dphi;
+      m2->magnetic_map(rzp1, dphi);
+      I tid1 = m2->locate(rzp1, l.mu1);
+      if (tid1 < 0) { // invalid triangle
+        l.tri1[0] = l.tri1[1] = l.tri1[2] = m2->nearest(rzp1);
+        l.mu1[0] = l.mu1[1] = l.mu1[2] = F(1) / 3;
+      } else {
+        m2->get_simplex(2, tid1, l.tri1);
+      }
+    });
+  }
+  fprintf(stderr, "interpolants initialized.\n");
+}
+
+template <typename I, typename F>
 ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) const
 {
   const int m2n0 = m2->n(0), 
@@ -280,7 +336,22 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
       const int p0 = i / vphi, p1 = (p0 + 1) % nphi;
       const F beta = F(i) / vphi - p0, alpha = F(1) - beta;
       fprintf(stderr, "p0=%d, p1=%d, alpha=%f, beta=%f\n", p0, p1, alpha, beta);
+      const std::vector<interpolant_t>& ls = interpolants[i % vphi];
+
       for (int j = 0; j < m2n0; j ++) {
+        const interpolant_t& l = ls[j];
+        // fprintf(stderr, "node %d, tri0=%d, %d, %d, mu0=%f, %f, %f, tri1=%d, %d, %d, mu1=%f, %f, %f\n", 
+        //     j, l.tri0[0], l.tri0[1], l.tri0[2], l.mu0[0], l.mu0[1], l.mu0[2],
+        //     l.tri1[0], l.tri1[1], l.tri1[2], l.mu1[0], l.mu1[1], l.mu1[2]);
+        
+        F f0 = 0, f1 = 0;
+        for (int k = 0; k < 3; k ++) {
+          f0 += l.mu0[k] * scalar[m2n0 * p0 + l.tri0[k]];
+          f1 += l.mu1[k] * scalar[m2n0 * p1 + l.tri1[k]];
+        }
+        
+        f[m2n0 * i + j] = alpha * f0 + beta * f1;
+#if 0
         F rzp0[3], rzp1[3];
         F mu0[3], mu1[3];
         I tri0[3], tri1[3];
@@ -309,6 +380,7 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
           f1 += mu1[k] * scalar[m2n0 * p1 + tri1[k]];
         
         f[m2n0 * i + j] = alpha * f0 + beta * f1;
+#endif
 
 #if 0
         const int next = m2->nextnode(j);

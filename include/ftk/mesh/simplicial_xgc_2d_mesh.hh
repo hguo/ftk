@@ -17,6 +17,8 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
       const ndarray<F>& psi,
       const ndarray<I>& nextnodes);
 
+  void initialize_point_locator();
+
   static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
   void read_bfield_h5(const std::string& filename);
 
@@ -80,13 +82,14 @@ void simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end) const
 }
 
 template <typename I, typename F>
+void simplicial_xgc_2d_mesh<I, F>::initialize_point_locator()
+{
+  this->locator.reset( new point_locator_2d_quad<I, F>(*this) );
+}
+
+template <typename I, typename F>
 bool simplicial_xgc_2d_mesh<I, F>::eval_b(const F x[], F b[]) const
 {
-  if (!(this->locator)) {
-    fprintf(stderr, "creating point locator...\n");
-    this->locator.reset( new point_locator_2d_quad<I, F>(*this) );
-  }
-
   F mu[3];
   I tid = this->locator->locate(x, mu);
   if (tid < 0) {
