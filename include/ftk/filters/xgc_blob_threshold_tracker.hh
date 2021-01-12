@@ -130,8 +130,8 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
   auto ids = get_sliced(t).to_vtk_data_array("id");
   grid->GetPointData()->AddArray( ids );
 
-  auto scalar = field_data_snapshots[0].scalar.to_vtk_data_array("scalar");
-  grid->GetPointData()->AddArray( scalar );
+  // auto scalar = field_data_snapshots[0].scalar.to_vtk_data_array("scalar");
+  // grid->GetPointData()->AddArray( scalar );
 
   // grid->PrintSelf(std::cerr, vtkIndent(2));
   

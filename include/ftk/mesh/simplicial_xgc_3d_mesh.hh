@@ -174,7 +174,7 @@ template <typename I, typename F>
 std::set<I> simplicial_xgc_3d_mesh<I, F>::get_vertex_edge_vertex(I i) const
 {
   std::set<I> verts;
-  for (const auto v : m2->get_vertex_edge_vertex(i))
+  for (const auto v : m3->get_vertex_edge_vertex(i))
     verts.insert( transform(0, v) );
   return verts;
 }
