@@ -30,7 +30,7 @@ TEST_CASE("critical_point_tracking_woven_unstructured") {
     );
 
     ftk::ndarray<double> scalar, grad, J;
-    m.smooth_scalar_gradient_jacobian(data, kernel_size, scalar, grad, J);
+    m.smooth_scalar_gradient_jacobian(data, scalar, grad, J);
     scalar.reshape({1, scalar.dim(0)});
 
     tracker.push_field_data_snapshot(scalar, grad, J);

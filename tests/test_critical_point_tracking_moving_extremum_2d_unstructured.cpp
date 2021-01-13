@@ -32,7 +32,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_2d_unstructured") {
     );
 
     ftk::ndarray<double> scalar, grad, J;
-    m.smooth_scalar_gradient_jacobian(data, kernel_size, scalar, grad, J);
+    m.smooth_scalar_gradient_jacobian(data, /*kernel_size,*/ scalar, grad, J);
 
     // write back for debugging
     char filename[1024];
