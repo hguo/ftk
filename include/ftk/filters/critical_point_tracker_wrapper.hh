@@ -352,7 +352,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
     dpot.reshape(dpot.dim(0));
 
     ftk::ndarray<double> scalar, grad, J;
-    m.smooth_scalar_gradient_jacobian(dpot, smoothing_kernel_size, scalar, grad, J);
+    m.smooth_scalar_gradient_jacobian(dpot, /*smoothing_kernel_size,*/ scalar, grad, J);
   
     ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
 
@@ -371,7 +371,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
       auto dpot = field_data.get_transpose();
       for (int k = 0; k < dpot.dim(1); k ++) {
         ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
-        m.smooth_scalar_gradient_jacobian(dpot_slice, smoothing_kernel_size, scalar, grad, J);
+        m.smooth_scalar_gradient_jacobian(dpot_slice, /*smoothing_kernel_size,*/ scalar, grad, J);
 
         ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
         tracker->push_field_data_snapshot(scalars, grad, J);

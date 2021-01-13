@@ -36,14 +36,16 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   void build_edges();
   void build_triangles();
 
+  bool has_smoothing_kernel() const { return smoothing_kernel.size() > 0; }
   void build_smoothing_kernel(F sigma);
   void smooth_scalar_gradient_jacobian(
       const ndarray<F>& f, 
-      const F sigma,
+      // const F sigma,
       ndarray<F>& fs, // smoothed scalar field
       ndarray<F>& g,  // smoothed gradient field
       ndarray<F>& j   // smoothed jacobian field
   ) const; 
+  ndarray<F> smooth_scalar(const ndarray<F>& f) const;
 
 public: // io
 #if FTK_HAVE_VTK
@@ -106,6 +108,7 @@ public: // additional mesh info
   std::map<std::tuple<I, I, I>, int> triangle_id_map;
 
 private:
+  F sigma; // smoothing kernel size
   std::vector<std::vector<std::tuple<I/*vert*/, F/*weight*/>>> smoothing_kernel;
 };
 
@@ -330,8 +333,31 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
 }
 
 template <typename I, typename F>
+ndarray<F> simplicial_unstructured_2d_mesh<I, F>::smooth_scalar(const ndarray<F>& f) const
+{
+  const F sigma2 = sigma * sigma, 
+          sigma4 = sigma2 * sigma2;
+
+  ndarray<F> scalar;
+  scalar.reshape({n(0)});
+
+  // for (auto i = 0; i < smoothing_kernel.size(); i ++) {
+  this->parallel_for(smoothing_kernel.size(), [&](int i) {
+    for (auto j = 0; j < smoothing_kernel[i].size(); j ++) {
+      auto tuple = smoothing_kernel[i][j];
+      const auto k = std::get<0>(tuple);
+      const auto w = std::get<1>(tuple);
+
+      scalar[i] += f[k] * w;
+    }
+  });
+
+  return scalar;
+}
+
+template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
-    const ndarray<F>& f, const F sigma, 
+    const ndarray<F>& f, // const F sigma, 
     ndarray<F>& scalar, // smoothed scalar field
     ndarray<F>& grad,  // smoothed gradient field
     ndarray<F>& J) const // smoothed jacobian field
@@ -484,13 +510,13 @@ template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::write_smoothing_kernel(const std::string& f)
 {
   fprintf(stderr, "writing smoothing kernel...\n");
-  diy::serializeToFile(smoothing_kernel, f);
+  diy::serializeToFile(sigma, smoothing_kernel, f);
 }
 
 template <typename I, typename F>
 bool simplicial_unstructured_2d_mesh<I, F>::read_smoothing_kernel(const std::string& f)
 {
-  return diy::unserializeFromFile(f, smoothing_kernel);
+  return diy::unserializeFromFile(f, sigma, smoothing_kernel);
 }
 
 template <typename I, typename F>

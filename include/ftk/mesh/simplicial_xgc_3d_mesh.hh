@@ -56,6 +56,10 @@ public: // vtk
   virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtu_solid() const { return this->to_vtu(); }
 #endif
 
+public: // smoothing
+  bool has_smoothing_kernel() const { return m2->has_smoothing_kernel(); }
+  ndarray<F> smooth_scalar(const ndarray<F>& f) const;
+
 public:
   struct interpolant_t { // poloidal interpolants
     I tri0[3], tri1[3];
@@ -337,8 +341,9 @@ F simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar, I i) // in
   const int p = i / m2n0; // poloidal plane id
 
   if (p % vphi == 0) { // non-virtual plane
-    const int j = i / vphi;
-    return scalar[j];
+    const int p0 = p / vphi;
+    const int j = i % m2n0;
+    return scalar[m2n0 * p0 + j];
   } else { // virtual plane
     const int p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
@@ -352,6 +357,22 @@ F simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar, I i) // in
 
     return alpha * f0 + beta * f1;
   }
+}
+
+template <typename I, typename F>
+ndarray<F> simplicial_xgc_3d_mesh<I, F>::smooth_scalar(const ndarray<F>& scalar) const
+{
+  ndarray<double> result;
+  result.reshape(scalar);
+  
+  for (size_t i = 0; i < nphi; i ++) {
+    auto slice = scalar.slice_time(i);
+    auto f = m2->smooth_scalar(slice);
+    for (size_t k = 0; k < m2->n(0); k ++)
+      result(k, i) = f(k);
+  }
+
+  return result;
 }
 
 template <typename I, typename F>

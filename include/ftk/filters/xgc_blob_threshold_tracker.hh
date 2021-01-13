@@ -49,7 +49,12 @@ protected:
 inline void xgc_blob_threshold_tracker::push_field_data_snapshot(const ndarray<double> &scalar)
 {
   ndarray<double> grad, J; // no grad or jacobian needed
-  xgc_tracker::push_field_data_snapshot(scalar, grad, J);
+   
+  if (m3->has_smoothing_kernel()) {
+    ndarray<double> smoothed_scalar = m3->smooth_scalar(scalar);
+    xgc_tracker::push_field_data_snapshot(smoothed_scalar, grad, J);
+  } else 
+    xgc_tracker::push_field_data_snapshot(scalar, grad, J);
 }
 
 inline void xgc_blob_threshold_tracker::update_timestep()
@@ -60,11 +65,11 @@ inline void xgc_blob_threshold_tracker::update_timestep()
   const auto &scalar = field_data_snapshots[0].scalar;
   for (int i = 0; i < m3n0; i ++) {
     if (m3->interpolate(scalar, i) < threshold) continue;
+    const int ei = i + current_timestep * m3n0;
     // for (const auto j : m3->get_vertex_edge_vertex_nextnodes(i)) {
     for (const auto j : m3->get_vertex_edge_vertex(i)) {
       if (m3->interpolate(scalar, j) >= threshold) {
-        int ei = i + current_timestep * m3n0,
-            ej = j + current_timestep * m3n0;
+        const int ej = j + current_timestep * m3n0;
         uf.unite(ei, ej);
       }
     }
@@ -123,6 +128,47 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
 
 vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_solid(int t) const
 {
+  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+
+  std::map<int, vtkIdType> idmap;
+  for (int i = 0; i < m3->n(0); i ++) {
+    const int e = i + t * m3->n(0);
+    if (uf.exists(e)) {
+      double coords[3];
+      m3->get_coords(i, coords);
+      vtkIdType id = points->InsertNextPoint(coords[0], coords[1], coords[2]);
+      idmap[i] = id;
+    }
+    // array[i] = uf.find(e);
+  }
+  grid->SetPoints(points);
+
+  std::mutex mutex;
+  for (int tid = 0; tid < m3->n(3); tid ++) {
+    int tet[4];
+    m3->get_simplex(3, tid, tet);
+
+    std::vector<vtkIdType> ids;
+    for (int k = 0; k < 4; k ++)
+      if (idmap.find(tet[k]) != idmap.end())
+        ids.push_back(idmap[tet[k]]);
+      
+    std::sort(ids.begin(), ids.end());
+    {
+      std::lock_guard<std::mutex> guard(mutex);
+      if (ids.size() == 4)
+        grid->InsertNextCell(VTK_TETRA, 4, &ids[0]);
+      else if (ids.size() == 3)
+        grid->InsertNextCell(VTK_TRIANGLE, 3, &ids[0]);
+      // else if (ids.size() == 2)
+      //   grid->InsertNextCell(VTK_LINE, 2, &ids[0]);
+    }
+  }
+  
+  return grid;
+
+#if 0
   vtkSmartPointer<vtkUnstructuredGrid> grid;
   if (mf3) grid = mf3->to_vtu_solid();
   else grid = m3->to_vtu_solid();
@@ -136,13 +182,6 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
   // grid->PrintSelf(std::cerr, vtkIndent(2));
   
   return grid;
- 
-#if 0
-  vtkSmartPointer<vtkThreshold> th = vtkThreshold::New();
-  th->ThresholdByUpper(0);
-  th->SetInputData(grid);
-  th->Update();
-  return th->GetOutput();
 #endif
 }
 

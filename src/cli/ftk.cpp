@@ -56,7 +56,8 @@ std::string xgc_mesh_filename,
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_write_back_filename;
 bool xgc_post_process = false, 
-     xgc_torus = false;
+     xgc_torus = false, 
+     xgc_use_smoothing_kernel = false;
 double xgc_smoothing_kernel_size = 0.03;
 int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
 
@@ -412,6 +413,9 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
     m2->read_bfield_h5(xgc_bfield_filename);
     // m2->array_to_vtu("bfield.vtu", "B", m2->get_bfield());
   }
+ 
+  if (xgc_use_smoothing_kernel)
+    m2->build_smoothing_kernel(xgc_smoothing_kernel_size);
 
   // std::shared_ptr<ftk::point_locator_2d<>> locator(new ftk::point_locator_2d_quad<>(m2));
   // const double x[2] = {2.3, -0.4};
@@ -662,6 +666,9 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     j_input = args_to_input_stream_json(results);
     stream->set_input_source_json(j_input);
   }
+  
+  if (results.count("xgc-smoothing-kernel-size"))
+    xgc_use_smoothing_kernel = true;
 
   if (ttype == TRACKER_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);

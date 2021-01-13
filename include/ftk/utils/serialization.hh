@@ -59,6 +59,16 @@ namespace diy {
     diy::save(bb, obj);
     fclose(fp);
   }
+  
+  template <typename T1, typename T2> void serializeToFile(const T1& obj1, const T2& obj2, const std::string& filename)
+  {
+    FILE *fp = fopen(filename.c_str(), "wb");
+    assert(fp);
+    diy::detail::FileBuffer bb(fp);
+    diy::save(bb, obj1);
+    diy::save(bb, obj2);
+    fclose(fp);
+  }
 
   template <typename T> void unserializeFromString(const std::string& buf, T& obj)
   {
@@ -73,6 +83,17 @@ namespace diy {
     if (!fp) return false;
     diy::detail::FileBuffer bb(fp);
     diy::load(bb, obj);
+    fclose(fp);
+    return true;
+  }
+  
+  template <typename T1, typename T2> bool unserializeFromFile(const std::string& filename, T1& obj1, T2 &obj2)
+  {
+    FILE *fp = fopen(filename.c_str(), "rb");
+    if (!fp) return false;
+    diy::detail::FileBuffer bb(fp);
+    diy::load(bb, obj1);
+    diy::load(bb, obj2);
     fclose(fp);
     return true;
   }
