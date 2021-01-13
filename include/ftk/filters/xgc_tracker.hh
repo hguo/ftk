@@ -86,10 +86,9 @@ inline void xgc_tracker::push_field_data_snapshot(
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
   
   for (size_t i = 0; i < m3->get_nphi(); i ++) {
-    // fprintf(stderr, "smoothing slice %zu\n", i);
     ftk::ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
-    m2->smooth_scalar_gradient_jacobian(slice, /*0.03,*/ f, grad, j);
+    m2->smooth_scalar_gradient_jacobian(slice, f, grad, j);
     for (size_t k = 0; k < m2->n(0); k ++) {
       F(k, i) = f(k);
       G(0, k, i) = grad(0, k);

@@ -282,6 +282,7 @@ template <typename I, typename F>
 inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const F sigma)
 {
   fprintf(stderr, "building smoothing kernel...\n");
+  this->sigma = sigma;
 
   const F sigma2 = sigma * sigma;
   const F limit = F(3) * sigma;
@@ -516,7 +517,8 @@ void simplicial_unstructured_2d_mesh<I, F>::write_smoothing_kernel(const std::st
 template <typename I, typename F>
 bool simplicial_unstructured_2d_mesh<I, F>::read_smoothing_kernel(const std::string& f)
 {
-  return diy::unserializeFromFile(f, sigma, smoothing_kernel);
+  bool succ = diy::unserializeFromFile(f, sigma, smoothing_kernel);
+  return succ;
 }
 
 template <typename I, typename F>

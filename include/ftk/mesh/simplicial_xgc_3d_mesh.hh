@@ -69,6 +69,8 @@ public:
   void initialize_interpolants();
   ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
   F interpolate(const ndarray<F>& scalar, I i); // interpolate scalar value
+  void interpolate(const ndarray<F>& scalar, const ndarray<F>& grad, const ndarray<F>& jacobian, 
+      I i, F f[], F g[2], F j[2][2]) const;
 
   const interpolant_t& get_interpolant(int v /*virtual plane id*/, I i/*vertex id*/) const { return interpolants[v][i]; }
   
@@ -333,9 +335,53 @@ void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants()
   }
   fprintf(stderr, "interpolants initialized.\n");
 }
+  
+template <typename I, typename F>
+void simplicial_xgc_3d_mesh<I, F>::interpolate(
+    const ndarray<F>& scalar, const ndarray<F>& grad, const ndarray<F>& jacobian, 
+    I i, F f[], F g[2], F j[2][2]) const
+{
+  const int m2n0 = m2->n(0);
+  const int p = i / m2n0; // poloidal plane id
+
+  if (p % vphi == 0) { // non-virtual plane
+    const int p0 = p / vphi;
+    const int j = i % m2n0;
+
+    const auto idx = m2n0 * p0 + j;
+    f[0] = scalar[idx];
+    g[0] = grad[idx*2];
+    g[1] = grad[idx*2+1];
+  } else { // virtual plane
+    const int p0 = p / vphi, p1 = (p0 + 1) % nphi;
+    const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
+    const interpolant_t& l = interpolants[p % vphi][i % m2n0];
+
+    // init
+    f[0] = 0;
+    for (int k0 = 0; k0 < 2; k0 ++) {
+      g[k0] = 0;
+      for (int k1 = 0; k1 < 2; k1 ++) 
+        j[k0][k1] = 0;
+    }
+
+    // add values
+    for (int k = 0; k < 3; k ++) {
+      const auto idx0 = m2n0 * p0 + l.tri0[k], 
+                 idx1 = m2n0 * p1 + l.tri1[k];
+
+      f[0] += alpha * l.mu0[k] * scalar[idx0] + beta * l.mu1[k] * scalar[idx1];
+      for (int k0 = 0; k0 < 2; k0 ++) {
+        g[k0] += alpha * l.mu0[k] * grad[idx0*2+k0] + beta * l.mu1[k] * grad[idx1*2+k0];
+        for (int k1 = 0; k1 < 2; k1 ++) 
+          j[k0][k1] += alpha * l.mu0[k] * jacobian[idx0*4+k0*2+k1] + beta * l.mu1[k] * jacobian[idx1*4+k0*2+k1];
+      }
+    }
+  }
+}
 
 template <typename I, typename F>
-F simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar, I i) // interpoloate scalar value
+F simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar, I i) // interpolate scalar value
 {
   const int m2n0 = m2->n(0);
   const int p = i / m2n0; // poloidal plane id

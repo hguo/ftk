@@ -299,17 +299,20 @@ void xgc_blob_filament_tracker::simplex_values(
     p[k] = v3 / m2->n(0); // poloidal plane coords
 
     // if (m3->is_poloidal(p[k])) fprintf(stderr, "non-poloidal virtual plane\n");
-  
+    m3->get_coords_rzp(v3, rzpt[k]);
+    rzpt[k][3] = t[k];
+
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
     const auto &data = field_data_snapshots[iv];
-   
+
+#if 1
+    m3->interpolate(data.scalar, data.vector, data.jacobian, v3, 
+        &f[k], v[k], j[k]);
+#else
     const int dp0 = p[k] / iphi / vphi, // plane id in the density array
               dp1 = dp0 + 1; // (dp0 + 1) % nphi;
     const int vc0 = v2 + dp0 * m2n0;
    
-    m3->get_coords_rzp(v3, rzpt[k]);
-    rzpt[k][3] = t[k];
-
     // if (m3->is_poloidal(p[k])) {
     // if (p[k] % vphi == 0) { // poloidal
     if (1) { 
@@ -352,6 +355,7 @@ void xgc_blob_filament_tracker::simplex_values(
         rzpt[k][j] = alpha * rzp0[j] + beta * rzp1[j];
 #endif
     }
+#endif
   }
 
 #if 1
