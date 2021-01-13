@@ -63,8 +63,9 @@ inline void xgc_blob_threshold_tracker::update_timestep()
 
   const int m3n0 = m3->n(0);
   const auto &scalar = field_data_snapshots[0].scalar;
-  for (int i = 0; i < m3n0; i ++) {
-    if (m3->interpolate(scalar, i) < threshold) continue;
+  // for (int i = 0; i < m3n0; i ++) {
+  parallel_for(m3n0, [&](int i) {
+    if (m3->interpolate(scalar, i) < threshold) return; // continue;
     const int ei = i + current_timestep * m3n0;
     // for (const auto j : m3->get_vertex_edge_vertex_nextnodes(i)) {
     for (const auto j : m3->get_vertex_edge_vertex(i)) {
@@ -73,16 +74,17 @@ inline void xgc_blob_threshold_tracker::update_timestep()
         uf.unite(ei, ej);
       }
     }
-  }
+  });
 
   if (field_data_snapshots.size() >= 2) {
     const auto &scalar1 = field_data_snapshots[1].scalar;
-    for (int i = 0; i < m3n0; i ++) {
+    // for (int i = 0; i < m3n0; i ++) {
+    parallel_for(m3n0, [&](int i) {
       // if (scalar[i] < threshold || scalar1[i] < threshold) continue;
-      if (m3->interpolate(scalar, i) < threshold || m3->interpolate(scalar1, i) < threshold) continue;
+      if (m3->interpolate(scalar, i) < threshold || m3->interpolate(scalar1, i) < threshold) return; // continue;
       else
         uf.unite(i + current_timestep * m3n0, i + (current_timestep+1) * m3n0);
-    }
+    });
   }
   
   fprintf(stderr, "%zu\n", uf.size());
@@ -146,6 +148,7 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
 
   std::mutex mutex;
   for (int tid = 0; tid < m3->n(3); tid ++) {
+  // parallel_for(m3->n(3), [&](int tid) {
     int tet[4];
     m3->get_simplex(3, tid, tet);
 
@@ -156,7 +159,7 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
       
     std::sort(ids.begin(), ids.end());
     {
-      std::lock_guard<std::mutex> guard(mutex);
+      // std::lock_guard<std::mutex> guard(mutex);
       if (ids.size() == 4)
         grid->InsertNextCell(VTK_TETRA, 4, &ids[0]);
       else if (ids.size() == 3)
@@ -164,7 +167,7 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
       // else if (ids.size() == 2)
       //   grid->InsertNextCell(VTK_LINE, 2, &ids[0]);
     }
-  }
+  }// );
   
   return grid;
 
