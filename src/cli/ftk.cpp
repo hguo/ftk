@@ -273,7 +273,7 @@ void initialize_xgc(diy::mpi::communicator comm)
     fatal("missing xgc mesh filename");
  
   const auto js = stream->get_json();
-  const int ntimesteps = js["n_timesteps"];
+  ntimesteps = js["n_timesteps"];
 
   // determine nphi and iphi
   const std::string filename0 = js["filenames"][0];
@@ -331,7 +331,12 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 #endif
   {
     auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+    m2->initialize_point_locator();
+    if (xgc_bfield_filename.length() > 0)
+      m2->read_bfield_h5(xgc_bfield_filename);
+    
     std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
+    mx->initialize_interpolants();
 
     // tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi)); // WIP
     tracker.reset(new xgc_blob_filament_tracker(comm, mx));

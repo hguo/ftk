@@ -169,10 +169,10 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.ordinal = m4->is_ordinal(2, i); 
   cp.timestep = current_timestep;
 
-  fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
-      mu[0], mu[1], mu[2], 
-      x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
-      t[0], t[1], t[2]);
+  // fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
+  //     mu[0], mu[1], mu[2], 
+  //     x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
+  //     t[0], t[1], t[2]);
   
   return true;
 }
