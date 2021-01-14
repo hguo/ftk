@@ -27,7 +27,7 @@ private:
   mutable tbb::concurrent_hash_map<T, T> parents;
 #else
   mutable std::map<T, T> parents; // pointer to the parent in the local process
-  std::mutex mutex;
+  mutable std::mutex mutex;
 #endif
 };
 
