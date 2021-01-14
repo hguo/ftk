@@ -346,12 +346,16 @@ void simplicial_xgc_3d_mesh<I, F>::interpolate(
 
   if (p % vphi == 0) { // non-virtual plane
     const int p0 = p / vphi;
-    const int j = i % m2n0;
+    const int k = i % m2n0;
 
-    const auto idx = m2n0 * p0 + j;
+    const auto idx = m2n0 * p0 + k;
     f[0] = scalar[idx];
     g[0] = grad[idx*2];
     g[1] = grad[idx*2+1];
+    j[0][0] = jacobian[idx*4];
+    j[0][1] = jacobian[idx*4+1];
+    j[1][0] = jacobian[idx*4+2];
+    j[1][1] = jacobian[idx*4+3];
   } else { // virtual plane
     const int p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
