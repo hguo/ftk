@@ -2,6 +2,7 @@
 #define FTK_XGC_3D_MESH_HH
 
 #include <ftk/ftk_config.hh>
+#include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_3d_mesh.hh>
 
 namespace ftk {
@@ -45,6 +46,17 @@ public:
   virtual std::set<I> side_of(int d, I i) const;
 
   I transform(int d, I i) const;
+
+public: // io
+  ndarray<F> derive_turbulence(
+      const ndarray<F>& dpot, 
+      const ndarray<F>& pot0,
+      const ndarray<F>& potm0,
+      const ndarray<F>& eden, 
+      const ndarray<F>& psi_mks,  // 80
+      const ndarray<F>& e_gc_density_avg,
+      const ndarray<F>& e_perp_temperature_avg,
+      const ndarray<F>& e_parallel_mean_en_avg) const;
 
 public: // vtk
   void to_vtu_slices_file(const std::string& filename) const;
@@ -426,9 +438,83 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::smooth_scalar(const ndarray<F>& scalar)
 }
 
 template <typename I, typename F>
+ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
+      const ndarray<F>& dpot, 
+      const ndarray<F>& pot0,
+      const ndarray<F>& potm0,
+      const ndarray<F>& eden, 
+      const ndarray<F>& psid, // psi_mks, 80
+      const ndarray<F>& dens, // e_gc_density_avg, 80
+      const ndarray<F>& temp1, // e_perp_temperature_avg,
+      const ndarray<F>& temp2) const // e_parallel_mean_en_avg
+{
+  // see http://visit.ilight.com/svn/visit/trunk/src/databases/ADIOS/avtXGCFileFormat.C
+  auto interpolate = [&](const ndarray<F>& x, const ndarray<F>& y, const ndarray<F>& xi) {
+    const int n = x.size(), ni = xi.size();
+    ndarray<F> yi(xi.shape());
+    for (int i = 0; i < ni; i ++) {
+      F val = xi[i];
+      if (val < x[0])
+        yi[i] = y[0];
+      else if (val >= x[n-1])
+        yi[i] = y[n-1];
+      else {
+        for (int j = 0; j < n-1; j ++) {
+          if (val >= x[j] && val <= x[j+1]) {
+            F dy = y[j+1] - y[j];
+            F t = (xi[i] - x[j]) / (x[j+1] - x[j]);
+            yi[i] = y[j] + t * dy;
+            break;
+          }
+        }
+      }
+    }
+    return yi;
+  };
+
+  const ndarray<F>& psi = m2->get_psifield();
+
+  ndarray<F> temp(temp1.shape());
+  for (int i = 0 ; i < temp.size(); i ++)
+    temp[i] = 2.0 * (temp1[i] + temp2[i]) / 3.0;
+
+  const int n = psid.size();
+  const int ni = psi.size();
+
+  ndarray<F> te = interpolate(psid, temp, psi);
+  ndarray<F> de = interpolate(psid, dens, psi);
+
+  const int m2n0 = m2->n(0);
+  ndarray<F> mean_eden; 
+  mean_eden.reshape(m2n0);
+  for (int i = 0; i < nphi; i ++) 
+    for (int j = 0; j < m2n0; j ++) 
+      mean_eden[j] += eden[i*m2n0+j]; // eden(j, i);
+  for (int j = 0; j < m2n0; j ++)
+    mean_eden[j] /= nphi;
+
+  // ndarray<F> arr({size_t(m2n0), size_t(nphi)});
+  ndarray<F> arr(eden.shape());
+  for (int i = 0; i < nphi; i ++) {
+    for (int j = 0; j < m2n0; j ++) {
+      const int idx = i*m2n0 + j;
+      F v1 = dpot[idx] - (potm0[j] - pot0[j]);
+      v1 = v1 / te[j];
+
+      F v2 = eden[idx] - mean_eden[j];
+      v2 = v2 / de[j];
+
+      arr[idx] = v1 + v2;
+    }
+  }
+
+  return arr;
+}
+
+template <typename I, typename F>
 ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) const
 {
-  const int m2n0 = m2->n(0), 
+  const size_t m2n0 = m2->n(0), 
             nvphi = nphi * vphi;
   const F dphi = 2 * M_PI / (nphi * iphi);
 
