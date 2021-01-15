@@ -508,6 +508,21 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
     }
   }
 
+  // check mean and std
+#if 0
+  F mean(0), var(0);
+  for (int i = 0; i < arr.size(); i ++)
+    mean += arr[i];
+  mean /= arr.size();
+
+  for (int i = 0; i < arr.size(); i ++) {
+    F d = arr[i] - mean;
+    var += d * d;
+  }
+  F s = std::sqrt(var / arr.size());
+  fprintf(stderr, "mean=%f, std=%f\n", mean, s);
+#endif
+
   return arr;
 }
 
