@@ -54,6 +54,7 @@ std::string xgc_mesh_filename,
   xgc_bfield_filename,
   // xgc_augmented_mesh_filename,
   xgc_smoothing_kernel_filename = "xgc.kernel",
+  xgc_interpolant_filename,
   xgc_write_back_filename;
 bool xgc_post_process = false, 
      xgc_torus = false, 
@@ -336,7 +337,15 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
       m2->read_bfield_h5(xgc_bfield_filename);
     
     std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
-    mx->initialize_interpolants();
+    if (xgc_interpolant_filename.length() > 0) {
+      if (file_exists( xgc_interpolant_filename ))
+        mx->read_interpolants( xgc_interpolant_filename );
+      else {
+        mx->initialize_interpolants();
+        mx->write_interpolants( xgc_interpolant_filename );
+      }
+    } else 
+      mx->initialize_interpolants();
 
     // tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi)); // WIP
     tracker.reset(new xgc_blob_filament_tracker(comm, mx));
@@ -621,6 +630,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("xgc-vphi", "XGC number of virtual poloidal planes", cxxopts::value<int>(xgc_vphi)->default_value("1"))
     ("xgc-smoothing-kernel-file", "XGC: smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC: smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
+    ("xgc-interpolant-file", "XGC: interpolant file", cxxopts::value<std::string>(xgc_interpolant_filename))
     ("xgc-torus", "XGC: track over poloidal planes", cxxopts::value<bool>(xgc_torus))
     ("xgc-write-back", "XGC: write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("xgc-post-process", "XGC: enable post-processing", cxxopts::value<bool>(xgc_post_process))

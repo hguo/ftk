@@ -85,7 +85,10 @@ public:
       I i, F f[], F g[2], F j[2][2]) const;
 
   const interpolant_t& get_interpolant(int v /*virtual plane id*/, I i/*vertex id*/) const { return interpolants[v][i]; }
-  
+ 
+  void write_interpolants(const std::string& filename) const { diy::serializeToFile(interpolants, filename); }
+  void read_interpolants(const std::string& filename) { diy::unserializeFromFile(filename, interpolants); }
+
 protected:
   std::vector<std::vector<interpolant_t>> interpolants;
 
