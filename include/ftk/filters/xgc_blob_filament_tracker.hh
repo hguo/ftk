@@ -507,6 +507,11 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
       return !m3->is_poloidal(2, p.tag);
     });
   });
+  
+  // remove trajectories with no points
+  curves.filter([&](const feature_curve_t& c) {
+    return c.size() > 0;
+  });
 
   // apply only when virtual poloidal planes are used
   if (vphi > 1) {
@@ -523,7 +528,6 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
     return c.size() > 0;
   });
 
-  // discard points between poloidal planes
   fprintf(stderr, "after post process: #%zu\n", curves.size());
 }
 
