@@ -7,13 +7,9 @@ namespace ftk {
   
 struct feature_curve_t : public std::vector<feature_point_t>
 {
-  int id;
-  bool complete = false, loop = false;
-  std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
-  std::array<double, 3> bbmin, bbmax; // bounding box
-  double tmin, tmax; // time bounding box
-  double vmmin, vmmax; // min/max moving speed
-  unsigned int consistent_type = 0; // 0 if no consistent type
+  feature_curve_t() {}
+  feature_curve_t(const feature_curve_t&);
+  feature_curve_t& operator=(const feature_curve_t&);
 
   void relabel(int i); // assign id for traj and each point in the traj
   void update_statistics();
@@ -39,9 +35,62 @@ struct feature_curve_t : public std::vector<feature_point_t>
   void copy_info(feature_curve_t& t) {id = t.id; complete = t.complete; loop = t.loop;}
 
   feature_curve_t intercept(int t0, int t1) const; //! assuming the traj is already reordered
+
+  template <int k=2> void unwrap(const double period); // unwrap the curve in a periodical domain
+
+public:
+  int id;
+  bool complete = false, loop = false;
+  std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
+  std::array<double, 3> bbmin, bbmax; // bounding box
+  double tmin, tmax; // time bounding box
+  double vmmin, vmmax; // min/max moving speed
+  unsigned int consistent_type = 0; // 0 if no consistent type
 };
 
 /////////
+
+inline feature_curve_t::feature_curve_t(const feature_curve_t& c)
+{
+  id = c.id;
+  complete = c.complete;
+  loop = c.loop;
+  max = c.max;
+  min = c.min;
+  persistence = c.persistence;
+  bbmin = c.bbmin;
+  bbmax = c.bbmax;
+  tmin = c.tmin;
+  tmax = c.tmax;
+  vmmin = c.vmmin;
+  vmmax = c.vmmax;
+  consistent_type = c.consistent_type;
+  for (const feature_point_t& p : c) 
+    this->push_back(p);
+}
+  
+inline feature_curve_t& feature_curve_t::operator=(const feature_curve_t& c)
+{
+  id = c.id;
+  complete = c.complete;
+  loop = c.loop;
+  max = c.max;
+  min = c.min;
+  persistence = c.persistence;
+  bbmin = c.bbmin;
+  bbmax = c.bbmax;
+  tmin = c.tmin;
+  tmax = c.tmax;
+  vmmin = c.vmmin;
+  vmmax = c.vmmax;
+  consistent_type = c.consistent_type;
+  clear();
+  for (const feature_point_t& p : c) 
+    this->push_back(p);
+
+  return *this;
+}
+
 inline void feature_curve_t::relabel(int i)
 {
   id = i;
@@ -269,6 +318,28 @@ inline feature_curve_t feature_curve_t::intercept(int t0, int t1) const //! assu
   }
 
   return result;
+}
+  
+template <int k> void feature_curve_t::unwrap(const double period)
+{
+  for (int i = 0; i < size()-1; i ++) {
+    const double delta = at(i+1)[k] - at(i)[k];
+    if (delta >= period/2) {
+      for (int j = i+1; j < size(); j ++)
+        at(j)[k] -= period;
+    } else if (delta <= -period/2) {
+      for (int j = i+1; j < size(); j ++)
+        at(j)[k] += period;
+    }
+  }
+  
+  // update_statistics();
+  bbmin[k] = std::numeric_limits<double>::max();
+  bbmax[k] = std::numeric_limits<double>::lowest();
+  for (auto i = 0; i < size(); i ++) {
+    bbmax[k] = std::max(bbmax[k], at(i).x[k]);
+    bbmin[k] = std::min(bbmin[k], at(i).x[k]);
+  }
 }
 
 inline void feature_curve_t::derive_velocity() // const std::vector<double> &kernel)

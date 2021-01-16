@@ -49,6 +49,8 @@ protected:
 
 public:
   void build_critical_surfaces();
+  void post_process_surfaces();
+  void post_process_curves(feature_curve_set_t& curves) const;
 
 public:
   void write_intersections_binary(const std::string& filename) const;
@@ -483,6 +485,48 @@ inline void xgc_blob_filament_tracker::read_surfaces(const std::string& filename
   fprintf(stderr, "readed surfaces #pts=%zu, #tris=%zu\n", surfaces.pts.size(), surfaces.tris.size());
 }
 
+inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& curves) const
+{
+  fprintf(stderr, "before post process: #%zu\n", curves.size());
+
+  const int nphi = m3->get_nphi(), 
+            iphi = m3->get_iphi(),
+            vphi = m3->get_vphi();
+  const int np = m3->np();
+  
+  // unwrap and update statistics
+#if 0 
+  curves.foreach([&](feature_curve_t& curve) {
+    curve.unwrap<2>(np);
+    curve.update_statistics(); 
+  });
+#endif
+
+#if 0 
+  // discard non-poloidal points
+  curves.foreach([&](feature_curve_t& c) {
+    c.discard([&](const feature_point_t& p) {
+      return !m3->is_poloidal(2, p.tag);
+    });
+  });
+#endif
+
+#if 0
+  // apply only when virtual poloidal planes are used
+  if (vphi > 1) {
+    // discard loops between non-virtual poloidal planes
+    curves.filter([&](const feature_curve_t& c) {
+      const double delta_phi = c.bbmax[2] - c.bbmin[2];
+      // fprintf(stderr, "delta_phi=%f\n", delta_phi);
+      return delta_phi > vphi;
+    });
+  }
+#endif
+
+  // discard points between poloidal planes
+  fprintf(stderr, "after post process: #%zu\n", curves.size());
+}
+
 inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, std::string format, bool torus) const
 {
   if (!is_root_proc()) return;
@@ -490,6 +534,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
 #if FTK_HAVE_VTK
   for (int i = 0; i < end_timestep; i ++) { // TODO
     auto sliced = surfaces.slice_time(i);
+    post_process_curves(sliced);
     fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
     auto poly = sliced.to_vtp(3, std::vector<std::string>());

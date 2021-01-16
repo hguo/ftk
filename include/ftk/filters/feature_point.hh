@@ -14,6 +14,31 @@ using nlohmann::json;
 // template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
 struct feature_point_t {
   feature_point_t() {}
+  feature_point_t(const feature_point_t& p) {
+    x = p.x;
+    t = p.t;
+    cond = p.cond;
+    timestep = p.timestep;
+    scalar = p.scalar;
+    v = p.v;
+    type = p.type;
+    ordinal = p.ordinal;
+    tag = p.tag;
+    id = p.id;
+  }
+  feature_point_t& operator=(const feature_point_t& p) {
+    x = p.x;
+    t = p.t;
+    cond = p.cond;
+    timestep = p.timestep;
+    scalar = p.scalar;
+    v = p.v;
+    type = p.type;
+    ordinal = p.ordinal;
+    tag = p.tag;
+    id = p.id;
+    return *this;
+  }
   feature_point_t(const feature_point_lite_t& cp) {
     for (int i = 0; i < 3; i ++)
       x[i] = cp.x[i];
@@ -25,16 +50,7 @@ struct feature_point_t {
   }
 
   double operator[](size_t i) const {return x[i];}
-  std::array<double, 3> x = {0}; // double x[3] = {0}; // coordinates 
-  double t = 0.0; // time
-  double cond = 0.0; // condition number
-  int timestep = 0; 
-  // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
-  std::array<double, FTK_CP_MAX_NUM_VARS> scalar = {0}; // double scalar[FTK_CP_MAX_NUM_VARS] = {0};
-  std::array<double, 3> v = {0};
-  unsigned int type = 0;
-  bool ordinal = false;
-  unsigned long long tag = 0, id = 0;
+  double &operator[](size_t i) {return x[i];}
 
   // constexpr size_t size() const noexcept { return sizeof(feature_point_t); }
 
@@ -64,6 +80,18 @@ struct feature_point_t {
     os << "id=" << id;  // << std::endl;
     return os;
   }
+ 
+public:
+  std::array<double, 3> x = {0}; // double x[3] = {0}; // coordinates 
+  double t = 0.0; // time
+  double cond = 0.0; // condition number
+  int timestep = 0; 
+  // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
+  std::array<double, FTK_CP_MAX_NUM_VARS> scalar = {0}; // double scalar[FTK_CP_MAX_NUM_VARS] = {0};
+  std::array<double, 3> v = {0};
+  unsigned int type = 0;
+  bool ordinal = false;
+  unsigned long long tag = 0, id = 0;
 };
 
 }
@@ -103,35 +131,35 @@ namespace nlohmann
   };
 }
 
-#if 0
 // serialization
 namespace diy {
-  static void save(diy::BinaryBuffer& bb, const ftk::feature_point_t &cp) {
-    diy::save(bb, cp.x); 
-    diy::save(bb, cp.t);
-    diy::save(bb, cp.cond);
-    diy::save(bb, cp.timestep);
-    diy::save(bb, cp.scalar); 
-    diy::save(bb, cp.v);
-    diy::save(bb, cp.type);
-    diy::save(bb, cp.ordinal);
-    diy::save(bb, cp.tag);
-    diy::save(bb, cp.id);
-  }
+  template <> struct Serialization<ftk::feature_point_t> {
+    static void save(diy::BinaryBuffer& bb, const ftk::feature_point_t &cp) {
+      diy::save(bb, cp.x); 
+      diy::save(bb, cp.t);
+      diy::save(bb, cp.cond);
+      diy::save(bb, cp.timestep);
+      diy::save(bb, cp.scalar); 
+      diy::save(bb, cp.v);
+      diy::save(bb, cp.type);
+      diy::save(bb, cp.ordinal);
+      diy::save(bb, cp.tag);
+      diy::save(bb, cp.id);
+    }
 
-  static void load(diy::BinaryBuffer& bb, ftk::feature_point_t &cp) {
-    diy::load(bb, cp.x); 
-    diy::load(bb, cp.t);  
-    diy::load(bb, cp.cond);
-    diy::load(bb, cp.timestep);
-    diy::load(bb, cp.scalar); 
-    diy::load(bb, cp.v);
-    diy::load(bb, cp.type);
-    diy::load(bb, cp.ordinal);
-    diy::load(bb, cp.tag);
-    diy::load(bb, cp.id);
-  }
+    static void load(diy::BinaryBuffer& bb, ftk::feature_point_t &cp) {
+      diy::load(bb, cp.x); 
+      diy::load(bb, cp.t);  
+      diy::load(bb, cp.cond);
+      diy::load(bb, cp.timestep);
+      diy::load(bb, cp.scalar); 
+      diy::load(bb, cp.v);
+      diy::load(bb, cp.type);
+      diy::load(bb, cp.ordinal);
+      diy::load(bb, cp.tag);
+      diy::load(bb, cp.id);
+    }
+  };
 }
-#endif
 
 #endif
