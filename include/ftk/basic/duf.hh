@@ -3,6 +3,7 @@
 
 #include <ftk/ftk_config.hh>
 #include <map>
+#include <mutex>
 
 #if FTK_HAVE_TBB
 #include <tbb/concurrent_hash_map.h>
