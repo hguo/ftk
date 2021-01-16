@@ -323,13 +323,13 @@ inline feature_curve_t feature_curve_t::intercept(int t0, int t1) const //! assu
 template <int k> void feature_curve_t::unwrap(const double period)
 {
   for (int i = 0; i < size()-1; i ++) {
-    const double delta = at(i+1)[k] - at(i)[k];
+    const double delta = at(i+1).x[k] - at(i).x[k];
     if (delta >= period/2) {
       for (int j = i+1; j < size(); j ++)
-        at(j)[k] -= period;
+        at(j).x[k] -= period;
     } else if (delta <= -period/2) {
       for (int j = i+1; j < size(); j ++)
-        at(j)[k] += period;
+        at(j).x[k] += period;
     }
   }
   

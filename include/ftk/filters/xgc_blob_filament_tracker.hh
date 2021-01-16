@@ -495,23 +495,24 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
   const int np = m3->np();
   
   // unwrap and update statistics
-#if 0 
+#if 1
   curves.foreach([&](feature_curve_t& curve) {
     curve.unwrap<2>(np);
     curve.update_statistics(); 
   });
 #endif
 
-#if 0 
+#if 0
   // discard non-poloidal points
   curves.foreach([&](feature_curve_t& c) {
-    c.discard([&](const feature_point_t& p) {
-      return !m3->is_poloidal(2, p.tag);
-    });
+    c.discard_high_cond();
+    // c.discard([&](const feature_point_t& p) {
+    //   return !m3->is_poloidal(2, p.tag);
+    // });
   });
 #endif
 
-#if 0
+#if 1
   // apply only when virtual poloidal planes are used
   if (vphi > 1) {
     // discard loops between non-virtual poloidal planes
