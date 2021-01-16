@@ -461,8 +461,18 @@ inline void xgc_blob_filament_tracker::read_intersections_binary(const std::stri
 
 inline void xgc_blob_filament_tracker::write_surfaces(const std::string& filename, std::string format, bool torus) const 
 {
-  if (is_root_proc()) 
+  if (!is_root_proc()) return;
+
+  if (ends_with_lower(filename, "vtp")) {
+#if FTK_HAVE_VTK
+    fprintf(stderr, "writing surfaces...\n");
+    write_polydata(filename, transform_vtp_coordinates(surfaces.to_vtp()));
+#else
+    fatal("FTK not compiled with VTK.");
+#endif
+  } else {
     surfaces.save(filename, format);
+  }
 }
 
 inline void xgc_blob_filament_tracker::read_surfaces(const std::string& filename, std::string format)
@@ -559,20 +569,7 @@ vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::transform_vtp_coordinate
 
 inline vtkSmartPointer<vtkPolyData> xgc_blob_filament_tracker::get_critical_surfaces_vtp(bool torus) const
 {
-  if (!torus) return surfaces.to_vtp();
-  auto poly = get_intersections_vtp(torus);
-
-  vtkSmartPointer<vtkCellArray> cells = vtkCellArray::New();
-  for (int i = 0; i < surfaces.tris.size(); i ++) {
-    const auto &c = surfaces.tris[i];
-    vtkSmartPointer<vtkTriangle> tri = vtkTriangle::New();
-    for (int j = 0; j < 3; j ++)
-      tri->GetPointIds()->SetId(j, c[j]);
-    cells->InsertNextCell(tri);
-  }
-
-  poly->SetPolys(cells);
-  return poly;
+  return surfaces.to_vtp();
 }
 #endif
 
