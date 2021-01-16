@@ -339,12 +339,22 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
 
 inline void feature_curve_set_t::filter(std::function<bool(const feature_curve_t&)> f)
 {
+  std::vector<int> to_erase;
+
+  for (const auto &kv : *this) 
+    if (!f(kv.second)) to_erase.push_back(kv.first);
+  
+  for (const auto k : to_erase)
+    erase(k);
+
+#if 0
   for (auto it = cbegin(); it != cend(); ) {
     if (!f(it->second)) 
       erase(it ++);
     else 
       ++ it;
   }
+#endif
 }
 
 inline int feature_curve_set_t::add(const feature_curve_t& t)
