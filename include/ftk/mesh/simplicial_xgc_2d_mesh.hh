@@ -6,6 +6,7 @@
 #include <ftk/mesh/point_locator_2d_quad.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/print.hh>
+#include <ftk/io/xgc_units.hh>
 
 namespace ftk {
 
@@ -21,9 +22,11 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
 
   static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
   void read_bfield_h5(const std::string& filename);
+  bool read_units_m(const std::string& filename) { return units.read(filename); }
 
   I nextnode(I i) const { return nextnodes[i]; }
 
+  const xgc_units_t& get_units() const { return units; }
   const ndarray<I>& get_nextnodes() const { return nextnodes; }
   const ndarray<F>& get_bfield() const { return bfield; }
   const ndarray<F>& get_psifield() const { return psifield; }
@@ -35,6 +38,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   void magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
 
 protected:
+  xgc_units_t units;
   ndarray<F> psifield, bfield;
   ndarray<I> nextnodes;
 };

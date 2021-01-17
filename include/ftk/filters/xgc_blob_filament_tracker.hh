@@ -493,7 +493,7 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
             iphi = m3->get_iphi(),
             vphi = m3->get_vphi();
   const int np = m3->np();
-  
+
   // unwrap and update statistics
   curves.foreach([&](feature_curve_t& curve) {
     curve.unwrap<2>(np);
@@ -505,6 +505,7 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
     // c.discard_high_cond();
     c.discard([&](const feature_point_t& p) {
       return !m3->is_poloidal(2, p.tag);
+      // return !m3->is_actual_poloidal(2, p.tag); // remove virtual planes as well
     });
   });
   
@@ -516,17 +517,87 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
   // apply only when virtual poloidal planes are used
   if (vphi > 1) {
     // discard loops between non-virtual poloidal planes
+#if 1
     curves.filter([&](const feature_curve_t& c) {
       const double delta_phi = c.bbmax[2] - c.bbmin[2];
       // fprintf(stderr, "delta_phi=%f\n", delta_phi);
       return delta_phi > vphi;
     });
+#endif
+
+    // TODO: rotate loops to make the first point in an actual poloidal plane
+#if 0
+    // force phi being monotonous between non-virtual poloidal planes
+    curves.foreach([&](feature_curve_t& c) { // TODO: consider loops
+      auto poloidals = c.select([&](const feature_point_t& p) { return m3->is_actual_poloidal(2, p.tag); });
+      for (int i = 0; i < poloidals.size()-1; i ++) {
+        if (c[poloidals[i]].x[2] < c[poloidals[i+1]].x[2]) { // ascending phi
+          for (int j = poloidals[i]; j < poloidals[i+1]; j ++) 
+            if (c[j].x[2] > c[j+1].x[2]) 
+              c[j].x[2] = c[j+1].x[2];
+        } else if (c[poloidals[i]].x[2] > c[poloidals[i+1]].x[2]) { // descending phi
+          for (int j = poloidals[i]; j < poloidals[i+1]; j ++) 
+            if (c[j].x[2] < c[j+1].x[2]) 
+              c[j].x[2] = c[j+1].x[2];
+        } else { // same phi, flatten things up
+          for (int j = poloidals[i]+1; j < poloidals[i+1]; j ++) 
+            c[j].x[2] = c[poloidals[i]].x[2];
+        }
+      }
+      // c.loop = false;
+    });
+#endif
   }
   
-  // remove trajectories with no points
+  // remove trajectories with no points (again)
   curves.filter([&](const feature_curve_t& c) {
     return c.size() > 0;
   });
+
+  // if the curve is loop and has inconsistent type, rotate the loop
+  curves.foreach([&](feature_curve_t& c) { c.rotate(); });
+
+  // smooth types
+  const int half_window_size = 2;
+  curves.foreach([&](feature_curve_t& c) {
+    if (c.size() < half_window_size*2+1) return;
+
+    std::map<int, unsigned int> pending_changes;
+    for (int i = half_window_size; i < c.size() - half_window_size; i ++) {
+      unsigned int local_consistent_type = c.at(i - half_window_size).type;
+      for (int j = i - half_window_size; j <= i + half_window_size; j ++)  {
+        if (j == i) continue;
+        else if (local_consistent_type != c.at(j).type) {
+          local_consistent_type = 0; // type is inconsistent within the window
+          break;
+        }
+      }
+        
+      if (local_consistent_type != 0 && c.at(i).type != local_consistent_type)
+        pending_changes[i] = local_consistent_type;
+    }
+    for (const auto &kv : pending_changes)
+      c.at(kv.first).type = kv.second;
+  });
+
+  // print for debugging
+#if 0
+  curves.foreach([&](const feature_curve_t& c) {
+    for (int i = 0; i < c.size(); i ++)
+      fprintf(stderr, "r=%f, z=%f, p=%f, type=%d\n", 
+          c[i].x[0], c[i].x[1], c[i].x[2], c[i].type);
+  });
+#endif
+
+  // split into consistent type curves
+  curves.split_all();
+#if 0
+  curves.foreach([&](feature_curve_t& c) {
+    c.discard([&](const feature_point_t& p) {
+      return !m3->is_actual_poloidal(2, p.tag); // remove virtual planes as well
+    });
+  });
+#endif
 
   fprintf(stderr, "after post process: #%zu\n", curves.size());
 }

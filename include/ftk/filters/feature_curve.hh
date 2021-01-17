@@ -16,7 +16,8 @@ struct feature_curve_t : public std::vector<feature_point_t>
   void derive_velocity(); // (const std::vector<double> &dog_kernel); // assuming the traj contains only ordinal points (dt=1)
 
   std::vector<feature_curve_t> split() const; // split to consistent subtrajs
-  std::vector<int/*idx in orignal traj*/> to_ordinals() const;
+  std::vector<int/*idx in original traj*/> to_ordinals() const;
+  std::vector<int/*idx in original traj*/> select(std::function<bool(const feature_point_t&)> f);
 
   void rotate(); //! if the traj is a loop and the type is inconsistent, rotate the traj before splitting
   void reorder(); //! reorder by timestep
@@ -96,6 +97,15 @@ inline void feature_curve_t::relabel(int i)
   id = i;
   for (i = 0; i < size(); i ++)
     at(i).id = id;
+}
+
+inline std::vector<int> feature_curve_t::select(std::function<bool(const feature_point_t&)> f)
+{
+  std::vector<int> result;
+  for (int i = 0; i < size(); i ++) 
+    if (f(at(i)))
+      result.push_back(i);
+  return result;
 }
 
 inline void feature_curve_t::discard(std::function<bool(const feature_point_t&)> f)

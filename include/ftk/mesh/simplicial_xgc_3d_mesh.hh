@@ -26,6 +26,14 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
 
   bool is_poloidal(int p) const { return p % vphi == 0; }
   bool is_poloidal(int d, I i) const { return m3->is_ordinal(d, i); }
+  bool is_actual_poloidal(int d, I i) const { 
+    if (m3->is_ordinal(d, i)) {
+      int v[4];
+      get_simplex(d, i, v);
+      const int t = m3->flat_vertex_time(v[0]);
+      return t % vphi == 0;
+    } else return false;
+  }
 
   std::set<I> get_vertex_edge_vertex(I i) const;
   std::set<I> get_vertex_edge_vertex_nextnodes(I i) const;
