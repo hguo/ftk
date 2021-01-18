@@ -49,9 +49,12 @@ std::vector<std::string> input_filenames;
 double threshold = 0.0;
 
 // xgc specific
-std::string xgc_mesh_filename, 
+std::string xgc_data_path, 
+  xgc_mesh_filename, 
   xgc_ff_mesh_filename,
   xgc_bfield_filename,
+  xgc_oneddiag_filename,
+  xgc_units_filename,
   // xgc_augmented_mesh_filename,
   xgc_smoothing_kernel_filename = "xgc.kernel",
   xgc_interpolant_filename,
@@ -71,6 +74,11 @@ std::shared_ptr<threshold_tracker<>> tracker_threshold;
 std::shared_ptr<ndarray_stream<>> stream;
 
 nlohmann::json j_input, j_tracker;
+
+// xgc-specific
+std::shared_ptr<simplicial_xgc_2d_mesh<>> mx2; // 2d mesh
+std::shared_ptr<simplicial_xgc_3d_mesh<>> mx3, // 3d mesh, 
+                                          mx30; // 3d mesh for write-backs
 
 // input stream
 static const std::string 
@@ -270,9 +278,6 @@ void execute_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_xgc(diy::mpi::communicator comm)
 {
-  if (xgc_mesh_filename.empty()) 
-    fatal("missing xgc mesh filename");
- 
   const auto js = stream->get_json();
   ntimesteps = js["n_timesteps"];
 
@@ -301,11 +306,31 @@ void initialize_xgc(diy::mpi::communicator comm)
     iphi = 1;
 #endif
 
+  if (xgc_data_path.length() > 0) {
+    std::string postfix = "h5"; // TODO: check if format is bp
+    xgc_mesh_filename = xgc_data_path + "/xgc.mesh." + postfix;
+    if (!file_exists(xgc_mesh_filename)) {
+      postfix = "bp";
+      xgc_mesh_filename = xgc_data_path + "/xgc.mesh." + postfix;
+    }
+    if (!file_exists(xgc_mesh_filename)) {
+      fatal("xgc mesh file not found.");
+    }
+    xgc_bfield_filename = xgc_data_path + "/xgc.bfield." + postfix;
+    xgc_oneddiag_filename = xgc_data_path + "/xgc.oneddiag." + postfix;
+    xgc_units_filename = xgc_data_path + "/units.m";
+  }
+
   if (comm.rank() == 0) {
     fprintf(stderr, "SUMMARY\n=============\n");
-    fprintf(stderr, "xgc_mesh=%s\n", xgc_mesh_filename.c_str());
-    fprintf(stderr, "xgc_bfield=%s\n", xgc_bfield_filename.c_str());
+    fprintf(stderr, "xgc_data_path=%s\n", xgc_data_path.c_str());
+    fprintf(stderr, "xgc_mesh_filename=%s\n", xgc_mesh_filename.c_str());
+    fprintf(stderr, "xgc_bfield_filename=%s\n", xgc_bfield_filename.c_str());
+    fprintf(stderr, "xgc_oneddiag_filename=%s\n", xgc_oneddiag_filename.c_str());
+    fprintf(stderr, "xgc_units_m=%s\n", xgc_units_filename.c_str());
     fprintf(stderr, "xgc_ff_mesh=%s\n", xgc_ff_mesh_filename.c_str());
+    fprintf(stderr, "xgc_interpolant_filename=%s\n", xgc_interpolant_filename.c_str());
+    fprintf(stderr, "xgc_use_smoothing_kernel=%d\n", xgc_use_smoothing_kernel);
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
     fprintf(stderr, "threshold=%f\n", threshold);
@@ -317,6 +342,33 @@ void initialize_xgc(diy::mpi::communicator comm)
     std::cerr << "input=" << js << std::endl;
     fprintf(stderr, "=============\n");
   }
+  
+  mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  mx2->initialize_point_locator();
+  if (xgc_bfield_filename.length() > 0)
+    mx2->read_bfield_h5(xgc_bfield_filename);
+  if (xgc_units_filename.length() > 0)
+    mx2->read_units_m(xgc_units_filename);
+ 
+  if (xgc_use_smoothing_kernel) {
+    if (file_exists(xgc_smoothing_kernel_filename))
+      mx2->read_smoothing_kernel(xgc_smoothing_kernel_filename);
+    else {
+      mx2->build_smoothing_kernel(xgc_smoothing_kernel_size);
+      mx2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
+    }
+  }
+  
+  mx3.reset( new ftk::simplicial_xgc_3d_mesh<>(mx2, xgc_nphi, xgc_iphi, xgc_vphi) );
+  if (xgc_interpolant_filename.length() > 0) {
+    if (file_exists( xgc_interpolant_filename ))
+      mx3->read_interpolants( xgc_interpolant_filename );
+    else {
+      mx3->initialize_interpolants();
+      mx3->write_interpolants( xgc_interpolant_filename );
+    }
+  } else 
+    mx3->initialize_interpolants();
 }
 
 void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
@@ -324,44 +376,8 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   initialize_xgc(comm);
   
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
-
-#if 0
-  if (file_exists(xgc_augmented_mesh_filename)) { // load augmented mesh
-    tracker = ftk::xgc_blob_filament_tracker::from_augmented_mesh_file(comm, xgc_augmented_mesh_filename);
-  } else {
-#endif
-  {
-    auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-    m2->initialize_point_locator();
-    if (xgc_bfield_filename.length() > 0)
-      m2->read_bfield_h5(xgc_bfield_filename);
-    
-    std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
-    if (xgc_interpolant_filename.length() > 0) {
-      if (file_exists( xgc_interpolant_filename ))
-        mx->read_interpolants( xgc_interpolant_filename );
-      else {
-        mx->initialize_interpolants();
-        mx->write_interpolants( xgc_interpolant_filename );
-      }
-    } else 
-      mx->initialize_interpolants();
-
-    // tracker.reset(new xgc_blob_filament_tracker(comm, m2, nphi, iphi)); // WIP
-    tracker.reset(new xgc_blob_filament_tracker(comm, mx));
-
-    // if (!xgc_augmented_mesh_filename.empty()) // write augmented mesh
-    //   tracker->to_augmented_mesh_file(xgc_augmented_mesh_filename);
-  }
+  tracker.reset(new xgc_blob_filament_tracker(comm, mx3));
   
-  if (file_exists(xgc_smoothing_kernel_filename))
-    tracker->get_m2()->read_smoothing_kernel(xgc_smoothing_kernel_filename);
-  else {
-    auto m2 = tracker->get_m2();
-    m2->build_smoothing_kernel(xgc_smoothing_kernel_size);
-    m2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
-  }
-
   tracker->set_end_timestep(ntimesteps - 1);
   tracker->use_accelerator(accelerator);
   tracker->set_number_of_threads(nthreads);
@@ -421,26 +437,11 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
   std::shared_ptr<xgc_blob_threshold_tracker> tracker;
   
-  auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
-  m2->initialize_point_locator();
-  if (xgc_bfield_filename.length() > 0) {
-    m2->read_bfield_h5(xgc_bfield_filename);
-    // m2->array_to_vtu("bfield.vtu", "B", m2->get_bfield());
-  }
- 
-  if (xgc_use_smoothing_kernel)
-    m2->build_smoothing_kernel(xgc_smoothing_kernel_size);
-
   // std::shared_ptr<ftk::point_locator_2d<>> locator(new ftk::point_locator_2d_quad<>(m2));
   // const double x[2] = {2.3, -0.4};
   // fprintf(stderr, "locator test: %d\n", locator->locate(x));
 
-  std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, xgc_nphi, xgc_iphi, xgc_vphi));
-  mx->initialize_interpolants();
-
-  tracker.reset(new xgc_blob_threshold_tracker(comm, mx));
-  if (file_exists(xgc_ff_mesh_filename))
-    tracker->initialize_ff_mesh( xgc_ff_mesh_filename );
+  tracker.reset(new xgc_blob_threshold_tracker(comm, mx3));
   tracker->set_threshold( threshold );
   tracker->initialize();
 
@@ -451,7 +452,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 #if FTK_HAVE_VTK
     if (xgc_write_back_filename.length()) {
       auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
-      mx->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+      mx3->scalar_to_vtu_slices_file(filename, "scalar", scalar);
     }
 #endif
 #if 1 // only testing write-backs for now
@@ -624,6 +625,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     // ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
     ("archived-intersections", "Archived discrete intersections", cxxopts::value<std::string>(archived_intersections_filename))
     ("archived-traced", "Archived traced results", cxxopts::value<std::string>(archived_traced_filename))
+    ("xgc-data-path", "XGC data path; will automatically read mesh, bfield, and units.m files", cxxopts::value<std::string>(xgc_data_path))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
     ("xgc-bfield", "XGC bfield file", cxxopts::value<std::string>(xgc_bfield_filename))
     ("xgc-ff-mesh", "XGC field following mesh file", cxxopts::value<std::string>(xgc_ff_mesh_filename))
@@ -631,8 +633,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("xgc-smoothing-kernel-file", "XGC: smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC: smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
     ("xgc-interpolant-file", "XGC: interpolant file", cxxopts::value<std::string>(xgc_interpolant_filename))
-    ("xgc-torus", "XGC: track over poloidal planes", cxxopts::value<bool>(xgc_torus))
-    ("xgc-write-back", "XGC: write original back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
+    // ("xgc-torus", "XGC: track over poloidal planes (deprecated)", cxxopts::value<bool>(xgc_torus))
+    ("xgc-write-back", "XGC: write original data back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("xgc-post-process", "XGC: enable post-processing", cxxopts::value<bool>(xgc_post_process))
     // ("xgc-augmented-mesh", "XGC: read/write augmented mesh", cxxopts::value<std::string>(xgc_augmented_mesh_filename))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
