@@ -26,13 +26,13 @@ struct xgc_units_t {
 
 public:
   xgc_units_t() {}
-  xgc_units_t(const std::string& filename) { parse(filename); }
-  bool parse(const std::string& filename);
+  xgc_units_t(const std::string& filename) { read(filename); }
+  bool read(const std::string& filename);
   friend std::ostream& operator<<(std::ostream& os, const xgc_units_t&);
 };
 
 /////
-inline bool xgc_units_t::parse(const std::string& filename)
+inline bool xgc_units_t::read(const std::string& filename)
 {
   std::ifstream ifs(filename, std::ifstream::in);
   if (ifs.is_open()) {
