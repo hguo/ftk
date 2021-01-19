@@ -19,8 +19,8 @@ I mx3_transform_vert(I i, const I mx3n0)
 template <typename I, typename F>
 __device__
 inline void mx3_get_coords(
-    const I m2n0, const F *m2coords,
-    I v3, F *x)
+    I v3, F x[], 
+    const I m2n0, const F *m2coords)
 {
   return m2e_get_coords(m2n0, m2coords, v3, x);
 }
@@ -54,11 +54,12 @@ void mx3_get_tri(I k, I verts[3], const
 
 template <typename I, typename F>
 __device__
-inline void mx3_interpolate(
-    const I m2n0, const I i,
+inline void mx3_interpolate(const I i,
+    const I nphi, const I iphi, const I vphi,
+    const I m2n0, 
     const xgc_interpolant_t **interpolants, 
     const F *scalar, const F *vector, const F *jacobian, 
-    F &f, v[2], j[2][2])
+    F &f, F v[2], F j[2][2])
 {
   const I p = i % m2n0;
   if (p % vphi == 0) {
@@ -81,19 +82,19 @@ inline void mx3_interpolate(
     // init
     f = 0;
     for (int k0 = 0; k0 < 2; k0 ++) {
-      g[k0] = 0;
+      v[k0] = 0;
       for (int k1 = 0; k1 < 2; k1 ++) 
         j[k0][k1] = 0;
     }
 
     // add values
     for (int k = 0; k < 3; k ++) {
-      const auto idx0 = m2n0 * p0 + l.tri0[k], 
-                 idx1 = m2n0 * p1 + l.tri1[k];
+      const I idx0 = m2n0 * p0 + l.tri0[k], 
+              idx1 = m2n0 * p1 + l.tri1[k];
 
       f[0] += alpha * l.mu0[k] * scalar[idx0] + beta * l.mu1[k] * scalar[idx1];
       for (int k0 = 0; k0 < 2; k0 ++) {
-        g[k0] += alpha * l.mu0[k] * grad[idx0*2+k0] + beta * l.mu1[k] * grad[idx1*2+k0];
+        v[k0] += alpha * l.mu0[k] * vector[idx0*2+k0] + beta * l.mu1[k] * vector[idx1*2+k0];
         for (int k1 = 0; k1 < 2; k1 ++) 
           j[k0][k1] += alpha * l.mu0[k] * jacobian[idx0*4+k0*2+k1] + beta * l.mu1[k] * jacobian[idx1*4+k0*2+k1];
       }

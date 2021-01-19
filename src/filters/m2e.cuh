@@ -6,13 +6,13 @@
 template <typename I, typename F>
 __device__
 inline void m2e_get_coords(
-    I v3, F *x, 
+    I v3, F x[], 
     const I m2n0, const F *m2coords)
 {
   const I v2 = mod(v3, m2n0);
   x[0] = m2coords[v2*2];
   x[1] = m2coords[v2*2+1];
-  x[2] = t = v3 / m2n0;
+  x[2] = v3 / m2n0;
 }
 
 template <typename I>
@@ -20,7 +20,7 @@ __device__
 int m2e_edge_type(I i, const I m2n1)
 {
   if (i < m2n1) return 0;
-  else (i < 2 * m2n1) return 1;
+  else if (i < 2 * m2n1) return 1;
   else return 2;
 }
 
@@ -41,12 +41,12 @@ void m2e_get_edge(I k, I verts[2], const I m2n0, const I m2n1,
     const I *m2edges)
 {
   const I m2en1 = 2 * m2n1 + m2n0;
-  const I i = mod(k, n1), t = std::floor(double(k) / m2en1);
+  const I i = mod(k, m2en1), t = std::floor(double(k) / m2en1);
   const int type = m2e_edge_type(i, m2n1);
 
   if (type < 2) {
     I m2edge[2];
-    m2_get_edge(i % n1, m2edge, m2edges);
+    m2_get_edge(i % m2en1, m2edge, m2edges);
     if (type == 0) {
       verts[0] = m2edge[0];
       verts[1] = m2edge[1];

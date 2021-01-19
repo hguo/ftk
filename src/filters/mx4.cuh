@@ -5,9 +5,9 @@
 
 template <typename I>
 __device__
-void mx4_tri_type(const I k, const I mx3n1, const I mx3n2)
+void mx4_tri_type(const I i, const I mx3n1, const I mx3n2)
 {
-  const I i = mod(k, mx4n2); // , t = floor((double)k / mx4n2);
+  // const I i = mod(k, mx4n2); // , t = floor((double)k / mx4n2);
   if (i < mx3n2) return 0;
   else if (i < 2 * mx3n2) return 1;
   else if (i < 3 * mx3n2) return 2;
@@ -22,13 +22,9 @@ void mx4_get_tri(I k, I verts[3],
     const I m2n0, const I m2n1, const I m2n2, 
     const I *m2edges, const I *m2tris)
 {
-  const I mx2n0 = m2n0 * np;
-  const I mx2n1 = m2n1 * np;
-  const I mx2n2 = m2n2 * np;
-  
-  const I mx3n0 = mx2n0; 
-  const I mx3n1 = 2 * mx2n1 + mx2n0; 
-  const I mx3n2 = 3 * mx2n2 + 2 * mx2n1;
+  const I mx3n0 = m2n0 * np; 
+  const I mx3n1 = (2 * m2n1 + m2n0) * np; 
+  const I mx3n2 = (3 * m2n2 + 2 * m2n1) * np;
 
   const I mx4n2 = 3 * mx3n2 + 2 * mx3n1; 
 
@@ -41,7 +37,7 @@ void mx4_get_tri(I k, I verts[3],
 
   if (type < 3) {
     I mx3tri[3];
-    mx3_get_tri(i % mx3n2, mx3tri, m2tris);
+    mx3_get_tri(i % mx3n2, mx3tri, np, m2n0, m2n1, m2n2, m2edges, m2tris);
     if (type == 0) {
       verts[0] = mx3tri[0]; 
       verts[1] = mx3tri[1];
@@ -57,7 +53,7 @@ void mx4_get_tri(I k, I verts[3],
     }
   } else {
     I mx3edge[2];
-    mx3_get_edge((i - 3 * mx3n2) % mx3n1, mx3edges);
+    mx3_get_edge((i - 3 * mx3n2) % mx3n1, mx3edge, np, m2n0, m2n1, m2edges);
     if (type == 3) {
       verts[0] = mx3edge[0];
       verts[1] = mx3edge[1]; 
