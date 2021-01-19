@@ -20,7 +20,7 @@ template <typename I, typename F>
 __device__
 inline void mx3_get_coords(
     I v3, F x[], 
-    const I m2n0, const F *m2coords)
+    const I m2n0, const F m2coords[])
 {
   return m2e_get_coords(m2n0, m2coords, v3, x);
 }
@@ -29,7 +29,7 @@ template <typename I>
 __device__
 void mx3_get_edge(I k, I verts[2], 
     const I np, const I m2n0, const I m2n1, 
-    const I *m2edges)
+    const I m2edges[])
 {
   const I mx3n0 = m2n0 * np;
   m2e_get_edge(k, verts, m2n0, m2n1, m2edges);
@@ -43,7 +43,7 @@ __device__
 void mx3_get_tri(I k, I verts[3], const 
     I np, 
     const I m2n0, const I m2n1, const I m2n2, 
-    const I *m2edges, const I *m2tris)
+    const I m2edges[], const I m2tris[])
 {
   const I mx3n0 = m2n0 * np;
   m2e_get_tri(k, verts, m2n0, m2n1, m2n2, m2edges, m2tris);

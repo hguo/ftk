@@ -7,7 +7,7 @@ template <typename I, typename F>
 __device__
 inline void m2e_get_coords(
     I v3, F x[], 
-    const I m2n0, const F *m2coords)
+    const I m2n0, const F m2coords[])
 {
   const I v2 = mod(v3, m2n0);
   x[0] = m2coords[v2*2];
@@ -38,7 +38,7 @@ int m2e_tri_type(I i, const I m2n1, const I m2n2)
 template <typename I>
 __device__
 void m2e_get_edge(I k, I verts[2], const I m2n0, const I m2n1, 
-    const I *m2edges)
+    const I m2edges[])
 {
   const I m2en1 = 2 * m2n1 + m2n0;
   const I i = mod(k, m2en1), t = std::floor(double(k) / m2en1);
@@ -64,7 +64,7 @@ template <typename I>
 __device__
 void m2e_get_tri(I k, I verts[3], 
     const I m2n0, const I m2n1, const I m2n2,
-    const I *m2edges, const I *m2tris)
+    const I m2edges[], const I m2tris[])
 {
   // call m2_get_tri, m2_get_edge
   const I n2 = 3 * m2n2 + 2 * m2n1;

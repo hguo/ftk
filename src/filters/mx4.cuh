@@ -20,7 +20,7 @@ __device__
 void mx4_get_tri(I k, I verts[3], 
     const I np,
     const I m2n0, const I m2n1, const I m2n2, 
-    const I *m2edges, const I *m2tris)
+    const I m2edges[], const I m2tris[])
 {
   const I mx3n0 = m2n0 * np; 
   const I mx3n1 = (2 * m2n1 + m2n0) * np; 
