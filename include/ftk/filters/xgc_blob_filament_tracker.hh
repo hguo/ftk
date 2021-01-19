@@ -372,7 +372,8 @@ void xgc_blob_filament_tracker::simplex_values(
     // fprintf(stderr, "periodical.\n");
     for (int k = 0; k < n; k ++)
       if (p[k] == 0)
-        rzpt[k][2] += m3->np()-1;
+        // zpt[k][2] += m3->np()-1;
+        rzpt[k][2] += m3->np();
   }
 #endif
 }
