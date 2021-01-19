@@ -4,6 +4,7 @@
 #include <ftk/ftk_config.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_3d_mesh.hh>
+#include <ftk/numeric/xgc_interpolant.hh>
 
 namespace ftk {
 
@@ -81,24 +82,19 @@ public: // smoothing
   ndarray<F> smooth_scalar(const ndarray<F>& f) const;
 
 public:
-  struct interpolant_t { // poloidal interpolants
-    I tri0[3], tri1[3];
-    F mu0[3], mu1[3];
-  };
- 
   void initialize_interpolants();
   ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
   F interpolate(const ndarray<F>& scalar, I i); // interpolate scalar value
   void interpolate(const ndarray<F>& scalar, const ndarray<F>& grad, const ndarray<F>& jacobian, 
       I i, F f[], F g[2], F j[2][2]) const;
 
-  const interpolant_t& get_interpolant(int v /*virtual plane id*/, I i/*vertex id*/) const { return interpolants[v][i]; }
+  const xgc_interpolant_t<I, F>& get_interpolant(int v /*virtual plane id*/, I i/*vertex id*/) const { return interpolants[v][i]; }
  
   void write_interpolants(const std::string& filename) const { diy::serializeToFile(interpolants, filename); }
   void read_interpolants(const std::string& filename) { diy::unserializeFromFile(filename, interpolants); }
 
 protected:
-  std::vector<std::vector<interpolant_t>> interpolants;
+  std::vector<std::vector<xgc_interpolant_t<I, F>>> interpolants;
 
 protected: // backend meshes
   int nphi, iphi, vphi;
@@ -328,7 +324,7 @@ void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants()
     const F beta = F(v) / vphi, alpha = F(1) - beta;
     this->parallel_for(m2n0, [&](int i) {
     // for (I i = 0; i < m2n0; i ++) {
-      interpolant_t &l = interpolants[v][i];
+      xgc_interpolant_t<I, F> &l = interpolants[v][i];
       F rzp0[3], rzp1[3];
         
       // backward integration
@@ -382,7 +378,7 @@ void simplicial_xgc_3d_mesh<I, F>::interpolate(
   } else { // virtual plane
     const int p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
-    const interpolant_t& l = interpolants[p % vphi][i % m2n0];
+    const xgc_interpolant_t<I, F>& l = interpolants[p % vphi][i % m2n0];
 
     // init
     f[0] = 0;
@@ -420,7 +416,7 @@ F simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar, I i) // in
   } else { // virtual plane
     const int p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
-    const interpolant_t& l = interpolants[p % vphi][i % m2n0];
+    const xgc_interpolant_t<I, F>& l = interpolants[p % vphi][i % m2n0];
 
     F f0 = 0, f1 = 0;
     for (int k = 0; k < 3; k ++) {
@@ -556,10 +552,10 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
       const int p0 = i / vphi, p1 = (p0 + 1) % nphi;
       const F beta = F(i) / vphi - p0, alpha = F(1) - beta;
       // fprintf(stderr, "p0=%d, p1=%d, alpha=%f, beta=%f\n", p0, p1, alpha, beta);
-      const std::vector<interpolant_t>& ls = interpolants[i % vphi];
+      const std::vector<xgc_interpolant_t<I, F>>& ls = interpolants[i % vphi];
 
       for (int j = 0; j < m2n0; j ++) {
-        const interpolant_t& l = ls[j];
+        const xgc_interpolant_t<I, F>& l = ls[j];
         // fprintf(stderr, "node %d, tri0=%d, %d, %d, mu0=%f, %f, %f, tri1=%d, %d, %d, mu1=%f, %f, %f\n", 
         //     j, l.tri0[0], l.tri0[1], l.tri0[2], l.mu0[0], l.mu0[1], l.mu0[2],
         //     l.tri1[0], l.tri1[1], l.tri1[2], l.mu1[0], l.mu1[1], l.mu1[2]);
