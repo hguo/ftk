@@ -1,7 +1,7 @@
 #ifndef _FTK_MX3_CUH
 #define _FTK_MX3_CUH
 
-#include "m2e.cuh"
+#include "me2.cuh"
 
 struct xgc_interpolant_t {
   int tri0[3], tri1[3];
@@ -22,7 +22,7 @@ inline void mx3_get_coords(
     I v3, F x[], 
     const I m2n0, const F m2coords[])
 {
-  return m2e_get_coords(m2n0, m2coords, v3, x);
+  return me2_get_coords(m2n0, m2coords, v3, x);
 }
 
 template <typename I>
@@ -32,7 +32,7 @@ void mx3_get_edge(I k, I verts[2],
     const I m2edges[])
 {
   const I mx3n0 = m2n0 * np;
-  m2e_get_edge(k, verts, m2n0, m2n1, m2edges);
+  me2_get_edge(k, verts, m2n0, m2n1, m2edges);
   for (int i = 0; i < 2; i ++)
     verts[i] = mx3_transform_vert( verts[i], mx3n0 );
 }
@@ -46,7 +46,7 @@ void mx3_get_tri(I k, I verts[3], const
     const I m2edges[], const I m2tris[])
 {
   const I mx3n0 = m2n0 * np;
-  m2e_get_tri(k, verts, m2n0, m2n1, m2n2, m2edges, m2tris);
+  me2_get_tri(k, verts, m2n0, m2n1, m2n2, m2edges, m2tris);
   for (int i = 0; i < 3; i ++) 
     verts[i] = mx3_transform_vert( verts[i], mx3n0 );
 }
