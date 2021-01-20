@@ -1,5 +1,5 @@
-// #include <nvfunctional>
-// #include "common.cuh"
+#include <nvfunctional>
+#include "common.cuh"
 #include "mx4.cuh"
 
 // what are needed in device memory:
@@ -7,28 +7,42 @@
 // - triangles, edges, and vertex coordinates in 2D mesh
 // - current and next timestep of scalar, vector, and jacobian fields
 
+using namespace ftk;
+
+typedef struct {
+  int m2n0, m2n1, m2n2;
+  int nphi = 16, iphi = 1, vphi = 1;
+
+  double *d_m2coords;
+  int *d_m2edges, *d_m2tris;
+  xgc_interpolant_t **d_ptr_interpolants = NULL, *d_interpolants = NULL;
+
+  double *d_scalar[2] = {0}, *d_vector[2] = {0}, *d_jacobian[2] = {0};
+
+  cp_t *hcps = NULL, *dcps = NULL;
+  unsigned long long hncps = 0, *dncps = NULL;
+  const size_t bufsize = 512 * 1024 * 1024; // 512 MB of buffer
+} xft_ctx_t;
+
+typedef xft_ctx_t ctx_t;
+
 template <typename I, typename F>
 __device__
 bool check_simplex(
     I current_timestep, 
     I i,
-    const I nphi,
-    const I iphi,
-    const I vphi,
-    const I m2n0,
-    const I m2n1,
-    const I m2n2,
-    const F m2coords[], // vertex coordinates
-    const I m2edges[], 
-    const I m2tris[],
+    const I nphi, const I iphi, const I vphi,
+    const I m2n0, const I m2n1, const I m2n2,
+    const F m2coords[], // m2 vertex coordinates
+    const I m2edges[], // list of m2 edges
+    const I m2tris[], // list of m2 triangles
     const xgc_interpolant_t **interpolants, // interpolants
     const F *scalar[2], // current and next scalar
     const F *vector[2], // current and next grad
-    const F *jacobian[2]) // current and next jacobian
-    // cp_t & cp) // WIP: critical points
+    const F *jacobian[2], // current and next jacobian
+    cp_t & cp) // WIP: critical points
 {
-  // typedef ftk::fixed_point<> fp_t;
-  typedef unsigned long long fp_t; // WIP
+  typedef ftk::fixed_point<> fp_t;
 
   const I np = nphi * iphi * vphi;
   const I m3n0 = m2n0 * np;
@@ -65,4 +79,215 @@ bool check_simplex(
         rzpt[k][2] += np;
 
   fp_t vf[3][2];
+}
+
+template <typename I, typename F>
+__global__
+void sweep_simplices(
+    int scope, 
+    I current_timestep, 
+    const I nphi, const I iphi, const I vphi,
+    const I m2n0, const I m2n1, const I m2n2,
+    const F m2coords[], // m2 vertex coordinates
+    const I m2edges[], // list of m2 edges
+    const I m2tris[], // list of m2 triangles
+    const xgc_interpolant_t **interpolants, // interpolants
+    const F *scalar[2], // current and next scalar
+    const F *vector[2], // current and next grad
+    const F *jacobian[2], // current and next jacobian
+    unsigned long long &ncps, 
+    cp_t *cps)
+{
+  const I mx3n2 = (3 * m2n0 + 2 * m2n1) * np;
+
+  int tid = getGlobalIdx_3D_1D();
+  I i = tid;
+  if (scope == scope_interval) i += mx3n2;
+  
+  cp_t cp;
+  bool succ = check_simplex(
+      current_timestep, 
+      i, 
+      nphi, iphi, vphi, 
+      m2n0, m2n1, m2n2, 
+      m2coords, m2edges, m2tris,
+      interpolants, 
+      scalar, vector, jacobian, 
+      ncps, cps);
+  
+  if (succ) {
+    unsigned long long idx = atomicAdd(&ncps, 1ul);
+    cp.tag = tid;
+    cps[idx] = cp;
+  }
+}
+
+void xft_create_ctx(ctx_t **c)
+{
+  *c = malloc(sizeof(ctx_t));
+  
+  cudaMalloc((void**)&dncps, sizeof(unsigned long long));
+  cudaMemset(dncps, 0, sizeof(unsigned long long));
+  checkLastCudaError("[FTK-CUDA] cuda malloc");
+
+  hcps = (cp_t*)malloc(bufsize);
+  cudaMalloc((void**)&dcps, bufsize);
+  checkLastCudaError("[FTK-CUDA] cuda malloc");
+}
+
+void xft_destroy_ctx(ctx_t **c)
+{
+  if (c->d_m2coords != NULL) cudaFree(c->d_m2coords);
+  if (c->d_m2edges != NULL) cudaFree(c->d_m2edges);
+  if (c->d_m2tris != NULL) cudaFree(c->d_m2tris);
+
+  if (c->d_ptr_interpolants != NULL) cudaFree(c->d_ptr_interpolants);
+  if (c->d_interpolants != NULL) cudaFree(c->d_interpolants);
+
+  if (c->scalar[0] != NULL) cudaFree(c->d_scalar[0]);
+  if (c->scalar[1] != NULL) cudaFree(c->d_scalar[1]);
+  if (c->vector[0] != NULL) cudaFree(c->d_vector[0]);
+  if (c->vector[1] != NULL) cudaFree(c->d_vector[1]);
+  if (c->jacobian[0] != NULL) cudaFree(c->d_jacobian[0]);
+  if (c->jacobian[1] != NULL) cudaFree(c->d_jacobian[1]);
+  
+  checkLastCudaError("[FTK-CUDA] cuda free");
+
+  free(*c);
+}
+
+void xft_execute(ctx_t *c, int scope)
+{
+  const int np = c->nphi * c->iphi * c->vphi;
+  const int mx3n1 = (2 * c->m2n1 + 2 * c->m2n0) * np;
+  const int mx3n2 = (3 * c->m2n0 + 2 * c->m2n1) * np;
+  const int mx4n2 = 3 * mx3n2 + 2 * mx3n1;
+  const int mx4n2_ordinal  = mx3n2, 
+            mx4n2_interval = 2 * mx3n2 + 2 * mx3n1;
+
+  size_t ntasks;
+  if (scope == scope_ordinal) ntasks = mx4n2_ordinal; 
+  else ntasks = mx4n2_interval;
+  
+  const int maxGridDim = 1024;
+  const int blockSize = 256;
+  const int nBlocks = idivup(ntasks, blockSize);
+  dim3 gridSize;
+
+  if (nBlocks >= maxGridDim) 
+    gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else 
+    gridSize = dim3(nBlocks);
+
+  sweep_simplices<<<gridSize, blockSize>>>(
+      scope, current_timestep, 
+      c->nphi, c->iphi, c->vphi, 
+      c->m2n0, c->m2n1, c->m2n2, 
+      c->m2coords, c->m2edges, c->m2tris, 
+      c->interpolants, 
+      c->scalar, c->vector, c->jacobian, 
+      *c->dncps, c->dcps);
+  checkLastCudaError("[FTK-CUDA] sweep_simplicies");
+
+  cudaMemcpy(&ncps, dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
+  cudaMemcpy(hcps, dcps, sizeof(cp_t) * ncps, cudaMemcpyDeviceToHost);
+  
+  checkLastCudaError("[FTK-CUDA] cuda memcpy device to host");
+}
+
+void xft_load_data(ctx_t *c, 
+    const double *scalar, const double *vector, const double *jacobian)
+{
+  double *dd_scalar;
+  if (d_scalar[0] == NULL) {
+    cudaMalloc((void**)&c->d_scalar[0], sizeof(double) * c->m2n0);
+    dd_scalar = c->d_scalar[0];
+  } else if (d->scalar[1] == NULL) {
+    cudaMalloc((void**)&c->d_scalar[1], sizeof(double) * c->m2n0);
+    dd_scalar = c->d_scalar[1];
+  } else {
+    std::swap(d->scalar[0], d->scalar[1]);
+    dd_scalar = c->d_scalar[1];
+  }
+  cudaMemcpy(dd_scalar, scalar, sizeof(double) * c->m2n0, 
+      cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] loading scalar field data");
+ 
+  /// 
+  double *dd_vector;
+  if (d_vector[0] == NULL) {
+    cudaMalloc((void**)&c->d_vector[0], sizeof(double) * c->m2n0 * 2);
+    dd_vector = c->d_vector[0];
+  } else if (d->vector[1] == NULL) {
+    cudaMalloc((void**)&c->d_vector[1], sizeof(double) * c->m2n0 * 2);
+    dd_vector = c->d_vector[1];
+  } else {
+    std::swap(d->vector[0], d->vector[1]);
+    dd_vector = c->d_vector[1];
+  }
+  cudaMemcpy(dd_vector, vector, sizeof(double) * c->m2n0 * 2, 
+      cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] loading vector field data");
+
+  /// 
+  double *dd_jacobian;
+  if (d_jacobian[0] == NULL) {
+    cudaMalloc((void**)&c->d_jacobian[0], sizeof(double) * c->m2n0 * 4);
+    dd_jacobian = c->d_jacobian[0];
+  } else if (d->jacobian[1] == NULL) {
+    cudaMalloc((void**)&c->d_jacobian[1], sizeof(double) * c->m2n0 * 4);
+    dd_jacobian = c->d_jacobian[1];
+  } else {
+    std::swap(d->jacobian[0], d->jacobian[1]);
+    dd_jacobian = c->d_jacobian[1];
+  }
+  cudaMemcpy(dd_jacobian, jacobian, sizeof(double) * c->m2n0 * 4, 
+      cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] loading jacobian field data");
+}
+
+void xft_load_mesh(ctx_t *c,
+    int nphi, int iphi, int vphi,
+    int m2n0, int m2n1, int m2n2,
+    const double *m2coords, const int *m2edges, const int *m2tris)
+{
+  c->nphi = nphi; 
+  c->iphi = iphi;
+  c->vphi = vphi;
+  c->m2n0 = m2n0;
+  c->m2n1 = m2n1;
+  c->m2n2 = m2n2;
+
+  cudaMalloc((void**)&c->d_m2coords, m2n0 * sizeof(double) * m2n0);
+  cudaMemcpy(c->d_m2coords, m2coords, m2n0 * sizeof(double) * m2n0);
+
+  cudaMalloc((void**)&c->d_m2edges, m2n1 * sizeof(int) * m2n1);
+  cudaMemcpy(c->d_m2edges, m2edges, m2n1 * sizeof(int) * m2n1);
+
+  cudaMalloc((void**)&c->d_m2tris, m2n2 * sizeof(int) * m2n2);
+  cudaMemcpy(c->d_m2tris, m2n2 * sizeof(int) * m2n2);
+  
+  checkLastCudaError("[FTK-CUDA] loading xgc mesh");
+}
+
+void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<xgc_interpolant_t>> &interpolants)
+{
+  assert(vphi == interpolants.size());
+
+  cudaMalloc((void**)&c->d_interpolants, 
+      c->m2n0 * sizeof(xgc_interpolant_t) * vphi);
+  cudaMalloc((void**)&c->d_all_interpolants, vphi);
+
+  std::vector<xgc_interpolant_t*> ptr_all_interpolants;
+
+  for (int i = 0; i < interpolants.size(); i ++) {
+    if (i == 0) ptr_all_interpolants.push_back(c->d_interpolants);
+    else {
+      ptr_all_interpolants.push_back(c->d_interpolants + (i-1) * c->m2n0);
+      cudaMemcpy(c->d_interpolants + (i-1) * c->m2n0 * sizeof(xgc_interpolant_t), 
+          interpolants[i].data(), cudaMemcpyHostToDevice);
+    }
+  }
+  
+  checkLastCudaError("[FTK-CUDA] loading xgc interpolants");
 }
