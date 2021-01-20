@@ -3,6 +3,7 @@
 
 #include "threadIdx.cuh"
 #include "utils.cuh"
+#include <ftk/mesh/lattice.hh>
 #include <ftk/filters/feature_point_lite.hh>
 
 enum {
