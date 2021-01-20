@@ -92,6 +92,7 @@ public:
  
   void write_interpolants(const std::string& filename) const { diy::serializeToFile(interpolants, filename); }
   void read_interpolants(const std::string& filename) { diy::unserializeFromFile(filename, interpolants); }
+  const std::vector<std::vector<xgc_interpolant_t<I, F>>>& get_interpolants() const { return interpolants; }
 
 protected:
   std::vector<std::vector<xgc_interpolant_t<I, F>>> interpolants;

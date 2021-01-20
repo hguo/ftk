@@ -29,7 +29,7 @@ public:
 
 public:
   virtual void push_field_data_snapshot(const ndarray<double> &scalar);
-  void push_field_data_snapshot(
+  virtual void push_field_data_snapshot(
       const ndarray<double> &scalar, 
       const ndarray<double> &vector,
       const ndarray<double> &jacobian);

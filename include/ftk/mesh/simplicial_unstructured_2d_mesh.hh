@@ -80,6 +80,7 @@ public: // mesh access
 
   const ndarray<F>& get_coords() const {return vertex_coords;}
   const ndarray<I>& get_triangles() const {return triangles;}
+  const ndarray<I>& get_edges() const {return edges;}
 
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
 

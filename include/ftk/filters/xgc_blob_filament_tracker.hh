@@ -9,11 +9,16 @@
 #include <tbb/concurrent_unordered_set.h>
 #endif
 
+#if FTK_HAVE_CUDA
+#include "xgc_filament_tracker.cuh"
+#endif
+
 namespace ftk {
   
 struct xgc_blob_filament_tracker : public xgc_tracker {
   xgc_blob_filament_tracker(diy::mpi::communicator comm,
       std::shared_ptr<simplicial_xgc_3d_mesh<>> mx);
+  virtual ~xgc_blob_filament_tracker();
 
   // xgc_blob_filament_tracker(diy::mpi::communicator comm, 
   //     std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2, 
@@ -21,7 +26,7 @@ struct xgc_blob_filament_tracker : public xgc_tracker {
 
   int cpdims() const { return 3; }
  
-  void initialize() {}
+  void initialize();
   void reset() {
     field_data_snapshots.clear();
   }
@@ -30,6 +35,13 @@ struct xgc_blob_filament_tracker : public xgc_tracker {
 
 public:
   void update_timestep();
+  
+  void push_field_data_snapshot(
+      const ndarray<double> &scalar, 
+      const ndarray<double> &vector,
+      const ndarray<double> &jacobian);
+  void push_field_data_snapshot(
+      const ndarray<double> &scalar) { xgc_tracker::push_field_data_snapshot(scalar); }
 
 protected:
   bool check_simplex(int, feature_point_t& cp);
@@ -79,6 +91,11 @@ protected:
   std::set<int> related_cells;
 #endif
   feature_surface_t surfaces;
+
+protected:
+#if FTK_HAVE_CUDA
+  xft_ctx_t *ctx = NULL;
+#endif
 };
 
 /////
@@ -88,7 +105,38 @@ xgc_blob_filament_tracker::xgc_blob_filament_tracker(
     std::shared_ptr<simplicial_xgc_3d_mesh<>> mx) :
   xgc_tracker(comm, mx)
 {
+}
 
+xgc_blob_filament_tracker::~xgc_blob_filament_tracker()
+{
+#if FTK_HAVE_CUDA
+  xft_destroy_ctx(&ctx);
+#endif
+}
+
+inline void xgc_blob_filament_tracker::initialize()
+{
+#if FTK_HAVE_CUDA
+  xft_create_ctx(&ctx);
+  xft_load_mesh(ctx, 
+      m2->n(0), m2->n(1), m2->n(2), 
+      m2->get_coords().data(), 
+      m2->get_edges().data(), 
+      m2->get_triangles().data());
+  xft_load_interpolants(ctx, 
+      m3->get_interpolants());
+#endif
+}
+
+inline void xgc_blob_filament_tracker::push_field_data_snapshot(
+      const ndarray<double> &scalar, 
+      const ndarray<double> &vector,
+      const ndarray<double> &jacobian)
+{
+#if FTK_HAVE_CUDA
+  xft_load_data(ctx, scalar.data(), vector.data(), jacobian.data());
+#endif
+  xgc_tracker::push_field_data_snapshot(scalar, vector, jacobian);
 }
 
 inline void xgc_blob_filament_tracker::update_timestep()
