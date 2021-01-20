@@ -110,22 +110,25 @@ xgc_blob_filament_tracker::xgc_blob_filament_tracker(
 xgc_blob_filament_tracker::~xgc_blob_filament_tracker()
 {
 #if FTK_HAVE_CUDA
-  xft_destroy_ctx(&ctx);
+  if (xl == FTK_XL_CUDA)
+    xft_destroy_ctx(&ctx);
 #endif
 }
 
 inline void xgc_blob_filament_tracker::initialize()
 {
 #if FTK_HAVE_CUDA
-  xft_create_ctx(&ctx);
-  xft_load_mesh(ctx, 
-      m3->get_nphi(), m3->get_iphi(), m3->get_vphi(), 
-      m2->n(0), m2->n(1), m2->n(2), 
-      m2->get_coords().data(), 
-      m2->get_edges().data(), 
-      m2->get_triangles().data());
-  xft_load_interpolants(ctx, 
-      m3->get_interpolants());
+  if (xl == FTK_XL_CUDA) {
+    xft_create_ctx(&ctx);
+    xft_load_mesh(ctx, 
+        m3->get_nphi(), m3->get_iphi(), m3->get_vphi(), 
+        m2->n(0), m2->n(1), m2->n(2), 
+        m2->get_coords().data(), 
+        m2->get_edges().data(), 
+        m2->get_triangles().data());
+    xft_load_interpolants(ctx, 
+        m3->get_interpolants());
+  }
 #endif
 }
 
@@ -135,7 +138,8 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
       const ndarray<double> &jacobian)
 {
 #if FTK_HAVE_CUDA
-  xft_load_data(ctx, scalar.data(), vector.data(), jacobian.data());
+  if (xl == FTK_XL_CUDA) 
+    xft_load_data(ctx, scalar.data(), vector.data(), jacobian.data());
 #endif
   xgc_tracker::push_field_data_snapshot(scalar, vector, jacobian);
 }
@@ -176,9 +180,19 @@ inline void xgc_blob_filament_tracker::update_timestep()
     }
   };
 
-  m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
-  if (field_data_snapshots.size() >= 2)
-    m4->element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+  if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    xft_execute(ctx, 1 /* ordinal */, current_timestep);
+    if (field_data_snapshots.size() >= 2) 
+      xft_execute(ctx, 2 /* interval */, current_timestep);
+#else
+    fatal("FTK not compiled with CUDA.");
+#endif
+  } else {
+    m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+    if (field_data_snapshots.size() >= 2)
+      m4->element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+  }
 }
 
 inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
