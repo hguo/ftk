@@ -22,7 +22,7 @@ bool check_simplex(
     const F m2coords[], // m2 vertex coordinates
     const I m2edges[], // list of m2 edges
     const I m2tris[], // list of m2 triangles
-    const xgc_interpolant_t *const *const interpolants, // interpolants
+    const ftk::xgc_interpolant_t<I, F> *const *const interpolants, // interpolants
     const F *const scalar[2], // current and next scalar
     const F *const vector[2], // current and next grad
     const F *const jacobian[2], // current and next jacobian
@@ -77,7 +77,7 @@ void sweep_simplices(
     const F m2coords[], // m2 vertex coordinates
     const I m2edges[], // list of m2 edges
     const I m2tris[], // list of m2 triangles
-    const xgc_interpolant_t *const *const interpolants, // interpolants
+    const ftk::xgc_interpolant_t<I, F> *const *const interpolants, // interpolants
     const F * const scalar[2], // current and next scalar
     const F * const vector[2], // current and next grad
     const F * const jacobian[2], // current and next jacobian
@@ -262,22 +262,22 @@ void xft_load_mesh(ctx_t *c,
   checkLastCudaError("[FTK-CUDA] loading xgc mesh");
 }
 
-void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<xgc_interpolant_t>> &interpolants)
+void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_interpolant_t<>>> &interpolants)
 {
   assert(c->vphi == interpolants.size());
 
   cudaMalloc((void**)&c->d_interpolants, 
-      c->m2n0 * sizeof(xgc_interpolant_t) * c->vphi);
+      c->m2n0 * sizeof(ftk::xgc_interpolant_t<>) * c->vphi);
   cudaMalloc((void**)&c->d_ptr_interpolants, c->vphi);
 
-  std::vector<xgc_interpolant_t*> ptr_all_interpolants;
+  std::vector<ftk::xgc_interpolant_t<>*> ptr_all_interpolants;
 
   for (int i = 0; i < interpolants.size(); i ++) {
     if (i == 0) ptr_all_interpolants.push_back(c->d_interpolants);
     else {
       ptr_all_interpolants.push_back(c->d_interpolants + (i-1) * c->m2n0);
-      cudaMemcpy(c->d_interpolants + (i-1) * c->m2n0 * sizeof(xgc_interpolant_t), 
-          interpolants[i].data(), c->m2n0 * sizeof(xgc_interpolant_t), cudaMemcpyHostToDevice);
+      cudaMemcpy(c->d_interpolants + (i-1) * c->m2n0 * sizeof(ftk::xgc_interpolant_t<>), 
+          interpolants[i].data(), c->m2n0 * sizeof(ftk::xgc_interpolant_t<>), cudaMemcpyHostToDevice);
     }
   }
   

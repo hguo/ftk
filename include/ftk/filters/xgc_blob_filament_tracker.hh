@@ -119,6 +119,7 @@ inline void xgc_blob_filament_tracker::initialize()
 #if FTK_HAVE_CUDA
   xft_create_ctx(&ctx);
   xft_load_mesh(ctx, 
+      m3->get_nphi(), m3->get_iphi(), m3->get_vphi(), 
       m2->n(0), m2->n(1), m2->n(2), 
       m2->get_coords().data(), 
       m2->get_edges().data(), 
