@@ -13,7 +13,7 @@ typedef struct {
   int *d_m2edges, *d_m2tris;
   ftk::xgc_interpolant_t<> **d_ptr_interpolants = NULL, *d_interpolants = NULL;
 
-  double *d_scalar[2] = {0}, *d_vector[2] = {0}, *d_jacobian[2] = {0};
+  double *d_scalar[2] = {NULL, NULL}, *d_vector[2] = {NULL, NULL}, *d_jacobian[2] = {NULL, NULL};
 
   ftk::feature_point_lite_t *hcps = NULL, *dcps = NULL;
   unsigned long long hncps = 0, *dncps = NULL;

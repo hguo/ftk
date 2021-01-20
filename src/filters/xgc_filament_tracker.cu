@@ -122,6 +122,13 @@ void xft_create_ctx(ctx_t **c_)
   c->hcps = (cp_t*)malloc(c->bufsize);
   cudaMalloc((void**)&c->dcps, c->bufsize);
   checkLastCudaError("[FTK-CUDA] cuda malloc");
+
+  c->d_scalar[0] = NULL;
+  c->d_scalar[1] = NULL;
+  c->d_vector[0] = NULL;
+  c->d_vector[1] = NULL;
+  c->d_jacobian[0] = NULL;
+  c->d_jacobian[1] = NULL;
 }
 
 void xft_destroy_ctx(ctx_t **c_)
@@ -192,48 +199,51 @@ void xft_load_data(ctx_t *c,
 {
   double *dd_scalar;
   if (c->d_scalar[0] == NULL) {
-    cudaMalloc((void**)&c->d_scalar[0], sizeof(double) * c->m2n0);
+    cudaMalloc((void**)&c->d_scalar[0], sizeof(double) * c->m2n0 * c->nphi);
+    checkLastCudaError("[FTK-CUDA] loading scalar field data, malloc 0");
     dd_scalar = c->d_scalar[0];
   } else if (c->d_scalar[1] == NULL) {
-    cudaMalloc((void**)&c->d_scalar[1], sizeof(double) * c->m2n0);
+    cudaMalloc((void**)&c->d_scalar[1], sizeof(double) * c->m2n0 * c->nphi);
+    checkLastCudaError("[FTK-CUDA] loading scalar field data, malloc 0.1");
     dd_scalar = c->d_scalar[1];
   } else {
     std::swap(c->d_scalar[0], c->d_scalar[1]);
     dd_scalar = c->d_scalar[1];
   }
-  cudaMemcpy(dd_scalar, scalar, sizeof(double) * c->m2n0, 
+  // fprintf(stderr, "dd=%p, d0=%p, d1=%p, src=%p\n", dd_scalar, c->d_scalar[0], c->d_scalar[1], scalar);
+  cudaMemcpy(dd_scalar, scalar, sizeof(double) * c->m2n0 * c->nphi, 
       cudaMemcpyHostToDevice);
-  checkLastCudaError("[FTK-CUDA] loading scalar field data");
+  checkLastCudaError("[FTK-CUDA] loading scalar field data, memcpy 0");
  
   /// 
   double *dd_vector;
   if (c->d_vector[0] == NULL) {
-    cudaMalloc((void**)&c->d_vector[0], sizeof(double) * c->m2n0 * 2);
+    cudaMalloc((void**)&c->d_vector[0], sizeof(double) * c->m2n0 * c->nphi * 2);
     dd_vector = c->d_vector[0];
   } else if (c->d_vector[1] == NULL) {
-    cudaMalloc((void**)&c->d_vector[1], sizeof(double) * c->m2n0 * 2);
+    cudaMalloc((void**)&c->d_vector[1], sizeof(double) * c->m2n0 * c->nphi * 2);
     dd_vector = c->d_vector[1];
   } else {
     std::swap(c->d_vector[0], c->d_vector[1]);
     dd_vector = c->d_vector[1];
   }
-  cudaMemcpy(dd_vector, vector, sizeof(double) * c->m2n0 * 2, 
+  cudaMemcpy(dd_vector, vector, sizeof(double) * c->m2n0 * c->nphi * 2, 
       cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] loading vector field data");
 
   /// 
   double *dd_jacobian;
   if (c->d_jacobian[0] == NULL) {
-    cudaMalloc((void**)&c->d_jacobian[0], sizeof(double) * c->m2n0 * 4);
+    cudaMalloc((void**)&c->d_jacobian[0], sizeof(double) * c->m2n0 * c->nphi * 4);
     dd_jacobian = c->d_jacobian[0];
   } else if (c->d_jacobian[1] == NULL) {
-    cudaMalloc((void**)&c->d_jacobian[1], sizeof(double) * c->m2n0 * 4);
+    cudaMalloc((void**)&c->d_jacobian[1], sizeof(double) * c->m2n0 * c->nphi * 4);
     dd_jacobian = c->d_jacobian[1];
   } else {
     std::swap(c->d_jacobian[0], c->d_jacobian[1]);
     dd_jacobian = c->d_jacobian[1];
   }
-  cudaMemcpy(dd_jacobian, jacobian, sizeof(double) * c->m2n0 * 4, 
+  cudaMemcpy(dd_jacobian, jacobian, sizeof(double) * c->m2n0 * c->nphi * 4, 
       cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] loading jacobian field data");
 }
@@ -250,14 +260,16 @@ void xft_load_mesh(ctx_t *c,
   c->m2n1 = m2n1;
   c->m2n2 = m2n2;
 
-  cudaMalloc((void**)&c->d_m2coords, m2n0 * sizeof(double) * m2n0);
-  cudaMemcpy(c->d_m2coords, m2coords, m2n0 * sizeof(double) * m2n0, cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_m2coords, m2n0 * sizeof(double));
+  checkLastCudaError("[FTK-CUDA] loading xgc mesh, malloc 0");
+  cudaMemcpy(c->d_m2coords, m2coords, m2n0 * sizeof(double), cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] loading xgc mesh, memcpy 0");
 
-  cudaMalloc((void**)&c->d_m2edges, m2n1 * sizeof(int) * m2n1);
-  cudaMemcpy(c->d_m2edges, m2edges, m2n1 * sizeof(int) * m2n1, cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_m2edges, m2n1 * sizeof(int));
+  cudaMemcpy(c->d_m2edges, m2edges, m2n1 * sizeof(int), cudaMemcpyHostToDevice);
 
-  cudaMalloc((void**)&c->d_m2tris, m2n2 * sizeof(int) * m2n2);
-  cudaMemcpy(c->d_m2tris, m2tris, m2n2 * sizeof(int) * m2n2, cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_m2tris, m2n2 * sizeof(int));
+  cudaMemcpy(c->d_m2tris, m2tris, m2n2 * sizeof(int), cudaMemcpyHostToDevice);
   
   checkLastCudaError("[FTK-CUDA] loading xgc mesh");
 }
@@ -268,16 +280,20 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
 
   cudaMalloc((void**)&c->d_interpolants, 
       c->m2n0 * sizeof(ftk::xgc_interpolant_t<>) * c->vphi);
+  checkLastCudaError("[FTK-CUDA] loading xgc interpolants, malloc 0");
   cudaMalloc((void**)&c->d_ptr_interpolants, c->vphi);
+  checkLastCudaError("[FTK-CUDA] loading xgc interpolants, malloc 1");
 
   std::vector<ftk::xgc_interpolant_t<>*> ptr_all_interpolants;
 
   for (int i = 0; i < interpolants.size(); i ++) {
+    // fprintf(stderr, "loading interpolants %d\n", i);
     if (i == 0) ptr_all_interpolants.push_back(c->d_interpolants);
     else {
       ptr_all_interpolants.push_back(c->d_interpolants + (i-1) * c->m2n0);
-      cudaMemcpy(c->d_interpolants + (i-1) * c->m2n0 * sizeof(ftk::xgc_interpolant_t<>), 
+      cudaMemcpy(c->d_interpolants + (i-1) * c->m2n0, // * sizeof(ftk::xgc_interpolant_t<>), 
           interpolants[i].data(), c->m2n0 * sizeof(ftk::xgc_interpolant_t<>), cudaMemcpyHostToDevice);
+      checkLastCudaError("[FTK-CUDA] loading xgc interpolants, memcpy");
     }
   }
   
