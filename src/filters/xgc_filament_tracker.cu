@@ -55,13 +55,23 @@ bool check_simplex(
     mx3_get_coords(v3, rzpt[k], m2n0, m2coords);
     rzpt[k][3] = t[k];
     // const int iv = (t[k] == current_timestep) ? 0 : 1;
-    const int iv = 0; // (t[k] == current_timestep) ? 0 : 1;
+    const int iv = 0; // (t[k] == current_timestep) ? 0 : 1; // FIXME
     mx3_interpolate<I, F>(
         v3, nphi, iphi, vphi, 
         m2n0, interpolants,
         scalar[iv], vector[iv], jacobian[iv], 
         f[k], v[k], j[k]);
   }
+#if 0
+  if (i < 100)
+    printf("i=%d, verts=%d, %d, %d, f=%f, %f, %f, rzpt=%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", 
+        i, verts[0], verts[1], verts[2], 
+        f[0], f[1], f[2],
+        rzpt[0][0], rzpt[0][1], rzpt[0][2], rzpt[0][3], 
+        rzpt[1][0], rzpt[1][1], rzpt[1][2], rzpt[1][3],
+        rzpt[2][0], rzpt[2][1], rzpt[2][2], rzpt[2][3]);
+  return false;
+#endif
   // printf("%f, %f, %f\n", f[0], f[1], f[2]);
 
   // check if peridocial
@@ -86,6 +96,9 @@ bool check_simplex(
   double mu[3], x[4];
   bool succ2 = ftk::inverse_lerp_s2v2(v, mu);
   ftk::clamp_barycentric<3>(mu);
+  printf("mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
+  
+  return false;
 
   ftk::lerp_s2v4(rzpt, mu, x);
   for (int k = 0; k < 3; k ++)
@@ -102,6 +115,10 @@ bool check_simplex(
   // cp.ordinal = scope == 1; 
   // cp.timestep = current_timestep;
 
+  printf("cp.x=%f, %f, %f, %f, scalar=%f, type=%d\n", 
+      cp.x[0], cp.x[1], cp.x[2], cp.x[3], cp.scalar[0], cp.type);
+
+  return false;
   return true;
 }
 
@@ -116,9 +133,12 @@ void sweep_simplices(
     const I m2edges[], // list of m2 edges
     const I m2tris[], // list of m2 triangles
     const ftk::xgc_interpolant_t<I, F> *const *const interpolants, // interpolants
-    const F * const scalar[2], // current and next scalar
-    const F * const vector[2], // current and next grad
-    const F * const jacobian[2], // current and next jacobian
+    const F* scalar0, // current scalar
+    const F* scalar1, // next scalar
+    const F* vector0, 
+    const F* vector1, 
+    const F* jacobian0, 
+    const F* jacobian1,
     unsigned long long &ncps, 
     cp_t *cps)
 {
@@ -132,7 +152,11 @@ void sweep_simplices(
   I i = tid;
   if (scope == scope_interval) i += mx3n2;
   if (i >= mx4n2) return; // invalid element
-  
+ 
+  const F* const scalar[2] = {scalar0, scalar1};
+  const F* const vector[2] = {vector0, vector1};
+  const F* const jacobian[2] = {jacobian0, jacobian1};
+
   cp_t cp;
   bool succ = check_simplex<I, F>(
       current_timestep, 
@@ -228,7 +252,9 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
       c->m2n0, c->m2n1, c->m2n2, 
       c->d_m2coords, c->d_m2edges, c->d_m2tris, 
       c->d_ptr_interpolants, 
-      c->d_scalar, c->d_vector, c->d_jacobian, 
+      c->d_scalar[0], c->d_scalar[1],
+      c->d_vector[0], c->d_vector[1],
+      c->d_jacobian[0], c->d_jacobian[1], 
       *c->dncps, c->dcps);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] sweep_simplicies");
@@ -343,6 +369,8 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
       checkLastCudaError("[FTK-CUDA] loading xgc interpolants, memcpy");
     }
   }
+  cudaMemcpy(c->d_ptr_interpolants, ptr_all_interpolants.data(), 
+      sizeof(void*) * c->iphi, cudaMemcpyHostToDevice);
   
   checkLastCudaError("[FTK-CUDA] loading xgc interpolants");
 }

@@ -61,7 +61,7 @@ inline void mx3_interpolate(const I i,
     const F *scalar, const F *vector, const F *jacobian, 
     F &f, F v[2], F j[2][2])
 {
-  const I p = i % m2n0;
+  const I p = i / m2n0; // poloidal plane
   if (p % vphi == 0) {
     const I p0 = p / vphi;
     const I k = i % m2n0;
@@ -75,6 +75,7 @@ inline void mx3_interpolate(const I i,
     j[1][0] = jacobian[4*idx+2];
     j[1][1] = jacobian[4*idx+3];
   } else { // virtual plane
+#if 1
     const I p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
     const auto& l = interpolants[p % vphi][i % m2n0];
@@ -99,6 +100,7 @@ inline void mx3_interpolate(const I i,
           j[k0][k1] += alpha * l.mu0[k] * jacobian[idx0*4+k0*2+k1] + beta * l.mu1[k] * jacobian[idx1*4+k0*2+k1];
       }
     }
+#endif
   }
 }
 

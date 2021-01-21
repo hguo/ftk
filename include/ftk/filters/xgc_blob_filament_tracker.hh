@@ -183,8 +183,8 @@ inline void xgc_blob_filament_tracker::update_timestep()
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     xft_execute(ctx, 1 /* ordinal */, current_timestep);
-    if (field_data_snapshots.size() >= 2) 
-      xft_execute(ctx, 2 /* interval */, current_timestep);
+    // if (field_data_snapshots.size() >= 2) 
+    //   xft_execute(ctx, 2 /* interval */, current_timestep);
 #else
     fatal("FTK not compiled with CUDA.");
 #endif
