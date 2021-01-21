@@ -22,10 +22,12 @@ struct filter : public object {
   void use_accelerator(const std::string& acc);
   void use_accelerator(int i) {
     xl = i;
+#if 0
     if (xl == FTK_XL_OPENMP || xl == FTK_XL_SYCL || xl == FTK_XL_KOKKOS_CUDA) {
       warn("Accelerator not available.  Using FTK_XL_NONE.");
       xl = FTK_XL_NONE;
     }
+#endif
   }
 
   int default_nthreads() const {

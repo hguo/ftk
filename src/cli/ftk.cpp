@@ -113,7 +113,7 @@ static const std::string
         str_critical_point_type_saddle("saddle");
 
 static const std::set<std::string>
-        set_valid_accelerator({str_none, "cuda", "tbb"}),
+        set_valid_accelerator({str_none, "cuda", "tbb", "openmp"}),
         set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti, str_adios2}),
         set_valid_input_dimension({str_auto, str_two, str_three});
 

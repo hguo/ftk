@@ -192,10 +192,10 @@ inline void xgc_blob_filament_tracker::update_timestep()
     // TODO: strange that m4->element_for has proformance problem...
     // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
     const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
-    parallel_for(no, [&](int i) {func(i + current_timestep * nd);});
+    parallel_for(no, [&](int i) {func(i + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
 
     if (field_data_snapshots.size() >= 2)
-      parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);});
+      parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
       //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
   }
 }

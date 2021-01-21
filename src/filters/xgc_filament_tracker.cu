@@ -229,11 +229,12 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
       c->d_ptr_interpolants, 
       c->d_scalar, c->d_vector, c->d_jacobian, 
       *c->dncps, c->dcps);
+  cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] sweep_simplicies");
 
   cudaMemcpy(&c->hncps, c->dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
   checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 1");
-  fprintf(stderr, "ncps=%zu\n", c->hncps);
+  fprintf(stderr, "ncps=%llu\n", c->hncps);
   cudaMemcpy(c->hcps, c->dcps, sizeof(cp_t) * c->hncps, cudaMemcpyDeviceToHost);
   
   checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 2");
@@ -305,16 +306,16 @@ void xft_load_mesh(ctx_t *c,
   c->m2n1 = m2n1;
   c->m2n2 = m2n2;
 
-  cudaMalloc((void**)&c->d_m2coords, m2n0 * sizeof(double));
+  cudaMalloc((void**)&c->d_m2coords, m2n0 * sizeof(double) * 2);
   checkLastCudaError("[FTK-CUDA] loading xgc mesh, malloc 0");
-  cudaMemcpy(c->d_m2coords, m2coords, m2n0 * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(c->d_m2coords, m2coords, m2n0 * sizeof(double) * 2, cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] loading xgc mesh, memcpy 0");
 
-  cudaMalloc((void**)&c->d_m2edges, m2n1 * sizeof(int));
-  cudaMemcpy(c->d_m2edges, m2edges, m2n1 * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_m2edges, m2n1 * sizeof(int) * 2);
+  cudaMemcpy(c->d_m2edges, m2edges, m2n1 * sizeof(int) * 2, cudaMemcpyHostToDevice);
 
-  cudaMalloc((void**)&c->d_m2tris, m2n2 * sizeof(int));
-  cudaMemcpy(c->d_m2tris, m2tris, m2n2 * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_m2tris, m2n2 * sizeof(int) * 3);
+  cudaMemcpy(c->d_m2tris, m2tris, m2n2 * sizeof(int) * 3, cudaMemcpyHostToDevice);
   
   checkLastCudaError("[FTK-CUDA] loading xgc mesh");
 }

@@ -85,6 +85,7 @@ struct object {
       std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
     } else if (accelerator == FTK_XL_OPENMP) {
 #if FTK_HAVE_OPENMP
+      fprintf(stderr, "parallelization w/ openmp...\n");
 #pragma omp parallel for
       for (size_t j = 0; j < ntasks; j ++)
         f(j);
