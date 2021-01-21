@@ -57,7 +57,7 @@ __device__
 inline void mx3_interpolate(const I i,
     const I nphi, const I iphi, const I vphi,
     const I m2n0, 
-    const ftk::xgc_interpolant_t<I, F> *const *const interpolants, 
+    const ftk::xgc_interpolant_t<I, F> *interpolants, 
     const F *scalar, const F *vector, const F *jacobian, 
     F &f, F v[2], F j[2][2])
 {
@@ -78,7 +78,8 @@ inline void mx3_interpolate(const I i,
 #if 1
     const I p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
-    const auto& l = interpolants[p % vphi][i % m2n0];
+    // const auto& l = interpolants[p % vphi][i % m2n0];
+    const auto& l = interpolants[(p % vphi - 1) * m2n0 + i % m2n0];
 
     // init
     f = 0;

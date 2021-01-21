@@ -29,7 +29,7 @@ bool check_simplex(
     const F m2coords[], // m2 vertex coordinates
     const I m2edges[], // list of m2 edges
     const I m2tris[], // list of m2 triangles
-    const ftk::xgc_interpolant_t<I, F> *const *const interpolants, // interpolants
+    const ftk::xgc_interpolant_t<I, F>* interpolants, // interpolants
     const F *const scalar[2], // current and next scalar
     const F *const vector[2], // current and next grad
     const F *const jacobian[2], // current and next jacobian
@@ -93,12 +93,9 @@ bool check_simplex(
   bool succ = ftk::robust_critical_point_in_simplex2(vf, verts);
   if (!succ) return false;
 
-  double mu[3], x[4];
+  F mu[3], x[4];
   bool succ2 = ftk::inverse_lerp_s2v2(v, mu);
   ftk::clamp_barycentric<3>(mu);
-  printf("mu=%f, %f, %f\n", mu[0], mu[1], mu[2]);
-  
-  return false;
 
   ftk::lerp_s2v4(rzpt, mu, x);
   for (int k = 0; k < 3; k ++)
@@ -107,14 +104,16 @@ bool check_simplex(
 
   cp.scalar[0] = f[0] * mu[0] + f[1] * mu[1] + f[2] * mu[2];
 
-  double h[2][2];
+#if 1
+  F h[2][2];
   ftk::lerp_s2m2x2(j, mu, h);
+  // ftk::make_symmetric2x2(h);
   cp.type = ftk::critical_point_type_2d(h, true);
 
   cp.tag = i;
   // cp.ordinal = scope == 1; 
   // cp.timestep = current_timestep;
-
+#endif
   printf("cp.x=%f, %f, %f, %f, scalar=%f, type=%d\n", 
       cp.x[0], cp.x[1], cp.x[2], cp.x[3], cp.scalar[0], cp.type);
 
@@ -132,7 +131,7 @@ void sweep_simplices(
     const F m2coords[], // m2 vertex coordinates
     const I m2edges[], // list of m2 edges
     const I m2tris[], // list of m2 triangles
-    const ftk::xgc_interpolant_t<I, F> *const *const interpolants, // interpolants
+    const ftk::xgc_interpolant_t<I, F> *interpolants, 
     const F* scalar0, // current scalar
     const F* scalar1, // next scalar
     const F* vector0, 
@@ -205,7 +204,6 @@ void xft_destroy_ctx(ctx_t **c_)
   if (c->d_m2edges != NULL) cudaFree(c->d_m2edges);
   if (c->d_m2tris != NULL) cudaFree(c->d_m2tris);
 
-  if (c->d_ptr_interpolants != NULL) cudaFree(c->d_ptr_interpolants);
   if (c->d_interpolants != NULL) cudaFree(c->d_interpolants);
 
   if (c->d_scalar[0] != NULL) cudaFree(c->d_scalar[0]);
@@ -251,7 +249,7 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
       c->nphi, c->iphi, c->vphi, 
       c->m2n0, c->m2n1, c->m2n2, 
       c->d_m2coords, c->d_m2edges, c->d_m2tris, 
-      c->d_ptr_interpolants, 
+      c->d_interpolants, 
       c->d_scalar[0], c->d_scalar[1],
       c->d_vector[0], c->d_vector[1],
       c->d_jacobian[0], c->d_jacobian[1], 
@@ -354,23 +352,12 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
   cudaMalloc((void**)&c->d_interpolants, 
       c->m2n0 * sizeof(ftk::xgc_interpolant_t<>) * c->vphi);
   checkLastCudaError("[FTK-CUDA] loading xgc interpolants, malloc 0");
-  cudaMalloc((void**)&c->d_ptr_interpolants, c->vphi);
-  checkLastCudaError("[FTK-CUDA] loading xgc interpolants, malloc 1");
 
-  std::vector<ftk::xgc_interpolant_t<>*> ptr_all_interpolants;
-
-  for (int i = 0; i < interpolants.size(); i ++) {
-    // fprintf(stderr, "loading interpolants %d\n", i);
-    if (i == 0) ptr_all_interpolants.push_back(c->d_interpolants);
-    else {
-      ptr_all_interpolants.push_back(c->d_interpolants + (i-1) * c->m2n0);
-      cudaMemcpy(c->d_interpolants + (i-1) * c->m2n0, // * sizeof(ftk::xgc_interpolant_t<>), 
-          interpolants[i].data(), c->m2n0 * sizeof(ftk::xgc_interpolant_t<>), cudaMemcpyHostToDevice);
-      checkLastCudaError("[FTK-CUDA] loading xgc interpolants, memcpy");
-    }
+  for (int i = 1; i < interpolants.size(); i ++) {
+    cudaMemcpy(c->d_interpolants + (i-1) * c->m2n0, // * sizeof(ftk::xgc_interpolant_t<>), 
+        interpolants[i].data(), c->m2n0 * sizeof(ftk::xgc_interpolant_t<>), cudaMemcpyHostToDevice);
+    checkLastCudaError("[FTK-CUDA] loading xgc interpolants, memcpy");
   }
-  cudaMemcpy(c->d_ptr_interpolants, ptr_all_interpolants.data(), 
-      sizeof(void*) * c->iphi, cudaMemcpyHostToDevice);
   
   checkLastCudaError("[FTK-CUDA] loading xgc interpolants");
 }
