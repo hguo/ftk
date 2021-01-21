@@ -17,7 +17,7 @@ typedef struct {
 
   ftk::feature_point_lite_t *hcps = NULL, *dcps = NULL;
   unsigned long long hncps = 0, *dncps = NULL;
-  const size_t bufsize = 512 * 1024 * 1024; // 512 MB of buffer
+  size_t bufsize; //  = 512 * 1024 * 1024; // 512 MB of buffer
 } xft_ctx_t;
 
 void xft_create_ctx(xft_ctx_t **c_);

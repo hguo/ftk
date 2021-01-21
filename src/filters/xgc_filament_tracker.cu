@@ -160,6 +160,7 @@ void xft_create_ctx(ctx_t **c_)
   cudaMemset(c->dncps, 0, sizeof(unsigned long long));
   checkLastCudaError("[FTK-CUDA] cuda malloc");
 
+  c->bufsize = 512 * 1024 * 1024; 
   c->hcps = (cp_t*)malloc(c->bufsize);
   cudaMalloc((void**)&c->dcps, c->bufsize);
   checkLastCudaError("[FTK-CUDA] cuda malloc");
