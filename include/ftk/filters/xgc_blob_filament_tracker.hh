@@ -189,9 +189,16 @@ inline void xgc_blob_filament_tracker::update_timestep()
     fatal("FTK not compiled with CUDA.");
 #endif
   } else {
-    m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+    fprintf(stderr, "sweeping...\n");
+    // TODO: strange that m4->element_for has proformance problem...
+    // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
+    const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
+    parallel_for(no, [&](int i) {func(i + current_timestep * nd);});
+
     if (field_data_snapshots.size() >= 2)
-      m4->element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+      parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);});
+      //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
+    fprintf(stderr, "end sweeping.\n");
   }
 }
 
@@ -201,9 +208,8 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   double rzpt[3][4], f[3], v[3][2], j[3][2][2];
   long long vf[3][2];
   const long long factor = 1 << 15; // WIP
-
+ 
   simplex_values<3, double>(i, tri, t, p, rzpt, f, v, j);
-  // fprintf(stderr, "%d, tri=%d, %d, %d\n", i, tri[0], tri[1], tri[2]);
 
   // print3x2("rz", rz);
   // print3x2("v", v);
@@ -234,10 +240,10 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.ordinal = m4->is_ordinal(2, i); 
   cp.timestep = current_timestep;
 
-  // fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
-  //     mu[0], mu[1], mu[2], 
-  //     x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
-  //     t[0], t[1], t[2]);
+  fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
+      mu[0], mu[1], mu[2], 
+      x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
+      t[0], t[1], t[2]);
   
   return true;
 }
@@ -368,11 +374,10 @@ void xgc_blob_filament_tracker::simplex_values(
     rzpt[k][3] = t[k];
 
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
-    const auto &data = field_data_snapshots[iv];
+    const field_data_snapshot_t &data = field_data_snapshots[iv];
 
 #if 1
-    m3->interpolate(data.scalar, data.vector, data.jacobian, v3, 
-        &f[k], v[k], j[k]);
+    m3->interpolate(data.scalar, data.vector, data.jacobian, v3, &f[k], v[k], j[k]);
 #else
     const int dp0 = p[k] / iphi / vphi, // plane id in the density array
               dp1 = dp0 + 1; // (dp0 + 1) % nphi;
