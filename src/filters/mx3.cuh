@@ -22,7 +22,7 @@ inline void mx3_get_coords(
     I v3, F x[], 
     const I m2n0, const F m2coords[])
 {
-  return me2_get_coords(m2n0, m2coords, v3, x);
+  return me2_get_coords(v3, x, m2n0, m2coords);
 }
 
 template <typename I>
@@ -57,7 +57,7 @@ __device__
 inline void mx3_interpolate(const I i,
     const I nphi, const I iphi, const I vphi,
     const I m2n0, 
-    const xgc_interpolant_t **interpolants, 
+    const ftk::xgc_interpolant_t<I, F> *const *const interpolants, 
     const F *scalar, const F *vector, const F *jacobian, 
     F &f, F v[2], F j[2][2])
 {
@@ -77,7 +77,7 @@ inline void mx3_interpolate(const I i,
   } else { // virtual plane
     const I p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
-    const xgc_interpolant_t& l = interpolants[p % vphi][i % m2n0];
+    const auto& l = interpolants[p % vphi][i % m2n0];
 
     // init
     f = 0;
@@ -92,7 +92,7 @@ inline void mx3_interpolate(const I i,
       const I idx0 = m2n0 * p0 + l.tri0[k], 
               idx1 = m2n0 * p1 + l.tri1[k];
 
-      f[0] += alpha * l.mu0[k] * scalar[idx0] + beta * l.mu1[k] * scalar[idx1];
+      f += alpha * l.mu0[k] * scalar[idx0] + beta * l.mu1[k] * scalar[idx1];
       for (int k0 = 0; k0 < 2; k0 ++) {
         v[k0] += alpha * l.mu0[k] * vector[idx0*2+k0] + beta * l.mu1[k] * vector[idx1*2+k0];
         for (int k1 = 0; k1 < 2; k1 ++) 

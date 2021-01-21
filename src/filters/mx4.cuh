@@ -5,7 +5,7 @@
 
 template <typename I>
 __device__
-void mx4_tri_type(const I i, const I mx3n1, const I mx3n2)
+int mx4_tri_type(const I i, const I mx3n1, const I mx3n2)
 {
   // const I i = mod(k, mx4n2); // , t = floor((double)k / mx4n2);
   if (i < mx3n2) return 0;
