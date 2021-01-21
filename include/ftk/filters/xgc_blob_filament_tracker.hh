@@ -189,7 +189,6 @@ inline void xgc_blob_filament_tracker::update_timestep()
     fatal("FTK not compiled with CUDA.");
 #endif
   } else {
-    fprintf(stderr, "sweeping...\n");
     // TODO: strange that m4->element_for has proformance problem...
     // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
     const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
@@ -198,7 +197,6 @@ inline void xgc_blob_filament_tracker::update_timestep()
     if (field_data_snapshots.size() >= 2)
       parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);});
       //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
-    fprintf(stderr, "end sweeping.\n");
   }
 }
 
@@ -240,10 +238,10 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.ordinal = m4->is_ordinal(2, i); 
   cp.timestep = current_timestep;
 
-  fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
-      mu[0], mu[1], mu[2], 
-      x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
-      t[0], t[1], t[2]);
+  // fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
+  //     mu[0], mu[1], mu[2], 
+  //     x[0], x[1], x[2], x[3], cp.timestep, cp.type, 
+  //     t[0], t[1], t[2]);
   
   return true;
 }
