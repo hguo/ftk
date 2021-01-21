@@ -1,7 +1,14 @@
 #include <nvfunctional>
+#include <ftk/numeric/inverse_linear_interpolation_solver.hh>
+#include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/clamp.hh>
+#include <ftk/numeric/symmetric_matrix.hh>
+#include <ftk/numeric/fixed_point.hh>
+#include <ftk/numeric/critical_point_type.hh>
+#include <ftk/numeric/critical_point_test.hh>
+#include <ftk/filters/xgc_filament_tracker.cuh>
 #include "common.cuh"
 #include "mx4.cuh"
-#include <ftk/filters/xgc_filament_tracker.cuh>
 
 // what are needed in device memory:
 // - field-following interpolants for virtual poloidal planes
@@ -29,6 +36,7 @@ bool check_simplex(
     cp_t & cp) // WIP: critical points
 {
   // typedef ftk::fixed_point<> fp_t;
+  const long long factor = 1 << 15; // WIP
 
   const I np = nphi * iphi * vphi;
   const I m3n0 = m2n0 * np;
@@ -44,14 +52,17 @@ bool check_simplex(
     const I v2 = v3 % m2n0; // vert in m2
     p[k] = v3 / m2n0; // poloidal plane
 
-    mx3_get_coords(v3, rzpt[k]);
+    mx3_get_coords(v3, rzpt[k], m2n0, m2coords);
     rzpt[k][3] = t[k];
-
-    const int iv = (t[k] == current_timestep) ? 0 : 1;
-    mx3_interpolate(interpolants, 
+    // const int iv = (t[k] == current_timestep) ? 0 : 1;
+    const int iv = 0; // (t[k] == current_timestep) ? 0 : 1;
+    mx3_interpolate<I, F>(
+        v3, nphi, iphi, vphi, 
+        m2n0, interpolants,
         scalar[iv], vector[iv], jacobian[iv], 
-        v3, f[k], v[k], j[k]);
+        f[k], v[k], j[k]);
   }
+  // printf("%f, %f, %f\n", f[0], f[1], f[2]);
 
   // check if peridocial
   bool b0 = false, b1 = false;
@@ -64,7 +75,34 @@ bool check_simplex(
       if (p[k] == 0)
         rzpt[k][2] += np;
 
-  // fp_t vf[3][2];
+  long long vf[3][2];
+  for (int k = 0; k < 3; k ++) 
+    for (int l = 0; l < 2; l ++) 
+      vf[k][l] = factor * v[k][l];
+  
+  bool succ = ftk::robust_critical_point_in_simplex2(vf, verts);
+  if (!succ) return false;
+
+  double mu[3], x[4];
+  bool succ2 = ftk::inverse_lerp_s2v2(v, mu);
+  ftk::clamp_barycentric<3>(mu);
+
+  ftk::lerp_s2v4(rzpt, mu, x);
+  for (int k = 0; k < 3; k ++)
+    cp.x[k] = x[k];
+  cp.t = x[3];
+
+  cp.scalar[0] = f[0] * mu[0] + f[1] * mu[1] + f[2] * mu[2];
+
+  double h[2][2];
+  ftk::lerp_s2m2x2(j, mu, h);
+  cp.type = ftk::critical_point_type_2d(h, true);
+
+  cp.tag = i;
+  // cp.ordinal = scope == 1; 
+  // cp.timestep = current_timestep;
+
+  return true;
 }
 
 template <typename I, typename F>
@@ -84,15 +122,19 @@ void sweep_simplices(
     unsigned long long &ncps, 
     cp_t *cps)
 {
-#if 0
+  const I np = nphi * iphi * vphi;
+  const I mx3n0 = m2n0 * np; 
+  const I mx3n1 = (2 * m2n1 + m2n0) * np; 
   const I mx3n2 = (3 * m2n0 + 2 * m2n1) * np;
+  const I mx4n2 = 3 * mx3n2 + 2 * mx3n1;
 
   int tid = getGlobalIdx_3D_1D();
   I i = tid;
   if (scope == scope_interval) i += mx3n2;
+  if (i >= mx4n2) return; // invalid element
   
   cp_t cp;
-  bool succ = check_simplex(
+  bool succ = check_simplex<I, F>(
       current_timestep, 
       i, 
       nphi, iphi, vphi, 
@@ -100,14 +142,13 @@ void sweep_simplices(
       m2coords, m2edges, m2tris,
       interpolants, 
       scalar, vector, jacobian, 
-      ncps, cps);
+      cp);
   
   if (succ) {
     unsigned long long idx = atomicAdd(&ncps, 1ul);
     cp.tag = tid;
     cps[idx] = cp;
   }
-#endif
 }
 
 void xft_create_ctx(ctx_t **c_)
@@ -173,6 +214,8 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
   const int nBlocks = idivup(ntasks, blockSize);
   dim3 gridSize;
 
+  fprintf(stderr, "ntasks=%zu\n", ntasks);
+
   if (nBlocks >= maxGridDim) 
     gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else 
@@ -189,9 +232,11 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
   checkLastCudaError("[FTK-CUDA] sweep_simplicies");
 
   cudaMemcpy(&c->hncps, c->dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
+  checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 1");
+  fprintf(stderr, "ncps=%zu\n", c->hncps);
   cudaMemcpy(c->hcps, c->dcps, sizeof(cp_t) * c->hncps, cudaMemcpyDeviceToHost);
   
-  checkLastCudaError("[FTK-CUDA] cuda memcpy device to host");
+  checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 2");
 }
 
 void xft_load_data(ctx_t *c, 
