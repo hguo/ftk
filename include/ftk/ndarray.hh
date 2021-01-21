@@ -71,7 +71,7 @@
 namespace ftk {
 
 template <typename T>
-struct ndarray : object {
+struct ndarray { // : object {
   friend class diy::Serialization<ndarray<T>>;
 
   ndarray() {}
@@ -460,7 +460,7 @@ void ndarray<T>::from_binary_file(FILE *fp)
 {
   auto s = fread(&p[0], sizeof(T), nelem(), fp);
   if (s != nelem())
-    warn("Unable to read expected number of bytes.");
+    object::warn("Unable to read expected number of bytes.");
 }
 
 template <typename T>
@@ -552,7 +552,7 @@ inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::st
     d->SetNumberOfComponents(1);
     d->SetNumberOfTuples(nelem());
   } else {
-    fatal("Only support one dimension for components");
+    object::fatal("Only support one dimension for components");
   }
   memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * p.size()); // nelem());
   return d;
@@ -1274,7 +1274,7 @@ inline bool ndarray<float>::from_amira(const std::string& filename)
 
   FILE *fp = fopen(filename.c_str(), "rb"); 
   if (!fp) {
-    warn("cannot open file " + filename);
+    object::warn("cannot open file " + filename);
     return false;
   }
 
@@ -1283,7 +1283,7 @@ inline bool ndarray<float>::from_amira(const std::string& filename)
   buffer[2047] = '\0';
 
   if (!strstr(buffer, "# AmiraMesh BINARY-LITTLE-ENDIAN 2.1")) {
-    warn("Not a proper AmiraMesh file " + filename);
+    object::warn("Not a proper AmiraMesh file " + filename);
     fclose(fp);
     return false;
   }
@@ -1316,7 +1316,7 @@ inline bool ndarray<float>::from_amira(const std::string& filename)
       || xmin > xmax || ymin > ymax || zmin > zmax
       || !bIsUniform || NumComponents <= 0)
   {
-    warn("Something went wrong when reading AmiraMesh data\n");
+    object::warn("Something went wrong when reading AmiraMesh data\n");
     fclose(fp);
     return false;
   }
