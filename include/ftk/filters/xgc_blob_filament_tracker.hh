@@ -219,9 +219,9 @@ inline void xgc_blob_filament_tracker::update_timestep()
       std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
       for (auto lcp : results) {
         feature_point_t cp(lcp);
-        cp.tag += current_timestep * m4->n(2);
+        cp.tag += (current_timestep-1) * m4->n(2);
         cp.ordinal = false;
-        cp.timestep = current_timestep;
+        cp.timestep = current_timestep - 1;
 
         intersections.insert({cp.tag, cp});
 

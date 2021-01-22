@@ -63,10 +63,11 @@ bool check_simplex(
         f[k], v[k], j[k]);
   }
 #if 0
-  if (i < 100)
-    printf("i=%d, verts=%d, %d, %d, f=%f, %f, %f, rzpt=%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", 
+  if (i > 5000000 && i < 5000100)
+    printf("i=%d, verts=%d, %d, %d, f=%f, %f, %f, p=%d, %d, %d, rzpt=%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", 
         i, verts[0], verts[1], verts[2], 
         f[0], f[1], f[2],
+        p[0], p[1], p[2],
         rzpt[0][0], rzpt[0][1], rzpt[0][2], rzpt[0][3], 
         rzpt[1][0], rzpt[1][1], rzpt[1][2], rzpt[1][3],
         rzpt[2][0], rzpt[2][1], rzpt[2][2], rzpt[2][3]);
@@ -109,20 +110,9 @@ bool check_simplex(
   ftk::lerp_s2m2x2(j, mu, h);
   // ftk::make_symmetric2x2(h);
   cp.type = ftk::critical_point_type_2d(h, true);
-#if 0
-  const F b = -(h[0][0] + h[1][1]), c = h[0][0] * h[1][1] - h[1][0] * h[1][0];
-  const F sqrt_delta = sqrt( max(0.0, __fma_rn(b, b, -4*c)) );
-  const F e0 = -b + sqrt_delta, e1 = -b - sqrt_delta;
-
-  if (e0 > 0 && e1 > 0) cp.type = ftk::CRITICAL_POINT_2D_MINIMUM;
-  else if (e0 < 0 && e1 < 0) cp.type = ftk::CRITICAL_POINT_2D_MAXIMUM;
-  else if (e0 * e1 < 0) cp.type = ftk::CRITICAL_POINT_2D_SADDLE;
-  else cp.type = ftk::CRITICAL_POINT_2D_DEGENERATE;
-#endif
-
-  // printf("cp.x=%f, %f, %f, %f, scalar=%f, h=%f, %f, %f, %f, type=%d\n", 
+  
+  // printf("cp.x=%f, %f, %f, %f, scalar=%f, type=%d\n", 
   //     cp.x[0], cp.x[1], cp.x[2], cp.x[3], cp.scalar[0], 
-  //     h[0][0], h[0][1], h[1][0], h[1][1], 
   //     cp.type);
 
   return true;
@@ -156,8 +146,12 @@ void sweep_simplices(
 
   int tid = getGlobalIdx_3D_1D();
   I i = tid;
-  if (scope == scope_interval) i += mx3n2;
-  if (i >= mx4n2) return; // invalid element
+  if (scope == scope_interval) {
+    i += mx3n2;
+    if (i >= mx4n2) return; // invalid element
+  } else { // ordinal
+    if (i >= mx3n2) return;
+  }
  
   const F* const scalar[2] = {scalar0, scalar1};
   const F* const vector[2] = {vector0, vector1};
@@ -241,25 +235,26 @@ void xft_destroy_ctx(ctx_t **c_)
 void xft_execute(ctx_t *c, int scope, int current_timestep)
 {
   const int np = c->nphi * c->iphi * c->vphi;
-  const int mx3n1 = (2 * c->m2n1 + 2 * c->m2n0) * np;
+  const int mx3n1 = (2 * c->m2n1 + c->m2n0) * np;
   const int mx3n2 = (3 * c->m2n0 + 2 * c->m2n1) * np;
   // const int mx4n2 = 3 * mx3n2 + 2 * mx3n1;
   const int mx4n2_ordinal  = mx3n2, 
             mx4n2_interval = 2 * mx3n2 + 2 * mx3n1;
+  // fprintf(stderr, "executing timestep %d\n", current_timestep);
 
   size_t ntasks;
   if (scope == scope_ordinal) ntasks = mx4n2_ordinal; 
   else ntasks = mx4n2_interval;
+  
+  fprintf(stderr, "ntasks=%zu\n", ntasks);
   
   const int maxGridDim = 1024;
   const int blockSize = 256;
   const int nBlocks = idivup(ntasks, blockSize);
   dim3 gridSize;
 
-  if (nBlocks >= maxGridDim) 
-    gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
-  else 
-    gridSize = dim3(nBlocks);
+  if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else gridSize = dim3(nBlocks);
 
   sweep_simplices<int, double><<<gridSize, blockSize>>>(
       scope, current_timestep, 
@@ -506,7 +501,7 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
 
 void xft_load_scalar_data(ctx_t *c, const double *scalar)
 {
-  fprintf(stderr, "loading and smoothing scalar data w/ gpu...\n");
+  // fprintf(stderr, "loading and smoothing scalar data w/ gpu...\n");
   if (c->d_scalar_in == NULL)
     cudaMalloc((void**)&c->d_scalar_in, sizeof(double) * c->m2n0 * c->nphi);
   cudaMemcpy(c->d_scalar_in, scalar, sizeof(double) * c->m2n0 * c->nphi, 
@@ -539,5 +534,5 @@ void xft_load_scalar_data(ctx_t *c, const double *scalar)
   xft_smooth_scalar_vector_jacobian(c, 
       c->d_scalar_in, dd_scalar, dd_vector, dd_jacobian);
   
-  fprintf(stderr, "scalar smoothed and loaded to gpu\n");
+  // fprintf(stderr, "scalar smoothed and loaded to gpu\n");
 }

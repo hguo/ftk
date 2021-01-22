@@ -30,6 +30,7 @@ void mx4_get_tri(I k, I verts[3],
 
   const I i = mod(k, mx4n2), t = floor(double(k) / mx4n2);
   const int type = mx4_tri_type(i, mx3n1, mx3n2);
+  const I offset = t * mx3n0;
 
   // const I n2 = 3 * m2n2 + 2 * m2n1;
   // const I i = mod(k, n2), t = std::floor(double(k) / n2);
@@ -64,6 +65,9 @@ void mx4_get_tri(I k, I verts[3],
       verts[2] = mx3edge[1] + mx3n0;
     }
   }
+
+  for (int j = 0; j < 3; j ++)
+    verts[j] += offset;
 }
 
 #endif

@@ -52,6 +52,7 @@ void me2_get_edge(I k, I verts[2], const I m2n0, const I m2n1,
   const I me2n1 = 2 * m2n1 + m2n0;
   const I i = mod(k, me2n1), t = std::floor(double(k) / me2n1);
   const int type = me2_edge_type(i, m2n1);
+  const I offset = t * m2n0;
 
   if (type < 2) {
     I me2edge[2];
@@ -67,6 +68,9 @@ void me2_get_edge(I k, I verts[2], const I m2n0, const I m2n1,
     verts[0] = i - 2 * m2n1;
     verts[1] = i - 2 * m2n1 + m2n0;
   }
+  
+  for (int j = 0; j < 2; j ++)
+    verts[j] += offset;
 }
 
 template <typename I>
@@ -79,6 +83,7 @@ void me2_get_tri(I k, I verts[3],
   const I n2 = 3 * m2n2 + 2 * m2n1;
   const I i = mod(k, n2), t = std::floor(double(k) / n2);
   const int type = me2_tri_type(i, m2n1, m2n2);
+  const I offset = t * m2n0;
 
   if (type < 3) {
     I m2tri[3];
@@ -109,6 +114,9 @@ void me2_get_tri(I k, I verts[3],
       verts[2] = me2edge[1] + m2n0;
     }
   }
+
+  for (int j = 0; j < 3; j ++)
+    verts[j] += offset;
 }
 
 #endif
