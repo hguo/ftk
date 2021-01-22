@@ -182,9 +182,37 @@ inline void xgc_blob_filament_tracker::update_timestep()
 
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
+    // ordinal
     xft_execute(ctx, 1 /* ordinal */, current_timestep);
-    if (field_data_snapshots.size() >= 2) 
+    std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
+    for (auto lcp : results) {
+      feature_point_t cp(lcp);
+      cp.tag += current_timestep * m4->n(2);
+      cp.ordinal = true;
+      cp.timestep = current_timestep;
+
+      intersections.insert({cp.tag, cp});
+
+      std::set<int> related = get_related_cels(cp.tag);
+      related_cells.insert( related.begin(), related.end() );
+    }
+
+    // interval
+    if (field_data_snapshots.size() >= 2) {
       xft_execute(ctx, 2 /* interval */, current_timestep);
+      std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
+      for (auto lcp : results) {
+        feature_point_t cp(lcp);
+        cp.tag += current_timestep * m4->n(2);
+        cp.ordinal = true;
+        cp.timestep = current_timestep;
+
+        intersections.insert({cp.tag, cp});
+
+        std::set<int> related = get_related_cels(cp.tag);
+        related_cells.insert( related.begin(), related.end() );
+      }
+    }
 #else
     fatal("FTK not compiled with CUDA.");
 #endif
