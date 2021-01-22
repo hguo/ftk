@@ -41,7 +41,7 @@ public:
       const ndarray<double> &vector,
       const ndarray<double> &jacobian);
   void push_field_data_snapshot(
-      const ndarray<double> &scalar) { xgc_tracker::push_field_data_snapshot(scalar); }
+      const ndarray<double> &scalar);
 
 protected:
   bool check_simplex(int, feature_point_t& cp);
@@ -147,6 +147,19 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
   xgc_tracker::push_field_data_snapshot(scalar, vector, jacobian);
 }
 
+inline void xgc_blob_filament_tracker::push_field_data_snapshot(
+      const ndarray<double> &scalar)
+{
+#if FTK_HAVE_CUDA
+  if (xl == FTK_XL_CUDA) {
+    xft_load_scalar_data(ctx, scalar.data());
+  } else 
+    xgc_tracker::push_field_data_snapshot(scalar);
+#else
+  xgc_tracker::push_field_data_snapshot(scalar);
+#endif
+}
+
 inline void xgc_blob_filament_tracker::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
@@ -201,7 +214,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
     }
 
     // interval
-    if (field_data_snapshots.size() >= 2) {
+    if (current_timestep > 0) { // field_data_snapshots.size() >= 2) {
       xft_execute(ctx, 2 /* interval */, current_timestep);
       std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
       for (auto lcp : results) {

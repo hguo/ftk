@@ -367,9 +367,13 @@ void smooth_scalar_vector_jacobian(
     const int k = nodes[offsets[i] + j];
     const F w = values[offsets[i] + j]; // weight
     const F d[2] = {m2coords[k*2] - m2coords[i*2], m2coords[k*2+1] - m2coords[i*2+1]};
-
-    const F f = w * scalar_in[idx];
-    scalar_out[idx] += f;
+  
+    const F f = scalar_in[ k + p * m2n0 ];
+    scalar_out[idx] += f * w;
+    
+    // if (idx == 10000)
+    // if (scalar_in[idx] > 0.01)
+    //   printf("w[%d]=%f, scalar_in=%f\n", k, w, scalar_in[idx]);
 
     vector_out[idx*2]   += -f * w * d[0] / sigma2;
     vector_out[idx*2+1] += -f * w * d[1] / sigma2;
@@ -379,6 +383,9 @@ void smooth_scalar_vector_jacobian(
     jacobian_out[idx*4+2] += d[0]*d[1] / sigma4 * f * w;
     jacobian_out[idx*4+3] += (d[1]*d[1] / sigma2 - 1) / sigma2 * f * w;
   }
+    
+  // if (scalar_out[idx] > 0.01)
+  //   printf("%f, %f, %f\n", scalar_out[idx], vector_out[idx*2], vector_out[idx*2+1]);
 }
 
 void xft_smooth_scalar_vector_jacobian(ctx_t *c, 
@@ -495,4 +502,42 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
   }
   
   checkLastCudaError("[FTK-CUDA] loading xgc interpolants");
+}
+
+void xft_load_scalar_data(ctx_t *c, const double *scalar)
+{
+  fprintf(stderr, "loading and smoothing scalar data w/ gpu...\n");
+  if (c->d_scalar_in == NULL)
+    cudaMalloc((void**)&c->d_scalar_in, sizeof(double) * c->m2n0 * c->nphi);
+  cudaMemcpy(c->d_scalar_in, scalar, sizeof(double) * c->m2n0 * c->nphi, 
+      cudaMemcpyHostToDevice);
+
+  double *dd_scalar, *dd_vector, *dd_jacobian;
+  if (c->d_scalar[0] == NULL) {
+    cudaMalloc((void**)&c->d_scalar[0], sizeof(double) * c->m2n0 * c->nphi);
+    cudaMalloc((void**)&c->d_vector[0], sizeof(double) * c->m2n0 * c->nphi * 2);
+    cudaMalloc((void**)&c->d_jacobian[0], sizeof(double) * c->m2n0 * c->nphi * 4);
+    dd_scalar = c->d_scalar[0];
+    dd_vector = c->d_vector[0];
+    dd_jacobian = c->d_jacobian[0];
+  } else if (c->d_scalar[1] == NULL) {
+    cudaMalloc((void**)&c->d_scalar[1], sizeof(double) * c->m2n0 * c->nphi);
+    cudaMalloc((void**)&c->d_vector[1], sizeof(double) * c->m2n0 * c->nphi * 2);
+    cudaMalloc((void**)&c->d_jacobian[1], sizeof(double) * c->m2n0 * c->nphi * 4);
+    dd_scalar = c->d_scalar[1];
+    dd_vector = c->d_vector[1];
+    dd_jacobian = c->d_jacobian[1];
+  } else {
+    std::swap(c->d_scalar[0], c->d_scalar[1]);
+    std::swap(c->d_vector[0], c->d_vector[1]);
+    std::swap(c->d_jacobian[0], c->d_jacobian[1]);
+    dd_scalar = c->d_scalar[1];
+    dd_vector = c->d_vector[1];
+    dd_jacobian = c->d_jacobian[1];
+  }
+
+  xft_smooth_scalar_vector_jacobian(c, 
+      c->d_scalar_in, dd_scalar, dd_vector, dd_jacobian);
+  
+  fprintf(stderr, "scalar smoothed and loaded to gpu\n");
 }
