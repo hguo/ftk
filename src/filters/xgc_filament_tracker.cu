@@ -195,6 +195,12 @@ void xft_create_ctx(ctx_t **c_)
   cudaMalloc((void**)&c->dcps, c->bufsize);
   checkLastCudaError("[FTK-CUDA] cuda malloc");
 
+  c->d_kernel_nodes = NULL;
+  c->d_kernel_values = NULL;
+  c->d_kernel_lengths = NULL;
+  c->d_kernel_offsets = NULL;
+
+  c->d_scalar_in = NULL;
   c->d_scalar[0] = NULL;
   c->d_scalar[1] = NULL;
   c->d_vector[0] = NULL;
@@ -213,6 +219,12 @@ void xft_destroy_ctx(ctx_t **c_)
 
   if (c->d_interpolants != NULL) cudaFree(c->d_interpolants);
 
+  if (c->d_kernel_nodes != NULL) cudaFree(c->d_kernel_nodes);
+  if (c->d_kernel_values != NULL) cudaFree(c->d_kernel_values);
+  if (c->d_kernel_lengths != NULL) cudaFree(c->d_kernel_lengths);
+  if (c->d_kernel_offsets != NULL) cudaFree(c->d_kernel_offsets);
+
+  if (c->d_scalar_in != NULL) cudaFree(c->d_scalar_in);
   if (c->d_scalar[0] != NULL) cudaFree(c->d_scalar[0]);
   if (c->d_scalar[1] != NULL) cudaFree(c->d_scalar[1]);
   if (c->d_vector[0] != NULL) cudaFree(c->d_vector[0]);

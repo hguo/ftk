@@ -20,6 +20,7 @@ typedef struct {
   double *d_kernel_values;
   size_t *d_kernel_lengths, *d_kernel_offsets;
 
+  double *d_scalar_in;
   double *d_scalar[2], *d_vector[2], *d_jacobian[2];
 
   ftk::feature_point_lite_t *hcps = NULL, *dcps = NULL;
@@ -36,6 +37,7 @@ void xft_load_mesh(xft_ctx_t *c,
 void xft_load_interpolants(xft_ctx_t *c, const std::vector<std::vector<ftk::xgc_interpolant_t<>>> &interpolants);
 void xft_load_smoothing_kernel(xft_ctx_t *c, double sigma, const std::vector<std::vector<std::tuple<int, double>>>& kernels);
 void xft_execute(xft_ctx_t *c, int scope, int current_timestep);
+void xft_load_scalar_data(xft_ctx_t *c, const double *scalar);
 void xft_load_data(xft_ctx_t *c, 
     const double *scalar, 
     const double *vector, 
