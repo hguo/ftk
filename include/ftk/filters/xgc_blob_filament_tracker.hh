@@ -204,7 +204,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
       for (auto lcp : results) {
         feature_point_t cp(lcp);
         cp.tag += current_timestep * m4->n(2);
-        cp.ordinal = true;
+        cp.ordinal = false;
         cp.timestep = current_timestep;
 
         intersections.insert({cp.tag, cp});
@@ -493,7 +493,7 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
 #else // for all related 4-simplicies
   parallel_for<int>(related_cells, [&](const int e) {
     check_penta(e);
-  }, xl, nthreads, enable_set_affinity);
+  }, FTK_XL_NONE, nthreads, enable_set_affinity);
 #endif
 
   surfaces.relabel();

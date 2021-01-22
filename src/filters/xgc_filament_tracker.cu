@@ -244,8 +244,6 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
   const int nBlocks = idivup(ntasks, blockSize);
   dim3 gridSize;
 
-  fprintf(stderr, "ntasks=%zu\n", ntasks);
-
   if (nBlocks >= maxGridDim) 
     gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else 
