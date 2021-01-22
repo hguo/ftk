@@ -11,7 +11,7 @@ typedef struct {
 
   double *d_m2coords;
   int *d_m2edges, *d_m2tris;
-  ftk::xgc_interpolant_t<> **d_ptr_interpolants = NULL, *d_interpolants = NULL;
+  ftk::xgc_interpolant_t<> *d_interpolants = NULL;
 
   double *d_scalar[2], *d_vector[2], *d_jacobian[2];
 

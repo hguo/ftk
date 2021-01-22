@@ -43,6 +43,7 @@ inline void solve_eigenvalues_symmetric2x2(T m00, T m10, T m11, T eig[2])
 }
 
 template <typename T>
+__device__ __host__
 inline void solve_eigenvalues_symmetric2x2(const T m[2][2], T eig[2])
 {
   return solve_eigenvalues_symmetric2x2(m[0][0], m[1][0], m[1][1], eig);

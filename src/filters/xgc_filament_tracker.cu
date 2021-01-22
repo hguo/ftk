@@ -55,7 +55,7 @@ bool check_simplex(
     mx3_get_coords(v3, rzpt[k], m2n0, m2coords);
     rzpt[k][3] = t[k];
     // const int iv = (t[k] == current_timestep) ? 0 : 1;
-    const int iv = 0; // (t[k] == current_timestep) ? 0 : 1; // FIXME
+    const int iv = t[k]; 
     mx3_interpolate<I, F>(
         v3, nphi, iphi, vphi, 
         m2n0, interpolants,
@@ -103,21 +103,28 @@ bool check_simplex(
   cp.t = x[3];
 
   cp.scalar[0] = f[0] * mu[0] + f[1] * mu[1] + f[2] * mu[2];
+  cp.tag = i;
 
-#if 1
   F h[2][2];
   ftk::lerp_s2m2x2(j, mu, h);
   // ftk::make_symmetric2x2(h);
   cp.type = ftk::critical_point_type_2d(h, true);
+#if 0
+  const F b = -(h[0][0] + h[1][1]), c = h[0][0] * h[1][1] - h[1][0] * h[1][0];
+  const F sqrt_delta = sqrt( max(0.0, __fma_rn(b, b, -4*c)) );
+  const F e0 = -b + sqrt_delta, e1 = -b - sqrt_delta;
 
-  cp.tag = i;
-  // cp.ordinal = scope == 1; 
-  // cp.timestep = current_timestep;
+  if (e0 > 0 && e1 > 0) cp.type = ftk::CRITICAL_POINT_2D_MINIMUM;
+  else if (e0 < 0 && e1 < 0) cp.type = ftk::CRITICAL_POINT_2D_MAXIMUM;
+  else if (e0 * e1 < 0) cp.type = ftk::CRITICAL_POINT_2D_SADDLE;
+  else cp.type = ftk::CRITICAL_POINT_2D_DEGENERATE;
 #endif
-  printf("cp.x=%f, %f, %f, %f, scalar=%f, type=%d\n", 
-      cp.x[0], cp.x[1], cp.x[2], cp.x[3], cp.scalar[0], cp.type);
 
-  return false;
+  // printf("cp.x=%f, %f, %f, %f, scalar=%f, h=%f, %f, %f, %f, type=%d\n", 
+  //     cp.x[0], cp.x[1], cp.x[2], cp.x[3], cp.scalar[0], 
+  //     h[0][0], h[0][1], h[1][0], h[1][1], 
+  //     cp.type);
+
   return true;
 }
 
@@ -258,6 +265,7 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
   checkLastCudaError("[FTK-CUDA] sweep_simplicies");
 
   cudaMemcpy(&c->hncps, c->dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
+  cudaMemset(c->dncps, 0, sizeof(unsigned long long)); // clear the counter
   checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 1");
   fprintf(stderr, "ncps=%llu\n", c->hncps);
   cudaMemcpy(c->hcps, c->dcps, sizeof(cp_t) * c->hncps, cudaMemcpyDeviceToHost);
