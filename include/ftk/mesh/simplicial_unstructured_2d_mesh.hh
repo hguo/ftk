@@ -38,6 +38,8 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
 
   bool has_smoothing_kernel() const { return smoothing_kernel.size() > 0; }
   void build_smoothing_kernel(F sigma);
+  const std::vector<std::vector<std::tuple<I, F>>> &get_smoothing_kernel() const { return smoothing_kernel; }
+  F get_smoothing_kernel_size() const { return sigma; }
   void smooth_scalar_gradient_jacobian(
       const ndarray<F>& f, 
       // const F sigma,

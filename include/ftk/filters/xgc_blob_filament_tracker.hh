@@ -128,6 +128,9 @@ inline void xgc_blob_filament_tracker::initialize()
         m2->get_triangles().data());
     xft_load_interpolants(ctx, 
         m3->get_interpolants());
+    xft_load_smoothing_kernel(ctx, 
+        m2->get_smoothing_kernel_size(),
+        m2->get_smoothing_kernel());
   }
 #endif
 }

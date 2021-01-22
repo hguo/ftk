@@ -325,6 +325,123 @@ void xft_load_data(ctx_t *c,
   checkLastCudaError("[FTK-CUDA] loading jacobian field data");
 }
 
+template <typename I, typename F>
+__global__
+void smooth_scalar_vector_jacobian(
+    const I nphi,
+    const I m2n0,
+    const F *m2coords,
+    const F sigma,
+    const size_t *lengths,
+    const size_t *offsets,
+    const I *nodes,
+    const F *values,
+    const F *scalar_in,
+    F *scalar_out,
+    F *vector_out, 
+    F *jacobian_out)
+{
+  int idx = getGlobalIdx_3D_1D();
+  if (idx >= m2n0 * nphi) return; // out of bounds
+
+  const F sigma2 = sigma * sigma, 
+          sigma4 = sigma2 * sigma2;
+
+  const I i = idx % m2n0, 
+          p = idx / m2n0;
+
+  // scalar_out[idx] = 0; // assuming out values are zero'ed
+  for (int j = 0; j < lengths[i]; j ++) {
+    const int k = nodes[offsets[i] + j];
+    const F w = values[offsets[i] + j]; // weight
+    const F d[2] = {m2coords[k*2] - m2coords[i*2], m2coords[k*2+1] - m2coords[i*2+1]};
+
+    const F f = w * scalar_in[idx];
+    scalar_out[idx] += f;
+
+    vector_out[idx*2]   += -f * w * d[0] / sigma2;
+    vector_out[idx*2+1] += -f * w * d[1] / sigma2;
+
+    jacobian_out[idx*4]   += (d[0]*d[0] / sigma2 - 1) / sigma2 * f * w;
+    jacobian_out[idx*4+1] += d[0]*d[1] / sigma4 * f * w;
+    jacobian_out[idx*4+2] += d[0]*d[1] / sigma4 * f * w;
+    jacobian_out[idx*4+3] += (d[1]*d[1] / sigma2 - 1) / sigma2 * f * w;
+  }
+}
+
+void xft_smooth_scalar_vector_jacobian(ctx_t *c, 
+    const double *d_scalar_in, 
+    double *d_scalar_out, 
+    double *d_vector_out, 
+    double *d_jacobian_out)
+{
+  cudaMemset(d_scalar_out, 0, c->m2n0 * c->nphi * sizeof(double));
+  cudaMemset(d_vector_out, 0, 2 * c->m2n0 * c->nphi * sizeof(double));
+  cudaMemset(d_jacobian_out, 0, 4 * c->m2n0 * c->nphi * sizeof(double));
+  
+  size_t ntasks = c->nphi * c->m2n0;
+  const int maxGridDim = 1024;
+  const int blockSize = 256;
+  const int nBlocks = idivup(ntasks, blockSize);
+  dim3 gridSize;
+  if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else gridSize = dim3(nBlocks);
+
+  smooth_scalar_vector_jacobian<int, double><<<gridSize, blockSize>>>(
+      c->nphi, 
+      c->m2n0, 
+      c->d_m2coords,
+      c->sigma,
+      c->d_kernel_lengths,
+      c->d_kernel_offsets,
+      c->d_kernel_nodes,
+      c->d_kernel_values,
+      d_scalar_in, 
+      d_scalar_out,
+      d_vector_out,
+      d_jacobian_out);
+  cudaDeviceSynchronize();
+  checkLastCudaError("[FTK-CUDA] smoothing scalar vector jacobian");
+}
+
+void xft_load_smoothing_kernel(ctx_t *c, double sigma, const std::vector<std::vector<std::tuple<int, double>>>& kernels)
+{
+  c->sigma = sigma;
+
+  // fprintf(stderr, "loading smoothing kernels to GPU...\n");
+  std::vector<size_t> lengths(kernels.size()), offsets(kernels.size());
+  std::vector<int> nodes;
+  std::vector<double> values;
+
+  size_t acc = 0;
+  for (size_t i = 0; i < kernels.size(); i ++) { // nodes
+    const std::vector<std::tuple<int, double>>& kernel = kernels[i];
+    lengths[i] = kernel.size();
+    offsets[i] = acc;
+    acc += kernel.size();
+
+    for (size_t j = 0; j < kernel.size(); j ++) {
+      nodes.push_back(std::get<0>(kernel[j]));
+      values.push_back(std::get<1>(kernel[j]));
+    }
+  }
+  
+  cudaMalloc((void**)&c->d_kernel_nodes, nodes.size() * sizeof(int));
+  cudaMemcpy(c->d_kernel_nodes, nodes.data(), nodes.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_kernel_values, values.size() * sizeof(double));
+  cudaMemcpy(c->d_kernel_values, values.data(), values.size() * sizeof(double), cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_kernel_lengths, lengths.size() * sizeof(size_t));
+  cudaMemcpy(c->d_kernel_lengths, lengths.data(), lengths.size() * sizeof(size_t), cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_kernel_offsets, offsets.size() * sizeof(size_t));
+  cudaMemcpy(c->d_kernel_offsets, offsets.data(), offsets.size() * sizeof(size_t), cudaMemcpyHostToDevice);
+
+  checkLastCudaError("[FTK-CUDA] loading smoothing kernel");
+  // fprintf(stderr, "smoothing kernels loaded to GPU.\n");
+}
+
 void xft_load_mesh(ctx_t *c,
     int nphi, int iphi, int vphi,
     int m2n0, int m2n1, int m2n2,
