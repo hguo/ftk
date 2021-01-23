@@ -51,7 +51,8 @@ void mx4_get_tri(I k, I verts[3],
       verts[0] = mx3tri[0];
       verts[1] = mx3tri[1] + mx3n0;
       verts[2] = mx3tri[2] + mx3n0;
-    }
+    } else 
+      assert(false);
   } else {
     I mx3edge[2];
     mx3_get_edge((i - 3 * mx3n2) % mx3n1, mx3edge, np, m2n0, m2n1, m2edges);

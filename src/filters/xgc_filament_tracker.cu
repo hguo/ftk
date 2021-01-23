@@ -62,10 +62,12 @@ bool check_simplex(
         scalar[iv], vector[iv], jacobian[iv], 
         f[k], v[k], j[k]);
   }
+
 #if 0
-  if (i > 5000000 && i < 5000100)
-    printf("i=%d, verts=%d, %d, %d, f=%f, %f, %f, p=%d, %d, %d, rzpt=%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", 
+  if (i > 100000000 && i < 100000100)
+    printf("i=%d, verts=%d, %d, %d, t=%d, %d, %d, f=%f, %f, %f, p=%d, %d, %d, rzpt=%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", 
         i, verts[0], verts[1], verts[2], 
+        t[0], t[1], t[2],
         f[0], f[1], f[2],
         p[0], p[1], p[2],
         rzpt[0][0], rzpt[0][1], rzpt[0][2], rzpt[0][3], 
@@ -141,7 +143,7 @@ void sweep_simplices(
   const I np = nphi * iphi * vphi;
   const I mx3n0 = m2n0 * np; 
   const I mx3n1 = (2 * m2n1 + m2n0) * np; 
-  const I mx3n2 = (3 * m2n0 + 2 * m2n1) * np;
+  const I mx3n2 = (3 * m2n2 + 2 * m2n1) * np;
   const I mx4n2 = 3 * mx3n2 + 2 * mx3n1;
 
   int tid = getGlobalIdx_3D_1D();
@@ -236,14 +238,14 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
 {
   const int np = c->nphi * c->iphi * c->vphi;
   const int mx3n1 = (2 * c->m2n1 + c->m2n0) * np;
-  const int mx3n2 = (3 * c->m2n0 + 2 * c->m2n1) * np;
+  const int mx3n2 = (3 * c->m2n2 + 2 * c->m2n1) * np;
   // const int mx4n2 = 3 * mx3n2 + 2 * mx3n1;
   const int mx4n2_ordinal  = mx3n2, 
             mx4n2_interval = 2 * mx3n2 + 2 * mx3n1;
   // fprintf(stderr, "executing timestep %d\n", current_timestep);
 
   size_t ntasks;
-  if (scope == scope_ordinal) ntasks = mx4n2_ordinal; 
+  if (scope == scope_ordinal) ntasks = mx4n2_ordinal;
   else ntasks = mx4n2_interval;
   
   fprintf(stderr, "ntasks=%zu\n", ntasks);
