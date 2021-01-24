@@ -398,9 +398,9 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 #endif
 
         tracker->push_field_data_snapshot(scalar);
-
-        if (k != 0) tracker->advance_timestep();
+        tracker->advance_timestep();
         if (k == stream->n_timesteps() - 1) tracker->update_timestep();
+        // if (k != 0) tracker->advance_timestep();
       });
 
       stream->start();

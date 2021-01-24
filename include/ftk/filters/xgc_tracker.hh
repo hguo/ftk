@@ -113,10 +113,15 @@ inline bool xgc_tracker::pop_field_data_snapshot()
 
 inline bool xgc_tracker::advance_timestep()
 {
-  update_timestep();
-  pop_field_data_snapshot();
+  // fprintf(stderr, "advancing timestep!!! t=%d, #snapshot=%zu\n", 
+  //     current_timestep, field_data_snapshots.size());
 
-  current_timestep ++;
+  if (field_data_snapshots.size() >= 2) {
+    update_timestep();
+    pop_field_data_snapshot();
+    current_timestep ++;
+  }
+
   return field_data_snapshots.size() > 0;
 }
 
