@@ -50,19 +50,19 @@ void me2_get_edge(I k, I verts[2], const I m2n0, const I m2n1,
     const I me2edges[])
 {
   const I me2n1 = 2 * m2n1 + m2n0;
-  const I i = mod(k, me2n1), t = std::floor(double(k) / me2n1);
+  const I i = mod(k, me2n1), t = floor(double(k) / me2n1);
   const int type = me2_edge_type(i, m2n1);
   const I offset = t * m2n0;
 
   if (type < 2) {
-    I me2edge[2];
-    m2_get_edge(i % me2n1, me2edge, me2edges);
+    I m2edge[2];
+    m2_get_edge(i % m2n1, m2edge, me2edges);
     if (type == 0) {
-      verts[0] = me2edge[0];
-      verts[1] = me2edge[1];
+      verts[0] = m2edge[0];
+      verts[1] = m2edge[1];
     } else { // type == 1
-      verts[0] = me2edge[0];
-      verts[1] = me2edge[1] + m2n0;
+      verts[0] = m2edge[0];
+      verts[1] = m2edge[1] + m2n0;
     }
   } else {
     verts[0] = i - 2 * m2n1;
@@ -77,11 +77,11 @@ template <typename I>
 __device__
 void me2_get_tri(I k, I verts[3], 
     const I m2n0, const I m2n1, const I m2n2,
-    const I me2edges[], const I m2tris[])
+    const I m2edges[], const I m2tris[])
 {
   // call m2_get_tri, m2_get_edge
-  const I n2 = 3 * m2n2 + 2 * m2n1;
-  const I i = mod(k, n2), t = std::floor(double(k) / n2);
+  const I me2n2 = 3 * m2n2 + 2 * m2n1;
+  const I i = mod(k, me2n2), t = floor(double(k) / me2n2);
   const int type = me2_tri_type(i, m2n1, m2n2);
   const I offset = t * m2n0;
 
@@ -102,16 +102,16 @@ void me2_get_tri(I k, I verts[3],
       verts[2] = m2tri[2] + m2n0;
     }
   } else {
-    I me2edge[2];
-    m2_get_edge((i - 3 * m2n2) % m2n1, me2edge, me2edges);
+    I m2edge[2];
+    m2_get_edge((i - 3 * m2n2) % m2n1, m2edge, m2edges);
     if (type == 3) {
-      verts[0] = me2edge[0];
-      verts[1] = me2edge[1]; 
-      verts[2] = me2edge[1] + m2n0;
+      verts[0] = m2edge[0];
+      verts[1] = m2edge[1]; 
+      verts[2] = m2edge[1] + m2n0;
     } else { // type 4
-      verts[0] = me2edge[0];
-      verts[1] = me2edge[0] + m2n0;
-      verts[2] = me2edge[1] + m2n0;
+      verts[0] = m2edge[0];
+      verts[1] = m2edge[0] + m2n0;
+      verts[2] = m2edge[1] + m2n0;
     }
   }
 

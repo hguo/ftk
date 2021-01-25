@@ -35,8 +35,9 @@ void mx3_get_edge(I k, I verts[2],
   me2_get_edge(k, verts, m2n0, m2n1, m2edges);
   for (int i = 0; i < 2; i ++)
     verts[i] = mx3_transform_vert( verts[i], mx3n0 );
-}
 
+  sort2(verts);
+}
 
 template <typename I>
 __device__
@@ -49,6 +50,8 @@ void mx3_get_tri(I k, I verts[3], const
   me2_get_tri(k, verts, m2n0, m2n1, m2n2, m2edges, m2tris);
   for (int i = 0; i < 3; i ++) 
     verts[i] = mx3_transform_vert( verts[i], mx3n0 );
+
+  sort3(verts);
 }
 
 

@@ -71,5 +71,33 @@ static inline T dist2(const T A[3], const T B[3])
   return inner_product(D, D);
 }
 
+template <typename T>
+__device__
+static inline void swap(T &a, T &b)
+{
+  T c(a); a=b; b=c;
+}
+
+template <typename T>
+__device__ __host__
+static inline void sort2(T arr[])
+{
+  if (arr[0] > arr[1])
+    swap(arr[0], arr[1]);
+}
+
+template <typename T>
+__device__ __host__
+static inline void sort3(T arr[])
+{
+  if (arr[1] < arr[0]) 
+    swap(arr[0], arr[1]); 
+        
+  if (arr[2] < arr[1]) {
+    swap(arr[1], arr[2]); 
+    if (arr[1] < arr[0]) 
+      swap(arr[1], arr[0]); 
+  }
+}
 
 #endif

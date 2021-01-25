@@ -112,7 +112,9 @@ bool check_simplex(
   ftk::lerp_s2m2x2(j, mu, h);
   // ftk::make_symmetric2x2(h);
   cp.type = ftk::critical_point_type_2d(h, true);
-  
+ 
+  // printf("tag=%d, verts=%d, %d, %d, x=%f, %f, %f, %f, scalar=%f\n", 
+  //     i, verts[0], verts[1], verts[2], cp.x[0], cp.x[1], cp.x[2], cp.x[3], cp.scalar[0]);
   // printf("cp.x=%f, %f, %f, %f, scalar=%f, type=%d\n", 
   //     cp.x[0], cp.x[1], cp.x[2], cp.x[3], cp.scalar[0], 
   //     cp.type);
@@ -172,7 +174,7 @@ void sweep_simplices(
   
   if (succ) {
     unsigned long long idx = atomicAdd(&ncps, 1ul);
-    cp.tag = tid;
+    cp.tag = i; // tid;
     cps[idx] = cp;
   }
 }
@@ -511,6 +513,7 @@ void xft_load_scalar_data(ctx_t *c, const double *scalar)
 
   double *dd_scalar, *dd_vector, *dd_jacobian;
   if (c->d_scalar[0] == NULL) {
+    fprintf(stderr, "init slot 0\n");
     cudaMalloc((void**)&c->d_scalar[0], sizeof(double) * c->m2n0 * c->nphi);
     cudaMalloc((void**)&c->d_vector[0], sizeof(double) * c->m2n0 * c->nphi * 2);
     cudaMalloc((void**)&c->d_jacobian[0], sizeof(double) * c->m2n0 * c->nphi * 4);
@@ -518,6 +521,7 @@ void xft_load_scalar_data(ctx_t *c, const double *scalar)
     dd_vector = c->d_vector[0];
     dd_jacobian = c->d_jacobian[0];
   } else if (c->d_scalar[1] == NULL) {
+    fprintf(stderr, "init slot 1\n");
     cudaMalloc((void**)&c->d_scalar[1], sizeof(double) * c->m2n0 * c->nphi);
     cudaMalloc((void**)&c->d_vector[1], sizeof(double) * c->m2n0 * c->nphi * 2);
     cudaMalloc((void**)&c->d_jacobian[1], sizeof(double) * c->m2n0 * c->nphi * 4);
@@ -525,6 +529,7 @@ void xft_load_scalar_data(ctx_t *c, const double *scalar)
     dd_vector = c->d_vector[1];
     dd_jacobian = c->d_jacobian[1];
   } else {
+    fprintf(stderr, "swapping 0 and 1\n");
     std::swap(c->d_scalar[0], c->d_scalar[1]);
     std::swap(c->d_vector[0], c->d_vector[1]);
     std::swap(c->d_jacobian[0], c->d_jacobian[1]);

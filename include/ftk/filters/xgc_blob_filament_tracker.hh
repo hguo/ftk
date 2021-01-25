@@ -153,6 +153,7 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
 #if FTK_HAVE_CUDA
   if (xl == FTK_XL_CUDA) {
     xft_load_scalar_data(ctx, scalar.data());
+    xgc_tracker::push_field_data_snapshot(ndarray<double>(), ndarray<double>(), ndarray<double>()); // empty
   } else 
     xgc_tracker::push_field_data_snapshot(scalar);
 #else
@@ -214,14 +215,14 @@ inline void xgc_blob_filament_tracker::update_timestep()
     }
 
     // interval
-    if (current_timestep > 0) { // field_data_snapshots.size() >= 2) {
+    if (field_data_snapshots.size() >= 2) {
       xft_execute(ctx, 2 /* interval */, current_timestep);
       std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
       for (auto lcp : results) {
         feature_point_t cp(lcp);
-        cp.tag += (current_timestep-1) * m4->n(2);
+        cp.tag += current_timestep * m4->n(2);
         cp.ordinal = false;
-        cp.timestep = current_timestep - 1;
+        cp.timestep = current_timestep; // - 1;
 
         intersections.insert({cp.tag, cp});
 
