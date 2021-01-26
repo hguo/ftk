@@ -42,6 +42,7 @@ void xft_load_data(xft_ctx_t *c,
     const double *scalar, 
     const double *vector, 
     const double *jacobian);
+void xft_swap(xft_ctx_t *c);
 
 
 #endif

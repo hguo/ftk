@@ -282,6 +282,14 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
   checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 2");
 }
 
+void xft_swap(ctx_t *c)
+{
+  // fprintf(stderr, "calling swap\n");
+  std::swap(c->d_scalar[0], c->d_scalar[1]);
+  std::swap(c->d_vector[0], c->d_vector[1]);
+  std::swap(c->d_jacobian[0], c->d_jacobian[1]);
+}
+
 void xft_load_data(ctx_t *c, 
     const double *scalar, const double *vector, const double *jacobian)
 {
@@ -513,7 +521,7 @@ void xft_load_scalar_data(ctx_t *c, const double *scalar)
 
   double *dd_scalar, *dd_vector, *dd_jacobian;
   if (c->d_scalar[0] == NULL) {
-    fprintf(stderr, "init slot 0\n");
+    // fprintf(stderr, "init slot 0\n");
     cudaMalloc((void**)&c->d_scalar[0], sizeof(double) * c->m2n0 * c->nphi);
     cudaMalloc((void**)&c->d_vector[0], sizeof(double) * c->m2n0 * c->nphi * 2);
     cudaMalloc((void**)&c->d_jacobian[0], sizeof(double) * c->m2n0 * c->nphi * 4);
@@ -521,7 +529,7 @@ void xft_load_scalar_data(ctx_t *c, const double *scalar)
     dd_vector = c->d_vector[0];
     dd_jacobian = c->d_jacobian[0];
   } else if (c->d_scalar[1] == NULL) {
-    fprintf(stderr, "init slot 1\n");
+    // fprintf(stderr, "init slot 1\n");
     cudaMalloc((void**)&c->d_scalar[1], sizeof(double) * c->m2n0 * c->nphi);
     cudaMalloc((void**)&c->d_vector[1], sizeof(double) * c->m2n0 * c->nphi * 2);
     cudaMalloc((void**)&c->d_jacobian[1], sizeof(double) * c->m2n0 * c->nphi * 4);
@@ -529,7 +537,7 @@ void xft_load_scalar_data(ctx_t *c, const double *scalar)
     dd_vector = c->d_vector[1];
     dd_jacobian = c->d_jacobian[1];
   } else {
-    fprintf(stderr, "swapping 0 and 1\n");
+    // fprintf(stderr, "swapping 0 and 1\n");
     std::swap(c->d_scalar[0], c->d_scalar[1]);
     std::swap(c->d_vector[0], c->d_vector[1]);
     std::swap(c->d_jacobian[0], c->d_jacobian[1]);
