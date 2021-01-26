@@ -60,10 +60,15 @@ add_executable (test_mesh test_mesh.cpp)
 target_link_libraries (test_mesh libftk)
 catch_discover_tests (test_mesh)
 
-if (FTK_BUILD_TESTS_XGC)
+if (NOT "${FTK_XGC_TEST_DATA_PATH}" STREQUAL "") 
+  message("Adding XGC tests...")
   add_executable (test_xgc_mesh test_xgc_mesh.cpp)
   target_link_libraries (test_xgc_mesh libftk)
   catch_discover_tests (test_xgc_mesh)
+  
+  configure_file (
+    ${CMAKE_CURRENT_SOURCE_DIR}/synthesize_xgc_data.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/synthesize_xgc_data.py)
 endif ()
 
 #add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)

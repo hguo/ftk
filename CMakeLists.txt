@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 # include (ExternalProject)
 
 option (FTK_BUILD_TESTS "Build tests" OFF)
-option (FTK_BUILD_TESTS_XGC "Build XGC-specific tests" OFF)
+# option (FTK_BUILD_TESTS_XGC "Build XGC-specific tests" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
 option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
 
@@ -341,6 +341,8 @@ endif ()
 
 # If FTK_BUILD_TESTS is on, enable testing.
 if (FTK_BUILD_TESTS)
+  set (FTK_XGC_TEST_DATA_PATH "" CACHE PATH "XGC test data path") # if xgc data path is provided, xgc tests will be built
+  
   if (FTK_HAVE_MPI)
     # set (TEST_EXECUTOR ${MPIEXEC_EXECUTABLE})
   endif()
