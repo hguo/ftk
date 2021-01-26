@@ -200,6 +200,8 @@ inline void xgc_blob_filament_tracker::update_timestep()
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     // ordinal
+    if (current_timestep == end_timestep) 
+      xft_swap(ctx); // swap buffers in order to correctly access the very last timestep
     xft_execute(ctx, 1 /* ordinal */, current_timestep);
     std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
     for (auto lcp : results) {
