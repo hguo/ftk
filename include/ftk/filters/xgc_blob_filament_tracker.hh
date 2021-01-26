@@ -217,6 +217,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
     // interval
     if (field_data_snapshots.size() >= 2) {
       xft_execute(ctx, 2 /* interval */, current_timestep);
+      // fprintf(stderr, "** current_timestep=%d, gpu done interval.\n", current_timestep);
       std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
       for (auto lcp : results) {
         feature_point_t cp(lcp);

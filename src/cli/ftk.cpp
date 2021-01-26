@@ -396,11 +396,15 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
           // tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi); // WIP
         }
 #endif
+   
+        tracker->push_field_data_snapshot( scalar );
 
-        tracker->push_field_data_snapshot(scalar);
-        tracker->advance_timestep();
+        if (k != 0) tracker->advance_timestep();
         if (k == stream->n_timesteps() - 1) tracker->update_timestep();
-        // if (k != 0) tracker->advance_timestep();
+
+        // tracker->push_field_data_snapshot(scalar);
+        // tracker->advance_timestep();
+        // if (k == stream->n_timesteps() - 1) tracker->update_timestep();
       });
 
       stream->start();
