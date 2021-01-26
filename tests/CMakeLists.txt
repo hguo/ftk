@@ -64,13 +64,14 @@ if (NOT "${FTK_XGC_TEST_DATA_PATH}" STREQUAL "")
   message("Adding XGC-specific tests, data_path = ${FTK_XGC_TEST_DATA_PATH}")
 
   add_custom_target (synthesize_xgc_data ALL
+    # BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/xgc.synthetic.0000.h5
     COMMAND ${CMAKE_COMMAND} -E env FTK_XGC_TEST_DATA_PATH=${FTK_XGC_TEST_DATA_PATH}
     ${PYTHON_EXECUTABLE}
     ${CMAKE_CURRENT_SOURCE_DIR}/synthesize_xgc_data.py)
 
   add_executable (test_xgc_mesh test_xgc_mesh.cpp)
   target_link_libraries (test_xgc_mesh libftk)
-  catch_discover_tests (test_xgc_mesh)
+  catch_discover_tests (test_xgc_mesh PROPERTIES ENVIRONMENT FTK_XGC_TEST_DATA_PATH=${FTK_XGC_TEST_DATA_PATH})
 endif ()
 
 #add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)

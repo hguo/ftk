@@ -6,11 +6,13 @@
 
 diy::mpi::environment env;
 
+std::string xgc_data_path; 
+std::string xgc_mesh_filename = "xgc.mesh.h5";
+
 const int nphi = 16, iphi = 1;
-const std::string xgc_mesh_filename = "xgc.mesh.h5";
 
 #if FTK_HAVE_HDF5
-TEST_CASE("mesh_3d_xgc_sides") {
+TEST_CASE("xgc_mesh_3d_sides") {
   auto m2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
   std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi));
 
@@ -40,7 +42,7 @@ TEST_CASE("mesh_3d_xgc_sides") {
   }
 }
 
-TEST_CASE("mesh_3d_xgc_find") {
+TEST_CASE("xgc_mesh_3d_find") {
   auto m2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
   std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi));
 
@@ -68,6 +70,13 @@ TEST_CASE("mesh_3d_xgc_find") {
 
 int main(int argc, char **argv)
 {
+  const char* path = std::getenv("FTK_XGC_TEST_DATA_PATH");
+  if (path) {
+    xgc_data_path = path;
+    xgc_mesh_filename = xgc_data_path + "/" + xgc_mesh_filename;
+  }
+  // fprintf(stderr, "xgc_data_path=%s\n", xgc_data_dir.c_str());
+
   Catch::Session session;
   session.run(argc, argv);
   return 0;
