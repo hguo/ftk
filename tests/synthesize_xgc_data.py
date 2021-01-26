@@ -1,4 +1,5 @@
 # modified script based on https://github.com/rmchurch/synthetic_blobs
+import os
 import h5py
 import numpy as np
 from scipy.integrate import odeint
@@ -135,7 +136,8 @@ class syntheticBlobs():
 
         return dnXGC
 
-fileDir = '${FTK_XGC_TEST_DATA_PATH}'
+fileDir = os.getenv('FTK_XGC_TEST_DATA_PATH') + "/"
+print('xgc_file_dir=', fileDir)
 fileBfield = fileDir + 'xgc.bfield.h5'
 fb = h5py.File(fileBfield,'r')
 Bgrid = fb['node_data[0]/values'][:]
@@ -181,9 +183,9 @@ for timestep in range (0, 10):
     dnOvernMag = 0.1
     dnOvernXGC = blob_generator.generate(xcenter,ntor,Lpol,Lrad,dnOvernMag)
 
-    print(timestep, dnOvernXGC.shape)
+    print("synthesizing xgc timestep", timestep) #dnOvernXGC.shape)
 
-    file_output = fileDir + 'xgc.synthetic.%04d.h5' % timestep
+    file_output = 'xgc.synthetic.%04d.h5' % timestep
     fo = h5py.File(file_output,'w')
     fo['/dnOvernXGC'] = dnOvernXGC.transpose()
     fo.close()
