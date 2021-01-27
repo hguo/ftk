@@ -3,6 +3,11 @@
 
 #include <ftk/ftk_config.hh>
 #include <ftk/filters/xgc_tracker.hh>
+#include <ftk/numeric/critical_point_type.hh>
+#include <ftk/numeric/critical_point_test.hh>
+#include <ftk/numeric/inverse_linear_interpolation_solver.hh>
+#include <ftk/numeric/clamp.hh>
+#include <ftk/ndarray/writer.hh>
 
 #if FTK_HAVE_TBB
 #include <tbb/concurrent_hash_map.h>
@@ -81,6 +86,8 @@ public:
 
   vtkSmartPointer<vtkPolyData> transform_vtp_coordinates(vtkSmartPointer<vtkPolyData>) const;
 #endif
+
+  const feature_surface_t& get_surfaces() const { return surfaces; }
 
 protected:
 #if FTK_HAVE_TBB

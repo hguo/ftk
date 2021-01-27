@@ -179,7 +179,7 @@ blob_generator = syntheticBlobs(RZ,psin,tri,Bgrid,sml_nphi)
 #xcenter = np.array([0.95,0,0]) #(psin,theta,phi)
 #xcenter = np.array([2.26,0,0]) #(R,Z,phi)
 
-for timestep in range (0, 10):
+for timestep in range (0, 5):
     xcenter = np.array([2.26, timestep * 0.01, 0]) #(R,Z,phi)
     ntor = 5
     Lpol = 0.01
