@@ -1,7 +1,7 @@
 #ifndef _FTK_POLYNOMIAL_SOLVER_HH
 #define _FTK_POLYNOMIAL_SOLVER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/polynomial.hh>
 
 namespace ftk {

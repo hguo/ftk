@@ -1,7 +1,7 @@
 #ifndef _FTK_CRITICAL_POINT_TRACKER_2D_REGULAR_HH
 #define _FTK_CRITICAL_POINT_TRACKER_2D_REGULAR_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/cross_product.hh>

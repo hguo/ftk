@@ -1,7 +1,7 @@
 #ifndef _FTK_UNDERDETERMINED_EIGEN_SOLVER_HH
 #define _FTK_UNDERDETERMINED_EIGEN_SOLVER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/polynomial.hh>
 #include <ftk/numeric/polynomial_solver.hh>
 #include <algorithm>

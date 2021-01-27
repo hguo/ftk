@@ -1,6 +1,6 @@
 #include <CL/sycl.hpp>
 #include <vector>
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/mesh/lattice.hh>
 #include "common.cuh"
 

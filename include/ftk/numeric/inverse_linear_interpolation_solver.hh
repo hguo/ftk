@@ -1,7 +1,7 @@
 #ifndef _FTK_INVERSE_LINEAR_INTERPOLATION_SOLVER_HH
 #define _FTK_INVERSE_LINEAR_INTERPOLATION_SOLVER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/linear_solver.hh>
 #include <ftk/numeric/cond.hh>
 #include <ftk/numeric/print.hh>

@@ -1,7 +1,7 @@
 #ifndef _FTK_XGC_TRACKER_HH
 #define _FTK_XGC_TRACKER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/algorithms/cca.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/filters/feature_point.hh>

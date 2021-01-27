@@ -1,7 +1,7 @@
 #ifndef _TDGL_IO_HH
 #define _TDGL_IO_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/io/tdgl_metadata.hh>
 #include <iostream>

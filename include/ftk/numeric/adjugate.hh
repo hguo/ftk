@@ -1,7 +1,7 @@
 #ifndef _FTK_ADJUGATE_HH
 #define _FTK_ADJUGATE_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 
 namespace ftk {
 

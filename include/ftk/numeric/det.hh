@@ -1,7 +1,7 @@
 #ifndef _FTK_DET_H
 #define _FTK_DET_H
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <iostream>
 
 namespace ftk {

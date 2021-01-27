@@ -1,7 +1,7 @@
 #ifndef _DIY_EXT
 #define _DIY_EXT
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/diy/storage.hpp>
 #include <cassert>

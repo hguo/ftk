@@ -8,7 +8,7 @@
 #include <set>
 #include <functional>
 #include <algorithm>
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/external/diy/mpi.hpp>
 #include <unistd.h>
 #include <sched.h>

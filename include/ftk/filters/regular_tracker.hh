@@ -1,7 +1,7 @@
 #ifndef _FTK_REGULAR_TRACKER_HH
 #define _FTK_REGULAR_TRACKER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/mesh/lattice_partitioner.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/external/diy/master.hpp>

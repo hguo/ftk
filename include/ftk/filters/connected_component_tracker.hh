@@ -1,7 +1,7 @@
 #ifndef _FTK_CONNECT_COMPONENT_TRACKER
 #define _FTK_CONNECT_COMPONENT_TRACKER
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/tracking_graph/tracking_graph.hh>
 

@@ -1,7 +1,7 @@
 #ifndef _FTK_SIGN_DET_HH
 #define _FTK_SIGN_DET_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/sign.hh>
 #include <ftk/numeric/det.hh>
 

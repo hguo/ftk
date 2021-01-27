@@ -1,7 +1,7 @@
 #ifndef _FTK_TRANSPOSE_H
 #define _FTK_TRANSPOSE_H
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <algorithm>
 #include <utility>
 

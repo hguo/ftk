@@ -1,7 +1,7 @@
 #ifndef _FTK_FEATURE_POINT_LITE_HH
 #define _FTK_FEATURE_POINT_LITE_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 
 namespace ftk {
 

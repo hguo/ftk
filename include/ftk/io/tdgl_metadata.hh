@@ -1,7 +1,7 @@
 #ifndef _TDGL_META_HH
 #define _TDGL_META_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 
 namespace ftk {
 

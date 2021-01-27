@@ -1,7 +1,7 @@
 #ifndef FTK_XGC_3D_MESH_HH
 #define FTK_XGC_3D_MESH_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_3d_mesh.hh>
 #include <ftk/numeric/xgc_interpolant.hh>

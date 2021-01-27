@@ -1,7 +1,7 @@
 #ifndef _FTK_FILE_EXTENSIONS_HH
 #define _FTK_FILE_EXTENSIONS_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/utils/string.hh>
 
 namespace ftk {

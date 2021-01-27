@@ -1,7 +1,7 @@
 #ifndef _FTK_TRACKER_HH
 #define _FTK_TRACKER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/filters/filter.hh>
 #include <ftk/external/diy/master.hpp>
 

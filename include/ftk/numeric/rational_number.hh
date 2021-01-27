@@ -1,7 +1,7 @@
 #ifndef _FTK_RATIONAL_NUMBER_HH
 #define _FTK_RATIONAL_NUMBER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/gcd.hh>
 #include <iostream>
 #include <iomanip>

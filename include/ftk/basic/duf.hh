@@ -1,7 +1,7 @@
 #ifndef _FTK_DUF_HH
 #define _FTK_DUF_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <map>
 #include <mutex>
 

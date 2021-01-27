@@ -1,7 +1,7 @@
 #ifndef _FTK_STRING_HH
 #define _FTK_STRING_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <string>
 #include <algorithm>
 #include <regex>

@@ -1,7 +1,7 @@
 #ifndef _HYPERMESH_simplicial_regular_MESH_HH
 #define _HYPERMESH_simplicial_regular_MESH_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <iostream>
 #include <sstream> 
 #include <vector>

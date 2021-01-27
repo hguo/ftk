@@ -304,12 +304,12 @@ include_directories (${FTK_INCLUDE_DIR})
 set (FTK_FP_PRECISION "32768" CACHE STRING "Fixed point precision")
 set (FTK_CP_MAX_NUM_VARS "3" CACHE STRING "Number of additional scalar properties for feature points")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/ftk_config.hh.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ftk/config.hh.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/config.hh)
 
 install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ftk DESTINATION
   ${CMAKE_INSTALL_INCLUDEDIR})
-install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/ftk_config.hh
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/ftk/config.hh
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ftk)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FTKConfig.cmake.in

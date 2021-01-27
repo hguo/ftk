@@ -1,7 +1,7 @@
 #ifndef _FTK_EIGEN_SOLVER3_HH
 #define _FTK_EIGEN_SOLVER3_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/trace.hh>
 #include <ftk/numeric/det.hh>
 #include <ftk/numeric/linear_solver.hh>

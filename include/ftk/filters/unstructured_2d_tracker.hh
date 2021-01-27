@@ -1,7 +1,7 @@
 #ifndef _FTK_UNSTRUCTURED_2D_TRACKER_HH
 #define _FTK_UNSTRUCTURED_2D_TRACKER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>

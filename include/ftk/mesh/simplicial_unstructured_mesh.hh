@@ -1,7 +1,7 @@
 #ifndef _FTK_UNSTRUCTURED_MESH_HH
 #define _FTK_UNSTRUCTURED_MESH_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/object.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/numeric/vector_norm.hh>

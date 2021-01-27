@@ -1,7 +1,7 @@
 #ifndef _FTK_XGC_BLOB_FILAMENT_TRACKER_HH
 #define _FTK_XGC_BLOB_FILAMENT_TRACKER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/filters/xgc_tracker.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>

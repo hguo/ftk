@@ -1,7 +1,7 @@
 #ifndef _FTK_CHARACTERISTIC_POLYNOMIAL_HH
 #define _FTK_CHARACTERISTIC_POLYNOMIAL_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/trace.hh>
 #include <ftk/numeric/det.hh>
 

@@ -1,7 +1,7 @@
 #ifndef _FTK_AABB_H
 #define _FTK_AABB_H
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 
 namespace ftk {
 

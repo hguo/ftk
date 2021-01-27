@@ -1,7 +1,7 @@
 #ifndef _FTK_XGC_2D_MESH_HH
 #define _FTK_XGC_2D_MESH_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/point_locator_2d_quad.hh>
 #include <ftk/numeric/linear_interpolation.hh>

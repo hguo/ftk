@@ -1,7 +1,7 @@
 #ifndef _FTK_XGC_3D_FF_MESH_HH
 #define _FTK_XGC_3D_FF_MESH_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/utils/file_exists.hh>
 

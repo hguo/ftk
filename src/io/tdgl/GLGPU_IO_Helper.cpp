@@ -1,4 +1,4 @@
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/ndarray.hh>
 #include "GLHeader.h"
 #include "BDATReader.h"

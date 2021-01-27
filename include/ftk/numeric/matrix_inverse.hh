@@ -1,7 +1,7 @@
 #ifndef _FTK_MATRIX_INVERSE_H
 #define _FTK_MATRIX_INVERSE_H
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 
 namespace ftk {
 

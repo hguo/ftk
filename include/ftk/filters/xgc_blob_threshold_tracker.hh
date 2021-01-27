@@ -1,7 +1,7 @@
 #ifndef _FTK_XGC_BLOB_CCL_TRACKER_HH
 #define _FTK_XGC_BLOB_CCL_TRACKER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/filters/xgc_tracker.hh>
 #include <ftk/tracking_graph/tracking_graph.hh>

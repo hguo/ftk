@@ -1,7 +1,7 @@
 #ifndef _FTK_CONTOUR_TRACKER_3D_REGULAR_HH
 #define _FTK_CONTOUR_TRACKER_3D_REGULAR_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_norm.hh>

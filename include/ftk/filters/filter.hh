@@ -1,7 +1,7 @@
 #ifndef _FTK_FILTER_HH
 #define _FTK_FILTER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/object.hh>
 #include <ftk/external/cxxopts.hpp>
 #include <thread>

@@ -1,7 +1,7 @@
 #ifndef _XGC_UNITS_HH
 #define _XGC_UNITS_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/utils/string.hh>
 #include <fstream>
 #include <string>

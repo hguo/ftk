@@ -1,7 +1,7 @@
 #ifndef _FTK_POINT_LOCATOR_2D_HH
 #define _FTK_POINT_LOCATOR_2D_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/mesh/aabb.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 

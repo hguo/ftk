@@ -1,7 +1,7 @@
 #ifndef _FTK_FEATURE_SURFACE_HH
 #define _FTK_FEATURE_SURFACE_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/filters/feature_curve.hh>
 #include <ftk/filters/feature_curve_set.hh>
 #include <ftk/basic/simple_union_find.hh>

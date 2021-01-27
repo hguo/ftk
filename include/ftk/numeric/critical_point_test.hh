@@ -1,7 +1,7 @@
 #ifndef _FTK_CRITICAL_POINT_TEST_HH
 #define _FTK_CRITICAL_POINT_TEST_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/sign_det.hh>
 
 // reference:

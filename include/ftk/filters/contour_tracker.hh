@@ -1,7 +1,7 @@
 #ifndef _FTK_CONTOUR_TRACKER_HH
 #define _FTK_CONTOUR_TRACKER_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/algorithms/cca.hh>
 // #include <ftk/filters/contour.hh>
 #include <ftk/filters/tracker.hh>

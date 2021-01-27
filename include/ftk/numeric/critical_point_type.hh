@@ -1,7 +1,7 @@
 #ifndef _FTK_CRITICAL_POINT_HH
 #define _FTK_CRITICAL_POINT_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/numeric/eigen_solver2.hh>
 #include <ftk/numeric/eigen_solver3.hh>
 

@@ -1,7 +1,7 @@
 #ifndef _FTK_GCD_HH
 #define _FTK_GCD_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 
 namespace ftk {
 

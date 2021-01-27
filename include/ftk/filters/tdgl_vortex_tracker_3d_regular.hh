@@ -1,7 +1,7 @@
 #ifndef _FTK_TDGL_TRACKER_3D_REGULAR_HH
 #define _FTK_TDGL_TRACKER_3D_REGULAR_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/filters/tdgl_vortex_tracker.hh>
 #include <ftk/filters/regular_tracker.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>

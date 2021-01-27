@@ -1,7 +1,7 @@
 #ifndef _HYPERMESH_ARRAY_HH
 #define _HYPERMESH_ARRAY_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/object.hh>
 #include <ftk/mesh/lattice.hh>
 #include <vector>

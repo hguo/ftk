@@ -1,7 +1,7 @@
 #ifndef _FTK_UNSTRUCTURED_MESH_2D_HH
 #define _FTK_UNSTRUCTURED_MESH_2D_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/algorithms/bfs.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
 

@@ -1,7 +1,7 @@
 #ifndef _FTK_ORIENTATION_HH
 #define _FTK_ORIENTATION_HH
 
-#include <ftk/ftk_config.hh>
+#include <ftk/config.hh>
 #include <ftk/sign_det.hh>
 
 namespace ftk {
