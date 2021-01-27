@@ -1,4 +1,6 @@
 # modified script based on https://github.com/rmchurch/synthetic_blobs
+print('executing xgc synthesizer...')
+
 import os
 import h5py
 import numpy as np
