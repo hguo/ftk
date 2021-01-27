@@ -34,7 +34,8 @@ enum {
   FTK_ERR_NOT_BUILT_WITH_VTK,
   FTK_ERR_NDARRAY_MULTIDIMENSIONAL_COMPONENTS = 3000, // only support one dim for components
   FTK_ERR_NDARRAY_UNSUPPORTED_DIMENSIONALITY,
-  FTK_ERR_ACCELERATOR_UNSUPPORTED = 4000
+  FTK_ERR_ACCELERATOR_UNSUPPORTED = 4000,
+  FTK_ERR_THREAD_BACKEND_UNSUPPORTED = 5000
 };
 
 inline std::string err2str(int e)
@@ -69,6 +70,7 @@ inline std::string err2str(int e)
   case FTK_ERR_NDARRAY_MULTIDIMENSIONAL_COMPONENTS: return "FTK only supports one dim for components";
   case FTK_ERR_NDARRAY_UNSUPPORTED_DIMENSIONALITY: return "unsupported data dimensionality";
   case FTK_ERR_ACCELERATOR_UNSUPPORTED: return "unsupported accelerator";
+  case FTK_ERR_THREAD_BACKEND_UNSUPPORTED: return "unsupported thread backend";
   default: return "unknown error";
   }
 }

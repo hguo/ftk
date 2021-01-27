@@ -22,12 +22,16 @@
 
 namespace ftk {
 
+enum { // thread backend
+  FTK_THREAD_NONE = 0,
+  FTK_THREAD_PTHREAD = 0,
+  FTK_THREAD_OPENMP = 1,
+  FTK_THREAD_TBB = 6
+};
+
 enum { 
   FTK_XL_NONE = 0,
-  FTK_XL_PTHREAD = 0,
-  FTK_XL_OPENMP = 1,
   FTK_XL_SYCL = 2,
-  FTK_XL_TBB = 3,
   FTK_XL_CUDA = 4,
   FTK_XL_KOKKOS_CUDA = 5
 };
@@ -54,11 +58,11 @@ struct object {
   }
 
   static void parallel_for(int ntasks, std::function<void(int)> f, 
-      int accelerator = FTK_XL_PTHREAD, 
+      int thread_backend = FTK_THREAD_PTHREAD, 
       int nthreads = std::thread::hardware_concurrency(), 
       bool affinity = true)
   {
-    if (accelerator == FTK_XL_PTHREAD) {
+    if (thread_backend == FTK_THREAD_PTHREAD) {
       nthreads = std::min(ntasks, nthreads);
 
       std::vector<std::thread> workers;
@@ -75,7 +79,7 @@ struct object {
         f(j);
 
       std::for_each(workers.begin(), workers.end(), [](std::thread &t) {t.join();});
-    } else if (accelerator == FTK_XL_OPENMP) {
+    } else if (thread_backend == FTK_THREAD_OPENMP) {
 #if FTK_HAVE_OPENMP
       fprintf(stderr, "parallelization w/ openmp...\n");
 #pragma omp parallel for
@@ -84,7 +88,7 @@ struct object {
 #else
       fatal(FTK_ERR_NOT_BUILT_WITH_OPENMP);
 #endif
-    } else if (accelerator == FTK_XL_TBB) {
+    } else if (thread_backend == FTK_THREAD_TBB) {
 #if FTK_HAVE_TBB
       fprintf(stderr, "executing parallel_for with tbb...\n");
       tbb::parallel_for(tbb::blocked_range<size_t>(0, ntasks),

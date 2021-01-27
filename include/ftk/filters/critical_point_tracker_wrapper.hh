@@ -245,6 +245,11 @@ void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communi
       tracker->use_accelerator( FTK_XL_CUDA );
   }
 
+  if (j.contains("thread_backend")) {
+    std::string backend = j["thread_backend"];
+    tracker->use_thread_backend( backend );
+  }
+
   if (j.contains("nblocks"))
     tracker->set_number_of_blocks(j["nblocks"]);
 

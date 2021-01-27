@@ -19,11 +19,14 @@ struct filter : public object {
   virtual void update() = 0;
   virtual void reset() {};
 
+  void use_thread_backend(const std::string& backend);
+  void use_thread_backend(int i) { thread_backend = i; }
+
   void use_accelerator(const std::string& acc);
   void use_accelerator(int i) {
     xl = i;
 #if 0
-    if (xl == FTK_XL_OPENMP || xl == FTK_XL_SYCL || xl == FTK_XL_KOKKOS_CUDA) {
+    if (xl == FTK_THREAD_OPENMP || xl == FTK_XL_SYCL || xl == FTK_XL_KOKKOS_CUDA) {
       warn("Accelerator not available.  Using FTK_XL_NONE.");
       xl = FTK_XL_NONE;
     }
@@ -47,7 +50,7 @@ struct filter : public object {
   int get_number_devices() const {return device_ids.size();}
 
 protected:
-  int xl = FTK_XL_NONE;
+  int xl = FTK_XL_NONE, thread_backend = FTK_THREAD_PTHREAD;
   int nthreads = 1, nblocks = 0;
   bool enable_set_affinity = false; // true;
 
@@ -57,11 +60,16 @@ protected:
 };
 
 ////
+inline void filter::use_thread_backend(const std::string& str)
+{
+  if (str == "openmp") use_thread_backend( FTK_THREAD_OPENMP );
+  else if (str == "tbb") use_thread_backend( FTK_THREAD_TBB );
+  else use_thread_backend( FTK_THREAD_PTHREAD );
+}
+
 inline void filter::use_accelerator(const std::string& acc)
 {
   if (acc == "cuda") use_accelerator(FTK_XL_CUDA);
-  else if (acc == "openmp") use_accelerator(FTK_XL_OPENMP);
-  else if (acc == "tbb") use_accelerator(FTK_XL_TBB);
   else if (acc == "sycl") use_accelerator(FTK_XL_SYCL);
   else use_accelerator(FTK_XL_NONE);
 }

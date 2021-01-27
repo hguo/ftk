@@ -146,7 +146,7 @@ inline void tdgl_vortex_tracker_3d_regular::build_vortex_surfaces()
     } else {
       fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
     }
-  }, FTK_XL_PTHREAD, nthreads, enable_set_affinity);
+  }, FTK_THREAD_PTHREAD, nthreads, enable_set_affinity);
 
   surfaces.relabel();
   fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.tris.size());

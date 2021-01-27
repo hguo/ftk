@@ -28,7 +28,7 @@ std::string output_pattern, output_type, output_format;
 std::string mesh_filename;
 std::string archived_intersections_filename, // archived_discrete_critical_points_filename,
   archived_traced_filename; // archived_traced_critical_points_filename;
-std::string accelerator;
+std::string thread_backend, accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
 bool affinity = false;
@@ -113,7 +113,8 @@ static const std::string
         str_critical_point_type_saddle("saddle");
 
 static const std::set<std::string>
-        set_valid_accelerator({str_none, "cuda", "tbb", "openmp"}),
+        set_valid_thread_backend({str_none, "pthread", "openmp", "tbb"}),
+        set_valid_accelerator({str_none, "cuda", "sycl"}),
         set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti, str_adios2}),
         set_valid_input_dimension({str_auto, str_two, str_three});
 
@@ -137,6 +138,9 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 
   if (accelerator != str_none)
     j_tracker["accelerator"] = accelerator;
+
+  if (thread_backend != str_none)
+    j_tracker["thread_backend"] = thread_backend;
 
   if (archived_intersections_filename.size() > 0)
     j_tracker["archived_discrete_critical_points_filename"] = archived_intersections_filename;
@@ -329,6 +333,7 @@ void initialize_xgc(diy::mpi::communicator comm)
     fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
     fprintf(stderr, "archived_traced_filename=%s, exists=%d\n", archived_traced_filename.c_str(), file_exists(archived_traced_filename));
     fprintf(stderr, "output_format=%s\n", output_format.c_str());
+    fprintf(stderr, "thread_backend=%s\n", thread_backend.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
     std::cerr << "input=" << js << std::endl;
     fprintf(stderr, "=============\n");
@@ -370,6 +375,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   tracker.reset(new xgc_blob_filament_tracker(comm, mx3));
   
   tracker->set_end_timestep(ntimesteps - 1);
+  tracker->use_thread_backend(thread_backend);
   tracker->use_accelerator(accelerator);
   tracker->set_number_of_threads(nthreads);
   tracker->initialize();
@@ -487,6 +493,7 @@ void initialize_tdgl_tracker(diy::mpi::communicator comm)
     fprintf(stderr, "dims=%zu, %zu, %zu\n", DW, DH, DD);
     fprintf(stderr, "nt=%zu\n", ntimesteps);
     fprintf(stderr, "output_format=%s\n", output_format.c_str());
+    fprintf(stderr, "thread_backend=%s\n", thread_backend.c_str());
     fprintf(stderr, "nthreads=%d\n", nthreads);
     fprintf(stderr, "=============\n");
   }
@@ -642,6 +649,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<int>(intercept_length)->default_value("2"))
     ("type-filter", "Type filter: ane single or a combination of critical point types, e.g. `min', `max', `saddle', `min|max'",
      cxxopts::value<std::string>(type_filter_str))
+    ("thread-backend", "Thread backends {pthread|openmp|tbb}",
+     cxxopts::value<std::string>(thread_backend)->default_value(str_none))
     ("affinity", "Enable thread affinity", 
      cxxopts::value<bool>(affinity))
     ("nthreads", "Number of threads", 
