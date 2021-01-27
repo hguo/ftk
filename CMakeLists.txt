@@ -341,7 +341,7 @@ endif ()
 
 # If FTK_BUILD_TESTS is on, enable testing.
 if (FTK_BUILD_TESTS)
-  find_package (Python QUIET) # for testing xgc
+  # find_package (Python QUIET) # for testing xgc
   set (FTK_XGC_TEST_DATA_PATH "" CACHE PATH "XGC test data path") # if xgc data path is provided, xgc tests will be built
   
   if (FTK_HAVE_MPI)

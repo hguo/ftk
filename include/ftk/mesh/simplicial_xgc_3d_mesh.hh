@@ -10,6 +10,7 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
+  simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_); // nphi and iphi must be specified before using
   simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1);
   // simplicial_xgc_3d_mesh(const std::string& mesh_filename);
 
@@ -18,6 +19,7 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   virtual size_t n(int d) const;
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
 
+  bool probe_nphi_iphi_h5(const std::string& filename);
   void set_nphi_iphi(int n, int i) {nphi = n; iphi = i;}
   void set_vphi(int v) { vphi = v; }
 
@@ -107,6 +109,14 @@ protected: // backend meshes
 
 template <typename I, typename F>
 simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
+    std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_) :
+  m2(m2_),
+  m3(new simplicial_unstructured_extruded_2d_mesh<I, F>(*m2_))
+{
+}
+
+template <typename I, typename F>
+simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
     std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, 
     int nphi_, int iphi_, int vphi_) :
   m2(m2_),
@@ -114,6 +124,28 @@ simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
   nphi(nphi_), iphi(iphi_), vphi(vphi_)
 {
 
+}
+
+template <typename I, typename F>
+bool simplicial_xgc_3d_mesh<I, F>::probe_nphi_iphi_h5(const std::string& filename)
+{
+  const std::string varname("/dpot");
+  const auto array_nphi = ndarray<int>::read_h5(filename, "/nphi");
+  const auto array_iphi = ndarray<int>::read_h5(filename, "/iphi");
+
+  if (array_nphi.size()) {
+    nphi = array_nphi[0];
+  } else { // determine nphi based on data array
+    const auto data = ndarray<double>::read_h5(filename, varname);
+    nphi = data.dim(0);
+  }
+
+  if (array_iphi.size()) {
+    iphi = std::max(array_iphi[0], 1);
+  } else 
+    iphi = 1;
+
+  return true;
 }
 
 template <typename I, typename F>
