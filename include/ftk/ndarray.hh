@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/object.hh>
+#include <ftk/error.hh>
 #include <ftk/mesh/lattice.hh>
 #include <vector>
 #include <array>
@@ -460,7 +461,7 @@ void ndarray<T>::from_binary_file(FILE *fp)
 {
   auto s = fread(&p[0], sizeof(T), nelem(), fp);
   if (s != nelem())
-    object::warn("Unable to read expected number of bytes.");
+    warn(FTK_ERR_FILE_CANNOT_READ_EXPECTED_BYTES);
 }
 
 template <typename T>
@@ -552,7 +553,7 @@ inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::st
     d->SetNumberOfComponents(1);
     d->SetNumberOfTuples(nelem());
   } else {
-    object::fatal("Only support one dimension for components");
+    fatal(FTK_ERR_NDARRAY_MULTIDIMENSIONAL_COMPONENTS);
   }
   memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * p.size()); // nelem());
   return d;
@@ -1274,7 +1275,7 @@ inline bool ndarray<float>::from_amira(const std::string& filename)
 
   FILE *fp = fopen(filename.c_str(), "rb"); 
   if (!fp) {
-    object::warn("cannot open file " + filename);
+    warn(FTK_ERR_FILE_CANNOT_OPEN, filename);
     return false;
   }
 
@@ -1283,7 +1284,7 @@ inline bool ndarray<float>::from_amira(const std::string& filename)
   buffer[2047] = '\0';
 
   if (!strstr(buffer, "# AmiraMesh BINARY-LITTLE-ENDIAN 2.1")) {
-    object::warn("Not a proper AmiraMesh file " + filename);
+    warn(FTK_ERR_FILE_FORMAT_AMIRA, filename);
     fclose(fp);
     return false;
   }
@@ -1316,7 +1317,7 @@ inline bool ndarray<float>::from_amira(const std::string& filename)
       || xmin > xmax || ymin > ymax || zmin > zmax
       || !bIsUniform || NumComponents <= 0)
   {
-    object::warn("Something went wrong when reading AmiraMesh data\n");
+    warn(FTK_ERR_FILE_FORMAT_AMIRA);
     fclose(fp);
     return false;
   }

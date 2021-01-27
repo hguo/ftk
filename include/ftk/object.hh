@@ -9,6 +9,7 @@
 #include <functional>
 #include <algorithm>
 #include <ftk/config.hh>
+#include <ftk/error.hh>
 #include <ftk/external/diy/mpi.hpp>
 #include <unistd.h>
 #include <sched.h>
@@ -39,15 +40,6 @@ struct object {
   void set_root_proc(int p) {root_proc = p;}
   int get_root_proc() const {return root_proc;}
   bool is_root_proc() const {return root_proc == comm.rank();}
-
-  static void fatal(const std::string& str) {
-    std::cerr << "FATAL: " << str << std::endl;
-    exit(1);
-  }
-
-  static void warn(const std::string& str) {
-    std::cerr << "WARN: " << str << std::endl;
-  }
 
   static void set_affinity(int cpu) {
 #if !defined(_MSC_VER) && !defined(__APPLE__)
@@ -90,7 +82,7 @@ struct object {
       for (size_t j = 0; j < ntasks; j ++)
         f(j);
 #else
-      fatal("FTK not built with OpenMP");
+      fatal(FTK_ERR_NOT_BUILT_WITH_OPENMP);
 #endif
     } else if (accelerator == FTK_XL_TBB) {
 #if FTK_HAVE_TBB
@@ -101,10 +93,10 @@ struct object {
               f(i);
           });
 #else
-      fatal("FTK not built with TBB");
+      fatal(FTK_ERR_NOT_BUILT_WITH_TBB);
 #endif
     } else 
-      fatal("Unsupported accelerator");
+      fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
   }
 
   template <typename T, typename Container=std::set<T>>

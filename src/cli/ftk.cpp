@@ -123,15 +123,6 @@ static void fatal(const cxxopts::Options &options, const std::string& str) {
   exit(1);
 };
 
-static void fatal(const std::string& str) {
-  std::cerr << "FATAL: " << str << std::endl;
-  exit(1);
-};
-
-void warn(const std::string& str) {
-  std::cerr << "WARN: " << str << std::endl;
-};
-
 static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 {
   j_tracker["output"] = output_pattern;
