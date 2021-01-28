@@ -245,7 +245,7 @@ void simplicial_unstructured_3d_mesh<I, F>::to_vtu_file(const std::string& filen
   writer->SetInputData( to_vtu() );
   writer->Write();
 #else
-  this->fatal("FTK not compiled with VTK");
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -328,7 +328,7 @@ std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3
     reader->Update();
     m->from_vtu( reader->GetOutput() );
 #else
-    object::fatal("FTK not compiled with VTK");
+    fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
   } else {
     diy::unserializeFromFile(filename, *m);
