@@ -21,6 +21,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   void initialize_point_locator();
 
   static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
+  static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_adios2(diy::mpi::communicator comm, const std::string& filename);
   void read_bfield_h5(const std::string& filename);
   bool read_units_m(const std::string& filename) { return units.read(filename); }
 
@@ -112,6 +113,33 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_b(const F x[], F b[]) const
     //     mu[0], mu[1], mu[2], b[0], b[1], b[2]);
     return true;
   }
+}
+
+template <typename I, typename F>
+std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from_xgc_mesh_adios2(
+    diy::mpi::communicator comm, 
+    const std::string& filename)
+{
+  ndarray<I> triangles;
+  ndarray<F> coords;
+  ndarray<I> nextnodes;
+  ndarray<F> psifield;
+
+  triangles.from_bp(comm, filename, "/cell_set[0]/node_connect_list");
+  coords.from_bp(comm, filename, "/coordinates/values");
+  psifield.from_bp(comm, filename, "psi");
+  nextnodes.from_bp(comm, filename, "nextnode");
+
+  triangles.reshape(triangles.dim(1), triangles.dim(0));
+  coords.reshape(coords.dim(1), coords.dim(0));
+
+  std::cerr << triangles.shape() << std::endl;
+  std::cerr << coords.shape() << std::endl;
+  std::cerr << nextnodes.shape() << std::endl;
+  std::cerr << psifield.shape() << std::endl;
+
+  return std::shared_ptr<simplicial_xgc_2d_mesh<I, F>>(
+      new simplicial_xgc_2d_mesh<I, F>(coords, triangles, psifield, nextnodes));
 }
 
 template <typename I, typename F>

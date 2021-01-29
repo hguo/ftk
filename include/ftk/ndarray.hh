@@ -265,12 +265,19 @@ public: // i/o for parallel-netcdf
 #endif
 
 public: // i/o for adios2
+  void from_bp(diy::mpi::communicator comm, const std::string& filename, const std::string& varname);
+
 #if FTK_HAVE_ADIOS2
   void from_adios2(
       adios2::IO &io, 
       adios2::Engine& reader, 
+      const std::string &varname); // read all
+
+  void from_adios2(
+      adios2::IO &io, 
+      adios2::Engine& reader, 
       const std::string &varname, 
-      int step_start = 0);
+      int step_start);
 #endif
 
 public: // i/o for png
@@ -955,7 +962,44 @@ template <> inline int ndarray<float>::nc_datatype() { return NC_FLOAT; }
 template <> inline int ndarray<int>::nc_datatype() { return NC_INT; }
 #endif
 
+template <typename T>
+inline void ndarray<T>::from_bp(diy::mpi::communicator comm, const std::string& filename, const std::string& varname)
+{
 #if FTK_HAVE_ADIOS2
+  adios2::ADIOS adios(comm);
+  adios2::IO io = adios.DeclareIO("BPReader");
+  adios2::Engine reader = io.Open(filename, adios2::Mode::Read); // , MPI_COMM_SELF);
+  
+  from_adios2(io, reader, varname);
+  reader.Close();
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+#endif
+}
+
+#if FTK_HAVE_ADIOS2
+template <typename T>
+inline void ndarray<T>::from_adios2(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+{
+  auto var = io.template InquireVariable<T>(varname);
+  // std::cerr << var << std::endl;
+  // std::cerr << var.Shape() << std::endl;
+  if (var) {
+    std::vector<size_t> shape(var.Shape());
+    // std::cerr << shape << std::endl;
+
+    std::vector<size_t> zeros(shape.size(), 0);
+    // fprintf(stderr, "%zu, %zu\n", shape.size(), zeros.size());
+    reshape(shape);
+
+    var.SetSelection({zeros, shape}); // read everything
+    reader.Get<T>(var, p);
+
+    // std::reverse(shape.begin(), shape.end());
+    // reshape(shape);
+  }
+}
+
 template <typename T>
 inline void ndarray<T>::from_adios2(adios2::IO &io, adios2::Engine &reader, const std::string &varname, int step_start)
 {
