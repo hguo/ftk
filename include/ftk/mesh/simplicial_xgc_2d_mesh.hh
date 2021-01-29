@@ -19,6 +19,8 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
       const ndarray<I>& nextnodes);
 
   void initialize_point_locator();
+  void initialize_roi(double psin_min = 0.9, double psin_max = 1.05, 
+      double theta_min_deg = -60.0, double theta_max_deg = 60.0);
 
   static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
   static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_adios2(diy::mpi::communicator comm, const std::string& filename);
@@ -33,7 +35,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   const ndarray<F>& get_psifield() const { return psifield; }
 
   bool eval_b(const F x[], F b[]) const; // get magnetic field value at x
-  bool eval_f(const F rzp[3], F f[2]) const;
+  // bool eval_f(const F rzp[3], F f[2]) const;
   F eval_psi(const F x[]) const; // get psi value at x
 
   void magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
@@ -42,6 +44,9 @@ protected:
   xgc_units_t units;
   ndarray<F> psifield, bfield;
   ndarray<I> nextnodes;
+  ndarray<I> roi;
+
+  std::vector<I> roi_nodes;
 };
 /////////
   
@@ -160,6 +165,37 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
 
   // return std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>>(
   //     new simplicial_unstructured_2d_mesh<I, F>(coords, triangles));
+}
+
+template <typename I, typename F>
+void simplicial_xgc_2d_mesh<I, F>::initialize_roi(
+    double psin_min, double psin_max, double theta_min_deg, double theta_max_deg)
+{
+  const F r0 = units.eq_axis_r, 
+          z0 = units.eq_axis_z;
+  const F psi_x = units.psi_x;
+  const F theta_min_rad = theta_min_deg * M_PI / 180, 
+          theta_max_rad = theta_max_deg * M_PI / 180;
+
+  roi.reshape(nextnodes.shape());
+  roi_nodes.clear();
+
+  for (int i = 0; i < psifield.size(); i ++) {
+    const F r = this->vertex_coords(0, i), 
+            z = this->vertex_coords(1, i);
+    
+    const F theta = atan2(z - z0, r - r0);
+    if (theta < theta_min_rad || theta > theta_max_rad) continue;
+
+    const F psin = psifield[i] / psi_x;
+    if (psin < psin_min || psin > psin_max) continue;
+
+    roi_nodes.push_back(i);
+    roi[i] = 1;
+  }
+
+  // fprintf(stderr, "#xgc_roi_nodes=%zu\n", roi_nodes.size());
+  // this->array_to_vtu("xgc-roi.vtu", "roi", roi);
 }
 
 } // namespace ftk

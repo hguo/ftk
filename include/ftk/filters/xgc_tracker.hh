@@ -133,7 +133,6 @@ inline bool xgc_tracker::advance_timestep()
 #endif
 }
 
-
 }
 
 #endif

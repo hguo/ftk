@@ -94,7 +94,7 @@ public: // point locator and misc
 protected:
   mutable std::shared_ptr<point_locator_2d<I, F>> locator;
 
-private: // mesh connectivities
+protected: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
   std::vector<std::set<I>> vertex_side_of;
   std::vector<std::set<I>> vertex_edge_vertex;
