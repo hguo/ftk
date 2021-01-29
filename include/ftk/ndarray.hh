@@ -5,6 +5,7 @@
 #include <ftk/object.hh>
 #include <ftk/error.hh>
 #include <ftk/mesh/lattice.hh>
+#include <ftk/utils/io_util.hh>
 #include <vector>
 #include <array>
 #include <numeric>
@@ -13,7 +14,6 @@
 #include <cstring>
 #include <cassert>
 #include <random>
-#include <glob.h>
 
 #if FTK_HAVE_ADIOS2
 #include <adios2.h>
@@ -313,8 +313,6 @@ public: // netcdf
   void to_netcdf_unlimited_time(int ncid, int varid) const;
   void to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const;
 
-  static std::vector<std::string> glob(const std::string &pattern);
-
 #if FTK_HAVE_MPI
   static MPI_Datatype mpi_datatype();
 #endif
@@ -495,21 +493,9 @@ void ndarray<T>::to_binary_file2(const std::string& f) const
 }
 
 template <typename T>
-std::vector<std::string> ndarray<T>::glob(const std::string& pattern)
-{
-  std::vector<std::string> filenames;
-  glob_t results; 
-  ::glob(pattern.c_str(), 0, NULL, &results); 
-  for (int i=0; i<results.gl_pathc; i++)
-    filenames.push_back(results.gl_pathv[i]); 
-  globfree(&results);
-  return filenames;
-}
-
-template <typename T>
 void ndarray<T>::from_binary_file_sequence(const std::string& pattern)
 {
-  const auto filenames = ndarray<T>::glob(pattern);
+  const auto filenames = ftk::glob(pattern);
   if (filenames.size() == 0) return;
 
   std::vector<size_t> mydims = dims;
@@ -643,7 +629,7 @@ inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename, co
 template<typename T>
 inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pattern)
 {
-  const auto filenames = ndarray<T>::glob(pattern);
+  const auto filenames = glob(pattern);
   if (filenames.size() == 0) return;
   p.clear();
 

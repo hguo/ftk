@@ -4,6 +4,9 @@
 #include <ftk/config.hh>
 #include <ftk/utils/string.hh>
 #include <iostream>
+#include <fstream>
+#include <vector>
+#include <glob.h>
 
 namespace ftk {
 
@@ -33,6 +36,17 @@ static inline std::string series_filename(
   const std::string filename(buf);
   free(buf);
   return filename;
+}
+
+static inline std::vector<std::string> glob(const std::string &pattern)
+{
+  std::vector<std::string> filenames;
+  glob_t results; 
+  ::glob(pattern.c_str(), 0, NULL, &results); 
+  for (int i=0; i<results.gl_pathc; i++)
+    filenames.push_back(results.gl_pathv[i]); 
+  globfree(&results);
+  return filenames;
 }
 
 static bool file_exists(const std::string& filename) {

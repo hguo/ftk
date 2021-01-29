@@ -475,7 +475,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
 {
-  input_filenames = ndarray<float>::glob(input_pattern);
+  input_filenames = glob(input_pattern);
   if (input_filenames.empty()) 
     fatal("unable to find matching filenames.");
 

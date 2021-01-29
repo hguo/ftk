@@ -334,7 +334,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
         if (j["filenames"].is_array()) {
           // j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else {
-          auto filenames = ftk::ndarray<double>::glob(j["filenames"]);
+          auto filenames = glob(j["filenames"]);
           if (filenames.empty()) fatal("unable to find matching filename(s).");
           // if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
           // else j["n_timesteps"] = filenames.size();
