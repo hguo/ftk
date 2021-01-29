@@ -14,7 +14,7 @@
 #include "ftk/filters/xgc_blob_threshold_tracker.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
-#include "ftk/utils/file_exists.hh"
+#include "ftk/utils/io_util.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
 
@@ -389,7 +389,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
         auto scalar = data.get_transpose();
 #if FTK_HAVE_VTK
         if (xgc_write_back_filename.length()) {
-          auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
+          auto filename = series_filename(xgc_write_back_filename, k);
           // mx->scalar_to_vtu_slices_file(filename, "scalar", scalar);
           // tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi); // WIP
         }
@@ -453,7 +453,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
 #if FTK_HAVE_VTK
     if (xgc_write_back_filename.length()) {
-      auto filename = ndarray_writer<double>::filename(xgc_write_back_filename, k);
+      auto filename = series_filename(xgc_write_back_filename, k);
       mx3->scalar_to_vtu_slices_file(filename, "scalar", scalar);
     }
 #endif

@@ -5,10 +5,10 @@
 #include <ftk/filters/feature_curve.hh>
 #include <ftk/filters/feature_curve_set.hh>
 #include <ftk/basic/simple_union_find.hh>
-#include <ftk/utils/file_extensions.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/write_polydata.hh>
 #include <ftk/utils/serialization.hh>
+#include <ftk/utils/io_util.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkDoubleArray.h>

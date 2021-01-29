@@ -454,7 +454,7 @@ inline void tdgl_vortex_tracker_3d_regular::write_sliced(const std::string& patt
 
       auto poly = sliced.to_vtp(3, std::vector<std::string>());
       
-      const auto filename = ndarray_writer<double>::filename(pattern, i);
+      const auto filename = series_filename(pattern, i);
       write_polydata(filename, poly);
     }
   }

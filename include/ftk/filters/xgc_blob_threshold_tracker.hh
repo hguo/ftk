@@ -96,7 +96,7 @@ inline void xgc_blob_threshold_tracker::finalize()
 
 void xgc_blob_threshold_tracker::write_sliced(int t, const std::string& pattern) const
 {
-  const std::string filename = ndarray_writer<double>::filename(pattern, t);
+  const std::string filename = series_filename(pattern, t);
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();

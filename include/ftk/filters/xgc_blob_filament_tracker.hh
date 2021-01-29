@@ -736,7 +736,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
 
     auto poly = sliced.to_vtp(3, std::vector<std::string>());
     
-    const auto filename = ndarray_writer<double>::filename(pattern, i);
+    const auto filename = series_filename(pattern, i);
     write_polydata(filename, transform_vtp_coordinates(poly));
     // write_polydata(filename, poly);
   }

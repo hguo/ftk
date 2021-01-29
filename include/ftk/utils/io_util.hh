@@ -1,8 +1,9 @@
-#ifndef _FTK_FILE_EXTENSIONS_HH
-#define _FTK_FILE_EXTENSIONS_HH
+#ifndef _FTK_IO_UTIL_HH
+#define _FTK_IO_UTIL_HH
 
 #include <ftk/config.hh>
 #include <ftk/utils/string.hh>
+#include <iostream>
 
 namespace ftk {
 
@@ -22,6 +23,26 @@ enum {
   FILE_EXT_PLY, // surface
   FILE_EXT_STL  // surface
 };
+
+static inline std::string series_filename(
+    const std::string& pattern, int k)
+{
+  ssize_t size = snprintf(NULL, 0, pattern.c_str(), k);
+  char *buf = (char*)malloc(size + 1);
+  snprintf(buf, size + 1, pattern.c_str(), k);
+  const std::string filename(buf);
+  free(buf);
+  return filename;
+}
+
+static bool file_exists(const std::string& filename) {
+  std::ifstream f(filename);
+  return f.good();
+}
+
+static bool file_not_exists(const std::string& filename) { 
+  return !file_exists(filename); 
+}
 
 static inline int file_extension(const std::string& f)
 {
@@ -63,6 +84,6 @@ static inline int file_extension(const std::string& filename, const std::string&
     return file_extension(format);
 }
 
-}
+} // namespace ftk
 
 #endif

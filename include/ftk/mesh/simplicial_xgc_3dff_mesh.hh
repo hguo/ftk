@@ -3,11 +3,11 @@
 
 #include <ftk/config.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
-#include <ftk/utils/file_exists.hh>
+#include <ftk/utils/io_util.hh>
 
 namespace ftk {
 
-/// a magnetic field folowing mesh with simplicial elements
+/// legacy code: a magnetic field folowing mesh with simplicial elements
 template <typename I=int, typename F=double>
 struct simplicial_xgc_3dff_mesh : public simplicial_xgc_3d_mesh<I, F> {
   simplicial_xgc_3dff_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1) 

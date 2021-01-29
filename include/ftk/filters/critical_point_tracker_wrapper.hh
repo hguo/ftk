@@ -9,6 +9,7 @@
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
+#include <ftk/utils/io_util.hh>
 
 namespace ftk {
 
@@ -365,7 +366,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 
     if (j["xgc"].contains("write_back_filename")) { // write data back to vtu files
       const std::string pattern = j["xgc"]["write_back_filename"];
-      const std::string filename = ndarray_writer<double>::filename(pattern, k);
+      const std::string filename = series_filename(pattern, k);
       // m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
       m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", scalar);
     }
@@ -386,7 +387,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
       
         if (j["xgc"].contains("write_back_filename")) { // write data back to vtu files
           const std::string pattern = j["xgc"]["write_back_filename"];
-          const std::string filename = ndarray_writer<double>::filename(pattern, k);
+          const std::string filename = series_filename(pattern, k);
           // m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
           m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", scalar);
         }
@@ -409,7 +410,7 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
 void critical_point_tracker_wrapper::write_sliced_results(int k)
 {
   const std::string pattern = j["output"];
-  const std::string filename = ndarray_writer<double>::filename(pattern, k);
+  const std::string filename = series_filename(pattern, k);
   if (j["output_format"] == "vtp")
     tracker->write_sliced_critical_points_vtk(k, filename);
   else 
@@ -419,7 +420,7 @@ void critical_point_tracker_wrapper::write_sliced_results(int k)
 void critical_point_tracker_wrapper::write_intercepted_results(int k, int nt)
 {
   const std::string pattern = j["output"];
-  const std::string filename = ndarray_writer<double>::filename(pattern, k);
+  const std::string filename = series_filename(pattern, k);
   if (j["output_format"] == "vtp") {
     int nt = 2;
     if (j.contains("intercept_length") && j["intercept_length"].is_number())

@@ -464,7 +464,7 @@ inline void contour_tracker_3d_regular::write_sliced_vtu(const std::string& patt
 {
   if (comm.rank() == get_root_proc()) {
     for (int i = 0; i < current_timestep; i ++) {
-      const auto filename = ndarray_writer<double>::filename(pattern, i);
+      const auto filename = series_filename(pattern, i);
       
       auto poly = isovolume.slice_time(i).to_vtp();
    

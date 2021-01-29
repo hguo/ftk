@@ -3,6 +3,7 @@
 
 #include <ftk/object.hh>
 #include <ftk/ndarray/stream.hh>
+#include <ftk/utils/io_util.hh>
 
 namespace ftk {
 using nlohmann::json;
@@ -40,9 +41,6 @@ protected:
   void write_netcdf(int k, const ndarray<T> &data);
   void write_vti(int k, const ndarray<T> &data);
   std::string filename(int k) const;
-
-public:
-  static std::string filename(const std::string& pattern, int k);
 
 private:
   json j;
@@ -147,18 +145,7 @@ void ndarray_writer<T>::configure(const json& j_)
 template <typename T>
 std::string ndarray_writer<T>::filename(int k) const {
   const std::string pattern = j["filename"];
-  return filename(pattern, k);
-}
-
-template <typename T>
-std::string ndarray_writer<T>::filename(const std::string& pattern, int k)
-{
-  ssize_t size = snprintf(NULL, 0, pattern.c_str(), k);
-  char *buf = (char*)malloc(size + 1);
-  snprintf(buf, size + 1, pattern.c_str(), k);
-  const std::string filename(buf);
-  free(buf);
-  return filename;
+  return series_filename(pattern, k);
 }
 
 template <typename T>
