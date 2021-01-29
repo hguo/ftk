@@ -1167,11 +1167,33 @@ template <typename T>
 ndarray<T> ndarray<T>::get_transpose() const 
 {
   ndarray<T> a;
-  a.reshape(dim(1), dim(0));
-  for (auto i = 0; i < dim(0); i ++) 
-    for (auto j = 0; j < dim(1); j ++)
-      a(j, i) = at(i, j);
-  return a;
+  if (nd() == 0) return a;
+  else if (nd() == 1) return *this;
+  else if (nd() == 2) {
+    a.reshape(dim(1), dim(0));
+    for (auto i = 0; i < dim(0); i ++) 
+      for (auto j = 0; j < dim(1); j ++)
+        a(j, i) = at(i, j);
+    return a;
+  } else if (nd() == 3) {
+    a.reshape(dim(2), dim(1), dim(0));
+    for (auto i = 0; i < dim(0); i ++) 
+      for (auto j = 0; j < dim(1); j ++)
+        for (auto k = 0; k < dim(2); k ++)
+          a(k, j, i) = at(i, j, k);
+    return a;
+  } else if (nd() == 4) {
+    a.reshape(dim(3), dim(2), dim(1), dim(0));
+    for (auto i = 0; i < dim(0); i ++) 
+      for (auto j = 0; j < dim(1); j ++)
+        for (auto k = 0; k < dim(2); k ++)
+          for (auto l = 0; l < dim(3); l ++)
+            a(l, k, j, i) = at(i, j, k, l);
+    return a;
+  } else {
+    fatal(FTK_ERR_NDARRAY_UNSUPPORTED_DIMENSIONALITY);
+    return a;
+  }
 }
 
 template <typename T>
