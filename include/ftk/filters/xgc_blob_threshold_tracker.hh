@@ -49,7 +49,9 @@ protected:
 inline void xgc_blob_threshold_tracker::push_field_data_snapshot(const ndarray<double> &scalar)
 {
   ndarray<double> grad, J; // no grad or jacobian needed
-   
+  
+  fprintf(stderr, "threshold_2.5_sigma=%f\n", derive_threshold(scalar));
+
   if (m3->has_smoothing_kernel()) {
     ndarray<double> smoothed_scalar = m3->smooth_scalar(scalar);
     xgc_tracker::push_field_data_snapshot(smoothed_scalar, grad, J);

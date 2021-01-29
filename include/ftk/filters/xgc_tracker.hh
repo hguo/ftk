@@ -38,6 +38,9 @@ public:
 
   bool advance_timestep();
 
+public:
+  double derive_threshold(const ndarray<double>& scalar, double sigma_threshold = 2.5) const;
+
 protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
@@ -131,6 +134,31 @@ inline bool xgc_tracker::advance_timestep()
 
   return field_data_snapshots.size() > 0;
 #endif
+}
+
+inline double xgc_tracker::derive_threshold(const ndarray<double>& scalar, double sigma_threshold) const
+{
+  const std::vector<int> roi_nodes = m2->get_roi_nodes();
+  double sum = 0.0, sigma = 0.0;
+  const int nphi = m3->get_nphi(), m2n0 = m2->n(0), nroi0 = roi_nodes.size();
+
+  for (int p = 0; p < nphi; p ++) {
+    for (int i = 0; i < nroi0; i ++) {
+      const int idx = roi_nodes[i] + m2n0 * p;
+      sum += scalar[idx];
+    }
+  }
+
+  const double ave = sum / nroi0;
+  for (int p = 0; p < nphi; p ++) {
+    for (int i = 0; i < nroi0; i ++) {
+      const int idx = roi_nodes[i] + m2n0 * p;
+      sigma += std::pow(scalar[idx] - ave, 2.0);
+    }
+  }
+
+  sigma = std::sqrt(sigma / (nphi * nroi0)) * sigma_threshold;
+  return sigma;
 }
 
 }
