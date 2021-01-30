@@ -627,22 +627,19 @@ inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pat
 template<typename T>
 inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename, const std::string array_name)
 {
-  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
-  assert(false);
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 }
 
 template<typename T>
 inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pattern)
 {
-  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
-  assert(false);
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 }
 
 template<typename T>
-inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, bool) const 
+inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename) const 
 {
-  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with VTK.\n");
-  assert(false);
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 }
 #endif
 
