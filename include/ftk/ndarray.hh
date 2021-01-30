@@ -240,7 +240,7 @@ public: // i/o for binary file
 public: // i/o for vtk image data
   void from_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
   void from_vtk_image_data_file_sequence(const std::string& pattern);
-  void to_vtk_image_data_file(const std::string& filename, const std::string varname) const;
+  void to_vtk_image_data_file(const std::string& filename, const std::string varname=std::string()) const;
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
@@ -535,7 +535,8 @@ template <typename T>
 inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::string varname) const
 {
   vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
-  d->SetName( varname.c_str() );
+  if (varname.length() > 0)
+    d->SetName( varname.c_str() );
 
   if (ncd == 1) {
     d->SetNumberOfComponents(shape(0));

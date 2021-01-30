@@ -164,8 +164,8 @@ void ndarray_writer<T>::write_vti(int k, const ndarray<T>& data)
 {
   const std::string filename = this->filename(k);
   const int nv = j["variable"].size();
-  const bool multicomponent = nv > 1;
-  data.to_vtk_image_data_file(filename, multicomponent);
+  // const bool multicomponent = nv > 1;
+  data.to_vtk_image_data_file(filename); // , multicomponent);
 }
 
 template <typename T>
