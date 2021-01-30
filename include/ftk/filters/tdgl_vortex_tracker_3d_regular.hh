@@ -9,6 +9,7 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/write_polydata.hh>
 #include <ftk/ndarray/writer.hh>
+#include <ftk/numeric/fmod.hh>
 
 extern std::vector<ftk::feature_point_lite_t> 
 extract_tdgl_vortex_3dt_cuda(
@@ -70,8 +71,8 @@ protected:
 
   static float line_integral(float X0[], float X1[], float A0[], float A1[]);
 
-  template <typename T> inline static T mod2pi(T x) { T y = fmod(x, 2*M_PI); if (y<0) y+= 2*M_PI; return y; }
-  template <typename T> static T mod2pi1(T x) { return mod2pi(x + M_PI) - M_PI; }
+  // template <typename T> inline static T mod2pi(T x) { T y = fmod(x, 2*M_PI); if (y<0) y+= 2*M_PI; return y; }
+  // template <typename T> static T mod2pi1(T x) { return mod2pi(x + M_PI) - M_PI; }
 };
 
 
