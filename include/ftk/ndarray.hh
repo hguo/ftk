@@ -532,7 +532,7 @@ template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
 template<typename T>
 inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, const std::string varname) const
 {
-  fprintf(stderr, "to_vtk_image_data_file, ncd=%zu\n", ncd);
+  // fprintf(stderr, "to_vtk_image_data_file, ncd=%zu\n", ncd);
   vtkSmartPointer<vtkXMLImageDataWriter> writer = vtkXMLImageDataWriter::New();
   writer->SetFileName(filename.c_str());
   writer->SetInputData( to_vtk_image_data(varname) );
@@ -546,7 +546,7 @@ inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::st
   if (varname.length() > 0)
     d->SetName( varname.c_str() );
 
-  fprintf(stderr, "to_vtk_data_array, ncd=%zu\n", ncd);
+  // fprintf(stderr, "to_vtk_data_array, ncd=%zu\n", ncd);
 
   if (ncd == 1) {
     d->SetNumberOfComponents(shape(0));
@@ -566,7 +566,7 @@ template<typename T>
 inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(const std::string varname) const
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
-  fprintf(stderr, "to_vtk_image_data, ncd=%zu\n", ncd);
+  // fprintf(stderr, "to_vtk_image_data, ncd=%zu\n", ncd);
   if (ncd) { // multicomponent
     if (nd() == 3) d->SetDimensions(shape(1), shape(2), 1);
     else d->SetDimensions(shape(1), shape(2), shape(3)); // nd == 4
