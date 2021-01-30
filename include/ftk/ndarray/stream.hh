@@ -304,6 +304,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           
         } else if (j["name"] == "double_gyre") {
           default_nd = 2;
+          default_dims[0] = 64; 
+          default_dims[1] = 32;
+          default_n_timesteps = 50;
+          j["variables"] = {"u", "v", "w"};
         } else if (j["name"] == "merger_2d") {
           j["variables"] = {"scalar"};
           default_nd = 2;
@@ -783,7 +787,15 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_merger_2d(int k)
 template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_synthetic_double_gyre(int k) 
 {
-  return ndarray<T>(); // TODO
+  // TODO: allowing parameter configuration
+  const T A = 0.1, Omega = M_PI * 2, Eps = 0.25;
+  const T time = k * 0.1; 
+  const size_t DW = j["dimensions"][0], 
+               DH = j["dimensions"][1];
+ 
+  auto result = synthetic_double_gyre<T>(DW, DH, time, A, Omega, Eps);
+  // std::cerr << result.multicomponents() << std::endl;
+  return result;
 }
 
 template <typename T>
@@ -837,8 +849,10 @@ void ndarray_stream<T>::start()
   for (int i = 0; i < j["n_timesteps"]; i ++) {
     auto t0 = std::chrono::high_resolution_clock::now();
     ndarray<T> array;
-    if (j["type"] == "synthetic") 
+    if (j["type"] == "synthetic") {
       array = request_timestep_synthetic(i);
+      // fprintf(stderr, "requested data ncd=%zu, ncd1=%zu\n", array.multicomponents(), array1.multicomponents());
+    }
     else if (j["type"] == "file")
       array = request_timestep_file(i);
     auto t1 = std::chrono::high_resolution_clock::now();

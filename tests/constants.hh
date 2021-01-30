@@ -28,6 +28,11 @@ const json js_merger_2d_synthetic = {
   {"name", "merger_2d"}
 };
 
+const json js_double_gyre_synthetic = {
+  {"type", "synthetic"},
+  {"name", "double_gyre"}
+};
+
 const json js_moving_extremum_2d_synthetic = {
   {"type", "synthetic"},
   {"name", "moving_extremum_2d"}
@@ -137,6 +142,13 @@ const json jw_woven_vti {
   {"format", "vti"},
   {"filename", "woven-%04d.vti"},
   {"variable", "scalar"}
+};
+
+const json jw_double_gyre_vti {
+  {"nd", 2},
+  {"format", "vti"},
+  {"filename", "double-gyre-%04d.vti"},
+  {"variable", "vector"}
 };
 
 const json jw_volcano_vti {

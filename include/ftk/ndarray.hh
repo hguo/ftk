@@ -80,6 +80,12 @@ struct ndarray { // : object {
   ndarray(const std::vector<size_t> &dims, T val) {reshape(dims, val);}
   ndarray(const lattice& l) {reshape(l.sizes());}
   ndarray(const T *a, const std::vector<size_t> &shape);
+  
+  template <typename T1> ndarray(const ndarray<T1>& array1) { from_array<T1>(array1); }
+  ndarray(const ndarray<T>& a) { dims = a.dims; s = a.s; ncd = a.ncd; p = a.p; }
+  
+  template <typename T1> ndarray<T>& operator=(const ndarray<T1>& array1) { from_array<T1>(array1); return *this; }
+  ndarray<T>& operator=(const ndarray<T>& a) { dims = a.dims; s = a.s; ncd = a.ncd; p = a.p; return *this; }
 
   std::ostream& print(std::ostream& os) const;
   std::ostream& print_shape(std::ostream& os) const;
@@ -182,7 +188,6 @@ struct ndarray { // : object {
   friend std::ostream& operator<<(std::ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
   friend bool operator==(const ndarray<T>& lhs, const ndarray<T>& rhs) {return lhs.dims == rhs.dims && lhs.p == rhs.p;}
 
-  ndarray<T>& operator=(const ndarray<T>& x) {dims = x.dims; s = x.s; p = x.p; return *this;}
   ndarray<T>& operator+=(const ndarray<T>& x);
   ndarray<T>& operator-=(const ndarray<T>& x);
   
@@ -411,6 +416,7 @@ void ndarray<T>::from_array(const ndarray<T1>& array1)
   reshape(array1.shape());
   for (auto i = 0; i < p.size(); i ++)
     p[i] = static_cast<T>(array1[i]);
+  ncd = array1.multicomponents();
 }
 
 template <typename T>
@@ -450,6 +456,7 @@ void ndarray<T>::swap(ndarray& x)
   dims.swap(x.dims);
   s.swap(x.s);
   p.swap(x.p);
+  std::swap(x.ncd, ncd);
 }
 
 template <typename T>
@@ -525,6 +532,7 @@ template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
 template<typename T>
 inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, const std::string varname) const
 {
+  fprintf(stderr, "to_vtk_image_data_file, ncd=%zu\n", ncd);
   vtkSmartPointer<vtkXMLImageDataWriter> writer = vtkXMLImageDataWriter::New();
   writer->SetFileName(filename.c_str());
   writer->SetInputData( to_vtk_image_data(varname) );
@@ -537,6 +545,8 @@ inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::st
   vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
   if (varname.length() > 0)
     d->SetName( varname.c_str() );
+
+  fprintf(stderr, "to_vtk_data_array, ncd=%zu\n", ncd);
 
   if (ncd == 1) {
     d->SetNumberOfComponents(shape(0));
@@ -556,6 +566,7 @@ template<typename T>
 inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(const std::string varname) const
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
+  fprintf(stderr, "to_vtk_image_data, ncd=%zu\n", ncd);
   if (ncd) { // multicomponent
     if (nd() == 3) d->SetDimensions(shape(1), shape(2), 1);
     else d->SetDimensions(shape(1), shape(2), shape(3)); // nd == 4
