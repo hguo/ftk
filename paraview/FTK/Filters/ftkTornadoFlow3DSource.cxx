@@ -77,7 +77,7 @@ int ftkTornadoFlow3DSource::RequestData(
     currentTime = 0;
 
   auto vector_field = ftk::synthetic_tornado<float>(DW, DH, DD, static_cast<int>(currentTime));
-  auto imageData1 = vector_field.to_vtk_image_data(true);
+  auto imageData1 = vector_field.to_vtk_image_data(); // true);
   imageData->DeepCopy(imageData1);
   
   int extent[6] = {0, DW-1, 0, DH-1, 0, DD-1};
