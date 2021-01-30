@@ -35,9 +35,82 @@ protected:
   
   void simplex_values(
       const std::vector<std::vector<int>>& vertices,
-      float spin[][3]);
+      float X[][4], float spin[][4]);
 };
 
+///////
+inline void magnetic_vortex_tracker_3d_regular::simplex_values(
+      const std::vector<std::vector<int>>& vertices,
+      float X[][4], float spin[][3])
+{
+  for (int i = 0; i < vertices.size(); i ++) {
+    const int iv = vertices[i][3] == current_timestep ? 0 : 1;
+    const auto &f = field_data_snapshots[iv];
+
+    for (int k = 0; k < 3; k ++)
+      spin[i][k] = f.spin(k, vertices[i][0], vertices[i][1], vertices[i][2]);
+    spin[i][3] = 0;
+    
+    for (int j = 0; j < 3; j ++)
+      X[i][j] = vertices[i][j];
+    X[i][3] = vertices[i][3];
+  }
 }
+
+inline bool magnetic_vortex_tracker_3d_regular::check_simplex(
+    const element_t& e, feature_point_t& p)
+{
+  if (!e.valid(m)) return false; // check if the 2-simplex is valid
+  const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
+
+  float X[3][4], // coordinates
+        spin[3][4], 
+        normal[4];
+  simplex_values(vertices, X, spin);
+
+  return false;
+
+  return true;
+}
+
+inline void magnetic_vortex_tracker_3d_regular::update_timestep()
+{
+  if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+  
+  auto get_relatetd_cels = [&](element_t e) {
+    std::set<element_t> my_related_cells;
+    
+    auto tets = e.side_of(m);
+    for (auto tet : tets) {
+      if (tet.valid(m)) {
+        auto pents = tet.side_of(m);
+        for (auto pent : pents)
+          if (pent.valid(m))
+            my_related_cells.insert(pent);
+      }
+    }
+
+    return my_related_cells;
+  };
+
+  auto func = [=](element_t e) {
+    feature_point_t p;
+    if (check_simplex(e, p)) {
+      std::set<element_t> my_related_cells = get_relatetd_cels(e);
+
+      {
+        std::lock_guard<std::mutex> guard(mutex);
+        intersections[e] = p;
+        related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      }
+    }
+  };
+    
+  element_for_ordinal(2, func);
+  if (field_data_snapshots.size() >= 2) 
+    element_for_interval(2, func);
+}
+
+} // namespace ftk
 
 #endif
