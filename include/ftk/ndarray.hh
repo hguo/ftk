@@ -637,7 +637,7 @@ inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pat
 }
 
 template<typename T>
-inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename) const 
+inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, const std::string) const 
 {
   fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 }
