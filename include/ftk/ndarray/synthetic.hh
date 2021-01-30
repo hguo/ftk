@@ -123,6 +123,7 @@ ndarray<T> synthetic_double_gyre_unstructured(
 {
   ndarray<T> result; 
   result.reshape(coords);
+  result.set_multicomponent();
 
   for (auto i = 0; i < coords.dim(1); i ++) {
     auto uv = double_gyre(coords(0, i), coords(1, i), time, A, omega, epsilon);
@@ -142,6 +143,7 @@ ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=fal
 {
   ndarray<T> Vf;
   Vf.reshape(2 + zchannel, DW, DH);
+  Vf.set_multicomponent();
 
   for (int j = 0; j < DH; j ++) {
     for (int i = 0; i < DW; i ++) {
@@ -166,6 +168,7 @@ ndarray<T> synthetic_time_varying_double_gyre(
     const T A = 0.1, const T omega = M_PI * 0.2, const T epsilon = 0.25)
 {
   ndarray<T> Vft;
+  Vft.set_multicomponent();
 
   for (int t = 0; t < DT; t ++) {
     auto Vf = synthetic_double_gyre(DW, DH, 
@@ -184,6 +187,7 @@ ndarray<T> synthetic_abc_flow(int DW, int DH, int DD,
 {
   ndarray<T> Vf;
   Vf.reshape(3, DW, DH, DD);
+  Vf.set_multicomponent();
 
   for (int k = 0; k < DD; k ++)
     for (int j = 0; j < DH; j ++)
@@ -383,6 +387,7 @@ ndarray<T> synthetic_tornado(int xs, int ys, int zs, int time)
 {
   ndarray<T> array;
   array.reshape({3, static_cast<size_t>(xs), static_cast<size_t>(ys), static_cast<size_t>(zs)});
+  array.set_multicomponent();
   T *tornado = &array[0];
 
   T x, y, z;

@@ -79,7 +79,7 @@ int ftkDoubleGyre2DSource::RequestData(
     currentTime = StartTime;
 
   auto vector_field = ftk::synthetic_double_gyre<double>(DW, DH, currentTime, true, A, Omega, Epsilon);
-  auto imageData1 = vector_field.to_vtk_image_data(true);
+  auto imageData1 = vector_field.to_vtk_image_data(); // true);
   imageData->ShallowCopy(imageData1);
   
   
