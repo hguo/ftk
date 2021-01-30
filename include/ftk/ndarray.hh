@@ -244,8 +244,8 @@ public: // i/o for vtk image data
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
-  vtkSmartPointer<vtkImageData> to_vtk_image_data(const std::string varname) const; 
-  vtkSmartPointer<vtkDataArray> to_vtk_data_array(const std::string varname) const; 
+  vtkSmartPointer<vtkImageData> to_vtk_image_data(const std::string varname=std::string()) const; 
+  vtkSmartPointer<vtkDataArray> to_vtk_data_array(const std::string varname=std::string()) const; 
 #endif
 
 public: // i/o for hdf5
