@@ -587,6 +587,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
         array[i*nv+j] = arrays[j][i];
       }
     }
+
+    array.set_multicomponents();
   }
 #else
   fatal("FTK not compiled with VTK.");
@@ -659,6 +661,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
         array[i*nv+j] = arrays[j][i];
       }
     }
+
+    array.set_multicomponents();
   }
 #else
   fatal("FTK not compiled with netcdf");
@@ -682,6 +686,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_h5(int k)
       arrays[i].from_h5(filename, j["variables"][i]);
 
     array = ndarray<T>::concat(arrays);
+    array.set_multicomponents();
   }
 #else
   fatal("FTK not compiled with HDF5");
