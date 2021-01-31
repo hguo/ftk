@@ -32,6 +32,7 @@ struct ndarray_stream : public object {
   //  - variables (required if format is nc/h5, optional for vti), array of strings.
   //    - the number of components is the length of the array.
   //    - if not given, the defaulat value is ["scalar"]
+  //  - components (to be determined), array of number of components per variable
   //  - dimensions (required if format is floaot32/float64), array of integers, e.g.  
   //    [width, height, depth]
   //  - n_timesteps, integer.  The default is 32 for synthetic data; the number can be 
@@ -47,9 +48,13 @@ struct ndarray_stream : public object {
 
   void set_callback(std::function<void(int, const ndarray<T>&)> f) {callback = f;}
 
-  bool is_single_component() const { return n_components() == 1; }
-  bool is_multi_component() const { return n_components() > 1; }
-  size_t n_components() const { return j["variables"].size(); }
+  size_t n_variables() const { return j["variables"].size(); }
+  size_t n_components() const {
+    size_t n = 0;
+    for (int i = 0; i < j["components"].size(); i ++)
+      n += j["components"][i].template get<size_t>();
+    return n;
+  }
   size_t n_dimensions() const {
     // if (j.contains("nc_has_unlimited_time_dimension")) return j["dimensions"].size() - 1;
     // else return j["dimensions"].size(); 
@@ -151,6 +156,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
       int default_nd;
       int default_dims[3] = {32, 32, 32};
       int default_n_timesteps = 32;
+      std::vector<int> default_components = {1};
 
       if (j.contains("name")) {
         if (j["name"] == "woven") {
@@ -308,6 +314,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           default_dims[1] = 32;
           default_n_timesteps = 50;
           j["variables"] = {"u", "v", "w"};
+          j["components"] = {1, 1, 1};
         } else if (j["name"] == "merger_2d") {
           j["variables"] = {"scalar"};
           default_nd = 2;
@@ -317,6 +324,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
         } else if (j["name"] == "tornado") {
           default_nd = 3;
           j["variables"] = {"u", "v", "w"};
+          j["components"] = {1, 1, 1};
         } else {
           std::cerr << "synthetic case name: " << j["name"] << std::endl;
           fatal("synthetic case not available.");
@@ -329,6 +337,9 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           dims.push_back(default_dims[i]);
         j["dimensions"] = dims;
       }
+
+      if (!j.contains("components"))
+        j["components"] = default_components;
 
       // if (j.contains("n_timesteps")) assert(j["n_timesteps"] != 0);
       if (!j.contains("n_timesteps"))
@@ -361,6 +372,11 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             const std::string var("scalar");
             const std::vector<std::string> vars = {var};
             j["variables"] = vars;
+            j["components"] = {1};
+          } else {
+            const size_t nv = j["variables"].size();
+            const std::vector<int> ones(nv, 1);
+            j["components"] = ones;
           }
           
           j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
@@ -384,6 +400,17 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             const std::string var = image->GetPointData()->GetArrayName(0);
             j["variables"] = {var};
           }
+
+          // determine number of components per var
+          std::vector<int> components;
+          for (int i = 0; i < j["variables"].size(); i ++) {
+            const std::string var = j["variables"][i];
+            vtkSmartPointer<vtkDataArray> da = image->GetPointData()->GetArray( var.c_str() );
+            if (!da) fatal(FTK_ERR_VTK_VARIABLE_NOT_FOUND);
+            const int nc = da->GetNumberOfComponents();
+            components.push_back(nc);
+          }
+          j["components"] = components;
           
           // determine number timesteps
           if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
@@ -407,6 +434,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             NC_SAFE_CALL( nc_inq_varid(ncid, var.c_str(), &varids[i]) );
           }
           NC_SAFE_CALL( nc_inq_varndims(ncid, varids[0], &ncdims) ); // assuming all variables have the same dimensions
+
+          // components
+          const std::vector<int> components(nv, 1);
+          j["components"] = components;
 
           // determin spatial dimensions
           int dimids[4]; 
@@ -495,6 +526,11 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           H5Fclose(fid);
           
           j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
+          
+          // components
+          const size_t nv = j["variables"].size();
+          const std::vector<int> components(nv, 1);
+          j["components"] = components;
 #else
           fatal("FTK not compiled with HDF5.");
           // fatal("array stream w/ h5 not implemented yet");
@@ -535,8 +571,11 @@ template <typename T>
 std::vector<size_t> ndarray_stream<T>::shape() const
 {
   std::vector<size_t> shape = j["dimensions"];
-  if (is_multi_component()) 
-    shape.insert(shape.begin(), n_components());
+  const size_t nc = n_components();
+  if (nc > 1)
+    shape.insert(shape.begin(), nc);
+  // if (is_multi_component()) 
+  //   shape.insert(shape.begin(), n_variables());
   return shape;
 }
 
@@ -577,8 +616,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
   const std::string filename = j["filenames"][k];
   // std::cerr << j << std::endl;
 #if FTK_HAVE_VTK
-  const int nv = n_components();
-  if (is_single_component()) {
+  const int nv = n_variables();
+  if (nv == 1) { //  (is_single_component()) {
     array.from_vtk_image_data_file(filename, j["variables"][0]);
   } else {
     std::vector<ftk::ndarray<T>> arrays(nv);
@@ -594,6 +633,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 
     array.set_multicomponents();
   }
+
+  // std::cerr << array.shape() << ", " << array.multicomponents() << std::endl;
 #else
   fatal("FTK not compiled with VTK.");
 #endif
@@ -654,7 +695,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     array.from_netcdf(filename, j["variables"][0], starts, sizes);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
-    const int nv = n_components();
+    const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
       arrays[i].from_netcdf(filename, j["variables"][i], starts, sizes);
@@ -680,11 +721,12 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_h5(int k)
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][k];
 #if FTK_HAVE_HDF5
-  if (is_single_component()) { // all data in one single variable; channels are automatically handled in ndarray
+  const int nc = n_components();
+  if (nc == 1) { // all data in one single-component variable; channels are automatically handled in ndarray
     array.from_h5(filename, j["variables"][0]);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
-    const int nv = n_components();
+    const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
       arrays[i].from_h5(filename, j["variables"][i]);

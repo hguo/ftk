@@ -106,6 +106,10 @@ add_executable (test_critical_point_tracking_merger_2d test_critical_point_track
 target_link_libraries (test_critical_point_tracking_merger_2d libftk)
 catch_discover_tests (test_critical_point_tracking_merger_2d)
 
+add_executable (test_critical_point_tracking_double_gyre test_critical_point_tracking_double_gyre)
+target_link_libraries (test_critical_point_tracking_double_gyre libftk)
+catch_discover_tests (test_critical_point_tracking_double_gyre)
+
 function (add_mpi_test target maxp args)
   add_executable (${target} ${target}.cpp)
   target_link_libraries (${target} libftk)

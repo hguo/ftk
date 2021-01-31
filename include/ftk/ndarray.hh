@@ -593,10 +593,16 @@ inline void ndarray<T>::from_vtk_image_data(
 
   if (nd == 2) {
     if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1]); // scalar field
-    else reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1]); // vector field
+    else {
+      reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1]); // vector field
+      ncd = 1; // multicomponent array
+    };
   } else if (nd == 3) {
     if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]); // scalar field
-    else reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
+    else {
+      reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
+      ncd = 1; // multicomponent array
+    }
   } else {
     fprintf(stderr, "[FTK] fatal error: unsupported data dimension %d.\n", nd);
     assert(false);

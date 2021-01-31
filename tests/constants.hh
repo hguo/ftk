@@ -90,6 +90,11 @@ const json js_woven_vti {
   {"filenames", "woven-*.vti"}
 };
 
+const json js_double_gyre_vti {
+  {"format", "vti"},
+  {"filenames", "double-gyre-*.vti"}
+};
+
 // for writers
 const json jw_woven_float64 = {
   {"nd", 2},
