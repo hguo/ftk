@@ -112,7 +112,7 @@ Depending on file formats and number of components, it may or may not be necessa
 
 #### Use synthetic inputs in lieu of file inputs
 
-Use `--synthetic` to use synthetic data instead of file inputs for demonstration and testing purposes.  Available options include `woven`, `double_gyre_2d`, `merger_2d`, `moving_extremum_2d`, `moving_extremum_3d`.  For example, to track critical in the 2D woven synthetic data:
+See [this page](docs/synthetic.md) for more details on synthetic inputs.  Use `--synthetic` to use synthetic data instead of file inputs for demonstration and testing purposes.  Available options include `woven`, `double_gyre_2d`, `merger_2d`, `moving_extremum_2d`, `moving_extremum_3d`.  For example, to track critical in the 2D woven synthetic data:
 
 ```bash
 $ ftk -f cp --synthetic woven --output woven.txt 
