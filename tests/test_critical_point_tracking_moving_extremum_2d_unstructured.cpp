@@ -5,8 +5,6 @@
 #include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
 
 using nlohmann::json;
-  
-diy::mpi::environment env;
 
 const std::string mesh_filename = "1x1.vtu";
 const int nt = 32;

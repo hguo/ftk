@@ -7,15 +7,13 @@ using nlohmann::json;
 
 const int merger_n_trajs = 9;
   
-diy::mpi::environment env;
-diy::mpi::communicator world;
-
 TEST_CASE("critical_point_tracking_merger_2d_write_discrete_critical_points_binary") {
   auto result = track_cp2d(js_merger_2d_synthetic, {
     {"output", "merger_2d_discrete.bin"},
     {"output_type", "discrete"}
   });
 
+  diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
@@ -25,6 +23,7 @@ TEST_CASE("critical_point_tracking_merger_2d_read_discrete_critical_points_binar
     {"archived_discrete_critical_points_filename", "merger_2d_discrete.bin"}
   });
   
+  diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
@@ -35,6 +34,7 @@ TEST_CASE("critical_point_tracking_merger_2d_write_discrete_critical_points_json
     {"output_type", "discrete"}
   });
 
+  diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
@@ -44,6 +44,7 @@ TEST_CASE("critical_point_tracking_merger_2d_read_discrete_critical_points_json"
     {"archived_discrete_critical_points_filename", "merger_2d_discrete.json"}
   });
   
+  diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
@@ -55,6 +56,7 @@ TEST_CASE("critical_point_tracking_merger_2d_write_traced_critical_points_binary
     {"output_type", "traced"}
   });
 
+  diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
@@ -64,6 +66,7 @@ TEST_CASE("critical_point_tracking_merger_2d_read_traced_critical_points_binary"
     {"archived_traced_critical_points_filename", "merger_2d_traced.bin"}
   });
   
+  diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
@@ -74,6 +77,7 @@ TEST_CASE("critical_point_tracking_merger_2d_write_traced_critical_points_json")
     {"output_type", "traced"}
   });
 
+  diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
@@ -83,6 +87,7 @@ TEST_CASE("critical_point_tracking_merger_2d_read_traced_critical_points_json") 
     {"archived_traced_critical_points_filename", "merger_2d_traced.json"}
   });
   
+  diy::mpi::communicator world;
   if (world.rank() == 0)
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }

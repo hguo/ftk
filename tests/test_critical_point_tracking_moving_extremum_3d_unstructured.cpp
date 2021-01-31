@@ -6,8 +6,6 @@
 
 using nlohmann::json;
   
-diy::mpi::environment env;
-
 const std::string mesh_filename = "3d.vtu";
 const int nt = 32;
 const double kernel_size = 2.0;
