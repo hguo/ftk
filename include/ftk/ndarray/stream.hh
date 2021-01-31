@@ -691,7 +691,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][fid];
 #if FTK_HAVE_NETCDF
-  if (is_single_component()) { // all data in one single variable; channels are automatically handled in ndarray
+  const int nv = n_variables();
+  if (nv == 1) { // all data in one single variable; channels are automatically handled in ndarray
     array.from_netcdf(filename, j["variables"][0], starts, sizes);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
