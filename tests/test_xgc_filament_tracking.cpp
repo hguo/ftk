@@ -6,9 +6,6 @@
 
 using namespace ftk;
 
-diy::mpi::environment env;
-diy::mpi::communicator world;
-
 int nphi = 16, iphi = 1;
 const int vphi = 8;
 
@@ -28,6 +25,8 @@ std::shared_ptr<simplicial_xgc_3d_mesh<>> mx3, // 3d mesh,
 
 #if FTK_HAVE_HDF5
 TEST_CASE("xgc_synthetic_filament_tracking") {
+  diy::mpi::communicator world;
+
   mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_data_path + "/" + xgc_mesh_filename);
   mx2->initialize_point_locator();
   mx2->read_bfield_h5(xgc_data_path + "/" + xgc_bfield_filename);
@@ -39,7 +38,7 @@ TEST_CASE("xgc_synthetic_filament_tracking") {
   mx3->set_vphi( vphi );
   mx3->initialize_interpolants();
   
-  std::vector<std::string> filenames = ftk::ndarray<double>::glob(xgc_synthetic_filename);
+  std::vector<std::string> filenames = ftk::glob(xgc_synthetic_filename);
   REQUIRE( filenames.size() == 5 ); // make sure synthetic data are generated correctly
   REQUIRE( mx3->get_nphi() == 16);
   REQUIRE( mx3->get_iphi() == 1);
@@ -56,8 +55,8 @@ TEST_CASE("xgc_synthetic_filament_tracking") {
     auto data = ndarray<double>::read_h5(filenames[k], xgc_varname)
       .get_transpose();
 
-    REQUIRE(data.dim(0) == 56980)
-    REQUIRE(data.dim(1) == 16)
+    REQUIRE(data.dim(0) == 56980);
+    REQUIRE(data.dim(1) == 16);
 
     tracker->push_field_data_snapshot( data );
 

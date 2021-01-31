@@ -66,6 +66,26 @@ TEST_CASE("xgc_mesh_3d_find") {
     REQUIRE(i == i1);
   }
 }
+
+TEST_CASE("xgc_mesh_point_locator_2d") {
+  auto mx2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  mx2->initialize_point_locator();
+
+  double lbx = 1.0, ubx = 1.5, 
+         lby = -1.0, uby = 1.0;
+
+  srand(0);
+  for (int k = 0; k < 1000; k ++) {
+    double x[2] = {
+      (double)rand() / RAND_MAX * (ubx - lbx) + lbx, 
+      (double)rand() / RAND_MAX * (uby - lby) + lby
+    };
+
+    double mu[3];
+    int tid = mx2->locate(x, mu);
+    REQUIRE( tid >= 0 );
+  }
+}
 #endif
 
 int main(int argc, char **argv)
