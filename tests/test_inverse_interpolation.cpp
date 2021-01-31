@@ -5,6 +5,7 @@
 #include <ftk/numeric/rand.hh>
 #include <ftk/numeric/trilinear_interpolation.hh>
 #include <ftk/numeric/inverse_trilinear_interpolation_solver.hh>
+#include <ftk/external/diy/mpi.hpp>
 
 const int nruns = 1; // 00000;
 const double epsilon = 1e-9;
@@ -70,9 +71,4 @@ TEST_CASE("inverse_trilinear_interpolation3") {
 #endif
 
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv);
-  // return 0;
-}
+#include "main.hh"

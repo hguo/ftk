@@ -4,8 +4,6 @@
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 
-diy::mpi::environment env;
-
 bool write(const json& jstream, const json& jwriter)
 {
   ftk::ndarray_stream<> stream;
@@ -73,9 +71,4 @@ TEST_CASE("io_write_vti_moving_ramp_3d_synthetic") {
 }
 #endif
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv);
-  // return 0;
-}
+#include "main.hh"

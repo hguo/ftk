@@ -87,11 +87,4 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_random_motion") {
   }
 }
 
-int main(int argc, char **argv)
-{
-  diy::mpi::environment env;
-  
-  Catch::Session session;
-  return session.run(argc, argv);
-  // return 0;
-}
+#include "main.hh"

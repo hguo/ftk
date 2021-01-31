@@ -38,8 +38,4 @@ TEST_CASE("simple_union_find") {
   REQUIRE(!UF.same_set(1, 5));
 }
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv);
-}
+#include "main.hh"

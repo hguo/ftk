@@ -46,15 +46,4 @@ TEST_CASE("critical_point_tracking_woven_vti") {
 }
 #endif
 
-int main(int argc, char **argv)
-{
-  diy::mpi::environment env;
-  
-  // auto result = track_cp2d(js_woven_float64);
-  // auto result = track_cp2d(js_woven_nc_no_time);
-  // return 0;
-
-  Catch::Session session;
-  return session.run(argc, argv);
-  // return 0;
-}
+#include "main.hh"

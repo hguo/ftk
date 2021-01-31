@@ -3,6 +3,7 @@
 #include <ftk/numeric/rand.hh>
 #include <ftk/numeric/polynomial.hh>
 #include <ftk/numeric/linear_inequality_solver.hh>
+#include <ftk/external/diy/mpi.hpp>
 
 const int nruns = 1; // 00000;
 const double epsilon = 1e-9;
@@ -43,9 +44,4 @@ TEST_CASE("linear_inequality_test2") {
   }
 }
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv);
-  // return 0;
-}
+#include "main.hh"

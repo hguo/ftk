@@ -4,6 +4,7 @@
 #include <ftk/numeric/parallel_vector_solver3.hh>
 #include <ftk/numeric/rational_function.hh>
 #include <ftk/numeric/rand.hh>
+#include <ftk/external/diy/mpi.hpp>
 
 const int nruns = 1; // 00000;
 const double epsilon = 1e-4;
@@ -188,9 +189,4 @@ TEST_CASE("solve_parallel_vector3_simplex2") {
   }
 }
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv);
-  // return 0;
-}
+#include "main.hh"

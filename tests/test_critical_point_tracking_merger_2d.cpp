@@ -87,9 +87,4 @@ TEST_CASE("critical_point_tracking_merger_2d_read_traced_critical_points_json") 
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv); // ignoring results
-  // return 0;
-}
+#include "main.hh"

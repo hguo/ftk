@@ -6,8 +6,6 @@
 #include <ftk/ndarray.hh>
 #include <ftk/numeric/rand.hh>
 
-diy::mpi::environment env;
-
 const int nruns = 100000;
 const double epsilon = 1e-9;
 
@@ -88,9 +86,4 @@ TEST_CASE("3D_conv_gaussian_test") {
   REQUIRE(res == ans);
 }
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv);
-  // return 0;
-}
+#include "main.hh"

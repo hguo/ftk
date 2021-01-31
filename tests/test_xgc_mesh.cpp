@@ -76,7 +76,18 @@ int main(int argc, char **argv)
     xgc_mesh_filename = xgc_data_path + "/" + xgc_mesh_filename;
   }
   // fprintf(stderr, "xgc_data_path=%s\n", xgc_data_dir.c_str());
+  
+  int requested = MPI_THREAD_FUNNELED, provided;
+#if FTK_HAVE_MPI
+  MPI_Init_thread(&argc, &argv, requested, &provided);
+#endif
 
   Catch::Session session;
-  return session.run(argc, argv);
+  int result = session.run(argc, argv);
+
+#if FTK_HAVE_MPI
+  MPI_Finalize();
+#endif
+
+  return result;
 }

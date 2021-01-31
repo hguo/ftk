@@ -3,8 +3,6 @@
 #include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <ftk/ndarray.hh>
 
-diy::mpi::environment env;
-
 #if FTK_HAVE_VTK
 TEST_CASE("mesh_extruded_3d_unstructured_pent_sides") {
   ftk::simplicial_unstructured_3d_mesh<> m;
@@ -156,12 +154,7 @@ TEST_CASE("mesh_2d_unstructured_find") {
 }
 #endif
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv);
-  // return 0;
-}
+#include "main.hh"
 
 #if 0
 int main(int argc, char **argv)

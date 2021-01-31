@@ -28,9 +28,4 @@ TEST_CASE("critical_point_tracking_double_gyre") {
     REQUIRE(std::get<0>(result) == 2);
 }
 
-int main(int argc, char **argv)
-{
-  Catch::Session session;
-  return session.run(argc, argv); // ignoring results
-  // return 0;
-}
+#include "main.hh"
