@@ -91,6 +91,6 @@ TEST_CASE("3D_conv_gaussian_test") {
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  session.run(argc, argv);
-  return 0;
+  return session.run(argc, argv);
+  // return 0;
 }

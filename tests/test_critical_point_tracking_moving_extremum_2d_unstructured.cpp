@@ -63,6 +63,6 @@ TEST_CASE("critical_point_tracking_moving_extremum_2d_unstructured") {
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  session.run(argc, argv);
-  return 0;
+  return session.run(argc, argv);
+  // return 0;
 }

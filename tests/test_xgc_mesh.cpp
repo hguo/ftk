@@ -78,6 +78,5 @@ int main(int argc, char **argv)
   // fprintf(stderr, "xgc_data_path=%s\n", xgc_data_dir.c_str());
 
   Catch::Session session;
-  session.run(argc, argv);
-  return 0;
+  return session.run(argc, argv);
 }

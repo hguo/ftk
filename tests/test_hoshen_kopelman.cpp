@@ -37,6 +37,6 @@ TEST_CASE("hoshen_kopelman_2d", "hoshen_kopelman")
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  session.run(argc, argv);
-  return 0;
+  return session.run(argc, argv);
+  // return 0;
 }

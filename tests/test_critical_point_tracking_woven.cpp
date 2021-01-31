@@ -55,6 +55,6 @@ int main(int argc, char **argv)
   // return 0;
 
   Catch::Session session;
-  session.run(argc, argv);
-  return 0;
+  return session.run(argc, argv);
+  // return 0;
 }

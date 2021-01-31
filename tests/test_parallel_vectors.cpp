@@ -191,6 +191,6 @@ TEST_CASE("solve_parallel_vector3_simplex2") {
 int main(int argc, char **argv)
 {
   Catch::Session session;
-  session.run(argc, argv);
-  return 0;
+  return session.run(argc, argv);
+  // return 0;
 }
