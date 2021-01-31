@@ -1,6 +1,7 @@
 #ifndef _FTK_SIMPLE_UNION_FIND_H
 #define _FTK_SIMPLE_UNION_FIND_H
 
+#include <ftk/config.hh>
 #include <vector>
 #include <iostream>
 

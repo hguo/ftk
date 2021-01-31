@@ -1,6 +1,7 @@
 #ifndef _FTK_CONTOUR_TREE_H
 #define _FTK_CONTOUR_TREE_H
 
+#include <ftk/config.hh>
 #include <set>
 #include <map>
 

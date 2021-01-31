@@ -1,6 +1,8 @@
 #ifndef _FTK_QUADRATIC_INTERPOLATION_HH
 #define _FTK_QUADRATIC_INTERPOLATION_HH
 
+#include <ftk/config.hh>
+
 namespace ftk {
 
 template <typename T>

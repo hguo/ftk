@@ -1,6 +1,7 @@
 #ifndef _FTK_GRAPH_H
 #define _FTK_GRAPH_H
 
+#include <ftk/config.hh>
 #include <vector>
 #include <map>
 #include <set>

@@ -4,8 +4,6 @@
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/ndarray.hh>
 
-diy::mpi::environment env;
-
 std::string xgc_data_path; 
 std::string xgc_mesh_filename = "xgc.mesh.h5";
 
