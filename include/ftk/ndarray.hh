@@ -230,9 +230,9 @@ struct ndarray { // : object {
   void copy(Iterator first, Iterator last);
 
 public: // i/o for binary file
-  void from_binary_file(const std::string& filename);
-  void from_binary_file(FILE *fp);
-  void from_binary_file_sequence(const std::string& pattern);
+  void read_binary_file(const std::string& filename);
+  void read_binary_file(FILE *fp);
+  void read_binary_file_sequence(const std::string& pattern);
   void to_vector(std::vector<T> &out_vector) const;
   void to_binary_file(const std::string& filename);
   void to_binary_file(FILE *fp);
@@ -460,15 +460,15 @@ void ndarray<T>::swap(ndarray& x)
 }
 
 template <typename T>
-void ndarray<T>::from_binary_file(const std::string& filename)
+void ndarray<T>::read_binary_file(const std::string& filename)
 {
   FILE *fp = fopen(filename.c_str(), "rb");
-  from_binary_file(fp);
+  read_binary_file(fp);
   fclose(fp);
 }
 
 template <typename T>
-void ndarray<T>::from_binary_file(FILE *fp)
+void ndarray<T>::read_binary_file(FILE *fp)
 {
   auto s = fread(&p[0], sizeof(T), nelem(), fp);
   if (s != nelem())
@@ -499,7 +499,7 @@ void ndarray<T>::to_binary_file2(const std::string& f) const
 }
 
 template <typename T>
-void ndarray<T>::from_binary_file_sequence(const std::string& pattern)
+void ndarray<T>::read_binary_file_sequence(const std::string& pattern)
 {
   const auto filenames = ftk::glob(pattern);
   if (filenames.size() == 0) return;
@@ -1377,7 +1377,7 @@ inline bool ndarray<float>::from_amira(const std::string& filename)
     fgets(buffer, 2047, fp);
 
     reshape(NumComponents, xDim, yDim, zDim);
-    from_binary_file(fp);
+    read_binary_file(fp);
   }
 
   fclose(fp);

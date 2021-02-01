@@ -601,7 +601,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_binary(int k)
 {
   const std::string filename = j["filenames"][k];
   ftk::ndarray<T1> array1(shape());
-  array1.from_binary_file(filename);
+  array1.read_binary_file(filename);
   
   ftk::ndarray<T> array(shape());
   array.from_array(array1);
