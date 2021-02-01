@@ -136,6 +136,7 @@ void sweep_simplices(
     const F m2coords[], // m2 vertex coordinates
     const I m2edges[], // list of m2 edges
     const I m2tris[], // list of m2 triangles
+    const F psin[],
     const ftk::xgc_interpolant_t<I, F> *interpolants, 
     const F* scalar0, // current scalar
     const F* scalar1, // next scalar
@@ -172,6 +173,7 @@ void sweep_simplices(
       nphi, iphi, vphi, 
       m2n0, m2n1, m2n2, 
       m2coords, m2edges, m2tris,
+      psin,
       interpolants, 
       scalar, vector, jacobian, 
       cp);
@@ -197,6 +199,8 @@ void xft_create_ctx(ctx_t **c_)
   cudaMalloc((void**)&c->dcps, c->bufsize);
   checkLastCudaError("[FTK-CUDA] cuda malloc");
 
+  c->d_psin = NULL;
+
   c->d_kernel_nodes = NULL;
   c->d_kernel_values = NULL;
   c->d_kernel_lengths = NULL;
@@ -218,6 +222,7 @@ void xft_destroy_ctx(ctx_t **c_)
   if (c->d_m2coords != NULL) cudaFree(c->d_m2coords);
   if (c->d_m2edges != NULL) cudaFree(c->d_m2edges);
   if (c->d_m2tris != NULL) cudaFree(c->d_m2tris);
+  if (c->d_psin != NULL) cudaFree(c->d_psin);
 
   if (c->d_interpolants != NULL) cudaFree(c->d_interpolants);
 
@@ -269,6 +274,7 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
       c->nphi, c->iphi, c->vphi, 
       c->m2n0, c->m2n1, c->m2n2, 
       c->d_m2coords, c->d_m2edges, c->d_m2tris, 
+      c->d_psin,
       c->d_interpolants, 
       c->d_scalar[0], c->d_scalar[1],
       c->d_vector[0], c->d_vector[1],
@@ -474,8 +480,8 @@ void xft_load_smoothing_kernel(ctx_t *c, double sigma, const std::vector<std::ve
 
 void xft_load_psin(ctx_t *c, const double *psin)
 {
-  cudaMalloc((void**)&c->d_psin, m2n0 * sizeof(double));
-  cudaMemcpy(c->d_psin, psin, m2n0 * sizeof(double), cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_psin, c->m2n0 * sizeof(double));
+  cudaMemcpy(c->d_psin, psin, c->m2n0 * sizeof(double), cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] loading psin");
 }
 

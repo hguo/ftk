@@ -31,7 +31,7 @@ if (FTK_HAVE_CUDA)
     filters/tdgl_vortex_tracker_3d_regular.cu
     filters/critical_point_tracer_2d_regular.cu
     filters/contour_tracker_3d_regular.cu
-    filters/xgc_filament_tracker.cu)
+    filters/xgc_blob_filament_tracker.cu)
 endif ()
 
 add_library (libftk SHARED ${ftk_sources} ${ftk_cuda_sources})

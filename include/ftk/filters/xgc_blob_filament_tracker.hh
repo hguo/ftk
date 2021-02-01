@@ -140,7 +140,8 @@ inline void xgc_blob_filament_tracker::initialize()
         m2->get_smoothing_kernel_size(),
         m2->get_smoothing_kernel());
 
-    const ndarray<double> psin = m2->get_psifield() / m2->get_units().psi_x;
+    ndarray<double> psin = m2->get_psifield();
+    psin /= m2->get_units().psi_x;
     xft_load_psin(ctx, psin.data());
   }
 #endif

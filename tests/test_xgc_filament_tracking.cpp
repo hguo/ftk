@@ -52,7 +52,7 @@ TEST_CASE("xgc_synthetic_filament_tracking") {
   tracker->initialize();
 
   for (int k = 0; k < filenames.size(); k ++) {
-    auto data = ndarray<double>::read_h5(filenames[k], xgc_varname)
+    auto data = ndarray<double>::from_h5(filenames[k], xgc_varname)
       .get_transpose();
 
     REQUIRE(data.dim(0) == 56980);
