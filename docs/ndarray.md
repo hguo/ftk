@@ -66,12 +66,8 @@ Conversion from the following data structures are supported:
 
 * Raw data pointer.  The shape of the array needs to be specified 
 * `std::vector` and `std::array`.  The output will be a 1D array; reshape as needed
-
-* `pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast>`.  Conversion between `numpy` arrays with `pybind11`
-
-### VTK
-
-See previous I/O section for more details.
+* `pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast>`.  Conversion between `numpy` arrays with `pybind11`.  The numpy array must be in C style.
+* `vtkDataArray` and `vtkImageData`. See previous I/O section for more details.
 
 
 
