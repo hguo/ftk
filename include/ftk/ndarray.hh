@@ -269,15 +269,15 @@ public: // i/o for parallel-netcdf
 #endif
 
 public: // i/o for adios2
-  void from_bp(diy::mpi::communicator comm, const std::string& filename, const std::string& varname);
+  void read_bp(diy::mpi::communicator comm, const std::string& filename, const std::string& varname);
 
 #if FTK_HAVE_ADIOS2
-  void from_adios2(
+  void read_bp(
       adios2::IO &io, 
       adios2::Engine& reader, 
       const std::string &varname); // read all
 
-  void from_adios2(
+  void read_bp(
       adios2::IO &io, 
       adios2::Engine& reader, 
       const std::string &varname, 
@@ -944,7 +944,7 @@ template <> inline int ndarray<int>::nc_datatype() { return NC_INT; }
 #endif
 
 template <typename T>
-inline void ndarray<T>::from_bp(diy::mpi::communicator comm, const std::string& filename, const std::string& varname)
+inline void ndarray<T>::read_bp(diy::mpi::communicator comm, const std::string& filename, const std::string& varname)
 {
 #if FTK_HAVE_ADIOS2
   adios2::ADIOS adios(comm);
@@ -960,7 +960,7 @@ inline void ndarray<T>::from_bp(diy::mpi::communicator comm, const std::string& 
 
 #if FTK_HAVE_ADIOS2
 template <typename T>
-inline void ndarray<T>::from_adios2(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
 {
   auto var = io.template InquireVariable<T>(varname);
   // std::cerr << var << std::endl;
@@ -982,7 +982,7 @@ inline void ndarray<T>::from_adios2(adios2::IO &io, adios2::Engine &reader, cons
 }
 
 template <typename T>
-inline void ndarray<T>::from_adios2(adios2::IO &io, adios2::Engine &reader, const std::string &varname, int step_start)
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname, int step_start)
 {
   auto var = io.template InquireVariable<T>(varname);
   if (var) {
