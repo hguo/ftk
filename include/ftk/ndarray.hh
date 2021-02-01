@@ -265,7 +265,7 @@ public: // i/o for hdf5
 
 public: // i/o for parallel-netcdf
 #if FTK_HAVE_PNETCDF
-  void from_pnetcdf_all(int ncid, int varid, const MPI_Offset *st, const MPI_Offset *sz);
+  void read_pnetcdf_all(int ncid, int varid, const MPI_Offset *st, const MPI_Offset *sz);
 #endif
 
 public: // i/o for adios2
@@ -285,11 +285,11 @@ public: // i/o for adios2
 #endif
 
 public: // i/o for png
-  void from_png(const std::string& filename);
+  void read_png(const std::string& filename);
   void to_png(const std::string& filename) const;
 
 public: // i/o for amira, see https://www.csc.kth.se/~weinkauf/notes/amiramesh.html
-  bool from_amira(const std::string& filename); // T must be floatt
+  bool read_amira(const std::string& filename); // T must be floatt
 
 public: // pybind11
 #if FTK_HAVE_PYBIND11
@@ -297,7 +297,7 @@ public: // pybind11
   void from_numpy(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &numpy_array);
   pybind11::array_t<T, pybind11::array::c_style> to_numpy() const;
 #endif
-  void from_numpy(const std::string& filename);
+  void read_numpy(const std::string& filename);
   void to_numpy(const std::string& filename) const;
 
 public: // netcdf
@@ -1251,11 +1251,11 @@ ndarray<T> ndarray<T>::stack(const std::vector<ndarray<T>>& arrays)
 template <typename T>
 ndarray<T>::ndarray(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &numpy_array)
 {
-  from_numpy(numpy_array);
+  read_numpy(numpy_array);
 }
  
 template <typename T>
-void ndarray<T>::from_numpy(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &array)
+void ndarray<T>::read_numpy(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &array)
 {
   pybind11::buffer_info buf = array.request();
   std::vector<size_t> shape;
@@ -1296,7 +1296,7 @@ void ndarray<T>::to_png(const std::string& filename) const
 }
 #else
 template <typename T>
-void ndarray<T>::from_png(const std::string& filename)
+void ndarray<T>::read_png(const std::string& filename)
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with PNG.\n");
   assert(false);
@@ -1312,7 +1312,7 @@ void ndarray<T>::to_png(const std::string& filename) const
 
 // see https://www.csc.kth.se/~weinkauf/notes/amiramesh.html
 template <>
-inline bool ndarray<float>::from_amira(const std::string& filename)
+inline bool ndarray<float>::read_amira(const std::string& filename)
 {
   auto find_and_jump = [](const char* buffer, const char* SearchString) {
     const char* FoundLoc = strstr(buffer, SearchString);
