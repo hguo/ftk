@@ -66,7 +66,7 @@ simplicial_xgc_2d_mesh<I, F>::simplicial_xgc_2d_mesh(
 template <typename I, typename F>
 void simplicial_xgc_2d_mesh<I, F>::read_bfield_h5(const std::string& filename)
 {
-  bfield.from_h5(filename, "/node_data[0]/values");
+  bfield.read_h5(filename, "/node_data[0]/values");
   bfield.set_multicomponents();
   // std::cerr << bfield.shape() << std::endl;
 }
@@ -156,10 +156,10 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
   ndarray<I> nextnodes;
   ndarray<F> psifield;
 
-  triangles.from_h5(filename, "/cell_set[0]/node_connect_list");
-  coords.from_h5(filename, "/coordinates/values");
-  psifield.from_h5(filename, "/psi");
-  nextnodes.from_h5(filename, "/nextnode");
+  triangles.read_h5(filename, "/cell_set[0]/node_connect_list");
+  coords.read_h5(filename, "/coordinates/values");
+  psifield.read_h5(filename, "/psi");
+  nextnodes.read_h5(filename, "/nextnode");
 
   return std::shared_ptr<simplicial_xgc_2d_mesh<I, F>>(
       new simplicial_xgc_2d_mesh<I, F>(coords, triangles, psifield, nextnodes));

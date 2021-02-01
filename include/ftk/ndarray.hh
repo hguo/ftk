@@ -254,11 +254,11 @@ public: // i/o for vtk image data
 #endif
 
 public: // i/o for hdf5
-  static ndarray<T> read_h5(const std::string& filename, const std::string& name);
-  bool from_h5(const std::string& filename, const std::string& name); 
+  static ndarray<T> from_h5(const std::string& filename, const std::string& name);
+  bool read_h5(const std::string& filename, const std::string& name); 
 #if FTK_HAVE_HDF5
-  bool from_h5(hid_t fid, const std::string& name);
-  bool from_h5(hid_t did);
+  bool read_h5(hid_t fid, const std::string& name);
+  bool read_h5(hid_t did);
 
   static hid_t h5_mem_type_id();
 #endif
@@ -1016,20 +1016,20 @@ inline void ndarray<T>::copy_to_cuda_device()
 }
 
 template <typename T>
-ndarray<T> ndarray<T>::read_h5(const std::string& filename, const std::string& name)
+ndarray<T> ndarray<T>::from_h5(const std::string& filename, const std::string& name)
 {
   ndarray<T> array;
-  array.from_h5(filename, name);
+  array.read_h5(filename, name);
   return array;
 }
 
 template <typename T>
-inline bool ndarray<T>::from_h5(const std::string& filename, const std::string& name)
+inline bool ndarray<T>::read_h5(const std::string& filename, const std::string& name)
 {
 #if FTK_HAVE_HDF5
   auto fid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   if (fid < 0) return false; else {
-    bool succ = from_h5(fid, name);
+    bool succ = read_h5(fid, name);
     H5Fclose(fid);
     return succ;
   }
@@ -1041,18 +1041,18 @@ inline bool ndarray<T>::from_h5(const std::string& filename, const std::string& 
 
 #if FTK_HAVE_HDF5
 template <typename T>
-inline bool ndarray<T>::from_h5(hid_t fid, const std::string& name)
+inline bool ndarray<T>::read_h5(hid_t fid, const std::string& name)
 {
   auto did = H5Dopen2(fid, name.c_str(), H5P_DEFAULT);
   if (did < 0) return false; else {
-    bool succ = from_h5(did);
+    bool succ = read_h5(did);
     H5Dclose(did);
     return succ;
   }
 }
 
 template <typename T>
-inline bool ndarray<T>::from_h5(hid_t did)
+inline bool ndarray<T>::read_h5(hid_t did)
 {
   auto sid = H5Dget_space(did);
   const int h5ndims = H5Sget_simple_extent_ndims(sid);

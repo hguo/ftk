@@ -280,18 +280,18 @@ void initialize_xgc(diy::mpi::communicator comm)
   const std::string filename0 = js["filenames"][0];
   const std::string varname = js["variables"][0];
     
-  const auto data0 = ndarray<double>::read_h5(filename0, varname);
+  const auto data0 = ndarray<double>::from_h5(filename0, varname);
   xgc_nphi = data0.dim(0);
   xgc_iphi = 1; // TODO
 
 #if 0
-  const auto array_nphi = ndarray<int>::read_h5(filename0, "/nphi");
-  const auto array_iphi = ndarray<int>::read_h5(filename0, "/iphi");
+  const auto array_nphi = ndarray<int>::from_h5(filename0, "/nphi");
+  const auto array_iphi = ndarray<int>::from_h5(filename0, "/iphi");
 
   if (array_nphi.size()) {
     nphi = array_nphi[0];
   } else { // determine nphi based on data array
-    const auto data = ndarray<double>::read_h5(filename0, varname);
+    const auto data = ndarray<double>::from_h5(filename0, varname);
     nphi = data.dim(0);
   }
 

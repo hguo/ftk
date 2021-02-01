@@ -315,9 +315,9 @@ void critical_point_tracker_wrapper::consume_xgc(ndarray_stream<> &stream, diy::
   ftk::ndarray<int> triangles;
   ftk::ndarray<double> coords, psi;
 
-  triangles.from_h5(mesh_filename, "/cell_set[0]/node_connect_list");
-  coords.from_h5(mesh_filename, "/coordinates/values");
-  psi.from_h5(mesh_filename, "psi");
+  triangles.read_h5(mesh_filename, "/cell_set[0]/node_connect_list");
+  coords.read_h5(mesh_filename, "/coordinates/values");
+  psi.read_h5(mesh_filename, "psi");
   
   // build mesh
   ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);

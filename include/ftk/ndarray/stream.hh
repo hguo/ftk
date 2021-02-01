@@ -724,13 +724,13 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_h5(int k)
 #if FTK_HAVE_HDF5
   const int nc = n_components();
   if (nc == 1) { // all data in one single-component variable; channels are automatically handled in ndarray
-    array.from_h5(filename, j["variables"][0]);
+    array.read_h5(filename, j["variables"][0]);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_h5(filename, j["variables"][i]);
+      arrays[i].read_h5(filename, j["variables"][i]);
 
     array = ndarray<T>::concat(arrays);
     array.set_multicomponents();
