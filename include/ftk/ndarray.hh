@@ -1251,11 +1251,11 @@ ndarray<T> ndarray<T>::stack(const std::vector<ndarray<T>>& arrays)
 template <typename T>
 ndarray<T>::ndarray(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &numpy_array)
 {
-  read_numpy(numpy_array);
+  from_numpy(numpy_array);
 }
  
 template <typename T>
-void ndarray<T>::read_numpy(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &array)
+void ndarray<T>::from_numpy(const pybind11::array_t<T, pybind11::array::c_style | pybind11::array::forcecast> &array)
 {
   pybind11::buffer_info buf = array.request();
   std::vector<size_t> shape;
