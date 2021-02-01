@@ -693,13 +693,13 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
 #if FTK_HAVE_NETCDF
   const int nv = n_variables();
   if (nv == 1) { // all data in one single variable; channels are automatically handled in ndarray
-    array.from_netcdf(filename, j["variables"][0], starts, sizes);
+    array.read_netcdf(filename, j["variables"][0], starts, sizes);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_netcdf(filename, j["variables"][i], starts, sizes);
+      arrays[i].read_netcdf(filename, j["variables"][i], starts, sizes);
 
     array.reshape(shape());
     for (int i = 0; i < arrays[0].nelem(); i ++) {

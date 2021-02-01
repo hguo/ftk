@@ -301,14 +301,14 @@ public: // pybind11
   void to_numpy(const std::string& filename) const;
 
 public: // netcdf
-  void from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
-  void from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
-  void from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[]);
-  void from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]);
-  void from_netcdf(const std::string& filename, const std::string& varname);
-  void from_netcdf(int ncid, const std::string& varname);
-  void from_netcdf(int ncid, int varid);
-  void from_netcdf_slice(const std::string& filename, const std::string& varname, int k);
+  void read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
+  void read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
+  void read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[]);
+  void read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]);
+  void read_netcdf(const std::string& filename, const std::string& varname);
+  void read_netcdf(int ncid, const std::string& varname);
+  void read_netcdf(int ncid, int varid);
+  void read_netcdf_slice(const std::string& filename, const std::string& varname, int k);
   // void to_netcdf(int ncid, const std::string& varname);
   // void to_netcdf(int ncid, int varid);
   void to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const;
@@ -663,7 +663,7 @@ inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, cons
 
 #ifdef FTK_HAVE_NETCDF
 template <>
-inline void ndarray<float>::from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
 {
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
@@ -673,7 +673,7 @@ inline void ndarray<float>::from_netcdf(int ncid, int varid, int ndims, const si
 }
 
 template <>
-inline void ndarray<double>::from_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
 {
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
@@ -753,7 +753,7 @@ inline void ndarray<T>::to_netcdf_multivariate_unlimited_time(int ncid, int vari
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
   int ndims;
   NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
@@ -762,11 +762,11 @@ inline void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], 
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
 
-  from_netcdf(ncid, varid, ndims, starts, sizes);
+  read_netcdf(ncid, varid, ndims, starts, sizes);
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(int ncid, int varid)
+inline void ndarray<T>::read_netcdf(int ncid, int varid)
 {
   int ndims;
   int dimids[4];
@@ -778,68 +778,68 @@ inline void ndarray<T>::from_netcdf(int ncid, int varid)
   for (int i = 0; i < ndims; i ++)
     NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &sizes[i]) );
   
-  from_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes);
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(int ncid, const std::string& varname)
+inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname)
 {
   int varid;
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  from_netcdf(ncid, varid);
+  read_netcdf(ncid, varid);
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname)
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname)
 {
   int ncid, varid;
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  from_netcdf(ncid, varid);
+  read_netcdf(ncid, varid);
   NC_SAFE_CALL( nc_close(ncid) );
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
   int varid;
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  from_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes);
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
   int ncid, varid;
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  from_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes);
   NC_SAFE_CALL( nc_close(ncid) );
 }
 #else
 template <typename T>
-inline void ndarray<T>::from_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
   assert(false);
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
   assert(false);
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname)
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname)
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
   assert(false);
 }
 
 template <typename T>
-inline void ndarray<T>::from_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
   fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
   assert(false);
