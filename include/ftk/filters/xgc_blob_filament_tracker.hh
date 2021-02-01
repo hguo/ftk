@@ -15,7 +15,7 @@
 #endif
 
 #if FTK_HAVE_CUDA
-#include "xgc_filament_tracker.cuh"
+#include "xgc_blob_filament_tracker.cuh"
 #endif
 
 namespace ftk {
@@ -139,6 +139,9 @@ inline void xgc_blob_filament_tracker::initialize()
     xft_load_smoothing_kernel(ctx, 
         m2->get_smoothing_kernel_size(),
         m2->get_smoothing_kernel());
+
+    const ndarray<double> psin = m2->get_psifield() / m2->get_units().psi_x;
+    xft_load_psin(ctx, psin.data());
   }
 #endif
 }

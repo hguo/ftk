@@ -1,5 +1,5 @@
-#ifndef _XGC_FILAMENT_TRACKER_CUH
-#define _XGC_FILAMENT_TRACKER_CUH
+#ifndef _XGC_BLOB_FILAMENT_TRACKER_CUH
+#define _XGC_BLOB_FILAMENT_TRACKER_CUH
 
 #include <vector>
 #include <ftk/numeric/xgc_interpolant.hh>
@@ -13,6 +13,7 @@ typedef struct {
   double *d_m2coords;
   int *d_m2edges, *d_m2tris;
   ftk::xgc_interpolant_t<> *d_interpolants = NULL;
+  double *d_psin; // normalized psi
 
   // smoothing kernel
   double sigma;
@@ -36,6 +37,7 @@ void xft_load_mesh(xft_ctx_t *c,
     const double *m2coords, const int *m2edges, const int *m2tris);
 void xft_load_interpolants(xft_ctx_t *c, const std::vector<std::vector<ftk::xgc_interpolant_t<>>> &interpolants);
 void xft_load_smoothing_kernel(xft_ctx_t *c, double sigma, const std::vector<std::vector<std::tuple<int, double>>>& kernels);
+void xft_load_psin(xft_ctx_t *c, const double *psin);
 void xft_execute(xft_ctx_t *c, int scope, int current_timestep);
 void xft_load_scalar_data(xft_ctx_t *c, const double *scalar);
 void xft_load_data(xft_ctx_t *c, 
