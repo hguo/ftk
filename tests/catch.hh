@@ -13453,7 +13453,8 @@ namespace Catch {
             Catch::cout() << "...waiting for enter/ return before exiting, with code: " << exitCode << std::endl;
             static_cast<void>(std::getchar());
         }
-        return exitCode;
+        if (m_configData.listTestNamesOnly) return false; // added by Hanqi, for the openmpi workaround
+        else return exitCode;
     }
 
     clara::Parser const& Session::cli() const {
