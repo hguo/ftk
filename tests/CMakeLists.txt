@@ -176,7 +176,7 @@ if (FTK_BUILD_PYFTK)
     ENVIRONMENT "PYTHONPATH=${LIBRARY_OUTPUT_PATH}")
 endif ()
 
-if (PARAVIEW_USE_PYTHON AND Python_FOUND) # testing paraview plugins
+if (NOT FTK_HAVE_MPI AND PARAVIEW_USE_PYTHON AND Python_FOUND) # testing paraview plugins
   file (GENERATE
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_critical_point_tracking.py
     INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/test_paraview_critical_point_tracking.py.in)
