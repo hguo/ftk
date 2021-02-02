@@ -2,6 +2,7 @@
 #define __FTK_ERROR_HH
 
 #include <ftk/config.hh>
+#include <execinfo.h>
 
 namespace ftk {
 
@@ -79,11 +80,31 @@ inline std::string err2str(int e)
   }
 }
 
+inline void print_backtrace()
+{
+  void *array[10];
+  size_t size;
+  char **strings;
+  size_t i;
+
+  size = backtrace (array, 10);
+  strings = backtrace_symbols (array, size);
+
+  printf ("Obtained %zd stack frames.\n", size);
+
+  for (i = 0; i < size; i++)
+    printf ("%s\n", strings[i]);
+
+  free (strings);
+}
+
 inline void fatal(int err, std::string str = "")
 {
   std::cerr << "[FTK FATAL] " << err2str(err);
   if (str.length()) std::cerr << ": " << str;
   std::cerr << std::endl;
+  
+  print_backtrace();
   exit(1);
 }
 
@@ -96,6 +117,8 @@ inline void warn(int err, std::string str = "")
 
 inline void fatal(const std::string& str) {
   std::cerr << "[FTK FATAL]" << str << std::endl;
+  
+  print_backtrace();
   exit(1);
 }
 
