@@ -10,6 +10,7 @@ enum {
   FTK_ERR_FILE_CANNOT_OPEN,
   FTK_ERR_FILE_CANNOT_WRITE,
   FTK_ERR_FILE_CANNOT_READ_EXPECTED_BYTES,
+  FTK_ERR_FILE_UNRECOGNIZED_EXTENSION,
   FTK_ERR_FILE_FORMAT,
   FTK_ERR_FILE_FORMAT_AMIRA,
   FTK_ERR_NOT_BUILT_WITH_ADIOS2 = 2000,
@@ -48,6 +49,7 @@ inline std::string err2str(int e)
   case FTK_ERR_FILE_CANNOT_READ_EXPECTED_BYTES: return "cannot read expected number of bytes";
   case FTK_ERR_FILE_FORMAT: return "file format error";
   case FTK_ERR_FILE_FORMAT_AMIRA: return "file format error with AmiraMesh data";
+  case FTK_ERR_FILE_UNRECOGNIZED_EXTENSION: return "unrecognized file extension";
   case FTK_ERR_NOT_BUILT_WITH_ADIOS2: return "FTK not compiled with ADIOS2";
   case FTK_ERR_NOT_BUILT_WITH_BOOST: return "FTK not compiled with Boost";
   case FTK_ERR_NOT_BUILT_WITH_CGAL: return "FTK not compiled with CGAL";

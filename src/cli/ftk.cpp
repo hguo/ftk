@@ -339,12 +339,12 @@ void initialize_xgc(diy::mpi::communicator comm)
     fprintf(stderr, "=============\n");
   }
   
-  mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename, comm);
   // mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_adios2(comm, xgc_mesh_filename);
   mx2->initialize_point_locator();
   mx2->initialize_roi();
   if (xgc_bfield_filename.length() > 0)
-    mx2->read_bfield_h5(xgc_bfield_filename);
+    mx2->read_bfield(xgc_bfield_filename);
   if (xgc_units_filename.length() > 0)
     mx2->read_units_m(xgc_units_filename);
  

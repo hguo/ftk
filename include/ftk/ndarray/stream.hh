@@ -618,11 +618,11 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 #if FTK_HAVE_VTK
   const int nv = n_variables();
   if (nv == 1) { //  (is_single_component()) {
-    array.from_vtk_image_data_file(filename, j["variables"][0]);
+    array.read_vtk_image_data_file(filename, j["variables"][0]);
   } else {
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_vtk_image_data_file(filename, j["variables"][i]);
+      arrays[i].read_vtk_image_data_file(filename, j["variables"][i]);
 
     array.reshape(shape());
     for (int i = 0; i < arrays[0].nelem(); i ++) {

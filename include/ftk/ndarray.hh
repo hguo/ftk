@@ -229,6 +229,11 @@ struct ndarray { // : object {
   template <typename Iterator>
   void copy(Iterator first, Iterator last);
 
+public: // file i/o; automatically determine format based on extensions
+  static ndarray<T> from_file(const std::string& filename, const std::string varname="", diy::mpi::communicator comm = MPI_COMM_WORLD);
+  bool read_file(const std::string& filename, const std::string varname="", diy::mpi::communicator comm = MPI_COMM_WORLD);
+  bool to_file(const std::string& filename, const std::string varname="", diy::mpi::communicator comm = MPI_COMM_WORLD) const;
+
 public: // i/o for binary file
   void read_binary_file(const std::string& filename);
   void read_binary_file(FILE *fp);
@@ -243,8 +248,8 @@ public: // i/o for binary file
   void to_bov(const std::string& filename) const;
 
 public: // i/o for vtk image data
-  void from_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
-  void from_vtk_image_data_file_sequence(const std::string& pattern);
+  void read_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
+  void read_vtk_image_data_file_sequence(const std::string& pattern);
   void to_vtk_image_data_file(const std::string& filename, const std::string varname=std::string()) const;
 #if FTK_HAVE_VTK
   static int vtk_data_type();
@@ -269,7 +274,8 @@ public: // i/o for parallel-netcdf
 #endif
 
 public: // i/o for adios2
-  void read_bp(diy::mpi::communicator comm, const std::string& filename, const std::string& varname);
+  static ndarray<T> from_bp(const std::string& filename, const std::string& name, diy::mpi::communicator comm = MPI_COMM_WORLD);
+  void read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm = MPI_COMM_WORLD);
 
 #if FTK_HAVE_ADIOS2
   void read_bp(
@@ -616,7 +622,7 @@ inline void ndarray<T>::from_vtk_image_data(
 }
 
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename, const std::string array_name)
+inline void ndarray<T>::read_vtk_image_data_file(const std::string& filename, const std::string array_name)
 {
   vtkNew<vtkXMLImageDataReader> reader;
   reader->SetFileName(filename.c_str());
@@ -625,7 +631,7 @@ inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename, co
 }
 
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pattern)
+inline void ndarray<T>::read_vtk_image_data_file_sequence(const std::string& pattern)
 {
   const auto filenames = glob(pattern);
   if (filenames.size() == 0) return;
@@ -633,7 +639,7 @@ inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pat
 
   ndarray<T> array;
   for (int t = 0; t < filenames.size(); t ++) {
-    array.from_vtk_image_data_file(filenames[t]);
+    array.read_vtk_image_data_file(filenames[t]);
     p.insert(p.end(), array.p.begin(), array.p.end());
   }
 
@@ -643,13 +649,13 @@ inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pat
 }
 #else
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data_file(const std::string& filename, const std::string array_name)
+inline void ndarray<T>::read_vtk_image_data_file(const std::string& filename, const std::string array_name)
 {
   fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 }
 
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data_file_sequence(const std::string& pattern)
+inline void ndarray<T>::read_vtk_image_data_file_sequence(const std::string& pattern)
 {
   fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 }
@@ -944,7 +950,7 @@ template <> inline int ndarray<int>::nc_datatype() { return NC_INT; }
 #endif
 
 template <typename T>
-inline void ndarray<T>::read_bp(diy::mpi::communicator comm, const std::string& filename, const std::string& varname)
+inline void ndarray<T>::read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
 {
 #if FTK_HAVE_ADIOS2
   adios2::ADIOS adios(comm);
@@ -1013,6 +1019,39 @@ inline void ndarray<T>::copy_to_cuda_device()
   fprintf(stderr, "[FTK] fatal: FTK not compiled with CUDA.\n");
   assert(false);
 #endif
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::from_file(const std::string& filename, const std::string varname, diy::mpi::communicator comm)
+{
+  ndarray<T> array;
+  array.read_file(filename, varname, comm);
+  return array;
+}
+
+template <typename T>
+bool ndarray<T>::read_file(const std::string& filename, const std::string varname, diy::mpi::communicator comm)
+{
+  if (!file_exists(filename)) {
+    warn(FTK_ERR_FILE_NOT_FOUND);
+    return false;
+  }
+
+  auto ext = file_extension(filename);
+  if (ext == FILE_EXT_BP) read_bp(filename, varname, comm);
+  else if (ext == FILE_EXT_NETCDF) read_netcdf(filename, varname);
+  else if (ext == FILE_EXT_VTI) read_vtk_image_data_file(filename, varname);
+  else warn(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
+
+  return true; // TODO: return read_* results
+}
+
+template <typename T>
+ndarray<T> ndarray<T>::from_bp(const std::string& filename, const std::string& name, diy::mpi::communicator comm)
+{
+  ndarray<T> array;
+  array.read_bp(filename, name, comm);
+  return array;
 }
 
 template <typename T>
