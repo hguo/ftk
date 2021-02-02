@@ -166,6 +166,7 @@ triObj = Triangulation(RZ[:,0],RZ[:,1],tri)
 file3d = fileDir + 'xgc.3d.00001.h5'
 f3d = h5py.File(file3d,'r')
 sml_nphi = f3d['nphi'][0]
+sml_iphi = f3d['iphi'][0]
 
 #setup Bfield interpolator (could use higher order interpolation scheme)
 Binterp = LinearNDInterpolator(RZ, Bgrid, fill_value = np.inf)
@@ -192,4 +193,6 @@ for timestep in range (0, 5):
     file_output = 'xgc.synthetic.%04d.h5' % timestep
     fo = h5py.File(file_output,'w')
     fo['/dnOvernXGC'] = dnOvernXGC.transpose()
+    fo['/nphi'] = sml_nphi
+    fo['/iphi'] = sml_iphi
     fo.close()

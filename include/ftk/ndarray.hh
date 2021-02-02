@@ -673,45 +673,92 @@ inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, cons
 }
 #endif
 
-#ifdef FTK_HAVE_NETCDF
+template <typename T>
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname)
+{
+#if FTK_HAVE_NETCDF
+  int ncid, varid;
+  NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  read_netcdf(ncid, varid);
+  NC_SAFE_CALL( nc_close(ncid) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+template <>
+inline void ndarray<int>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+{
+#if FTK_HAVE_NETCDF
+  std::vector<size_t> mysizes(sizes, sizes+ndims);
+  std::reverse(mysizes.begin(), mysizes.end());
+  reshape(mysizes);
+
+  NC_SAFE_CALL( nc_get_vara_int(ncid, varid, starts, sizes, &p[0]) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
 template <>
 inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
 {
+#if FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
 
   NC_SAFE_CALL( nc_get_vara_float(ncid, varid, starts, sizes, &p[0]) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <>
 inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
 {
+#ifdef FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
 
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <>
 inline void ndarray<double>::to_netcdf(int ncid, int varid, const size_t st[], const size_t sz[]) const
 {
+#ifdef FTK_HAVE_NETCDF
   fprintf(stderr, "st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
       st[0], st[1], st[2], st[3], sz[0], sz[1], sz[2], sz[3]);
   NC_SAFE_CALL( nc_put_vara_double(ncid, varid, st, sz, &p[0]) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <>
 inline void ndarray<float>::to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const
 {
+#ifdef FTK_HAVE_NETCDF
   NC_SAFE_CALL( nc_put_vara_float(ncid, varid, starts, sizes, &p[0]) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <>
 inline void ndarray<int>::to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const
 {
+#ifdef FTK_HAVE_NETCDF
   NC_SAFE_CALL( nc_put_vara_int(ncid, varid, starts, sizes, &p[0]) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <typename T>
@@ -767,6 +814,7 @@ inline void ndarray<T>::to_netcdf_multivariate_unlimited_time(int ncid, int vari
 template <typename T>
 inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
 {
+#ifdef FTK_HAVE_NETCDF
   int ndims;
   NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
 
@@ -775,11 +823,15 @@ inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], 
   reshape(mysizes);
 
   read_netcdf(ncid, varid, ndims, starts, sizes);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <typename T>
 inline void ndarray<T>::read_netcdf(int ncid, int varid)
 {
+#ifdef FTK_HAVE_NETCDF
   int ndims;
   int dimids[4];
   size_t starts[4] = {0}, sizes[4] = {0};
@@ -791,72 +843,48 @@ inline void ndarray<T>::read_netcdf(int ncid, int varid)
     NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &sizes[i]) );
   
   read_netcdf(ncid, varid, starts, sizes);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <typename T>
 inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname)
 {
+#ifdef FTK_HAVE_NETCDF
   int varid;
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
   read_netcdf(ncid, varid);
-}
-
-template <typename T>
-inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname)
-{
-  int ncid, varid;
-  NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
-  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid);
-  NC_SAFE_CALL( nc_close(ncid) );
-}
-
-template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
-{
-  int varid;
-  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid, starts, sizes);
-}
-
-template <typename T>
-inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
-{
-  int ncid, varid;
-  NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
-  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid, starts, sizes);
-  NC_SAFE_CALL( nc_close(ncid) );
-}
 #else
-template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
-{
-  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
-  assert(false);
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <typename T>
 inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
-  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
-  assert(false);
-}
-
-template <typename T>
-inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname)
-{
-  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
-  assert(false);
+#ifdef FTK_HAVE_NETCDF
+  int varid;
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  read_netcdf(ncid, varid, starts, sizes);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
 }
 
 template <typename T>
 inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
 {
-  fprintf(stderr, "[FTK] fatal error: FTK is not compiled with netcdf.\n");
-  assert(false);
-}
+#ifdef FTK_HAVE_NETCDF
+  int ncid, varid;
+  NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  read_netcdf(ncid, varid, starts, sizes);
+  NC_SAFE_CALL( nc_close(ncid) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
+}
 
 template <typename T>
 void ndarray<T>::reshape(size_t ndims, const size_t dims[])
@@ -978,22 +1006,29 @@ template <typename T>
 inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
 {
   auto var = io.template InquireVariable<T>(varname);
-  // std::cerr << var << std::endl;
-  // std::cerr << var.Shape() << std::endl;
   if (var) {
+    // std::cerr << var << std::endl;
+    // std::cerr << var.Shape() << std::endl;
+
     std::vector<size_t> shape(var.Shape());
     // std::cerr << shape << std::endl;
 
-    std::vector<size_t> zeros(shape.size(), 0);
-    // fprintf(stderr, "%zu, %zu\n", shape.size(), zeros.size());
-    reshape(shape);
+    if (shape.size()) { // array type
+      std::vector<size_t> zeros(shape.size(), 0);
+      // fprintf(stderr, "%zu, %zu\n", shape.size(), zeros.size());
+      reshape(shape);
 
-    var.SetSelection({zeros, shape}); // read everything
-    reader.Get<T>(var, p);
+      var.SetSelection({zeros, shape}); // read everything
+      reader.Get<T>(var, p);
 
-    std::reverse(shape.begin(), shape.end()); // we use a different dimension ordering than adios..
-    reshape(shape);
-  }
+      std::reverse(shape.begin(), shape.end()); // we use a different dimension ordering than adios..
+      reshape(shape);
+    } else { // scalar type
+      reshape(1);
+      reader.Get<T>(var, p);
+    }
+  } else 
+    fatal(FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND);
 }
 
 template <typename T>
@@ -1050,7 +1085,8 @@ bool ndarray<T>::read_file(const std::string& filename, const std::string varnam
   if (ext == FILE_EXT_BP) read_bp(filename, varname, comm);
   else if (ext == FILE_EXT_NETCDF) read_netcdf(filename, varname);
   else if (ext == FILE_EXT_VTI) read_vtk_image_data_file(filename, varname);
-  else warn(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
+  else if (ext == FILE_EXT_HDF5) read_h5(filename, varname);
+  else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
 
   return true; // TODO: return read_* results
 }
@@ -1102,18 +1138,26 @@ inline bool ndarray<T>::read_h5(hid_t fid, const std::string& name)
 template <typename T>
 inline bool ndarray<T>::read_h5(hid_t did)
 {
-  auto sid = H5Dget_space(did);
-  const int h5ndims = H5Sget_simple_extent_ndims(sid);
-  hsize_t h5dims[h5ndims];
-  H5Sget_simple_extent_dims(sid, h5dims, NULL);
-  
-  std::vector<size_t> dims(h5ndims);
-  for (auto i = 0; i < h5ndims; i ++)
-    dims[i] = h5dims[i];
-  std::reverse(dims.begin(), dims.end()); // we use a different dimension ordering than hdf5..
-  reshape(dims);
-  
-  H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
+  auto sid = H5Dget_space(did); // space id
+  auto type = H5Sget_simple_extent_type(sid);
+
+  if (type == H5S_SIMPLE) {
+    const int h5ndims = H5Sget_simple_extent_ndims(sid);
+    hsize_t h5dims[h5ndims];
+    H5Sget_simple_extent_dims(sid, h5dims, NULL);
+    
+    std::vector<size_t> dims(h5ndims);
+    for (auto i = 0; i < h5ndims; i ++)
+      dims[i] = h5dims[i];
+    std::reverse(dims.begin(), dims.end()); // we use a different dimension ordering than hdf5..
+    reshape(dims);
+    
+    H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
+  } else if (type == H5S_SCALAR) {
+    reshape(1);
+    H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
+  } else 
+    fatal("unsupported h5 extent type");
 
   return true;
 }

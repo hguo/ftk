@@ -40,7 +40,8 @@ enum {
   FTK_ERR_NDARRAY_RESHAPE_EMPTY,
   FTK_ERR_ACCELERATOR_UNSUPPORTED = 4000,
   FTK_ERR_THREAD_BACKEND_UNSUPPORTED = 5000,
-  FTK_ERR_VTK_VARIABLE_NOT_FOUND = 6000
+  FTK_ERR_VTK_VARIABLE_NOT_FOUND = 6000,
+  FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND = 7000,
 };
 
 inline std::string err2str(int e)
@@ -80,6 +81,7 @@ inline std::string err2str(int e)
   case FTK_ERR_ACCELERATOR_UNSUPPORTED: return "unsupported accelerator";
   case FTK_ERR_THREAD_BACKEND_UNSUPPORTED: return "unsupported thread backend";
   case FTK_ERR_VTK_VARIABLE_NOT_FOUND: return "VTK variable not found";
+  case FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND: return "adios2 variable not found";
   default: return "unknown error";
   }
 }

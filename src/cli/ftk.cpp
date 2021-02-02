@@ -279,29 +279,15 @@ void initialize_xgc(diy::mpi::communicator comm)
   // determine nphi and iphi
   const std::string filename0 = js["filenames"][0];
   const std::string varname = js["variables"][0];
-
   const auto ext = file_extension(filename0);
-    
-  const auto data0 = ndarray<double>::from_file(filename0, varname);
-  xgc_nphi = data0.dim(0);
-  xgc_iphi = 1; // TODO
+  
+  // const auto data0 = ndarray<double>::from_file(filename0, varname);
 
-#if 0
-  const auto array_nphi = ndarray<int>::from_h5(filename0, "/nphi");
-  const auto array_iphi = ndarray<int>::from_h5(filename0, "/iphi");
+  const auto array_nphi = ndarray<int>::from_file(filename0, "nphi");
+  const auto array_iphi = ndarray<int>::from_file(filename0, "iphi");
 
-  if (array_nphi.size()) {
-    nphi = array_nphi[0];
-  } else { // determine nphi based on data array
-    const auto data = ndarray<double>::from_h5(filename0, varname);
-    nphi = data.dim(0);
-  }
-
-  if (array_iphi.size()) {
-    iphi = std::max(array_iphi[0], 1);
-  } else 
-    iphi = 1;
-#endif
+  xgc_nphi = array_nphi[0];
+  xgc_iphi = std::max(1, array_iphi[0]);
 
   if (xgc_data_path.length() > 0) {
     std::string postfix = ext == FILE_EXT_BP ? "bp" : "h5"; // TODO: check if format is bp
