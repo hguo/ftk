@@ -86,17 +86,6 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_MPI=ON"
 
-    - name: build with openmpi (linux)
-      os: linux
-      dist: bionic
-      addons:
-        apt:
-          packages:
-            - libopenmpi-dev 
-            - openmpi-bin
-      env: 
-        - CMAKE_ARG="-DFTK_USE_MPI=ON"
-
     - name: build with cuda10 (linux)
       os: linux
       dist: bionic
@@ -117,6 +106,19 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=$HOME/paraview-5.8.1/lib/cmake/paraview-5.8"
 
+
+  allow_failures:
+    - name: build with openmpi (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          packages:
+            - libopenmpi-dev 
+            - openmpi-bin
+      env: 
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
+    
     - name: build with mpsolve, netcdf, hdf5, vtk, and openmpi (linux)
       os: linux
       dist: bionic
@@ -134,7 +136,6 @@ jobs:
         - CMAKE_ARG="-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_USE_VTK=ON -DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/tmp/MPSolve-3.2.1/include -DMPSolve_LIBRARY=/tmp/MPSolve-3.2.1/lib/libmps.so"
 
 
-  allow_failures:
     - name: build with mpich from spack
       os: linux
       dist: bionic
