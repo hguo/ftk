@@ -82,10 +82,10 @@ struct ndarray { // : object {
   ndarray(const T *a, const std::vector<size_t> &shape);
   
   template <typename T1> ndarray(const ndarray<T1>& array1) { from_array<T1>(array1); }
-  ndarray(const ndarray<T>& a) { dims = a.dims; s = a.s; ncd = a.ncd; p = a.p; }
+  ndarray(const ndarray<T>& a) { dims = a.dims; s = a.s; ncd = a.ncd; tv = a.tv; p = a.p; }
   
   template <typename T1> ndarray<T>& operator=(const ndarray<T1>& array1) { from_array<T1>(array1); return *this; }
-  ndarray<T>& operator=(const ndarray<T>& a) { dims = a.dims; s = a.s; ncd = a.ncd; p = a.p; return *this; }
+  ndarray<T>& operator=(const ndarray<T>& a) { dims = a.dims; s = a.s; ncd = a.ncd; tv = a.tv; p = a.p; return *this; }
 
   std::ostream& print(std::ostream& os) const;
   std::ostream& print_shape(std::ostream& os) const;
@@ -100,6 +100,9 @@ struct ndarray { // : object {
 
   void set_multicomponents(size_t c=1) {ncd = c;}
   size_t multicomponents() const {return ncd;}
+
+  void set_has_time(bool b) { tv = b; }
+  bool has_time() const { return tv; }
 
   lattice get_lattice() const;
 
@@ -340,7 +343,8 @@ public: // statistics & misc
 
 private:
   std::vector<size_t> dims, s;
-  size_t ncd = 0; // Number of dimensions for components.  For 3D vector field, nd=4, ncd=1.  For 3D jacobian field, nd=5, ncd=2
+  size_t ncd = 0; // number of dimensions for components.  For 3D vector field, nd=4, ncd=1.  For 3D jacobian field, nd=5, ncd=2
+  bool tv = false; // wheter the last dimension is time
   std::vector<T> p;
     
 #if 0 // FTK_HAVE_CUDA
@@ -423,6 +427,7 @@ void ndarray<T>::from_array(const ndarray<T1>& array1)
   for (auto i = 0; i < p.size(); i ++)
     p[i] = static_cast<T>(array1[i]);
   ncd = array1.multicomponents();
+  tv = array1.has_time();
 }
 
 template <typename T>
@@ -463,6 +468,7 @@ void ndarray<T>::swap(ndarray& x)
   s.swap(x.s);
   p.swap(x.p);
   std::swap(x.ncd, ncd);
+  std::swap(x.tv, tv);
 }
 
 template <typename T>
@@ -885,6 +891,9 @@ void ndarray<T>::reshape(const std::vector<size_t> &dims_)
   dims = dims_;
   s.resize(dims.size());
 
+  if (dims.size() == 0)
+    fatal(FTK_ERR_NDARRAY_RESHAPE_EMPTY);
+
   for (size_t i = 0; i < nd(); i ++)
     if (i == 0) s[i] = 1;
     else s[i] = s[i-1]*dims[i-1];
@@ -957,7 +966,7 @@ inline void ndarray<T>::read_bp(const std::string& filename, const std::string& 
   adios2::IO io = adios.DeclareIO("BPReader");
   adios2::Engine reader = io.Open(filename, adios2::Mode::Read); // , MPI_COMM_SELF);
   
-  from_adios2(io, reader, varname);
+  read_bp(io, reader, varname);
   reader.Close();
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
@@ -982,8 +991,8 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const st
     var.SetSelection({zeros, shape}); // read everything
     reader.Get<T>(var, p);
 
-    // std::reverse(shape.begin(), shape.end());
-    // reshape(shape);
+    std::reverse(shape.begin(), shape.end()); // we use a different dimension ordering than adios..
+    reshape(shape);
   }
 }
 
@@ -1101,7 +1110,7 @@ inline bool ndarray<T>::read_h5(hid_t did)
   std::vector<size_t> dims(h5ndims);
   for (auto i = 0; i < h5ndims; i ++)
     dims[i] = h5dims[i];
-  std::reverse(dims.begin(), dims.end());
+  std::reverse(dims.begin(), dims.end()); // we use a different dimension ordering than hdf5..
   reshape(dims);
   
   H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
@@ -1449,6 +1458,7 @@ namespace diy {
       diy::save(bb, a.dims);
       diy::save(bb, a.s);
       diy::save(bb, a.ncd);
+      diy::save(bb, a.tv);
       diy::save(bb, a.p);
     }
    
@@ -1456,6 +1466,7 @@ namespace diy {
       diy::load(bb, a.dims);
       diy::load(bb, a.s);
       diy::load(bb, a.ncd);
+      diy::load(bb, a.tv);
       diy::load(bb, a.p);
     }
   };

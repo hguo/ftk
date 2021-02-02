@@ -147,19 +147,17 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
     diy::mpi::communicator comm)
 {
   ndarray<I> triangles = ndarray<I>::from_bp(filename, "/cell_set[0]/node_connect_list", comm);
-  ndarray<F> coords = ndarray<I>::from_bp(filename, "/coordinates/values", comm);
+  ndarray<F> coords = ndarray<F>::from_bp(filename, "/coordinates/values", comm);
   ndarray<I> nextnodes = ndarray<I>::from_bp(filename, "nextnode", comm);
   ndarray<F> psifield = ndarray<F>::from_bp(filename, "psi", comm);
 
-  triangles.transpose();
-  coords.transpose();
-  // triangles.reshape(triangles.dim(1), triangles.dim(0));
-  // coords.reshape(coords.dim(1), coords.dim(0));
+  // triangles.transpose();
+  // coords.transpose();
 
-  std::cerr << triangles.shape() << std::endl;
-  std::cerr << coords.shape() << std::endl;
-  std::cerr << nextnodes.shape() << std::endl;
-  std::cerr << psifield.shape() << std::endl;
+  // std::cerr << triangles.shape() << std::endl;
+  // std::cerr << coords.shape() << std::endl;
+  // std::cerr << nextnodes.shape() << std::endl;
+  // std::cerr << psifield.shape() << std::endl;
 
   return std::shared_ptr<simplicial_xgc_2d_mesh<I, F>>(
       new simplicial_xgc_2d_mesh<I, F>(coords, triangles, psifield, nextnodes));

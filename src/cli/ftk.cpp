@@ -279,8 +279,10 @@ void initialize_xgc(diy::mpi::communicator comm)
   // determine nphi and iphi
   const std::string filename0 = js["filenames"][0];
   const std::string varname = js["variables"][0];
+
+  const auto ext = file_extension(filename0);
     
-  const auto data0 = ndarray<double>::from_h5(filename0, varname);
+  const auto data0 = ndarray<double>::from_file(filename0, varname);
   xgc_nphi = data0.dim(0);
   xgc_iphi = 1; // TODO
 
@@ -302,7 +304,7 @@ void initialize_xgc(diy::mpi::communicator comm)
 #endif
 
   if (xgc_data_path.length() > 0) {
-    std::string postfix = "h5"; // TODO: check if format is bp
+    std::string postfix = ext == FILE_EXT_BP ? "bp" : "h5"; // TODO: check if format is bp
     xgc_mesh_filename = xgc_data_path + "/xgc.mesh." + postfix;
     if (!file_exists(xgc_mesh_filename)) {
       postfix = "bp";
@@ -341,6 +343,7 @@ void initialize_xgc(diy::mpi::communicator comm)
   
   mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename, comm);
   // mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_adios2(comm, xgc_mesh_filename);
+  // mx2->to_vtu("xgc_base_mesh.vtu");
   mx2->initialize_point_locator();
   mx2->initialize_roi();
   if (xgc_bfield_filename.length() > 0)

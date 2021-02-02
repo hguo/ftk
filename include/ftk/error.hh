@@ -24,6 +24,7 @@ enum {
   FTK_ERR_NOT_BUILT_WITH_LEVELDB,
   FTK_ERR_NOT_BUILT_WITH_MPI,
   FTK_ERR_NOT_BUILT_WITH_MPSOLVE,
+  FTK_ERR_NOT_BUILT_WITH_NETCDF,
   FTK_ERR_NOT_BUILT_WITH_OPENMP,
   FTK_ERR_NOT_BUILT_WITH_PARAVIEW,
   FTK_ERR_NOT_BUILT_WITH_PNETCDF,
@@ -36,6 +37,7 @@ enum {
   FTK_ERR_NOT_BUILT_WITH_VTK,
   FTK_ERR_NDARRAY_MULTIDIMENSIONAL_COMPONENTS = 3000, // only support one dim for components
   FTK_ERR_NDARRAY_UNSUPPORTED_DIMENSIONALITY,
+  FTK_ERR_NDARRAY_RESHAPE_EMPTY,
   FTK_ERR_ACCELERATOR_UNSUPPORTED = 4000,
   FTK_ERR_THREAD_BACKEND_UNSUPPORTED = 5000,
   FTK_ERR_VTK_VARIABLE_NOT_FOUND = 6000
@@ -61,6 +63,7 @@ inline std::string err2str(int e)
   case FTK_ERR_NOT_BUILT_WITH_LEVELDB: return "FTK not compiled with LevelDB";
   case FTK_ERR_NOT_BUILT_WITH_MPI: return "FTK not compiled with MPI";
   case FTK_ERR_NOT_BUILT_WITH_MPSOLVE: return "FTK not compiled with MPSolve";
+  case FTK_ERR_NOT_BUILT_WITH_NETCDF: return "FTK not compiled with NetCDF";
   case FTK_ERR_NOT_BUILT_WITH_OPENMP: return "FTK not compiled with OpenMP";
   case FTK_ERR_NOT_BUILT_WITH_PARAVIEW: return "FTK not compiled with ParaView";
   case FTK_ERR_NOT_BUILT_WITH_PNETCDF: return "FTK not compiled with Parallel-NetCDF";
@@ -73,6 +76,7 @@ inline std::string err2str(int e)
   case FTK_ERR_NOT_BUILT_WITH_VTK: return "FTK not compiled with VTK";
   case FTK_ERR_NDARRAY_MULTIDIMENSIONAL_COMPONENTS: return "FTK only supports one dim for components";
   case FTK_ERR_NDARRAY_UNSUPPORTED_DIMENSIONALITY: return "unsupported data dimensionality";
+  case FTK_ERR_NDARRAY_RESHAPE_EMPTY: return "unable to reshape empty array";
   case FTK_ERR_ACCELERATOR_UNSUPPORTED: return "unsupported accelerator";
   case FTK_ERR_THREAD_BACKEND_UNSUPPORTED: return "unsupported thread backend";
   case FTK_ERR_VTK_VARIABLE_NOT_FOUND: return "VTK variable not found";
