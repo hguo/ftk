@@ -19,7 +19,7 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   virtual size_t n(int d) const;
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
 
-  bool probe_nphi_iphi_h5(const std::string& filename);
+  bool probe_nphi_iphi(const std::string& filename);
   void set_nphi_iphi(int n, int i) {nphi = n; iphi = i;}
   void set_vphi(int v) { vphi = v; }
 
@@ -127,24 +127,15 @@ simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
 }
 
 template <typename I, typename F>
-bool simplicial_xgc_3d_mesh<I, F>::probe_nphi_iphi_h5(const std::string& filename)
+bool simplicial_xgc_3d_mesh<I, F>::probe_nphi_iphi(const std::string& filename)
 {
-  const std::string varname("/dpot");
-  const auto array_nphi = ndarray<int>::from_h5(filename, "/nphi");
-  const auto array_iphi = ndarray<int>::from_h5(filename, "/iphi");
+  // determine nphi and iphi
+  const auto ext = file_extension(filename);
+  const auto array_nphi = ndarray<int>::from_file(filename, "nphi");
+  const auto array_iphi = ndarray<int>::from_file(filename, "iphi");
 
-  if (array_nphi.size()) {
-    nphi = array_nphi[0];
-  } else { // determine nphi based on data array
-    const auto data = ndarray<double>::from_h5(filename, varname);
-    nphi = data.dim(0);
-  }
-
-  if (array_iphi.size()) {
-    iphi = std::max(array_iphi[0], 1);
-  } else 
-    iphi = 1;
-
+  nphi = array_nphi[0];
+  iphi = std::max(1, array_iphi[0]);
   return true;
 }
 

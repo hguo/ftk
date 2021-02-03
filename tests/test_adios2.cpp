@@ -20,7 +20,7 @@ int main(int argc, char **argv)
   }
 
   ftk::ndarray<double> array;
-  array.from_adios2(io, reader, "dpot");
+  array.read_bp(io, reader, "dpot");
 
   reader.Close();
 #endif
