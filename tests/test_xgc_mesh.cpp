@@ -5,13 +5,13 @@
 #include <ftk/ndarray.hh>
 #include "main.hh"
 
-std::string xgc_mesh_filename = "xgc.mesh.h5";
+std::string xgc_mesh_filename = xgc_data_path + "/xgc.mesh.h5";
 
 const int nphi = 16, iphi = 1;
 
 #if FTK_HAVE_HDF5
 TEST_CASE("xgc_mesh_3d_sides") {
-  auto m2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  auto m2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename);
   std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi));
 
   srand(0);
@@ -41,7 +41,7 @@ TEST_CASE("xgc_mesh_3d_sides") {
 }
 
 TEST_CASE("xgc_mesh_3d_find") {
-  auto m2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  auto m2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename);
   std::shared_ptr<ftk::simplicial_xgc_3d_mesh<>> mx(new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi));
 
   srand(0);
@@ -66,7 +66,7 @@ TEST_CASE("xgc_mesh_3d_find") {
 }
 
 TEST_CASE("xgc_mesh_point_locator_2d") {
-  auto mx2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  auto mx2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename);
   mx2->initialize_point_locator();
 
   double lbx = 1.0, ubx = 1.5, 

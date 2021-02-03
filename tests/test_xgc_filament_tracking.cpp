@@ -27,14 +27,14 @@ std::shared_ptr<simplicial_xgc_3d_mesh<>> mx3, // 3d mesh,
 TEST_CASE("xgc_synthetic_filament_tracking") {
   diy::mpi::communicator world;
 
-  mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_data_path + "/" + xgc_mesh_filename);
+  mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_data_path + "/" + xgc_mesh_filename);
   mx2->initialize_point_locator();
-  mx2->read_bfield_h5(xgc_data_path + "/" + xgc_bfield_filename);
+  mx2->read_bfield(xgc_data_path + "/" + xgc_bfield_filename);
   mx2->read_units_m(xgc_data_path + "/" + xgc_units_filename);
   mx2->build_smoothing_kernel(xgc_smoothing_kernel_size);
   
   mx3.reset( new simplicial_xgc_3d_mesh<>(mx2) );
-  mx3->probe_nphi_iphi_h5( xgc_data_path + "/" + xgc_3d_filename );
+  mx3->probe_nphi_iphi( xgc_data_path + "/" + xgc_3d_filename );
   mx3->set_vphi( vphi );
   mx3->initialize_interpolants();
   

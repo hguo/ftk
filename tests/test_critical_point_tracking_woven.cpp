@@ -8,7 +8,7 @@ using nlohmann::json;
 
 const int woven_n_trajs = 56; // 48;
 
-#if FTK_HAVE_CUDA
+#if FTK_TEST_CUDA
 TEST_CASE("critical_point_tracking_cuda_woven_synthetic") {
   auto result = track_cp2d(js_woven_synthetic, {
     {"accelerator", "cuda"}
