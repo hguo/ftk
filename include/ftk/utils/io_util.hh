@@ -69,7 +69,7 @@ static inline int file_extension(const std::string& f)
   else if (m("h5") || m("hdf5"))
     return FILE_EXT_HDF5;
   else if (m("bp") || m("adios2"))
-    return FILE_EXT_HDF5;
+    return FILE_EXT_BP;
   else if (m("npy") || m("numpy"))
     return FILE_EXT_NUMPY;
   else if (m("png"))

@@ -1,4 +1,4 @@
-# FTK synthetic data
+# Synthetic data
 
 We provide a number of options to produce synthetic data for tutorial and testing purposes.  These synthetic data are generated on-the-fly and consumed by feature tracking algorithms.
 

@@ -6,7 +6,7 @@
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
-#include <ftk/filters/xgc_filament_tracker.cuh>
+#include <ftk/filters/xgc_blob_filament_tracker.cuh>
 #include "common.cuh"
 #include "mx4.cuh"
 
@@ -29,6 +29,7 @@ bool check_simplex(
     const F m2coords[], // m2 vertex coordinates
     const I m2edges[], // list of m2 edges
     const I m2tris[], // list of m2 triangles
+    const F psin_[], // normalized psi
     const ftk::xgc_interpolant_t<I, F>* interpolants, // interpolants
     const F *const scalar[2], // current and next scalar
     const F *const vector[2], // current and next grad
@@ -42,7 +43,7 @@ bool check_simplex(
   const I m3n0 = m2n0 * np;
 
   I verts[3], t[3], p[3];
-  F rzpt[3][4], f[3], v[3][2], j[3][2][2];
+  F rzpt[3][4], f[3], v[3][2], j[3][2][2], psin[3];
 
   mx4_get_tri(i, verts, np, m2n0, m2n1, m2n2, m2edges, m2tris);
 
@@ -51,6 +52,7 @@ bool check_simplex(
     const I v3 = verts[k] % m3n0; // vert in m3
     const I v2 = v3 % m2n0; // vert in m2
     p[k] = v3 / m2n0; // poloidal plane
+    psin[k] = psin_[v2];
 
     mx3_get_coords(v3, rzpt[k], m2n0, m2coords);
     rzpt[k][3] = t[k];
@@ -105,7 +107,9 @@ bool check_simplex(
     cp.x[k] = x[k];
   cp.t = x[3];
 
-  cp.scalar[0] = f[0] * mu[0] + f[1] * mu[1] + f[2] * mu[2];
+  // cp.scalar[0] = f[0] * mu[0] + f[1] * mu[1] + f[2] * mu[2];
+  cp.scalar[0] = ftk::lerp_s2( f, mu );
+  cp.scalar[1] = ftk::lerp_s2( psin, mu );
   cp.tag = i;
 
   F h[2][2];
@@ -132,6 +136,7 @@ void sweep_simplices(
     const F m2coords[], // m2 vertex coordinates
     const I m2edges[], // list of m2 edges
     const I m2tris[], // list of m2 triangles
+    const F psin[],
     const ftk::xgc_interpolant_t<I, F> *interpolants, 
     const F* scalar0, // current scalar
     const F* scalar1, // next scalar
@@ -168,6 +173,7 @@ void sweep_simplices(
       nphi, iphi, vphi, 
       m2n0, m2n1, m2n2, 
       m2coords, m2edges, m2tris,
+      psin,
       interpolants, 
       scalar, vector, jacobian, 
       cp);
@@ -193,6 +199,8 @@ void xft_create_ctx(ctx_t **c_)
   cudaMalloc((void**)&c->dcps, c->bufsize);
   checkLastCudaError("[FTK-CUDA] cuda malloc");
 
+  c->d_psin = NULL;
+
   c->d_kernel_nodes = NULL;
   c->d_kernel_values = NULL;
   c->d_kernel_lengths = NULL;
@@ -214,6 +222,7 @@ void xft_destroy_ctx(ctx_t **c_)
   if (c->d_m2coords != NULL) cudaFree(c->d_m2coords);
   if (c->d_m2edges != NULL) cudaFree(c->d_m2edges);
   if (c->d_m2tris != NULL) cudaFree(c->d_m2tris);
+  if (c->d_psin != NULL) cudaFree(c->d_psin);
 
   if (c->d_interpolants != NULL) cudaFree(c->d_interpolants);
 
@@ -265,6 +274,7 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
       c->nphi, c->iphi, c->vphi, 
       c->m2n0, c->m2n1, c->m2n2, 
       c->d_m2coords, c->d_m2edges, c->d_m2tris, 
+      c->d_psin,
       c->d_interpolants, 
       c->d_scalar[0], c->d_scalar[1],
       c->d_vector[0], c->d_vector[1],
@@ -466,6 +476,13 @@ void xft_load_smoothing_kernel(ctx_t *c, double sigma, const std::vector<std::ve
 
   checkLastCudaError("[FTK-CUDA] loading smoothing kernel");
   // fprintf(stderr, "smoothing kernels loaded to GPU.\n");
+}
+
+void xft_load_psin(ctx_t *c, const double *psin)
+{
+  cudaMalloc((void**)&c->d_psin, c->m2n0 * sizeof(double));
+  cudaMemcpy(c->d_psin, psin, c->m2n0 * sizeof(double), cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] loading psin");
 }
 
 void xft_load_mesh(ctx_t *c,

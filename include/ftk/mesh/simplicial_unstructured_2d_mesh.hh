@@ -491,6 +491,20 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_v
 #endif
 
 template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::to_vtu(const std::string& filename) const
+{
+#if FTK_HAVE_VTK
+  auto grid = to_vtu();
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName( filename.c_str() );
+  writer->SetInputData( grid );
+  writer->Write();
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+}
+
+template <typename I, typename F>
 template <typename T>
 void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(const std::string& filename, const std::string& varname, const ndarray<T>& array) const
 {
@@ -506,7 +520,7 @@ void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(const std::string& file
   writer->SetInputData( grid );
   writer->Write();
 #else
-  this->fatal("FTK not compiled with VTK.");
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 

@@ -72,6 +72,7 @@ protected:
   ndarray<T> request_timestep_file_nc(int k);
   ndarray<T> request_timestep_file_vti(int k);
   ndarray<T> request_timestep_file_h5(int k);
+  ndarray<T> request_timestep_file_bp(int k);
   template <typename T1> ndarray<T> request_timestep_file_binary(int k);
 
   ndarray<T> request_timestep_synthetic(int k);
@@ -358,10 +359,13 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
         const std::string filename0 = j["filenames"][0];
 
         if (!j.contains("format")) { // probing file format
-          if (ends_with(filename0, "vti")) j["format"] = "vti";
-          else if (ends_with(filename0, "nc")) j["format"] = "nc";
-          else if (ends_with(filename0, "h5")) j["format"] = "h5";
-          else fatal("unable to determine file format.");
+          const auto ext = file_extension(filename0);
+          
+          if (ext == FILE_EXT_VTI) j["format"] = "vti";
+          else if (ext == FILE_EXT_NETCDF) j["format"] = "nc";
+          else if (ext == FILE_EXT_HDF5) j["format"] = "h5";
+          else if (ext == FILE_EXT_BP) j["format"] = "bp";
+          else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
         }
 
         if (j["format"] == "float32" || j["format"] == "float64") {
@@ -418,7 +422,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           else 
             j["n_timesteps"] = j["filenames"].size();
 #else
-          fatal("FTK not compiled with VTK.");
+          fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
         } else if (j["format"] == "nc") {
 #if FTK_HAVE_NETCDF
@@ -499,7 +503,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             fatal("unsupported netcdf variable dimensionality");
 
 #else
-          fatal("FTK not compiled with NetCDF.");
+          fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
         } else if (j["format"] == "h5") {
 #if FTK_HAVE_HDF5
@@ -532,8 +536,36 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           const std::vector<int> components(nv, 1);
           j["components"] = components;
 #else
-          fatal("FTK not compiled with HDF5.");
-          // fatal("array stream w/ h5 not implemented yet");
+          fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
+#endif
+        } else if (j["format"] == "bp") {
+#if FTK_HAVE_ADIOS2
+          if (missing_variables)
+            fatal("missing variables for bp");
+          const std::string varname0 = j["variables"][0];
+
+          adios2::ADIOS adios(comm);
+          adios2::IO io = adios.DeclareIO("BPReader");
+          adios2::Engine reader = io.Open(filename0, adios2::Mode::Read);
+
+          auto var = io.template InquireVariable<T>(varname0);
+          if (!var) fatal("variable not found in bp");
+
+          std::vector<size_t> dims(var.Shape());
+          if (j.contains("dimensions"))
+            warn("ignoring bp dimensions");
+          j["dimensions"] = dims;
+
+          reader.Close();
+
+          j["n_timesteps"] = j["filenames"].size();
+
+          // components
+          const size_t nv = j["variables"].size();
+          const std::vector<int> components(nv, 1);
+          j["components"] = components;
+#else
+          fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
 #endif
         }
       } else fatal("missing filenames");
@@ -582,16 +614,19 @@ std::vector<size_t> ndarray_stream<T>::shape() const
 template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
 {
-  if (j["format"] == "float32") 
+  const std::string fmt = j["format"];
+  if (fmt == "float32") 
     return request_timestep_file_binary<float>(k);
-  else if (j["format"] == "float64")
+  else if (fmt == "float64")
     return request_timestep_file_binary<double>(k);
-  else if (j["format"] == "vti")
+  else if (fmt == "vti")
     return request_timestep_file_vti(k);
-  else if (j["format"] == "nc")
+  else if (fmt == "nc")
     return request_timestep_file_nc(k);
-  else if (j["format"] == "h5")
+  else if (fmt == "h5")
     return request_timestep_file_h5(k);
+  else if (fmt == "bp")
+    return request_timestep_file_bp(k);
   else return ndarray<T>();
 }
 
@@ -601,7 +636,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_binary(int k)
 {
   const std::string filename = j["filenames"][k];
   ftk::ndarray<T1> array1(shape());
-  array1.from_binary_file(filename);
+  array1.read_binary_file(filename);
   
   ftk::ndarray<T> array(shape());
   array.from_array(array1);
@@ -618,11 +653,11 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 #if FTK_HAVE_VTK
   const int nv = n_variables();
   if (nv == 1) { //  (is_single_component()) {
-    array.from_vtk_image_data_file(filename, j["variables"][0]);
+    array.read_vtk_image_data_file(filename, j["variables"][0]);
   } else {
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_vtk_image_data_file(filename, j["variables"][i]);
+      arrays[i].read_vtk_image_data_file(filename, j["variables"][i]);
 
     array.reshape(shape());
     for (int i = 0; i < arrays[0].nelem(); i ++) {
@@ -693,13 +728,13 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
 #if FTK_HAVE_NETCDF
   const int nv = n_variables();
   if (nv == 1) { // all data in one single variable; channels are automatically handled in ndarray
-    array.from_netcdf(filename, j["variables"][0], starts, sizes);
+    array.read_netcdf(filename, j["variables"][0], starts, sizes);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_netcdf(filename, j["variables"][i], starts, sizes);
+      arrays[i].read_netcdf(filename, j["variables"][i], starts, sizes);
 
     array.reshape(shape());
     for (int i = 0; i < arrays[0].nelem(); i ++) {
@@ -724,19 +759,43 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_h5(int k)
 #if FTK_HAVE_HDF5
   const int nc = n_components();
   if (nc == 1) { // all data in one single-component variable; channels are automatically handled in ndarray
-    array.from_h5(filename, j["variables"][0]);
+    array.read_h5(filename, j["variables"][0]);
     array.reshape(shape()); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].from_h5(filename, j["variables"][i]);
+      arrays[i].read_h5(filename, j["variables"][i]);
 
     array = ndarray<T>::concat(arrays);
     array.set_multicomponents();
   }
 #else
-  fatal("FTK not compiled with HDF5");
+  fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
+#endif
+  return array;
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_file_bp(int k)
+{
+  ftk::ndarray<T> array;
+  const std::string filename = j["filenames"][k];
+#if FTK_HAVE_ADIOS2
+  const int nc = n_components();
+  if (nc == 1) { // all data in one single-component variable; channels are automatically handled in ndarray
+    array.read_bp(filename, j["variables"][0], comm);
+  } else { // u, v, w in separate variables
+    const int nv = n_variables();
+    std::vector<ftk::ndarray<T>> arrays(nv);
+    for (int i = 0; i < nv; i ++)
+      arrays[i].read_bp(filename, j["variables"][i]);
+
+    array = ndarray<T>::concat(arrays);
+    array.set_multicomponents();
+  }
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
 #endif
   return array;
 }

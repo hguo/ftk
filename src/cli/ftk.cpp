@@ -279,30 +279,18 @@ void initialize_xgc(diy::mpi::communicator comm)
   // determine nphi and iphi
   const std::string filename0 = js["filenames"][0];
   const std::string varname = js["variables"][0];
-    
-  const auto data0 = ndarray<double>::read_h5(filename0, varname);
-  xgc_nphi = data0.dim(0);
-  xgc_iphi = 1; // TODO
+  const auto ext = file_extension(filename0);
+  
+  // const auto data0 = ndarray<double>::from_file(filename0, varname);
 
-#if 0
-  const auto array_nphi = ndarray<int>::read_h5(filename0, "/nphi");
-  const auto array_iphi = ndarray<int>::read_h5(filename0, "/iphi");
+  const auto array_nphi = ndarray<int>::from_file(filename0, "nphi");
+  const auto array_iphi = ndarray<int>::from_file(filename0, "iphi");
 
-  if (array_nphi.size()) {
-    nphi = array_nphi[0];
-  } else { // determine nphi based on data array
-    const auto data = ndarray<double>::read_h5(filename0, varname);
-    nphi = data.dim(0);
-  }
-
-  if (array_iphi.size()) {
-    iphi = std::max(array_iphi[0], 1);
-  } else 
-    iphi = 1;
-#endif
+  xgc_nphi = array_nphi[0];
+  xgc_iphi = std::max(1, array_iphi[0]);
 
   if (xgc_data_path.length() > 0) {
-    std::string postfix = "h5"; // TODO: check if format is bp
+    std::string postfix = ext == FILE_EXT_BP ? "bp" : "h5"; // TODO: check if format is bp
     xgc_mesh_filename = xgc_data_path + "/xgc.mesh." + postfix;
     if (!file_exists(xgc_mesh_filename)) {
       postfix = "bp";
@@ -339,12 +327,13 @@ void initialize_xgc(diy::mpi::communicator comm)
     fprintf(stderr, "=============\n");
   }
   
-  mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_h5(xgc_mesh_filename);
+  mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename, comm);
   // mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_adios2(comm, xgc_mesh_filename);
+  // mx2->to_vtu("xgc_base_mesh.vtu");
   mx2->initialize_point_locator();
   mx2->initialize_roi();
   if (xgc_bfield_filename.length() > 0)
-    mx2->read_bfield_h5(xgc_bfield_filename);
+    mx2->read_bfield(xgc_bfield_filename);
   if (xgc_units_filename.length() > 0)
     mx2->read_units_m(xgc_units_filename);
  

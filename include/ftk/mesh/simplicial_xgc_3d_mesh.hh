@@ -130,13 +130,13 @@ template <typename I, typename F>
 bool simplicial_xgc_3d_mesh<I, F>::probe_nphi_iphi_h5(const std::string& filename)
 {
   const std::string varname("/dpot");
-  const auto array_nphi = ndarray<int>::read_h5(filename, "/nphi");
-  const auto array_iphi = ndarray<int>::read_h5(filename, "/iphi");
+  const auto array_nphi = ndarray<int>::from_h5(filename, "/nphi");
+  const auto array_iphi = ndarray<int>::from_h5(filename, "/iphi");
 
   if (array_nphi.size()) {
     nphi = array_nphi[0];
   } else { // determine nphi based on data array
-    const auto data = ndarray<double>::read_h5(filename, varname);
+    const auto data = ndarray<double>::from_h5(filename, varname);
     nphi = data.dim(0);
   }
 

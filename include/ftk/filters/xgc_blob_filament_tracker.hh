@@ -15,7 +15,7 @@
 #endif
 
 #if FTK_HAVE_CUDA
-#include "xgc_filament_tracker.cuh"
+#include "xgc_blob_filament_tracker.cuh"
 #endif
 
 namespace ftk {
@@ -60,6 +60,7 @@ protected:
       int t[n],
       int p[n],
       T rzpt[n][4], 
+      T psin[n], // normalized psi
       T f[n], // scalars
       T v[n][2], // vectors
       T j[n][2][2]); // jacobians
@@ -138,6 +139,10 @@ inline void xgc_blob_filament_tracker::initialize()
     xft_load_smoothing_kernel(ctx, 
         m2->get_smoothing_kernel_size(),
         m2->get_smoothing_kernel());
+
+    ndarray<double> psin = m2->get_psifield();
+    psin /= m2->get_units().psi_x;
+    xft_load_psin(ctx, psin.data());
   }
 #endif
 }
@@ -258,11 +263,11 @@ inline void xgc_blob_filament_tracker::update_timestep()
 inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3], t[3], p[3];
-  double rzpt[3][4], f[3], v[3][2], j[3][2][2];
+  double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2];
   long long vf[3][2];
   const long long factor = 1 << 15; // WIP
  
-  simplex_values<3, double>(i, tri, t, p, rzpt, f, v, j);
+  simplex_values<3, double>(i, tri, t, p, rzpt, psin, f, v, j);
 
   // print3x2("rz", rz);
   // print3x2("v", v);
@@ -283,7 +288,8 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
     cp.x[k] = x[k];
   cp.t = x[3];
 
-  cp.scalar[0] = f[0] * mu[0] + f[1] * mu[1] + f[2] * mu[2];
+  cp.scalar[0] = lerp_s2(f, mu);
+  cp.scalar[1] = lerp_s2(psin, mu);
 
   double h[2][2];
   ftk::lerp_s2m2x2(j, mu, h);
@@ -405,6 +411,7 @@ void xgc_blob_filament_tracker::simplex_values(
     int t[n], // time
     int p[n], // poloidal
     T rzpt[n][4], 
+    T psin[n], // normalized psi
     T f[n],
     T v[n][2],
     T j[n][2][2])
@@ -421,6 +428,7 @@ void xgc_blob_filament_tracker::simplex_values(
     const int v3 = verts[k] % m3->n(0); // vertex id in m3 mesh
     const int v2 = v3 % m2->n(0); // vertex id in m2 mesh
     p[k] = v3 / m2->n(0); // poloidal plane coords
+    psin[k] = m2->psin(v2); // normalized psi
 
     // if (m3->is_poloidal(p[k])) fprintf(stderr, "non-poloidal virtual plane\n");
     m3->get_coords_rzp(v3, rzpt[k]);
