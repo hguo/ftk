@@ -20,6 +20,7 @@ enum {
   FTK_ERR_NOT_BUILT_WITH_CUDA,
   FTK_ERR_NOT_BUILT_WITH_GMP,
   FTK_ERR_NOT_BUILT_WITH_HDF5,
+  FTK_ERR_NOT_BUILT_WITH_HIPSYCL,
   FTK_ERR_NOT_BUILT_WITH_KOKKOS,
   FTK_ERR_NOT_BUILT_WITH_LEVELDB,
   FTK_ERR_NOT_BUILT_WITH_MPI,
@@ -60,6 +61,7 @@ inline std::string err2str(int e)
   case FTK_ERR_NOT_BUILT_WITH_CUDA: return "FTK not compiled with CUDA";
   case FTK_ERR_NOT_BUILT_WITH_GMP: return "FTK not compiled with GMP";
   case FTK_ERR_NOT_BUILT_WITH_HDF5: return "FTK not compiled with HDF5";
+  case FTK_ERR_NOT_BUILT_WITH_HIPSYCL: return "FTK not compiled with hipSYCL";
   case FTK_ERR_NOT_BUILT_WITH_KOKKOS: return "FTK not compiled with Kokkos";
   case FTK_ERR_NOT_BUILT_WITH_LEVELDB: return "FTK not compiled with LevelDB";
   case FTK_ERR_NOT_BUILT_WITH_MPI: return "FTK not compiled with MPI";

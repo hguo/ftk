@@ -244,6 +244,10 @@ void critical_point_tracker_wrapper::configure_tracker_general(diy::mpi::communi
   if (j.contains("accelerator")) {
     if (j["accelerator"] == "cuda")
       tracker->use_accelerator( FTK_XL_CUDA );
+    else if (j["accelerator"] == "sycl")
+      tracker->use_accelerator( FTK_XL_SYCL );
+    else 
+      fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
   }
 
   if (j.contains("thread_backend")) {

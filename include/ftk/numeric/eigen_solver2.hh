@@ -18,6 +18,11 @@ template <typename T>
 __device__ __host__
 inline void solve_eigenvalues_symmetric2x2(T m00, T m10, T m11, T eig[2])
 {
+#ifndef __CUDACC__
+  using std::abs;
+  using std::swap;
+#endif
+
   const T b = -(m00 + m11), c = m00*m11 - m10*m10;
   // const T delta = b*b - 4*c;
 #ifdef __CUDACC__
@@ -31,15 +36,8 @@ inline void solve_eigenvalues_symmetric2x2(T m00, T m10, T m11, T eig[2])
   eig[0] = T(0.5) * (-b+sqrt_delta);
   eig[1] = T(0.5) * (-b-sqrt_delta);
 
-  if (abs(eig[0]) < abs(eig[1])) {
-#ifdef __CUDACC__
-    T t(eig[0]);
-    eig[0] = eig[1];
-    eig[1] = t;
-#else
-    std::swap(eig[0], eig[1]);
-#endif
-  }
+  if (abs(eig[0]) < abs(eig[1]))
+    swap(eig[0], eig[1]);
 }
 
 template <typename T>

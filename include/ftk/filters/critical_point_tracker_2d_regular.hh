@@ -29,7 +29,6 @@
 #include <gmpxx.h>
 #endif
 
-#if FTK_HAVE_CUDA
 extern std::vector<ftk::feature_point_lite_t> // <3, double>> 
 extract_cp2dt_cuda(
     int scope, int current_timestep, 
@@ -45,7 +44,60 @@ extract_cp2dt_cuda(
     bool use_explicit_coords,
     const double *coords // coords of vertices
   ); 
+
+extern std::vector<ftk::feature_point_lite_t> // <3, double>> 
+extract_cp2dt_sycl(
+    int scope, int current_timestep, 
+    const ftk::lattice& domain, // 3D
+    const ftk::lattice& core, // 3D
+    const ftk::lattice& ext, // 2D, array dimension
+    const double *Vc, // current timestep
+    const double *Vn, // next timestep
+    const double *Jc, // jacobian of current timestep
+    const double *Jn, // jacobian of next timestep
+    const double *Sc, // scalar of current timestep
+    const double *Sn, // scalar of next timestep
+    bool use_explicit_coords,
+    const double *coords // coords of vertices
+  ); 
+
+static std::vector<ftk::feature_point_lite_t>
+extract_cp2dt_xl_wrapper(
+    int xl,
+    int scope, int current_timestep, 
+    const ftk::lattice& domain, // 3D
+    const ftk::lattice& core, // 3D
+    const ftk::lattice& ext, // 2D, array dimension
+    const double *Vc, // current timestep
+    const double *Vn, // next timestep
+    const double *Jc, // jacobian of current timestep
+    const double *Jn, // jacobian of next timestep
+    const double *Sc, // scalar of current timestep
+    const double *Sn, // scalar of next timestep
+    bool use_explicit_coords,
+    const double *coords // coords of vertices
+  )
+{
+  using namespace ftk;
+  if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    return extract_cp2dt_cuda(scope, current_timestep, domain, core, ext, Vc, Vn, Jc, J, Sc, Sn, use_explicit_coords, coords);
+#else
+    fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
+    return std::vector<ftk::feature_point_lite_t>();
 #endif
+  } else if (xl == FTK_XL_SYCL) {
+#if FTK_HAVE_HIPSYCL
+    return extract_cp2dt_sycl(scope, current_timestep, domain, core, ext, Vc, Vn, Jc, Jn, Sc, Sn, use_explicit_coords, coords);
+#else
+    fatal(FTK_ERR_NOT_BUILT_WITH_HIPSYCL);
+    return std::vector<ftk::feature_point_lite_t>();
+#endif
+  } else {
+    fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
+    return std::vector<ftk::feature_point_lite_t>();
+  }
+}
 
 namespace ftk {
 
@@ -244,8 +296,7 @@ inline void critical_point_tracker_2d_regular::update_timestep()
       if (enable_streaming_trajectories)
         grow();
     }
-  } else if (xl == FTK_XL_CUDA) {
-#if FTK_HAVE_CUDA
+  } else { //  if (xl == FTK_XL_CUDA) {
     ftk::lattice domain3({
           domain.start(0), 
           domain.start(1), 
@@ -282,7 +333,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         field_data_snapshots[0].vector.dim(2)});
     
     // ordinal
-    auto results = extract_cp2dt_cuda(
+    auto results = extract_cp2dt_xl_wrapper(
+        xl,
         ELEMENT_SCOPE_ORDINAL, 
         current_timestep, 
         domain3,
@@ -311,7 +363,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
 
     if (field_data_snapshots.size() >= 2) { // interval
       fprintf(stderr, "processing interval %d, %d\n", current_timestep, current_timestep+1);
-      auto results = extract_cp2dt_cuda(
+      auto results = extract_cp2dt_xl_wrapper(
+          xl,
           ELEMENT_SCOPE_INTERVAL, 
           current_timestep,
           domain3, 
@@ -340,9 +393,6 @@ inline void critical_point_tracker_2d_regular::update_timestep()
       if (enable_streaming_trajectories)
         grow();
     }
-#else
-    assert(false);
-#endif
   }
 
   auto t1 = clock_type::now();
