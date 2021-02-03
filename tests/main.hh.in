@@ -1,5 +1,10 @@
 #include <ftk/external/diy/mpi.hpp>
 
+#cmakedefine FTK_TEST_CUDA 1
+#cmakedefine FTK_TEST_XGC 1
+
+const std::string xgc_data_path = "${FTK_XGC_TEST_DATA_PATH}";
+
 int main(int argc, char **argv)
 {
   int requested = MPI_THREAD_FUNNELED, provided;

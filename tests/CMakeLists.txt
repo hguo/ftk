@@ -1,5 +1,17 @@
 unset (EXECUTABLE_OUTPUT_PATH)
 
+if (NOT "${FTK_XGC_TEST_DATA_PATH}" STREQUAL "") 
+  set (FTK_TEST_XGC TRUE)
+endif ()
+
+if (FTK_HAVE_CUDA AND DETECT_GPU_COUNT)
+  set (FTK_TEST_CUDA TRUE)
+endif ()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/main.hh.in
+  ${CMAKE_CURRENT_BINARY_DIR}/main.hh)
+include_directories (${CMAKE_CURRENT_BINARY_DIR})
+
 if (FTK_BUILD_PYFTK)
   include_directories (${CMAKE_CURRENT_SOURCE_DIR}/python/pybind11/include
     ${PYTHON_INCLUDE_DIRS})
@@ -60,9 +72,10 @@ add_executable (test_mesh test_mesh.cpp)
 target_link_libraries (test_mesh libftk)
 catch_discover_tests (test_mesh)
 
-if (NOT "${FTK_XGC_TEST_DATA_PATH}" STREQUAL "") 
+if (FTK_TEST_XGC)
   message("Adding XGC-specific tests, data_path = ${FTK_XGC_TEST_DATA_PATH}")
 
+  # generate synthetic data
   add_custom_target (synthesize_xgc_data ALL
     # BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/xgc.synthetic.0000.h5
     COMMAND ${CMAKE_COMMAND} -E env FTK_XGC_TEST_DATA_PATH=${FTK_XGC_TEST_DATA_PATH}
@@ -72,13 +85,12 @@ if (NOT "${FTK_XGC_TEST_DATA_PATH}" STREQUAL "")
 
   add_executable (test_xgc_mesh test_xgc_mesh.cpp)
   target_link_libraries (test_xgc_mesh libftk)
-  catch_discover_tests (test_xgc_mesh PROPERTIES 
-    ENVIRONMENT FTK_XGC_TEST_DATA_PATH=${FTK_XGC_TEST_DATA_PATH})
+  catch_discover_tests (test_xgc_mesh)
+  # PROPERTIES ENVIRONMENT FTK_XGC_TEST_DATA_PATH=${FTK_XGC_TEST_DATA_PATH})
   
   add_executable (test_xgc_filament_tracking test_xgc_filament_tracking.cpp)
   target_link_libraries (test_xgc_filament_tracking libftk)
-  catch_discover_tests (test_xgc_filament_tracking PROPERTIES 
-    ENVIRONMENT FTK_XGC_TEST_DATA_PATH=${FTK_XGC_TEST_DATA_PATH})
+  catch_discover_tests (test_xgc_filament_tracking)
 endif ()
 
 #add_executable (test_critical_point_tracking_woven test_critical_point_tracking_woven)

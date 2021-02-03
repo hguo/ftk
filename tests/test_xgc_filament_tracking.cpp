@@ -3,13 +3,13 @@
 #include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/filters/xgc_blob_filament_tracker.hh>
+#include "main.hh"
 
 using namespace ftk;
 
 int nphi = 16, iphi = 1;
 const int vphi = 8;
 
-std::string xgc_data_path; 
 const std::string xgc_mesh_filename = "xgc.mesh.h5", 
       xgc_bfield_filename = "xgc.bfield.h5",
       xgc_3d_filename = "xgc.3d.00001.h5",
@@ -70,24 +70,3 @@ TEST_CASE("xgc_synthetic_filament_tracking") {
   REQUIRE(surface.tris.size() == 44420);
 }
 #endif
-
-int main(int argc, char **argv)
-{
-  const char* path = std::getenv("FTK_XGC_TEST_DATA_PATH");
-  if (path)
-    xgc_data_path = path;
-
-  int requested = MPI_THREAD_FUNNELED, provided;
-#if FTK_HAVE_MPI
-  MPI_Init_thread(&argc, &argv, requested, &provided);
-#endif
-
-  Catch::Session session;
-  int result = session.run(argc, argv);
-
-#if FTK_HAVE_MPI
-  MPI_Finalize();
-#endif
-
-  return result;
-}

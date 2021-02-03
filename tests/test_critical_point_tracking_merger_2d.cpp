@@ -3,6 +3,8 @@
 #include "constants.hh"
 #include <ftk/filters/critical_point_tracker_wrapper.hh>
 
+#include "main.hh"
+
 using nlohmann::json;
 
 const int merger_n_trajs = 9;
@@ -92,4 +94,3 @@ TEST_CASE("critical_point_tracking_merger_2d_read_traced_critical_points_json") 
     REQUIRE(std::get<0>(result) == merger_n_trajs);
 }
 
-#include "main.hh"

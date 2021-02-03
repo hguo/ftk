@@ -3,8 +3,8 @@
 #include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/ndarray.hh>
+#include "main.hh"
 
-std::string xgc_data_path; 
 std::string xgc_mesh_filename = "xgc.mesh.h5";
 
 const int nphi = 16, iphi = 1;
@@ -85,27 +85,3 @@ TEST_CASE("xgc_mesh_point_locator_2d") {
   }
 }
 #endif
-
-int main(int argc, char **argv)
-{
-  const char* path = std::getenv("FTK_XGC_TEST_DATA_PATH");
-  if (path) {
-    xgc_data_path = path;
-    xgc_mesh_filename = xgc_data_path + "/" + xgc_mesh_filename;
-  }
-  // fprintf(stderr, "xgc_data_path=%s\n", xgc_data_dir.c_str());
-  
-  int requested = MPI_THREAD_FUNNELED, provided;
-#if FTK_HAVE_MPI
-  MPI_Init_thread(&argc, &argv, requested, &provided);
-#endif
-
-  Catch::Session session;
-  int result = session.run(argc, argv);
-
-#if FTK_HAVE_MPI
-  MPI_Finalize();
-#endif
-
-  return result;
-}
