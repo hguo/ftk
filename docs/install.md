@@ -20,6 +20,8 @@ To build FTK's advanced features, one can build and install FTK with various opt
 $ spack install ftk+vtk+netcdf+mpi+cuda+adios2@master
 ```
 
+See `spack info ftk` for more details.
+
 ## Pip install (Python bindings only)
 
 One can install PyFTK through PyPI: 
