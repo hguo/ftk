@@ -5,13 +5,21 @@
 include(CMakeFindDependencyMacro)
 include("${CMAKE_CURRENT_LIST_DIR}/ftkTargets.cmake") 
 
+list (INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_LIST_DIR}")
+
+set (FTK_HAVE_ADIOS2 @FTK_HAVE_ADIOS2@)
 set (FTK_HAVE_GMP @FTK_HAVE_GMP@)
+set (FTK_HAVE_HDF5 @FTK_HAVE_HDF5@)
 set (FTK_HAVE_MPI @FTK_HAVE_MPI@)
 set (FTK_HAVE_NETCDF @FTK_HAVE_NETCDF@)
 set (FTK_HAVE_VTK @FTK_HAVE_VTK@)
 
+if (FTK_HAVE_ADIOS2)
+  find_dependency (ADIOS2 REQUIRED)
+endif ()
+
 if (FTK_HAVE_VTK)
-  find_dependency (VTK ${VTK_MAJOR_VERSION}.${VTK_MINOR_VERSION})
+  find_dependency (VTK @VTK_MAJOR_VERSION@.@VTK_MINOR_VERSION@ REQUIRED)
 endif ()
 
 if (FTK_HAVE_MPI)
@@ -19,8 +27,12 @@ if (FTK_HAVE_MPI)
   include_directories (${MPI_C_INCLUDE_PATH})
 endif ()
 
+if (FTK_HAVE_HDF5)
+  find_dependency (HDF5 REQUIRED) 
+endif ()
+
 if (FTK_HAVE_NETCDF)
-  # find_dependency (NetCDF REQUIRED) # TODO
+  find_dependency (NetCDF REQUIRED) 
 endif ()
 
 set (FTK_INCLUDE_DIR "@FTK_INCLUDE_DIR@")

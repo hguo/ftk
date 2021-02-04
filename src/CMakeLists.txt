@@ -38,7 +38,7 @@ add_library (libftk SHARED ${ftk_sources} ${ftk_cuda_sources})
 target_link_libraries (libftk ${CMAKE_THREAD_LIBS_INIT})
 
 if (FTK_HAVE_ADIOS2)
-  target_link_libraries (libftk ${ADIOS2_LIBRARIES})
+  target_link_libraries (libftk adios2::adios2)
 endif ()
 
 if (FTK_HAVE_BOOST)
