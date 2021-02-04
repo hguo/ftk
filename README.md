@@ -2,64 +2,22 @@
 
 [![Build Status](https://travis-ci.org/hguo/ftk.svg?branch=master)](https://travis-ci.org/hguo/ftk)
 
-FTK is a library that scales, simplifies, and delivers feature tracking algorithms for scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or command line interface.   
+FTK is a library that scales, simplifies, and delivers feature tracking algorithms for scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or command line interface.   See [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) for more details on our feature tracking algorithms.
 
 ![](docs/images/critical_point_tracking_2d_paraview.png)
 
-## Dependencies
+## Installation
 
-FTK depends on GMP and requires CMake to build the libraries and executables.  Optional dependencies include ParaView (>=5.8.0 recommended), Python3, VTK, MPI, netCDF, HDF5, ADIOS2, MPSolve, and CUDA.
+To install FTK, use `spack install ftk`, `pip install pyftk`, or build from source; see [this page](docs/install.md) for more details on dependencies, compilation, and installation.  
 
 ## FTK command line interface
 
-FTK provides one single executable `ftk`.
-
-### Building the FTK executable
-
-FTK executables are built by default with CMake:
-
-```bash
-$ cd $FTK_SOURCE_DIR/build
-$ cmake .. && make
-```
-
-The executables can be found in the `bin` directory.  You may build FTK with NetCDF, HDF5, VTK, MPI, and CUDA to enable more features.  
-
-#### Building with VTK
-
-```bash
-$ cmake -DFTK_USE_VTK=ON -DCMAKE_PREFIX_PATH="$your_vtk_path/lib/cmake"
-```
-
-#### Building with NetCDF
-
-```bash
-$ cmake -DFTK_USE_NETCDF=ON -DNETCDF_DIR=${your_netcdf_path}
-```
-
-#### Building with MPI
-
-You may use MPI to accelerate feature tracking with both distributed-parallelism.  To build FTK with MPI, you need to use MPI C/C++ compilers: 
-
-```bash
-$ CC=mpicc CXX=mpicxx cmake -DFTK_USE_MPI=ON
-```
-
-#### Building with CUDA
-
-```bash
-$ cmake -DFTK_USE_CUDA=ON -DCMAKE_CUDA_COMPILER=$YOUR_NVCC_COMPILER
-```
-
-### Use FTK command line interface
-
-Follow the help information to explore all options the FTK CLI.
+FTK provides one single executable `ftk`.  Follow the help information to explore all options the FTK CLI.
 
 ```bash
 $ ftk --help
 Usage:
   ./bin/ftk [OPTION...]
-
   -f, --feature arg             Feature type: critical_point, isosurface,
                                 tdgl_vortex, or connected_component)
   -i, --input arg               Input file name pattern: a single file or a
@@ -69,12 +27,12 @@ Usage:
 ...
 ```
 
-#### Specify feature type
+#### Specify feature type (`-f`)
 
 It is mandatory to use the argument `-f` specifies the type of features that are tracked, e.g. `critical_point` (`cp` for short), `isosurface` (`iso` for short), and `tdgl_vortex` (`tdgl` for short).  
 
 
-#### Specify file inputs
+#### Specify file inputs (`-i`)
 
 Use `--input` or `-i` to specify input files.  The input argument typically needs to contain wildcards in order to read a list of files of the time-varying data.  For example, assuming the working directory has a series of files, each of which contains one timestep of the 2D regular-grid scalar field data: `scalar-000.raw`, `scalar-001.raw`, ... `scalar-255.raw`; to track critical points: 
 
@@ -148,7 +106,7 @@ Use `mpiexec` for distributed execution; use `--nthreads` and `--accelerator` to
 
 ##### MPI
 
-The FTK executable recognizes the option to use multiple processes if `mpiexec` is used.  It is recommended to specify `--nthreads` to avoid over-subscribing resources if multiple processes are on the same computing node:
+The FTK executable recognizes the option to use multiple processes if `mpiexec` is used.  It is recommended to carefully specify `--nthreads` to avoid over-subscribing resources if multiple processes are on the same computing node:
 
 ```bash
 $ mpiexec -n $NUM_PROCS ftk --nthreads $NUM_THREADS_PER_PROC ...
@@ -187,36 +145,11 @@ where $x$ and $y$ are 2D coordinates and $t$ is time.  We discretize the $x,y$ d
 
 ## FTK for Python (PyFTK)
 
-### Installing from PyPI
-
-You can install PyFTK with `pip`.  The only dependency in the current release is `numpy`.
+You can install PyFTK with `pip`.  The only dependency in the current release is `numpy`.  If you would like to build PyFTK from source and use advanced build options, see [this page](docs/install.md).
 
 ```bash
 $ pip3 install pyftk
 ```
-
-### Building PyFTK from source
-
-FTK Python bindings is based on [pybind11](https://github.com/pybind/pybind11).  You may build PyFTK with `setuptools` or CMake.  Notice that CMake is required to build PyFTK.  Advanced build options is currently not possible to configure with `setuptools`.  
-
-Build PyFTK with `setuptools`:
-
-```bash
-$ cd $FTK_SOURCE_DIR
-$ python setup.py install
-```
-
-Build PyFTK with CMake:
-
-```bash
-$ mkdir $FTK_SOURCE_DIR/build && cd $FTK_SOURCE_DIR/build
-$ cmake .. -DFTK_BUILD_PYFTK=ON
-$ make
-```
-
-The output PyFTK binary will be in the `lib` directory.
-
-### Using PyFTK
 
 PyFTK provides synthetic data generators (`pyftk.synthesizers`), feature extractors (`pyftk.extractors`), and feature trackers (`pyftk.trackers`).  Currently, PyFTK only supports critical points.  The following is an example of tracking critical points in a synthetic spiral woven data:
 
@@ -245,28 +178,6 @@ $ cmake .. -DCMAKE_INSTALL_PREFIX=$FTK_INSTALL_DIR
 $ make install
 ```
 
-The installed files are organized as follows: 
-
-```bash
-$ tree $FTK_INSTALL_DIR
-.
-├── bin
-│   └── ftk
-├── include
-│   └── ftk
-│       ├── algorithms
-│       │   ├── bfs.hh
-...
-│   └── mesh
-│       ├── lattice.hh
-...
-└── lib
-    ├── cmake
-    │   └── FTK
-    │       └── FTKConfig.cmake
-    └── liblibftk.so
-```
-
 #### Including FTK in your CMake project
 
 You may use the FTK installation in your own CMakeLists.txt file:
@@ -274,10 +185,10 @@ You may use the FTK installation in your own CMakeLists.txt file:
 ```cmake
 find_package(FTK REQUIRED)
 include_directories (${FTK_INCLUDE_DIR})
-target_link_library (${YOUR_TARGET} libftk)
+target_link_library (${YOUR_TARGET} FTK::libftk)
 ```
 
-When you configure your build, please specify FTK_DIR with CMake: 
+Specify FTK_DIR with CMake: 
 
 ```bash
 $ cmake -DFTK_DIR=$FTK_INSTALL_DIR/lib/cmake
@@ -300,4 +211,4 @@ $ cmake -DFTK_DIR=$FTK_INSTALL_DIR/lib/cmake
 
 ## Reference
 
-Hanqi Guo, David Lenz, Jiayi Xu, Xin Liang, Wenbin He, Iulian R. Grindeanu, Han-Wei Shen, Tom Peterka, Todd Munson, and Ian Foster, "FTK: A High-Dimensional Simplicial Meshing Framework for Robust and Scalable Feature Tracking," [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) [cs.GR], 2020.
+* Hanqi Guo, David Lenz, Jiayi Xu, Xin Liang, Wenbin He, Iulian R. Grindeanu, Han-Wei Shen, Tom Peterka, Todd Munson, and Ian Foster, "FTK: A High-Dimensional Simplicial Meshing Framework for Robust and Scalable Feature Tracking," [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) [cs.GR], 2020.
