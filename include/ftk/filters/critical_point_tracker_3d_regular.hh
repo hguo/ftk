@@ -19,7 +19,7 @@
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
-#include <ftk/filters/feature_point.hh>
+#include <ftk/features/feature_point.hh>
 #include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/external/diy/serialization.hpp>
 

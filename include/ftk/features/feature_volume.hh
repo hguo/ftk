@@ -1,7 +1,7 @@
 #ifndef _FTK_FEATURE_VOLUME_HH
 #define _FTK_FEATURE_VOLUME_HH
 
-#include <ftk/filters/feature_surface.hh>
+#include <ftk/features/feature_surface.hh>
 #include <ftk/basic/simple_union_find.hh>
 
 #if FTK_HAVE_VTK

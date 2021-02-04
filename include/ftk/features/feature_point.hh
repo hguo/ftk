@@ -2,7 +2,7 @@
 #define _FTK_CRITICAL_POINT_T_HH
 
 #include <ftk/config.hh>
-#include <ftk/filters/feature_point_lite.hh>
+#include <ftk/features/feature_point_lite.hh>
 // #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/json.hh>

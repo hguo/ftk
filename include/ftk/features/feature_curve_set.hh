@@ -1,7 +1,7 @@
 #ifndef _FTK_CRITICAL_POINT_TRAJ_SET_HH
 #define _FTK_CRITICAL_POINT_TRAJ_SET_HH
 
-#include <ftk/filters/feature_curve.hh>
+#include <ftk/features/feature_curve.hh>
 #include <map>
 
 #if FTK_HAVE_VTK

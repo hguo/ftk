@@ -4,7 +4,7 @@
 #include "threadIdx.cuh"
 #include "utils.cuh"
 #include <ftk/mesh/lattice.hh>
-#include <ftk/filters/feature_point_lite.hh>
+#include <ftk/features/feature_point_lite.hh>
 
 enum {
   scope_all = 0, 

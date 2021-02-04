@@ -1,7 +1,7 @@
 #ifndef _FTK_FEATURE_POINT_SET_HH
 #define _FTK_FEATURE_POINT_SET_HH
 
-#include <ftk/filters/feature_point_set.hh>
+#include <ftk/features/feature_point_set.hh>
 
 namespace ftk {
 

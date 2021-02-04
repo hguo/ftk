@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <ftk/numeric/xgc_interpolant.hh>
-#include <ftk/filters/feature_point_lite.hh>
+#include <ftk/features/feature_point_lite.hh>
 
 typedef struct {
   int m2n0, m2n1, m2n2;

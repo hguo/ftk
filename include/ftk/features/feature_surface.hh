@@ -2,8 +2,8 @@
 #define _FTK_FEATURE_SURFACE_HH
 
 #include <ftk/config.hh>
-#include <ftk/filters/feature_curve.hh>
-#include <ftk/filters/feature_curve_set.hh>
+#include <ftk/features/feature_curve.hh>
+#include <ftk/features/feature_curve_set.hh>
 #include <ftk/basic/simple_union_find.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/write_polydata.hh>

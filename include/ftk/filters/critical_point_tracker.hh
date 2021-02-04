@@ -3,9 +3,9 @@
 
 #include <ftk/config.hh>
 #include <ftk/algorithms/cca.hh>
-#include <ftk/filters/feature_point.hh>
-#include <ftk/filters/feature_curve.hh>
-#include <ftk/filters/feature_curve_set.hh>
+#include <ftk/features/feature_point.hh>
+#include <ftk/features/feature_curve.hh>
+#include <ftk/features/feature_curve_set.hh>
 #include <ftk/filters/filter.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/geometry/points2vtk.hh>

@@ -1,7 +1,7 @@
 #ifndef _FTK_FEATURE_CURVE_T_HH
 #define _FTK_FEATURE_CURVE_T_HH
 
-#include <ftk/filters/feature_point.hh>
+#include <ftk/features/feature_point.hh>
 
 namespace ftk {
   
