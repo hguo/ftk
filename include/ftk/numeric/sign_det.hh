@@ -4,6 +4,7 @@
 #include <ftk/config.hh>
 #include <ftk/numeric/sign.hh>
 #include <ftk/numeric/det.hh>
+#include <ftk/numeric/swap.hh>
 
 // reference:
 // Edelsbrunner and Mucke, Simulation of simplicity: A technique to cope with degenerate cases in geometric algorithms.
@@ -196,13 +197,6 @@ inline int robust_sign_det4(const T X[4][3])
   }
   // assert(false);
   return 0; // useless
-}
-
-template <typename T>
-__device__ __host__
-inline void swap_helper(T& a, T& b)
-{
-  T c(a); a = b; b = c;
 }
 
 // returns number of swaps for bubble sort

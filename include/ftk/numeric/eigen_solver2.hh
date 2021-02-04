@@ -9,6 +9,7 @@
 #include <ftk/numeric/quartic_solver.hh>
 #include <ftk/numeric/vector_normalization.hh>
 #include <ftk/numeric/characteristic_polynomial.hh>
+#include <ftk/numeric/swap.hh>
 #include <ftk/numeric/print.hh>
 #include <iostream>
 
@@ -20,7 +21,6 @@ inline void solve_eigenvalues_symmetric2x2(T m00, T m10, T m11, T eig[2])
 {
 #ifndef __CUDACC__
   using std::abs;
-  using std::swap;
 #endif
 
   const T b = -(m00 + m11), c = m00*m11 - m10*m10;
@@ -37,7 +37,7 @@ inline void solve_eigenvalues_symmetric2x2(T m00, T m10, T m11, T eig[2])
   eig[1] = T(0.5) * (-b-sqrt_delta);
 
   if (abs(eig[0]) < abs(eig[1]))
-    swap(eig[0], eig[1]);
+    swap_helper(eig[0], eig[1]);
 }
 
 template <typename T>
