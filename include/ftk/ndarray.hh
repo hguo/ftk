@@ -5,7 +5,7 @@
 #include <ftk/object.hh>
 #include <ftk/error.hh>
 #include <ftk/mesh/lattice.hh>
-#include <ftk/utils/io_util.hh>
+#include <ftk/io/util.hh>
 #include <vector>
 #include <array>
 #include <numeric>

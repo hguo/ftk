@@ -3,7 +3,7 @@
 
 #include <ftk/object.hh>
 #include <ftk/ndarray/stream.hh>
-#include <ftk/utils/io_util.hh>
+#include <ftk/io/util.hh>
 
 namespace ftk {
 using nlohmann::json;

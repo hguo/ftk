@@ -9,7 +9,7 @@
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
-#include <ftk/utils/io_util.hh>
+#include <ftk/io/util.hh>
 
 namespace ftk {
 

@@ -14,7 +14,7 @@
 #include "ftk/filters/xgc_blob_threshold_tracker.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
-#include "ftk/utils/io_util.hh"
+#include "ftk/io/util.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
 
