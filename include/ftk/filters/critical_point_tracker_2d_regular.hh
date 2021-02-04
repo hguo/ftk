@@ -81,7 +81,7 @@ extract_cp2dt_xl_wrapper(
   using namespace ftk;
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
-    return extract_cp2dt_cuda(scope, current_timestep, domain, core, ext, Vc, Vn, Jc, J, Sc, Sn, use_explicit_coords, coords);
+    return extract_cp2dt_cuda(scope, current_timestep, domain, core, ext, Vc, Vn, Jc, Jn, Sc, Sn, use_explicit_coords, coords);
 #else
     fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
     return std::vector<ftk::feature_point_lite_t>();
