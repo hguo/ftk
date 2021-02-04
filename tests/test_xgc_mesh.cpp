@@ -69,7 +69,7 @@ TEST_CASE("xgc_mesh_point_locator_2d") {
   auto mx2 = ftk::simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename);
   mx2->initialize_point_locator();
 
-  double lbx = 1.0, ubx = 1.5, 
+  double lbx = 1.5, ubx = 2.0, 
          lby = -1.0, uby = 1.0;
 
   srand(0);
