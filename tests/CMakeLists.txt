@@ -114,6 +114,9 @@ target_link_libraries (test_critical_point_tracking_moving_extremum_3d libftk)
 add_executable(test_adios2 test_adios2.cpp)
 target_link_libraries (test_adios2 libftk)
 
+add_executable(test_ndarray_wrapper test_ndarray_wrapper.cpp)
+target_link_libraries (test_ndarray_wrapper libftk)
+
 add_executable (test_critical_point_tracking_merger_2d test_critical_point_tracking_merger_2d)
 target_link_libraries (test_critical_point_tracking_merger_2d libftk)
 catch_discover_tests (test_critical_point_tracking_merger_2d)
