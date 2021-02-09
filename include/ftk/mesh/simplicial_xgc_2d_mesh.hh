@@ -17,6 +17,10 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
       const ndarray<I>& triangles,
       const ndarray<F>& psi,
       const ndarray<I>& nextnodes);
+  
+  simplicial_xgc_2d_mesh(
+      const ndarray<F>& coords, 
+      const ndarray<I>& triangles) : simplicial_unstructured_2d_mesh<I, F>(coords, triangles) {}
 
   void initialize_point_locator();
   void initialize_roi(double psin_min = 0.9, double psin_max = 1.05, 
@@ -45,7 +49,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   void magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
 
 public:
-  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> new_roi_mesh(
+  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> new_roi_mesh(
       std::vector<I> &node_map, /* vert id of original mesh --> vert id of new mesh */
       std::vector<I> &inverse_node_map /* vert id of new mesh --> vert id of original mesh */
   ) const; 
@@ -190,7 +194,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
 }
 
 template <typename I, typename F>
-std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_roi_mesh(
+std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_roi_mesh(
     std::vector<I> &node_map, 
     std::vector<I> &inverse_node_map) const
 {
@@ -239,10 +243,9 @@ std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I,
   new_triangles_array.copy_vector(new_triangles);
   new_triangles_array.reshape(3, new_triangles.size() / 3);
   
-  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2( new simplicial_unstructured_2d_mesh<I, F>( new_coords, new_triangles_array ) );
-  return m2;
+  // std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2( new simplicial_unstructured_2d_mesh<I, F>( new_coords, new_triangles_array ) );
+  // return m2;
 
-#if 0
   std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> mx2( new simplicial_xgc_2d_mesh<I, F>( new_coords, new_triangles_array ) );
   mx2->units = units;
  
@@ -265,7 +268,6 @@ std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I,
     }
   }
   return mx2;
-#endif
 }
 
 template <typename I, typename F>

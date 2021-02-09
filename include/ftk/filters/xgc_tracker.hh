@@ -50,7 +50,12 @@ protected:
   std::shared_ptr<simplicial_xgc_2d_mesh<>> m2; 
   std::shared_ptr<simplicial_xgc_3d_mesh<>> m3; 
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
-  
+
+  // roi meshes
+  std::shared_ptr<simplicial_xgc_2d_mesh<>> mr2; 
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> mr3; 
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> mr4;
+
   std::shared_ptr<simplicial_xgc_3dff_mesh<>> mf3; // field following 3d mesh
 };
 
