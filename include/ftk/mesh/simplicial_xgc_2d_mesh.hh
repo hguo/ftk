@@ -17,10 +17,6 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
       const ndarray<I>& triangles,
       const ndarray<F>& psi,
       const ndarray<I>& nextnodes);
-  
-  simplicial_xgc_2d_mesh(
-      const ndarray<F>& coords, 
-      const ndarray<I>& triangles) : simplicial_xgc_2d_mesh(coords, triangles) {}
 
   void initialize_point_locator();
   void initialize_roi(double psin_min = 0.9, double psin_max = 1.05, 
@@ -49,7 +45,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   void magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
 
 public:
-  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> new_roi_mesh(
+  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> new_roi_mesh(
       std::vector<I> &node_map, /* vert id of original mesh --> vert id of new mesh */
       std::vector<I> &inverse_node_map /* vert id of new mesh --> vert id of original mesh */
   ) const; 
@@ -58,8 +54,8 @@ protected:
   xgc_units_t units;
   ndarray<F> psifield, bfield;
   ndarray<I> nextnodes;
+  
   ndarray<I> roi;
-
   std::vector<I> roi_nodes;
 };
 /////////
@@ -194,12 +190,12 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
 }
 
 template <typename I, typename F>
-std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_roi_mesh(
+std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_roi_mesh(
     std::vector<I> &node_map, 
     std::vector<I> &inverse_node_map) const
 {
-  if (roi_nodes.empty()) 
-    initialize_roi();
+  // if (roi_nodes.empty()) 
+  //   initialize_roi();
   const auto nn = roi_nodes.size();
 
   std::map<I, I> map; // oridinal id to new id
@@ -210,7 +206,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
   for (auto i = 0; i < nn; i ++) {
     I node = roi_nodes[i];
     for (int j = 0; j < 2; j ++)
-      new_coords(j, i) = vertex_coords(j, node);
+      new_coords(j, i) = this->vertex_coords(j, node);
   }
 
   // updating node map
@@ -227,7 +223,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
   std::vector<I> new_triangles;
   for (auto i = 0; i < this->n(2); i ++) {
     I tri[3];
-    get_triangle(i, tri);
+    this->get_triangle(i, tri);
 
     bool b = true;
     for (int j = 0; j < 3; j ++)
@@ -239,25 +235,37 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
       new_triangles.push_back( map[tri[j]] );
   }
 
-  ndarray<F> new_triangles_array;
+  ndarray<I> new_triangles_array;
   new_triangles_array.copy_vector(new_triangles);
   new_triangles_array.reshape(3, new_triangles.size() / 3);
-
-  std::shared_ptr<simplicial_xgc_2d_mesh> mx2( new simplicial_xgc_2d_mesh( new_coords, new_triangles ) );
-  mx2->units = units;
   
-  // updating psifield and bfield
-  mx2->psifield.reshape(nn);
-  mx2->bfield.reshape(3, nn);
+  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2( new simplicial_unstructured_2d_mesh<I, F>( new_coords, new_triangles_array ) );
+  return m2;
 
-  for (int i = 0; i < nn; i ++) {
-    const auto k = roi_nodes[i];
-    mx2->psifield[i] = psifield[k];
-    for (int j = 0; j < 3; j ++) 
-      mx2->bfield(j, i) = bfield(j, k);
+#if 0
+  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> mx2( new simplicial_xgc_2d_mesh<I, F>( new_coords, new_triangles_array ) );
+  mx2->units = units;
+ 
+  // updating psifield and bfield
+  if (!psifield.empty()) {
+    mx2->psifield.reshape(nn);
+    for (int i = 0; i < nn; i ++) {
+      const auto k = roi_nodes[i];
+      mx2->psifield[i] = psifield[k];
+    }
   }
 
+  if (!bfield.empty()) {
+    mx2->bfield.reshape(3, nn);
+    for (int i = 0; i < nn; i ++) {
+      const auto k = roi_nodes[i];
+      mx2->psifield[i] = psifield[k];
+      for (int j = 0; j < 3; j ++) 
+        mx2->bfield(j, i) = bfield(j, k);
+    }
+  }
   return mx2;
+#endif
 }
 
 template <typename I, typename F>

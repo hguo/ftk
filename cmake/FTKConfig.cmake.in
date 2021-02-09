@@ -37,7 +37,8 @@ if (FTK_HAVE_HDF5)
 endif ()
 
 if (FTK_HAVE_NETCDF)
-  find_dependency (NetCDF REQUIRED) 
+  find_dependency (NetCDF REQUIRED)
+  include_directories (${NETCDF_INCLUDE_DIR})
 endif ()
 
 set (FTK_INCLUDE_DIR "@FTK_INCLUDE_DIR@")
