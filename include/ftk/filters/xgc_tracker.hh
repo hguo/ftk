@@ -55,6 +55,7 @@ protected:
   std::shared_ptr<simplicial_xgc_2d_mesh<>> mr2; 
   std::shared_ptr<simplicial_xgc_3d_mesh<>> mr3; 
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> mr4;
+  std::vector<int> roi_node_map, roi_inverse_node_map;
 
   std::shared_ptr<simplicial_xgc_3dff_mesh<>> mf3; // field following 3d mesh
 };
@@ -66,9 +67,14 @@ xgc_tracker::xgc_tracker(
   tracker(comm),
   m2(mx->get_m2()),
   m3(mx),
-  m4(new ftk::simplicial_unstructured_extruded_3d_mesh<>(*m3))
+  m4(new simplicial_unstructured_extruded_3d_mesh<>(*m3))
 {
-
+  // initialize roi meshes
+  m2->initialize_roi();
+  mr2 = m2->new_roi_mesh(roi_node_map, roi_inverse_node_map);
+  mr3.reset(new simplicial_xgc_3d_mesh<>(mr2, 
+        m3->get_nphi(), m3->get_vphi(), m3->get_iphi()));
+  mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*mr3));
 }
 
 inline void xgc_tracker::push_field_data_snapshot(
@@ -94,7 +100,7 @@ inline void xgc_tracker::push_field_data_snapshot(
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
   
   for (size_t i = 0; i < m3->get_nphi(); i ++) {
-    ftk::ndarray<double> f, grad, j;
+    ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
     m2->smooth_scalar_gradient_jacobian(slice, f, grad, j);
     for (size_t k = 0; k < m2->n(0); k ++) {
