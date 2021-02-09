@@ -86,6 +86,10 @@ public: // mesh access
 
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
 
+public: // extract region of interest
+  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> submesh(
+      const std::vector<I> &nodes) const;
+
 public: // point locator and misc
   I nearest(F x[]) const; // locate which point is nearest to x
   // I locate(F x[]) const; // locate which triangle contains x
@@ -582,6 +586,45 @@ I simplicial_unstructured_2d_mesh<I, F>::nearest(F x[]) const
     }
   }
   return imindist;
+}
+
+template <typename I, typename F>
+std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> 
+simplicial_unstructured_2d_mesh<I, F>::submesh(const std::vector<I> &nodes) const
+{
+  ndarray<F> new_coords({2, nodes.size()});
+
+  std::map<I, I> nodemap; // oridinal id to new id
+  for (auto i = 0; i < nodes.size(); i ++)
+    nodemap[nodes[i]] = i;
+
+  for (auto i = 0; i < nodes.size(); i ++) {
+    I node = nodes[i];
+    for (int j = 0; j < 2; j ++)
+      new_coords(j, i) = vertex_coords(j, node);
+  }
+  
+  std::vector<I> new_triangles;
+  for (auto i = 0; i < triangles.size(); i ++) {
+    I tri[3];
+    get_triangle(i, tri);
+
+    bool b = true;
+    for (int j = 0; j < 3; j ++)
+      if (nodemap.find(tri[b]) == nodemap.end())
+        b = false;
+    if (!b) continue;  // not a triangle in the new mesh
+
+    for (int j = 0; j < 3; j ++)
+      new_triangles.push_back( nodemap[tri[j]] );
+  }
+
+  ndarray<F> new_triangles_array;
+  new_triangles_array.copy_vector(new_triangles);
+  new_triangles_array.reshape(3, new_triangles.size() / 3);
+
+  return new simplicial_unstructured_2d_mesh(
+      new_coords, new_triangles);
 }
 
 #if 0

@@ -70,6 +70,8 @@ public:
   void post_process_surfaces();
   void post_process_curves(feature_curve_set_t& curves) const;
 
+  void post_analysis_curves(feature_curve_set_t& curves) const; // compute magnetic line alignment, etc.
+
 public:
   void write_intersections_binary(const std::string& filename) const;
   void write_intersections(const std::string& filename, std::string format="") const;
@@ -145,6 +147,8 @@ inline void xgc_blob_filament_tracker::initialize()
     xft_load_psin(ctx, psin.data());
   }
 #endif
+
+  // initialize roi
 }
 
 inline void xgc_blob_filament_tracker::push_field_data_snapshot(
@@ -613,6 +617,10 @@ inline void xgc_blob_filament_tracker::read_surfaces(const std::string& filename
 
   surfaces.load(filename, format);
   fprintf(stderr, "readed surfaces #pts=%zu, #tris=%zu\n", surfaces.pts.size(), surfaces.tris.size());
+}
+
+inline void xgc_blob_filament_tracker::post_analysis_curves(feature_curve_set_t& curves) const
+{
 }
 
 inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& curves) const
