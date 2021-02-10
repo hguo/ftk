@@ -61,7 +61,8 @@ std::string xgc_data_path,
   xgc_write_back_filename;
 bool xgc_post_process = false, 
      xgc_torus = false, 
-     xgc_use_smoothing_kernel = false;
+     xgc_use_smoothing_kernel = false,
+     xgc_use_roi = false;
 double xgc_smoothing_kernel_size = 0.03;
 int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
 
@@ -314,6 +315,7 @@ void initialize_xgc(diy::mpi::communicator comm)
     fprintf(stderr, "xgc_ff_mesh=%s\n", xgc_ff_mesh_filename.c_str());
     fprintf(stderr, "xgc_interpolant_filename=%s\n", xgc_interpolant_filename.c_str());
     fprintf(stderr, "xgc_use_smoothing_kernel=%d\n", xgc_use_smoothing_kernel);
+    fprintf(stderr, "xgc_use_roi=%d\n", xgc_use_roi);
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
     fprintf(stderr, "threshold=%f\n", threshold);
@@ -330,13 +332,18 @@ void initialize_xgc(diy::mpi::communicator comm)
   mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename, comm);
   // mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_adios2(comm, xgc_mesh_filename);
   // mx2->to_vtu("xgc_base_mesh.vtu");
+  
+  mx3.reset( new ftk::simplicial_xgc_3d_mesh<>(mx2, xgc_nphi, xgc_iphi, xgc_vphi) );
+  
+  if (file_exists(archived_traced_filename))
+    return; // skip interpolants, smoothing kernel
+  
   mx2->initialize_point_locator();
-  mx2->initialize_roi();
   if (xgc_bfield_filename.length() > 0)
     mx2->read_bfield(xgc_bfield_filename);
   if (xgc_units_filename.length() > 0)
     mx2->read_units_m(xgc_units_filename);
- 
+
   if (xgc_use_smoothing_kernel) {
     if (file_exists(xgc_smoothing_kernel_filename))
       mx2->read_smoothing_kernel(xgc_smoothing_kernel_filename);
@@ -346,7 +353,6 @@ void initialize_xgc(diy::mpi::communicator comm)
     }
   }
   
-  mx3.reset( new ftk::simplicial_xgc_3d_mesh<>(mx2, xgc_nphi, xgc_iphi, xgc_vphi) );
   if (xgc_interpolant_filename.length() > 0) {
     if (file_exists( xgc_interpolant_filename ))
       mx3->read_interpolants( xgc_interpolant_filename );
@@ -364,7 +370,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
   tracker.reset(new xgc_blob_filament_tracker(comm, mx3));
-  
+  tracker->set_use_roi(xgc_use_roi);
   tracker->set_end_timestep(ntimesteps - 1);
   tracker->use_thread_backend(thread_backend);
   tracker->use_accelerator(accelerator);
@@ -623,6 +629,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("xgc-bfield", "XGC bfield file", cxxopts::value<std::string>(xgc_bfield_filename))
     ("xgc-ff-mesh", "XGC field following mesh file", cxxopts::value<std::string>(xgc_ff_mesh_filename))
     ("xgc-vphi", "XGC number of virtual poloidal planes", cxxopts::value<int>(xgc_vphi)->default_value("1"))
+    ("xgc-roi", "XGC: extract features in ROI", cxxopts::value<bool>(xgc_use_roi))
     ("xgc-smoothing-kernel-file", "XGC: smoothing kernel file", cxxopts::value<std::string>(xgc_smoothing_kernel_filename))
     ("xgc-smoothing-kernel-size", "XGC: smoothing kernel size", cxxopts::value<double>(xgc_smoothing_kernel_size))
     ("xgc-interpolant-file", "XGC: interpolant file", cxxopts::value<std::string>(xgc_interpolant_filename))

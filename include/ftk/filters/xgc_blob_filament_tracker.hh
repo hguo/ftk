@@ -52,7 +52,7 @@ protected:
   bool check_simplex(int, feature_point_t& cp);
   void check_penta(int);
   void add_penta_tri(int, int, int);
- 
+
   template <int n, typename T>
   void simplex_values(
       const int i,
@@ -183,7 +183,10 @@ inline void xgc_blob_filament_tracker::update_timestep()
  
   auto get_related_cels = [&](int i) {
     std::set<int> my_related_cells;
-    
+  
+    std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+      use_roi ? this->mr4 : this->m4;
+
     auto tets = m4->side_of(2, i);
     for (auto tet : tets) {
       if (1) { // TODO: if valid tet
@@ -253,14 +256,22 @@ inline void xgc_blob_filament_tracker::update_timestep()
     fatal("FTK not compiled with CUDA.");
 #endif
   } else {
-    // TODO: strange that m4->element_for has proformance problem...
-    // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
-    const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
-    parallel_for(no, [&](int i) {func(i + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+    if (use_roi) {
+      const auto nd = mr4->n(2), no = mr4->n_ordinal(2), ni = mr4->n_interval(2);
+      parallel_for(no, [&](int i) {func(i + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
 
-    if (field_data_snapshots.size() >= 2)
-      parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
-      //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
+      if (field_data_snapshots.size() >= 2)
+        parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+    } else {
+      // TODO: strange that m4->element_for has proformance problem...
+      // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
+      const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
+      parallel_for(no, [&](int i) {func(i + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+
+      if (field_data_snapshots.size() >= 2)
+        parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+        //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
+    }
   }
 }
 
@@ -300,6 +311,8 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.type = ftk::critical_point_type_2d(h, true);
 
   cp.tag = i;
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
   cp.ordinal = m4->is_ordinal(2, i); 
   cp.timestep = current_timestep;
 
@@ -321,6 +334,9 @@ void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
 
 void xgc_blob_filament_tracker::check_penta(int e)
 {
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
+  
   int penta[5], t[5];
   m4->get_simplex(4, e, penta);
   for (int i = 0; i < 5; i ++) {
@@ -426,12 +442,43 @@ void xgc_blob_filament_tracker::simplex_values(
             vphi = m3->get_vphi();
   const int n0ivphi = m2n0 * vphi * nphi;
 
-  m4->get_simplex(n-1, i, verts);
+  if (use_roi)
+    mr4->get_simplex(n-1, i, verts);
+  else 
+    m4->get_simplex(n-1, i, verts);
+
+#if 0
+  if (use_roi) {
+    mr4->get_simplex(n-1, i, verts);
+    for (int k = 0; k < n; k ++) {
+      const int rv3 = verts[k] % mr3n0;
+      const int p = rv3 / mr2n0;
+      const int rv2 = rv3 % mr2n0;
+      verts[i] = roi_inverse_node_map[verts[i]]; // FIXME: wrong
+    }
+  } else 
+    m4->get_simplex(n-1, i, verts);
+#endif
+
   for (int k = 0; k < n; k ++) {
-    t[k] = verts[k] / m4->n(0); // m4->flat_vertex_time(verts[k]);
-    const int v3 = verts[k] % m3->n(0); // vertex id in m3 mesh
-    const int v2 = v3 % m2->n(0); // vertex id in m2 mesh
-    p[k] = v3 / m2->n(0); // poloidal plane coords
+    int v3, v2;
+
+    if (use_roi) {
+      t[k] = verts[k] / mr4->n(0);
+      v3 = verts[k] % mr3->n(0); // needs translation
+      v2 = v3 % mr2->n(0); // needs translation
+      p[k] = v3 / mr2->n(0);
+
+      v2 = roi_inverse_node_map[ v2 ];
+      v3 = m2n0 * p[k] + v2;
+
+      // verts[k] = t[k] * m4->n(0) + v3;
+    } else {
+      t[k] = verts[k] / m4->n(0); // m4->flat_vertex_time(verts[k]);
+      v3 = verts[k] % m3->n(0); // vertex id in m3 mesh
+      v2 = v3 % m2->n(0); // vertex id in m2 mesh
+      p[k] = v3 / m2->n(0); // poloidal plane coords
+    }
     psin[k] = m2->psin(v2); // normalized psi
 
     // if (m3->is_poloidal(p[k])) fprintf(stderr, "non-poloidal virtual plane\n");
@@ -626,6 +673,9 @@ inline void xgc_blob_filament_tracker::post_analysis_curves(feature_curve_set_t&
 inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& curves) const
 {
   fprintf(stderr, "before post process: #%zu\n", curves.size());
+
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3 = 
+    use_roi ? this->mr3 : this->m3;
 
   const int nphi = m3->get_nphi(), 
             iphi = m3->get_iphi(),

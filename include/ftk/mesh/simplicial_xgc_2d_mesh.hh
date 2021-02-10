@@ -90,6 +90,9 @@ void simplicial_xgc_2d_mesh<I, F>::read_bfield(const std::string& filename, diy:
 template <typename I, typename F>
 void simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps) const
 {
+  if (bfield.empty()) 
+    fatal("missing xgc bfield.");
+
   const F delta = (phi_end - rzp[2]) / nsteps;
 
   // rk1
