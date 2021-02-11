@@ -68,14 +68,14 @@ See the main page.
 
 #### Merger (time-varying 2D scalar field data)
 
+<img align="right" src="images/merger.png">
+
 The merger function is defined as $f(x,y,t)=\max(e^{-\hat{x}(t)^2-\hat{y}(t)^2}, e^{-\tilde{x}(t)^2-\hat{y}(t)^2})$, with $\hat{x}(t)=(x-\sin(t-2\pi))\cos(t)-y\sin(t)$, $\hat{x}(t)=(x-\sin(t+2\pi))\cos(t)-y\sin(t)$, and $\hat{y}(t)=x\sin(t)+y\cos(t)$, which is a combination of periodical rotation and translation motions.  The dataset is used to test critical point tracking with split and merge behaviors in 2D regular-grid scalar field data.
 
 ##### Parameters
 
 * `dimensions` (by default `[32, 32]`)
 * `n_timesteps` (by default 100)
-
-![](images/merger.png){: style="float: right"}
 
 #### Double gyre (time-varying 2D vector field data)
 
