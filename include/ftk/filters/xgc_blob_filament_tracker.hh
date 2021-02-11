@@ -305,6 +305,7 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
   cp.scalar[0] = lerp_s2(f, mu);
   cp.scalar[1] = lerp_s2(psin, mu);
+  // scalar[2] will be the offset to the magnetic lines
 
   double h[2][2];
   ftk::lerp_s2m2x2(j, mu, h);
@@ -313,7 +314,7 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.tag = i;
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
     use_roi ? this->mr4 : this->m4;
-  cp.ordinal = m4->is_ordinal(2, i); 
+  cp.ordinal = m4->is_ordinal(2, i);
   cp.timestep = current_timestep;
 
   // fprintf(stderr, "succ, mu=%f, %f, %f, x=%f, %f, %f, %f, timestep=%d, type=%d, t=%d, %d, %d\n", 
@@ -668,6 +669,33 @@ inline void xgc_blob_filament_tracker::read_surfaces(const std::string& filename
 
 inline void xgc_blob_filament_tracker::post_analysis_curves(feature_curve_set_t& curves) const
 {
+  // calculate the deviation from magnetic lines, assuming that 
+  // curves are already sampled at (virtual) poloidal planes
+  curves.foreach([&](feature_curve_t& c) {
+    // fprintf(stderr, "curve:\n");
+    double accumulated_offset = 0.0;
+    for (int i = 0; i < c.size(); i ++) {
+      double offset = 0;
+      if (i > 0) {
+        const feature_point_t &prev = c[i-1], &curr = c[i];
+        double rzp[3] = {prev.x[0], prev.x[1], prev.x[2] / m3->np() * M_PI * 2};
+        m2->magnetic_map(rzp, curr.x[2] / m3->np() * M_PI * 2);
+        double rzp1[3] = {curr.x[0], curr.x[1], curr.x[2] / m3->np() * M_PI * 2};
+
+        offset = vector_dist_2norm_3(rzp, rzp1);
+        accumulated_offset += offset;
+
+        // fprintf(stderr, "----projected_rzp=%f, %f, %f, actual_rzp=%f, %f, %f, offset=%f\n", 
+        //     rzp[0], rzp[1], rzp[2], rzp1[0], rzp1[1], rzp1[2], offset);
+      }
+
+      c[i].scalar[2] = offset;
+      // fprintf(stderr, "---r=%f, z=%f, p=%f, t=%f, offset=%f\n", 
+      //     c[i].x[0], c[i].x[1], c[i].x[2], c[i].t, offset);
+    }
+
+    // fprintf(stderr, "----average_offset=%f\n", accumulated_offset / (c.size() - 1));
+  });
 }
 
 inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& curves) const
@@ -692,7 +720,8 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
   curves.foreach([&](feature_curve_t& c) {
     // c.discard_high_cond();
     c.discard([&](const feature_point_t& p) {
-      return !m3->is_poloidal(2, p.tag);
+      return !m3->is_poloidal(2, p.tag % m4->n(2));
+      // return (p.scalar[2] != 0);
       // return !m3->is_actual_poloidal(2, p.tag); // remove virtual planes as well
     });
   });
@@ -786,6 +815,12 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
     });
   });
 #endif
+    
+  // remove saddle curves
+  curves.filter([&](const feature_curve_t& c) {
+    return c.consistent_type == CRITICAL_POINT_2D_MAXIMUM ||
+           c.consistent_type == CRITICAL_POINT_2D_MINIMUM;
+  });
 
   fprintf(stderr, "after post process: #%zu\n", curves.size());
 }
@@ -798,9 +833,12 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
   for (int i = 0; i < end_timestep; i ++) { // TODO
     auto sliced = surfaces.slice_time(i);
     post_process_curves(sliced);
+    post_analysis_curves(sliced);
     fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
-    auto poly = sliced.to_vtp(3, std::vector<std::string>());
+    // auto poly = sliced.to_vtp(3, std::vector<std::string>());
+    auto poly = sliced.to_vtp(3, {
+        "dneOverne0", "psin", "offset"});
     
     const auto filename = series_filename(pattern, i);
     write_polydata(filename, transform_vtp_coordinates(poly));

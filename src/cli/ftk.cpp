@@ -335,14 +335,14 @@ void initialize_xgc(diy::mpi::communicator comm)
   
   mx3.reset( new ftk::simplicial_xgc_3d_mesh<>(mx2, xgc_nphi, xgc_iphi, xgc_vphi) );
   
-  if (file_exists(archived_traced_filename))
-    return; // skip interpolants, smoothing kernel
-  
   mx2->initialize_point_locator();
   if (xgc_bfield_filename.length() > 0)
     mx2->read_bfield(xgc_bfield_filename);
   if (xgc_units_filename.length() > 0)
     mx2->read_units_m(xgc_units_filename);
+  
+  if (file_exists(archived_traced_filename))
+    return; // skip interpolants, smoothing kernel
 
   if (xgc_use_smoothing_kernel) {
     if (file_exists(xgc_smoothing_kernel_filename))
