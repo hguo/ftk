@@ -209,6 +209,8 @@ $ cmake -DFTK_DIR=$FTK_INSTALL_DIR/lib/cmake
 
 * [Hanqi Guo](http://www.mcs.anl.gov/~hguo/), [hguo@anl.gov](mailto:hguo@anl.gov)
 
-## Reference
+## Publications
 
-* Hanqi Guo, David Lenz, Jiayi Xu, Xin Liang, Wenbin He, Iulian R. Grindeanu, Han-Wei Shen, Tom Peterka, Todd Munson, and Ian Foster, "FTK: A High-Dimensional Simplicial Meshing Framework for Robust and Scalable Feature Tracking," [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) [cs.GR], 2020.
+* Hanqi Guo, David Lenz, Jiayi Xu, Xin Liang, Wenbin He, Iulian R. Grindeanu, Han-Wei Shen, Tom Peterka, Todd Munson, and Ian Foster, "FTK: A High-Dimensional Simplicial Meshing Framework for Robust and Scalable Feature Tracking" [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) [cs.GR], 2020.
+
+* Jiayi Xu, Hanqi Guo, Han-Wei Shen, Mukund Raj, Xueqiao Xu, Xueyun Wang, Zhehui Wang, and Tom Peterka, "Asynchronous and Load-Balanced Union-Find for Distributed and Parallel Scientific Data Visualization and Analysis." IEEE Transactions on Visualization and Computer Graphics (Proc. IEEE PacificVis 2021), [arXiv:2003.02351](https://arxiv.org/abs/2003.02351) [cs.DC], 2021. (Accepted)
