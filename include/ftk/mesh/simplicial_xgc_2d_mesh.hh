@@ -48,6 +48,8 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
 
   void magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
 
+  double theta(double r, double z) const;
+
 public:
   std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> new_roi_mesh(
       std::vector<I> &node_map, /* vert id of original mesh --> vert id of new mesh */
@@ -271,6 +273,12 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
     }
   }
   return mx2;
+}
+
+template <typename I, typename F>
+double simplicial_xgc_2d_mesh<I, F>::theta(double r, double z) const 
+{
+  return atan2(z - units.eq_axis_z, r - units.eq_axis_r);
 }
 
 template <typename I, typename F>

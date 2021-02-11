@@ -303,9 +303,10 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
     cp.x[k] = x[k];
   cp.t = x[3];
 
-  cp.scalar[0] = lerp_s2(f, mu);
-  cp.scalar[1] = lerp_s2(psin, mu);
-  // scalar[2] will be the offset to the magnetic lines
+  cp.scalar[0] = lerp_s2(f, mu); // dneOverne0
+  cp.scalar[1] = lerp_s2(psin, mu); // psin
+  cp.scalar[2] = m2->theta(cp.x[0], cp.x[1]); // theta
+  /// scalar[2] will be the offset to the magnetic lines
 
   double h[2][2];
   ftk::lerp_s2m2x2(j, mu, h);
@@ -689,7 +690,7 @@ inline void xgc_blob_filament_tracker::post_analysis_curves(feature_curve_set_t&
         //     rzp[0], rzp[1], rzp[2], rzp1[0], rzp1[1], rzp1[2], offset);
       }
 
-      c[i].scalar[2] = offset;
+      c[i].scalar[3] = offset;
       // fprintf(stderr, "---r=%f, z=%f, p=%f, t=%f, offset=%f\n", 
       //     c[i].x[0], c[i].x[1], c[i].x[2], c[i].t, offset);
     }
@@ -838,7 +839,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
 
     // auto poly = sliced.to_vtp(3, std::vector<std::string>());
     auto poly = sliced.to_vtp(3, {
-        "dneOverne0", "psin", "offset"});
+        "dneOverne0", "psin", "theta", "offset"});
     
     const auto filename = series_filename(pattern, i);
     write_polydata(filename, transform_vtp_coordinates(poly));
