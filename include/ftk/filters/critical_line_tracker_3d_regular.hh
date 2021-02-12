@@ -147,6 +147,19 @@ inline bool critical_line_tracker_3d_regular::check_simplex(
   // locate zero
   float mu[3], // barycentric coordinates
         cond; // condition number
+
+  const long long factor = 2 << 20; // TODO
+  long long UVf[3][2];
+  for (int i = 0; i < 3; i ++)
+    for (int j = 0; j < 2; j ++)
+      UVf[i][j] = factor * UV[i][j];
+  
+  int indices[3];
+  simplex_indices(vertices, indices);
+  
+  bool succ = robust_critical_point_in_simplex2(UVf, indices);
+  if (!succ) return false;
+
   inverse_lerp_s2v2(UV, mu, &cond);
   // mu[0] = mu[1] = mu[2] = 0.3333;
 
@@ -172,7 +185,8 @@ inline bool critical_line_tracker_3d_regular::check_simplex(
 inline void critical_line_tracker_3d_regular::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
-  
+  // std::cerr << field_data_snapshots[0].uv.shape() << std::endl;
+
   typedef std::chrono::high_resolution_clock clock_type;
   auto t0 = clock_type::now();
 

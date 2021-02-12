@@ -486,6 +486,12 @@ void initialize_critical_line_tracker(diy::mpi::communicator comm)
   tracker_critical_line->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
   tracker_critical_line->set_end_timestep(nt - 1);
   tracker_critical_line->set_number_of_threads(nthreads);
+  
+  if (comm.rank() == 0) {
+    // fprintf(stderr, "SUMMARY\n=============\n");
+    std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
+    // fprintf(stderr, "=============\n");
+  }
 }
 
 void execute_critical_line_tracker(diy::mpi::communicator comm)
@@ -494,18 +500,19 @@ void execute_critical_line_tracker(diy::mpi::communicator comm)
   stream->set_callback([&](int k, const ndarray<double> &field_data) {
     tracker_critical_line->push_field_data_snapshot(field_data);
     
-    if (k != 0) tracker_contour->advance_timestep();
-    if (k == stream->n_timesteps() - 1) tracker_contour->update_timestep();
+    if (k != 0) tracker_critical_line->advance_timestep();
+    if (k == stream->n_timesteps() - 1) tracker_critical_line->update_timestep();
   });
   stream->start();
   stream->finish();
-  tracker_contour->finalize();
-
+  
   if (output_type == "intersections")
     tracker_critical_line->write_intersections(output_pattern);
-  else if (output_type == "sliced")
+  
+  tracker_critical_line->finalize();
+  if (output_type == "sliced")
     tracker_critical_line->write_sliced(output_pattern);
-  else
+  else if (output_type == "traced")
     tracker_critical_line->write_surfaces(output_pattern, output_format);
 }
 
