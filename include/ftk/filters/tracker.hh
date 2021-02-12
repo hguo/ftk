@@ -9,10 +9,11 @@ namespace ftk {
 
 enum {
   TRACKER_CRITICAL_POINT = 1,
-  TRACKER_TDGL_VORTEX = 2,
-  TRACKER_CONTOUR = 3,
-  TRACKER_CONNECTED_COMPONENTS = 4,
-  TRACKER_THRESHOLD = 5,
+  TRACKER_CRITICAL_LINE = 2,
+  TRACKER_TDGL_VORTEX = 3,
+  TRACKER_CONTOUR = 4,
+  TRACKER_CONNECTED_COMPONENTS = 5,
+  TRACKER_THRESHOLD = 6,
   TRACKER_XGC_BLOB_FILAMENT = 105,
   TRACKER_XGC_BLOB_THRESHOLD = 106
 };
@@ -68,6 +69,8 @@ inline int tracker::str2tracker(const std::string& s)
     return TRACKER_CONTOUR;
   else if (s == "tdgl" || s == "tdgl_vortex" || s == "tdgl-vortex" || s == "tdgl_vortices" || s == "tdgl-vortices")
     return TRACKER_TDGL_VORTEX;
+  else if (s == "cl" || s == "critical_line" || s == "critical_lines")
+    return TRACKER_CRITICAL_LINE;
   else if (s == "cc" || s == "connected_component" || s == "connected_components")
     return TRACKER_CONNECTED_COMPONENTS;
   else if (s == "xgc_blob_filament" || s == "xgc-blob-filament")

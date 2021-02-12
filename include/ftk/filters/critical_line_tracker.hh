@@ -1,5 +1,5 @@
-#ifndef _FTK_TDGL_TRACKER_HH
-#define _FTK_TDGL_TRACKER_HH
+#ifndef _FTK_CRITICAL_LINE_TRACKER_HH
+#define _FTK_CRITICAL_LINE_TRACKER_HH
 
 #include <ftk/config.hh>
 #include <ftk/algorithms/cca.hh>
@@ -59,6 +59,7 @@ inline bool critical_line_tracker::pop_field_data_snapshot()
   
 inline void critical_line_tracker::push_field_data_snapshot(const ndarray<float> &uv)
 {
+  field_data_snapshot_t snapshot; 
   snapshot.uv = uv;
   field_data_snapshots.emplace_back(snapshot);
 }
