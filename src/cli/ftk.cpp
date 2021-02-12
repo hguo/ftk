@@ -72,6 +72,7 @@ std::shared_ptr<tracker> mtracker;
 std::shared_ptr<critical_point_tracker_wrapper> tracker_critical_point;
 std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
+std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
 std::shared_ptr<threshold_tracker<>> tracker_threshold;
 std::shared_ptr<ndarray_stream<>> stream;
 
@@ -470,6 +471,44 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
   tracker->finalize();
 }
 
+void initialize_critical_line_tracker(diy::mpi::communicator comm)
+{
+  const auto js = stream->get_json();
+  const size_t nd = stream->n_dimensions(),
+               DW = js["dimensions"][0], 
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+  const int nt = js["n_timesteps"];
+
+  tracker_critical_line.reset(new critical_line_tracker_3d_regular(comm) );
+  
+  tracker_critical_line->set_domain(lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
+  tracker_critical_line->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
+  tracker_critical_line->set_end_timestep(nt - 1);
+  tracker_critical_line->set_number_of_threads(nthreads);
+}
+
+void execute_critical_line_tracker(diy::mpi::communicator comm)
+{
+  tracker_critical_line->initialize();
+  stream->set_callback([&](int k, const ndarray<double> &field_data) {
+    tracker_critical_line->push_field_data_snapshot(field_data);
+    
+    if (k != 0) tracker_contour->advance_timestep();
+    if (k == stream->n_timesteps() - 1) tracker_contour->update_timestep();
+  });
+  stream->start();
+  stream->finish();
+  tracker_contour->finalize();
+
+  if (output_type == "intersections")
+    tracker_critical_line->write_intersections(output_pattern);
+  else if (output_type == "sliced")
+    tracker_critical_line->write_sliced(output_pattern);
+  else
+    tracker_critical_line->write_surfaces(output_pattern, output_format);
+}
+
 void initialize_tdgl_tracker(diy::mpi::communicator comm)
 {
   input_filenames = glob(input_pattern);
@@ -692,6 +731,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 
   if (ttype == TRACKER_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);
+  else if (ttype == TRACKER_CRITICAL_LINE)
+    initialize_critical_line_tracker(comm);
   else if (ttype == TRACKER_CONTOUR)
     initialize_contour_tracker(comm); 
   else if (ttype == TRACKER_TDGL_VORTEX)
@@ -717,6 +758,8 @@ int main(int argc, char **argv)
 
   if (ttype == TRACKER_CRITICAL_POINT)
     execute_critical_point_tracker(comm);
+  else if (ttype == TRACKER_CRITICAL_LINE)
+    execute_critical_line_tracker(comm);
   else if (ttype == TRACKER_CONTOUR)
     execute_contour_tracker(comm);
   else if (ttype == TRACKER_TDGL_VORTEX)
