@@ -31,7 +31,11 @@ namespace ftk {
 
 // a non-template ndarray wrapper
 struct ndarray_wrapper {
+  explicit ndarray_wrapper() {}
   explicit ndarray_wrapper(int t);
+  template <typename T> ndarray_wrapper(const ndarray<T>&);
+  template <typename T> ndarray_wrapper& operator=(const ndarray<T>&);
+
   ndarray_wrapper(const ndarray_wrapper& w); // shallow copy
   ndarray_wrapper& operator=(const ndarray_wrapper& w); // shallow copy
   ~ndarray_wrapper() {}
@@ -40,12 +44,16 @@ struct ndarray_wrapper {
 
   template <typename T> std::shared_ptr<ndarray<T>> get() const;
 
+  template <typename T> static int data_type();
+
 public: // wrapping ndarray member funcs
   size_t nd() const { FTK_NDARRAY_RTN_OP(nd()); }
   size_t dim(size_t i) const { FTK_NDARRAY_RTN_OP( dim(i)); } 
   size_t size() const { FTK_NDARRAY_RTN_OP(size()); }
   bool empty() const { FTK_NDARRAY_RTN_OP(empty()); }
   const std::vector<size_t>& shape() const { FTK_NDARRAY_RTN_OP( shape() ); }
+
+  double resolution() const { FTK_NDARRAY_RTN_OP(resolution()); }
 
   void set_multicomponents(size_t c=1) { FTK_NDARRAY_VOID_OP( set_multicomponents(c) ); }
   bool multicomponents() const { FTK_NDARRAY_RTN_OP( multicomponents() ); }
@@ -66,6 +74,43 @@ private:
 template <> std::shared_ptr<ndarray<float>> ndarray_wrapper::get<float>() const { return ptr_float; }
 template <> std::shared_ptr<ndarray<double>> ndarray_wrapper::get<double>() const { return ptr_double; }
 template <> std::shared_ptr<ndarray<int>> ndarray_wrapper::get<int>() const { return ptr_int; }
+
+template <> int ndarray_wrapper::data_type<float>() { return NDARRAY_TYPE_FLOAT; }
+template <> int ndarray_wrapper::data_type<double>() { return NDARRAY_TYPE_DOUBLE; }
+template <> int ndarray_wrapper::data_type<int>() { return NDARRAY_TYPE_INT; }
+
+template <> ndarray_wrapper::ndarray_wrapper(const ndarray<float>& array) {
+  type = NDARRAY_TYPE_FLOAT;
+  ptr_float.reset(new ndarray<float>(array)); 
+}
+
+template <> ndarray_wrapper::ndarray_wrapper(const ndarray<double>& array) { 
+  type = NDARRAY_TYPE_DOUBLE;
+  ptr_double.reset(new ndarray<double>(array)); 
+}
+
+template <> ndarray_wrapper::ndarray_wrapper(const ndarray<int>& array) { 
+  type = NDARRAY_TYPE_INT;
+  ptr_int.reset(new ndarray<int>(array)); 
+}
+
+template <> ndarray_wrapper& ndarray_wrapper::operator=(const ndarray<float>& array) {
+  type = NDARRAY_TYPE_FLOAT;
+  ptr_float.reset(new ndarray<float>(array)); 
+  return *this;
+}
+
+template <> ndarray_wrapper& ndarray_wrapper::operator=(const ndarray<double>& array) {
+  type = NDARRAY_TYPE_DOUBLE;
+  ptr_double.reset(new ndarray<double>(array)); 
+  return *this;
+}
+
+template <> ndarray_wrapper& ndarray_wrapper::operator=(const ndarray<int>& array) {
+  type = NDARRAY_TYPE_INT;
+  ptr_int.reset(new ndarray<int>(array)); 
+  return *this;
+}
 
 ndarray_wrapper::ndarray_wrapper(int t)
 {
