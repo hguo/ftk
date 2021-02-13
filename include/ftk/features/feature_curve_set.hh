@@ -6,7 +6,7 @@
 
 #if FTK_HAVE_VTK
 #include <vtkUnsignedIntArray.h>
-#include <vtkDoubleArray.h>
+#include <vtkFloatArray.h>
 #include <vtkVertex.h>
 #include <vtkSmartPointer.h>
 #include <vtkCellArray.h>
@@ -239,12 +239,12 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     obj->GetPointIds()->SetNumberOfIds(npts);
     for (int i = 0; i < npts; i ++)
       obj->GetPointIds()->SetId(i, i+nv);
-
+      
     if (curve.size() < 2) // isolated vertex
       verts->InsertNextCell(obj);
     else 
       lines->InsertNextCell(obj);
-
+    
     nv += npts;
   });
  
@@ -260,6 +260,8 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     foreach([&](const feature_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
         types->SetValue(i ++, curve[j].type);
+      if (curve.loop)
+        types->SetValue(i ++, curve[0].type);
     });
     types->SetName("type");
     polyData->GetPointData()->AddArray(types);
@@ -270,49 +272,53 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     ids->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](int id, const feature_curve_t& curve) {
-      const auto npts = curve.loop ? curve.size()+1 : curve.size();
-      for (auto j = 0; j < npts; j ++)
-        ids->SetValue(i ++, id);
+      for (auto j = 0; j < curve.size(); j ++)
+        ids->SetValue(i ++, curve[j].id);
+      if (curve.loop)
+        ids->SetValue(i ++, curve[0].id);
     });
     ids->SetName("id");
     polyData->GetPointData()->AddArray(ids);
   }
   
   if (1) { // velocities
-    vtkSmartPointer<vtkDoubleArray> vels = vtkSmartPointer<vtkDoubleArray>::New();
+    vtkSmartPointer<vtkFloatArray> vels = vtkSmartPointer<vtkFloatArray>::New();
     vels->SetNumberOfComponents(3);
     vels->SetNumberOfTuples(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
-      const auto npts = curve.loop ? curve.size()+1 : curve.size();
-      for (auto j = 0; j < npts; j ++)
+      for (auto j = 0; j < curve.size(); j ++)
         vels->SetTuple3(i ++, curve[j].v[0], curve[j].v[1], curve[j].v[2]);
+      if (curve.loop)
+        vels->SetTuple3(i ++, curve[0].v[0], curve[0].v[1], curve[0].v[2]);
     });
     vels->SetName("velocity");
     polyData->GetPointData()->AddArray(vels);
   }
   
   if (1) { // time
-    vtkSmartPointer<vtkDoubleArray> time = vtkSmartPointer<vtkDoubleArray>::New();
+    vtkSmartPointer<vtkFloatArray> time = vtkSmartPointer<vtkFloatArray>::New();
     time->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
-      const auto npts = curve.loop ? curve.size()+1 : curve.size();
-      for (auto j = 0; j < npts; j ++)
+      for (auto j = 0; j < curve.size(); j ++)
         time->SetValue(i ++, curve[j].t);
+      if (curve.loop)
+        time->SetValue(i ++, curve[0].t);
     });
     time->SetName("time");
     polyData->GetPointData()->AddArray(time);
   }
   
   if (1) { // condition numbers
-    vtkSmartPointer<vtkDoubleArray> conds = vtkSmartPointer<vtkDoubleArray>::New();
+    vtkSmartPointer<vtkFloatArray> conds = vtkSmartPointer<vtkFloatArray>::New();
     conds->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
-      const auto npts = curve.loop ? curve.size()+1 : curve.size();
-      for (auto j = 0; j < npts; j ++)
+      for (auto j = 0; j < curve.size(); j ++)
         conds->SetValue(i ++, curve[j].cond);
+      if (curve.loop)
+        conds->SetValue(i ++, curve[0].cond);
     });
     conds->SetName("cond");
     polyData->GetPointData()->AddArray(conds);
@@ -321,13 +327,14 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
   // point data for scalars
   // if (has_scalar_field) {
   for (auto k = 0; k < scalar_components.size(); k ++) {
-    vtkSmartPointer<vtkDoubleArray> scalar = vtkSmartPointer<vtkDoubleArray>::New();
+    vtkSmartPointer<vtkFloatArray> scalar = vtkSmartPointer<vtkFloatArray>::New();
     scalar->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
-      const auto npts = curve.loop ? curve.size()+1 : curve.size();
-      for (auto j = 0; j < npts; j ++)
+      for (auto j = 0; j < curve.size(); j ++)
         scalar->SetValue(i ++, curve[j].scalar[k]);
+      if (curve.loop)
+        scalar->SetValue(i ++, curve[0].scalar[k]);
     });
     scalar->SetName(scalar_components[k].c_str());
     polyData->GetPointData()->AddArray(scalar);
