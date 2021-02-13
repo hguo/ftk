@@ -219,6 +219,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
   };
 
   foreach([&](const feature_curve_t& curve) {
+    if (curve.empty()) return;
     for (auto i = 0; i < curve.size(); i ++) {
       const auto p = pt2coords(curve[i]);
       points->InsertNextPoint(p[0], p[1], p[2]);
@@ -232,7 +233,6 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
   size_t nv = 0;
   foreach([&](const feature_curve_t& curve) {
     if (curve.empty()) return;
-
     const auto npts = curve.loop ? curve.size()+1 : curve.size();
     
     vtkSmartPointer<vtkPolyLine> obj = vtkPolyLine::New();

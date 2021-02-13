@@ -25,7 +25,7 @@ inline void clamp_barycentric(T x[])
 {
   T sum = 0.0;
   for (int i = 0; i < n; i ++) {
-    x[i] = clamp(x[i], 0.0, 1.0);
+    x[i] = clamp<T>(x[i], 0.0, 1.0);
     sum += x[i];
   }
   for (int i = 0; i < n; i ++)

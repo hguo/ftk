@@ -173,16 +173,17 @@ ndarray<T> gradient3Dt(const ndarray<T>& scalar)
 
 // derivate gradients (jacobians) for 3D vector field
 template <typename T>
-ndarray<T> jacobian3D(const ndarray<T>& V)
+ndarray<T> jacobian3D(const ndarray<T>& V, int b = 2)
 {
   const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3);
   ndarray<T> J;
   J.reshape(3, 3, DW, DH, DD);
+  J.set_multicomponents(2);
 
 #pragma omp parallel for collapse(3)
-  for (int k = 2; k < DD-2; k ++) {
-    for (int j = 2; j < DH-2; j ++) {
-      for (int i = 2; i < DW-2; i ++) {
+  for (int k = b; k < DD-b; k ++) {
+    for (int j = b; j < DH-b; j ++) {
+      for (int i = b; i < DW-b; i ++) {
         const float H00 = J(0, 0, i, j, k) = // ddf/dx2
           0.5 * (V(0, i+1, j, k) - V(0, i-1, j, k));
         const float H01 = J(0, 1, i, j, k) = // ddf/dxdy
@@ -249,6 +250,54 @@ ndarray<T> jacobian3Dt(const ndarray<T>& V)
   }
 
   return J;
+}
+
+template <typename T>
+ndarray<T> cross_product3D(const ndarray<T>& V, const ndarray<T>& W)
+{
+  ndarray<T> VW(V.shape());
+  VW.set_multicomponents(1);
+  
+  for (int k = 1; k < V.dim(3) - 1; k++) {
+    for (int j = 1; j < V.dim(2) - 1; j++) {
+      for (int i = 1; i < V.dim(1) - 1; i++) {
+        VW(0, i, j, k) =  V(1, i, j, k) * W(2, i, j, k) - V(2, i, j, k) * W(1, i, j, k);
+        VW(1, i, j, k) = -V(0, i, j, k) * W(2, i, j, k) + V(2, i, j, k) * W(0, i, j, k);
+        VW(2, i, j, k) =  V(0, i, j, k) * W(1, i, j, k) - V(1, i, j, k) * W(0, i, j, k);
+      }
+    }
+  }
+
+  return VW;
+}
+
+template <typename T>
+ndarray<T> Jv_dot_v(const ndarray<T>& V)
+{
+  auto J = jacobian3D(V, 1);
+  ndarray<T> Jvv(V.shape());
+  Jvv.set_multicomponents(1);
+  
+  for (int k = 1; k < V.dim(3) - 1; k++) {
+    for (int j = 1; j < V.dim(2) - 1; j++) {
+      for (int i = 1; i < V.dim(1) - 1; i++) {
+        for (int v=0; v<3; v++) {
+#if 0
+          Jvv(v, i, j, k) =
+              J(0, v, i, j, k) * V(0, i, j, k)
+            + J(1, v, i, j, k) * V(1, i, j, k)
+            + J(2, v, i, j, k) * V(2, i, j, k);
+#else
+          Jvv(v, i, j, k) =
+              J(v, 0, i, j, k) * V(0, i, j, k)
+            + J(v, 1, i, j, k) * V(1, i, j, k)
+            + J(v, 2, i, j, k) * V(2, i, j, k);
+#endif
+        }
+      }
+    }
+  }
+  return Jvv;
 }
 
 }

@@ -57,10 +57,20 @@ inline bool critical_line_tracker::pop_field_data_snapshot()
   } else return false;
 }
   
-inline void critical_line_tracker::push_field_data_snapshot(const ndarray<float> &uv)
+inline void critical_line_tracker::push_field_data_snapshot(const ndarray<float> &data)
 {
   field_data_snapshot_t snapshot; 
-  snapshot.uv = uv;
+
+  if (data.dim(0) == 3) {
+    // compute v*Jv
+    // fprintf(stderr, "computing v*Jv...\n");
+    snapshot.uv = cross_product3D(data, Jv_dot_v(data));
+    // snapshot.uv.to_vtk_image_data_file("tornado-vJv.vti");
+    std::cerr << snapshot.uv.shape() << std::endl;
+  } else {
+    snapshot.uv = data;
+  }
+
   field_data_snapshots.emplace_back(snapshot);
 }
 

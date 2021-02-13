@@ -44,7 +44,7 @@ protected:
   void simplex_values(
       const std::vector<std::vector<int>>& vertices,
       float X[][4],
-      float UV[][2]);
+      float UV[][3]);
 };
 
 
@@ -141,7 +141,7 @@ inline bool critical_line_tracker_3d_regular::check_simplex(
   if (!e.valid(m)) return false; // check if the 2-simplex is valid
   const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
 
-  float X[3][4], UV[3][2];
+  float X[3][4], UV[3][3], uv[3][2];
   simplex_values(vertices, X, UV);
 
   // locate zero
@@ -151,8 +151,10 @@ inline bool critical_line_tracker_3d_regular::check_simplex(
   const long long factor = 2 << 20; // TODO
   long long UVf[3][2];
   for (int i = 0; i < 3; i ++)
-    for (int j = 0; j < 2; j ++)
+    for (int j = 0; j < 2; j ++) {
       UVf[i][j] = factor * UV[i][j];
+      uv[i][j] = UV[i][j];
+    }
   
   int indices[3];
   simplex_indices(vertices, indices);
@@ -160,8 +162,9 @@ inline bool critical_line_tracker_3d_regular::check_simplex(
   bool succ = robust_critical_point_in_simplex2(UVf, indices);
   if (!succ) return false;
 
-  inverse_lerp_s2v2(UV, mu, &cond);
+  inverse_lerp_s2v2(uv, mu, &cond);
   // mu[0] = mu[1] = mu[2] = 0.3333;
+  clamp_barycentric<3, float>(mu);
 
   // interpolation
   float x[4];
@@ -172,6 +175,7 @@ inline bool critical_line_tracker_3d_regular::check_simplex(
   p.x[1] = x[1];
   p.x[2] = x[2];
   p.t = x[3];
+  p.scalar[0] = mu[0] * UV[0][2] + mu[1] * UV[1][2] + mu[2] * UV[2][2];
   p.cond = cond;
   p.tag = e.to_integer(m);
   p.ordinal = e.is_ordinal(m);
@@ -230,7 +234,7 @@ inline void critical_line_tracker_3d_regular::update_timestep()
 inline void critical_line_tracker_3d_regular::simplex_values(
       const std::vector<std::vector<int>>& vertices,
       float X[][4],
-      float UV[][2])
+      float UV[][3])
 {
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
@@ -243,6 +247,7 @@ inline void critical_line_tracker_3d_regular::simplex_values(
           vertices[i][2] - local_array_domain.start(2)}));
     UV[i][0] = f.uv[idx];
     UV[i][1] = f.uv[idx+1];
+    UV[i][2] = f.uv[idx+2];
     
     for (int j = 0; j < 4; j ++)
       X[i][j] = vertices[i][j];
@@ -282,7 +287,7 @@ inline void critical_line_tracker_3d_regular::write_sliced(const std::string& pa
       auto sliced = surfaces.slice_time(i);
       fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
-      auto poly = sliced.to_vtp(3, std::vector<std::string>());
+      auto poly = sliced.to_vtp(3, {"residue"}); // std::vector<std::string>());
       
       const auto filename = series_filename(pattern, i);
       write_polydata(filename, poly);
