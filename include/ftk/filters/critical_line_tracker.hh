@@ -66,7 +66,7 @@ inline void critical_line_tracker::push_field_data_snapshot(const ndarray<float>
     // fprintf(stderr, "computing v*Jv...\n");
     snapshot.uv = cross_product3D(data, Jv_dot_v(data));
     // snapshot.uv.to_vtk_image_data_file("tornado-vJv.vti");
-    std::cerr << snapshot.uv.shape() << std::endl;
+    // std::cerr << snapshot.uv.shape() << std::endl;
   } else {
     snapshot.uv = data;
   }

@@ -198,11 +198,11 @@ ndarray<T> jacobian3D(const ndarray<T>& V, int b = 2)
         const float H12 = J(1, 2, i, j, k) = // ddf/dydz
           0.5 * (V(1, i, j, k+1) - V(1, i, j, k-1));
 
-        const float H20 = J(2, 0, i, j, k) = // ddf/dydx
+        const float H20 = J(2, 0, i, j, k) = // ddf/dzdx
           0.5 * (V(2, i+1, j, k) - V(2, i-1, j, k));
-        const float H21 = J(2, 1, i, j, k) = // ddf/dy2
+        const float H21 = J(2, 1, i, j, k) = // ddf/dzdy
           0.5 * (V(2, i, j+1, k) - V(2, i, j-1, k));
-        const float H22 = J(2, 2, i, j, k) = // ddf/dydz
+        const float H22 = J(2, 2, i, j, k) = // ddf/dz2
           0.5 * (V(2, i, j, k+1) - V(2, i, j, k-1));
       }
     }
@@ -272,6 +272,28 @@ ndarray<T> cross_product3D(const ndarray<T>& V, const ndarray<T>& W)
 }
 
 template <typename T>
+ndarray<T> JvT_dot_v(const ndarray<T>& V)
+{
+  auto J = jacobian3D(V, 1);
+  ndarray<T> Jvv(V.shape());
+  Jvv.set_multicomponents(1);
+  
+  for (int k = 1; k < V.dim(3) - 1; k++) {
+    for (int j = 1; j < V.dim(2) - 1; j++) {
+      for (int i = 1; i < V.dim(1) - 1; i++) {
+        for (int v=0; v<3; v++) {
+          Jvv(v, i, j, k) =
+              J(0, v, i, j, k) * V(0, i, j, k)
+            + J(1, v, i, j, k) * V(1, i, j, k)
+            + J(2, v, i, j, k) * V(2, i, j, k);
+        }
+      }
+    }
+  }
+  return Jvv;
+}
+
+template <typename T>
 ndarray<T> Jv_dot_v(const ndarray<T>& V)
 {
   auto J = jacobian3D(V, 1);
@@ -282,17 +304,10 @@ ndarray<T> Jv_dot_v(const ndarray<T>& V)
     for (int j = 1; j < V.dim(2) - 1; j++) {
       for (int i = 1; i < V.dim(1) - 1; i++) {
         for (int v=0; v<3; v++) {
-#if 0
-          Jvv(v, i, j, k) =
-              J(0, v, i, j, k) * V(0, i, j, k)
-            + J(1, v, i, j, k) * V(1, i, j, k)
-            + J(2, v, i, j, k) * V(2, i, j, k);
-#else
           Jvv(v, i, j, k) =
               J(v, 0, i, j, k) * V(0, i, j, k)
             + J(v, 1, i, j, k) * V(1, i, j, k)
             + J(v, 2, i, j, k) * V(2, i, j, k);
-#endif
         }
       }
     }
