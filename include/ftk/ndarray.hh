@@ -1,19 +1,8 @@
-#ifndef _HYPERMESH_ARRAY_HH
-#define _HYPERMESH_ARRAY_HH
+#ifndef _FTK_NDARRAY_HH
+#define _FTK_NDARRAY_HH
 
 #include <ftk/config.hh>
-#include <ftk/object.hh>
-#include <ftk/error.hh>
-#include <ftk/mesh/lattice.hh>
-#include <ftk/io/util.hh>
-#include <vector>
-#include <array>
-#include <numeric>
-#include <tuple>
-#include <algorithm>
-#include <cstring>
-#include <cassert>
-#include <random>
+#include <ftk/ndarray_base.hh>
 
 #if FTK_HAVE_ADIOS2
 #include <adios2.h>
@@ -72,7 +61,7 @@
 namespace ftk {
 
 template <typename T>
-struct ndarray { // : object {
+struct ndarray : public ndarray_base {
   friend class diy::Serialization<ndarray<T>>;
 
   ndarray() {}
@@ -90,21 +79,8 @@ struct ndarray { // : object {
   std::ostream& print(std::ostream& os) const;
   std::ostream& print_shape(std::ostream& os) const;
 
-  size_t nd() const {return dims.size();}
-  size_t dim(size_t i) const {return dims[i];}
-  size_t shape(size_t i) const {return dim(i);}
   size_t size() const {return p.size();}
-  size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
   bool empty() const  {return p.empty();}
-  const std::vector<size_t> &shape() const {return dims;}
-
-  void set_multicomponents(size_t c=1) {ncd = c;}
-  size_t multicomponents() const {return ncd;}
-
-  void set_has_time(bool b) { tv = b; }
-  bool has_time() const { return tv; }
-
-  lattice get_lattice() const;
 
   void fill(T value); //! fill with a constant value
   void fill(const std::vector<T>& values); //! fill values with std::vector
@@ -119,7 +95,6 @@ struct ndarray { // : object {
 
   void reshape(const std::vector<size_t> &dims_);
   void reshape(const std::vector<size_t> &dims, T val);
-  void reshape(size_t ndims, const size_t sizes[]);
   template <typename T1> void reshape(const ndarray<T1>& array); //! copy shape from another array
 
   void reshape(size_t n0) {reshape(std::vector<size_t>({n0}));}
@@ -139,12 +114,6 @@ struct ndarray { // : object {
   // merge multiple arrays into a multicomponent array
   static ndarray<T> concat(const std::vector<ndarray<T>>& arrays);
   static ndarray<T> stack(const std::vector<ndarray<T>>& arrays);
-
-  size_t index(const std::vector<size_t>& idx) const;
-  size_t index(const std::vector<int>& idx) const;
-
-  template <typename uint=size_t>
-  std::vector<uint> from_index(uint i) const {return lattice().from_integer(i);}
 
   T& at(const std::vector<size_t>& idx) {return p[index(idx)];}
   const T& at(const std::vector<size_t>& idx) const {return p[index(idx)];}
@@ -342,9 +311,6 @@ public: // statistics & misc
   ndarray<T> perturb(const T sigma) const; // add gaussian noise to the array
 
 private:
-  std::vector<size_t> dims, s;
-  size_t ncd = 0; // number of dimensions for components.  For 3D vector field, nd=4, ncd=1.  For 3D jacobian field, nd=5, ncd=2
-  bool tv = false; // wheter the last dimension is time
   std::vector<T> p;
     
 #if 0 // FTK_HAVE_CUDA
@@ -394,12 +360,6 @@ ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs)
   for (auto i = 0; i < array.nelem(); i ++)
     array[i] = lhs[i] * rhs;
   return array;
-}
-
-template <typename T>
-lattice ndarray<T>::get_lattice() const {
-  std::vector<size_t> st(nd(), 0), sz(dims);
-  return lattice(st, sz);
 }
 
 template <typename T>
@@ -887,13 +847,6 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 }
 
 template <typename T>
-void ndarray<T>::reshape(size_t ndims, const size_t dims[])
-{
-  std::vector<size_t> mydims(dims, dims+ndims);
-  reshape(mydims);
-}
-
-template <typename T>
 ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
 {
   dims = dims_;
@@ -934,20 +887,6 @@ void ndarray<T>::reshape(const std::vector<size_t> &dims, T val)
 {
   reshape(dims);
   std::fill(p.begin(), p.end(), val);
-}
-
-template <typename T>
-size_t ndarray<T>::index(const std::vector<size_t>& idx) const {
-  size_t i(idx[0]);
-  for (size_t j = 1; j < nd(); j ++)
-    i += idx[j] * s[j];
-  return i;
-}
-
-template <typename T>
-size_t ndarray<T>::index(const std::vector<int>& idx) const {
-  std::vector<size_t> myidx(idx.begin(), idx.end());
-  return index(myidx);
 }
 
 template <typename T>
