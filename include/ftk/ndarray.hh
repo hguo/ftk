@@ -53,6 +53,8 @@ template <typename T>
 struct ndarray : public ndarray_base {
   friend class diy::Serialization<ndarray<T>>;
 
+  int type() const;
+
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshape(dims);}
   ndarray(const std::vector<size_t> &dims, T val) {reshape(dims, val);}
@@ -309,6 +311,11 @@ private:
 };
 
 //////////////////////////////////
+
+template <typename T> int ndarray<T>::type() const { return NDARRAY_TYPE_UNKNOWN; }
+template <> inline int ndarray<double>::type() const { return NDARRAY_TYPE_DOUBLE; }
+template <> inline int ndarray<float>::type() const { return NDARRAY_TYPE_FLOAT; }
+template <> inline int ndarray<int>::type() const { return NDARRAY_TYPE_INT; }
 
 template <typename T>
 template <typename T1>

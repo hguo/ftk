@@ -28,11 +28,19 @@
 
 namespace ftk {
 
+enum {
+  NDARRAY_TYPE_UNKNOWN = 0,
+  NDARRAY_TYPE_FLOAT = 1,
+  NDARRAY_TYPE_DOUBLE = 2,
+  NDARRAY_TYPE_INT = 3
+};
+
 template <typename T> struct ndarray;
 
 // the non-template base class for ndarray
 struct ndarray_base {
- 
+  virtual int type() const = 0;
+
   virtual size_t size() const = 0;
   virtual bool empty() const = 0;
 
