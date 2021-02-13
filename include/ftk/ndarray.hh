@@ -43,17 +43,6 @@
 }
 #endif
 
-#if FTK_HAVE_VTK
-#include <vtkSmartPointer.h>
-#include <vtkDataArray.h>
-#include <vtkImageData.h>
-#include <vtkPointData.h>
-#include <vtkXMLImageDataReader.h>
-#include <vtkXMLImageDataWriter.h>
-#include <vtkDataReader.h>
-#include <vtkNew.h>
-#endif
-
 #if FTK_HAVE_PYBIND11
 #include <pybind11/numpy.h>
 #endif
@@ -207,11 +196,11 @@ public: // file i/o; automatically determine format based on extensions
   bool to_file(const std::string& filename, const std::string varname="", diy::mpi::communicator comm = MPI_COMM_WORLD) const;
 
 public: // i/o for binary file
-  void read_binary_file(const std::string& filename);
+  void read_binary_file(const std::string& filename) { ndarray_base::read_binary_file(filename); }
   void read_binary_file(FILE *fp);
   void read_binary_file_sequence(const std::string& pattern);
   void to_vector(std::vector<T> &out_vector) const;
-  void to_binary_file(const std::string& filename);
+  void to_binary_file(const std::string& filename) { ndarray_base::to_binary_file(filename); }
   void to_binary_file(FILE *fp);
 
   template <typename T1> void to_binary_file2(const std::string& f) const;
@@ -220,9 +209,8 @@ public: // i/o for binary file
   void to_bov(const std::string& filename) const;
 
 public: // i/o for vtk image data
-  void read_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
-  void read_vtk_image_data_file_sequence(const std::string& pattern);
   void to_vtk_image_data_file(const std::string& filename, const std::string varname=std::string()) const;
+  void read_vtk_image_data_file_sequence(const std::string& pattern);
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
@@ -432,27 +420,11 @@ void ndarray<T>::swap(ndarray& x)
 }
 
 template <typename T>
-void ndarray<T>::read_binary_file(const std::string& filename)
-{
-  FILE *fp = fopen(filename.c_str(), "rb");
-  read_binary_file(fp);
-  fclose(fp);
-}
-
-template <typename T>
 void ndarray<T>::read_binary_file(FILE *fp)
 {
   auto s = fread(&p[0], sizeof(T), nelem(), fp);
   if (s != nelem())
     warn(FTK_ERR_FILE_CANNOT_READ_EXPECTED_BYTES);
-}
-
-template <typename T>
-void ndarray<T>::to_binary_file(const std::string& f)
-{
-  FILE *fp = fopen(f.c_str(), "wb");
-  to_binary_file(fp);
-  fclose(fp);
 }
 
 template <typename T>
@@ -500,6 +472,42 @@ template<> inline int ndarray<long>::vtk_data_type() {return VTK_LONG;}
 template<> inline int ndarray<unsigned long>::vtk_data_type() {return VTK_UNSIGNED_LONG;}
 template<> inline int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
 template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
+
+template<typename T>
+inline void ndarray<T>::from_vtk_image_data(
+    vtkSmartPointer<vtkImageData> d, 
+    const std::string array_name)
+{
+  vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
+  if (!da) da = d->GetPointData()->GetArray(0);
+  
+  const int nd = d->GetDataDimension(), 
+            nc = da->GetNumberOfComponents();
+
+  if (nd == 2) {
+    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1]); // scalar field
+    else {
+      reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1]); // vector field
+      ncd = 1; // multicomponent array
+    };
+  } else if (nd == 3) {
+    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]); // scalar field
+    else {
+      reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
+      ncd = 1; // multicomponent array
+    }
+  } else {
+    fprintf(stderr, "[FTK] fatal error: unsupported data dimension %d.\n", nd);
+    assert(false);
+  }
+
+  for (auto i = 0; i < da->GetNumberOfTuples(); i ++) {
+    double *tuple = da->GetTuple(i);
+    for (auto j = 0; j < nc; j ++)
+      p[i*nc+j] = tuple[j];
+  }
+}
+
 
 template<typename T>
 inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, const std::string varname) const
@@ -553,50 +561,6 @@ inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(const std::st
 }
 
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data(
-    vtkSmartPointer<vtkImageData> d, 
-    const std::string array_name)
-{
-  vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
-  if (!da) da = d->GetPointData()->GetArray(0);
-  
-  const int nd = d->GetDataDimension(), 
-            nc = da->GetNumberOfComponents();
-
-  if (nd == 2) {
-    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1]); // scalar field
-    else {
-      reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1]); // vector field
-      ncd = 1; // multicomponent array
-    };
-  } else if (nd == 3) {
-    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]); // scalar field
-    else {
-      reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
-      ncd = 1; // multicomponent array
-    }
-  } else {
-    fprintf(stderr, "[FTK] fatal error: unsupported data dimension %d.\n", nd);
-    assert(false);
-  }
-
-  for (auto i = 0; i < da->GetNumberOfTuples(); i ++) {
-    double *tuple = da->GetTuple(i);
-    for (auto j = 0; j < nc; j ++)
-      p[i*nc+j] = tuple[j];
-  }
-}
-
-template<typename T>
-inline void ndarray<T>::read_vtk_image_data_file(const std::string& filename, const std::string array_name)
-{
-  vtkNew<vtkXMLImageDataReader> reader;
-  reader->SetFileName(filename.c_str());
-  reader->Update();
-  from_vtk_image_data(reader->GetOutput(), array_name);
-}
-
-template<typename T>
 inline void ndarray<T>::read_vtk_image_data_file_sequence(const std::string& pattern)
 {
   const auto filenames = glob(pattern);
@@ -614,12 +578,6 @@ inline void ndarray<T>::read_vtk_image_data_file_sequence(const std::string& pat
   reshape(dims);
 }
 #else
-template<typename T>
-inline void ndarray<T>::read_vtk_image_data_file(const std::string& filename, const std::string array_name)
-{
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
-}
-
 template<typename T>
 inline void ndarray<T>::read_vtk_image_data_file_sequence(const std::string& pattern)
 {

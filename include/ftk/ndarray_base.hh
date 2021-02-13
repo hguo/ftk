@@ -15,6 +15,17 @@
 #include <cassert>
 #include <random>
 
+#if FTK_HAVE_VTK
+#include <vtkSmartPointer.h>
+#include <vtkDataArray.h>
+#include <vtkImageData.h>
+#include <vtkPointData.h>
+#include <vtkXMLImageDataReader.h>
+#include <vtkXMLImageDataWriter.h>
+#include <vtkDataReader.h>
+#include <vtkNew.h>
+#endif
+
 namespace ftk {
 
 template <typename T> struct ndarray;
@@ -42,14 +53,27 @@ struct ndarray_base {
   template <typename uint=size_t>
   std::vector<uint> from_index(uint i) const {return lattice().from_integer(i);}
 
-  
+  lattice get_lattice() const;
+
+public:  
   void set_multicomponents(size_t c=1) {ncd = c;}
   size_t multicomponents() const {return ncd;}
 
   void set_has_time(bool b) { tv = b; }
   bool has_time() const { return tv; }
 
-  lattice get_lattice() const;
+public: // binary i/o
+  void read_binary_file(const std::string& filename);
+  virtual void read_binary_file(FILE *fp) = 0;
+  void to_binary_file(const std::string& filename);
+  virtual void to_binary_file(FILE *fp) = 0;
+
+public: // vti i/o
+  void read_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
+  virtual void read_vtk_image_data_file_sequence(const std::string& pattern) = 0;
+#if FTK_HAVE_VTK
+  virtual void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string()) = 0;
+#endif
 
 protected:
   std::vector<size_t> dims, s;
@@ -84,6 +108,32 @@ inline size_t ndarray_base::index(const std::vector<size_t>& idx) const {
 inline size_t ndarray_base::index(const std::vector<int>& idx) const {
   std::vector<size_t> myidx(idx.begin(), idx.end());
   return index(myidx);
+}
+
+inline void ndarray_base::read_binary_file(const std::string& filename)
+{
+  FILE *fp = fopen(filename.c_str(), "rb");
+  read_binary_file(fp);
+  fclose(fp);
+}
+
+inline void ndarray_base::to_binary_file(const std::string& f)
+{
+  FILE *fp = fopen(f.c_str(), "wb");
+  to_binary_file(fp);
+  fclose(fp);
+}
+
+inline void ndarray_base::read_vtk_image_data_file(const std::string& filename, const std::string array_name)
+{
+#if FTK_HAVE_VTK
+  vtkNew<vtkXMLImageDataReader> reader;
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+  from_vtk_image_data(reader->GetOutput(), array_name);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
 }
 
 } // namespace ftk
