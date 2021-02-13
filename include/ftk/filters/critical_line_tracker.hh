@@ -35,6 +35,7 @@ public:
 protected:
   struct field_data_snapshot_t {
     ndarray<float> uv; // shape is (2, width, height, depth)
+    ndarray<float> J; // jacobian, optional
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
 };
@@ -60,7 +61,9 @@ inline bool critical_line_tracker::pop_field_data_snapshot()
 inline void critical_line_tracker::push_field_data_snapshot(const ndarray<float> &data)
 {
   field_data_snapshot_t snapshot; 
+  snapshot.uv = data;
 
+#if 0
   if (data.dim(0) == 3) {
     // compute v*Jv
     // fprintf(stderr, "computing v*Jv...\n");
@@ -70,6 +73,7 @@ inline void critical_line_tracker::push_field_data_snapshot(const ndarray<float>
   } else {
     snapshot.uv = data;
   }
+#endif
 
   field_data_snapshots.emplace_back(snapshot);
 }
