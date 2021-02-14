@@ -481,8 +481,8 @@ void initialize_critical_line_tracker(diy::mpi::communicator comm)
                DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
   const int nt = js["n_timesteps"];
 
-  // tracker_critical_line.reset(new critical_line_tracker_3d_regular(comm) );
-  tracker_critical_line.reset(new sujudi_haimes_tracker_3d_regular(comm) );
+  tracker_critical_line.reset(new critical_line_tracker_3d_regular(comm) );
+  // tracker_critical_line.reset(new sujudi_haimes_tracker_3d_regular(comm) );
   
   tracker_critical_line->set_domain(lattice({2, 2, 2}, {DW-2, DH-2, DD-2}));
   tracker_critical_line->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));

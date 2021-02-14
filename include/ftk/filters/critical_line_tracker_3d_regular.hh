@@ -46,7 +46,7 @@ protected:
       float X[][4],
       float UV[][2]) const;
 
-  virtual std::vector<std::string> varnames() const { return {""}; } // varnames for additional variables stored in scalar
+  virtual std::vector<std::string> varnames() const { return {}; } // varnames for additional variables stored in scalar
 };
 
 
