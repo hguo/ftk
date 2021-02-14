@@ -24,7 +24,7 @@ protected:
 
   void push_field_data_snapshot(const ndarray<float>& data);
 
-  std::vector<std::string> varnames() const { return {"residue", "detJ"}; }
+  std::vector<std::string> varnames() const { return {"residue", "discJ"}; }
 };
 
 void sujudi_haimes_tracker_3d_regular::simplex_residue_J(
@@ -66,10 +66,17 @@ inline bool sujudi_haimes_tracker_3d_regular::check_simplex(const element_t& e, 
   float residue = lerp_s2(residues, mu);
   float J[3][3];
   ftk::lerp_s2m3x3(Js, mu, J);
-  float detJ = det3(J);
+
+  float P[4]; // characteristic polynomial
+  characteristic_polynomial_3x3(J, P);
+  float discJ = cubic_discriminant(P) * 1e10;
+
+
+  // fprintf(stderr, "P=%f, %f, %f, %f, disc=%f\n", P[0], P[1], P[2], P[3], discJ);
+  // float detJ = det3(J);
 
   cp.scalar[0] = residue;
-  cp.scalar[1] = detJ;
+  cp.scalar[1] = discJ;
 
   // fprintf(stderr, "residue=%f, detJ=%f\n", residue, detJ);
   // print3x3("J", J);

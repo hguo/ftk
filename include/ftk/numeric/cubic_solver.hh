@@ -7,6 +7,19 @@
 
 namespace ftk {
 
+template <typename T>
+T cubic_discriminant(T P[4])
+{
+  // 18abcd – 4b³d + b²c² – 4ac³ – 27a²d².
+  const T a = P[3], b = P[2], c = P[1], d = P[0];
+
+  return 18 * a * b * c * d 
+    - 4 * b * b * b * d
+    +     b * b * c * c
+    - 4 * a * c * c * c
+    -27 * a * a * d * d;
+}
+
 // This function returns the discriminant.  
 // If disc > 0, we have one real and two complex conjugate roots.
 // If disc <= 0, we have three roots; the roots may be multiple.
