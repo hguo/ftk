@@ -8,21 +8,28 @@ namespace ftk {
 
 struct sujudi_haimes_tracker_3d_regular : public critical_line_tracker_3d_regular 
 {
-  sujudi_haimes_tracker_3d_regular(diy::mpi::communicator comm=MPI_COMM_WORLD) : critical_line_tracker_3d_regular(comm) {}
-  virtual ~critical_line_tracker_3d_regular();
+  sujudi_haimes_tracker_3d_regular(diy::mpi::communicator comm) : 
+    critical_line_tracker_3d_regular(comm), 
+    critical_line_tracker(comm),
+    regular_tracker(comm, 3), 
+    tracker(comm) {}
+  virtual ~sujudi_haimes_tracker_3d_regular() {};
 
+protected:
   bool check_simplex(const element_t& s, feature_point_t& cp) const;
 
-  void simplex_resudue_J(
+  void simplex_residue_J(
       const std::vector<std::vector<int>>& vertices,
       float residues[3], float Js[3][3][3]) const;
 
   void push_field_data_snapshot(const ndarray<float>& data);
+
+  std::vector<std::string> varnames() const { return {"residue", "detJ"}; }
 };
 
-void sujudi_haimes_tracker_3d_regular::simplex_resudue_J(
+void sujudi_haimes_tracker_3d_regular::simplex_residue_J(
       const std::vector<std::vector<int>>& vertices,
-      float residue[3], float Js[3][3][3]) const
+      float residues[3], float Js[3][3][3]) const
 {
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
@@ -51,10 +58,21 @@ void sujudi_haimes_tracker_3d_regular::simplex_resudue_J(
 inline bool sujudi_haimes_tracker_3d_regular::check_simplex(const element_t& e, feature_point_t& cp) const
 {
   if (!critical_line_tracker_3d_regular::check_simplex(e, cp)) return false;
-
-  float residues[3], Js[3][3][3];
   
-  simplex_resudue_J(e.vertices(m), residues, Js);
+  float mu[3] = {(float)cp.v[0], (float)cp.v[1], (float)cp.v[2]};
+  float residues[3], Js[3][3][3];
+  simplex_residue_J(e.vertices(m), residues, Js);
+ 
+  float residue = lerp_s2(residues, mu);
+  float J[3][3];
+  ftk::lerp_s2m3x3(Js, mu, J);
+  float detJ = det3(J);
+
+  cp.scalar[0] = residue;
+  cp.scalar[1] = detJ;
+
+  // fprintf(stderr, "residue=%f, detJ=%f\n", residue, detJ);
+  // print3x3("J", J);
 
   return true;
 }

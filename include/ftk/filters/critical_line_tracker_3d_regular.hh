@@ -45,6 +45,8 @@ protected:
       const std::vector<std::vector<int>>& vertices,
       float X[][4],
       float UV[][2]) const;
+
+  virtual std::vector<std::string> varnames() const { return {""}; } // varnames for additional variables stored in scalar
 };
 
 
@@ -175,6 +177,9 @@ inline bool critical_line_tracker_3d_regular::check_simplex(
   p.x[1] = x[1];
   p.x[2] = x[2];
   p.t = x[3];
+  p.v[0] = mu[0]; // using v channel to store mu for now for the derived classes
+  p.v[1] = mu[1];
+  p.v[2] = mu[2];
   // p.scalar[0] = mu[0] * UV[0][2] + mu[1] * UV[1][2] + mu[2] * UV[2][2];
   p.cond = cond;
   p.tag = e.to_integer(m);
@@ -288,7 +293,7 @@ inline void critical_line_tracker_3d_regular::write_sliced(const std::string& pa
       fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
       // auto poly = sliced.to_vtp(3, {"residue"}); // std::vector<std::string>());
-      auto poly = sliced.to_vtp(3, std::vector<std::string>());
+      auto poly = sliced.to_vtp(3, varnames()); // std::vector<std::string>());
       
       const auto filename = series_filename(pattern, i);
       write_polydata(filename, poly);

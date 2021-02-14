@@ -136,6 +136,18 @@ inline void lerp_s3m3x3(const T V[4][3][3], const T mu[4], T v[3][3])
     }
 }
 
+template <typename T>
+__device__ __host__
+inline void lerp_s2m3x3(const T V[3][3][3], const T mu[3], T v[3][3])
+{
+  for (int j = 0; j < 3; j ++)
+    for (int k = 0; k < 3; k ++) {
+      v[j][k] = T(0);
+      for (int i = 0; i < 3; i ++) 
+        v[j][k] += V[i][j][k] * mu[i];
+    }
+}
+
 }
 
 #endif

@@ -30,7 +30,7 @@ public:
 
 public:
   bool pop_field_data_snapshot();
-  void push_field_data_snapshot(const ndarray<float> &uv);
+  virtual void push_field_data_snapshot(const ndarray<float> &uv);
   
 protected:
   struct field_data_snapshot_t {
