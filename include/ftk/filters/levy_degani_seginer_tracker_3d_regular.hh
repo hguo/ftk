@@ -18,18 +18,18 @@ struct levy_degani_seginer_tracker_3d_regular : public critical_line_tracker_3d_
 protected:
   bool check_simplex(const element_t& s, feature_point_t& cp) const;
 
-  void simplex_residue(
+  void simplex_residue_vorts(
       const std::vector<std::vector<int>>& vertices,
-      float residues[3]) const;
+      float residues[3], float vorts[3][3]) const;
 
   void push_field_data_snapshot(const ndarray<float>& data);
 
-  std::vector<std::string> varnames() const { return {"residue"}; }
+  std::vector<std::string> varnames() const { return {"residue", "vortmag"}; }
 };
 
-void levy_degani_seginer_tracker_3d_regular::simplex_residue(
+void levy_degani_seginer_tracker_3d_regular::simplex_residue_vorts(
       const std::vector<std::vector<int>>& vertices,
-      float residues[3]) const
+      float residues[3], float vorts[3][3]) const
 {
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
@@ -40,7 +40,10 @@ void levy_degani_seginer_tracker_3d_regular::simplex_residue(
           vertices[i][0] - local_array_domain.start(0), 
           vertices[i][1] - local_array_domain.start(1), 
           vertices[i][2] - local_array_domain.start(2)}));
+
     residues[i] = f.uv[idx+2];
+    for (int j = 0; j < 3; j ++)
+      vorts[i][j] = f.vorticity[idx+j];
   }
 
 }
@@ -50,11 +53,15 @@ inline bool levy_degani_seginer_tracker_3d_regular::check_simplex(const element_
   if (!critical_line_tracker_3d_regular::check_simplex(e, cp)) return false;
   
   float mu[3] = {(float)cp.v[0], (float)cp.v[1], (float)cp.v[2]};
-  float residues[3];
-  simplex_residue(e.vertices(m), residues);
+  float residues[3], vorts[3][3];
+  simplex_residue_vorts(e.vertices(m), residues, vorts);
  
   float residue = lerp_s2(residues, mu);
   cp.scalar[0] = residue;
+
+  float vort[3];
+  lerp_s2v3(vorts, mu, vort);
+  cp.scalar[1] = vector_2norm_2(vort);
 
   // fprintf(stderr, "residue=%f, detJ=%f\n", residue, detJ);
   // print3x3("J", J);
