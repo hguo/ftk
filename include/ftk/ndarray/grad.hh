@@ -253,6 +253,24 @@ ndarray<T> jacobian3Dt(const ndarray<T>& V)
 }
 
 template <typename T>
+ndarray<T> vorticity3D(const ndarray<T>& V)
+{
+  ndarray<T> vort(V.shape());
+  vort.set_multicomponents(1);
+
+  for (int k = 1; k < V.dim(3) - 1; k++) {
+    for (int j = 1; j < V.dim(2) - 1; j++) {
+      for (int i = 1; i < V.dim(1) - 1; i++) {
+        vort(0, i, j, k) =  (V(2, i, j+1, k) - V(2, i, j-1, k)) - (V(1, i, j, k+1) - V(1, i, j, k-1));
+        vort(1, i, j, k) =  (V(0, i, j, k+1) - V(0, i, j, k-1)) - (V(2, i+1, j, k) - V(2, i-1, j, k));
+        vort(2, i, j, k) =  (V(1, i+1, j, k) - V(1, i-1, j, k)) - (V(0, i, j+1, k) - V(0, i, j-1, k));
+      }
+    }
+  }
+  return vort;
+}
+
+template <typename T>
 ndarray<T> cross_product3D(const ndarray<T>& V, const ndarray<T>& W)
 {
   ndarray<T> VW(V.shape());
