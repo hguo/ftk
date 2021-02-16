@@ -22,6 +22,9 @@ struct feature_curve_set_t : public std::multimap<int, feature_curve_t>
   void add(const feature_curve_t&, int label);
   std::vector<int> add(const std::vector<feature_curve_t>&);
 
+  std::list<feature_curve_t> to_list() const;
+  void from_list(const std::list<feature_curve_t>&);
+
   // std::vector<int> split(int);
   void split_all();
   
@@ -71,18 +74,13 @@ namespace nlohmann
   template <>
   struct adl_serializer<feature_curve_set_t> {
     static void to_json(json& j, const feature_curve_set_t& s) {
-      j = {{"trajs", static_cast<std::multimap<int, feature_curve_t>>(s)}};
+      j = {{"trajs", s.to_list()}};
     }
    
     // TODO FIXME: json i/o w/ multimap has problem...
     static void from_json(const json&j, feature_curve_set_t& s) {
-#if 0
-      std::multimap<int, feature_curve_t> trajs = j["trajs"];
-      s.clear();
-      for (auto &kv : trajs)
-        s.insert(kv);
-#endif
-      // s.insert(trajs.begin(), trajs.end());
+      std::list<feature_curve_t> list = j["trajs"];
+      s.from_list(list);
     }
   };
 }
@@ -117,6 +115,20 @@ namespace diy {
 
 //////
 namespace ftk {
+
+inline std::list<feature_curve_t> feature_curve_set_t::to_list() const
+{
+  std::list<feature_curve_t> list;
+  for (const auto &kv : *this)
+    list.push_back(kv.second);
+  return list;
+}
+
+inline void feature_curve_set_t::from_list(const std::list<feature_curve_t>& list)
+{
+  for (const auto &c : list)
+    this->insert({get_new_id(), c});
+}
 
 inline void feature_curve_set_t::write(const std::string& format, const std::string& filename) const
 {
