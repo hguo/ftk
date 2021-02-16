@@ -350,22 +350,13 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
 
 inline void feature_curve_set_t::filter(std::function<bool(const feature_curve_t&)> f)
 {
-  std::vector<int> to_erase;
+  std::vector<std::multimap<int, feature_curve_t>::iterator> to_erase;
 
-  for (const auto &kv : *this) 
-    if (!f(kv.second)) to_erase.push_back(kv.first);
+  for (auto it = this->begin(); it != this->end(); it ++)
+    if (!f(it->second)) to_erase.push_back(it);
   
   for (const auto k : to_erase)
     erase(k);
-
-#if 0
-  for (auto it = cbegin(); it != cend(); ) {
-    if (!f(it->second)) 
-      erase(it ++);
-    else 
-      ++ it;
-  }
-#endif
 }
 
 inline int feature_curve_set_t::add(const feature_curve_t& t)
@@ -407,13 +398,13 @@ inline std::vector<int> feature_curve_set_t::split(int i)
 inline void feature_curve_set_t::split_all()
 {
   std::vector<feature_curve_t> result;
-  std::vector<int> to_erase;
+  std::vector<std::multimap<int, feature_curve_t>::iterator> to_erase;
 
-  for (const auto &kv : *this) {
-    if (!kv.second.consistent_type) {
-      const auto subtrajs = kv.second.split();
+  for (auto it = this->begin(); it != this->end(); it ++) {
+    if (!it->second.consistent_type) {
+      const auto subtrajs = it->second.split();
       result.insert(result.end(), subtrajs.begin(), subtrajs.end());
-      to_erase.push_back(kv.first);
+      to_erase.push_back(it);
     }
   }
 
