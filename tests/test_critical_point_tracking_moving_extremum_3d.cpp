@@ -72,16 +72,19 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_random_motion") {
 
       REQUIRE(trajs.size() == 1);
       
-      for (auto i = 0; i < trajs[0].size(); i ++) {
-        const auto &p = trajs[0][i];
-        double x = x0[0] + dir[0] * p[3], 
-               y = x0[1] + dir[1] * p[3], 
-               z = x0[2] + dir[2] * p[3];
-        fprintf(stderr, "p={%f, %f, %f, %f}, x={%f, %f, %f}\n", p[0], p[1], p[2], p[3], x, y, z);
+      for (const auto &kv : trajs) {
+        const auto &traj = kv.second;
+        for (auto i = 0; i < traj.size(); i ++) {
+          const auto &p = traj[i];
+          double x = x0[0] + dir[0] * p[3], 
+                 y = x0[1] + dir[1] * p[3], 
+                 z = x0[2] + dir[2] * p[3];
+          fprintf(stderr, "p={%f, %f, %f, %f}, x={%f, %f, %f}\n", p[0], p[1], p[2], p[3], x, y, z);
 
-        REQUIRE(p[0] == Approx(x).epsilon(0.01));
-        REQUIRE(p[1] == Approx(y).epsilon(0.01));
-        REQUIRE(p[2] == Approx(z).epsilon(0.01));
+          REQUIRE(p[0] == Approx(x).epsilon(0.01));
+          REQUIRE(p[1] == Approx(y).epsilon(0.01));
+          REQUIRE(p[2] == Approx(z).epsilon(0.01));
+        }
       }
     }
   }
