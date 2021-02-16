@@ -710,8 +710,8 @@ std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offli
 inline void critical_point_tracker::slice_traced_critical_points()
 {
   int sum0 = 0;
-  for (auto i = 0; i < traced_critical_points.size(); i ++) {
-    const auto &traj = traced_critical_points[i];
+  for (const auto &kv : traced_critical_points) {
+    const auto &traj = kv.second;
     for (auto j = 0; j < traj.size(); j ++) {
       const auto &cp = traj[j];
       if (cp.ordinal) {

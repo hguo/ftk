@@ -16,13 +16,13 @@
 
 namespace ftk {
 
-struct feature_curve_set_t : public std::map<int, feature_curve_t>
+struct feature_curve_set_t : public std::multimap<int, feature_curve_t>
 {
   int add(const feature_curve_t&);
   void add(const feature_curve_t&, int label);
   std::vector<int> add(const std::vector<feature_curve_t>&);
 
-  std::vector<int> split(int);
+  // std::vector<int> split(int);
   void split_all();
   
   void foreach(std::function<void(const feature_curve_t&)> f) const {for (const auto& kv : *this) f(kv.second);}
@@ -71,14 +71,17 @@ namespace nlohmann
   template <>
   struct adl_serializer<feature_curve_set_t> {
     static void to_json(json& j, const feature_curve_set_t& s) {
-      j = {{"trajs", static_cast<std::map<int, feature_curve_t>>(s)}};
+      j = {{"trajs", static_cast<std::multimap<int, feature_curve_t>>(s)}};
     }
    
+    // TODO FIXME: json i/o w/ multimap has problem...
     static void from_json(const json&j, feature_curve_set_t& s) {
-      std::map<int, feature_curve_t> trajs = j["trajs"];
+#if 0
+      std::multimap<int, feature_curve_t> trajs = j["trajs"];
       s.clear();
       for (auto &kv : trajs)
         s.insert(kv);
+#endif
       // s.insert(trajs.begin(), trajs.end());
     }
   };
@@ -106,7 +109,8 @@ namespace diy {
       diy::load(bb, traj);
       traj.relabel(id);
 
-      s[id] = traj;
+      s.insert({id, traj});
+      // s[id] = traj;
     }
   }
 } // namespace diy
@@ -367,16 +371,17 @@ inline void feature_curve_set_t::filter(std::function<bool(const feature_curve_t
 inline int feature_curve_set_t::add(const feature_curve_t& t)
 {
   const int id = get_new_id();
-  insert(std::pair<int, feature_curve_t>(id, t));
-  at(id).relabel(id);
+  auto it = insert(std::pair<int, feature_curve_t>(id, t));
+  it->second.relabel(id);
+  // at(id).relabel(id);
   return id;
 }
 
 inline void feature_curve_set_t::add(const feature_curve_t& t, int label)
 {
   // fprintf(stderr, "inserting new curve, id=%d\n", label);
-  insert(std::pair<int, feature_curve_t>(label, t));
-  at(label).relabel(label);
+  auto it = insert(std::pair<int, feature_curve_t>(label, t));
+  it->second.relabel(label);
 }
 
 inline std::vector<int> feature_curve_set_t::add(const std::vector<feature_curve_t>& trajs)
@@ -387,6 +392,7 @@ inline std::vector<int> feature_curve_set_t::add(const std::vector<feature_curve
   return ids;
 }
 
+#if 0
 inline std::vector<int> feature_curve_set_t::split(int i)
 {
   std::vector<int> result;
@@ -396,6 +402,7 @@ inline std::vector<int> feature_curve_set_t::split(int i)
   erase(i);
   return result;
 }
+#endif
 
 inline void feature_curve_set_t::split_all()
 {
@@ -423,7 +430,8 @@ inline feature_curve_set_t feature_curve_set_t::intercept(int t0, int t1) const
   for (const auto &kv : * this) {
     auto traj = kv.second.intercept(t0, t1);
     if (!traj.empty())
-      result[kv.first] = traj;
+      // result[kv.first] = traj;
+      result.insert({kv.first, traj});
   }
   return result;
 }
