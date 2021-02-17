@@ -35,6 +35,8 @@ public:
 protected:
   struct field_data_snapshot_t {
     ndarray<float> uv; // shape is (2, width, height, depth)
+    ndarray<float> scalar; // scalar field, optional
+    ndarray<float> v, w; // vector fields, optional
     ndarray<float> J; // jacobian, optional
     ndarray<float> vorticity; // vorticity field, optional
   };

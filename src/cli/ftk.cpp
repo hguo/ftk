@@ -12,6 +12,7 @@
 #include "ftk/filters/critical_line_tracker_3d_regular.hh"
 #include "ftk/filters/sujudi_haimes_tracker_3d_regular.hh"
 #include "ftk/filters/levy_degani_seginer_tracker_3d_regular.hh"
+#include "ftk/filters/ridge_valley_tracker_3d_regular.hh"
 #include "ftk/filters/tdgl_vortex_tracker_3d_regular.hh"
 #include "ftk/filters/xgc_blob_filament_tracker.hh"
 #include "ftk/filters/xgc_blob_threshold_tracker.hh"
@@ -486,6 +487,8 @@ void initialize_critical_line_tracker(diy::mpi::communicator comm)
     tracker_critical_line.reset(new sujudi_haimes_tracker_3d_regular(comm) );
   else if (feature == "levy_degani_seginer")
     tracker_critical_line.reset(new levy_degani_seginer_tracker_3d_regular(comm) );
+  else if (feature == "ridge_valley")
+    tracker_critical_line.reset(new ridge_valley_tracker_3d_regular(comm) );
   else
     tracker_critical_line.reset(new critical_line_tracker_3d_regular(comm) );
   
