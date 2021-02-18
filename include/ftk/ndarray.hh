@@ -127,7 +127,15 @@ struct ndarray : public ndarray_base {
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
- 
+
+  double get(size_t i0) const { return at(i0); }
+  double get(size_t i0, size_t i1) const { return at(i0, i1); }
+  double get(size_t i0, size_t i1, size_t i2) const { return at(i0, i1, i2); }
+  double get(size_t i0, size_t i1, size_t i2, size_t i3) const { return at(i0, i1, i2, i3); }
+  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const { return at(i0, i1, i2, i3, i4); }
+  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const { return at(i0, i1, i2, i3, i4, i5); }
+  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const { return at(i0, i1, i2, i3, i4, i5, i6); }
+
   T& operator()(const std::vector<size_t>& idx) {return at(idx);}
   T& operator()(const std::vector<int>& idx) {return at(idx);}
   T& operator()(size_t i0) {return p[i0];}
