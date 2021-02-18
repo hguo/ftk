@@ -13,9 +13,11 @@
 
 namespace ftk {
 
-struct json_interface {
+struct json_interface : public object {
+  json_interface(diy::mpi::communicator comm) : object(comm) {}
+
   // json options:
-  // - feature_type, string, required: 
+  // - feature, string, required: possible values include
   //      critical_point|cp: 2D/3D critical points
   //      critical_line|cl: 3D critical line (intersections of two isosurfaces)
   //      isosurface|iso: 3D isosurface
@@ -26,14 +28,102 @@ struct json_interface {
   //      xgc_blob_filament_2d: 2D XGC blob filaments defined by local extrema
   //      xgc_blob_filament: 3D XGX blob filaments defined by local extrema
   //      xgc_blob_threshold: 3D XGC blob filaments defined by levelsets
-  // - input, json, see ndarray/stream.hh for spec
-  // - output_type, string, by default "traced": intersections, traced, sliced, or intercepted
-  // - output_format, string, by default "text": text, json, vtp, vtu, ply
-  // - output_pattern, string, required
+  // - input, json, see ndarray/stream.hh for details
+  // // - writeback, json, optional: write input data back to files; see ndarray/writer.hh for details
+  // - archive, json, optional:
+  //    - discrete, string, optional: file name to load/store discrete feature points w/o tracking
+  //    - traced, string, optional: file name to load/store traced features
+  // - output, json, required:
+  //    - type, string, by default "traced": intersections, traced, sliced, or intercepted
+  //    - format, string, by default "auto": auto, text, json, vtp, vtu, ply
+  //    - pattern, string, required: e.g. "surface.vtp", "sliced-%04d.vtp"
+  // - threshold, number, by default 0: threshold for some trackers, e.g. contour trackers
   // - accelerator, string, by default "none": none, cuda, or hipsycl
-  // - nthreads, int, by default 0: number of threads; 0 will lead to the max available number of CPUs
-  void configure(const json& j);
+  // - thread_model, string by default "pthread": pthread, openmp, or tbb
+  // - nblocks, int, by default 0: number of blocks; 0 will be replaced by the number of processes
+  // - nthreads, int, by default 0: number of threads; 0 will replaced by the max available number of CPUs
+  // - enable_streaming, bool, by default false
+  // - enable_discarding_interval_points, bool, by default false
+  // - enable_fast_detection, bool, by default true
+  // - enable_deriving_velocities, bool, by default false
+  // - enable_post_processing, bool, by default true
+  // - xgc, json, optional: XGC-specific options
+  //    - format, string, by default auto: auto, h5, or bp
+  //    - path, string, optional: XGC data path, which contains xgc.mesh, xgc.bfield, units.m, 
+  //      and xgc.3d data
+  //    - mesh, string, optional: path to xgc.mesh
+  //    - bfield, string, optional: path to xgc.bfield
+  //    - oneddiag, string, optional: path to xgc.onediag
+  //    - units.m, string, optional: path to units.m
+  //    - vphi, integer, by default 1: number of virtual poloidal planes
+  //    - interpolant, string, optional: path to interpolant file
+  //    - smoothing_kernel_file, string, optional: path to smoothing kernel file; will (over)write 
+  //      the file if the file does not exist or the file has a different smoothing kernel size
+  //    - smoothing_kernel_size, number, optional: smoothing kernel size
+  void configure(const json& j); // configure and validate json input
+
+protected:
+  json j;
+  std::shared_ptr<tracker> tr;
+  std::shared_ptr<ndarray_stream> st;
+
+  int feature_type = 0;
 };
+
+///////
+void json_interface::configure(const json& j)
+{
+  if (j.contains("feature")) {
+    if (j["feature"].is_string()) {
+      feature_type = tracker::str2tracker(j["feature"]);
+      if (feature_type == 0) fatal("invalid feature");
+      // otherwise ok
+    }
+  } else fatal("missing feature");
+
+  if (j.contains("input")) {
+    st.reset(new ndarray_stream<>);
+    st->set_input_source_json(j_input);
+  } else fatal("missing input");
+
+  if (j.contains("archive")) {
+    if (j["archive"].is_object()) {
+      json ja = j["archive"];
+      if (ja.contains("discrete")) {
+        if (ja["discrete"].is_string()) { // OK
+        } else fatal("invalid discrete archival file name");
+      }
+
+      if (ja.contains("traced")) {
+        if (ja["traced"].is_string()) { // OK
+        } else fatal("invalid traced archival file name");
+      }
+    }
+  }
+
+  if (j.contains("output")) {
+    if (j["output"].is_object()) {
+      json jo = j["output"];
+      if (jo.contains("type")) {
+        if (jo["type"].is_string()) { // OK
+          const std::string t = jo["type"];
+          // TODO: check if type is valid
+        } else fatal("invalid output type");
+      } else jo["type"] = "auto";
+    }
+  }
+
+  if (j.contains("threshold")) {
+    if (j["threshold"].is_number()) { // OK
+    } else fatal("invalid threshold");
+  } else j["threshold"] = 0.0;
+
+  if (j.contains("accelerator")) {
+    if (j["accelerator"].is_string()) { // OK
+      const std::string a = j["accelerator"];
+
+  }
+}
 
 }
 
