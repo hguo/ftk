@@ -2,7 +2,7 @@
 #define _FTK_NDARRAY_HH
 
 #include <ftk/config.hh>
-#include <ftk/ndarray_base.hh>
+#include <ftk/ndarray/ndarray_base.hh>
 
 #if FTK_HAVE_ADIOS2
 #include <adios2.h>
