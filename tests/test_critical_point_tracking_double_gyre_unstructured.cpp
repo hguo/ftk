@@ -43,11 +43,7 @@ TEST_CASE("critical_point_tracking_double_gyre_unstructured") {
   auto trajs = tracker.get_traced_critical_points();
   
   if (world.rank() == 0)
-#if FTK_HAVE_GMP
-    REQUIRE(trajs.size() == 5); 
-#else // there is a tiny difference between using GMP or not
-    REQUIRE(trajs.size() == 4); 
-#endif
+    REQUIRE(trajs.size() == 2);
 }
 #endif
 
