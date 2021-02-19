@@ -18,6 +18,14 @@ class MainTest(unittest.TestCase):
 
         self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 1)
         self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 269)
+    
+    def test_paraview_critical_point_tracking_moving_extremum_3d(self):
+        data = MovingExtremum3DSource()
+        myCriticalPointTracker = CriticalPointTracker3D(Input=data)
+        myCriticalPointTracker.UpdatePipeline()
+
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 1)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 329)
 
 if __name__ == '__main__':
     unittest.main()
