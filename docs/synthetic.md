@@ -53,6 +53,8 @@ C++ functions are available to generate synthetic data in `ndarray` data structu
 
 ## Definitions
 
+<img align="right" src="images/woven_perturbation.png">
+
 #### Spiral woven (time-varying 2D scalar field data)
 
 The spiral woven function is defined as $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\sin t + y\cos t),$ where where $x$ and $y$ are 2D coordinates and $t$ is time.  The image of this data rotates counterclockwise over time.  In the regular grid domain, $x$ and $y$ coordinates are scaled by the `scalaing_factor`, and the rotation center sits on the center of the image.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
@@ -64,7 +66,11 @@ The spiral woven function is defined as $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\
 
 ##### Example
 
-See the main page.
+In the right figure, we demonstrate critical point tracking results with/without the presence of noise injection.  For example, the following command injects Gaussian noise ($\sigma=0.02$) to the synthetic woven data:
+```bash
+$ ftk -f cp --synthetic woven --perturbation 0.02 --output woven-0.02.vtp
+```
+
 
 #### Merger (time-varying 2D scalar field data)
 
@@ -135,7 +141,7 @@ The contents of `double_gyre.json` are
 ```
 
 
-#### Moving extreume 3D (time-varying 3D scalar field data)
+#### Moving extremum 3D (time-varying 3D scalar field data)
 
 Similar to the moving extremum 2D data, the 3D version is defined as $f(x, y, z, t)=(x-x_0)^2 + (y-y_0)^2 + (z-z_0)^2$ and contains one single minimum at $(x_0, y_0, z_0)$.  This dataset is used to test critical point tracking in 3D regular-grid scalar field data. 
 
