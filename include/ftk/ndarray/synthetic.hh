@@ -101,7 +101,8 @@ std::array<T, 2> double_gyre(
   const auto b = [&](T t) { return 1 - 2 * epsilon * sin(omega * t); };
   const auto f = [&](T x, T t) { return a(t) * x * x + b(t) * x; };
   const auto dfdx = [&](T x, T t) {
-    return 2 * a(t) * x * x + b(t);
+    // return 2 * a(t) * x * x + b(t); // this is the old buggy version; made a mistake on df/dx
+    return 2 * a(t) * x + b(t); 
   };
   const auto u = [&](T x, T y, T t) {
     return -M_PI * A * sin(M_PI * f(x, t)) * cos(M_PI * y);
