@@ -224,8 +224,8 @@ public: // i/o for vtk image data
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
-  vtkSmartPointer<vtkImageData> to_vtk_image_data(const std::string varname=std::string()) const; 
-  vtkSmartPointer<vtkDataArray> to_vtk_data_array(const std::string varname=std::string()) const; 
+  vtkSmartPointer<vtkImageData> to_vtk_image_data(std::string varname=std::string()) const; 
+  vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
 #endif
 
 public: // i/o for hdf5
@@ -558,16 +558,20 @@ inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::st
 }
 
 template<typename T>
-inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(const std::string varname) const
+inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(std::string varname) const
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
   // fprintf(stderr, "to_vtk_image_data, ncd=%zu\n", ncd);
   if (ncd) { // multicomponent
     if (nd() == 3) d->SetDimensions(shape(1), shape(2), 1);
     else d->SetDimensions(shape(1), shape(2), shape(3)); // nd == 4
+
+    if (varname.empty()) varname = "vector";
   } else {
     if (nd() == 2) d->SetDimensions(shape(0), shape(1), 1);
     else d->SetDimensions(shape(0), shape(1), shape(2)); // nd == 3
+    
+    if (varname.empty()) varname = "scalar";
   }
   // d->GetPointData()->AddArray(to_vtk_data_array(multicomponent));
   d->GetPointData()->SetScalars(to_vtk_data_array(varname));
