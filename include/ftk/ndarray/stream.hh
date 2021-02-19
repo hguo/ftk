@@ -316,6 +316,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           default_n_timesteps = 50;
           j["variables"] = {"u", "v", "w"};
           j["components"] = {1, 1, 1};
+          if (j.contains("time_scale")) {
+            if (j["time_scale"].is_number()) { // ok
+            } else fatal("invalid time_scale");
+          } else j["time_scale"] = 0.1;
         } else if (j["name"] == "merger_2d") {
           j["variables"] = {"scalar"};
           default_nd = 2;
@@ -890,8 +894,9 @@ template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_synthetic_double_gyre(int k) 
 {
   // TODO: allowing parameter configuration
+  const double time_scale = j["time_scale"];
   const T A = 0.1, Omega = M_PI * 2, Eps = 0.25;
-  const T time = k * 0.1; 
+  const T time = k * time_scale; 
   const size_t DW = j["dimensions"][0], 
                DH = j["dimensions"][1];
  
