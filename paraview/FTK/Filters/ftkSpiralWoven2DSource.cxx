@@ -18,7 +18,9 @@
 vtkStandardNewMacro(ftkSpiralWoven2DSource);
 
 ftkSpiralWoven2DSource::ftkSpiralWoven2DSource() 
-  : DW(32), DH(32), DT(10), ScalingFactor(15.0), StartTime(0.0), TimeScale(1.0)
+  : DW(32), DH(32), DT(10), 
+    ScalingFactor(15.0), StartTime(0.0), TimeScale(1.0), 
+    NoiseInjection(0.0)
 {
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
@@ -77,6 +79,9 @@ int ftkSpiralWoven2DSource::RequestData(
     currentTime = StartTime;
 
   auto scalar = ftk::synthetic_woven_2D<float>(DW, DH, currentTime+1e-4, ScalingFactor);
+  if (NoiseInjection > 0) {
+    scalar = scalar.perturb(NoiseInjection);
+  }
   auto imageData1 = scalar.to_vtk_image_data();
   imageData->ShallowCopy(imageData1);
   

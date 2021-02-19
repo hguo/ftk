@@ -18,6 +18,7 @@ public:
   vtkSetMacro(ScalingFactor, double);
   vtkSetMacro(StartTime, double);
   vtkSetMacro(TimeScale, double);
+  vtkSetMacro(NoiseInjection, double);
 
 protected:
   ftkSpiralWoven2DSource();
@@ -35,6 +36,7 @@ private:
   int DW, DH, DT;
   double ScalingFactor;
   double StartTime, TimeScale;
+  double NoiseInjection;
 };
 
 #endif
