@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/ndarray/ndarray_base.hh>
+#include <ftk/numeric/clamp.hh>
 
 #if FTK_HAVE_ADIOS2
 #include <adios2.h>
@@ -306,7 +307,8 @@ public: // statistics & misc
   
   ndarray<uint64_t> quantize() const; // quantization based on resolution
 
-  ndarray<T> perturb(const T sigma) const; // add gaussian noise to the array
+  ndarray<T> &perturb(T sigma); // add gaussian noise to the array
+  ndarray<T> &clamp(T min, T max); // clamp data with min and max
 
 private:
   std::vector<T> p;
@@ -1393,19 +1395,25 @@ inline bool ndarray<float>::read_amira(const std::string& filename)
 }
 
 template <typename T>
-ndarray<T> ndarray<T>::perturb(const T sigma) const
+ndarray<T>& ndarray<T>::perturb(T sigma)
 {
   std::random_device rd{};
   std::mt19937 gen{rd()};
   std::normal_distribution<> d{0, sigma};
 
-  ndarray<T> result;
-  result.reshape(*this);
-
   for (auto i = 0; i < nelem(); i ++)
-    result[i] = p[i] + d(gen);
+    p[i] = p[i] + d(gen);
 
-  return result;
+  return *this;
+}
+
+template <typename T>
+ndarray<T>& ndarray<T>::clamp(T min, T max)
+{
+  for (auto i = 0; i < nelem(); i ++)
+    p[i] = ftk::clamp(p[i], min, max);
+
+  return *this;
 }
 
 } // namespace ftk

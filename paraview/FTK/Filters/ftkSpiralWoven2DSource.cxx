@@ -80,7 +80,7 @@ int ftkSpiralWoven2DSource::RequestData(
 
   auto scalar = ftk::synthetic_woven_2D<float>(DW, DH, currentTime+1e-4, ScalingFactor);
   if (NoiseInjection > 0) {
-    scalar = scalar.perturb(NoiseInjection);
+    scalar.perturb(NoiseInjection);
   }
   auto imageData1 = scalar.to_vtk_image_data();
   imageData->ShallowCopy(imageData1);
