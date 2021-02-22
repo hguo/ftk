@@ -1,0 +1,73 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="sources">
+    <SourceProxy name="MovingDualRamp3DSource" class="ftkMovingDualRamp3DSource" label="MovingDualRamp3DSource">
+      <Documentation
+        short_help="synthetic moving dual ramp 3D data for FTK"
+        long_help="synthetic moving dual ramp 3D data for FTK">
+      </Documentation>
+
+      <IntVectorProperty 
+        name="Width"
+        command="SetDW"
+        number_of_elements="1"
+        default_values="21">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Height"
+        command="SetDH"
+        number_of_elements="1"
+        default_values="21">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Depth"
+        command="SetDD"
+        number_of_elements="1"
+        default_values="21">
+      </IntVectorProperty>
+      
+      <IntVectorProperty 
+        name="Timesteps"
+        command="SetDT"
+        number_of_elements="1"
+        default_values="100">
+      </IntVectorProperty>
+
+      <DoubleVectorProperty 
+        name="x0"
+        command="SetX0"
+        number_of_elements="1"
+        default_values="10">
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty 
+        name="rate"
+        command="SetRate"
+        number_of_elements="1"
+        default_values="0.7">
+      </DoubleVectorProperty>
+      
+      <DoubleVectorProperty 
+        name="offset"
+        command="SetOffset"
+        number_of_elements="1"
+        default_values="0.2">
+      </DoubleVectorProperty>
+
+			<DoubleVectorProperty
+			  information_only="1"
+			  name="TimestepValues"
+        repeatable="1">
+        <TimeStepsInformationHelper/>
+			  <Documentation>
+			    Available timestep values.
+			  </Documentation>
+			</DoubleVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="FTK"/>
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>
