@@ -31,6 +31,8 @@ protected:
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
+  int RequestSlicedSurfaces(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
+
 private:
   ftkLevelsetTracker3D(const ftkLevelsetTracker3D&);
   void operator=(const ftkLevelsetTracker3D&);
@@ -45,7 +47,7 @@ private:
  
 private:
   ftk::contour_tracker_3d_regular tracker; 
-  bool tracked = false;
+  bool tracker_needs_recompute = true;
 };
 
 #endif

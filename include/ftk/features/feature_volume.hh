@@ -17,6 +17,7 @@ struct feature_volume_t {
   std::vector<feature_point_t> pts;
   std::vector<std::array<int, 4>> conn;
 
+  void clear() { pts.clear(); conn.clear(); }
   void relabel();
 
   feature_surface_t slice(std::function<bool(const feature_point_t&)>) const;

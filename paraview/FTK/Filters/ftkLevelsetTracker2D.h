@@ -17,6 +17,7 @@ public:
   vtkGetMacro(InputVariable, std::string);
   
   vtkSetMacro(Threshold, double);
+  vtkGetMacro(Threshold, double);
 
 protected:
   ftkLevelsetTracker2D();
@@ -36,7 +37,7 @@ private:
   int currentTimestep;
   int inputDataComponents;
   
-  ftk::contour_tracker_2d_regular tracker; 
+  ftk::contour_tracker_2d_regular tracker;
 };
 
 #endif
