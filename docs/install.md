@@ -81,7 +81,15 @@ If built successfully, you will see the plugins binary as `lib/paraview-5.8/plug
 
 ### Building PyFTK
 
-FTK Python bindings is based on [pybind11](https://github.com/pybind/pybind11).  You may build PyFTK with `setuptools` or CMake.  Notice that CMake is required to build PyFTK.  Advanced build options is currently not possible to configure with `setuptools`.  
+FTK Python bindings is based on [pybind11](https://github.com/pybind/pybind11), which is included as a submodule under the `python` subdirectory; make sure the submodule is checked out:
+
+```bash
+$ git submodule update --init --recursive
+```
+
+If you downloaded a release from tarball archives on GitHub, be sure to manually download `pybind11` to the designated directory before building.  
+
+You may build PyFTK with `setuptools` or CMake.  Notice that CMake is required to build PyFTK.  Advanced build options is currently not possible to configure with `setuptools`.  
 
 Build PyFTK with `setuptools`:
 
