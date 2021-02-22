@@ -1036,8 +1036,8 @@ inline bool ndarray<T>::read_h5(const std::string& filename, const std::string& 
     return succ;
   }
 #else 
-  fprintf(stderr, "[FTK] fatal: FTK not compiled with HDF5.\n");
-  assert(false);
+  fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
+  return false;
 #endif
 }
 
