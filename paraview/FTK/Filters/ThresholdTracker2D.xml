@@ -1,9 +1,9 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="filters">
-    <SourceProxy name="LevelsetTracker3D" class="ftkLevelsetTracker3D" label="LevelsetTracker3D">
+    <SourceProxy name="ThresholdTracker2D" class="ftkThresholdTracker2D" label="ThresholdTracker2D">
       <Documentation
-         short_help="track levelsets in 3D time-varying scalar field data"
-         long_help="track levelsets in 3D time-varying scalar field data">
+         short_help="track thresholds in 2D time-varying scalar field data"
+         long_help="track thresholds in 2D time-varying scalar field data">
       </Documentation>
       
       <InputProperty
@@ -17,6 +17,13 @@
           <DataType value="vtkImageData"/>
         </DataTypeDomain>
       </InputProperty>
+      
+      <DoubleVectorProperty
+        name="Threshold"
+        command="SetThreshold"
+        number_of_elements="1"
+        default_values="0.0">
+      </DoubleVectorProperty>
 
       <StringVectorProperty 
         name="InputVariable"
@@ -32,14 +39,6 @@
           </RequiredProperties>
         </ArrayListDomain>
       </StringVectorProperty>
-      
-      <DoubleVectorProperty
-        name="Threshold"
-        command="SetThreshold"
-        number_of_elements="1"
-        default_values="0.0"
-        animateable="0">
-      </DoubleVectorProperty>
 
       <Hints>
         <ShowInMenu category="FTK"/>

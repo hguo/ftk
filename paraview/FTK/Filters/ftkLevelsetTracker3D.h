@@ -12,6 +12,9 @@ class ftkLevelsetTracker3D : public vtkImageAlgorithm
 public:
   static ftkLevelsetTracker3D *New();
   vtkTypeMacro(ftkLevelsetTracker3D, vtkImageAlgorithm);
+  
+  vtkSetMacro(Threshold, double);
+  vtkGetMacro(Threshold, double);
 
   vtkSetMacro(UseGPU, bool);
   vtkGetMacro(UseGPU, bool);
@@ -33,13 +36,16 @@ private:
   void operator=(const ftkLevelsetTracker3D&);
 
 private:
+  double Threshold;
   bool UseGPU;
   std::string InputVariable;
 
   int currentTimestep;
   int inputDataComponents;
-  
+ 
+private:
   ftk::contour_tracker_3d_regular tracker; 
+  bool tracked = false;
 };
 
 #endif

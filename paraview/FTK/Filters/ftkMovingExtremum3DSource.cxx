@@ -53,7 +53,7 @@ int ftkMovingExtremum3DSource::RequestInformation(
   double timeRange[2] = {0.0, DT - 1.0};
   std::vector<double> timeSteps;
   for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i));
+    timeSteps.push_back(static_cast<double>(i) * 0.1);
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);
@@ -94,7 +94,7 @@ int ftkMovingExtremum3DSource::RequestData(
   double timeRange[2] = {0.0, DT - 1.0};
   std::vector<double> timeSteps;
   for (int i = 0; i < DT; i ++)
-    timeSteps.push_back(static_cast<double>(i));
+    timeSteps.push_back(static_cast<double>(i) * 0.1);
 
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_RANGE(), timeRange, 2);
   outInfo->Set(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timeSteps[0], DT);

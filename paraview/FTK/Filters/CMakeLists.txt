@@ -2,6 +2,7 @@ set(classes
   ftkCriticalPointTracker2D
   #ftkCriticalPointTracker2DSpacetime
   ftkCriticalPointTracker3D
+  ftkThresholdTracker2D
   ftkLevelsetTracker2D
   ftkLevelsetTracker3D
   #ftkSpiralWoven2DSpacetimeSource
@@ -23,6 +24,7 @@ paraview_add_server_manager_xmls(XMLS
   CriticalPointTracker2D.xml
   #CriticalPointTracker2DSpacetime.xml
   CriticalPointTracker3D.xml
+  ThresholdTracker2D.xml
   LevelsetTracker2D.xml
   LevelsetTracker3D.xml
   #SpiralWoven2DSpacetimeSource.xml
