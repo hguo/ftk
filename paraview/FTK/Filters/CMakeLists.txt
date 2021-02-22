@@ -11,6 +11,7 @@ set(classes
   ftkMerger2DSource
   ftkMovingExtremum2DSource
   ftkMovingExtremum3DSource
+  ftkMovingRamp3DSource
   ftkABCFlow3DSource
   ftkTornadoFlow3DSource
 )
@@ -32,6 +33,7 @@ paraview_add_server_manager_xmls(XMLS
   Merger2DSource.xml
   MovingExtremum2DSource.xml
   MovingExtremum3DSource.xml
+  MovingRamp3DSource.xml
   ABCFlow3DSource.xml
   TornadoFlow3DSource.xml
   DoubleGyre2DSource.xml

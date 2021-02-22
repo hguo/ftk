@@ -142,7 +142,7 @@ int ftkLevelsetTracker3D::RequestData(
       
       fprintf(stderr, "DW=%zu, DH=%zu, DD=%zu, components=%d\n", DW, DH, DD, inputDataComponents);
       tracker.reset();
-      tracker.set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+      tracker.set_domain(ftk::lattice({0, 0, 0}, {DW-1, DH-1, DD-1})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
       tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
       tracker.set_input_array_partial(false);
       tracker.set_threshold( Threshold );
