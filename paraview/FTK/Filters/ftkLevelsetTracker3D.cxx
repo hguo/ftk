@@ -98,6 +98,7 @@ int ftkLevelsetTracker3D::RequestData(
       tracker.set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
       tracker.set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
       tracker.set_input_array_partial(false);
+      tracker.set_threshold( Threshold );
       tracker.initialize();
     }
     
@@ -149,13 +150,36 @@ int ftkLevelsetTracker3D::RequestData(
     currentTimestep ++;
     return 1; 
   } else {
-    double t; 
-    if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP()))
-      t = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
-    else 
-      t = 0;
+    const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    std::vector<double> timesteps(nt);
+    inInfo->Get(vtkStreamingDemandDrivenPipeline::TIME_STEPS(), &timesteps[0]);
 
-    fprintf(stderr, "already tracked! t=%f\n", t);
+    double rt; // requested time
+    int ts; // actual time step
+    if (outInfo->Has(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP())) {
+      rt = outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP());
+      ts = std::find_if(timesteps.begin(), timesteps.end(), 
+              [rt](double t) { return std::abs(t - rt) < 1e-6; })
+            - timesteps.begin();
+      if (ts == timesteps.size() - 1) ts = ts - 1; // TODO FIXME: the tracker does not slice the last timestep
+    } else {
+      rt = timesteps[0];
+      ts = 0;
+    }
+    
+    auto poly = tracker.get_isovolume().slice_time(ts).to_vtp();
+    vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
+    normalGenerator->SetInputData(poly);
+    normalGenerator->ConsistencyOn();
+    normalGenerator->ComputePointNormalsOff();
+    normalGenerator->ComputeCellNormalsOn();
+    // normalGenerator->SetFlipNormals(true);
+    // normalGenerator->AutoOrientNormalsOn();
+    normalGenerator->Update();
+
+    // output->DeepCopy( tracker.get_isovolume().slice_time(ts).to_vtp() );
+    output->DeepCopy( normalGenerator->GetOutput() );
+    // fprintf(stderr, "already tracked! requested=%f, ts=%d\n", rt, ts);
     return 1;
   }
 }

@@ -60,6 +60,9 @@ struct contour_tracker_3d_regular : public contour_tracker_regular {
 
   void update_timestep();
 
+public:
+  const feature_volume_t& get_isovolume() { return isovolume; }
+
 protected:
   void build_isovolume();
 
