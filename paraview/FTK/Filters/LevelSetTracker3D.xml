@@ -2,8 +2,8 @@
   <ProxyGroup name="filters">
     <SourceProxy name="LevelsetTracker3D" class="ftkLevelsetTracker3D" label="LevelsetTracker3D">
       <Documentation
-         short_help="track critical points in 3D time-varying scalar field data"
-         long_help="track critical points in 3D time-varying scalar field data">
+         short_help="track levelsets in 3D time-varying scalar field data"
+         long_help="track levelsets in 3D time-varying scalar field data">
       </Documentation>
       
       <InputProperty
@@ -32,14 +32,6 @@
           </RequiredProperties>
         </ArrayListDomain>
       </StringVectorProperty>
-
-      <IntVectorProperty 
-        name="UseGPU"
-        command="SetUseGPU"
-        number_of_elements="1"
-        default_values="0">
-        <BooleanDomain name="bool"/>
-      </IntVectorProperty>
 
       <Hints>
         <ShowInMenu category="FTK"/>

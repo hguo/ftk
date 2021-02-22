@@ -350,7 +350,7 @@ inline feature_curve_set_t feature_surface_t::slice_time(int t) const
   return curve_set;
 }
 
-void feature_surface_t::load(const std::string& filename, std::string format)
+inline void feature_surface_t::load(const std::string& filename, std::string format)
 {
   const int fmt = file_extension(filename, format);
   if (fmt == FILE_EXT_BIN) {
@@ -361,7 +361,7 @@ void feature_surface_t::load(const std::string& filename, std::string format)
   }
 }
 
-void feature_surface_t::save(const std::string& filename, std::string format) const
+inline void feature_surface_t::save(const std::string& filename, std::string format) const
 {
   const int fmt = file_extension(filename, format);
   if (fmt == FILE_EXT_BIN || fmt == FILE_EXT_NULL) {

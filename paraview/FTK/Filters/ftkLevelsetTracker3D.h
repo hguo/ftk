@@ -3,7 +3,7 @@
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
-#include <ftk/filters/critical_point_tracker_3d_regular.hh>
+#include <ftk/filters/contour_tracker_3d_regular.hh>
 
 class vtkDataSet;
 
@@ -15,9 +15,6 @@ public:
 
   vtkSetMacro(UseGPU, bool);
   vtkGetMacro(UseGPU, bool);
-
-  vtkSetMacro(GaussianKernelSize, double);
-  vtkGetMacro(GaussianKernelSize, double);
 
   vtkSetMacro(InputVariable, std::string);
   vtkGetMacro(InputVariable, std::string);
@@ -37,13 +34,12 @@ private:
 
 private:
   bool UseGPU;
-  double GaussianKernelSize;
   std::string InputVariable;
 
   int currentTimestep;
   int inputDataComponents;
   
-  ftk::critical_point_tracker_3d_regular tracker; 
+  ftk::contour_tracker_3d_regular tracker; 
 };
 
 #endif
