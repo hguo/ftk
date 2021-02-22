@@ -1,4 +1,4 @@
-#include "ftkLevelsetTracker2D.h"
+#include "ftkThresholdTracker2D.h"
 #include "vtkInformation.h"
 #include "vtkSmartPointer.h"
 #include "vtkPointData.h"
@@ -13,9 +13,9 @@
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
 
-vtkStandardNewMacro(ftkLevelsetTracker2D);
+vtkStandardNewMacro(ftkThresholdTracker2D);
 
-ftkLevelsetTracker2D::ftkLevelsetTracker2D()
+ftkThresholdTracker2D::ftkThresholdTracker2D()
   : tracker(diy::mpi::communicator()), 
   Threshold(0.0)
 {
@@ -26,11 +26,11 @@ ftkLevelsetTracker2D::ftkLevelsetTracker2D()
   inputDataComponents = 0;
 }
 
-ftkLevelsetTracker2D::~ftkLevelsetTracker2D()
+ftkThresholdTracker2D::~ftkThresholdTracker2D()
 {
 }
 
-int ftkLevelsetTracker2D::RequestInformation(
+int ftkThresholdTracker2D::RequestInformation(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -39,7 +39,7 @@ int ftkLevelsetTracker2D::RequestInformation(
   return 1;
 }
 
-int ftkLevelsetTracker2D::RequestData(
+int ftkThresholdTracker2D::RequestData(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
@@ -61,11 +61,12 @@ int ftkLevelsetTracker2D::RequestData(
   ftk::ndarray<double> field_data;
   field_data.from_vtk_image_data(input, InputVariable);
 
-  tracker.push_field_data_snapshot(field_data);
+  tracker.push_scalar_field_data_snapshot(field_data);
   tracker.advance_timestep();
 
-  auto isovolume = tracker.get_isovolume_vtp(); // WIP FIXME
-  output->ShallowCopy(isovolume);
+  auto labeled_data = tracker.get_last_labeled_array_snapshot();
+  auto img = labeled_data.to_vtk_image_data();
+  output->ShallowCopy(img);
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );

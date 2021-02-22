@@ -49,7 +49,7 @@ struct contour_tracker_2d_regular : public contour_tracker_regular {
 
   void update_timestep();
 
-protected:
+public:
   void write_isovolume_vtu(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_isovolume_vtp() const;

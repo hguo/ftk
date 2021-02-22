@@ -87,7 +87,7 @@ protected:
 
 
 ////////////////////
-void critical_point_tracker_3d_regular::finalize()
+inline void critical_point_tracker_3d_regular::finalize()
 {
   double max_accumulated_kernel_time;
   diy::mpi::reduce(comm, accumulated_kernel_time, max_accumulated_kernel_time, get_root_proc(), diy::mpi::maximum<double>());
@@ -305,7 +305,7 @@ inline void critical_point_tracker_3d_regular::update_timestep()
   accumulated_kernel_time += std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
 }
 
-void critical_point_tracker_3d_regular::trace_connected_components()
+inline void critical_point_tracker_3d_regular::trace_connected_components()
 {
   // Convert connected components to geometries
   auto neighbors = [&](element_t f) {
@@ -337,7 +337,7 @@ void critical_point_tracker_3d_regular::trace_connected_components()
   }
 }
 
-void critical_point_tracker_3d_regular::simplex_positions(
+inline void critical_point_tracker_3d_regular::simplex_positions(
     const std::vector<std::vector<int>>& vertices, double X[][4]) const
 {
   for (int i = 0; i < vertices.size(); i ++)
@@ -345,7 +345,7 @@ void critical_point_tracker_3d_regular::simplex_positions(
       X[i][j] = vertices[i][j];
 }
 
-void critical_point_tracker_3d_regular::simplex_vectors(
+inline void critical_point_tracker_3d_regular::simplex_vectors(
     const std::vector<std::vector<int>>& vertices, double v[4][3]) const
 {
   for (int i = 0; i < 4; i ++) {
@@ -358,7 +358,7 @@ void critical_point_tracker_3d_regular::simplex_vectors(
   }
 }
 
-void critical_point_tracker_3d_regular::simplex_scalars(
+inline void critical_point_tracker_3d_regular::simplex_scalars(
     const std::vector<std::vector<int>>& vertices, double values[4]) const
 {
   for (int i = 0; i < 4; i ++) {
@@ -370,7 +370,7 @@ void critical_point_tracker_3d_regular::simplex_scalars(
   }
 }
 
-void critical_point_tracker_3d_regular::simplex_jacobians(
+inline void critical_point_tracker_3d_regular::simplex_jacobians(
     const std::vector<std::vector<int>>& vertices, 
     double Js[4][3][3]) const
 {
@@ -388,7 +388,7 @@ void critical_point_tracker_3d_regular::simplex_jacobians(
 }
 
 
-bool critical_point_tracker_3d_regular::check_simplex(
+inline bool critical_point_tracker_3d_regular::check_simplex(
     const simplicial_regular_mesh_element& e,
     feature_point_t& cp)
 {
