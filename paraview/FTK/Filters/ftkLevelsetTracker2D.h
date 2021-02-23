@@ -23,8 +23,12 @@ protected:
   ftkLevelsetTracker2D();
   ~ftkLevelsetTracker2D();
 
+  int RequestUpdateExtent(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
+  int FillOutputPortInformation(int, vtkInformation*) override;
+  
+  int RequestSliced(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
 
 private:
   ftkLevelsetTracker2D(const ftkLevelsetTracker2D&);
@@ -38,6 +42,7 @@ private:
   int inputDataComponents;
   
   ftk::contour_tracker_2d_regular tracker;
+  bool tracker_needs_recompute = true;
 };
 
 #endif

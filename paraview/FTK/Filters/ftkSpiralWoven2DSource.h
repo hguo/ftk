@@ -13,12 +13,25 @@ public:
   vtkTypeMacro(ftkSpiralWoven2DSource, vtkImageAlgorithm);
 
   vtkSetMacro(DW, int);
+  vtkGetMacro(DW, int);
+
   vtkSetMacro(DH, int);
+  vtkGetMacro(DH, int);
+
   vtkSetMacro(DT, int);
+  vtkGetMacro(DT, int);
+
   vtkSetMacro(ScalingFactor, double);
+  vtkGetMacro(ScalingFactor, double);
+
   vtkSetMacro(StartTime, double);
+  vtkGetMacro(StartTime, double);
+
   vtkSetMacro(TimeScale, double);
+  vtkGetMacro(TimeScale, double);
+
   vtkSetMacro(NoiseInjection, double);
+  vtkGetMacro(NoiseInjection, double);
 
 protected:
   ftkSpiralWoven2DSource();

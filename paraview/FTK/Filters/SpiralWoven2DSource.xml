@@ -2,8 +2,8 @@
   <ProxyGroup name="sources">
     <SourceProxy name="SpiralWoven2DSource" class="ftkSpiralWoven2DSource" label="SpiralWoven2DSource">
       <Documentation
-        short_help="synthetic 2D time-varying stack for FTK"
-        long_help="synthetic 2D time-varying stack for FTK">
+        short_help="synthetic 2D time-varying spiral woven data for FTK"
+        long_help="synthetic 2D time-varying spiral woven data for FTK">
       </Documentation>
 
       <IntVectorProperty 
@@ -54,6 +54,16 @@
         number_of_elements="1"
         default_values="0.0">
       </DoubleVectorProperty>
+      
+      <DoubleVectorProperty
+			  information_only="1"
+			  name="TimestepValues"
+        repeatable="1">
+        <TimeStepsInformationHelper/>
+			  <Documentation>
+			    Available timestep values.
+			  </Documentation>
+			</DoubleVectorProperty>
 
       <Hints>
         <ShowInMenu category="FTK"/>
