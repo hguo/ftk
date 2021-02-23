@@ -68,7 +68,7 @@ protected:
   void trace_intersections();
   void trace_connected_components();
 
-  void build_surface();
+  void build_surfaces();
 
   virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
@@ -76,58 +76,46 @@ protected:
 
 
 ////////////////////
-inline void contour_tracker_2d_regular::build_surface()
+inline void contour_tracker_2d_regular::build_surfaces()
 {
-  fprintf(stderr, "building isosurfaces...\n");
+  fprintf(stderr, "building spacetime isosurfaces...\n");
   
-  int i = 0;
-  for (auto &kv : intersections) {
-    kv.second.id = i ++;
-    surfaces.pts.push_back(kv.second);
-  }
-
   std::mutex my_mutex;
-  auto add_tri = [&](int i0, int i1, int i2) {
+  auto add_triangle = [&](int i0, int i1, int i2) {
     std::lock_guard<std::mutex> guard(my_mutex);
     surfaces.tris.push_back({i0, i1, i2});
   };
+  
+  auto my_intersections = intersections; // get_intersections();
+  unsigned long long i = 0;
+  for (auto &kv : my_intersections) {
+    double p[3] = {kv.second.x[0], kv.second.x[1], kv.second.t};
+    kv.second.tag = i ++;
+    surfaces.pts.push_back(kv.second);
+  }
 
   parallel_for<element_t>(related_cells, [&](const element_t &e) {
     int count = 0;
-    int ids[6];
+    unsigned long long ids[4];
 
-    std::set<element_t> unique_tris;
-    for (auto tet : e.sides(m))
-      for (auto tri : tet.sides(m))
-        unique_tris.insert(tri);
-
-    for (auto tri : unique_tris)
-      if (intersections.find(tri) != intersections.end())
-        ids[count ++] = intersections[tri].id;
+    std::set<element_t> unique_edges;
+    for (auto tri : e.sides(m)) {
+      for (auto edge : tri.sides(m)) {
+        unique_edges.insert(edge);
+      }
+    }
+    
+    for (auto edge : unique_edges) 
+      if (my_intersections.find(edge) != my_intersections.end())
+        ids[count ++] = my_intersections[edge].tag;
 
     if (count == 3) {
-      add_tri(ids[0], ids[1], ids[2]);
-    } else if (count == 4) {
-      // std::lock_guard<std::mutex> guard(my_mutex);
-      // surfaces.quads.push_back({ids[0], ids[1], ids[2], ids[3]});
-      add_tri(ids[0], ids[1], ids[2]);
-      add_tri(ids[0], ids[1], ids[3]);
-      add_tri(ids[0], ids[2], ids[3]);
-      add_tri(ids[1], ids[2], ids[3]);
-    } else if (count == 5) {
-      // std::lock_guard<std::mutex> guard(my_mutex);
-      // surfaces.pentagons.push_back({ids[0], ids[1], ids[2], ids[3], ids[4]});
-      add_tri(ids[0], ids[1], ids[2]);
-      add_tri(ids[0], ids[1], ids[3]);
-      add_tri(ids[0], ids[1], ids[4]);
-      add_tri(ids[0], ids[2], ids[3]);
-      add_tri(ids[0], ids[2], ids[4]);
-      add_tri(ids[0], ids[3], ids[4]);
-      add_tri(ids[1], ids[2], ids[3]);
-      add_tri(ids[1], ids[2], ids[4]);
-      add_tri(ids[2], ids[3], ids[4]);
+      add_triangle(ids[0], ids[1], ids[2]);
+    } else if (count == 4) { // quad
+      add_triangle(ids[0], ids[1], ids[2]);
+      add_triangle(ids[1], ids[3], ids[2]);
     } else {
-      fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
+      // fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
     }
   }, FTK_THREAD_PTHREAD, nthreads, enable_set_affinity);
 
@@ -141,7 +129,7 @@ inline void contour_tracker_2d_regular::finalize()
   diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
 
   if (comm.rank() == get_root_proc())
-    build_surface();
+    build_surfaces();
 
 #if 0
   // TODO: build surfaces
@@ -333,7 +321,6 @@ vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_isovolume_vtp() con
         unique_edges.insert(edge);
       }
     }
-    // if (unique_edges.size() != 6) fprintf(stderr, "shoot %zu\n", unique_edges.size());
     
     for (auto edge : unique_edges) 
       if (my_intersections.find(edge) != my_intersections.end())

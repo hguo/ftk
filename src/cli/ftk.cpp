@@ -219,17 +219,23 @@ void initialize_contour_tracker(diy::mpi::communicator comm)
                DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
   const int nt = js["n_timesteps"];
 
-  if (DD == 0) tracker_contour.reset( new contour_tracker_2d_regular(comm) ); 
-  else tracker_contour.reset(new contour_tracker_3d_regular(comm) );
+  if (DD == 0) {
+    tracker_contour.reset( new contour_tracker_2d_regular(comm) ); 
+    tracker_contour->set_domain(lattice({0, 0}, {DW, DH}));
+    tracker_contour->set_array_domain(lattice({0, 0}, {DW, DH}));
+  } else {
+    tracker_contour.reset(new contour_tracker_3d_regular(comm) );
+    tracker_contour->set_domain(lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
+    tracker_contour->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
+  }
+  
+  tracker_contour->set_end_timestep(nt - 1);
+  tracker_contour->set_number_of_threads(nthreads);
+  tracker_contour->set_threshold(threshold);
   
   if (accelerator == "cuda")
     tracker_contour->use_accelerator(FTK_XL_CUDA);
 
-  tracker_contour->set_domain(lattice({0, 0, 0}, {DW-2, DH-2, DD-2}));
-  tracker_contour->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
-  tracker_contour->set_end_timestep(nt - 1);
-  tracker_contour->set_number_of_threads(nthreads);
-  tracker_contour->set_threshold(threshold);
 }
 
 void execute_contour_tracker(diy::mpi::communicator comm)
