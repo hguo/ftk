@@ -48,6 +48,14 @@
         default_values="2.0"
         animateable="0">
       </DoubleVectorProperty>
+      
+      <DoubleVectorProperty
+        name="Z-time scale"
+        command="SetZTimeScale"
+        number_of_elements="1"
+        default_values="0.0"
+        animateable="0">
+      </DoubleVectorProperty>
 
       <Hints>
         <ShowInMenu category="FTK"/>

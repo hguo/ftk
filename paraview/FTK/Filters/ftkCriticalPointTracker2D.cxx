@@ -145,7 +145,8 @@ int ftkCriticalPointTracker2D::RequestData(
     currentTimestep = 0;
     
     tracker.finalize();
-    auto poly = tracker.get_traced_critical_points_vtk();
+    // auto poly = tracker.get_traced_critical_points_vtk();
+    auto poly = tracker.get_traced_critical_points().to_vtp(2, {}, ZTimeScale);
     output->DeepCopy(poly);
 
     tracker.reset();
