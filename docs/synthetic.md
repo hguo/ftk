@@ -116,27 +116,6 @@ The double-gyre function is proposed by [Shadden et al.](https://shaddenlab.berk
 
 ##### Example with CLI
 
-To reproduce the results in the right figure, use the following command line:
-```bash
-$ ftk -f cp --synthetic merger_2d --output merger_2d.vtp --no-post-processing
-```
-Note that the `--no-post-processing` option prevents trajectories being split into sub-trajectories with consistent types.
-
-##### Example with ParaView
-
-* [double-gyre.pvsm](pvsm/double-gyre.pvsm) (SurfaceLIC plug-in may be needed to visualize the vector field)
-
-
-#### Moving extremum 2D (time-varying 2D scalar field data)
-
-The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$, where $(x_0, y_0)$ are the coordinates of the minimum and moves along the designated direction over time.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
-
-##### Parameters
-
-* `x0` (by default `[10, 10]`)
-* `dir` (by default `[0.1, 0.1]`)
-* `dimensions` (by default `[64, 32]`)
-* `n_timesteps` (by default 50)
 
 ##### Example
 
@@ -154,6 +133,23 @@ The contents of `double_gyre.json` are
   "time_scale": 2.0
 }
 ```
+
+##### Example with ParaView
+
+* [double-gyre.pvsm](pvsm/double-gyre.pvsm) (SurfaceLIC plug-in may be needed to visualize the vector field)
+
+
+#### Moving extremum 2D (time-varying 2D scalar field data)
+
+The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$, where $(x_0, y_0)$ are the coordinates of the minimum and moves along the designated direction over time.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
+
+##### Parameters
+
+* `x0` (by default `[10, 10]`)
+* `dir` (by default `[0.1, 0.1]`)
+* `dimensions` (by default `[64, 32]`)
+* `n_timesteps` (by default 50)
+
 
 
 #### Moving extremum 3D (time-varying 3D scalar field data)
