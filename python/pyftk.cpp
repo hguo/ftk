@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <ftk/ndarray.hh>
+#include <ftk/filters/json_interface.hh>
 
 diy::mpi::environment env;
 diy::mpi::communicator comm;
