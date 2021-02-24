@@ -65,7 +65,7 @@ The spiral woven function is defined as $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\
 * `scalaring_factor` (by default 15.0) scales $x$ and $y$ coordinates in the 2D regular grid and controls the density of woven
 * `dimensions` (by default `[32, 32]`)
 
-##### Example with command line
+##### Example with CLI
 
 In the right figure, we demonstrate critical point tracking results with/without the presence of noise injection.  For example, the following command injects Gaussian noise ($\sigma=0.02$) to the synthetic woven data:
 ```bash
@@ -88,13 +88,18 @@ The merger function is defined as $f(x,y,t)=\max(e^{-\hat{x}(t)^2-\hat{y}(t)^2},
 * `dimensions` (by default `[32, 32]`)
 * `n_timesteps` (by default 100)
 
-##### Example
+##### Example with CLI
 
 To reproduce the results in the right figure, use the following command line:
 ```bash
 $ ftk -f cp --synthetic merger_2d --output merger_2d.vtp --no-post-processing
 ```
 Note that the `--no-post-processing` option prevents trajectories being split into sub-trajectories with consistent types.
+
+##### Example with ParaView
+
+* [merger.pvsm](pvsm/merger.pvsm)
+
 
 #### Double gyre (time-varying 2D vector field data)
 
