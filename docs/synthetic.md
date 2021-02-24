@@ -75,7 +75,7 @@ $ ftk -f cp --synthetic woven --perturbation 0.02 --output woven-0.02.vtp
 
 * [woven.pvsm](pvsm/woven.pvsm): Critical point tracking in woven data without perturbation
 * [woven-0.04.pvsm](pvsm/woven-0.04.pvsm): Critical point tracking in woven data with perturbation ($\sigma=0.04$)
-* [woven-contour-0.2.pvsm](pvsm/woven-contour-0.2.pvsm): Contour tracking in woven data with the isovolume of 0.2
+* [woven-contour-0.2.pvsm](pvsm/woven-contour-0.2.pvsm): Contour tracking in woven data with the isovalue of 0.2
 
 
 #### Merger (time-varying 2D scalar field data)
@@ -106,6 +106,12 @@ Note that the `--no-post-processing` option prevents trajectories being split in
 
 The double-gyre function is proposed by [Shadden et al.](https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html) and is used to study Lagrangian coherent structures in time-dependent dynamical systems.  See the above link for more details.  We use this dataset to test critical point tracking in 2D regular- and unstructured-grid vector field data.
 
+##### Parameters
+
+* `dimensions` (by default `[64, 32]`)
+* `n_timesteps` (by default 50)
+* `time_scale` (by default 0.1) defines how discrete timestep is mapped to time: t = time_scale * timestep
+
 ##### Example with CLI
 
 To reproduce the results in the right figure, use the following command line:
@@ -119,11 +125,6 @@ Note that the `--no-post-processing` option prevents trajectories being split in
 * [double-gyre.pvsm](pvsm/double-gyre.pvsm) (SurfaceLIC plug-in may be needed to visualize the vector field)
 
 
-##### Parameters
-
-* `dimensions` (by default `[64, 32]`)
-* `n_timesteps` (by default 50)
-* `time_scale` (by default 0.1) defines how discrete timestep is mapped to time: t = time_scale * timestep
 
 #### Moving extremum 2D (time-varying 2D scalar field data)
 
