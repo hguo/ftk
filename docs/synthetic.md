@@ -35,7 +35,8 @@ A complete list of synthetic data sources including parameters are introduced in
 
 ### Using FTK synthetic data sources in ParaView
 
-One can find the list of FTK synthetic data sources in the "Sources --> FTK" menu.  These data sources can be combined with 
+One can find the list of FTK synthetic data sources in the "Sources --> FTK" menu.  These data sources can be combined with filters under the "Filters --> FTK" menu.  For many of the following examples, we provide `.pvsm` (ParaView state file format) for one to reproduce the results.  FTK/ParaView plug-ins need to be correctly built and loaded before loading the `.pvsm` files we provide. 
+
 
 ### Using FTK synthetic data sources in Python
 
@@ -72,9 +73,8 @@ $ ftk -f cp --synthetic woven --perturbation 0.02 --output woven-0.02.vtp
 ```
 ##### Example with ParaView
 
-Download the following `.pvsm` (ParaView state file format) file to load the example of using `SpiralWoven2DSource` and `CriticalPoint2DTracker`.  FTK/ParaView plug-ins need to be correctly built and loaded: 
-
-* [woven.pvsm](pvsm/woven.pvsm)
+* [woven.pvsm](pvsm/woven.pvsm): Woven without perturbation
+* [woven.pvsm](pvsm/woven-0.04.pvsm): Woven with perturbation ($\sigma=0.04$)
 
 
 #### Merger (time-varying 2D scalar field data)
