@@ -1,7 +1,6 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hh"
 #include "constants.hh"
-#include <ftk/filters/critical_point_tracker_wrapper.hh>
 #include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
 
 using nlohmann::json;

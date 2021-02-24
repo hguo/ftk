@@ -1,7 +1,6 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hh"
 #include "constants.hh"
-#include <ftk/filters/critical_point_tracker_wrapper.hh>
 
 #if FTK_HAVE_VTK
 #include <vtkXMLPolyDataReader.h>
@@ -46,7 +45,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_3d_random_motion") {
     jc["root_proc"] = root;
     // fprintf(stderr, "root=%d\n", root);
 
-    ftk::critical_point_tracker_wrapper consumer;
+    ftk::json_interface consumer;
     consumer.configure(jc);
     consumer.consume(stream);
     consumer.post_process();

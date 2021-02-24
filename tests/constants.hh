@@ -2,7 +2,7 @@
 #define _FTK_TEST_CONSTANTS_HH
 
 #include <ftk/external/json.hh>
-#include <ftk/filters/critical_point_tracker_wrapper.hh>
+#include <ftk/filters/json_interface.hh>
 
 using nlohmann::json;
 
@@ -182,7 +182,7 @@ static std::tuple<size_t, size_t> track_cp2d(const json jstream, const json jcon
   ftk::ndarray_stream<> stream;
   stream.configure(jstream);
 
-  ftk::critical_point_tracker_wrapper consumer;
+  ftk::json_interface consumer;
   consumer.configure(jconfig);
   consumer.consume(stream);
   consumer.post_process();
