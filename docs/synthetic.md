@@ -169,7 +169,9 @@ Similar to the moving extremum 2D data, the 3D version is defined as $f(x, y, z,
 
 #### Moving ramp 3D (time-varying 3D scalar field data)
 
-The 3D moving ramp function is defined as $f(x,y,z,t)=x - (x_0 + rate*t)$, where $x_0$ moves at the designated speed over time.  This dataset contains no critical point and used to test 3D isosurface tracking in regular-grid scalar field.
+<img align="right" width="30%" src="images/ramp.gif">
+
+The 3D moving ramp function is defined as $f(x,y,z,t)=x - (x_0 + rt)$, where $x_0$ moves at the designated speed $r$ over time.  This dataset contains no critical point and used to test 3D isosurface tracking in regular-grid scalar field.
 
 ##### Parameters
 
@@ -179,11 +181,16 @@ The 3D moving ramp function is defined as $f(x,y,z,t)=x - (x_0 + rate*t)$, where
 * `dimensions` (by default `[21, 21, 21]`)
 * `n_timesteps` (by default 32)
 
+##### Example with ParaView
+
+* [ramp.pvsm](pvsm/ramp.pvsm) (May take a while because 4D isovolumes are reconstructed)
+
+
 #### Moving dual ramp 3D (time-varying 3D scalar field data)
 
 <img align="right" width="30%" src="images/dual-ramp.gif">
 
-The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rate*t$.  The purpose is to test 3D isosurface tracking in regular-grid scalar field.
+The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rt$, where $r$ is the rate that controls the moving speed.  The purpose is to test 3D isosurface tracking in regular-grid scalar field.
 
 * `x0` (by default 10)
 * `rate` (by default 0.1) defines the the changing rate of $x_0$.
