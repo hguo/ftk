@@ -64,12 +64,17 @@ The spiral woven function is defined as $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\
 * `scalaring_factor` (by default 15.0) scales $x$ and $y$ coordinates in the 2D regular grid and controls the density of woven
 * `dimensions` (by default `[32, 32]`)
 
-##### Example
+##### Example with command line
 
 In the right figure, we demonstrate critical point tracking results with/without the presence of noise injection.  For example, the following command injects Gaussian noise ($\sigma=0.02$) to the synthetic woven data:
 ```bash
 $ ftk -f cp --synthetic woven --perturbation 0.02 --output woven-0.02.vtp
 ```
+##### Example with ParaView
+
+Download the following `.pvsm` (ParaView state file format) file to load the example of using `SpiralWoven2DSource` and `CriticalPoint2DTracker`.  FTK/ParaView plug-ins need to be correctly built and loaded: 
+
+* [woven.pvsm](pvsm/woven.pvsm)
 
 
 #### Merger (time-varying 2D scalar field data)
