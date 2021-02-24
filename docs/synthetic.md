@@ -73,8 +73,9 @@ $ ftk -f cp --synthetic woven --perturbation 0.02 --output woven-0.02.vtp
 ```
 ##### Example with ParaView
 
-* [woven.pvsm](pvsm/woven.pvsm): Woven without perturbation
-* [woven.pvsm](pvsm/woven-0.04.pvsm): Woven with perturbation ($\sigma=0.04$)
+* [woven.pvsm](pvsm/woven.pvsm): Critical point tracking in woven data without perturbation
+* [woven-0.04.pvsm](pvsm/woven-0.04.pvsm): Critical point tracking in woven data with perturbation ($\sigma=0.04$)
+* [woven-contour-0.2.pvsm](pvsm/woven-contour-0.2.pvsm): Contour tracking in woven data with the isovolume of 0.2
 
 
 #### Merger (time-varying 2D scalar field data)
