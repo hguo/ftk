@@ -181,6 +181,8 @@ The 3D moving ramp function is defined as $f(x,y,z,t)=x - (x_0 + rate*t)$, where
 
 #### Moving dual ramp 3D (time-varying 3D scalar field data)
 
+<img align="right" src="images/dual-ramp.png">
+
 The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rate*t$.  The purpose is to test 3D isosurface tracking in regular-grid scalar field.
 
 * `x0` (by default 10)
@@ -190,3 +192,6 @@ The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rate*t$.  The purpose is to test
 * `dimensions` (by default `[21, 21, 21]`)
 * `n_timesteps` (by default 32)
 
+##### Example with ParaView
+
+* [dual-ramp.pvsm](pvsm/dual-ramp.pvsm) (May take a while because 4D isovolumes are reconstructed)
