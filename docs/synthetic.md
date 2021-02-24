@@ -106,13 +106,17 @@ Note that the `--no-post-processing` option prevents trajectories being split in
 
 The double-gyre function is proposed by [Shadden et al.](https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html) and is used to study Lagrangian coherent structures in time-dependent dynamical systems.  See the above link for more details.  We use this dataset to test critical point tracking in 2D regular- and unstructured-grid vector field data.
 
-##### Example
+##### Example with CLI
 
 To reproduce the results in the right figure, use the following command line:
 ```bash
 $ ftk -f cp --synthetic merger_2d --output merger_2d.vtp --no-post-processing
 ```
 Note that the `--no-post-processing` option prevents trajectories being split into sub-trajectories with consistent types.
+
+##### Example with ParaView
+
+* [double-gyre.pvsm](pvsm/double-gyre.pvsm) (SurfaceLIC plug-in may be needed to visualize the vector field)
 
 
 ##### Parameters
