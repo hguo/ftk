@@ -59,6 +59,12 @@ int ftkLevelsetTracker2D::RequestInformation(
     vtkInformationVector* outputVector)
 {
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+  if (OutputType == 1) { // traced outputs; remove timesteps in the outputs
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_RANGE());
+  }
+
   return 1;
 }
 
@@ -118,15 +124,23 @@ int ftkLevelsetTracker2D::RequestData(
       
       tracker.finalize();
       tracker_needs_recompute = false;
-     
-      // return 1;
-      return RequestSliced(request, inputVector, outputVector);
+    
+      if (OutputType == 0)
+        return RequestSliced(request, inputVector, outputVector);
+      else {
+        output->DeepCopy( tracker.get_surfaces().to_vtp(true, true, ZTimeScale) );
+      }
     }
 
     currentTimestep ++;
     return 1; 
   } else {
-    return RequestSliced(request, inputVector, outputVector);
+    if (OutputType == 0)
+      return RequestSliced(request, inputVector, outputVector);
+    else {
+      output->DeepCopy( tracker.get_surfaces().to_vtp(true, true, ZTimeScale) );
+      return 1;
+    }
   }
 }
 

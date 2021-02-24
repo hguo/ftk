@@ -38,6 +38,7 @@ struct feature_surface_t {
   std::vector<std::array<int, 4>> quads;
   std::vector<std::array<int, 5>> pentagons;
 
+  void clear();
   void relabel();
 
   feature_curve_set_t slice_time(int t) const;
@@ -51,7 +52,7 @@ public: // IO
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
-  vtkSmartPointer<vtkPolyData> to_vtp(bool generate_normal=false) const;
+  vtkSmartPointer<vtkPolyData> to_vtp(bool generate_normal=false, bool spacetime=false, double z_time_scale=1.0) const;
 #endif
 };
 
@@ -78,6 +79,14 @@ namespace diy {
 ////////////////////////
 
 namespace ftk {
+
+inline void feature_surface_t::clear()
+{
+  pts.clear();
+  tris.clear();
+  quads.clear();
+  pentagons.clear();
+}
 
 inline void feature_surface_t::relabel()
 {
@@ -113,7 +122,7 @@ inline void feature_surface_t::triangulate()
 }
 
 #if FTK_HAVE_VTK
-inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_normal) const
+inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_normal, bool spacetime, double z_time_scale) const
 {
   vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
@@ -135,7 +144,11 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_norm
 
   for (int i = 0; i < pts.size(); i ++) {
     const auto &p = pts[i];
-    points->InsertNextPoint(p.x[0], p.x[1], p.x[2]);
+    if (spacetime) 
+      points->InsertNextPoint(p.x[0], p.x[1], p.t * z_time_scale);
+    else 
+      points->InsertNextPoint(p.x[0], p.x[1], p.x[2]);
+
     array_id->SetTuple1(i, p.id);
     array_time->SetTuple1(i, p.t);
     array_grad->SetTuple3(i, p.v[0], p.v[1], p.v[2]);
@@ -170,9 +183,9 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_norm
     // normalGenerator->SetFlipNormals(true);
     normalGenerator->AutoOrientNormalsOn();
     normalGenerator->Update();
-  }
-
-  return poly;
+    return normalGenerator->GetOutput();
+  } else 
+    return poly;
 }
 
 inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const

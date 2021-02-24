@@ -153,12 +153,8 @@ inline void contour_tracker_2d_regular::finalize()
 
 inline void contour_tracker_2d_regular::reset()
 {
-  current_timestep = 0;
-
-  field_data_snapshots.clear();
-  intersections.clear();
-
-  contour_tracker::reset();
+  surfaces.clear();
+  contour_tracker_regular::reset();
 }
 
 inline bool contour_tracker_2d_regular::check_simplex(
