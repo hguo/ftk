@@ -181,7 +181,7 @@ The 3D moving ramp function is defined as $f(x,y,z,t)=x - (x_0 + rate*t)$, where
 
 #### Moving dual ramp 3D (time-varying 3D scalar field data)
 
-<img align="right" src="images/dual-ramp.png">
+<img align="right" src="images/dual-ramp.gif">
 
 The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rate*t$.  The purpose is to test 3D isosurface tracking in regular-grid scalar field.
 
