@@ -104,6 +104,8 @@ Note that the `--no-post-processing` option prevents trajectories being split in
 
 #### Double gyre (time-varying 2D vector field data)
 
+<img align="right" src="images/double_gyre.png">
+
 The double-gyre function is proposed by [Shadden et al.](https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html) and is used to study Lagrangian coherent structures in time-dependent dynamical systems.  See the above link for more details.  We use this dataset to test critical point tracking in 2D regular- and unstructured-grid vector field data.
 
 ##### Parameters
@@ -125,10 +127,7 @@ Note that the `--no-post-processing` option prevents trajectories being split in
 * [double-gyre.pvsm](pvsm/double-gyre.pvsm) (SurfaceLIC plug-in may be needed to visualize the vector field)
 
 
-
 #### Moving extremum 2D (time-varying 2D scalar field data)
-
-<img align="right" src="images/double_gyre.png">
 
 The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$, where $(x_0, y_0)$ are the coordinates of the minimum and moves along the designated direction over time.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
 
