@@ -19,6 +19,12 @@ public:
   vtkSetMacro(Threshold, double);
   vtkGetMacro(Threshold, double);
 
+  vtkSetMacro(OutputType, int);
+  vtkGetMacro(OutputType, int);
+
+  vtkSetMacro(ZTimeScale, double);
+  vtkGetMacro(ZTimeScale, double);
+
 protected:
   ftkLevelsetTracker2D();
   ~ftkLevelsetTracker2D();
@@ -37,6 +43,8 @@ private:
 private:
   double Threshold;
   std::string InputVariable;
+  int OutputType; // 0: sliced, 1: traced
+  double ZTimeScale;
 
   int currentTimestep;
   int inputDataComponents;
