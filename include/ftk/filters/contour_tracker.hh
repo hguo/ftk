@@ -28,6 +28,7 @@ struct contour_tracker : public virtual tracker {
   void set_scalar_components(const std::vector<std::string>& c);
   int get_num_scalar_components() const {return scalar_components.size();}
 
+  double get_threshold() const { return threshold; }
   void set_threshold(double t) {threshold = t;}
 
 public:

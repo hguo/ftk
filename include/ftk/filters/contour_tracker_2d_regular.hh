@@ -49,7 +49,9 @@ struct contour_tracker_2d_regular : public contour_tracker_regular {
 
   void update_timestep();
 
-protected:
+  const feature_surface_t& get_surfaces() const { return surfaces; }
+
+public:
   void write_isovolume_vtu(const std::string& filename) const;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_isovolume_vtp() const;
@@ -58,11 +60,15 @@ protected:
 
 protected:
   typedef simplicial_regular_mesh_element element_t;
-  
+
+  feature_surface_t surfaces;
+
 protected:
   bool check_simplex(const element_t& s, feature_point_t& cp);
   void trace_intersections();
   void trace_connected_components();
+
+  void build_surfaces();
 
   virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
@@ -70,12 +76,62 @@ protected:
 
 
 ////////////////////
+inline void contour_tracker_2d_regular::build_surfaces()
+{
+  fprintf(stderr, "building spacetime isosurfaces...\n");
+  
+  std::mutex my_mutex;
+  auto add_triangle = [&](int i0, int i1, int i2) {
+    std::lock_guard<std::mutex> guard(my_mutex);
+    surfaces.tris.push_back({i0, i1, i2});
+  };
+  
+  auto my_intersections = intersections; // get_intersections();
+  unsigned long long i = 0;
+  for (auto &kv : my_intersections) {
+    double p[3] = {kv.second.x[0], kv.second.x[1], kv.second.t};
+    kv.second.tag = i ++;
+    surfaces.pts.push_back(kv.second);
+  }
+
+  parallel_for<element_t>(related_cells, [&](const element_t &e) {
+    int count = 0;
+    unsigned long long ids[4];
+
+    std::set<element_t> unique_edges;
+    for (auto tri : e.sides(m)) {
+      for (auto edge : tri.sides(m)) {
+        unique_edges.insert(edge);
+      }
+    }
+    
+    for (auto edge : unique_edges) 
+      if (my_intersections.find(edge) != my_intersections.end())
+        ids[count ++] = my_intersections[edge].tag;
+
+    if (count == 3) {
+      add_triangle(ids[0], ids[1], ids[2]);
+    } else if (count == 4) { // quad
+      add_triangle(ids[0], ids[1], ids[2]);
+      add_triangle(ids[1], ids[3], ids[2]);
+    } else {
+      // fprintf(stderr, "irregular count=%d\n", count); // WIP: triangulation
+    }
+  }, FTK_THREAD_PTHREAD, nthreads, enable_set_affinity);
+
+  surfaces.relabel();
+  fprintf(stderr, "#pts=%zu, #tri=%zu\n", surfaces.pts.size(), surfaces.tris.size());
+}
+
 inline void contour_tracker_2d_regular::finalize()
 {
   diy::mpi::gather(comm, intersections, intersections, get_root_proc());
+  diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
 
-  return; 
+  if (comm.rank() == get_root_proc())
+    build_surfaces();
 
+#if 0
   // TODO: build surfaces
   for (const auto &e : related_cells) {
     auto sides = e.sides(m);
@@ -92,21 +148,7 @@ inline void contour_tracker_2d_regular::finalize()
         count ++;
     std::cerr << "count=" << count << ", " << e << std::endl;
   }
-
-  if (comm.rank() == get_root_proc()) {
-    // fprintf(stderr, "finalizing...\n");
-    // traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 
-    //     [&](element_t f) {
-    //       std::set<element_t> neighbors;
-    //       const auto cells = f.side_of(m);
-    //       for (const auto c : cells) {
-    //         const auto elements = c.sides(m);
-    //         for (const auto f1 : elements)
-    //           neighbors.insert(f1);
-    //       }
-    //       return neighbors;
-    // }));
-  }
+#endif
 }
 
 inline void contour_tracker_2d_regular::reset()
@@ -138,12 +180,12 @@ inline bool contour_tracker_2d_regular::check_simplex(
     fi[i] = f[i] * factor;
   }
 
-  // bool succ = robust_critical_point_in_simplex1(f, indices);
-  // if (!succ) return false;
+  bool succ = robust_critical_point_in_simplex1(fi, indices);
+  if (!succ) return false;
 
   double mu[2];
   bool succ2 = inverse_lerp_s1v1(f, mu);
-  if (!succ2) return false;
+  // if (!succ2) return false;
 
   double X[2][3], x[3];
   simplex_coordinates(vertices, X);
@@ -279,7 +321,6 @@ vtkSmartPointer<vtkPolyData> contour_tracker_2d_regular::get_isovolume_vtp() con
         unique_edges.insert(edge);
       }
     }
-    // if (unique_edges.size() != 6) fprintf(stderr, "shoot %zu\n", unique_edges.size());
     
     for (auto edge : unique_edges) 
       if (my_intersections.find(edge) != my_intersections.end())

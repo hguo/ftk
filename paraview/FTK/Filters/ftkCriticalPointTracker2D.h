@@ -18,6 +18,9 @@ public:
 
   vtkSetMacro(GaussianKernelSize, double);
   vtkGetMacro(GaussianKernelSize, double);
+  
+  vtkSetMacro(ZTimeScale, double);
+  vtkGetMacro(ZTimeScale, double);
 
   vtkSetMacro(InputVariable, std::string);
   vtkGetMacro(InputVariable, std::string);
@@ -38,6 +41,7 @@ private:
 private:
   bool UseGPU;
   double GaussianKernelSize;
+  double ZTimeScale;
   std::string InputVariable;
 
   int currentTimestep;

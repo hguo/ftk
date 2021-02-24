@@ -53,6 +53,8 @@ C++ functions are available to generate synthetic data in `ndarray` data structu
 
 ## Definitions
 
+<img align="right" src="images/woven_perturbation.png">
+
 #### Spiral woven (time-varying 2D scalar field data)
 
 The spiral woven function is defined as $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\sin t + y\cos t),$ where where $x$ and $y$ are 2D coordinates and $t$ is time.  The image of this data rotates counterclockwise over time.  In the regular grid domain, $x$ and $y$ coordinates are scaled by the `scalaing_factor`, and the rotation center sits on the center of the image.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
@@ -64,7 +66,11 @@ The spiral woven function is defined as $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\
 
 ##### Example
 
-See the main page.
+In the right figure, we demonstrate critical point tracking results with/without the presence of noise injection.  For example, the following command injects Gaussian noise ($\sigma=0.02$) to the synthetic woven data:
+```bash
+$ ftk -f cp --synthetic woven --perturbation 0.02 --output woven-0.02.vtp
+```
+
 
 #### Merger (time-varying 2D scalar field data)
 
@@ -77,16 +83,36 @@ The merger function is defined as $f(x,y,t)=\max(e^{-\hat{x}(t)^2-\hat{y}(t)^2},
 * `dimensions` (by default `[32, 32]`)
 * `n_timesteps` (by default 100)
 
+##### Example
+
+To reproduce the results in the right figure, use the following command line:
+```bash
+$ ftk -f cp --synthetic merger_2d --output merger_2d.vtp --no-post-processing
+```
+Note that the `--no-post-processing` option prevents trajectories being split into sub-trajectories with consistent types.
+
 #### Double gyre (time-varying 2D vector field data)
 
 The double-gyre function is proposed by [Shadden et al.](https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html) and is used to study Lagrangian coherent structures in time-dependent dynamical systems.  See the above link for more details.  We use this dataset to test critical point tracking in 2D regular- and unstructured-grid vector field data.
+
+##### Example
+
+To reproduce the results in the right figure, use the following command line:
+```bash
+$ ftk -f cp --synthetic merger_2d --output merger_2d.vtp --no-post-processing
+```
+Note that the `--no-post-processing` option prevents trajectories being split into sub-trajectories with consistent types.
+
 
 ##### Parameters
 
 * `dimensions` (by default `[64, 32]`)
 * `n_timesteps` (by default 50)
+* `time_scale` (by default 0.1) defines how discrete timestep is mapped to time: t = time_scale * timestep
 
 #### Moving extremum 2D (time-varying 2D scalar field data)
+
+<img align="right" src="images/double_gyre.png">
 
 The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$, where $(x_0, y_0)$ are the coordinates of the minimum and moves along the designated direction over time.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
 
@@ -94,10 +120,28 @@ The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$
 
 * `x0` (by default `[10, 10]`)
 * `dir` (by default `[0.1, 0.1]`)
-* `dimensions` (by default `[21, 21]`)
-* `n_timesteps` (by default 32)
+* `dimensions` (by default `[64, 32]`)
+* `n_timesteps` (by default 50)
 
-#### Moving extreume 3D (time-varying 3D scalar field data)
+##### Example
+
+To reproduce the results in the right figure, use the following command line:
+```bash
+$ ftk -f cp --input double_gyre.json --output double_gyre.vtp
+```
+The contents of `double_gyre.json` are
+```json
+{
+  "type": "synthetic",
+  "name": "double_gyre",
+  "dimensions": [64,32],
+  "n_timesteps": 50,
+  "time_scale": 2.0
+}
+```
+
+
+#### Moving extremum 3D (time-varying 3D scalar field data)
 
 Similar to the moving extremum 2D data, the 3D version is defined as $f(x, y, z, t)=(x-x_0)^2 + (y-y_0)^2 + (z-z_0)^2$ and contains one single minimum at $(x_0, y_0, z_0)$.  This dataset is used to test critical point tracking in 3D regular-grid scalar field data. 
 

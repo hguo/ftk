@@ -1,9 +1,9 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="filters">
-    <SourceProxy name="CriticalPointTracker2D" class="ftkCriticalPointTracker2D" label="CriticalPointTracker2D">
+    <SourceProxy name="LevelsetTracker3D" class="ftkLevelsetTracker3D" label="LevelsetTracker3D">
       <Documentation
-         short_help="track critical points in 2D time-varying scalar field data"
-         long_help="track critical points in 2D time-varying scalar field data">
+         short_help="track levelsets in 3D time-varying scalar field data"
+         long_help="track levelsets in 3D time-varying scalar field data">
       </Documentation>
       
       <InputProperty
@@ -32,26 +32,10 @@
           </RequiredProperties>
         </ArrayListDomain>
       </StringVectorProperty>
-
-      <IntVectorProperty 
-        name="UseGPU"
-        command="SetUseGPU"
-        number_of_elements="1"
-        default_values="0">
-        <BooleanDomain name="bool"/>
-      </IntVectorProperty>
-
-      <DoubleVectorProperty
-        name="GaussianKernelSize"
-        command="SetGaussianKernelSize"
-        number_of_elements="1"
-        default_values="2.0"
-        animateable="0">
-      </DoubleVectorProperty>
       
       <DoubleVectorProperty
-        name="Z-time scale"
-        command="SetZTimeScale"
+        name="Threshold"
+        command="SetThreshold"
         number_of_elements="1"
         default_values="0.0"
         animateable="0">

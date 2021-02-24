@@ -6,6 +6,7 @@ DEPENDS
   VTK::CommonExecutionModel
   VTK::IOLegacy
   VTK::IOXML
+  VTK::FiltersCore
 PRIVATE_DEPENDS
   VTK::CommonCore
   VTK::CommonDataModel

@@ -38,6 +38,8 @@ struct ndarray_stream : public object {
   //  - n_timesteps, integer.  The default is 32 for synthetic data; the number can be 
   //    automatically derived from file; the number can be automatically derived from files
   //  - perturbation, number.  Add gaussian perturbation to the data
+  //  - clamp, array of two numbers (min, max).  Clamp the range of the input data 
+  //    with the given min and max values
 
   void set_input_source_json_file(const std::string& filename);
   void set_input_source_json(const json& j_);
@@ -316,6 +318,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           default_n_timesteps = 50;
           j["variables"] = {"u", "v", "w"};
           j["components"] = {1, 1, 1};
+          if (j.contains("time_scale")) {
+            if (j["time_scale"].is_number()) { // ok
+            } else fatal("invalid time_scale");
+          } else j["time_scale"] = 0.1;
         } else if (j["name"] == "merger_2d") {
           j["variables"] = {"scalar"};
           default_nd = 2;
@@ -571,7 +577,25 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
       } else fatal("missing filenames");
     } else fatal("invalid input type");
   } else fatal("missing `type'");
- 
+
+  if (j.contains("clamp")) {
+    if (j["clamp"].is_array()) {
+      auto jc = j["clamp"];
+      if (jc.size() == 2) { 
+        for (int i = 0; i < 2; i ++) {
+          if (jc[0].is_number()) { // ok
+          } else fatal("invalid clmap");
+        }
+        if (jc[0] > jc[1]) 
+          fatal("invalid clamp: min is greater than max");
+      } else fatal("invalid clamp");
+    }
+  }
+
+  if (j.contains("perturbation")) {
+    if (j["perturbation"].is_number()) { // ok
+    } else fatal("invalid perturbation");
+  }
 
   if (j.contains("temporal-smoothing-kernel")) {
     if (j["temporal-smoothing-kernel"].is_number()) {
@@ -890,8 +914,9 @@ template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_synthetic_double_gyre(int k) 
 {
   // TODO: allowing parameter configuration
+  const double time_scale = j["time_scale"];
   const T A = 0.1, Omega = M_PI * 2, Eps = 0.25;
-  const T time = k * 0.1; 
+  const T time = k * time_scale; 
   const size_t DW = j["dimensions"][0], 
                DH = j["dimensions"][1];
  
@@ -919,22 +944,32 @@ void ndarray_stream<T>::modified_callback(int k, const ndarray<T> &array)
     else
       callback(k, array);
   };
-    
-  auto f1 = [&](const ndarray<T> &array) { // handling perturbation
-    if (j.contains("perturbation")) { 
-      const auto array1 = array.perturb(j["perturbation"]);
+   
+  auto f1 = [&](const ndarray<T> &array) { // handling clamp
+    if (j.contains("clamp")) {
+      auto array1 = array;
+      array1.clamp(j["clamp"][0], j["clamp"][1]);
       f(array1);
     } else 
       f(array);
+  };
+
+  auto f2 = [&](const ndarray<T> &array) { // handling perturbation
+    if (j.contains("perturbation")) { 
+      auto array1 = array; 
+      array1.perturb(j["perturbation"]);
+      f1(array1);
+    } else 
+      f1(array);
   };
 
   if (j.contains("spatial-smoothing-kernel")) {
     const int ksize = j["spatial-smoothing-kernel-size"];
     const T sigma = j["spatial-smoothing-kernel"];
     ndarray<T> array1 = conv_gaussian(array, sigma, ksize, ksize/2);
-    f1(array1);
+    f2(array1);
   } else
-    f1(array);
+    f2(array);
 }
 
 template <typename T>

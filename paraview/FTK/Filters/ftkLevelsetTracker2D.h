@@ -3,7 +3,7 @@
 
 #include "vtkImageAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
-#include <ftk/filters/threshold_tracker.hh>
+#include <ftk/filters/contour_tracker_2d_regular.hh>
 
 class vtkDataSet;
 
@@ -17,13 +17,18 @@ public:
   vtkGetMacro(InputVariable, std::string);
   
   vtkSetMacro(Threshold, double);
+  vtkGetMacro(Threshold, double);
 
 protected:
   ftkLevelsetTracker2D();
   ~ftkLevelsetTracker2D();
 
+  int RequestUpdateExtent(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
+  int FillOutputPortInformation(int, vtkInformation*) override;
+  
+  int RequestSliced(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
 
 private:
   ftkLevelsetTracker2D(const ftkLevelsetTracker2D&);
@@ -36,7 +41,8 @@ private:
   int currentTimestep;
   int inputDataComponents;
   
-  ftk::threshold_tracker<> tracker; 
+  ftk::contour_tracker_2d_regular tracker;
+  bool tracker_needs_recompute = true;
 };
 
 #endif

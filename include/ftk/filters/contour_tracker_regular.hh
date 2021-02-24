@@ -14,6 +14,8 @@ struct contour_tracker_regular : public contour_tracker, public regular_tracker 
   contour_tracker_regular(diy::mpi::communicator comm, int nd/*2 or 3*/) : contour_tracker(comm), regular_tracker(comm, nd), tracker(comm) {}
   virtual ~contour_tracker_regular() {}
 
+  void reset();
+
 protected:
   typedef simplicial_regular_mesh_element element_t;
   
@@ -27,6 +29,14 @@ public: // cp io
   const std::map<element_t, feature_point_t>& get_discrete_intersections() const {return intersections;}
   std::vector<feature_point_t> get_intersections() const;
 };
+
+inline void contour_tracker_regular::reset()
+{
+  current_timestep = 0;
+  intersections.clear();
+  related_cells.clear();
+  contour_tracker::reset();
+}
 
 /////
 ////

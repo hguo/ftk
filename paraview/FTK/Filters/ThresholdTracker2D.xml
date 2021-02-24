@@ -1,9 +1,9 @@
 <ServerManagerConfiguration>
   <ProxyGroup name="filters">
-    <SourceProxy name="CriticalPointTracker2D" class="ftkCriticalPointTracker2D" label="CriticalPointTracker2D">
+    <SourceProxy name="ThresholdTracker2D" class="ftkThresholdTracker2D" label="ThresholdTracker2D">
       <Documentation
-         short_help="track critical points in 2D time-varying scalar field data"
-         long_help="track critical points in 2D time-varying scalar field data">
+         short_help="track thresholds in 2D time-varying scalar field data"
+         long_help="track thresholds in 2D time-varying scalar field data">
       </Documentation>
       
       <InputProperty
@@ -17,6 +17,13 @@
           <DataType value="vtkImageData"/>
         </DataTypeDomain>
       </InputProperty>
+      
+      <DoubleVectorProperty
+        name="Threshold"
+        command="SetThreshold"
+        number_of_elements="1"
+        default_values="0.0">
+      </DoubleVectorProperty>
 
       <StringVectorProperty 
         name="InputVariable"
@@ -32,30 +39,6 @@
           </RequiredProperties>
         </ArrayListDomain>
       </StringVectorProperty>
-
-      <IntVectorProperty 
-        name="UseGPU"
-        command="SetUseGPU"
-        number_of_elements="1"
-        default_values="0">
-        <BooleanDomain name="bool"/>
-      </IntVectorProperty>
-
-      <DoubleVectorProperty
-        name="GaussianKernelSize"
-        command="SetGaussianKernelSize"
-        number_of_elements="1"
-        default_values="2.0"
-        animateable="0">
-      </DoubleVectorProperty>
-      
-      <DoubleVectorProperty
-        name="Z-time scale"
-        command="SetZTimeScale"
-        number_of_elements="1"
-        default_values="0.0"
-        animateable="0">
-      </DoubleVectorProperty>
 
       <Hints>
         <ShowInMenu category="FTK"/>

@@ -2,6 +2,7 @@
 #define _FTK_TRACKER_HH
 
 #include <ftk/config.hh>
+#include <ftk/ndarray/field_data_snapshot.hh>
 #include <ftk/filters/filter.hh>
 #include <ftk/external/diy/master.hpp>
 
@@ -45,6 +46,9 @@ public:
   
   virtual bool advance_timestep() = 0;
   virtual void update_timestep() = 0;
+
+protected:
+  std::deque<field_data_snapshot> snapshots;
 
 protected:
   // diy::Master master;

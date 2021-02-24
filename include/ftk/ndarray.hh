@@ -2,7 +2,8 @@
 #define _FTK_NDARRAY_HH
 
 #include <ftk/config.hh>
-#include <ftk/ndarray_base.hh>
+#include <ftk/ndarray/ndarray_base.hh>
+#include <ftk/numeric/clamp.hh>
 
 #if FTK_HAVE_ADIOS2
 #include <adios2.h>
@@ -127,7 +128,15 @@ struct ndarray : public ndarray_base {
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
- 
+
+  double get(size_t i0) const { return at(i0); }
+  double get(size_t i0, size_t i1) const { return at(i0, i1); }
+  double get(size_t i0, size_t i1, size_t i2) const { return at(i0, i1, i2); }
+  double get(size_t i0, size_t i1, size_t i2, size_t i3) const { return at(i0, i1, i2, i3); }
+  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const { return at(i0, i1, i2, i3, i4); }
+  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const { return at(i0, i1, i2, i3, i4, i5); }
+  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const { return at(i0, i1, i2, i3, i4, i5, i6); }
+
   T& operator()(const std::vector<size_t>& idx) {return at(idx);}
   T& operator()(const std::vector<int>& idx) {return at(idx);}
   T& operator()(size_t i0) {return p[i0];}
@@ -216,8 +225,8 @@ public: // i/o for vtk image data
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
-  vtkSmartPointer<vtkImageData> to_vtk_image_data(const std::string varname=std::string()) const; 
-  vtkSmartPointer<vtkDataArray> to_vtk_data_array(const std::string varname=std::string()) const; 
+  vtkSmartPointer<vtkImageData> to_vtk_image_data(std::string varname=std::string()) const; 
+  vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
 #endif
 
 public: // i/o for hdf5
@@ -298,7 +307,8 @@ public: // statistics & misc
   
   ndarray<uint64_t> quantize() const; // quantization based on resolution
 
-  ndarray<T> perturb(const T sigma) const; // add gaussian noise to the array
+  ndarray<T> &perturb(T sigma); // add gaussian noise to the array
+  ndarray<T> &clamp(T min, T max); // clamp data with min and max
 
 private:
   std::vector<T> p;
@@ -550,16 +560,20 @@ inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::st
 }
 
 template<typename T>
-inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(const std::string varname) const
+inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(std::string varname) const
 {
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
   // fprintf(stderr, "to_vtk_image_data, ncd=%zu\n", ncd);
   if (ncd) { // multicomponent
     if (nd() == 3) d->SetDimensions(shape(1), shape(2), 1);
     else d->SetDimensions(shape(1), shape(2), shape(3)); // nd == 4
+
+    if (varname.empty()) varname = "vector";
   } else {
     if (nd() == 2) d->SetDimensions(shape(0), shape(1), 1);
     else d->SetDimensions(shape(0), shape(1), shape(2)); // nd == 3
+    
+    if (varname.empty()) varname = "scalar";
   }
   // d->GetPointData()->AddArray(to_vtk_data_array(multicomponent));
   d->GetPointData()->SetScalars(to_vtk_data_array(varname));
@@ -1022,8 +1036,8 @@ inline bool ndarray<T>::read_h5(const std::string& filename, const std::string& 
     return succ;
   }
 #else 
-  fprintf(stderr, "[FTK] fatal: FTK not compiled with HDF5.\n");
-  assert(false);
+  fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
+  return false;
 #endif
 }
 
@@ -1381,19 +1395,25 @@ inline bool ndarray<float>::read_amira(const std::string& filename)
 }
 
 template <typename T>
-ndarray<T> ndarray<T>::perturb(const T sigma) const
+ndarray<T>& ndarray<T>::perturb(T sigma)
 {
   std::random_device rd{};
   std::mt19937 gen{rd()};
   std::normal_distribution<> d{0, sigma};
 
-  ndarray<T> result;
-  result.reshape(*this);
-
   for (auto i = 0; i < nelem(); i ++)
-    result[i] = p[i] + d(gen);
+    p[i] = p[i] + d(gen);
 
-  return result;
+  return *this;
+}
+
+template <typename T>
+ndarray<T>& ndarray<T>::clamp(T min, T max)
+{
+  for (auto i = 0; i < nelem(); i ++)
+    p[i] = ftk::clamp(p[i], min, max);
+
+  return *this;
 }
 
 } // namespace ftk
