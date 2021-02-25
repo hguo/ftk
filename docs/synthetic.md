@@ -203,4 +203,4 @@ The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rt$, where $r$ is the rate that 
 
 ##### Example with ParaView
 
-* [dual-ramp.pvsm](pvsm/dual-ramp.pvsm) (May take a while because 4D isovolumes are reconstructed)
+* [dual-ramp.pvsm](pvsm/dual-ramp.pvsm): Tracking of two isosurfaces in the dual ramp data.  Color encodes the unique ID of each surface.  It may take a while because 4D isovolumes are reconstructed
