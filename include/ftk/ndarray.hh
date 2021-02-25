@@ -1387,6 +1387,7 @@ inline bool ndarray<float>::read_amira(const std::string& filename)
     fgets(buffer, 2047, fp);
 
     reshape(NumComponents, xDim, yDim, zDim);
+    set_multicomponents();
     read_binary_file(fp);
   }
 
