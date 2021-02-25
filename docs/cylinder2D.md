@@ -1,6 +1,6 @@
 # Example: Tracking critical points in a flow-past-cylinder dataset
 
-<img align="right" width="30%" src="images/cylinder2d.png">
+<img align="right" width="30%" src="images/cylinder2D.png">
 
 This example demonstrates the use of C++ APIs to track critical points in this flow-past-cylinder dataset, which is made publicly available by [Tino Weinkauf](https://www.csc.kth.se/~weinkauf/).  One can find the information of the dataset from this webpage: https://www.csc.kth.se/~weinkauf/notes/cylinder2d.html; restrictions of this dataset may apply.  The data are in the AmiraMesh format, which is currently not fully supported by FTK's CLI and bindings.  This example requires one to build the FTK library with VTK.
 
