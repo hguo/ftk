@@ -1,0 +1,85 @@
+#ifndef _FTK_TRACKER_JSON_INTERFACE_HH
+#define _FTK_TRACKER_JSON_INTERFACE_HH
+
+#include <ftk/filters/critical_point_tracker_2d_regular.hh>
+#include <ftk/filters/critical_point_tracker_3d_regular.hh>
+#include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
+#include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
+#include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
+#include <ftk/ndarray/stream.hh>
+#include <ftk/ndarray/writer.hh>
+#include <ftk/io/util.hh>
+
+namespace ftk {
+
+struct json_interface : public object {
+  json_interface(diy::mpi::communicator comm) : object(comm) {}
+  void configure(const json& j); // configure and validate json input
+
+protected:
+  json j;
+  std::shared_ptr<tracker> tr;
+  std::shared_ptr<ndarray_stream> st;
+
+  int feature_type = 0;
+};
+
+///////
+void json_interface::configure(const json& j)
+{
+  if (j.contains("feature")) {
+    if (j["feature"].is_string()) {
+      feature_type = tracker::str2tracker(j["feature"]);
+      if (feature_type == 0) fatal("invalid feature");
+      // otherwise ok
+    }
+  } else fatal("missing feature");
+
+  if (j.contains("input")) {
+    st.reset(new ndarray_stream<>);
+    st->set_input_source_json(j_input);
+  } else fatal("missing input");
+
+  if (j.contains("archive")) {
+    if (j["archive"].is_object()) {
+      json ja = j["archive"];
+      if (ja.contains("discrete")) {
+        if (ja["discrete"].is_string()) { // OK
+        } else fatal("invalid discrete archival file name");
+      }
+
+      if (ja.contains("traced")) {
+        if (ja["traced"].is_string()) { // OK
+        } else fatal("invalid traced archival file name");
+      }
+    }
+  }
+
+  if (j.contains("output")) {
+    if (j["output"].is_object()) {
+      json jo = j["output"];
+      if (jo.contains("type")) {
+        if (jo["type"].is_string()) { // OK
+          const std::string t = jo["type"];
+          // TODO: check if type is valid
+        } else fatal("invalid output type");
+      } else jo["type"] = "auto";
+    }
+  }
+
+  if (j.contains("threshold")) {
+    if (j["threshold"].is_number()) { // OK
+    } else fatal("invalid threshold");
+  } else j["threshold"] = 0.0;
+
+  if (j.contains("accelerator")) {
+    if (j["accelerator"].is_string()) { // OK
+      const std::string a = j["accelerator"];
+
+  }
+}
+
+}
+
+#endif

@@ -6,7 +6,7 @@
 #include "ftk/ndarray/synthetic.hh"
 #include "ftk/filters/critical_point_tracker_2d_regular.hh"
 #include "ftk/filters/critical_point_tracker_3d_regular.hh"
-#include "ftk/filters/critical_point_tracker_wrapper.hh"
+#include "ftk/filters/json_interface.hh"
 #include "ftk/filters/contour_tracker_2d_regular.hh"
 #include "ftk/filters/contour_tracker_3d_regular.hh"
 #include "ftk/filters/critical_line_tracker_3d_regular.hh"
@@ -72,7 +72,7 @@ int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
 
 // tracker and input stream
 std::shared_ptr<tracker> mtracker;
-std::shared_ptr<critical_point_tracker_wrapper> tracker_critical_point;
+std::shared_ptr<json_interface> wrapper;
 std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
 std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
@@ -185,13 +185,13 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
     j_tracker["xgc"] = jx;
   }
 
-  tracker_critical_point.reset(new critical_point_tracker_wrapper);
-  tracker_critical_point->configure(j_tracker);
+  wrapper.reset(new json_interface);
+  wrapper->configure(j_tracker);
 
   if (comm.rank() == 0) {
     // fprintf(stderr, "SUMMARY\n=============\n");
     std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
-    std::cerr << "config=" << std::setw(2) << tracker_critical_point->get_json() << std::endl;
+    std::cerr << "config=" << std::setw(2) << wrapper->get_json() << std::endl;
     // fprintf(stderr, "=============\n");
   }
 
@@ -202,12 +202,12 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 
 static void execute_critical_point_tracker(diy::mpi::communicator comm)
 {
-  tracker_critical_point->consume(*stream);
+  wrapper->consume(*stream);
  
   if (!disable_post_processing)
-     tracker_critical_point->post_process();
+     wrapper->post_process();
   
-  tracker_critical_point->write();
+  wrapper->write();
 }
 
 void initialize_contour_tracker(diy::mpi::communicator comm)

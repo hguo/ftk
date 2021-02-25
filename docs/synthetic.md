@@ -35,7 +35,8 @@ A complete list of synthetic data sources including parameters are introduced in
 
 ### Using FTK synthetic data sources in ParaView
 
-One can find the list of FTK synthetic data sources in the "Sources --> FTK" menu.  These data sources can be combined with 
+One can find the list of FTK synthetic data sources in the "Sources --> FTK" menu.  These data sources can be combined with filters under the "Filters --> FTK" menu.  For many of the following examples, we provide `.pvsm` (ParaView state file format) for one to reproduce the results.  FTK/ParaView plug-ins need to be correctly built and loaded before loading the `.pvsm` files we provide. 
+
 
 ### Using FTK synthetic data sources in Python
 
@@ -64,12 +65,17 @@ The spiral woven function is defined as $f(x,y,t)=cos(x\cos t - y\sin t) \sin(x\
 * `scalaring_factor` (by default 15.0) scales $x$ and $y$ coordinates in the 2D regular grid and controls the density of woven
 * `dimensions` (by default `[32, 32]`)
 
-##### Example
+##### Example with CLI
 
 In the right figure, we demonstrate critical point tracking results with/without the presence of noise injection.  For example, the following command injects Gaussian noise ($\sigma=0.02$) to the synthetic woven data:
 ```bash
 $ ftk -f cp --synthetic woven --perturbation 0.02 --output woven-0.02.vtp
 ```
+##### Example with ParaView
+
+* [woven.pvsm](pvsm/woven.pvsm): Critical point tracking in woven data without perturbation
+* [woven-0.04.pvsm](pvsm/woven-0.04.pvsm): Critical point tracking in woven data with perturbation ($\sigma=0.04$)
+* [woven-contour-0.2.pvsm](pvsm/woven-contour-0.2.pvsm): Contour tracking in woven data with the isovalue of 0.2
 
 
 #### Merger (time-varying 2D scalar field data)
@@ -83,26 +89,24 @@ The merger function is defined as $f(x,y,t)=\max(e^{-\hat{x}(t)^2-\hat{y}(t)^2},
 * `dimensions` (by default `[32, 32]`)
 * `n_timesteps` (by default 100)
 
-##### Example
+##### Example with CLI
 
 To reproduce the results in the right figure, use the following command line:
 ```bash
 $ ftk -f cp --synthetic merger_2d --output merger_2d.vtp --no-post-processing
 ```
 Note that the `--no-post-processing` option prevents trajectories being split into sub-trajectories with consistent types.
+
+##### Example with ParaView
+
+* [merger.pvsm](pvsm/merger.pvsm)
+
 
 #### Double gyre (time-varying 2D vector field data)
 
+<img align="right" src="images/double_gyre.png">
+
 The double-gyre function is proposed by [Shadden et al.](https://shaddenlab.berkeley.edu/uploads/LCS-tutorial/examples.html) and is used to study Lagrangian coherent structures in time-dependent dynamical systems.  See the above link for more details.  We use this dataset to test critical point tracking in 2D regular- and unstructured-grid vector field data.
-
-##### Example
-
-To reproduce the results in the right figure, use the following command line:
-```bash
-$ ftk -f cp --synthetic merger_2d --output merger_2d.vtp --no-post-processing
-```
-Note that the `--no-post-processing` option prevents trajectories being split into sub-trajectories with consistent types.
-
 
 ##### Parameters
 
@@ -110,18 +114,8 @@ Note that the `--no-post-processing` option prevents trajectories being split in
 * `n_timesteps` (by default 50)
 * `time_scale` (by default 0.1) defines how discrete timestep is mapped to time: t = time_scale * timestep
 
-#### Moving extremum 2D (time-varying 2D scalar field data)
+##### Example with CLI
 
-<img align="right" src="images/double_gyre.png">
-
-The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$, where $(x_0, y_0)$ are the coordinates of the minimum and moves along the designated direction over time.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
-
-##### Parameters
-
-* `x0` (by default `[10, 10]`)
-* `dir` (by default `[0.1, 0.1]`)
-* `dimensions` (by default `[64, 32]`)
-* `n_timesteps` (by default 50)
 
 ##### Example
 
@@ -140,6 +134,23 @@ The contents of `double_gyre.json` are
 }
 ```
 
+##### Example with ParaView
+
+* [double-gyre.pvsm](pvsm/double-gyre.pvsm) (SurfaceLIC plug-in may be needed to visualize the vector field)
+
+
+#### Moving extremum 2D (time-varying 2D scalar field data)
+
+The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$, where $(x_0, y_0)$ are the coordinates of the minimum and moves along the designated direction over time.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
+
+##### Parameters
+
+* `x0` (by default `[10, 10]`)
+* `dir` (by default `[0.1, 0.1]`)
+* `dimensions` (by default `[64, 32]`)
+* `n_timesteps` (by default 50)
+
+
 
 #### Moving extremum 3D (time-varying 3D scalar field data)
 
@@ -154,7 +165,9 @@ Similar to the moving extremum 2D data, the 3D version is defined as $f(x, y, z,
 
 #### Moving ramp 3D (time-varying 3D scalar field data)
 
-The 3D moving ramp function is defined as $f(x,y,z,t)=x - (x_0 + rate*t)$, where $x_0$ moves at the designated speed over time.  This dataset contains no critical point and used to test 3D isosurface tracking in regular-grid scalar field.
+<img align="right" width="30%" src="images/ramp.gif">
+
+The 3D moving ramp function is defined as $f(x,y,z,t)=x - (x_0 + rt)$, where $x_0$ moves at the designated speed $r$ over time.  This dataset contains no critical point and used to test 3D isosurface tracking in regular-grid scalar field.
 
 ##### Parameters
 
@@ -164,9 +177,16 @@ The 3D moving ramp function is defined as $f(x,y,z,t)=x - (x_0 + rate*t)$, where
 * `dimensions` (by default `[21, 21, 21]`)
 * `n_timesteps` (by default 32)
 
+##### Example with ParaView
+
+* [ramp.pvsm](pvsm/ramp.pvsm) (May take a while because 4D isovolumes are reconstructed)
+
+
 #### Moving dual ramp 3D (time-varying 3D scalar field data)
 
-The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rate*t$.  The purpose is to test 3D isosurface tracking in regular-grid scalar field.
+<img align="right" width="30%" src="images/dual-ramp.gif">
+
+The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rt$, where $r$ is the rate that controls the moving speed.  The purpose is to test 3D isosurface tracking in regular-grid scalar field.
 
 * `x0` (by default 10)
 * `rate` (by default 0.1) defines the the changing rate of $x_0$.
@@ -175,3 +195,6 @@ The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rate*t$.  The purpose is to test
 * `dimensions` (by default `[21, 21, 21]`)
 * `n_timesteps` (by default 32)
 
+##### Example with ParaView
+
+* [dual-ramp.pvsm](pvsm/dual-ramp.pvsm) (May take a while because 4D isovolumes are reconstructed)
