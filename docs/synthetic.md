@@ -154,6 +154,8 @@ The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$
 
 #### Moving extremum 3D (time-varying 3D scalar field data)
 
+<img align="right" width="30%" src="images/moving_extremum_3d_6.png">
+
 Similar to the moving extremum 2D data, the 3D version is defined as $f(x, y, z, t)=(x-x_0)^2 + (y-y_0)^2 + (z-z_0)^2$ and contains one single minimum at $(x_0, y_0, z_0)$.  This dataset is used to test critical point tracking in 3D regular-grid scalar field data. 
 
 ##### Parameters 
@@ -162,6 +164,10 @@ Similar to the moving extremum 2D data, the 3D version is defined as $f(x, y, z,
 * `dir` (by default `[0.1, 0.11, 0.1]`)
 * `dimensions` (by default `[21, 21, 21]`)
 * `n_timesteps` (by default 32)
+
+##### Example with ParaView
+
+* [moving-extremum-3d-6.pvsm](pvsm/moving-extremum-3d-6.pvsm) Critical point trajectories of six (6) different moving extremum data.  It may take a while to load because 4D isovolumes are reconstructed.
 
 #### Moving ramp 3D (time-varying 3D scalar field data)
 
