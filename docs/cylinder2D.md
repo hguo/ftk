@@ -83,6 +83,7 @@ int main(int argc, char **argv)
   tracker.set_array_domain( array.get_lattice() );
   tracker.set_scalar_field_source( ftk::SOURCE_NONE ); // no scalar field
   tracker.set_jacobian_field_source( ftk::SOURCE_DERIVED );
+  tracker.set_jacobian_symmetric( false ); // Jacobians are asymmetric
   tracker.initialize();
 
   // Feed time-varying data into the tracker
@@ -119,5 +120,5 @@ $ ftk-cylinder2D ~/Downloads/Cylinder2D.am cylinder2d.vti cylinder2d.vtp
 
 ## Visualize the outputs
 
-Open `cylinder2d.vti` and `cylinder2d.vtp` with ParaView.  You may also download this ParaView state file to reproduce the visualization, given that both `.vti` and `.vtp` are reachable by ParaView: [cylinder2D.pvsm](pvsm/cylinder2D.pvsm).
+Open `cylinder2d.vti` and `cylinder2d.vtp` with ParaView.  You may also download this ParaView state file to reproduce the visualization, given that both output files are reachable by ParaView: [cylinder2D.pvsm](pvsm/cylinder2D.pvsm).
 
