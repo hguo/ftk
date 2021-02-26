@@ -55,7 +55,7 @@ This filter tracks critical points in 3D scalar and vector fields.  We omit desc
 
 This filter tracks level sets (contours) in 2D scalar fields.
 
-![images/sliced-vs-traced.png]()
+![](images/sliced-vs-traced.png)
 
 #### Inputs
 
