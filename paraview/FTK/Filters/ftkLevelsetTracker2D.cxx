@@ -173,6 +173,6 @@ int ftkLevelsetTracker2D::RequestSliced(
   }
 
   fprintf(stderr, "rt=%f, ts=%d\n", rt, ts);
-  output->DeepCopy( tracker.get_surfaces().slice_time(ts).to_vtp(2, {}) );
+  output->DeepCopy( tracker.get_surfaces().slice_time(ts).to_vtp(2, {}, ZTimeScale) );
   return 1;
 }

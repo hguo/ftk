@@ -141,6 +141,8 @@ The contents of `double_gyre.json` are
 
 #### Moving extremum 2D (time-varying 2D scalar field data)
 
+<img align="right" width="30%" src="images/moving_extremum_2d.gif">
+
 The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$, where $(x_0, y_0)$ are the coordinates of the minimum and moves along the designated direction over time.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
 
 ##### Parameters
@@ -150,6 +152,13 @@ The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$
 * `dimensions` (by default `[64, 32]`)
 * `n_timesteps` (by default 50)
 
+##### Example with ParaView
+
+* [moving-extremum-2d.pvsm](pvsm/moving-extremum-2d.pvsm) combines four visualizations
+  * MovingExtremum2DSource with 100 timesteps
+  * CriticalPointTracker2D visualized as the tube in the center)
+  * LevelsetTracker2D ("traced" output) visualized as spacetime isosurface with the threshold of 10
+  * LevelsetTracker2D ("sliced" output) visualized as contour lines with the threshold of 10 
 
 
 #### Moving extremum 3D (time-varying 3D scalar field data)
