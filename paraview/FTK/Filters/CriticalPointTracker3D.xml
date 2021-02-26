@@ -33,6 +33,7 @@
         </ArrayListDomain>
       </StringVectorProperty>
 
+      <!---
       <IntVectorProperty 
         name="UseGPU"
         command="SetUseGPU"
@@ -48,6 +49,7 @@
         default_values="2.0"
         animateable="0">
       </DoubleVectorProperty>
+      -->
 
       <Hints>
         <ShowInMenu category="FTK"/>
