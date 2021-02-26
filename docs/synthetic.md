@@ -141,6 +141,8 @@ The contents of `double_gyre.json` are
 
 #### Moving extremum 2D (time-varying 2D scalar field data)
 
+<img align="right" width="30%" src="images/moving_extremum_2d.gif">
+
 The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$, where $(x_0, y_0)$ are the coordinates of the minimum and moves along the designated direction over time.  This dataset is used to test critical point tracking in 2D regular-grid scalar field data. 
 
 ##### Parameters
@@ -150,9 +152,18 @@ The moving extremum 2D function is defined as $f(x, y, t)=(x-x_0)^2 + (y-y_0)^2$
 * `dimensions` (by default `[64, 32]`)
 * `n_timesteps` (by default 50)
 
+##### Example with ParaView
+
+* [moving-extremum-2d.pvsm](pvsm/moving-extremum-2d.pvsm) combines four visualizations
+  * MovingExtremum2DSource with 100 timesteps
+  * CriticalPointTracker2D visualized as the tube in the center)
+  * LevelsetTracker2D ("traced" output) visualized as spacetime isosurface with the threshold of 10
+  * LevelsetTracker2D ("sliced" output) visualized as contour lines with the threshold of 10 
 
 
 #### Moving extremum 3D (time-varying 3D scalar field data)
+
+<img align="right" width="30%" src="images/moving_extremum_3d_6.png">
 
 Similar to the moving extremum 2D data, the 3D version is defined as $f(x, y, z, t)=(x-x_0)^2 + (y-y_0)^2 + (z-z_0)^2$ and contains one single minimum at $(x_0, y_0, z_0)$.  This dataset is used to test critical point tracking in 3D regular-grid scalar field data. 
 
@@ -162,6 +173,10 @@ Similar to the moving extremum 2D data, the 3D version is defined as $f(x, y, z,
 * `dir` (by default `[0.1, 0.11, 0.1]`)
 * `dimensions` (by default `[21, 21, 21]`)
 * `n_timesteps` (by default 32)
+
+##### Example with ParaView
+
+* [moving-extremum-3d-6.pvsm](pvsm/moving-extremum-3d-6.pvsm) Critical point trajectories of six (6) different moving extremum data.  It may take a while to load because 4D isovolumes are reconstructed.
 
 #### Moving ramp 3D (time-varying 3D scalar field data)
 
@@ -197,4 +212,4 @@ The dual ramp is defined as $f(x,y,z,t)=|x-x_0|-rt$, where $r$ is the rate that 
 
 ##### Example with ParaView
 
-* [dual-ramp.pvsm](pvsm/dual-ramp.pvsm) (May take a while because 4D isovolumes are reconstructed)
+* [dual-ramp.pvsm](pvsm/dual-ramp.pvsm): Tracking of two isosurfaces in the dual ramp data.  Color encodes the unique ID of each surface.  It may take a while because 4D isovolumes are reconstructed
