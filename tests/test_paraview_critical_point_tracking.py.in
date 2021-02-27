@@ -25,7 +25,7 @@ class MainTest(unittest.TestCase):
         myCriticalPointTracker.UpdatePipeline()
 
         self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 1)
-        # self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 329)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 131)
 
 if __name__ == '__main__':
     unittest.main()
