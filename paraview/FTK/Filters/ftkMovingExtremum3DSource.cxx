@@ -21,9 +21,9 @@ ftkMovingExtremum3DSource::ftkMovingExtremum3DSource() :
   DW(32), DH(32), DD(32), DT(10)
 {
   X0[0] = X0[1] = X0[2] = 10.0;
-  Dir[0] = 0.1; 
-  Dir[1] = 0.11;
-  Dir[2] = 0.1;
+  Dir[0] = 1.0; 
+  Dir[1] = 2.0;
+  Dir[2] = 1.0;
   SetNumberOfInputPorts(0);
   SetNumberOfOutputPorts(1);
 }

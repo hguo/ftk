@@ -429,11 +429,11 @@ inline bool critical_point_tracker_3d_regular::check_simplex(
     simplex_indices(vertices, indices);
     bool succ = robust_critical_point_in_simplex3(vf, indices);
     if (!succ) return false;
-
-    if (!succ2) clamp_barycentric<4>(mu);
   } else {
     if (!succ2) return false;
   }
+      
+  clamp_barycentric<4>(mu);
 
   double X[4][4], x[4]; // position
   simplex_positions(vertices, X);
@@ -458,6 +458,9 @@ inline bool critical_point_tracker_3d_regular::check_simplex(
   cp.tag = e.to_integer(m);
   cp.ordinal = e.is_ordinal(m);
   cp.timestep = current_timestep;
+
+  // fprintf(stderr, "mu=%f, %f, %f, x=%f, %f, %f, %f\n", 
+  //     mu[0], mu[1], mu[2], cp.x[0], cp.x[1], cp.x[2], cp.t);
 
   return true; // TODO
 #if 0 // legacy

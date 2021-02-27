@@ -31,7 +31,7 @@
         name="Timesteps"
         command="SetDT"
         number_of_elements="1"
-        default_values="100">
+        default_values="32">
       </IntVectorProperty>
 
       <DoubleVectorProperty 
@@ -45,7 +45,7 @@
         name="dir"
         command="SetDir"
         number_of_elements="3"
-        default_values="0.1 0.11 0.1">
+        default_values="1.0 2.0 1.0">
       </DoubleVectorProperty>
 
 			<DoubleVectorProperty
