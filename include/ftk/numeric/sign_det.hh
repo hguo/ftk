@@ -295,13 +295,14 @@ inline bool robust_intersect_half_line2(
     int j, const T vj[2], 
     int k, const T vk[2])
 {
-  // assume j < k
-  if (k > j)
+  // assuming 
+  if (!robust_smaller(j, 1, k, 1, vj[1], vk[1]))
     return robust_intersect_half_line2(v, k, vk, j, vj);
-
+  
   if (robust_smaller(j, 1, 0, 1, vj[1], v[1]) && 
       robust_smaller(0, 1, k, 1, v[1], vk[1]))
   {
+    // assuming 0 < i < j
     const T M[3][2] = {
       {v[0], v[1]},
       {vj[0], vj[1]},
