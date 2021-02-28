@@ -150,9 +150,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
   if (comm.rank() == 0) 
     fprintf(stderr, "current_timestep = %d\n", current_timestep);
   
-#ifndef FTK_HAVE_GMP
+// #ifndef FTK_HAVE_GMP
   update_vector_field_scaling_factor();
-#endif
+// #endif
   
   typedef std::chrono::high_resolution_clock clock_type;
   auto t0 = clock_type::now();
@@ -406,7 +406,7 @@ inline bool critical_point_tracker_3d_regular::check_simplex(
   //   if (std::isnan(mu[i]) || std::isinf(mu[i])) return false;
 
   if (enable_robust_detection) {
-#if FTK_HAVE_GMP
+#if 0 // FTK_HAVE_GMP
     typedef mpf_class fp_t;
     fp_t vf[4][3];
     for (int i = 0; i < 4; i ++)
