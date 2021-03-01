@@ -1,4 +1,4 @@
-# Tutorial: Critical Point Tracking with FTK
+# Critical Point Tracking with FTK
 
 Critical points---vanishing locations in a vector field---are the most important family of features in scientific data.  Critical points are the key constitiuents of vector field topology and essentially determine the characteristics of flow transport such as sources, sinks, and saddles.   Critical points are also in the gradient field of scalar functions, representing minimum, maximum, and saddles in a scalar field.  Read [this preprint](https://arxiv.org/abs/2011.08697) for more details on critical point tracking in FTK. 
 
