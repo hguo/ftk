@@ -24,6 +24,16 @@ In the second pass, we connect two triangles if they both test positive and belo
 
 See Section 4 of [this preprint](https://arxiv.org/abs/2011.08697).  More details are forthcoming. 
 
+### Known issues
+
+#### Gradients of scalar field
+
+In the case of critical point tracking in scalar fields, one has to use the derived gradient fields as the input, which may cause artifacts depending on the quality of gradients.  The spacetime PL gradient field implies $C^2$ continuity of the original scalar field (this is different from topology methods, which assume PL scalar field and identify critical points at vertices of the mesh).  The outputs may be distorted because of the smoothness of differentiation kernels used for gradient derivation (e.g. central differences).  Being said, the output trajectories are as accurate as the quality of the gradient field and how close the scalar field is to $C^2$ continuity.
+
+The following are the critical point tracking results in the "capped" spiral woven data.  The input values are bounded by the maximum value of 0.5, generating plateaus in the scalar field.  On the left are results based on central-difference gradient estimates, and on the right are based on analytical gradients.  Both results handles degeneracies, but we see artifacts (e.g. loops and zigzag trajectories) in the left figure, which are unseen in the right figure.  The ParaView state file to reproduce this case is available [here](pvsm/capped-woven.pvsm) (FTK plug-ins and SurfaceLIC plug-ins required). 
+
+![](images/capped-woven.png)
+
 ## Further readings
 
 * Hanqi Guo, David Lenz, Jiayi Xu, Xin Liang, Wenbin He, Iulian R. Grindeanu, Han-Wei Shen, Tom Peterka, Todd Munson, Ian Foster, "FTK: A High-Dimensional Simplicial Meshing Framework for Robust and Scalable Feature Tracking." [arXiv:2011.08697](https://arxiv.org/abs/2011.08697), in preprint, 2020
