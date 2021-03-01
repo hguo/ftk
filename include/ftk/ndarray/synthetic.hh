@@ -13,6 +13,18 @@ T woven_function_2Dt(T x, T y, T t)
   return cos(x*cos(t)-y*sin(t))*sin(x*sin(t)+y*cos(t));
 }
 
+template <typename T> 
+T woven_grad_x_2Dt(T x, T y, T t) 
+{
+  return (-sin(x*cos(t)-y*sin(t))*cos(t)) * sin(x*sin(t)+y*cos(t)) + cos(x*sin(t) + y*cos(t))*sin(t)*cos(x*cos(t)-y*sin(t));
+}
+
+template <typename T> 
+T woven_grad_y_2Dt(T x, T y, T t) 
+{
+  return  sin(t) * sin(x*cos(t)-y*sin(t)) * sin(x*sin(t)+y*cos(t)) + cos(x*sin(t) + y*cos(t))*cos(t)*cos(x*cos(t)-y*sin(t));
+}
+
 // generate 2D woven data
 template <typename T>
 ndarray<T> synthetic_woven_2D(int DW, int DH, T t = T(1e-4), T scaling_factor = T(15))
@@ -31,6 +43,29 @@ ndarray<T> synthetic_woven_2D(int DW, int DH, T t = T(1e-4), T scaling_factor = 
 
   return scalar;
 }
+
+template <typename T>
+ndarray<T> synthetic_capped_woven_grad_2D(int DW, int DH, T t = T(1e-4), T cap = 10, T scaling_factor = T(15))
+{
+  ndarray<T> vector;
+  vector.reshape(3, DW, DH);
+  vector.set_multicomponents(1);
+
+  // const T scaling_factor = 15; // the factor that controls the shape of the synthesize data
+  for (int j = 0; j < DH; j ++) {
+    for (int i = 0; i < DW; i ++) {
+      const T x = ((T(i) / (DW-1)) - 0.5) * scaling_factor,
+              y = ((T(j) / (DH-1)) - 0.5) * scaling_factor;
+      if (woven_function_2Dt(x, y, t) < cap) {
+        vector(0, i, j) = woven_grad_x_2Dt(x, y, t);
+        vector(1, i, j) = woven_grad_y_2Dt(x, y, t);
+      }
+    }
+  }
+
+  return vector;
+}
+
 
 // generate 2D woven data in a core
 template <typename T>

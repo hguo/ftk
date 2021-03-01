@@ -7,6 +7,7 @@ set(classes
   ftkLevelsetTracker3D
   #ftkSpiralWoven2DSpacetimeSource
   ftkSpiralWoven2DSource
+  ftkCappedWovenGradient2DSource
   ftkDoubleGyre2DSource
   ftkMerger2DSource
   ftkMovingExtremum2DSource
@@ -31,6 +32,7 @@ paraview_add_server_manager_xmls(XMLS
   LevelsetTracker3D.xml
   #SpiralWoven2DSpacetimeSource.xml
   SpiralWoven2DSource.xml
+  CappedWovenGradient2DSource.xml
   Merger2DSource.xml
   MovingExtremum2DSource.xml
   MovingExtremum3DSource.xml
