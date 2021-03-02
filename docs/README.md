@@ -18,7 +18,8 @@ Examples
 * [Tracking features in FTK synthetic data](synthetic.md)
 * [Tracking critical points in a 2D flow-past-cylinder dataset](cylinder2D.md)
 
-FTK data structures and APIs
+FTK library components
 
+* [High-dimensional meshing](hypermesh.md)
 * [Multidimensional arrays](ndarray.md)
 
