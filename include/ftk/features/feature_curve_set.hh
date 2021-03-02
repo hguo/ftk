@@ -57,6 +57,8 @@ public: // IO
   vtkSmartPointer<vtkPolyData> to_vtp(const int ncdims, 
       const std::vector<std::string> &scalar_components, 
       double tfactor=1.0) const;
+
+  void from_vtp(vtkSmartPointer<vtkPolyData>);
 #endif
 
 protected:
@@ -223,6 +225,23 @@ inline void feature_curve_set_t::write_vtk(const std::string& filename) const
 }
 
 #if FTK_HAVE_VTK
+inline void feature_curve_set_t::from_vtp(vtkSmartPointer<vtkPolyData> poly) 
+{
+  vtkSmartPointer<vtkPoints> points = poly.GetPoints();
+  vtkSmartPointer<vtkCellArray> lines = poly.GetLines();
+  vtkSmartPointer<vtkCellArray> verts = poly.GetVerts();
+
+  clear();
+
+  auto iter = vtk::TakeSmartPointer(lines->NewIterator());
+  for (iter->GoToFirstCell(); !iter->IsDoneWithTraversal(); iter->GoToNextCell())
+  {
+    auto idlist = iter->GetCurrentCell();
+    feature_curve_t curve;
+    // WIP
+  }
+}
+
 inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims, const std::vector<std::string> &scalar_components, double tfactor) const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
@@ -295,6 +314,20 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     });
     ids->SetName("id");
     polyData->GetPointData()->AddArray(ids);
+  }
+
+  if (1) { // tags (simplex ids)
+    vtkSmartPointer<vtkUnsignedIntArray> tags = vtkSmartPointer<vtkUnsignedIntArray>::New();
+    tags->SetNumberOfValues(nv);
+    size_t i = 0;
+    foreach([&](int id, const feature_curve_t& curve) {
+      for (auto j = 0; j < curve.size(); j ++)
+        ids->SetValue(i ++, curve[j].tag);
+      if (curve.loop)
+        ids->SetValue(i ++, curve[0].tag);
+    });
+    tags->SetName("tag");
+    polyData->GetPointData()->AddArray(tags);
   }
   
   if (1) { // velocities
