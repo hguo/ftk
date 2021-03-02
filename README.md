@@ -4,6 +4,8 @@
 
 FTK is a library that scales, simplifies, and delivers feature tracking algorithms for scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or command line interface.   See [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) for more details on our feature tracking algorithms.
 
+See [documentation](docs/README.md) for more details.
+
 ![](docs/images/critical_point_tracking_2d_paraview.png)
 
 ## Installation

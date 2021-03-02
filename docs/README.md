@@ -12,6 +12,8 @@ Using FTK
 Feature tracking algorithms
 
 * [Critical point tracking](critical.md)
+* Levelset tracking (upcoming)
+* TDGL vortex tracking (upcoming)
 
 Examples
 
