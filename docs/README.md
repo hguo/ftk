@@ -2,7 +2,12 @@
 
 [Installation and compilation](install.md)
 
-[ParaView plug-ins](paraview.md)
+Using FTK
+
+* [Command line interface](cli.md)
+* [ParaView plug-ins](paraview.md)
+* Python bindings (upcoming)
+* C++ APIs (upcoming)
 
 Feature tracking algorithms
 
