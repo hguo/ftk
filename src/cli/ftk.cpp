@@ -330,6 +330,7 @@ void initialize_xgc(diy::mpi::communicator comm)
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
     fprintf(stderr, "threshold=%f\n", threshold);
+    fprintf(stderr, "ntimesteps=%zu\n", ntimesteps);
     fprintf(stderr, "write_back_filename=%s\n", xgc_write_back_filename.c_str());
     fprintf(stderr, "archived_intersections_filename=%s, exists=%d\n", archived_intersections_filename.c_str(), file_exists(archived_intersections_filename));
     fprintf(stderr, "archived_traced_filename=%s, exists=%d\n", archived_traced_filename.c_str(), file_exists(archived_traced_filename));
@@ -355,6 +356,7 @@ void initialize_xgc(diy::mpi::communicator comm)
   if (file_exists(archived_traced_filename))
     return; // skip interpolants, smoothing kernel
 
+#if 0
   if (xgc_use_smoothing_kernel) {
     if (file_exists(xgc_smoothing_kernel_filename))
       mx2->read_smoothing_kernel(xgc_smoothing_kernel_filename);
@@ -363,6 +365,9 @@ void initialize_xgc(diy::mpi::communicator comm)
       mx2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
     }
   }
+#else
+  mx2->build_smoothing_kernel(xgc_smoothing_kernel_size);
+#endif
   
   if (xgc_interpolant_filename.length() > 0) {
     if (file_exists( xgc_interpolant_filename ))

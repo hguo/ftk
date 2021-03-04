@@ -535,7 +535,11 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 
           H5Fclose(fid);
           
-          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
+          // j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+          else 
+            j["n_timesteps"] = j["filenames"].size();
           
           // components
           const size_t nv = j["variables"].size();

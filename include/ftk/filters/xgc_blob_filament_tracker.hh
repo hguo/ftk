@@ -705,6 +705,8 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
 
   std::shared_ptr<simplicial_xgc_3d_mesh<>> m3 = 
     use_roi ? this->mr3 : this->m3;
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
 
   const int nphi = m3->get_nphi(), 
             iphi = m3->get_iphi(),
@@ -722,8 +724,7 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
     // c.discard_high_cond();
     c.discard([&](const feature_point_t& p) {
       return !m3->is_poloidal(2, p.tag % m4->n(2));
-      // return (p.scalar[2] != 0);
-      // return !m3->is_actual_poloidal(2, p.tag); // remove virtual planes as well
+      // return !m3->is_actual_poloidal(2, p.tag % m4->n(2)); // remove virtual planes as well
     });
   });
   
@@ -769,7 +770,7 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
   
   // remove trajectories with no points (again)
   curves.filter([&](const feature_curve_t& c) {
-    return c.size() > 0;
+    return c.size() > 1;
   });
 
   // if the curve is loop and has inconsistent type, rotate the loop
@@ -821,6 +822,11 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
   curves.filter([&](const feature_curve_t& c) {
     return c.consistent_type == CRITICAL_POINT_2D_MAXIMUM ||
            c.consistent_type == CRITICAL_POINT_2D_MINIMUM;
+  });
+  
+  // remove trajectories with no points (again..)
+  curves.filter([&](const feature_curve_t& c) {
+    return c.size() > 1;
   });
 
   fprintf(stderr, "after post process: #%zu\n", curves.size());
