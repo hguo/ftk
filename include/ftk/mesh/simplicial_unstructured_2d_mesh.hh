@@ -49,6 +49,10 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   ) const; 
   ndarray<F> smooth_scalar(const ndarray<F>& f) const;
 
+  ndarray<F> scalar_gradient(const ndarray<F>& f) const;
+  ndarray<F> vector_gradient(const ndarray<F>& f) const;
+  void scalar_gradient_jacobian(const ndarray<F>& f, ndarray<F>& g, ndarray<F>& j) const;
+
 public: // io
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
@@ -399,6 +403,101 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
       J(1, 1, i) += (d[1]*d[1] / sigma2 - 1) / sigma2 * f[k] * w;
     }
   });
+}
+
+template <typename I, typename F>
+ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<F>& vector) const
+{
+  ndarray<F> jacobian;
+  jacobian.reshape({2, 2, n(0)});
+  jacobian.set_multicomponents(2);
+
+  for (int i = 0; i < n(0); i ++) {
+    const auto neighbors = vertex_edge_vertex[i];
+    const F x0  = vertex_coords(0, i), 
+            y0  = vertex_coords(1, i),
+            vx0 = vector(0, i),
+            vy0 = vector(1, i);
+
+    F dvxdx = 0, dvxdy = 0, 
+      dvydx = 0, dvydy = 0;
+
+    int ix = 0, iy = 0;
+    for (const auto k : neighbors) {
+      const F x = vertex_coords(0, k), 
+              y = vertex_coords(1, k),
+              vx = vector(0, k), 
+              vy = vector(1, k);
+
+      if (std::abs(x - x0) > 1e-10) {
+        dvxdx += (vx - vx0) / (x - x0);
+        dvydx += (vy - vy0) / (x - x0);
+        ix ++;
+      }
+      
+      if (std::abs(y - y0) > 1e-10) {
+        dvxdy += (vx - vx0) / (y - y0);
+        dvydy += (vy - vy0) / (y - y0);
+        iy ++;
+      }
+    }
+
+    if (ix) {
+      jacobian(0, 0, i) = dvxdx / ix;
+      jacobian(0, 1, i) = dvydx / ix;
+    }
+    if (iy) {
+      jacobian(1, 0, i) = dvxdy / iy;
+      jacobian(1, 1, i) = dvydy / iy;
+    }
+  }
+
+  return jacobian;
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::scalar_gradient_jacobian(const ndarray<F>& f, ndarray<F>& g, ndarray<F>& j) const
+{
+  g = scalar_gradient(f);
+  j = vector_gradient(g);
+}
+
+template <typename I, typename F>
+ndarray<F> simplicial_unstructured_2d_mesh<I, F>::scalar_gradient(const ndarray<F>& scalar) const
+{
+  ndarray<F> grad;
+  grad.reshape({2, n(0)});
+  grad.set_multicomponents();
+
+  for (int i = 0; i < n(0); i ++) {
+    const auto neighbors = vertex_edge_vertex[i];
+    const F x0 = vertex_coords(0, i), 
+            y0 = vertex_coords(1, i), 
+            f0 = scalar(i);
+
+    F dfdx = 0, dfdy = 0;
+    int ix = 0, iy = 0;
+    for (const auto k : neighbors) {
+      const F x = vertex_coords(0, k), 
+              y = vertex_coords(1, k), 
+              f = scalar(k);
+
+      if (std::abs(x - x0) > 1e-10) {
+        dfdx += (f - f0) / (x - x0);
+        ix ++;
+      }
+      
+      if (std::abs(y - y0) > 1e-10) {
+        dfdy += (f - f0) / (y - y0);
+        iy ++;
+      }
+    }
+
+    if (ix) grad(0, i) = dfdx / ix;
+    if (iy) grad(1, i) = dfdy / iy;
+  }
+
+  return grad;
 }
 
 template <typename I, typename F>

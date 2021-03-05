@@ -69,9 +69,10 @@ public:
   void build_critical_surfaces();
   void post_process_surfaces();
   void post_process_curves(feature_curve_set_t& curves) const;
-
   void post_analysis_curves(feature_curve_set_t& curves) const; // compute magnetic line alignment, etc.
 
+  void set_enable_post_processing(bool b) { enable_post_processing = b; }
+ 
 public:
   void write_intersections_binary(const std::string& filename) const;
   void write_intersections(const std::string& filename, std::string format="") const;
@@ -101,6 +102,8 @@ protected:
   std::set<int> related_cells;
 #endif
   feature_surface_t surfaces;
+
+  bool enable_post_processing = true;
 
 protected:
 #if FTK_HAVE_CUDA
@@ -310,6 +313,7 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
   double h[2][2];
   ftk::lerp_s2m2x2(j, mu, h);
+  h[1][0] = h[0][1] = 0.5 * (h[1][0] + h[0][1]);
   cp.type = ftk::critical_point_type_2d(h, true);
 
   cp.tag = i;
@@ -839,8 +843,10 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
 #if FTK_HAVE_VTK
   for (int i = 0; i < end_timestep; i ++) { // TODO
     auto sliced = surfaces.slice_time(i);
-    post_process_curves(sliced);
-    post_analysis_curves(sliced);
+    if (enable_post_processing) {
+      post_process_curves(sliced);
+      post_analysis_curves(sliced);
+    }
     fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
     // auto poly = sliced.to_vtp(3, std::vector<std::string>());

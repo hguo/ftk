@@ -391,6 +391,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   tracker->use_thread_backend(thread_backend);
   tracker->use_accelerator(accelerator);
   tracker->set_number_of_threads(nthreads);
+  tracker->set_enable_post_processing( !disable_post_processing );
   tracker->initialize();
 
   if (archived_traced_filename.length() > 0 && file_exists(archived_traced_filename)) {
