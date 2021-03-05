@@ -344,7 +344,7 @@ void initialize_xgc(diy::mpi::communicator comm)
   mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(xgc_mesh_filename, comm);
   // mx2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_adios2(comm, xgc_mesh_filename);
   // mx2->to_vtu("xgc_base_mesh.vtu");
-  
+ 
   mx3.reset( new ftk::simplicial_xgc_3d_mesh<>(mx2, xgc_nphi, xgc_iphi, xgc_vphi) );
   
   mx2->initialize_point_locator();

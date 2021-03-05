@@ -76,7 +76,7 @@ xgc_tracker::xgc_tracker(
   m2->initialize_roi();
   mr2 = m2->new_roi_mesh(roi_node_map, roi_inverse_node_map);
   mr3.reset(new simplicial_xgc_3d_mesh<>(mr2, 
-        m3->get_nphi(), m3->get_vphi(), m3->get_iphi()));
+        m3->get_nphi(), m3->get_iphi(), m3->get_vphi()));
   mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*mr3));
 }
 

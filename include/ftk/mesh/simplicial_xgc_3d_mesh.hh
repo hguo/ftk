@@ -34,6 +34,7 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
       int v[4];
       get_simplex(d, i, v);
       const int t = m3->flat_vertex_time(v[0]);
+      // fprintf(stderr, "t=%d, vphi=%d, t_mod_vphi=%d\n", t, vphi, t%vphi);
       return t % vphi == 0;
     } else return false;
   }
