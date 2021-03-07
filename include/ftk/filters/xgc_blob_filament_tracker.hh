@@ -824,8 +824,9 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
     
   // remove saddle curves
   curves.filter([&](const feature_curve_t& c) {
-    return c.consistent_type == CRITICAL_POINT_2D_MAXIMUM ||
-           c.consistent_type == CRITICAL_POINT_2D_MINIMUM;
+    // return c.consistent_type == CRITICAL_POINT_2D_MAXIMUM ||
+    //        c.consistent_type == CRITICAL_POINT_2D_MINIMUM;
+    return c.consistent_type == CRITICAL_POINT_2D_MAXIMUM;
   });
   
   // remove trajectories with no points (again..)

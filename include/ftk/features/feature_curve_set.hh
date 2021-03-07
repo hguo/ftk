@@ -424,7 +424,7 @@ inline void feature_curve_set_t::split_all()
     erase(k);
 
   for (const auto &traj : result)
-    add(traj);
+    add(traj, traj[0].id);
 }
 
 inline feature_curve_set_t feature_curve_set_t::intercept(int t0, int t1) const
