@@ -12,7 +12,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-      with: submodules: recursive
+      with: 
+        submodules: recursive
 
     - name: Build
       working-directory: ${{github.workspace}}
