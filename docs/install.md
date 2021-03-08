@@ -32,6 +32,8 @@ $ pip3 install pyftk
 
 ## Build and install FTK from source
 
+**Important note:** If you change CMake build options, e.g. `FTK_USE_HDF5`, we recommend to reconfigure with CMake in an empty build directory.  If you have previously installed FTK to a system directory e.g. `/usr/local` , it is important to completely delete all FTK headers and binaries; otherwise your compiler might find FTK headers in default search directories such as `/usr/local/include/ftk/config.hh`, causing unexpected errors. 
+
 ### Dependencies and CMake options
 
 Mandatory dependencies
