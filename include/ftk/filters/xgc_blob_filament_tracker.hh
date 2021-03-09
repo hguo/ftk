@@ -333,8 +333,13 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
 {
   std::lock_guard<std::mutex> guard(mutex);
-  // tri_count ++;
-  // fprintf(stderr, "pushing %d, %d, %d, count=%zu\n", i0, i1, i2, surfaces.tris.size()); // , tri_count);
+  auto type0 = surfaces.pts[i0].type,
+       type1 = surfaces.pts[i1].type,
+       type2 = surfaces.pts[i2].type;
+
+  // if (type0 == type1 && type1 == type2)
+  //   surfaces.tris.push_back({i0, i1, i2});
+    
   surfaces.tris.push_back({i0, i1, i2});
 }
 
@@ -494,56 +499,7 @@ void xgc_blob_filament_tracker::simplex_values(
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
     const field_data_snapshot_t &data = field_data_snapshots[iv];
 
-#if 1
     m3->interpolate(data.scalar, data.vector, data.jacobian, v3, &f[k], v[k], j[k]);
-#else
-    const int dp0 = p[k] / iphi / vphi, // plane id in the density array
-              dp1 = dp0 + 1; // (dp0 + 1) % nphi;
-    const int vc0 = v2 + dp0 * m2n0;
-   
-    // if (m3->is_poloidal(p[k])) {
-    // if (p[k] % vphi == 0) { // poloidal
-    if (1) { 
-      f[k] = data.scalar[vc0];
-
-      v[k][0] = data.vector[vc0*2];
-      v[k][1] = data.vector[vc0*2+1];
-
-      j[k][0][0] = data.jacobian[vc0*4];
-      j[k][0][1] = data.jacobian[vc0*4+1];
-      j[k][1][0] = data.jacobian[vc0*4+2];
-      j[k][1][1] = data.jacobian[vc0*4+3];
-    } else { // virtual polodal plane, using linear interpolation
-      int next = m2->nextnode(v2);
-      const int vc1 = next + (dp1 % nphi) * m2n0;
-      const T beta = T(p[k]) / iphi / vphi - dp0, 
-              alpha = T(1) - beta;
-      
-      f[k] = alpha * data.scalar[vc0] + beta * data.scalar[vc1];
-
-      v[k][0] = alpha * data.vector[vc0*2] + beta * data.vector[vc1*2];
-      v[k][1] = alpha * data.vector[vc0*2+1] + beta * data.vector[vc1*2+1];
-
-      j[k][0][0] = alpha * data.jacobian[vc0*4] + beta * data.jacobian[vc1*4];
-      j[k][0][1] = alpha * data.jacobian[vc0*4+1] + beta * data.jacobian[vc1*4+1];
-      j[k][1][0] = alpha * data.jacobian[vc0*4+2] + beta * data.jacobian[vc1*4+2];
-      j[k][1][1] = alpha * data.jacobian[vc0*4+3] + beta * data.jacobian[vc1*4+3];
-
-#if 0
-      T rzp0[3], rzp1[3];
-      m3->get_coords_rzp(v2 + dp0 * m2n0 * iphi * vphi, rzp0);
-      m3->get_coords_rzp(next + dp1 * m2n0 * iphi * vphi, rzp1);
-      if (dp1 == nphi) { // the next plane is in the next period
-        // rzp1[2] += nphi * iphi * vphi;
-        // fprintf(stderr, "alpha=%f, beta=%f, dp0=%d, dp1=%d, p0=%f, p1=%f\n", alpha, beta, 
-        //     dp0, dp1, rzp0[2], rzp1[2]);
-      }
-
-      for (int j = 0; j < 3; j ++)
-        rzpt[k][j] = alpha * rzp0[j] + beta * rzp1[j];
-#endif
-    }
-#endif
   }
 
 #if 1
@@ -574,7 +530,6 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
     surfaces.pts.push_back(kv.second);
   }
 
-  int tri_count = 0;
 #if 0 // for all 4-simplicies
   for (int timestep = 0; timestep < current_timestep; timestep ++) {
     fprintf(stderr, "pass II, timestep=%d\n", timestep);
@@ -589,8 +544,8 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
 #endif
 
   surfaces.relabel();
-  fprintf(stderr, "#pts=%zu, #tri=%zu, #tri_count=%d\n", 
-      surfaces.pts.size(), surfaces.tris.size(), tri_count);
+  fprintf(stderr, "#pts=%zu, #tri=%zu\n",
+      surfaces.pts.size(), surfaces.tris.size());
 }
 
 #if 0 // legacy code, to be removed later
