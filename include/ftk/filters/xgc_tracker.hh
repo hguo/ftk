@@ -50,7 +50,7 @@ protected:
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
   std::shared_ptr<simplicial_xgc_2d_mesh<>> m2; 
-  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3; 
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3, m30;
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
 
   // roi meshes
@@ -77,6 +77,8 @@ xgc_tracker::xgc_tracker(
   mr2 = m2->new_roi_mesh(roi_node_map, roi_inverse_node_map);
   mr3.reset(new simplicial_xgc_3d_mesh<>(mr2, 
         m3->get_nphi(), m3->get_iphi(), m3->get_vphi()));
+  m30.reset(new simplicial_xgc_3d_mesh<>(m2, 
+        m3->get_nphi(), m3->get_iphi()));
   mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*mr3));
 }
 
@@ -109,9 +111,9 @@ inline void xgc_tracker::push_field_data_snapshot(
     // f = m2->smooth_scalar(slice);
     // m2->scalar_gradient_jacobian(slice, grad, j);
     // m2->scalar_gradient_jacobian(f, grad, j);
-    if (i == 0)
-      m2->array_to_vtu("nonsmooth-grad.vtu", "grad", grad);
-    f = slice;
+    // if (i == 0)
+    //   m2->array_to_vtu("nonsmooth-grad.vtu", "grad", grad);
+    // f = slice;
     for (size_t k = 0; k < m2->n(0); k ++) {
       F(k, i) = f(k);
       G(0, k, i) = grad(0, k);
@@ -122,6 +124,11 @@ inline void xgc_tracker::push_field_data_snapshot(
       J(0, 1, k, i) = j(0, 1, k);
     }
   }
+
+#if 0
+  auto filename = series_filename("xgc-smoothed-%05d.vtu", current_timestep);
+  m30->scalar_to_vtu_slices_file(filename, "scalar", F);
+#endif
 
   push_field_data_snapshot(F, G, J);
 }

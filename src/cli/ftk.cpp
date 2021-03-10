@@ -400,10 +400,12 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     if (archived_intersections_filename.empty() || file_not_exists(archived_intersections_filename)) {
       stream->set_callback([&](int k, const ndarray<double> &data) {
         auto scalar = data.get_transpose();
-#if FTK_HAVE_VTK
+#if 0 // FTK_HAVE_VTK
         if (xgc_write_back_filename.length()) {
           auto filename = series_filename(xgc_write_back_filename, k);
-          // mx->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+          auto mx30 = new ftk::simplicial_xgc_3d_mesh<>(mx2, xgc_nphi, xgc_iphi);
+          mx30->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+          delete mx30;
           // tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi); // WIP
         }
 #endif
