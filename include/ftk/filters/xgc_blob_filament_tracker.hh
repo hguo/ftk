@@ -337,10 +337,10 @@ void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
        type1 = surfaces.pts[i1].type,
        type2 = surfaces.pts[i2].type;
 
-  // if (type0 == type1 && type1 == type2)
-  //   surfaces.tris.push_back({i0, i1, i2});
+  if (type0 == type1 && type1 == type2 && type0 == CRITICAL_POINT_2D_MAXIMUM)
+    surfaces.tris.push_back({i0, i1, i2});
     
-  surfaces.tris.push_back({i0, i1, i2});
+  // surfaces.tris.push_back({i0, i1, i2});
 }
 
 void xgc_blob_filament_tracker::check_penta(int e)
@@ -499,6 +499,7 @@ void xgc_blob_filament_tracker::simplex_values(
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
     const field_data_snapshot_t &data = field_data_snapshots[iv];
 
+    // m3->interpolate_central_difference(data.scalar, data.vector, data.jacobian, v3, &f[k], v[k], j[k]);
     m3->interpolate(data.scalar, data.vector, data.jacobian, v3, &f[k], v[k], j[k]);
   }
 
