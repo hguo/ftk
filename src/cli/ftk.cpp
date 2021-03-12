@@ -352,6 +352,8 @@ void initialize_xgc(diy::mpi::communicator comm)
     mx2->read_bfield(xgc_bfield_filename);
   if (xgc_units_filename.length() > 0)
     mx2->read_units_m(xgc_units_filename);
+  if (xgc_oneddiag_filename.length() > 0)
+    mx2->read_oneddiag(xgc_oneddiag_filename);
   
   if (file_exists(archived_traced_filename))
     return; // skip interpolants, smoothing kernel

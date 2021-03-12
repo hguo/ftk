@@ -30,6 +30,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
   static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_bp(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
 
+  void read_oneddiag(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
   void read_bfield(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
   bool read_units_m(const std::string& filename) { return units.read(filename); }
 
@@ -59,6 +60,8 @@ public:
 protected:
   xgc_units_t units;
   ndarray<F> psifield, bfield;
+  ndarray<F> etemp_par, etemp_per, Te1d;
+
   ndarray<I> nextnodes;
   
   ndarray<I> roi;
@@ -76,6 +79,18 @@ simplicial_xgc_2d_mesh<I, F>::simplicial_xgc_2d_mesh(
   psifield(psi_),
   nextnodes(nextnodes_)
 {
+}
+
+template <typename I, typename F>
+void simplicial_xgc_2d_mesh<I, F>::read_oneddiag(const std::string& filename, diy::mpi::communicator comm)
+{
+  try {
+    etemp_par.read_file(filename, "/e_parallel_mean_en_avg");
+    etemp_per.read_file(filename, "/e_perp_temperature_avg");
+    Te1d = (etemp_par + etemp_per) * (2.0 / 3.0);
+  } catch (...) {
+    warn("unable to read e_parallel_mean_en_avg or e_perp_temperature_avg");
+  }
 }
 
 template <typename I, typename F>

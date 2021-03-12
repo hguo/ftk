@@ -370,6 +370,17 @@ ndarray<T>& ndarray<T>::operator+=(const ndarray<T>& x)
   return *this;
 }
 
+template <typename T>
+ndarray<T> operator+(const ndarray<T>& lhs, const ndarray<T>& rhs)
+{
+  ndarray<T> array;
+  array.reshape(lhs);
+
+  for (auto i = 0; i < array.nelem(); i ++)
+    array[i] = lhs[i] + rhs[i];
+  return array;
+}
+
 template <typename T, typename T1>
 ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs) 
 {
@@ -965,8 +976,10 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const st
       reshape(1);
       reader.Get<T>(var, p);
     }
-  } else 
-    fatal(FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND);
+  } else {
+    throw FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND;
+    // fatal(FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND);
+  }
 }
 
 template <typename T>
