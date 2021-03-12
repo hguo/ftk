@@ -60,7 +60,7 @@ std::string xgc_data_path,
   xgc_oneddiag_filename,
   xgc_units_filename,
   // xgc_augmented_mesh_filename,
-  xgc_smoothing_kernel_filename = "xgc.kernel",
+  xgc_smoothing_kernel_filename,
   xgc_interpolant_filename,
   xgc_write_back_filename;
 bool xgc_post_process = false, 
@@ -326,6 +326,7 @@ void initialize_xgc(diy::mpi::communicator comm)
     fprintf(stderr, "xgc_ff_mesh=%s\n", xgc_ff_mesh_filename.c_str());
     fprintf(stderr, "xgc_interpolant_filename=%s\n", xgc_interpolant_filename.c_str());
     fprintf(stderr, "xgc_use_smoothing_kernel=%d\n", xgc_use_smoothing_kernel);
+    fprintf(stderr, "xgc_smoothing_kernel_filename=%s\n", xgc_smoothing_kernel_filename.c_str());
     fprintf(stderr, "xgc_use_roi=%d\n", xgc_use_roi);
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
@@ -358,18 +359,15 @@ void initialize_xgc(diy::mpi::communicator comm)
   if (file_exists(archived_traced_filename))
     return; // skip interpolants, smoothing kernel
 
-#if 0
   if (xgc_use_smoothing_kernel) {
     if (file_exists(xgc_smoothing_kernel_filename))
       mx2->read_smoothing_kernel(xgc_smoothing_kernel_filename);
     else {
       mx2->build_smoothing_kernel(xgc_smoothing_kernel_size);
-      mx2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
+      if (!xgc_smoothing_kernel_filename.empty())
+        mx2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
     }
   }
-#else
-  mx2->build_smoothing_kernel(xgc_smoothing_kernel_size);
-#endif
   
   if (xgc_interpolant_filename.length() > 0) {
     if (file_exists( xgc_interpolant_filename ))
@@ -759,7 +757,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     stream->set_input_source_json(j_input);
   }
   
-  if (results.count("xgc-smoothing-kernel-size"))
+  if (results.count("xgc-smoothing-kernel-size") || results.count("xgc-smoothing-kernel-file"))
     xgc_use_smoothing_kernel = true;
 
   if (ttype == TRACKER_CRITICAL_POINT)

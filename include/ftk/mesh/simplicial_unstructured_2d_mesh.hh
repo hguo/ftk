@@ -626,13 +626,14 @@ void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(const std::string& file
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::write_smoothing_kernel(const std::string& f)
 {
-  fprintf(stderr, "writing smoothing kernel...\n");
+  fprintf(stderr, "writing smoothing kernel to %s\n", f.c_str());
   diy::serializeToFile(sigma, smoothing_kernel, f);
 }
 
 template <typename I, typename F>
 bool simplicial_unstructured_2d_mesh<I, F>::read_smoothing_kernel(const std::string& f)
 {
+  fprintf(stderr, "reading smoothing kernel from %s\n", f.c_str());
   bool succ = diy::unserializeFromFile(f, sigma, smoothing_kernel);
   return succ;
 }
