@@ -942,7 +942,7 @@ inline void ndarray<T>::read_bp(const std::string& filename, const std::string& 
   // empty array; try legacy reader
   if (empty()) read_bp_legacy(filename, varname, comm);
 #else
-  WARN(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+  warn(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
   if (empty()) read_bp_legacy(filename, varname, comm);
 
   fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
