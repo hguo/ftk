@@ -48,7 +48,7 @@ struct ndarray_base {
   size_t dim(size_t i) const {return dims[i];}
   size_t shape(size_t i) const {return dim(i);}
   const std::vector<size_t> &shape() const {return dims;}
-  size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
+  size_t nelem() const { if (empty()) return 0; else return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>()); }
   
   virtual void reshape(const std::vector<size_t> &dims_) = 0;
   void reshape(size_t ndims, const size_t sizes[]);
