@@ -269,8 +269,8 @@ public: // i/o for adios2
 
 public: // i/o for adios1
   static ndarray<T> from_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm);
-#if FTK_HAVE_ADIOS1
   bool read_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm);
+#if FTK_HAVE_ADIOS1
   bool read_bp_legacy(ADIOS_FILE *fp, const std::string& varname);
 #endif
 
