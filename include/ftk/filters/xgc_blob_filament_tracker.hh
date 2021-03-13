@@ -104,6 +104,12 @@ protected:
   feature_surface_t surfaces;
 
   bool enable_post_processing = true;
+  
+protected:
+  double vector_field_resolution = std::numeric_limits<double>::max(); // min abs nonzero value of vector field.  for robust cp detection w/o gmp
+  uint64_t vector_field_scaling_factor = 1;
+  
+  void update_vector_field_scaling_factor(int minbits=8, int maxbits=16);
 
 protected:
 #if FTK_HAVE_CUDA
@@ -126,6 +132,22 @@ xgc_blob_filament_tracker::~xgc_blob_filament_tracker()
   if (xl == FTK_XL_CUDA)
     xft_destroy_ctx(&ctx);
 #endif
+}
+
+inline void xgc_blob_filament_tracker::update_vector_field_scaling_factor(int minbits, int maxbits)
+{
+  // vector_field_resolution = std::numeric_limits<double>::max();
+  for (const auto &s : field_data_snapshots)
+    vector_field_resolution = std::min(vector_field_resolution, s.vector.resolution());
+  
+  int nbits = std::ceil(std::log2(1.0 / vector_field_resolution));
+  nbits = std::max(minbits, std::min(nbits, maxbits));
+
+  vector_field_scaling_factor = 1 << nbits;
+ 
+  std::cerr << "resolution=" << vector_field_resolution 
+    << ", factor=" << vector_field_scaling_factor 
+    << ", nbits=" << nbits << std::endl;
 }
 
 inline void xgc_blob_filament_tracker::initialize()
@@ -183,6 +205,7 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
 inline void xgc_blob_filament_tracker::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+  update_vector_field_scaling_factor();
  
   auto get_related_cels = [&](int i) {
     std::set<int> my_related_cells;
@@ -283,7 +306,7 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   int tri[3], t[3], p[3];
   double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2];
   long long vf[3][2];
-  const long long factor = 1 << 15; // WIP
+  // const long long factor = 1 << 15; // WIP
  
   simplex_values<3, double>(i, tri, t, p, rzpt, psin, f, v, j);
 
@@ -292,7 +315,7 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
   for (int k = 0; k < 3; k ++) 
     for (int l = 0; l < 2; l ++) 
-      vf[k][l] = factor * v[k][l];
+      vf[k][l] = vector_field_scaling_factor * v[k][l];
 
   bool succ = ftk::robust_critical_point_in_simplex2(vf, tri);
   if (!succ) return false;

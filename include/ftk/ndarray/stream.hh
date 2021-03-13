@@ -568,12 +568,15 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 
           reader.Close();
 
-          j["n_timesteps"] = j["filenames"].size();
-
           // components
           const size_t nv = j["variables"].size();
           const std::vector<int> components(nv, 1);
           j["components"] = components;
+          
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+          else 
+            j["n_timesteps"] = j["filenames"].size();
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
 #endif
