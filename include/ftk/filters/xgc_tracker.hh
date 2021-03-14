@@ -102,7 +102,9 @@ inline void xgc_tracker::push_field_data_snapshot(
 
   F.reshape(scalar);
   G.reshape(2, scalar.dim(0), scalar.dim(1));
+  G.set_multicomponents(1);
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
+  J.set_multicomponents(2);
   
   for (size_t i = 0; i < m3->get_nphi(); i ++) {
     ndarray<double> f, grad, j;
@@ -127,7 +129,8 @@ inline void xgc_tracker::push_field_data_snapshot(
 
 #if 0
   auto filename = series_filename("xgc-smoothed-%05d.vtu", current_timestep);
-  m30->scalar_to_vtu_slices_file(filename, "scalar", F);
+  // m30->scalar_to_vtu_slices_file(filename, "scalar", F);
+  m30->scalar_to_vtu_slices_file(filename, "vector", G);
 #endif
 
   push_field_data_snapshot(F, G, J);

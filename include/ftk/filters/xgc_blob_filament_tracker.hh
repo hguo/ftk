@@ -106,8 +106,9 @@ protected:
   bool enable_post_processing = true;
   
 protected:
+  double vector_field_maxabs = 0;
   double vector_field_resolution = std::numeric_limits<double>::max(); // min abs nonzero value of vector field.  for robust cp detection w/o gmp
-  uint64_t vector_field_scaling_factor = 1;
+  double vector_field_scaling_factor = 1;
   
   void update_vector_field_scaling_factor(int minbits=8, int maxbits=16);
 
@@ -137,17 +138,27 @@ xgc_blob_filament_tracker::~xgc_blob_filament_tracker()
 inline void xgc_blob_filament_tracker::update_vector_field_scaling_factor(int minbits, int maxbits)
 {
   // vector_field_resolution = std::numeric_limits<double>::max();
-  for (const auto &s : field_data_snapshots)
-    vector_field_resolution = std::min(vector_field_resolution, s.vector.resolution());
-  
+  for (const auto &s : field_data_snapshots) {
+    // vector_field_resolution = std::min(vector_field_resolution, s.vector.resolution());
+    vector_field_maxabs = std::max(vector_field_maxabs, s.vector.maxabs());
+  }
+
+  vector_field_scaling_factor = std::exp2(-std::ceil(std::log2(vector_field_maxabs)) + 20); // 20 bits
+
+  fprintf(stderr, "maxabs=%f, factor=%f\n", vector_field_maxabs, vector_field_scaling_factor);
+
+#if 0
   int nbits = std::ceil(std::log2(1.0 / vector_field_resolution));
   nbits = std::max(minbits, std::min(nbits, maxbits));
 
   vector_field_scaling_factor = 1 << nbits;
  
-  std::cerr << "resolution=" << vector_field_resolution 
+  std::cerr 
+    << "maxabs=" << vector_field_maxabs
+    << ", resolution=" << vector_field_resolution 
     << ", factor=" << vector_field_scaling_factor 
     << ", nbits=" << nbits << std::endl;
+#endif
 }
 
 inline void xgc_blob_filament_tracker::initialize()
@@ -305,8 +316,8 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3], t[3], p[3];
   double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2];
-  long long vf[3][2];
-  // const long long factor = 1 << 15; // WIP
+  int64_t vf[3][2];
+  const long long factor = 1 << 15; // WIP
  
   simplex_values<3, double>(i, tri, t, p, rzpt, psin, f, v, j);
 
@@ -315,7 +326,12 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
   for (int k = 0; k < 3; k ++) 
     for (int l = 0; l < 2; l ++) 
+      // vf[k][l] = vector_field_scaling_factor * v[k][l];
       vf[k][l] = vector_field_scaling_factor * v[k][l];
+
+  // if (vf[0][0] + vf[0][1] + vf[1][0] + vf[1][1] + vf[2][0] + vf[2][1] != 0)
+  //   fprintf(stderr, "vf=%lld, %lld; %lld, %lld; %lld, %lld\n", 
+  //       vf[0][0], vf[0][1], vf[1][0], vf[1][1], vf[2][0], vf[2][1]);
 
   bool succ = ftk::robust_critical_point_in_simplex2(vf, tri);
   if (!succ) return false;

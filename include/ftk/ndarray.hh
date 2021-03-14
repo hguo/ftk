@@ -316,6 +316,7 @@ public: // netcdf
 
 public: // statistics & misc
   std::tuple<T, T> min_max() const;
+  T maxabs() const;
   T resolution() const; // the min abs nonzero value
   
   ndarray<uint64_t> quantize() const; // quantization based on resolution
@@ -903,6 +904,16 @@ std::tuple<T, T> ndarray<T>::min_max() const {
   }
 
   return std::make_tuple(min, max);
+}
+
+template <typename T>
+T ndarray<T>::maxabs() const 
+{
+  T r = 0;
+  for (size_t i = 0; i < nelem(); i ++)
+    r = std::max(r, std::abs(p[i]));
+
+  return r;
 }
 
 template <typename T>
