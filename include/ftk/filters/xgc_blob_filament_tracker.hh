@@ -376,10 +376,10 @@ void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
        type1 = surfaces.pts[i1].type,
        type2 = surfaces.pts[i2].type;
 
-  if (type0 == type1 && type1 == type2 && type0 == CRITICAL_POINT_2D_MAXIMUM)
-    surfaces.tris.push_back({i0, i1, i2});
+  // if (type0 == type1 && type1 == type2 && type0 == CRITICAL_POINT_2D_MAXIMUM)
+  //   surfaces.tris.push_back({i0, i1, i2});
     
-  // surfaces.tris.push_back({i0, i1, i2});
+  surfaces.tris.push_back({i0, i1, i2});
 }
 
 void xgc_blob_filament_tracker::check_penta(int e)
