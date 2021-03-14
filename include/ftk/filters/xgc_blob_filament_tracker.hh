@@ -143,7 +143,7 @@ inline void xgc_blob_filament_tracker::update_vector_field_scaling_factor(int mi
     vector_field_maxabs = std::max(vector_field_maxabs, s.vector.maxabs());
   }
 
-  vector_field_scaling_factor = std::exp2(-std::ceil(std::log2(vector_field_maxabs)) + 20); // 20 bits
+  vector_field_scaling_factor = std::exp2(-std::ceil(std::log2(vector_field_maxabs)) + 60); // 20 bits
 
   fprintf(stderr, "maxabs=%f, factor=%f\n", vector_field_maxabs, vector_field_scaling_factor);
 
@@ -316,7 +316,7 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3], t[3], p[3];
   double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2];
-  int64_t vf[3][2];
+  __int128 vf[3][2];
   const long long factor = 1 << 15; // WIP
  
   simplex_values<3, double>(i, tri, t, p, rzpt, psin, f, v, j);
