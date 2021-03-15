@@ -106,6 +106,13 @@ public:
 protected:
   std::vector<std::vector<xgc_interpolant_t<I, F>>> interpolants;
 
+public: // rotation
+  void initialize_rotational_interpolants();
+  ndarray<F> rotate(const ndarray<F>& scalar) const; // rotate poloidal planes to match the first plane
+
+protected:
+  std::vector<std::vector<std::tuple<I, F, F/* triangleId, mu0, mu1 */>>> rotational_interpolants;
+
 protected: // backend meshes
   int nphi, iphi, vphi;
   std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2;
@@ -634,7 +641,8 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
 }
 
 template <typename I, typename F>
-ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) const
+ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(
+    const ndarray<F>& scalar) const
 {
   const size_t m2n0 = m2->n(0), 
             nvphi = nphi * vphi;
@@ -716,6 +724,68 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
       }
     }
   }
+  return f;
+}
+
+template <typename I, typename F>
+void simplicial_xgc_3d_mesh<I, F>::initialize_rotational_interpolants()
+{
+  const I m2n0 = m2->n(0);
+  const F dphi = 2 * M_PI / (nphi * iphi);
+  const int nsteps_per_dphi = 128;
+
+  fprintf(stderr, "initialize rotational interpolants\n");
+  rotational_interpolants.resize(nphi);
+  for (int i = 1; i < nphi; i ++) {
+    rotational_interpolants[i].resize(m2n0);
+    this->parallel_for(m2n0, [&](int k) {
+      auto &l = rotational_interpolants[i][k];
+
+      F rzp[3] = {0};
+      m2->get_coords(k, rzp);
+      m2->magnetic_map(rzp, dphi * i, nsteps_per_dphi * i);
+
+      F mu[3] = {0};
+      I tid = m2->locate(rzp, mu);
+
+      rotational_interpolants[i][k] = std::make_tuple(tid, mu[0], mu[1]);
+    });
+  }
+}
+
+template <typename I, typename F>
+ndarray<F> simplicial_xgc_3d_mesh<I, F>::rotate(
+    const ndarray<F>& scalar) const
+{
+  const size_t m2n0 = m2->n(0);
+
+  ndarray<F> f;
+  f.reshape(scalar);
+
+  for (int i = 0; i < nphi; i ++) {
+    if (i == 0) {
+      for (int j = 0; j < m2n0; j ++)
+        f[j] = scalar[j];
+    } else {
+      for (int j = 0; j < m2n0; j ++) {
+        const auto &l = rotational_interpolants[i][j];
+        if (std::get<0>(l) < 0)
+          f(j, i) = std::numeric_limits<F>::quiet_NaN();
+        else {
+          I tri[3];
+          m2->get_triange(std::get<0>(l), tri);
+
+          F mu[3] = {std::get<1>(l), std::get<2>(l), 0};
+          mu[2] = F(1) - mu[0] - mu[1];
+
+          f(j, i) =  mu[0] * scalar(tri[0], i) 
+                   + mu[1] * scalar(tri[1], i)
+                   + mu[2] * scalar(tri[2], i);
+        }
+      }
+    }
+  }
+
   return f;
 }
 
