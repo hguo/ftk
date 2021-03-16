@@ -27,11 +27,12 @@ typedef struct {
   ftk::feature_point_lite_t *hcps = NULL, *dcps = NULL;
   unsigned long long hncps = 0, *dncps = NULL;
   size_t bufsize; //  = 512 * 1024 * 1024; // 512 MB of buffer
+  int device;
 
   double factor; // scaling factor
 } xft_ctx_t;
 
-void xft_create_ctx(xft_ctx_t **c_);
+void xft_create_ctx(xft_ctx_t **c_, int device=0, int buffer_size_in_mb=512);
 void xft_destroy_ctx(xft_ctx_t **c_);
 void xft_load_mesh(xft_ctx_t *c,
     int nphi, int iphi, int vphi,

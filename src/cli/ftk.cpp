@@ -70,6 +70,10 @@ bool xgc_post_process = false,
 double xgc_smoothing_kernel_size = 0.03;
 int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
 
+// devices
+std::string device_ids;
+int device_buffer_size = 512; // in MB
+
 // tracker and input stream
 std::shared_ptr<tracker> mtracker;
 std::shared_ptr<json_interface> wrapper;
@@ -386,6 +390,8 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
   tracker.reset(new xgc_blob_filament_tracker(comm, mx3));
+  tracker->set_device_ids(device_ids);
+  tracker->set_device_buffer_size( device_buffer_size );
   tracker->set_use_roi(xgc_use_roi);
   tracker->set_end_timestep(ntimesteps - 1);
   tracker->use_thread_backend(thread_backend);
@@ -728,6 +734,10 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<bool>(timing))
     ("a,accelerator", "Accelerator {none|cuda} (experimental)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
+    ("device", "Device ID(s)", 
+     cxxopts::value<std::string>(device_ids)->default_value("0"))
+    ("device-buffer", "Device buffer size in MB", 
+     cxxopts::value<int>(device_buffer_size)->default_value("512"))
     ("stream",  "Stream trajectories (experimental)",
      cxxopts::value<bool>(enable_streaming_trajectories))
     ("discard-interval-points", "Discard interval critical points (experimental)", 

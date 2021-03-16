@@ -165,7 +165,9 @@ inline void xgc_blob_filament_tracker::initialize()
 {
 #if FTK_HAVE_CUDA
   if (xl == FTK_XL_CUDA) {
-    xft_create_ctx(&ctx);
+    int device = device_ids.empty() ? 0 : device_ids[0];
+
+    xft_create_ctx(&ctx, device, device_buffer_size_in_mb);
     xft_load_mesh(ctx, 
         m3->get_nphi(), m3->get_iphi(), m3->get_vphi(), 
         m2->n(0), m2->n(1), m2->n(2), 

@@ -195,16 +195,19 @@ void sweep_simplices(
   }
 }
 
-void xft_create_ctx(ctx_t **c_)
+void xft_create_ctx(ctx_t **c_, int device, int device_buffer_size_in_mb)
 {
   *c_ = (ctx_t*)malloc(sizeof(ctx_t));
   ctx_t *c = *c_;
-  
+
+  c->device = device;
+  cudaSetDevice(device);
+
   cudaMalloc((void**)&c->dncps, sizeof(unsigned long long));
   cudaMemset(c->dncps, 0, sizeof(unsigned long long));
   checkLastCudaError("[FTK-CUDA] cuda malloc");
 
-  c->bufsize = 512 * 1024 * 1024; 
+  c->bufsize = device_buffer_size_in_mb * 1024 * 1024; 
   c->hcps = (cp_t*)malloc(c->bufsize);
   cudaMalloc((void**)&c->dcps, c->bufsize);
   checkLastCudaError("[FTK-CUDA] cuda malloc");

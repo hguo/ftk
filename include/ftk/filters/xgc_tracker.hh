@@ -98,6 +98,12 @@ inline void xgc_tracker::push_field_data_snapshot(
 inline void xgc_tracker::push_field_data_snapshot(
       const ndarray<double> &scalar)
 {
+#if 0
+  auto filename = series_filename("xgc-smoothed-%05d.vtu", current_timestep);
+  m30->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+  // m30->scalar_to_vtu_slices_file(filename, "vector", G);
+#endif
+
   ndarray<double> F, G, J;
 
   F.reshape(scalar);
@@ -126,12 +132,6 @@ inline void xgc_tracker::push_field_data_snapshot(
       J(0, 1, k, i) = j(0, 1, k);
     }
   }
-
-#if 0
-  auto filename = series_filename("xgc-smoothed-%05d.vtu", current_timestep);
-  // m30->scalar_to_vtu_slices_file(filename, "scalar", F);
-  m30->scalar_to_vtu_slices_file(filename, "vector", G);
-#endif
 
   push_field_data_snapshot(F, G, J);
 }
