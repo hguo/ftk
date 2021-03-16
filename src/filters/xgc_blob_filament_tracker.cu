@@ -224,7 +224,7 @@ void xft_create_ctx(ctx_t **c_)
   c->d_jacobian[0] = NULL;
   c->d_jacobian[1] = NULL;
 
-  c->factor = 1.0;
+  c->factor = 32768.0;
 }
 
 void xft_destroy_ctx(ctx_t **c_)
