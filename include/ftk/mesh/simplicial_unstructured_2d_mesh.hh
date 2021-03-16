@@ -9,6 +9,32 @@ namespace ftk {
 
 template <typename I, typename F> struct point_locator_2d;
 
+template <typename I=int>
+struct hash_compare_tuple_i2 {
+  hash_compare_tuple_i2() {}
+  hash_compare_tuple_i2(const hash_compare_tuple_i2&) {}
+  ~hash_compare_tuple_i2() {}
+
+  bool equal(const std::tuple<I, I>& a, const std::tuple<I, I>& b) const { return a == b; }
+  size_t hash(const std::tuple<I, I>& x) const {
+    I a = std::get<0>(x), b = std::get<1>(x);
+    return a * b * 2654435761;
+  };
+};
+
+template <typename I=int>
+struct hash_compare_tuple_i3 {
+  hash_compare_tuple_i3() {}
+  hash_compare_tuple_i3(const hash_compare_tuple_i3&) {}
+  ~hash_compare_tuple_i3() {}
+
+  bool equal(const std::tuple<I, I, I>& a, const std::tuple<I, I, I>& b) const { return a == b; }
+  size_t hash(const std::tuple<I, I, I>& x) const {
+    I a = std::get<0>(x), b = std::get<1>(x), c = std::get<2>(x);
+    return a * b * c * 2654435761;
+  };
+};
+
 template <typename I=int, typename F=double>
 struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   public simplicial_unstructured_mesh<I, F>
@@ -111,8 +137,13 @@ protected: // mesh connectivities
   ndarray<I> triangle_sides; // 3 * n_triangles
 
 public: // additional mesh info
+#if FTK_HAVE_TBB
+  tbb::concurrent_hash_map<std::tuple<I, I>, int, hash_compare_tuple_i2<I>> edge_id_map;
+  tbb::concurrent_hash_map<std::tuple<I, I, I>, int, hash_compare_tuple_i3<I>> triangle_id_map;
+#else
   std::map<std::tuple<I, I>, int> edge_id_map;
   std::map<std::tuple<I, I, I>, int> triangle_id_map;
+#endif
 
 private:
   F sigma; // smoothing kernel size
@@ -166,6 +197,17 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v_[2], I &i) const
   I v[2] = {v_[0], v_[1]};
   if (v[0] > v[1]) std::swap(v[0], v[1]);
 
+#if FTK_HAVE_TBB
+  typename tbb::concurrent_hash_map<std::tuple<I, I>, int, hash_compare_tuple_i2<I>>::const_accessor it;
+  bool found = edge_id_map.find(it, std::make_tuple(v[0], v[1]));
+  if (found) {
+    i = it->second;
+    assert(edges(0, i) == v[0]);
+    assert(edges(1, i) == v[1]);
+    return true;
+  } else 
+    return false;
+#else
   const auto it = edge_id_map.find( std::make_tuple(v[0], v[1]) );
   if (it == edge_id_map.end()) return false;
   else {
@@ -176,6 +218,7 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v_[2], I &i) const
     assert(edges(1, i) == v[1]);
     return true;
   }
+#endif
 }
 
 template <typename I, typename F>
@@ -184,6 +227,18 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v_[3], I &i) c
   int v[3] = {v_[0], v_[1], v_[2]};
   std::sort(v, v+3);
 
+#if FTK_HAVE_TBB
+  typename tbb::concurrent_hash_map<std::tuple<I, I, I>, int, hash_compare_tuple_i3<I>>::const_accessor it;
+  bool found = triangle_id_map.find(it, std::make_tuple(v[0], v[1], v[2]));
+  if (found) {
+    i = it->second;
+    assert(triangles(0, i) == v[0]);
+    assert(triangles(1, i) == v[1]);
+    assert(triangles(2, i) == v[2]);
+    return true;
+  } else 
+    return false;
+#else
   const auto it = triangle_id_map.find( std::make_tuple(v[0], v[1], v[2]) );
   if (it == triangle_id_map.end()) return false;
   else {
@@ -193,6 +248,7 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v_[3], I &i) c
     assert(triangles(2, i) == v[2]);
     return true;
   }
+#endif
 }
 
 template <typename I, typename F>
@@ -205,7 +261,8 @@ void simplicial_unstructured_2d_mesh<I, F>::build_triangles()
     for (auto j = 0; j < 3; j ++)
       triangles(j, i) = v[j];
 
-    triangle_id_map[ std::make_tuple(v[0], v[1], v[2]) ] = i;
+    // triangle_id_map[ std::make_tuple(v[0], v[1], v[2]) ] = i;
+    triangle_id_map.insert( { std::make_tuple(v[0], v[1], v[2]), i } );
   }
 }
 
@@ -220,11 +277,21 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
     if (v0 > v1) std::swap(v0, v1);
     const auto edge = std::make_tuple(v0, v1);
     I id;
+#if FTK_HAVE_TBB
+    typename tbb::concurrent_hash_map<std::tuple<I, I>, int, hash_compare_tuple_i2<I>>::const_accessor it;
+    bool found = edge_id_map.find(it, edge);
+    if (!found) {
+      id = edge_count ++;
+      edge_id_map.insert( {edge, id} );
+    } else 
+      id = it->second;
+#else
     if (edge_id_map.find(edge) == edge_id_map.end()) {
       id = edge_count ++;
       edge_id_map[edge] = id;
     } else 
       id = edge_id_map[edge];
+#endif
 
     map_edges_side_of[id].insert(tid);
       
