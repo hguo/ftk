@@ -255,14 +255,25 @@ inline void xgc_blob_filament_tracker::update_timestep()
     }
   };
 
-  if (xl == FTK_XL_CUDA) {
-#if FTK_HAVE_CUDA
-    // ordinal
-    if (current_timestep == end_timestep) 
-      xft_swap(ctx); // swap buffers in order to correctly access the very last timestep
-    xft_execute(ctx, 1 /* ordinal */, current_timestep);
-    std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
-    for (auto lcp : results) {
+  auto add_feature_point_lite_batch = [&](const std::vector<feature_point_lite_t>& pts) {
+#if FTK_HAVE_TBB
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, pts.size()), 
+      [=](const tbb::blocked_range<size_t>& r) {
+        for (size_t i = r.begin(); i != r.end(); ++ i) {
+          feature_point_t cp(pts[i]);
+          cp.tag += current_timestep * m4->n(2);
+          cp.ordinal = true;
+          cp.timestep = current_timestep;
+
+          // both intersections and related_cells are concurrent tbb containers
+          intersections.insert({cp.tag, cp});
+
+          std::set<int> related = get_related_cels(cp.tag);
+          related_cells.insert( related.begin(), related.end() );
+        }
+      });
+#else
+    for (auto lcp : pts) {
       feature_point_t cp(lcp);
       cp.tag += current_timestep * m4->n(2);
       cp.ordinal = true;
@@ -273,23 +284,24 @@ inline void xgc_blob_filament_tracker::update_timestep()
       std::set<int> related = get_related_cels(cp.tag);
       related_cells.insert( related.begin(), related.end() );
     }
+#endif
+  };
+
+  if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    // ordinal
+    if (current_timestep == end_timestep) 
+      xft_swap(ctx); // swap buffers in order to correctly access the very last timestep
+    xft_execute(ctx, 1 /* ordinal */, current_timestep);
+    std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
+    add_feature_point_lite_batch(results);
 
     // interval
     if (field_data_snapshots.size() >= 2) {
       xft_execute(ctx, 2 /* interval */, current_timestep);
       // fprintf(stderr, "** current_timestep=%d, gpu done interval.\n", current_timestep);
       std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
-      for (auto lcp : results) {
-        feature_point_t cp(lcp);
-        cp.tag += current_timestep * m4->n(2);
-        cp.ordinal = false;
-        cp.timestep = current_timestep; // - 1;
-
-        intersections.insert({cp.tag, cp});
-
-        std::set<int> related = get_related_cels(cp.tag);
-        related_cells.insert( related.begin(), related.end() );
-      }
+      add_feature_point_lite_batch(results);
     }
 #else
     fatal("FTK not compiled with CUDA.");
