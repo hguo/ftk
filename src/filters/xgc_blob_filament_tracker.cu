@@ -24,6 +24,7 @@ __device__
 bool check_simplex(
     I current_timestep, 
     I i,
+    const F factor,
     const I nphi, const I iphi, const I vphi,
     const I m2n0, const I m2n1, const I m2n2,
     const F m2coords[], // m2 vertex coordinates
@@ -37,7 +38,6 @@ bool check_simplex(
     cp_t & cp) // WIP: critical points
 {
   // typedef ftk::fixed_point<> fp_t;
-  const long long factor = 1 << 15; // WIP
 
   const I np = nphi * iphi * vphi;
   const I m3n0 = m2n0 * np;
@@ -90,11 +90,19 @@ bool check_simplex(
       if (p[k] == 0)
         rzpt[k][2] += np;
 
-  long long vf[3][2];
+  int64_t vf[3][2];
   for (int k = 0; k < 3; k ++) 
     for (int l = 0; l < 2; l ++) 
       vf[k][l] = factor * v[k][l];
-  
+ 
+  // if (v[0][0] > 0)
+  //   printf("v=%f, %f, %f, %f, %f, %f\n", 
+  //       v[0][0], v[0][1], v[1][0], v[1][1], v[2][0], v[2][1]);
+
+  // if (vf[0][0] + vf[0][1] + vf[1][0] + vf[1][1] + vf[2][0] + vf[2][1] != 0)
+  //   printf("vf=%lld, %lld; %lld, %lld; %lld, %lld\n", 
+  //       vf[0][0], vf[0][1], vf[1][0], vf[1][1], vf[2][0], vf[2][1]);
+
   bool succ = ftk::robust_critical_point_in_simplex2(vf, verts);
   if (!succ) return false;
 
@@ -131,6 +139,7 @@ __global__
 void sweep_simplices(
     int scope, 
     I current_timestep, 
+    const F factor,
     const I nphi, const I iphi, const I vphi,
     const I m2n0, const I m2n1, const I m2n2,
     const F m2coords[], // m2 vertex coordinates
@@ -170,6 +179,7 @@ void sweep_simplices(
   bool succ = check_simplex<I, F>(
       current_timestep, 
       i, 
+      factor,
       nphi, iphi, vphi, 
       m2n0, m2n1, m2n2, 
       m2coords, m2edges, m2tris,
@@ -213,6 +223,8 @@ void xft_create_ctx(ctx_t **c_)
   c->d_vector[1] = NULL;
   c->d_jacobian[0] = NULL;
   c->d_jacobian[1] = NULL;
+
+  c->factor = 1.0;
 }
 
 void xft_destroy_ctx(ctx_t **c_)
@@ -271,6 +283,7 @@ void xft_execute(ctx_t *c, int scope, int current_timestep)
 
   sweep_simplices<int, double><<<gridSize, blockSize>>>(
       scope, current_timestep, 
+      c->factor,
       c->nphi, c->iphi, c->vphi, 
       c->m2n0, c->m2n1, c->m2n2, 
       c->d_m2coords, c->d_m2edges, c->d_m2tris, 
@@ -438,6 +451,20 @@ void xft_smooth_scalar_vector_jacobian(ctx_t *c,
       d_jacobian_out);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] smoothing scalar vector jacobian");
+
+  // update scaling factor; CPU implementation for now..
+  double *h_vector = (double*)malloc(c->m2n0 * c->nphi * sizeof(double));
+  cudaMemcpy(h_vector, d_vector_out, c->m2n0 * c->nphi * sizeof(double), 
+      cudaMemcpyDeviceToHost);
+  double maxabs = 0.0;
+  for (int i = 0; i < c->m2n0 * c->nphi; i ++)
+    maxabs = std::max(maxabs, std::abs(h_vector[i]));
+  free(h_vector);
+  
+  double factor = std::exp2(-std::ceil(std::log2(maxabs)) + 20); // 20 bits
+  c->factor = std::max(c->factor, factor);
+
+  std::cerr << "maxabs: " << maxabs << ", factor: " << c->factor << std::endl;
 }
 
 void xft_load_smoothing_kernel(ctx_t *c, double sigma, const std::vector<std::vector<std::tuple<int, double>>>& kernels)
