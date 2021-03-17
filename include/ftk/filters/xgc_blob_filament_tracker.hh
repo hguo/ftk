@@ -240,22 +240,24 @@ inline std::set<int> xgc_blob_filament_tracker::get_related_cells(size_t i) cons
 
 inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector<feature_point_lite_t>& pts) 
 {
+  // tbb::parallel_for(tbb::blocked_range<size_t>(0, pts.size()), 
+  //   [=](const tbb::blocked_range<size_t>& r) {
+  //     for (size_t i = r.begin(); i != r.end(); ++ i) {
 #if FTK_HAVE_TBB
-  tbb::parallel_for(tbb::blocked_range<size_t>(0, pts.size()), 
-    [=](const tbb::blocked_range<size_t>& r) {
-      for (size_t i = r.begin(); i != r.end(); ++ i) {
-        feature_point_t cp(pts[i]);
-        cp.tag += current_timestep * m4->n(2);
-        cp.ordinal = true;
-        cp.timestep = current_timestep;
+  fprintf(stderr, "deriving and inserting related cells...\n");
+  parallel_for(pts.size(), [=](int i) {
+    feature_point_t cp(pts[i]);
+    cp.tag += current_timestep * m4->n(2);
+    cp.ordinal = true;
+    cp.timestep = current_timestep;
+    
+    std::set<int> related = get_related_cells(cp.tag);
 
-        // both intersections and related_cells are concurrent tbb containers
-        intersections.insert({cp.tag, cp});
-
-        std::set<int> related = get_related_cells(cp.tag);
-        related_cells.insert( related.begin(), related.end() );
-      }
-    });
+    // both intersections and related_cells are concurrent tbb containers
+    intersections.insert({cp.tag, cp});
+    related_cells.insert( related.begin(), related.end() );
+  });
+  fprintf(stderr, "done.\n");
 #else
   for (auto lcp : pts) {
     feature_point_t cp(lcp);

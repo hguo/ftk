@@ -716,16 +716,23 @@ void simplicial_unstructured_2d_mesh<I, F>::element_for(int d, std::function<voi
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
 {
+  tri[0] = triangles[i*3];
+  tri[1] = triangles[i*3+1];
+  tri[2] = triangles[i*3+2];
+#if 0
   tri[0] = triangles(0, i);
   tri[1] = triangles(1, i);
   tri[2] = triangles(2, i);
+#endif
 }
 
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[]) const
 {
-  v[0] = edges(0, i);
-  v[1] = edges(1, i);
+  v[0] = edges(i*2);
+  v[1] = edges(i*2+1);
+  // v[0] = edges(0, i);
+  // v[1] = edges(1, i);
 }
 
 template <typename I, typename F>
