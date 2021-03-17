@@ -10,6 +10,7 @@ namespace ftk {
 template <typename I=int, typename F=double>
 struct point_locator_2d {
   point_locator_2d(const simplicial_unstructured_2d_mesh<I, F>& m) : m2(m) {}
+  virtual ~point_locator_2d() {}
 
   virtual void initialize() = 0;
   virtual I locate(const F x[], F mu[]) const = 0;

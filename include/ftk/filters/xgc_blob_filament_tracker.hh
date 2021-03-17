@@ -22,11 +22,11 @@ namespace ftk {
   
 struct xgc_blob_filament_tracker : public xgc_tracker {
   xgc_blob_filament_tracker(diy::mpi::communicator comm,
-      std::shared_ptr<simplicial_xgc_3d_mesh<>> mx);
+      async_ptr<simplicial_xgc_3d_mesh<>> mx);
   virtual ~xgc_blob_filament_tracker();
 
   // xgc_blob_filament_tracker(diy::mpi::communicator comm, 
-  //     std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2, 
+  //     async_ptr<simplicial_unstructured_2d_mesh<>> m2, 
   //     int nphi_, int iphi_);
 
   int cpdims() const { return 3; }
@@ -125,7 +125,7 @@ protected:
 
 xgc_blob_filament_tracker::xgc_blob_filament_tracker(
     diy::mpi::communicator comm, 
-    std::shared_ptr<simplicial_xgc_3d_mesh<>> mx) :
+    async_ptr<simplicial_xgc_3d_mesh<>> mx) :
   xgc_tracker(comm, mx)
 {
 }
@@ -222,7 +222,7 @@ inline std::set<int> xgc_blob_filament_tracker::get_related_cells(size_t i) cons
 {
   std::set<int> my_related_cells;
 
-  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+  async_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
     use_roi ? this->mr4 : this->m4;
 
   auto tets = m4->side_of(2, i);
@@ -376,7 +376,7 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
   cp.type = ftk::critical_point_type_2d(h, true);
 
   cp.tag = i;
-  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+  async_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
     use_roi ? this->mr4 : this->m4;
   cp.ordinal = m4->is_ordinal(2, i);
   cp.timestep = current_timestep;
@@ -404,7 +404,7 @@ void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
 
 void xgc_blob_filament_tracker::check_penta(int e)
 {
-  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+  async_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
     use_roi ? this->mr4 : this->m4;
   
   int penta[5], t[5];
@@ -609,7 +609,7 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
 }
 
 #if 0 // legacy code, to be removed later
-inline /*static*/ std::shared_ptr<xgc_blob_filament_tracker>
+inline /*static*/ async_ptr<xgc_blob_filament_tracker>
 xgc_blob_filament_tracker::from_augmented_mesh_file(
     diy::mpi::communicator comm, const std::string &filename)
 {
@@ -617,7 +617,7 @@ xgc_blob_filament_tracker::from_augmented_mesh_file(
   assert(fp);
   diy::detail::FileBuffer bb(fp);
 
-  std::shared_ptr<xgc_blob_filament_tracker> tracker(
+  async_ptr<xgc_blob_filament_tracker> tracker(
       new xgc_blob_filament_tracker(comm));
 
   diy::load(bb, tracker->nphi);
@@ -727,9 +727,9 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
 {
   fprintf(stderr, "before post process: #%zu\n", curves.size());
 
-  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3 = 
+  async_ptr<simplicial_xgc_3d_mesh<>> m3 = 
     use_roi ? this->mr3 : this->m3;
-  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+  async_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
     use_roi ? this->mr4 : this->m4;
 
   const int nphi = m3->get_nphi(), 

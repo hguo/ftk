@@ -26,9 +26,9 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   void initialize_roi(double psin_min = 0.9, double psin_max = 1.05, 
       double theta_min_deg = -60.0, double theta_max_deg = 60.0);
 
-  static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_file(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
-  static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
-  static std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_bp(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
+  static async_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_file(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
+  static async_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_h5(const std::string& filename);
+  static async_ptr<simplicial_xgc_2d_mesh<I, F>> from_xgc_mesh_bp(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
 
   void read_oneddiag(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
   void read_bfield(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
@@ -52,7 +52,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   double theta(double r, double z) const;
 
 public:
-  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> new_roi_mesh(
+  async_ptr<simplicial_xgc_2d_mesh<I, F>> new_roi_mesh(
       std::vector<I> &node_map, /* vert id of original mesh --> vert id of new mesh */
       std::vector<I> &inverse_node_map /* vert id of new mesh --> vert id of original mesh */
   ) const; 
@@ -158,7 +158,7 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_b(const F x[], F b[]) const
 }
 
 template <typename I, typename F>
-std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from_xgc_mesh_file(
+async_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from_xgc_mesh_file(
     const std::string& filename,
     diy::mpi::communicator comm)
 {
@@ -172,7 +172,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
 }
 
 template <typename I, typename F>
-std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from_xgc_mesh_bp(
+async_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from_xgc_mesh_bp(
     const std::string& filename,
     diy::mpi::communicator comm)
 {
@@ -189,12 +189,12 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
   // std::cerr << nextnodes.shape() << std::endl;
   // std::cerr << psifield.shape() << std::endl;
 
-  return std::shared_ptr<simplicial_xgc_2d_mesh<I, F>>(
+  return async_ptr<simplicial_xgc_2d_mesh<I, F>>(
       new simplicial_xgc_2d_mesh<I, F>(coords, triangles, psifield, nextnodes));
 }
 
 template <typename I, typename F>
-std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename)
+async_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from_xgc_mesh_h5(const std::string& filename)
 {
   ndarray<I> triangles;
   ndarray<F> coords;
@@ -206,15 +206,15 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
   psifield.read_h5(filename, "/psi");
   nextnodes.read_h5(filename, "/nextnode");
 
-  return std::shared_ptr<simplicial_xgc_2d_mesh<I, F>>(
+  return async_ptr<simplicial_xgc_2d_mesh<I, F>>(
       new simplicial_xgc_2d_mesh<I, F>(coords, triangles, psifield, nextnodes));
 
-  // return std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>>(
+  // return async_ptr<simplicial_unstructured_2d_mesh<I, F>>(
   //     new simplicial_unstructured_2d_mesh<I, F>(coords, triangles));
 }
 
 template <typename I, typename F>
-std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_roi_mesh(
+async_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_roi_mesh(
     std::vector<I> &node_map, 
     std::vector<I> &inverse_node_map) const
 {
@@ -263,10 +263,10 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
   new_triangles_array.copy_vector(new_triangles);
   new_triangles_array.reshape(3, new_triangles.size() / 3);
   
-  // std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2( new simplicial_unstructured_2d_mesh<I, F>( new_coords, new_triangles_array ) );
+  // async_ptr<simplicial_unstructured_2d_mesh<I, F>> m2( new simplicial_unstructured_2d_mesh<I, F>( new_coords, new_triangles_array ) );
   // return m2;
 
-  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> mx2( new simplicial_xgc_2d_mesh<I, F>( new_coords, new_triangles_array ) );
+  async_ptr<simplicial_xgc_2d_mesh<I, F>> mx2( new simplicial_xgc_2d_mesh<I, F>( new_coords, new_triangles_array ) );
   mx2->units = units;
  
   // updating psifield and bfield

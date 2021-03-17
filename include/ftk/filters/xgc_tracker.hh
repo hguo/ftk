@@ -19,14 +19,14 @@ namespace ftk {
 
 struct xgc_tracker : public tracker {
   xgc_tracker(diy::mpi::communicator comm,
-      std::shared_ptr<simplicial_xgc_3d_mesh<>> mx);
+      async_ptr<simplicial_xgc_3d_mesh<>> mx);
 
   void reset() { field_data_snapshots.clear(); }
 
   void set_use_roi(bool b) { use_roi = b; }
 
 public:
-  std::shared_ptr<simplicial_unstructured_2d_mesh<>> get_m2() { return m2; }
+  async_ptr<simplicial_unstructured_2d_mesh<>> get_m2() { return m2; }
   void initialize_ff_mesh(const std::string& filename) { mf3.reset(new simplicial_xgc_3dff_mesh<>(m2, m3->get_nphi(), m3->get_iphi(), m3->get_vphi()) ); mf3->initialize_ff_mesh(filename); }
 
 public:
@@ -49,24 +49,24 @@ protected:
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
-  std::shared_ptr<simplicial_xgc_2d_mesh<>> m2; 
-  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3, m30;
-  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
+  async_ptr<simplicial_xgc_2d_mesh<>> m2; 
+  async_ptr<simplicial_xgc_3d_mesh<>> m3, m30;
+  async_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
 
   // roi meshes
   bool use_roi = false;
-  std::shared_ptr<simplicial_xgc_2d_mesh<>> mr2; 
-  std::shared_ptr<simplicial_xgc_3d_mesh<>> mr3; 
-  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> mr4;
+  async_ptr<simplicial_xgc_2d_mesh<>> mr2; 
+  async_ptr<simplicial_xgc_3d_mesh<>> mr3; 
+  async_ptr<simplicial_unstructured_extruded_3d_mesh<>> mr4;
   std::vector<int> roi_node_map, roi_inverse_node_map;
 
-  std::shared_ptr<simplicial_xgc_3dff_mesh<>> mf3; // field following 3d mesh
+  async_ptr<simplicial_xgc_3dff_mesh<>> mf3; // field following 3d mesh
 };
 
 //////
 xgc_tracker::xgc_tracker(
     diy::mpi::communicator comm, 
-    std::shared_ptr<simplicial_xgc_3d_mesh<>> mx) :
+    async_ptr<simplicial_xgc_3d_mesh<>> mx) :
   tracker(comm),
   m2(mx->get_m2()),
   m3(mx),
