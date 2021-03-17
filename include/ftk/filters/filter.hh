@@ -86,8 +86,8 @@ inline void filter::set_device_ids(const std::string& ids)
   std::vector<int> myids;
   for (auto str : strs)
     myids.push_back( std::stoi(str) );
-  for (auto i : myids) 
-    fprintf(stderr, "using device %d\n", i);
+  // for (auto i : myids) 
+  //   fprintf(stderr, "using device %d\n", i);
   set_device_ids(myids);
 }
 
