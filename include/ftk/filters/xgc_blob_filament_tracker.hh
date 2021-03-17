@@ -277,7 +277,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
   update_vector_field_scaling_factor();
  
-  auto func = [&](int i) {
+  auto func = [=](int i) {
     feature_point_t cp;
     if (check_simplex(i, cp)) {
       std::set<int> my_related_cells = get_related_cells(i);
@@ -292,7 +292,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
       }
     }
   };
-
+  
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     // ordinal
@@ -315,18 +315,20 @@ inline void xgc_blob_filament_tracker::update_timestep()
   } else {
     if (use_roi) {
       const auto nd = mr4->n(2), no = mr4->n_ordinal(2), ni = mr4->n_interval(2);
-      parallel_for(no, [&](int i) {func(i + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+      parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
 
       if (field_data_snapshots.size() >= 2)
-        parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+        parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
     } else {
+
       // TODO: strange that m4->element_for has proformance problem...
       // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
       const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
-      parallel_for(no, [&](int i) {func(i + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+      // object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);}, FTK_THREAD_PTHREAD, 8, true);
+      object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
 
       if (field_data_snapshots.size() >= 2)
-        parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+        object::parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
         //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
     }
   }
