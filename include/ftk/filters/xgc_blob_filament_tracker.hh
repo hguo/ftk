@@ -65,6 +65,9 @@ protected:
       T v[n][2], // vectors
       T j[n][2][2]); // jacobians
 
+  std::set<int> get_related_cells(size_t tri) const;
+  void add_lite_feature_points(const std::vector<feature_point_lite_t>& pts);
+
 public:
   void build_critical_surfaces();
   void post_process_surfaces();
@@ -215,34 +218,69 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
 #endif
 }
 
+inline std::set<int> xgc_blob_filament_tracker::get_related_cells(size_t i) const
+{
+  std::set<int> my_related_cells;
+
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
+
+  auto tets = m4->side_of(2, i);
+  for (auto tet : tets) {
+    if (1) { // TODO: if valid tet
+      auto pents = m4->side_of(3, tet);
+      for (auto pent : pents)
+        if (1) // TODO if valid pent
+          my_related_cells.insert(pent);
+    }
+  }
+
+  return my_related_cells;
+}
+
+inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector<feature_point_lite_t>& pts) 
+{
+#if FTK_HAVE_TBB
+  tbb::parallel_for(tbb::blocked_range<size_t>(0, pts.size()), 
+    [=](const tbb::blocked_range<size_t>& r) {
+      for (size_t i = r.begin(); i != r.end(); ++ i) {
+        feature_point_t cp(pts[i]);
+        cp.tag += current_timestep * m4->n(2);
+        cp.ordinal = true;
+        cp.timestep = current_timestep;
+
+        // both intersections and related_cells are concurrent tbb containers
+        intersections.insert({cp.tag, cp});
+
+        std::set<int> related = get_related_cells(cp.tag);
+        related_cells.insert( related.begin(), related.end() );
+      }
+    });
+#else
+  for (auto lcp : pts) {
+    feature_point_t cp(lcp);
+    cp.tag += current_timestep * m4->n(2);
+    cp.ordinal = true;
+    cp.timestep = current_timestep;
+
+    intersections.insert({cp.tag, cp});
+
+    std::set<int> related = get_related_cells(cp.tag);
+    related_cells.insert( related.begin(), related.end() );
+  }
+#endif
+};
+
+
 inline void xgc_blob_filament_tracker::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
   update_vector_field_scaling_factor();
  
-  auto get_related_cels = [&](int i) {
-    std::set<int> my_related_cells;
-  
-    std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
-      use_roi ? this->mr4 : this->m4;
-
-    auto tets = m4->side_of(2, i);
-    for (auto tet : tets) {
-      if (1) { // TODO: if valid tet
-        auto pents = m4->side_of(3, tet);
-        for (auto pent : pents)
-          if (1) // TODO if valid pent
-            my_related_cells.insert(pent);
-      }
-    }
-
-    return my_related_cells;
-  };
-
   auto func = [&](int i) {
     feature_point_t cp;
     if (check_simplex(i, cp)) {
-      std::set<int> my_related_cells = get_related_cels(i);
+      std::set<int> my_related_cells = get_related_cells(i);
 
       {
 #if !FTK_HAVE_TBB
@@ -253,38 +291,6 @@ inline void xgc_blob_filament_tracker::update_timestep()
         related_cells.insert(my_related_cells.begin(), my_related_cells.end());
       }
     }
-  };
-
-  auto add_feature_point_lite_batch = [&](const std::vector<feature_point_lite_t>& pts) {
-#if FTK_HAVE_TBB
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, pts.size()), 
-      [=](const tbb::blocked_range<size_t>& r) {
-        for (size_t i = r.begin(); i != r.end(); ++ i) {
-          feature_point_t cp(pts[i]);
-          cp.tag += current_timestep * m4->n(2);
-          cp.ordinal = true;
-          cp.timestep = current_timestep;
-
-          // both intersections and related_cells are concurrent tbb containers
-          intersections.insert({cp.tag, cp});
-
-          std::set<int> related = get_related_cels(cp.tag);
-          related_cells.insert( related.begin(), related.end() );
-        }
-      });
-#else
-    for (auto lcp : pts) {
-      feature_point_t cp(lcp);
-      cp.tag += current_timestep * m4->n(2);
-      cp.ordinal = true;
-      cp.timestep = current_timestep;
-
-      intersections.insert({cp.tag, cp});
-
-      std::set<int> related = get_related_cels(cp.tag);
-      related_cells.insert( related.begin(), related.end() );
-    }
-#endif
   };
 
   if (xl == FTK_XL_CUDA) {
@@ -648,13 +654,18 @@ inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string&
 inline void xgc_blob_filament_tracker::write_intersections_binary(const std::string& filename) const
 {
   if (is_root_proc())
-    diy::serializeToFile(intersections, filename); // TODO: TBB
+    diy::serializeToFile(intersections, filename); 
 }
 
 inline void xgc_blob_filament_tracker::read_intersections_binary(const std::string& filename)
 {
-  if (is_root_proc())
-    diy::unserializeFromFile(filename, intersections); // TODO: TBB
+  if (is_root_proc()) {
+    diy::unserializeFromFile(filename, intersections); 
+    for (const auto &kv : intersections) {
+      std::set<int> related = get_related_cells(kv.second.tag);
+      related_cells.insert( related.begin(), related.end() );
+    }
+  }
 }
 
 inline void xgc_blob_filament_tracker::write_surfaces(const std::string& filename, std::string format, bool torus) const 
