@@ -83,7 +83,9 @@ public:
   void post_analysis_curves(feature_curve_set_t& curves) const; // compute magnetic line alignment, etc.
 
   void set_enable_post_processing(bool b) { enable_post_processing = b; }
- 
+  void set_ordinal_only(bool b) { ordinal_only = b; }
+  void set_ordinal_output_pattern(const std::string &str) { ordinal_output_pattern = str; }
+
 public:
   void write_intersections_binary(const std::string& filename) const;
   void write_intersections(const std::string& filename, std::string format="") const;
@@ -115,7 +117,10 @@ protected:
   feature_surface_t surfaces;
 
   bool enable_post_processing = true;
-  
+  bool ordinal_only;
+
+  std::string ordinal_output_pattern;
+
 protected:
   double vector_field_maxabs = 0;
   double vector_field_resolution = std::numeric_limits<double>::max(); // min abs nonzero value of vector field.  for robust cp detection w/o gmp
@@ -331,26 +336,20 @@ inline void xgc_blob_filament_tracker::update_timestep()
     fatal("FTK not compiled with CUDA.");
 #endif
   } else {
-    if (use_roi) {
-      const auto nd = mr4->n(2), no = mr4->n_ordinal(2), ni = mr4->n_interval(2);
-      parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
+    std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+      use_roi ? this->mr4 : this->m4;
+
+    // TODO: strange that m4->element_for has proformance problem...
+    // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
+    const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
+    // object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);}, FTK_THREAD_PTHREAD, 8, true);
+    object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
+
+    if (ordinal_only) {
       build_critical_line();
-
-      if (field_data_snapshots.size() >= 2)
-        parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
-    } else {
-
-      // TODO: strange that m4->element_for has proformance problem...
-      // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
-      const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
-      // object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);}, FTK_THREAD_PTHREAD, 8, true);
-      object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
-      build_critical_line();
-
-      if (field_data_snapshots.size() >= 2)
-        object::parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
-        //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
-    }
+    } else if (field_data_snapshots.size() >= 2)
+      object::parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
+      //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
   }
 }
 
@@ -514,7 +513,8 @@ void xgc_blob_filament_tracker::finalize()
   if (is_root_proc()) {
     fprintf(stderr, "#intersections=%zu, #related_cells=%zu\n", 
         intersections.size(), related_cells.size());
-    build_critical_surfaces();
+    if (!ordinal_only)
+      build_critical_surfaces();
   }
 }
 
@@ -651,7 +651,8 @@ inline void xgc_blob_filament_tracker::build_critical_line()
 #if FTK_HAVE_VTK
   auto poly = curves.to_vtp(3, {
       "dneOverne0", "psin", "theta", "offset"});
-  write_polydata("line.vtp", transform_vtp_coordinates(poly));
+  const auto filename = series_filename(ordinal_output_pattern, current_timestep);
+  write_polydata(filename, transform_vtp_coordinates(poly));
 #endif
 #endif
 }

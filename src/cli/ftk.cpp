@@ -398,6 +398,12 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   tracker->use_accelerator(accelerator);
   tracker->set_number_of_threads(nthreads);
   tracker->set_enable_post_processing( !disable_post_processing );
+
+  if (output_type == "ordinal") {
+    tracker->set_ordinal_only(true);
+    tracker->set_ordinal_output_pattern(output_pattern);
+  }
+
   tracker->initialize();
 
   if (archived_traced_filename.length() > 0 && file_exists(archived_traced_filename)) {
@@ -446,6 +452,9 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     }
   }
 
+  if (output_type == "ordinal") {
+    // nothing to do
+  }
   if (output_type == "intersections")
     tracker->write_intersections(output_pattern);
   else if (output_type == "sliced")
