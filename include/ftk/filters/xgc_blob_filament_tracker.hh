@@ -66,7 +66,7 @@ protected:
       T j[n][2][2]); // jacobians
 
   std::set<int> get_related_cells(size_t tri) const;
-  void add_lite_feature_points(const std::vector<feature_point_lite_t>& pts);
+  void add_lite_feature_points(const std::vector<feature_point_lite_t>& pts, bool ordinal);
 
 public:
   void build_critical_surfaces();
@@ -238,7 +238,7 @@ inline std::set<int> xgc_blob_filament_tracker::get_related_cells(size_t i) cons
   return my_related_cells;
 }
 
-inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector<feature_point_lite_t>& pts) 
+inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector<feature_point_lite_t>& pts, bool ordinal) 
 {
   // tbb::parallel_for(tbb::blocked_range<size_t>(0, pts.size()), 
   //   [=](const tbb::blocked_range<size_t>& r) {
@@ -248,7 +248,7 @@ inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector
   parallel_for(pts.size(), [=](int i) {
     feature_point_t cp(pts[i]);
     cp.tag += current_timestep * m4->n(2);
-    cp.ordinal = true;
+    cp.ordinal = ordinal;
     cp.timestep = current_timestep;
     
     std::set<int> related = get_related_cells(cp.tag);
@@ -302,14 +302,14 @@ inline void xgc_blob_filament_tracker::update_timestep()
       xft_swap(ctx); // swap buffers in order to correctly access the very last timestep
     xft_execute(ctx, 1 /* ordinal */, current_timestep);
     std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
-    add_lite_feature_points(results);
+    add_lite_feature_points(results, false);
 
     // interval
     if (field_data_snapshots.size() >= 2) {
       xft_execute(ctx, 2 /* interval */, current_timestep);
       // fprintf(stderr, "** current_timestep=%d, gpu done interval.\n", current_timestep);
       std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
-      add_lite_feature_points(results);
+      add_lite_feature_points(results, true);
     }
 #else
     fatal("FTK not compiled with CUDA.");
@@ -395,15 +395,17 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
 void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
 {
-  std::lock_guard<std::mutex> guard(mutex);
   auto type0 = surfaces.pts[i0].type,
        type1 = surfaces.pts[i1].type,
        type2 = surfaces.pts[i2].type;
 
   // if (type0 == type1 && type1 == type2 && type0 == CRITICAL_POINT_2D_MAXIMUM)
   //   surfaces.tris.push_back({i0, i1, i2});
-    
-  surfaces.tris.push_back({i0, i1, i2});
+  
+  {
+    std::lock_guard<std::mutex> guard(mutex);
+    surfaces.tris.push_back({i0, i1, i2});
+  }
 }
 
 void xgc_blob_filament_tracker::check_penta(int e)
@@ -602,9 +604,9 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
         xl, nthreads, enable_set_affinity);
   }
 #else // for all related 4-simplicies
-  parallel_for<int>(related_cells, [&](const int e) {
+  parallel_for<int>(related_cells, [=](const int e) {
     check_penta(e);
-  }, FTK_XL_NONE, nthreads, enable_set_affinity);
+  }, FTK_XL_NONE, nthreads, true);
 #endif
 
   surfaces.relabel();
@@ -867,6 +869,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
 
 #if FTK_HAVE_VTK
   for (int i = 0; i < end_timestep; i ++) { // TODO
+    fprintf(stderr, "slicing timestep %d\n", i);
     auto sliced = surfaces.slice_time(i);
     if (enable_post_processing) {
       post_process_curves(sliced);
