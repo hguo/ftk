@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/filters/xgc_tracker.hh>
+#include <ftk/features/feature_line.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
@@ -65,12 +66,15 @@ protected:
       T v[n][2], // vectors
       T j[n][2][2]); // jacobians
 
-  std::set<int> get_related_cells(size_t tri) const;
+  std::set<int> get_related_penta_cells(size_t tri) const;
   void add_lite_feature_points(const std::vector<feature_point_lite_t>& pts, bool ordinal);
 
 public:
   void start_lite_feature_point_consumer_threads(int);
   void join_lite_feature_point_consumer_threads();
+
+public:
+  void build_critical_line();
 
 public:
   void build_critical_surfaces();
@@ -222,7 +226,7 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
 #endif
 }
 
-inline std::set<int> xgc_blob_filament_tracker::get_related_cells(size_t i) const
+inline std::set<int> xgc_blob_filament_tracker::get_related_penta_cells(size_t i) const
 {
   std::set<int> my_related_cells;
 
@@ -263,7 +267,7 @@ inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector
     cp.ordinal = ordinal;
     cp.timestep = current_timestep;
     
-    std::set<int> related = get_related_cells(cp.tag);
+    std::set<int> related = get_related_penta_cells(cp.tag);
 
     // both intersections and related_cells are concurrent tbb containers
     intersections.insert({cp.tag, cp});
@@ -279,7 +283,7 @@ inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector
 
     intersections.insert({cp.tag, cp});
 
-    std::set<int> related = get_related_cells(cp.tag);
+    std::set<int> related = get_related_penta_cells(cp.tag);
     related_cells.insert( related.begin(), related.end() );
   }
 #endif
@@ -294,7 +298,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
   auto func = [=](int i) {
     feature_point_t cp;
     if (check_simplex(i, cp)) {
-      std::set<int> my_related_cells = get_related_cells(i);
+      std::set<int> my_related_cells = get_related_penta_cells(i);
 
       {
 #if !FTK_HAVE_TBB
@@ -330,6 +334,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
     if (use_roi) {
       const auto nd = mr4->n(2), no = mr4->n_ordinal(2), ni = mr4->n_interval(2);
       parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
+      build_critical_line();
 
       if (field_data_snapshots.size() >= 2)
         parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
@@ -340,6 +345,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
       const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
       // object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);}, FTK_THREAD_PTHREAD, 8, true);
       object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
+      build_critical_line();
 
       if (field_data_snapshots.size() >= 2)
         object::parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
@@ -598,6 +604,53 @@ void xgc_blob_filament_tracker::simplex_values(
 #endif
 }
 
+inline void xgc_blob_filament_tracker::build_critical_line()
+{
+#if FTK_HAVE_TBB // TODO
+#else
+  feature_line_t line;
+  async_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
+  
+  int i = 0; 
+  auto lower = intersections.lower_bound(m4->n(2) * current_timestep), 
+       upper = intersections.upper_bound(m4->n(2) * current_timestep + m4->n_ordinal(2));
+
+  for (auto it = lower; it != upper; it ++) {
+    it->second.id = i ++;
+    line.pts.push_back(it->second);
+  }
+
+  m4->element_for_ordinal(3, current_timestep,
+    [&](const int tetid) {
+      auto sides = m4->sides(3, tetid);
+      int count = 0;
+      int ids[4]; // some large number;
+      for (auto i : sides) {
+        if (intersections.find(i) != intersections.end()) {
+          ids[count ++] = intersections[i].id;
+        }
+      }
+
+      if (count == 0) return; 
+      else if (count == 2)
+        line.edges.push_back(std::array<int, 2>({ids[0], ids[1]}));
+      else fprintf(stderr, "irregular count=%d\n", count);
+    });
+
+  line.relabel();
+  fprintf(stderr, "critical line built, #pts=%zu, #edge=%zu\n", line.pts.size(), line.edges.size());
+
+#if 1 // FTK_HAVE_VTK
+  vtkSmartPointer<vtkUnstructuredGrid> grid = line.to_vtu();
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName("line.vtu");
+  writer->SetInputData(grid);
+  writer->Write();
+#endif
+#endif
+}
+
 inline void xgc_blob_filament_tracker::build_critical_surfaces()
 {
   fprintf(stderr, "building critical surfaces...\n");
@@ -680,7 +733,7 @@ inline void xgc_blob_filament_tracker::read_intersections_binary(const std::stri
   if (is_root_proc()) {
     diy::unserializeFromFile(filename, intersections); 
     for (const auto &kv : intersections) {
-      std::set<int> related = get_related_cells(kv.second.tag);
+      std::set<int> related = get_related_penta_cells(kv.second.tag);
       related_cells.insert( related.begin(), related.end() );
     }
   }
