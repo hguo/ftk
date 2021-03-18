@@ -31,7 +31,7 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
   ) const; 
 
 public: // io
-  static async_ptr<simplicial_unstructured_3d_mesh<I, F>> from_file(const std::string& filename);
+  static std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> from_file(const std::string& filename);
   void to_file(const std::string &filename) const;
 
   void to_vtu_file(const std::string& filename) const;
@@ -318,9 +318,9 @@ to_vtu() const
 #endif
 
 template <typename I, typename F>
-async_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3d_mesh<I, F>::from_file(const std::string& filename)
+std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> simplicial_unstructured_3d_mesh<I, F>::from_file(const std::string& filename)
 {
-  async_ptr<simplicial_unstructured_3d_mesh<I, F>> m(new simplicial_unstructured_3d_mesh<>);
+  std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> m(new simplicial_unstructured_3d_mesh<>);
   if (ends_with_lower(filename, "vtu")) {
 #if FTK_HAVE_VTK
     vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();

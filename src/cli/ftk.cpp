@@ -75,19 +75,19 @@ std::string device_ids;
 int device_buffer_size = 512; // in MB
 
 // tracker and input stream
-async_ptr<tracker> mtracker;
-async_ptr<json_interface> wrapper;
-async_ptr<contour_tracker_regular> tracker_contour;
-async_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
-async_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
-async_ptr<threshold_tracker<>> tracker_threshold;
-async_ptr<ndarray_stream<>> stream;
+std::shared_ptr<tracker> mtracker;
+std::shared_ptr<json_interface> wrapper;
+std::shared_ptr<contour_tracker_regular> tracker_contour;
+std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
+std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
+std::shared_ptr<threshold_tracker<>> tracker_threshold;
+std::shared_ptr<ndarray_stream<>> stream;
 
 nlohmann::json j_input, j_tracker;
 
 // xgc-specific
-async_ptr<simplicial_xgc_2d_mesh<>> mx2; // 2d mesh
-async_ptr<simplicial_xgc_3d_mesh<>> mx3, // 3d mesh, 
+std::shared_ptr<simplicial_xgc_2d_mesh<>> mx2; // 2d mesh
+std::shared_ptr<simplicial_xgc_3d_mesh<>> mx3, // 3d mesh, 
                                           mx30; // 3d mesh for write-backs
 
 // input stream
@@ -388,7 +388,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 {
   initialize_xgc(comm);
   
-  async_ptr<xgc_blob_filament_tracker> tracker;
+  std::shared_ptr<xgc_blob_filament_tracker> tracker;
   tracker.reset(new xgc_blob_filament_tracker(comm, mx3));
   tracker->set_device_ids(device_ids);
   tracker->set_device_buffer_size( device_buffer_size );
@@ -458,9 +458,9 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 {
   initialize_xgc(comm);
 
-  async_ptr<xgc_blob_threshold_tracker> tracker;
+  std::shared_ptr<xgc_blob_threshold_tracker> tracker;
   
-  // async_ptr<ftk::point_locator_2d<>> locator(new ftk::point_locator_2d_quad<>(m2));
+  // std::shared_ptr<ftk::point_locator_2d<>> locator(new ftk::point_locator_2d_quad<>(m2));
   // const double x[2] = {2.3, -0.4};
   // fprintf(stderr, "locator test: %d\n", locator->locate(x));
 

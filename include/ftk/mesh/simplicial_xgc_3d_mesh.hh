@@ -10,11 +10,11 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
-  simplicial_xgc_3d_mesh(async_ptr<simplicial_xgc_2d_mesh<I, F>> m2_); // nphi and iphi must be specified before using
-  simplicial_xgc_3d_mesh(async_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1);
+  simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_); // nphi and iphi must be specified before using
+  simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1);
   // simplicial_xgc_3d_mesh(const std::string& mesh_filename);
 
-  async_ptr<simplicial_xgc_2d_mesh<I, F>> get_m2() const {return m2;}
+  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> get_m2() const {return m2;}
 
   virtual size_t n(int d) const;
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
@@ -115,15 +115,15 @@ protected:
 
 protected: // backend meshes
   int nphi, iphi, vphi;
-  async_ptr<simplicial_xgc_2d_mesh<I, F>> m2;
-  async_ptr<simplicial_unstructured_extruded_2d_mesh<I, F>> m3;
+  std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2;
+  std::shared_ptr<simplicial_unstructured_extruded_2d_mesh<I, F>> m3;
 };
 ///////
 //
 
 template <typename I, typename F>
 simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
-    async_ptr<simplicial_xgc_2d_mesh<I, F>> m2_) :
+    std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_) :
   m2(m2_),
   m3(new simplicial_unstructured_extruded_2d_mesh<I, F>(*m2_))
 {
@@ -131,7 +131,7 @@ simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
 
 template <typename I, typename F>
 simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
-    async_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, 
+    std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, 
     int nphi_, int iphi_, int vphi_) :
   m2(m2_),
   m3(new simplicial_unstructured_extruded_2d_mesh<I, F>(*m2_)),

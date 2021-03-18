@@ -10,7 +10,7 @@ namespace ftk {
 /// legacy code: a magnetic field folowing mesh with simplicial elements
 template <typename I=int, typename F=double>
 struct simplicial_xgc_3dff_mesh : public simplicial_xgc_3d_mesh<I, F> {
-  simplicial_xgc_3dff_mesh(async_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1) 
+  simplicial_xgc_3dff_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1) 
     : simplicial_xgc_3d_mesh<I, F>(m2_, nphi, iphi, vphi) {}
 
   void initialize_ff_mesh() {}; // TODO
@@ -25,7 +25,7 @@ public: // reimpl
   bool find_simplex(int d, const I v[], I &i) const { return false; } // TODO
 
 protected:
-  async_ptr<simplicial_unstructured_3d_mesh<I, F>> um; // the "unit" 3D mesh between poloidal planes
+  std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> um; // the "unit" 3D mesh between poloidal planes
 };
 
 ///////////////////

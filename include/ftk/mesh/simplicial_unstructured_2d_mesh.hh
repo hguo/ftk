@@ -4,7 +4,6 @@
 #include <ftk/config.hh>
 #include <ftk/algorithms/bfs.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
-#include <ftk/utils/async_ptr.hh>
 
 namespace ftk {
 
@@ -123,7 +122,7 @@ public: // point locator and misc
   I locate(F x[], F mu[]) const { return locator->locate(x, mu); } // locate which triangle contains x and get the barycentric coordinates of x
 
 protected:
-  mutable async_ptr<point_locator_2d<I, F>> locator;
+  mutable std::shared_ptr<point_locator_2d<I, F>> locator;
 
 protected: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
