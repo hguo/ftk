@@ -69,6 +69,10 @@ protected:
   void add_lite_feature_points(const std::vector<feature_point_lite_t>& pts);
 
 public:
+  void start_lite_feature_point_consumer_threads(int);
+  void join_lite_feature_point_consumer_threads();
+
+public:
   void build_critical_surfaces();
   void post_process_surfaces();
   void post_process_curves(feature_curve_set_t& curves) const;
@@ -236,6 +240,14 @@ inline std::set<int> xgc_blob_filament_tracker::get_related_cells(size_t i) cons
   }
 
   return my_related_cells;
+}
+
+inline void xgc_blob_filament_tracker::start_lite_feature_point_consumer_threads(int nt)
+{
+  for (int i = 0; i < nt; i ++) {
+    // worker_threads.push_back(std::thread([=]() {
+    // }));
+  }
 }
 
 inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector<feature_point_lite_t>& pts) 
