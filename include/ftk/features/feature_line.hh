@@ -32,10 +32,10 @@ struct feature_line_t {
   void clear();
   void relabel();
 
-  feature_curve_set_t to_feature_curve_set() const;
+  feature_curve_set_t to_curve_set() const;
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const; 
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const; // to be removed
 #endif
 };
 
@@ -54,6 +54,42 @@ void feature_line_t::relabel()
 
   for (int i = 0; i < pts.size(); i ++)
     pts[i].id = uf.find(i);
+}
+
+feature_curve_set_t feature_line_t::to_curve_set() const
+{
+  feature_curve_set_t curve_set;
+  std::set<int> nodes;
+  std::map<int, std::set<int>> links;
+
+  for (int i = 0; i < pts.size(); i ++)
+    nodes.insert(i);
+
+  for (int i = 0; i < edges.size(); i ++) {
+    const int v0 = edges[i][0], v1 = edges[i][1];
+    links[v0].insert(v1);
+    links[v1].insert(v0);
+  }
+  
+  auto cc = extract_connected_components<int, std::set<int>>(
+      [&](int i) { return links[i]; }, 
+      nodes);
+  
+  for (const auto &component : cc) {
+    auto linear_graphs = connected_component_to_linear_components<int>(component, [&](int i) {return links[i];});
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      feature_curve_t traj;
+      traj.loop = is_loop<int>(linear_graphs[j], [&](int i) {return links[i];});
+      
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        traj.push_back(pts[linear_graphs[j][k]]);
+      // curve_set.add(traj); // , traj[0].id);
+      curve_set.add(traj, traj[0].id);
+      // fprintf(stderr, "curve_set.size=%zu\n", curve_set.size());
+    }
+  }
+
+  return curve_set;
 }
 
 #if FTK_HAVE_VTK

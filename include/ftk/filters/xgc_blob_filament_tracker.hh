@@ -633,20 +633,25 @@ inline void xgc_blob_filament_tracker::build_critical_line()
       }
 
       if (count == 0) return; 
-      else if (count == 2)
+      else if (count == 2) {
+        std::lock_guard<std::mutex> guard(mutex);
         line.edges.push_back(std::array<int, 2>({ids[0], ids[1]}));
+      }
       else fprintf(stderr, "irregular count=%d\n", count);
     });
 
   line.relabel();
-  fprintf(stderr, "critical line built, #pts=%zu, #edge=%zu\n", line.pts.size(), line.edges.size());
+  feature_curve_set_t curves = line.to_curve_set();
+  fprintf(stderr, "critical line built, #pts=%zu, #edge=%zu, #curves=%zu\n", 
+      line.pts.size(), line.edges.size(), curves.size());
 
-#if 1 // FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> grid = line.to_vtu();
-  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
-  writer->SetFileName("line.vtu");
-  writer->SetInputData(grid);
-  writer->Write();
+  post_process_curves( curves );
+  post_analysis_curves( curves );
+
+#if FTK_HAVE_VTK
+  auto poly = curves.to_vtp(3, {
+      "dneOverne0", "psin", "theta", "offset"});
+  write_polydata("line.vtp", transform_vtp_coordinates(poly));
 #endif
 #endif
 }
