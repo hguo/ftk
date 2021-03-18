@@ -15,7 +15,7 @@ namespace ftk {
 
 struct xgc_blob_threshold_tracker : public xgc_tracker {
   xgc_blob_threshold_tracker(diy::mpi::communicator comm, 
-      async_ptr<simplicial_xgc_3d_mesh<>> m3) : xgc_tracker(comm, m3) {}
+      std::shared_ptr<simplicial_xgc_3d_mesh<>> m3) : xgc_tracker(comm, m3) {}
   virtual ~xgc_blob_threshold_tracker() {}
   
   void set_threshold(double t) { threshold = t; }
