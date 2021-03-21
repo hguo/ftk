@@ -274,6 +274,9 @@ inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector
     
     std::set<int> related = get_related_penta_cells(cp.tag);
 
+    // fprintf(stderr, "adding tag %llu, ordinal=%d, current_timestep=%d, #related=%zu\n", 
+    //     cp.tag, cp.ordinal, cp.timestep, related.size());
+
     // both intersections and related_cells are concurrent tbb containers
     intersections.insert({cp.tag, cp});
     related_cells.insert( related.begin(), related.end() );
@@ -325,14 +328,14 @@ inline void xgc_blob_filament_tracker::update_timestep()
       xft_swap(ctx); // swap buffers in order to correctly access the very last timestep
     xft_execute(ctx, 1 /* ordinal */, current_timestep);
     std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
-    add_lite_feature_points(results, false);
+    add_lite_feature_points(results, true);
 
     // interval
     if (field_data_snapshots.size() >= 2) {
       xft_execute(ctx, 2 /* interval */, current_timestep);
       // fprintf(stderr, "** current_timestep=%d, gpu done interval.\n", current_timestep);
       std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
-      add_lite_feature_points(results, true);
+      add_lite_feature_points(results, false);
     }
 #else
     fatal("FTK not compiled with CUDA.");
