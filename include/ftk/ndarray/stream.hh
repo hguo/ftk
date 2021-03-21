@@ -373,7 +373,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           else if (ext == FILE_EXT_HDF5) j["format"] = "h5";
           else if (ext == FILE_EXT_BP) { // need to further distinguish if input is bp3 or bp4
             if (is_directory(filename0)) j["format"] = "bp4";
-            else if (is_directory(filename0)) j["format"] = "bp3";
+            else j["format"] = "bp3";
           }
           else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
         }

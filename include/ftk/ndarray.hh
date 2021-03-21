@@ -954,9 +954,7 @@ inline void ndarray<T>::read_bp(const std::string& filename, const std::string& 
   if (empty()) read_bp_legacy(filename, varname, comm);
 #else
   warn(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
-  if (empty()) read_bp_legacy(filename, varname, comm);
-
-  fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+  read_bp_legacy(filename, varname, comm);
 #endif
 }
 
@@ -1012,7 +1010,8 @@ bool ndarray<T>::read_bp_legacy(ADIOS_FILE *fp, const std::string& varname)
 {
   warn("reading bp file with legacy ADIOS1 API..");
   ADIOS_VARINFO *avi = adios_inq_var(fp, varname.c_str());
-  if (avi == NULL) return false;
+  if (avi == NULL)
+    throw FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND;
 
   adios_inq_var_stat(fp, avi, 0, 0);
   adios_inq_var_blockinfo(fp, avi);
