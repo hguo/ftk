@@ -117,7 +117,7 @@ protected:
   feature_surface_t surfaces;
 
   bool enable_post_processing = true;
-  bool ordinal_only;
+  bool ordinal_only = false;
 
   std::string ordinal_output_pattern;
 
