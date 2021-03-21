@@ -101,6 +101,7 @@ inline void xgc_tracker::push_field_data_snapshot(
 #if 0
   auto filename = series_filename("xgc-smoothed-%05d.vtu", current_timestep);
   m30->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+  return;
   // m30->scalar_to_vtu_slices_file(filename, "vector", G);
 #endif
 

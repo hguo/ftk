@@ -288,8 +288,10 @@ inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector
 
     intersections.insert({cp.tag, cp});
 
-    std::set<int> related = get_related_penta_cells(cp.tag);
-    related_cells.insert( related.begin(), related.end() );
+    if (!ordinal_only) {
+      std::set<int> related = get_related_penta_cells(cp.tag);
+      related_cells.insert( related.begin(), related.end() );
+    }
   }
 #endif
 };
@@ -343,10 +345,15 @@ inline void xgc_blob_filament_tracker::update_timestep()
     // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
     const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
     // object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);}, FTK_THREAD_PTHREAD, 8, true);
-    object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
+    
+    if (ordinal_only) 
+      object::parallel_for(no, [=](int i) {func(i);});
+    else 
+      object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
 
     if (ordinal_only) {
       build_critical_line();
+      intersections.clear();
     } else if (field_data_snapshots.size() >= 2)
       object::parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
       //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
@@ -613,15 +620,17 @@ inline void xgc_blob_filament_tracker::build_critical_line()
     use_roi ? this->mr4 : this->m4;
   
   int i = 0; 
-  auto lower = intersections.lower_bound(m4->n(2) * current_timestep), 
-       upper = intersections.upper_bound(m4->n(2) * current_timestep + m4->n_ordinal(2));
+  // auto lower = intersections.lower_bound(m4->n(2) * current_timestep), 
+  //      upper = intersections.upper_bound(m4->n(2) * current_timestep + m4->n_ordinal(2));
+  auto lower = intersections.lower_bound(0),
+       upper = intersections.upper_bound(m4->n_ordinal(2));
 
   for (auto it = lower; it != upper; it ++) {
     it->second.id = i ++;
     line.pts.push_back(it->second);
   }
 
-  m4->element_for_ordinal(3, current_timestep,
+  m4->element_for_ordinal(3, 0, // current_timestep,
     [&](const int tetid) {
       auto sides = m4->sides(3, tetid);
       int count = 0;
@@ -638,7 +647,7 @@ inline void xgc_blob_filament_tracker::build_critical_line()
         line.edges.push_back(std::array<int, 2>({ids[0], ids[1]}));
       }
       else fprintf(stderr, "irregular count=%d\n", count);
-    });
+    }, FTK_THREAD_PTHREAD, nthreads, true);
 
   line.relabel();
   feature_curve_set_t curves = line.to_curve_set();
