@@ -551,7 +551,7 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
 
   for (size_t i = 1; i < interpolants.size(); i ++) {
     cudaMemcpy(c->d_interpolants + (i-1) * size_t(c->m2n0), // * sizeof(ftk::xgc_interpolant_t<>), 
-        interpolants[i].data(), sizeof(c->m2n0) * sizeof(ftk::xgc_interpolant_t<>), cudaMemcpyHostToDevice);
+        interpolants[i].data(), size_t(c->m2n0) * sizeof(ftk::xgc_interpolant_t<>), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] loading xgc interpolants, memcpy");
   }
   
