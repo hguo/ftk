@@ -8,7 +8,7 @@ class MainTest(unittest.TestCase):
         myLevelsetTracker = LevelsetTracker3D(Input=data)
         myLevelsetTracker.UpdatePipeline()
     
-        self.assertEqual(myLevelsetTracker.GetDataInformation().GetNumberOfCells(), 3600)
+        self.assertEqual(myLevelsetTracker.GetDataInformation().GetNumberOfCells(), 3200)
         # self.assertEqual(myLevelsetTracker.GetDataInformation().GetNumberOfPoints(), 269)
 
 if __name__ == '__main__':
