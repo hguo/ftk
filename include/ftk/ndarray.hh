@@ -259,6 +259,11 @@ public: // i/o for adios2
       adios2::IO &io, 
       adios2::Engine& reader, 
       const std::string &varname); // read all
+  
+  void read_bp(
+      adios2::IO &io, 
+      adios2::Engine& reader, 
+      adios2::Variable<T>& var);
 
   void read_bp(
       adios2::IO &io, 
@@ -960,9 +965,8 @@ inline void ndarray<T>::read_bp(const std::string& filename, const std::string& 
 
 #if FTK_HAVE_ADIOS2
 template <typename T>
-inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::Variable<T>& var)
 {
-  auto var = io.template InquireVariable<T>(varname);
   if (var) {
     // std::cerr << var << std::endl;
     // std::cerr << var.Shape() << std::endl;
@@ -989,6 +993,13 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const st
     throw FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND;
     // fatal(FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND);
   }
+}
+
+template <typename T>
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+{
+  auto var = io.template InquireVariable<T>(varname);
+  read_bp(io, reader, var);
 }
 
 template <typename T>

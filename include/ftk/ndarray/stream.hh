@@ -14,6 +14,9 @@ using nlohmann::json;
 
 template <typename T=double>
 struct ndarray_stream : public object {
+  ndarray_stream(diy::mpi::communicator comm = MPI_COMM_WORLD);
+  ~ndarray_stream();
+
   void configure(const json& j) {set_input_source_json(j);}
   // JSON specifications:
   // required fields: 
@@ -98,6 +101,15 @@ protected:
 
   streaming_filter<ndarray<T>, T> temporal_filter;
 
+protected: // adios2
+#if FTK_HAVE_ADIOS2
+  adios2::ADIOS adios;
+  adios2::IO adios_io;
+  adios2::Engine adios_reader;
+  std::vector<adios2::Variable<T>> adios_vars;
+  int current_file_id = 0;
+#endif
+
 private:
   static bool ends_with(std::string const & value, std::string const & ending)
   {
@@ -105,6 +117,22 @@ private:
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
   }
 };
+
+template <typename T>
+ndarray_stream<T>::ndarray_stream(diy::mpi::communicator comm)
+#if FTK_HAVE_ADIOS2
+  : adios(comm)
+#endif
+{
+#if FTK_HAVE_ADIOS2
+  adios_io = adios.DeclareIO("BPReader");
+#endif
+}
+
+template <typename T>
+ndarray_stream<T>::~ndarray_stream()
+{
+}
 
 template <typename T>
 void ndarray_stream<T>::set_input_source_json_file(const std::string& filename)
@@ -556,31 +584,39 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 #if FTK_HAVE_ADIOS2
           if (missing_variables)
             fatal("missing variables for bp4");
-          const std::string varname0 = j["variables"][0];
 
-          adios2::ADIOS adios(comm);
-          adios2::IO io = adios.DeclareIO("BPReader");
-          adios2::Engine reader = io.Open(filename0, adios2::Mode::Read);
+          // adios2::ADIOS adios(comm);
+          // adios2::IO io = adios.DeclareIO("BPReader");
+          // adios2::Engine reader = io.Open(filename0, adios2::Mode::Read);
+          adios_reader = adios_io.Open(filename0, adios2::Mode::Read);
 
-          auto var = io.template InquireVariable<T>(varname0);
-          if (!var) fatal("variable not found in bp4");
+          for (int i = 0; i < j["variables"].size(); i ++) {
+            const std::string varname = j["variables"][i];
+            auto var = adios_io.template InquireVariable<T>(varname);
+            if (!var) fatal("variable not found in bp4");
+            else adios_vars.push_back( var );
+          }
 
-          std::vector<size_t> dims(var.Shape());
+          std::vector<size_t> dims(adios_vars[0].Shape());
           if (j.contains("dimensions"))
             warn("ignoring bp4 dimensions");
           j["dimensions"] = dims;
 
-          reader.Close();
+          const size_t nsteps0 = adios_vars[0].Steps();
+          // reader.Close();
 
           // components
           const size_t nv = j["variables"].size();
           const std::vector<int> components(nv, 1);
           j["components"] = components;
-          
-          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
-            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
-          else 
-            j["n_timesteps"] = j["filenames"].size();
+         
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number()) {
+            // number of timesteps explicitly specified
+            // j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+          } else {
+            if (nsteps0 > 1) j["n_timesteps"] = std::numeric_limits<size_t>::max(); // unlimited
+            else j["n_timesteps"] = j["filenames"].size();
+          }
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
 #endif
@@ -886,20 +922,41 @@ template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_file_bp4(int k)
 {
   ftk::ndarray<T> array;
-  const std::string filename = j["filenames"][k];
 #if FTK_HAVE_ADIOS2
+  fprintf(stderr, "requesting bp4 timestep %d\n", k);
+  while (1) {
+    auto status = adios_reader.BeginStep( adios2::StepMode::Read, 10.f );
+    if (status == adios2::StepStatus::NotReady) {
+      usleep(100000);
+      continue;
+    } else {
+      current_file_id ++; // TODO: EOF
+      if (current_file_id < j["filenames"].size()) {
+        const std::string filename = j["filenames"][current_file_id];
+        adios_reader.Close();
+        adios_reader = adios_io.Open(filename, adios2::Mode::Read);
+        continue;
+      } else 
+        break;
+    }
+  }
+
   const int nc = n_components();
   if (nc == 1) { // all data in one single-component variable; channels are automatically handled in ndarray
-    array.read_bp(filename, j["variables"][0], comm);
+    // array.read_bp(filename, j["variables"][0], comm);
+    array.read_bp(adios_io, adios_reader, adios_vars[0]);
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].read_bp(filename, j["variables"][i], comm);
+      // arrays[i].read_bp(filename, j["variables"][i], comm);
+      array.read_bp(adios_io, adios_reader, adios_vars[i]);
 
     array = ndarray<T>::concat(arrays);
     array.set_multicomponents();
   }
+
+  adios_reader.EndStep();
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
 #endif
@@ -1065,15 +1122,20 @@ void ndarray_stream<T>::start()
     temporal_filter.set_callback(callback);
   }
 
-  for (int i = 0; i < j["n_timesteps"]; i ++) {
+  for (size_t i = 0; i < j["n_timesteps"]; i ++) {
     auto t0 = std::chrono::high_resolution_clock::now();
     ndarray<T> array;
     if (j["type"] == "synthetic") {
       array = request_timestep_synthetic(i);
       // fprintf(stderr, "requested data ncd=%zu, ncd1=%zu\n", array.multicomponents(), array1.multicomponents());
     }
-    else if (j["type"] == "file")
+    else if (j["type"] == "file") {
       array = request_timestep_file(i);
+      if (array.empty()) {
+        fprintf(stderr, "got empty array; all files are read.\n"); 
+        break;
+      }
+    }
     auto t1 = std::chrono::high_resolution_clock::now();
 
     modified_callback(i, array);
@@ -1082,7 +1144,7 @@ void ndarray_stream<T>::start()
     float t_io = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
           t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9;
     
-    fprintf(stderr, "timestep=%d, t_io=%f, t_compute=%f\n", i, t_io, t_compute);
+    fprintf(stderr, "timestep=%zu, t_io=%f, t_compute=%f\n", i, t_io, t_compute);
   }
 }
  
