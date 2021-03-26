@@ -559,7 +559,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           std::vector<size_t> dims(h5ndims);
           for (auto i = 0; i < h5ndims; i ++)
             dims[i] = h5dims[i];
-          std::reverse(dims.begin(), dims.end()); // in h5, the last listed dimension is the fastest-changing dimension
+          std::reverse(dims.begin(), dims.end());
           
           if (j.contains("dimensions"))
             warn("ignoring dimensions");
@@ -598,6 +598,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           }
 
           std::vector<size_t> dims(adios_vars[0].Shape());
+          std::reverse(dims.begin(), dims.end()); 
           if (j.contains("dimensions"))
             warn("ignoring bp4 dimensions");
           j["dimensions"] = dims;
