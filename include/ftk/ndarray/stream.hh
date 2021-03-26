@@ -926,18 +926,27 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_bp4(int k)
   fprintf(stderr, "requesting bp4 timestep %d\n", k);
   while (1) {
     auto status = adios_reader.BeginStep( adios2::StepMode::Read, 10.f );
+    // std::cerr << "status=" << status << std::endl;
+    // fprintf(stderr, "status=%d\n", status);
     if (status == adios2::StepStatus::NotReady) {
-      usleep(100000);
+      usleep(100000000);
       continue;
-    } else {
-      current_file_id ++; // TODO: EOF
+    } else if (status == adios2::StepStatus::OK) {
+      break;
+    } else if (status == adios2::StepStatus::EndOfStream) {
+      fprintf(stderr, "end of stream, current_file_id=%d\n", current_file_id);
+      current_file_id ++; 
       if (current_file_id < j["filenames"].size()) {
         const std::string filename = j["filenames"][current_file_id];
         adios_reader.Close();
         adios_reader = adios_io.Open(filename, adios2::Mode::Read);
         continue;
-      } else 
+      } else {
+        return array; // EOF
         break;
+      }
+    } else { // other error
+      fatal("adios2 error");
     }
   }
 
