@@ -87,9 +87,15 @@ public: // smoothing
 public:
   void initialize_interpolants();
   ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
-  F interpolate(const ndarray<F>& scalar, I i); // interpolate scalar value
+  
+  F interpolate(const ndarray<F>& scalar, I i); // interpolate scalar value at vertex i
+  F interpolate(const ndarray<F>& scalar, F r, F z, I pi); // interpolate scalar value at rz and pi
+
   void interpolate(const ndarray<F>& scalar, const ndarray<F>& grad, const ndarray<F>& jacobian, 
       I i, F f[], F g[2], F j[2][2]) const;
+  
+  void interpolate_central_difference(const ndarray<F>& scalar, const ndarray<F>& grad, const ndarray<F>& jacobian, 
+      I i, F f[], F g[2], F j[2][2], I delta) const;
 
   const xgc_interpolant_t<I, F>& get_interpolant(int v /*virtual plane id*/, I i/*vertex id*/) const { return interpolants[v][i]; }
  
@@ -99,6 +105,13 @@ public:
 
 protected:
   std::vector<std::vector<xgc_interpolant_t<I, F>>> interpolants;
+
+public: // rotation
+  void initialize_rotational_interpolants();
+  ndarray<F> rotate(const ndarray<F>& scalar) const; // rotate poloidal planes to match the first plane
+
+protected:
+  std::vector<std::vector<std::tuple<I, F, F/* triangleId, mu0, mu1 */>>> rotational_interpolants;
 
 protected: // backend meshes
   int nphi, iphi, vphi;
@@ -429,7 +442,8 @@ void simplicial_xgc_3d_mesh<I, F>::interpolate(
 }
 
 template <typename I, typename F>
-F simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar, I i) // interpolate scalar value
+F simplicial_xgc_3d_mesh<I, F>::interpolate(
+    const ndarray<F>& scalar, I i) // interpolate scalar value
 {
   const int m2n0 = m2->n(0);
   const int p = i / m2n0; // poloidal plane id
@@ -452,6 +466,74 @@ F simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar, I i) // in
     return alpha * f0 + beta * f1;
   }
 }
+
+#if 0
+template <typename I, typename F>
+F simplicial_xgc_3d_mesh<I, F>::interpolate(
+    const ndarray<F>& scalar, F r, F z, I pi) // interpolate scalar value for arbitrary rzp
+{
+  const int m2n0 = m2->n(0);
+  const int p = pi / m2n0; // poloidal plane id
+
+  const int p0 = p / vphi, p1 = (p0 + 1) % nphi;
+  const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
+  const xgc_interpolant_t<I, F>& l = interpolants[pi % vphi][i % m2n0];
+
+  if (p % vphi == 0) { // non-virtual plane
+    const int p0 = p / vphi;
+    const int j = i % m2n0;
+    return scalar[m2n0 * p0 + j];
+  } else { // virtual plane
+    const int p0 = p / vphi, p1 = (p0 + 1) % nphi;
+    const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
+    const xgc_interpolant_t<I, F>& l = interpolants[p % vphi][i % m2n0];
+
+    F f0 = 0, f1 = 0;
+    for (int k = 0; k < 3; k ++) {
+      f0 += l.mu0[k] * scalar[m2n0 * p0 + l.tri0[k]];
+      f1 += l.mu1[k] * scalar[m2n0 * p1 + l.tri1[k]];
+    }
+
+    return alpha * f0 + beta * f1;
+  }
+}
+
+template <typename I, typename F>
+void simplicial_xgc_3d_mesh<I, F>::interpolate_central_difference(
+    const ndarray<F>& scalar, 
+    const ndarray<F>& grad, 
+    const ndarray<F>& jacobian, 
+    I i, F val[], F g[2], F j[2][2], I delta) const
+{
+  F coords[3];
+  get_coords_rzp(i, coords);
+  const F r = coords[0], z = coords[1], p = coords[2];
+
+  const F f[5][5] = {
+    { 0, 0, interpolate(scalar, r, z+2*delta, p), 0, 0 }, 
+    { 0, interpolate(scalar, r-delta, z+delta, p), interpolate(scalar, r, z+delta, p), interpolate(scalar, r+delta, z+delta, p), 0 },
+    { interpolate(scalar, r-2*delta, z, p), interpolate(scalar, r-delta, z, p), interpolate(scalar, i), interpolate(scalar, r+delta, z, p), interpolate(scalar, r+2*delta, z, p) }, 
+    { 0, interpolate(scalar, r-delta, z-delta, p), interpolate(scalar, r, z-delta, p), interpolate(scalar, r+delta, z-delta, p), 0 },
+    { 0, 0, interpolate(scalar, r, z-2*delta, p), 0, 0 }
+  };
+
+  const F df[3][3][2] = {
+    { { 0, 0 },                                 { f[1][3] - f[1][2], f[0][2] - f[2][2] }, { 0, 0 } }, 
+    { { f[2][2] - f[2][0], f[1][1] - f[3][1] }, { f[2][3] - f[2][1], f[1][2] - f[3][2] }, { f[2][4] - f[2][2], f[1][3] - f[3][3] } }, 
+    { { 0, 0 },                                 { f[3][3] - f[3][1], f[2][2] - f[4][2] }, { 0, 0 } }
+  };
+
+  j[0][0] = df[1][2][0] - df[1][0][0];
+  j[0][1] = df[1][2][1] - df[1][0][1];
+  j[1][0] = df[0][1][0] - df[2][1][0];
+  j[1][1] = df[0][1][1] - df[2][1][1];
+
+  g[0] = df[2][2][0];
+  g[1] = df[2][2][1];
+
+  val[0] = f[2][2];
+}
+#endif
 
 template <typename I, typename F>
 ndarray<F> simplicial_xgc_3d_mesh<I, F>::smooth_scalar(const ndarray<F>& scalar) const
@@ -559,7 +641,8 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
 }
 
 template <typename I, typename F>
-ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) const
+ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(
+    const ndarray<F>& scalar) const
 {
   const size_t m2n0 = m2->n(0), 
             nvphi = nphi * vphi;
@@ -641,6 +724,68 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(const ndarray<F>& scalar) c
       }
     }
   }
+  return f;
+}
+
+template <typename I, typename F>
+void simplicial_xgc_3d_mesh<I, F>::initialize_rotational_interpolants()
+{
+  const I m2n0 = m2->n(0);
+  const F dphi = 2 * M_PI / (nphi * iphi);
+  const int nsteps_per_dphi = 128;
+
+  fprintf(stderr, "initialize rotational interpolants\n");
+  rotational_interpolants.resize(nphi);
+  for (int i = 1; i < nphi; i ++) {
+    rotational_interpolants[i].resize(m2n0);
+    this->parallel_for(m2n0, [&](int k) {
+      auto &l = rotational_interpolants[i][k];
+
+      F rzp[3] = {0};
+      m2->get_coords(k, rzp);
+      m2->magnetic_map(rzp, dphi * i, nsteps_per_dphi * i);
+
+      F mu[3] = {0};
+      I tid = m2->locate(rzp, mu);
+
+      rotational_interpolants[i][k] = std::make_tuple(tid, mu[0], mu[1]);
+    });
+  }
+}
+
+template <typename I, typename F>
+ndarray<F> simplicial_xgc_3d_mesh<I, F>::rotate(
+    const ndarray<F>& scalar) const
+{
+  const size_t m2n0 = m2->n(0);
+
+  ndarray<F> f;
+  f.reshape(scalar);
+
+  for (int i = 0; i < nphi; i ++) {
+    if (i == 0) {
+      for (int j = 0; j < m2n0; j ++)
+        f[j] = scalar[j];
+    } else {
+      for (int j = 0; j < m2n0; j ++) {
+        const auto &l = rotational_interpolants[i][j];
+        if (std::get<0>(l) < 0)
+          f(j, i) = std::numeric_limits<F>::quiet_NaN();
+        else {
+          I tri[3];
+          m2->get_triange(std::get<0>(l), tri);
+
+          F mu[3] = {std::get<1>(l), std::get<2>(l), 0};
+          mu[2] = F(1) - mu[0] - mu[1];
+
+          f(j, i) =  mu[0] * scalar(tri[0], i) 
+                   + mu[1] * scalar(tri[1], i)
+                   + mu[2] * scalar(tri[2], i);
+        }
+      }
+    }
+  }
+
   return f;
 }
 

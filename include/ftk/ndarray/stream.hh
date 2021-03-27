@@ -14,6 +14,12 @@ using nlohmann::json;
 
 template <typename T=double>
 struct ndarray_stream : public object {
+  ndarray_stream(diy::mpi::communicator comm = MPI_COMM_WORLD);
+  ndarray_stream(const std::string adios2_config_filename, //  = "adios2.xml",
+      const std::string adios2_io_name, //  = "SimulationOutput",
+      diy::mpi::communicator comm); //  = MPI_COMM_WORLD);
+  ~ndarray_stream();
+
   void configure(const json& j) {set_input_source_json(j);}
   // JSON specifications:
   // required fields: 
@@ -74,7 +80,8 @@ protected:
   ndarray<T> request_timestep_file_nc(int k);
   ndarray<T> request_timestep_file_vti(int k);
   ndarray<T> request_timestep_file_h5(int k);
-  ndarray<T> request_timestep_file_bp(int k);
+  ndarray<T> request_timestep_file_bp3(int k);
+  ndarray<T> request_timestep_file_bp4(int k);
   template <typename T1> ndarray<T> request_timestep_file_binary(int k);
 
   ndarray<T> request_timestep_synthetic(int k);
@@ -97,6 +104,17 @@ protected:
 
   streaming_filter<ndarray<T>, T> temporal_filter;
 
+protected: // adios2
+#if FTK_HAVE_ADIOS2
+  adios2::ADIOS adios;
+  adios2::IO adios_io;
+  adios2::Engine adios_reader;
+  std::vector<adios2::Variable<T>> adios_vars;
+  int current_file_id = 0;
+#endif
+  std::string adios2_config_filename, 
+              adios2_io_name = "BPReader";
+
 private:
   static bool ends_with(std::string const & value, std::string const & ending)
   {
@@ -104,6 +122,39 @@ private:
     return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
   }
 };
+
+template <typename T>
+ndarray_stream<T>::ndarray_stream(diy::mpi::communicator comm)
+#if FTK_HAVE_ADIOS2
+  : adios(comm)
+#endif
+{
+#if FTK_HAVE_ADIOS2
+  adios_io = adios.DeclareIO(adios2_io_name);
+#endif
+}
+
+template <typename T>
+ndarray_stream<T>::ndarray_stream(
+    const std::string adios2_config_filename, 
+    const std::string adios2_io_name,
+    diy::mpi::communicator comm)
+#if FTK_HAVE_ADIOS2
+  : adios(adios2_config_filename, comm, adios2::DebugON)
+#endif
+{
+  fprintf(stderr, "creating stream...\n");
+#if FTK_HAVE_ADIOS2
+  this->adios2_config_filename = adios2_config_filename;
+  this->adios2_io_name = adios2_io_name;
+  adios_io = adios.DeclareIO(adios2_io_name);
+#endif
+}
+
+template <typename T>
+ndarray_stream<T>::~ndarray_stream()
+{
+}
 
 template <typename T>
 void ndarray_stream<T>::set_input_source_json_file(const std::string& filename)
@@ -121,7 +172,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 {
   j = j_;
   // std::cerr << j << std::endl;
-  
+ 
+  j["adios2_config"] = adios2_config_filename;
+  j["adios2_name"] = adios2_io_name;
+
   if (!j.contains("type") && j.contains("format"))
     j["type"] = "file";
 
@@ -357,7 +411,15 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           // j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else {
           auto filenames = glob(j["filenames"]);
-          if (filenames.empty()) fatal("unable to find matching filename(s).");
+          if (filenames.empty()) {
+            if (ends_with(j["filenames"], "bp")) {
+              // OK, input are adios streams
+              filenames.push_back( j["filenames"] ); // one single "filename"
+              j["format"] = "bp4"; // the input format must be adios2/bp4
+            } else {
+              fatal("unable to find matching filename(s).");
+            }
+          } 
           // if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
           // else j["n_timesteps"] = filenames.size();
           j["filenames"] = filenames;
@@ -370,7 +432,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           if (ext == FILE_EXT_VTI) j["format"] = "vti";
           else if (ext == FILE_EXT_NETCDF) j["format"] = "nc";
           else if (ext == FILE_EXT_HDF5) j["format"] = "h5";
-          else if (ext == FILE_EXT_BP) j["format"] = "bp";
+          else if (ext == FILE_EXT_BP) { // need to further distinguish if input is bp3 or bp4
+            if (is_directory(filename0)) j["format"] = "bp4";
+            else j["format"] = "bp3";
+          }
           else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
         }
 
@@ -527,7 +592,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           std::vector<size_t> dims(h5ndims);
           for (auto i = 0; i < h5ndims; i ++)
             dims[i] = h5dims[i];
-          std::reverse(dims.begin(), dims.end()); // in h5, the last listed dimension is the fastest-changing dimension
+          std::reverse(dims.begin(), dims.end());
           
           if (j.contains("dimensions"))
             warn("ignoring dimensions");
@@ -548,27 +613,53 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
 #endif
-        } else if (j["format"] == "bp") {
+        } else if (j["format"] == "bp4") {
 #if FTK_HAVE_ADIOS2
           if (missing_variables)
-            fatal("missing variables for bp");
-          const std::string varname0 = j["variables"][0];
+            fatal("missing variables for bp4");
 
-          adios2::ADIOS adios(comm);
-          adios2::IO io = adios.DeclareIO("BPReader");
-          adios2::Engine reader = io.Open(filename0, adios2::Mode::Read);
+          // adios2::ADIOS adios(comm);
+          // adios2::IO io = adios.DeclareIO("BPReader");
+          // adios2::Engine reader = io.Open(filename0, adios2::Mode::Read);
+          adios_reader = adios_io.Open(filename0, adios2::Mode::Read);
+          while (1) {
+            auto status = adios_reader.BeginStep( adios2::StepMode::Read, 10.f );
+            if (status == adios2::StepStatus::NotReady) {
+              usleep(100000);
+              continue;
+            } else if (status == adios2::StepStatus::OK) {
+              break;
+            } else fatal("adios2 error");
+          }
 
-          auto var = io.template InquireVariable<T>(varname0);
-          if (!var) fatal("variable not found in bp");
+          for (int i = 0; i < j["variables"].size(); i ++) {
+            const std::string varname = j["variables"][i];
+            adios2::Variable<T> var = adios_io.template InquireVariable<T>(varname);
+            if (!var) {
+              fatal("variable not found in bp4");
+            } else {
+              adios_vars.push_back( var );
+            }
+          }
 
-          std::vector<size_t> dims(var.Shape());
+          std::vector<size_t> dims(adios_vars[0].Shape());
+          std::reverse(dims.begin(), dims.end()); 
           if (j.contains("dimensions"))
-            warn("ignoring bp dimensions");
+            warn("ignoring bp4 dimensions");
           j["dimensions"] = dims;
 
-          reader.Close();
+          // const size_t nsteps0 = adios_vars[0].Steps();
+          // fprintf(stderr, "nsteps0=%zu\n", nsteps0);
+          // reader.Close();
 
-          j["n_timesteps"] = j["filenames"].size();
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number()) {
+            // number of timesteps explicitly specified
+            // j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+          } else {
+            // if (nsteps0 > 1) j["n_timesteps"] = std::numeric_limits<size_t>::max(); // unlimited
+            // else j["n_timesteps"] = j["filenames"].size();
+            j["n_timesteps"] = std::numeric_limits<size_t>::max();
+          }
 
           // components
           const size_t nv = j["variables"].size();
@@ -576,6 +667,51 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           j["components"] = components;
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+#endif
+        } else if (j["format"] == "bp3") {
+#if FTK_HAVE_ADIOS1
+          if (missing_variables) 
+            fatal("missing variables for bp3");
+          const std::string varname0 = j["variables"][0];
+
+          adios_read_init_method( ADIOS_READ_METHOD_BP, comm, "" );
+          ADIOS_FILE *fp = adios_read_open_file(filename0.c_str(), ADIOS_READ_METHOD_BP, comm);
+  
+          ADIOS_VARINFO *avi = adios_inq_var(fp, varname0.c_str());
+          adios_inq_var_stat(fp, avi, 0, 0);
+          adios_inq_var_blockinfo(fp, avi);
+          adios_inq_var_meshinfo(fp, avi);
+  
+          int nt = 1;
+          uint64_t st[4] = {0, 0, 0, 0}, sz[4] = {0, 0, 0, 0};
+          std::vector<size_t> mydims;
+          
+          for (int i = 0; i < avi->ndim; i++) {
+            st[i] = 0;
+            sz[i] = avi->dims[i];
+            nt = nt * sz[i];
+            mydims.push_back(sz[i]);
+          }
+          std::reverse(mydims.begin(), mydims.end());
+  
+          adios_read_finalize_method (ADIOS_READ_METHOD_BP);
+          adios_read_close(fp);
+          
+          if (j.contains("dimensions"))
+            warn("ignoring bp3 dimensions");
+          j["dimensions"] = mydims;
+
+          // components
+          const size_t nv = j["variables"].size();
+          const std::vector<int> components(nv, 1);
+          j["components"] = components;
+          
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+          else 
+            j["n_timesteps"] = j["filenames"].size();
+#else
+          fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS1);
 #endif
         }
       } else fatal("missing filenames");
@@ -653,8 +789,10 @@ ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
     return request_timestep_file_nc(k);
   else if (fmt == "h5")
     return request_timestep_file_h5(k);
-  else if (fmt == "bp")
-    return request_timestep_file_bp(k);
+  else if (fmt == "bp3")
+    return request_timestep_file_bp3(k);
+  else if (fmt == "bp4")
+    return request_timestep_file_bp4(k);
   else return ndarray<T>();
 }
 
@@ -805,23 +943,80 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_h5(int k)
 }
 
 template <typename T>
-ndarray<T> ndarray_stream<T>::request_timestep_file_bp(int k)
+ndarray<T> ndarray_stream<T>::request_timestep_file_bp3(int k)
 {
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][k];
-#if FTK_HAVE_ADIOS2
+#if FTK_HAVE_ADIOS1
   const int nc = n_components();
   if (nc == 1) { // all data in one single-component variable; channels are automatically handled in ndarray
-    array.read_bp(filename, j["variables"][0], comm);
+    array.read_bp_legacy(filename, j["variables"][0], comm);
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
-      arrays[i].read_bp(filename, j["variables"][i]);
+      arrays[i].read_bp_legacy(filename, j["variables"][i], comm);
 
     array = ndarray<T>::concat(arrays);
     array.set_multicomponents();
   }
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS1);
+#endif
+  return array;
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_file_bp4(int k)
+{
+  ftk::ndarray<T> array;
+#if FTK_HAVE_ADIOS2
+  fprintf(stderr, "requesting bp4 timestep %d\n", k);
+  while (k != 0) { // the first step was already beginned with configuration
+    auto status = adios_reader.BeginStep( adios2::StepMode::Read, 10.f );
+    // std::cerr << "status=" << status << std::endl;
+    // fprintf(stderr, "status=%d\n", status);
+    if (status == adios2::StepStatus::NotReady) {
+      usleep(100000);
+      continue;
+    } else if (status == adios2::StepStatus::OK) {
+      break;
+    } else if (status == adios2::StepStatus::EndOfStream) {
+      fprintf(stderr, "end of stream, current_file_id=%d\n", current_file_id);
+      current_file_id ++; 
+      if (current_file_id < j["filenames"].size()) {
+        const std::string filename = j["filenames"][current_file_id];
+        adios_reader.Close();
+        adios_reader = adios_io.Open(filename, adios2::Mode::Read);
+        continue;
+      } else {
+        return array; // EOF
+        break;
+      }
+    } else { // other error
+      fatal("adios2 error");
+    }
+  }
+
+  const int nc = n_components();
+  if (nc == 1) { // all data in one single-component variable; channels are automatically handled in ndarray
+    // array.read_bp(filename, j["variables"][0], comm);
+    auto var = adios_io.template InquireVariable<T>(j["variables"][0]);
+    array.read_bp(adios_io, adios_reader, var); // adios_vars[0]);
+  } else { // u, v, w in separate variables
+    const int nv = n_variables();
+    std::vector<ftk::ndarray<T>> arrays(nv);
+    for (int i = 0; i < nv; i ++) {
+      // arrays[i].read_bp(filename, j["variables"][i], comm);
+      auto var = adios_io.template InquireVariable<T>(j["variables"][0]);
+      array.read_bp(adios_io, adios_reader, var); // adios_vars[i]);
+    }
+
+    array = ndarray<T>::concat(arrays);
+    array.set_multicomponents();
+  }
+
+  adios_reader.EndStep();
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
 #endif
@@ -987,15 +1182,20 @@ void ndarray_stream<T>::start()
     temporal_filter.set_callback(callback);
   }
 
-  for (int i = 0; i < j["n_timesteps"]; i ++) {
+  for (size_t i = 0; i < j["n_timesteps"]; i ++) {
     auto t0 = std::chrono::high_resolution_clock::now();
     ndarray<T> array;
     if (j["type"] == "synthetic") {
       array = request_timestep_synthetic(i);
       // fprintf(stderr, "requested data ncd=%zu, ncd1=%zu\n", array.multicomponents(), array1.multicomponents());
     }
-    else if (j["type"] == "file")
+    else if (j["type"] == "file") {
       array = request_timestep_file(i);
+      if (array.empty()) {
+        fprintf(stderr, "got empty array; all files are read.\n"); 
+        break;
+      }
+    }
     auto t1 = std::chrono::high_resolution_clock::now();
 
     modified_callback(i, array);
@@ -1004,7 +1204,7 @@ void ndarray_stream<T>::start()
     float t_io = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
           t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9;
     
-    fprintf(stderr, "timestep=%d, t_io=%f, t_compute=%f\n", i, t_io, t_compute);
+    fprintf(stderr, "timestep=%zu, t_io=%f, t_compute=%f\n", i, t_io, t_compute);
   }
 }
  

@@ -23,7 +23,7 @@
 #include "ftk/ndarray/conv.hh"
 
 using namespace ftk;
-
+  
 // global variables
 std::string feature;
 int ttype = 0; // feature type in integer
@@ -52,6 +52,10 @@ std::vector<std::string> input_filenames;
 // contour/levelset specific
 double threshold = 0.0;
 
+// adios2 specific
+std::string adios_config_file;
+std::string adios_name = "BPReader";
+
 // xgc specific
 std::string xgc_data_path, 
   xgc_mesh_filename, 
@@ -60,7 +64,7 @@ std::string xgc_data_path,
   xgc_oneddiag_filename,
   xgc_units_filename,
   // xgc_augmented_mesh_filename,
-  xgc_smoothing_kernel_filename = "xgc.kernel",
+  xgc_smoothing_kernel_filename,
   xgc_interpolant_filename,
   xgc_write_back_filename;
 bool xgc_post_process = false, 
@@ -69,6 +73,10 @@ bool xgc_post_process = false,
      xgc_use_roi = false;
 double xgc_smoothing_kernel_size = 0.03;
 int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
+
+// devices
+std::string device_ids;
+int device_buffer_size = 512; // in MB
 
 // tracker and input stream
 std::shared_ptr<tracker> mtracker;
@@ -202,7 +210,7 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 
 static void execute_critical_point_tracker(diy::mpi::communicator comm)
 {
-  wrapper->consume(*stream);
+  wrapper->consume(*stream, comm);
  
   if (!disable_post_processing)
      wrapper->post_process();
@@ -326,6 +334,7 @@ void initialize_xgc(diy::mpi::communicator comm)
     fprintf(stderr, "xgc_ff_mesh=%s\n", xgc_ff_mesh_filename.c_str());
     fprintf(stderr, "xgc_interpolant_filename=%s\n", xgc_interpolant_filename.c_str());
     fprintf(stderr, "xgc_use_smoothing_kernel=%d\n", xgc_use_smoothing_kernel);
+    fprintf(stderr, "xgc_smoothing_kernel_filename=%s\n", xgc_smoothing_kernel_filename.c_str());
     fprintf(stderr, "xgc_use_roi=%d\n", xgc_use_roi);
     // fprintf(stderr, "xgc_augmented_mesh=%s\n", xgc_augmented_mesh_filename.c_str());
     fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", xgc_nphi, xgc_iphi, xgc_vphi);
@@ -352,22 +361,21 @@ void initialize_xgc(diy::mpi::communicator comm)
     mx2->read_bfield(xgc_bfield_filename);
   if (xgc_units_filename.length() > 0)
     mx2->read_units_m(xgc_units_filename);
+  if (xgc_oneddiag_filename.length() > 0)
+    mx2->read_oneddiag(xgc_oneddiag_filename);
   
   if (file_exists(archived_traced_filename))
     return; // skip interpolants, smoothing kernel
 
-#if 0
   if (xgc_use_smoothing_kernel) {
     if (file_exists(xgc_smoothing_kernel_filename))
       mx2->read_smoothing_kernel(xgc_smoothing_kernel_filename);
     else {
       mx2->build_smoothing_kernel(xgc_smoothing_kernel_size);
-      mx2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
+      if (!xgc_smoothing_kernel_filename.empty())
+        mx2->write_smoothing_kernel(xgc_smoothing_kernel_filename);
     }
   }
-#else
-  mx2->build_smoothing_kernel(xgc_smoothing_kernel_size);
-#endif
   
   if (xgc_interpolant_filename.length() > 0) {
     if (file_exists( xgc_interpolant_filename ))
@@ -386,12 +394,20 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
   tracker.reset(new xgc_blob_filament_tracker(comm, mx3));
+  tracker->set_device_ids(device_ids);
+  tracker->set_device_buffer_size( device_buffer_size );
   tracker->set_use_roi(xgc_use_roi);
   tracker->set_end_timestep(ntimesteps - 1);
   tracker->use_thread_backend(thread_backend);
   tracker->use_accelerator(accelerator);
   tracker->set_number_of_threads(nthreads);
   tracker->set_enable_post_processing( !disable_post_processing );
+
+  if (output_type == "ordinal") {
+    tracker->set_ordinal_only(true);
+    tracker->set_ordinal_output_pattern(output_pattern);
+  }
+
   tracker->initialize();
 
   if (archived_traced_filename.length() > 0 && file_exists(archived_traced_filename)) {
@@ -400,10 +416,12 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     if (archived_intersections_filename.empty() || file_not_exists(archived_intersections_filename)) {
       stream->set_callback([&](int k, const ndarray<double> &data) {
         auto scalar = data.get_transpose();
-#if FTK_HAVE_VTK
+#if 0 // FTK_HAVE_VTK
         if (xgc_write_back_filename.length()) {
           auto filename = series_filename(xgc_write_back_filename, k);
-          // mx->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+          auto mx30 = new ftk::simplicial_xgc_3d_mesh<>(mx2, xgc_nphi, xgc_iphi);
+          mx30->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+          delete mx30;
           // tracker->get_m2()->scalar_to_xgc_slices_3d_vtu(filename, "scalar", scalar, nphi, iphi); // WIP
         }
 #endif
@@ -438,6 +456,9 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     }
   }
 
+  if (output_type == "ordinal") {
+    // nothing to do
+  }
   if (output_type == "intersections")
     tracker->write_intersections(output_pattern);
   else if (output_type == "sliced")
@@ -682,6 +703,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("d,depth", "Depth (valid only for 3D regular grid data)", cxxopts::value<size_t>())
     ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>(ntimesteps))
     ("var", "Variable name(s), e.g. `scalar', `u,v,w'.  Valid only for NetCDF, HDF5, and VTK.", cxxopts::value<std::string>())
+    ("adios-config", "ADIOS2 config file", cxxopts::value<std::string>(adios_config_file))
+    ("adios-name", "ADIOS2 I/O name", cxxopts::value<std::string>(adios_name))
     ("temporal-smoothing-kernel", "Temporal smoothing kernel bandwidth", cxxopts::value<double>())
     ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", cxxopts::value<size_t>())
     ("spatial-smoothing-kernel", "Spatial smoothing kernel bandwidth", cxxopts::value<double>())
@@ -726,6 +749,10 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<bool>(timing))
     ("a,accelerator", "Accelerator {none|cuda} (experimental)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
+    ("device", "Device ID(s)", 
+     cxxopts::value<std::string>(device_ids)->default_value("0"))
+    ("device-buffer", "Device buffer size in MB", 
+     cxxopts::value<int>(device_buffer_size)->default_value("512"))
     ("stream",  "Stream trajectories (experimental)",
      cxxopts::value<bool>(enable_streaming_trajectories))
     ("discard-interval-points", "Discard interval critical points (experimental)", 
@@ -748,6 +775,13 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 
   if (output_pattern.empty())
     fatal(options, "Missing '--output'.");
+
+  // adios2
+  if (results.count("adios-config")) { // use adios2 config file
+    stream.reset(new ndarray_stream<>(adios_config_file, adios_name, comm));
+  } else { // no adios2
+    stream.reset(new ndarray_stream<>(comm));
+  }
   
   ttype = tracker::str2tracker(feature);
   if (ttype != TRACKER_TDGL_VORTEX) { // TDGL uses a different reader for now
@@ -755,7 +789,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     stream->set_input_source_json(j_input);
   }
   
-  if (results.count("xgc-smoothing-kernel-size"))
+  if (results.count("xgc-smoothing-kernel-size") || results.count("xgc-smoothing-kernel-file"))
     xgc_use_smoothing_kernel = true;
 
   if (ttype == TRACKER_CRITICAL_POINT)
@@ -779,9 +813,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 int main(int argc, char **argv)
 {
   diy::mpi::environment env(argc, argv);
-  diy::mpi::communicator comm;
-  
-  stream.reset(new ndarray_stream<>);
+  diy::mpi::communicator wcomm; // world
+  diy::mpi::communicator comm = wcomm.split(wcomm, 20 /* a magic number as color */);
  
   parse_arguments(argc, argv, comm);
 

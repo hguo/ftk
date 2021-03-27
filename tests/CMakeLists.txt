@@ -192,14 +192,18 @@ if (NOT FTK_HAVE_MPI AND PARAVIEW_USE_PYTHON AND Python_FOUND) # testing paravie
   file (GENERATE
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_critical_point_tracking.py
     INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/test_paraview_critical_point_tracking.py.in)
-
-  # set (_vtk_build_TEST_FILE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-  # paraview_add_test_python(NO_RT DIRECT_DATA ${CMAKE_CURRENT_BINARY_DIR}/test_ftkCriticalPointTracker2D.py)
   add_test (NAME test_paraview_critical_point_tracker
     COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_critical_point_tracking.py)
-
+  
+  file (GENERATE
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_levelset_tracking.py
+    INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/test_paraview_levelset_tracking.py.in)
+  add_test (NAME test_paraview_levelset_tracking
+    COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/test_paraview_levelset_tracking.py)
+  
   set_tests_properties (
     test_paraview_critical_point_tracker
+    test_paraview_levelset_tracking
     PROPERTIES
     ENVIRONMENT "PYTHONPATH=${ParaView_PREFIX_PATH}/${PARAVIEW_PYTHONPATH}")
 endif ()

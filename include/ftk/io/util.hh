@@ -7,6 +7,8 @@
 #include <fstream>
 #include <vector>
 #include <glob.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 namespace ftk {
 
@@ -47,6 +49,14 @@ static inline std::vector<std::string> glob(const std::string &pattern)
     filenames.push_back(results.gl_pathv[i]); 
   globfree(&results);
   return filenames;
+}
+
+static bool is_directory(const std::string& filename) {
+  struct stat s;
+  if ( stat(filename.c_str(), &s) == 0 ) {
+    if (s.st_mode & S_IFDIR) return true;
+    else return false;
+  } else return false;
 }
 
 static bool file_exists(const std::string& filename) {

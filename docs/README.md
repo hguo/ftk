@@ -22,6 +22,7 @@ Examples
 
 * [Tracking features in synthetic data with CLI and ParaView plug-ins](synthetic.md)
 * [Tracking critical points in a 2D flow-past-cylinder dataset with C++ APIs](cylinder2D.md)
+* [In situ critical point tracking in a 2D heat transfer simulation with FTK CLI](heat2D.md)
 
 FTK library components
 

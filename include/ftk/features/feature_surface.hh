@@ -133,12 +133,23 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_norm
   array_id->SetNumberOfComponents(1);
   array_id->SetNumberOfTuples(pts.size());
 
-  vtkSmartPointer<vtkDataArray> array_time = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_time = vtkFloatArray::New();
   array_time->SetName("time");
   array_time->SetNumberOfComponents(1);
   array_time->SetNumberOfTuples(pts.size());
+  
+  vtkSmartPointer<vtkDataArray> array_scalar = vtkFloatArray::New();
+  array_scalar->SetName("scalar");
+  array_scalar->SetNumberOfComponents(1);
+  array_scalar->SetNumberOfTuples(pts.size());
+  
+  vtkSmartPointer<vtkDataArray> array_type = vtkUnsignedIntArray::New();
+  array_type->SetName("type");
+  array_type->SetNumberOfComponents(1);
+  array_type->SetNumberOfTuples(pts.size());
 
-  vtkSmartPointer<vtkDataArray> array_grad = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_grad = vtkFloatArray::New();
+  array_grad->SetName("grad");
   array_grad->SetNumberOfComponents(3);
   array_grad->SetNumberOfTuples(pts.size());
 
@@ -151,11 +162,15 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_norm
 
     array_id->SetTuple1(i, p.id);
     array_time->SetTuple1(i, p.t);
+    array_scalar->SetTuple1(i, p.scalar[0]);
+    array_type->SetTuple1(i, p.type);
     array_grad->SetTuple3(i, p.v[0], p.v[1], p.v[2]);
   }
   poly->SetPoints(points);
   poly->GetPointData()->AddArray(array_id);
   poly->GetPointData()->AddArray(array_time);
+  poly->GetPointData()->AddArray(array_scalar);
+  poly->GetPointData()->AddArray(array_type);
   poly->GetPointData()->SetNormals(array_grad);
 
   for (int i = 0; i < tris.size(); i ++) {
@@ -198,17 +213,17 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
   array_id->SetNumberOfComponents(1);
   array_id->SetNumberOfTuples(pts.size());
 
-  vtkSmartPointer<vtkDataArray> array_time = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_time = vtkFloatArray::New();
   array_time->SetName("time");
   array_time->SetNumberOfComponents(1);
   array_time->SetNumberOfTuples(pts.size());
   
-  vtkSmartPointer<vtkDataArray> array_scalar = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_scalar = vtkFloatArray::New();
   array_scalar->SetName("scalar");
   array_scalar->SetNumberOfComponents(1);
   array_scalar->SetNumberOfTuples(pts.size());
   
-  vtkSmartPointer<vtkDataArray> array_grad = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_grad = vtkFloatArray::New();
   array_grad->SetNumberOfComponents(3);
   array_grad->SetNumberOfTuples(pts.size());
 

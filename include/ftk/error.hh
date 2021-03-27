@@ -15,6 +15,7 @@ enum {
   FTK_ERR_FILE_FORMAT,
   FTK_ERR_FILE_FORMAT_AMIRA,
   FTK_ERR_NOT_BUILT_WITH_ADIOS2 = 2000,
+  FTK_ERR_NOT_BUILT_WITH_ADIOS1,
   FTK_ERR_NOT_BUILT_WITH_BOOST,
   FTK_ERR_NOT_BUILT_WITH_CGAL,
   FTK_ERR_NOT_BUILT_WITH_CUDA,
@@ -124,14 +125,14 @@ inline void warn(int err, std::string str = "")
 }
 
 inline void fatal(const std::string& str) {
-  std::cerr << "[FTK FATAL]" << str << std::endl;
+  std::cerr << "[FTK FATAL] " << str << std::endl;
   
   print_backtrace();
   exit(1);
 }
 
 inline void warn(const std::string& str) {
-  std::cerr << "WARN: " << str << std::endl;
+  std::cerr << "[FTK WARN] " << str << std::endl;
 }
 
 }

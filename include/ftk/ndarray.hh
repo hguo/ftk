@@ -9,6 +9,12 @@
 #include <adios2.h>
 #endif
 
+#if FTK_HAVE_ADIOS1
+#include <adios.h>
+#include <adios_read.h>
+#include <adios_error.h>
+#endif
+
 #if FTK_HAVE_CUDA
 // #include <cuda.h>
 // #include <cuda_runtime.h>
@@ -253,12 +259,24 @@ public: // i/o for adios2
       adios2::IO &io, 
       adios2::Engine& reader, 
       const std::string &varname); // read all
+  
+  void read_bp(
+      adios2::IO &io, 
+      adios2::Engine& reader, 
+      adios2::Variable<T>& var);
 
   void read_bp(
       adios2::IO &io, 
       adios2::Engine& reader, 
       const std::string &varname, 
       int step_start);
+#endif
+
+public: // i/o for adios1
+  static ndarray<T> from_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm);
+  bool read_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm);
+#if FTK_HAVE_ADIOS1
+  bool read_bp_legacy(ADIOS_FILE *fp, const std::string& varname);
 #endif
 
 public: // i/o for png
@@ -303,6 +321,7 @@ public: // netcdf
 
 public: // statistics & misc
   std::tuple<T, T> min_max() const;
+  T maxabs() const;
   T resolution() const; // the min abs nonzero value
   
   ndarray<uint64_t> quantize() const; // quantization based on resolution
@@ -355,6 +374,17 @@ ndarray<T>& ndarray<T>::operator+=(const ndarray<T>& x)
       p[i] += x.p[i];
   }
   return *this;
+}
+
+template <typename T>
+ndarray<T> operator+(const ndarray<T>& lhs, const ndarray<T>& rhs)
+{
+  ndarray<T> array;
+  array.reshape(lhs);
+
+  for (auto i = 0; i < array.nelem(); i ++)
+    array[i] = lhs[i] + rhs[i];
+  return array;
 }
 
 template <typename T, typename T1>
@@ -882,6 +912,16 @@ std::tuple<T, T> ndarray<T>::min_max() const {
 }
 
 template <typename T>
+T ndarray<T>::maxabs() const 
+{
+  T r = 0;
+  for (size_t i = 0; i < nelem(); i ++)
+    r = std::max(r, std::abs(p[i]));
+
+  return r;
+}
+
+template <typename T>
 T ndarray<T>::resolution() const {
   T r = std::numeric_limits<T>::max();
 
@@ -914,21 +954,25 @@ inline void ndarray<T>::read_bp(const std::string& filename, const std::string& 
   
   read_bp(io, reader, varname);
   reader.Close();
+  
+  // empty array; try legacy reader
+  if (empty()) read_bp_legacy(filename, varname, comm);
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+  warn(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+  read_bp_legacy(filename, varname, comm);
 #endif
 }
 
 #if FTK_HAVE_ADIOS2
 template <typename T>
-inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::Variable<T>& var)
 {
-  auto var = io.template InquireVariable<T>(varname);
   if (var) {
     // std::cerr << var << std::endl;
     // std::cerr << var.Shape() << std::endl;
 
     std::vector<size_t> shape(var.Shape());
+    if (shape.empty()) return;
     // std::cerr << shape << std::endl;
 
     if (shape.size()) { // array type
@@ -945,8 +989,17 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const st
       reshape(1);
       reader.Get<T>(var, p);
     }
-  } else 
-    fatal(FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND);
+  } else {
+    throw FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND;
+    // fatal(FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND);
+  }
+}
+
+template <typename T>
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+{
+  auto var = io.template InquireVariable<T>(varname);
+  read_bp(io, reader, var);
 }
 
 template <typename T>
@@ -961,6 +1014,82 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const st
   }
 }
 #endif
+
+#if FTK_HAVE_ADIOS1
+template <typename T>
+bool ndarray<T>::read_bp_legacy(ADIOS_FILE *fp, const std::string& varname)
+{
+  warn("reading bp file with legacy ADIOS1 API..");
+  ADIOS_VARINFO *avi = adios_inq_var(fp, varname.c_str());
+  if (avi == NULL)
+    throw FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND;
+
+  adios_inq_var_stat(fp, avi, 0, 0);
+  adios_inq_var_blockinfo(fp, avi);
+  adios_inq_var_meshinfo(fp, avi);
+    
+  int nt = 1;
+  uint64_t st[4] = {0, 0, 0, 0}, sz[4] = {0, 0, 0, 0};
+  std::vector<size_t> mydims;
+  
+  for (int i = 0; i < avi->ndim; i++) {
+    st[i] = 0;
+    sz[i] = avi->dims[i];
+    nt = nt * sz[i];
+    mydims.push_back(sz[i]);
+  }
+  // fprintf(stderr, "%d, %d, %d, %d\n", sz[0], sz[1], sz[2], sz[3]);
+  
+  if (!mydims.empty()) {
+    std::reverse(mydims.begin(), mydims.end());
+    reshape(mydims);
+
+    ADIOS_SELECTION *sel = adios_selection_boundingbox(avi->ndim, st, sz);
+    assert(sel->type == ADIOS_SELECTION_BOUNDINGBOX);
+
+    adios_schedule_read_byid(fp, sel, avi->varid, 0, 1, &p[0]);
+    int retval = adios_perform_reads(fp, 1);
+    
+    adios_selection_delete(sel);
+    return true; // avi->ndim;
+  } else {
+    if (avi->type == adios_integer) { // TODO: other data types
+      reshape({1});
+      p[0] = *((int*)avi->value);
+      return true;
+    }
+    else return false;
+  }
+}
+#endif
+
+template <typename T>
+ndarray<T> ndarray<T>::from_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
+{
+  ndarray<T> arr;
+  arr.read_bp_legacy(filename, varname, comm);
+  return arr;
+}
+
+template <typename T>
+bool ndarray<T>::read_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
+{
+#if FTK_HAVE_ADIOS1
+  adios_read_init_method( ADIOS_READ_METHOD_BP, comm, "" );
+  ADIOS_FILE *fp = adios_read_open_file(filename.c_str(), ADIOS_READ_METHOD_BP, comm); 
+  // adios_read_bp_reset_dimension_order(fp, 0);
+
+  bool succ = read_bp_legacy(fp, varname);
+  
+  adios_read_finalize_method (ADIOS_READ_METHOD_BP);
+  adios_read_close(fp);
+  return succ;
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS1);
+  return false;
+#endif
+}
+
 
 template <typename T>
 inline void ndarray<T>::copy_to_cuda_device()
@@ -1014,6 +1143,7 @@ ndarray<T> ndarray<T>::from_bp(const std::string& filename, const std::string& n
 {
   ndarray<T> array;
   array.read_bp(filename, name, comm);
+    
   return array;
 }
 

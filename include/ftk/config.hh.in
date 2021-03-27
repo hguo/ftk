@@ -3,6 +3,7 @@
 
 #define FTK_VERSION "${FTK_VERSION}"
 
+#cmakedefine FTK_HAVE_ADIOS1 1
 #cmakedefine FTK_HAVE_ADIOS2 1
 #cmakedefine FTK_HAVE_BOOST 1
 #cmakedefine FTK_HAVE_CGAL 1
