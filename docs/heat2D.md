@@ -4,7 +4,7 @@ This example demonstrates the use of FTK command line to track scalar critical p
 
 ## Build the simulation
 
-Checkout this 2D heat transfer simulation code from ADIOS2 examples: [](https://github.com/hguo/adiosvm/tree/master/Tutorial/heat2d/cpp).  Edit `make.settings` to set `ADIOS2_DIR` to the same ADIOS2 installation that FTK is built with.  Build the simulation code with `make`.
+Checkout [this](https://github.com/hguo/adiosvm/tree/master/Tutorial/heat2d/cpp) 2D heat transfer simulation code from ADIOS2 examples.  Edit `make.settings` to set `ADIOS2_DIR` to the same ADIOS2 installation that FTK is built with.  Build the simulation code with `make`.
 
 ## Edit the configuration
 
