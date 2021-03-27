@@ -107,3 +107,7 @@ By default, the executable uses the maximum number of hardware threads, unless `
 ##### CUDA
 
 Use `--accelerator cuda` if FTK is compiled with CUDA and an NVIDIA GPU is available. 
+
+#### In situ analysis
+
+One can use ADIOS2 to stream data to the FTK executable.  Use `--adios-config` to specify the `adios.xml` file, and use `--adios-name` to specify the ADIOS I/O name.  See [this example](heat2D.md) to track critical points in a heat 2D simulation.
