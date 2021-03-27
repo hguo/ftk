@@ -15,6 +15,9 @@ using nlohmann::json;
 template <typename T=double>
 struct ndarray_stream : public object {
   ndarray_stream(diy::mpi::communicator comm = MPI_COMM_WORLD);
+  ndarray_stream(const std::string adios2_config_filename, //  = "adios2.xml",
+      const std::string adios2_io_name, //  = "SimulationOutput",
+      diy::mpi::communicator comm); //  = MPI_COMM_WORLD);
   ~ndarray_stream();
 
   void configure(const json& j) {set_input_source_json(j);}
@@ -108,6 +111,9 @@ protected: // adios2
   adios2::Engine adios_reader;
   std::vector<adios2::Variable<T>> adios_vars;
   int current_file_id = 0;
+
+  std::string adios2_config_filename, 
+              adios2_io_name = "BPReader";
 #endif
 
 private:
@@ -125,7 +131,24 @@ ndarray_stream<T>::ndarray_stream(diy::mpi::communicator comm)
 #endif
 {
 #if FTK_HAVE_ADIOS2
-  adios_io = adios.DeclareIO("BPReader");
+  adios_io = adios.DeclareIO(adios2_io_name);
+#endif
+}
+
+template <typename T>
+ndarray_stream<T>::ndarray_stream(
+    const std::string adios2_config_filename, 
+    const std::string adios2_io_name,
+    diy::mpi::communicator comm)
+#if FTK_HAVE_ADIOS2
+  : adios(adios2_config_filename, comm, adios2::DebugON)
+#endif
+{
+  fprintf(stderr, "creating stream...\n");
+#if FTK_HAVE_ADIOS2
+  this->adios2_config_filename = adios2_config_filename;
+  this->adios2_io_name = adios2_io_name;
+  adios_io = adios.DeclareIO(adios2_io_name);
 #endif
 }
 
@@ -150,7 +173,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 {
   j = j_;
   // std::cerr << j << std::endl;
-  
+ 
+  j["adios2_config"] = adios2_config_filename;
+  j["adios2_name"] = adios2_io_name;
+
   if (!j.contains("type") && j.contains("format"))
     j["type"] = "file";
 
@@ -386,7 +412,15 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           // j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else {
           auto filenames = glob(j["filenames"]);
-          if (filenames.empty()) fatal("unable to find matching filename(s).");
+          if (filenames.empty()) {
+            if (ends_with(j["filenames"], "bp")) {
+              // OK, input are adios streams
+              filenames.push_back( j["filenames"] ); // one single "filename"
+              j["format"] = "bp4"; // the input format must be adios2/bp4
+            } else {
+              fatal("unable to find matching filename(s).");
+            }
+          } 
           // if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
           // else j["n_timesteps"] = filenames.size();
           j["filenames"] = filenames;
@@ -589,12 +623,24 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           // adios2::IO io = adios.DeclareIO("BPReader");
           // adios2::Engine reader = io.Open(filename0, adios2::Mode::Read);
           adios_reader = adios_io.Open(filename0, adios2::Mode::Read);
+          while (1) {
+            auto status = adios_reader.BeginStep( adios2::StepMode::Read, 10.f );
+            if (status == adios2::StepStatus::NotReady) {
+              usleep(100000);
+              continue;
+            } else if (status == adios2::StepStatus::OK) {
+              break;
+            } else fatal("adios2 error");
+          }
 
           for (int i = 0; i < j["variables"].size(); i ++) {
             const std::string varname = j["variables"][i];
-            auto var = adios_io.template InquireVariable<T>(varname);
-            if (!var) fatal("variable not found in bp4");
-            else adios_vars.push_back( var );
+            adios2::Variable<T> var = adios_io.template InquireVariable<T>(varname);
+            if (!var) {
+              fatal("variable not found in bp4");
+            } else {
+              adios_vars.push_back( var );
+            }
           }
 
           std::vector<size_t> dims(adios_vars[0].Shape());
@@ -603,21 +649,23 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             warn("ignoring bp4 dimensions");
           j["dimensions"] = dims;
 
-          const size_t nsteps0 = adios_vars[0].Steps();
+          // const size_t nsteps0 = adios_vars[0].Steps();
+          // fprintf(stderr, "nsteps0=%zu\n", nsteps0);
           // reader.Close();
+
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number()) {
+            // number of timesteps explicitly specified
+            // j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+          } else {
+            // if (nsteps0 > 1) j["n_timesteps"] = std::numeric_limits<size_t>::max(); // unlimited
+            // else j["n_timesteps"] = j["filenames"].size();
+            j["n_timesteps"] = std::numeric_limits<size_t>::max();
+          }
 
           // components
           const size_t nv = j["variables"].size();
           const std::vector<int> components(nv, 1);
           j["components"] = components;
-         
-          if (j.contains("n_timesteps") && j["n_timesteps"].is_number()) {
-            // number of timesteps explicitly specified
-            // j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
-          } else {
-            if (nsteps0 > 1) j["n_timesteps"] = std::numeric_limits<size_t>::max(); // unlimited
-            else j["n_timesteps"] = j["filenames"].size();
-          }
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
 #endif
@@ -925,12 +973,12 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_bp4(int k)
   ftk::ndarray<T> array;
 #if FTK_HAVE_ADIOS2
   fprintf(stderr, "requesting bp4 timestep %d\n", k);
-  while (1) {
+  while (k != 0) { // the first step was already beginned with configuration
     auto status = adios_reader.BeginStep( adios2::StepMode::Read, 10.f );
     // std::cerr << "status=" << status << std::endl;
     // fprintf(stderr, "status=%d\n", status);
     if (status == adios2::StepStatus::NotReady) {
-      usleep(100000000);
+      usleep(100000);
       continue;
     } else if (status == adios2::StepStatus::OK) {
       break;
@@ -954,13 +1002,16 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_bp4(int k)
   const int nc = n_components();
   if (nc == 1) { // all data in one single-component variable; channels are automatically handled in ndarray
     // array.read_bp(filename, j["variables"][0], comm);
-    array.read_bp(adios_io, adios_reader, adios_vars[0]);
+    auto var = adios_io.template InquireVariable<T>(j["variables"][0]);
+    array.read_bp(adios_io, adios_reader, var); // adios_vars[0]);
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
-    for (int i = 0; i < nv; i ++)
+    for (int i = 0; i < nv; i ++) {
       // arrays[i].read_bp(filename, j["variables"][i], comm);
-      array.read_bp(adios_io, adios_reader, adios_vars[i]);
+      auto var = adios_io.template InquireVariable<T>(j["variables"][0]);
+      array.read_bp(adios_io, adios_reader, var); // adios_vars[i]);
+    }
 
     array = ndarray<T>::concat(arrays);
     array.set_multicomponents();

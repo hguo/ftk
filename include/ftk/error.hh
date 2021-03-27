@@ -125,14 +125,14 @@ inline void warn(int err, std::string str = "")
 }
 
 inline void fatal(const std::string& str) {
-  std::cerr << "[FTK FATAL]" << str << std::endl;
+  std::cerr << "[FTK FATAL] " << str << std::endl;
   
   print_backtrace();
   exit(1);
 }
 
 inline void warn(const std::string& str) {
-  std::cerr << "WARN: " << str << std::endl;
+  std::cerr << "[FTK WARN] " << str << std::endl;
 }
 
 }

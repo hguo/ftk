@@ -23,7 +23,7 @@
 #include "ftk/ndarray/conv.hh"
 
 using namespace ftk;
-
+  
 // global variables
 std::string feature;
 int ttype = 0; // feature type in integer
@@ -51,6 +51,10 @@ std::vector<std::string> input_filenames;
 
 // contour/levelset specific
 double threshold = 0.0;
+
+// adios2 specific
+std::string adios_config_file;
+std::string adios_name = "BPReader";
 
 // xgc specific
 std::string xgc_data_path, 
@@ -206,7 +210,7 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 
 static void execute_critical_point_tracker(diy::mpi::communicator comm)
 {
-  wrapper->consume(*stream);
+  wrapper->consume(*stream, comm);
  
   if (!disable_post_processing)
      wrapper->post_process();
@@ -699,6 +703,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("d,depth", "Depth (valid only for 3D regular grid data)", cxxopts::value<size_t>())
     ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>(ntimesteps))
     ("var", "Variable name(s), e.g. `scalar', `u,v,w'.  Valid only for NetCDF, HDF5, and VTK.", cxxopts::value<std::string>())
+    ("adios-config", "ADIOS2 config file", cxxopts::value<std::string>(adios_config_file))
+    ("adios-name", "ADIOS2 I/O name", cxxopts::value<std::string>(adios_name))
     ("temporal-smoothing-kernel", "Temporal smoothing kernel bandwidth", cxxopts::value<double>())
     ("temporal-smoothing-kernel-size", "Temporal smoothing kernel size", cxxopts::value<size_t>())
     ("spatial-smoothing-kernel", "Spatial smoothing kernel bandwidth", cxxopts::value<double>())
@@ -769,6 +775,13 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 
   if (output_pattern.empty())
     fatal(options, "Missing '--output'.");
+
+  // adios2
+  if (results.count("adios-config")) { // use adios2 config file
+    stream.reset(new ndarray_stream<>(adios_config_file, adios_name, comm));
+  } else { // no adios2
+    stream.reset(new ndarray_stream<>(comm));
+  }
   
   ttype = tracker::str2tracker(feature);
   if (ttype != TRACKER_TDGL_VORTEX) { // TDGL uses a different reader for now
@@ -800,9 +813,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 int main(int argc, char **argv)
 {
   diy::mpi::environment env(argc, argv);
-  diy::mpi::communicator comm;
-  
-  stream.reset(new ndarray_stream<>);
+  diy::mpi::communicator wcomm; // world
+  diy::mpi::communicator comm = wcomm.split(wcomm, 20 /* a magic number as color */);
  
   parse_arguments(argc, argv, comm);
 
