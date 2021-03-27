@@ -111,10 +111,9 @@ protected: // adios2
   adios2::Engine adios_reader;
   std::vector<adios2::Variable<T>> adios_vars;
   int current_file_id = 0;
-
+#endif
   std::string adios2_config_filename, 
               adios2_io_name = "BPReader";
-#endif
 
 private:
   static bool ends_with(std::string const & value, std::string const & ending)
