@@ -13,7 +13,7 @@ Edit the `adios2.xml` and change the `Engine` of `SimulationOutput` to `InSituMP
 ## Execute the simulation and FTK executable
 
 ```bash
-$ mpiexec -n 12 ./heatSimulation sim.bp 4 3 5 10 200 1 : -n 2 ~/workspace/projects/ftk/build4/bin/ftk --adios-config adios2.xml --adios-name SimulationOutput -f cp --input sim.bp --var T --output-type traced --output heat.vtp --stream
+$ mpiexec -n 12 ./heatSimulation sim.bp 4 3 5 10 200 1 : -n 2 /path/to/ftk --adios-config adios2.xml --adios-name SimulationOutput -f cp --input sim.bp --var T --output-type traced --output heat.vtp --stream
 ```
 
 This command invokes the simulation and FTK with 12 and 2 processes, respectively.  The data resolution is 20 by 30.  Trajectories of critical points are written into the `heat.vtp` file at the exit.
