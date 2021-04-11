@@ -80,7 +80,14 @@ struct feature_point_t {
     os << "id=" << id;  // << std::endl;
     return os;
   }
- 
+
+  friend double dist(const feature_point_t& a, const feature_point_t& b) {
+    return std::exp2(a.x[0] - b.x[0]) 
+      + std::exp2(a.x[1] - b.x[1])
+      + std::exp2(a.x[2] - b.x[2])
+      + std::exp2(a.t - b.t);
+  }
+
 public:
   std::array<double, 3> x = {0}; // double x[3] = {0}; // coordinates 
   double t = 0.0; // time
