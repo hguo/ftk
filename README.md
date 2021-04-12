@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/hguo/ftk.svg?branch=master)](https://travis-ci.org/hguo/ftk)
 
-FTK is a library that scales, simplifies, and delivers feature tracking algorithms for scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or command line interface.   See [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) for more details on our feature tracking algorithms.
+FTK is a library that scales, simplifies, and delivers feature tracking algorithms for scientific datasets.  You may use FTK as ParaView plugins, Python bindings, or a command-line interface.   See [arXiv:2011.08697](https://arxiv.org/abs/2011.08697) for more details on our feature tracking algorithms.
 
 See [documentation](docs/README.md) for more details.
 
