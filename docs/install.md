@@ -2,7 +2,7 @@
 
 ## Spack install
 
-One can install FTK through [spack](https://spack.io/):  
+One can install FTK through [spack](https://spack.io/) (we recommend to use the latest version of spack on the develop branch):  
 
 ```bash
 $ spack install ftk
@@ -70,7 +70,17 @@ $ CC=mpicc CXX=mpicxx cmake -DFTK_USE_MPI=ON
 
 ### Building ParaView plugins
 
-FTK provides ParaView plugins to allow users track critical points (maxima, minima, and saddles) in scalar field data.  In order to build the plugins, we recommend to build and use 
+FTK provides ParaView plugins to allow users track critical points (maxima, minima, and saddles) in scalar field data.  In order to build the plugins, one needs to build ParaView from source, for example: 
+
+```bash
+$ tar zxf ParaView-v5.8.0.tar.gz
+$ cd ParaView-v5.8.0
+$ mkdir build && cd build
+$ cmake ..   # You may need to specify paths to Qt and other dependencies needed by ParaView
+$ make
+```
+
+Assuming `$YOUR_ParaView_Build` is the above build directory, one can further build ParaView plugins as follows
 
 ```bash
 $ git clone https://github.com/hguo/ftk $FTK_SOURCE_DIR
@@ -79,7 +89,7 @@ $ cmake .. -DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=$YOUR_ParaView_Build
 $ make
 ```
 
-If built successfully, you will see the plugins binary as `lib/paraview-5.8/plugins/FTK/FTK.so`.  Open the "Plugin Manager" in ParaView, and load this binary with "Load New..." button, and then select and load FTK in the list.  To check if ParaView plugins are correctly built by reproducing the results in the above figure, use "Sources-->FTK-->SpiralWoven2DSource", "Filters-->FTK-->CriticalPointTracker2D",followed by the "Tube" filter in ParaView.
+If built successfully, you will see the plugins binary as `lib/paraview-5.8/plugins/FTK/FTK.so`.  Open the "Plugin Manager" in ParaView GUI, and load this binary with "Load New..." button, and then select and load FTK in the list.  To check if ParaView plugins are correctly built by reproducing the results in the above figure, use "Sources-->FTK-->SpiralWoven2DSource", "Filters-->FTK-->CriticalPointTracker2D",followed by the "Tube" filter in ParaView.
 
 ### Building PyFTK
 
@@ -91,7 +101,7 @@ $ git submodule update --init --recursive
 
 If you downloaded a release from tarball archives on GitHub, be sure to manually download `pybind11` to the designated directory before building.  
 
-You may build PyFTK with `setuptools` or CMake.  Notice that CMake is required to build PyFTK.  Advanced build options is currently not possible to configure with `setuptools`.  
+You may build PyFTK with `setuptools` or CMake.  Notice that CMake is required to build PyFTK.  We do not recommend to use Python 2.  Advanced build options is currently not possible to configure with `setuptools`.  
 
 Build PyFTK with `setuptools`:
 
