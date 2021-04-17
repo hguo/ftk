@@ -416,7 +416,7 @@ inline void feature_surface_t::discard(std::function<bool(const feature_point_t&
   std::vector<std::set<int>> children(pts.size());
 
   // build node-edge-node links
-  std::vector<std::set<int>> neighbors;
+  std::vector<std::set<int>> neighbors(pts.size());
   for (int i = 0; i < tris.size(); i ++) {
     const auto tri = tris[i];
 
@@ -496,6 +496,9 @@ inline void feature_surface_t::discard(std::function<bool(const feature_point_t&
       newtris.push_back( {ptsmap[tri[0]], ptsmap[tri[1]], ptsmap[tri[2]]} );
     }
   }
+
+  pts = newpts;
+  tris = newtris;
 }
 
 }

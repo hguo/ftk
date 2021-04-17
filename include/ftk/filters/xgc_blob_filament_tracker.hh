@@ -779,6 +779,18 @@ inline void xgc_blob_filament_tracker::read_surfaces(const std::string& filename
 
   surfaces.load(filename, format);
   fprintf(stderr, "readed surfaces #pts=%zu, #tris=%zu\n", surfaces.pts.size(), surfaces.tris.size());
+
+#if 1
+  // simplify
+  fprintf(stderr, "simplifying critical surfaces...");
+  surfaces.discard([&](const feature_point_t& p) {
+    if (p.type != CRITICAL_POINT_2D_MAXIMUM) return true;
+    // if (!p.ordinal) return true;
+    return false;
+  });
+  fprintf(stderr, "after simplification: #pts=%zu, #tri=%zu\n",
+      surfaces.pts.size(), surfaces.tris.size());
+#endif
 }
 
 inline void xgc_blob_filament_tracker::post_analysis_curves(feature_curve_set_t& curves) const
