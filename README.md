@@ -12,6 +12,8 @@ See [documentation](docs/README.md) for more details.
 
 To install FTK, use `spack install ftk`, `pip install pyftk`, or build from source; see [this page](docs/install.md) for more details on dependencies, compilation, and installation.  
 
+For Windows users only: this code has been developed and tested using MacOS and Linux environments; we have not tried porting functionalities to Windows.  Windows users may use a Linux virtual machine to compile and use FTK; the use of WSL2 has not been tested yet.  Stay tuned.
+
 ## FTK command line interface
 
 FTK provides one single executable `ftk`.  See [this page](docs/cli.md) for mor details on the usage of FTK command line interface.
