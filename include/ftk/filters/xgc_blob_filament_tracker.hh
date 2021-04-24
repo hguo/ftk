@@ -695,6 +695,89 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
   surfaces.relabel();
   fprintf(stderr, "#pts=%zu, #tri=%zu\n",
       surfaces.pts.size(), surfaces.tris.size());
+
+  // post_process_surfaces();
+}
+
+inline void xgc_blob_filament_tracker::post_process_surfaces()
+{
+  // an alternative way to calculate radial velocities:
+  // for each ordinal+poloidal point, find all ordinal+poloidal point in 
+  // the next timestep at the same poloidal plane (and with the same type), 
+  // and then find the nearest.
+  // for now, maybe find one with bfs is ok.
+  
+  fprintf(stderr, "post processing critical surfaces...\n");
+
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3 = 
+    use_roi ? this->mr3 : this->m3;
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
+  
+  std::vector<std::set<int>> neighbors(surfaces.pts.size());
+  for (int i = 0; i < surfaces.tris.size(); i ++) {
+    const auto tri = surfaces.tris[i];
+
+    for (int j = 0; j < 3; j ++)
+      for (int k = 0; k < 3; k ++)
+        if (j != k)
+          neighbors[tri[j]].insert(tri[k]);
+  }
+
+  parallel_for(surfaces.pts.size(), [=](int i) {
+  // for (int i = 0; i < surfaces.pts.size(); i ++) {
+    // compute only for poloidal+ordinal elements
+    auto &p = surfaces.pts[i];
+    const int tp = p.timestep;
+    const int pp = m3->get_poloidal(2, p.tag % m4->n(2));
+
+    if (m3->is_poloidal(2, p.tag % m4->n(2)) && p.ordinal) {
+      // fprintf(stderr, "investigating %d\n", i);
+      std::set<int> visited;
+      std::queue<int> Q;
+      Q.push(i);
+      visited.insert(i);
+
+      while (!Q.empty()) {
+        int current = Q.front();
+        Q.pop();
+
+        const auto &q = surfaces.pts[current];
+        if (current != i &&
+            q.ordinal && 
+            q.timestep == tp + 1 && 
+            // q.type == p.type &&
+            m3->is_poloidal(2, q.tag % m4->n(2)) && 
+            m3->get_poloidal(2, q.tag % m4->n(2)) == pp)
+        {
+          p.v[0] = q.scalar[1] - p.scalar[1]; // dpsin
+          p.v[1] = q.scalar[2] - p.scalar[2]; // dtheta
+          // p.v[0] = q.x[0] - p.x[0];
+          // p.v[1] = q.x[1] - p.x[1];
+#if 1
+          fprintf(stderr, "gotcha: i=%d, j=%d, xi=%f, %f, %f, %f, xj=%f, %f, %f, %f, v=%f, %f\n", 
+              i, current,
+              p.x[0], p.x[1], p.x[2], p.t, 
+              q.x[0], q.x[1], q.x[2], q.t, 
+              p.v[0], p.v[1]);
+#endif
+          break;
+        }
+
+        for (auto j : neighbors[current]) {
+          if (visited.find(j) == visited.end()
+              && surfaces.pts[j].timestep >= tp
+              && surfaces.pts[j].timestep <= tp + 1)
+          {
+            visited.insert(j);
+            Q.push(j);
+          }
+        }
+      }
+    }
+  });
+
+
 }
 
 #if 0 // legacy code, to be removed later
@@ -780,7 +863,7 @@ inline void xgc_blob_filament_tracker::read_surfaces(const std::string& filename
   surfaces.load(filename, format);
   fprintf(stderr, "readed surfaces #pts=%zu, #tris=%zu\n", surfaces.pts.size(), surfaces.tris.size());
 
-#if 1
+#if 0
   // simplify
   fprintf(stderr, "simplifying critical surfaces...");
   surfaces.discard([&](const feature_point_t& p) {

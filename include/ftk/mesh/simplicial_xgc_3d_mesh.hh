@@ -39,6 +39,8 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
     } else return false;
   }
 
+  int get_poloidal(int d, I i) const { return i / m3->n(d); }
+
   std::set<I> get_vertex_edge_vertex(I i) const;
   std::set<I> get_vertex_edge_vertex_nextnodes(I i) const;
 
@@ -48,7 +50,7 @@ public:
 public:
   virtual void get_simplex(int d, I i, I verts[]) const;
   virtual bool find_simplex(int d, const I v[], I& i) const;
-  
+
   void get_coords_rzp(I i, F coords[]) const { return m3->get_coords(i, coords); }
   void get_coords_xyz(I i, F coords[]) const;
   void get_coords(I i, F coords[]) const { get_coords_xyz(i, coords); }
