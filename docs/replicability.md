@@ -1,6 +1,6 @@
 ## Replicability with CLI
 
-This document serves as a guideline to reproduce the result in Figure 14 of this (preprint)[https://arxiv.org/abs/2011.08697] with FTK's CLI:
+This document serves as a guideline to reproduce the result in Figure 14 of this [preprint](https://arxiv.org/abs/2011.08697) with FTK's CLI:
 
 ```bash
 $ ftk --feature critical_point --synthetic merger_2d --output merger_2d.vtp
