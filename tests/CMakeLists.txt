@@ -29,6 +29,9 @@ add_executable (test_regular_simplex_mesh test_regular_simplex_mesh.cpp)
 target_link_libraries (test_regular_simplex_mesh libftk)
 # catch_discover_tests (test_regular_simplex_mesh)
 
+add_executable (test_array_group_stream test_array_group_stream.cpp)
+target_link_libraries (test_array_group_stream libftk)
+
 add_executable (test_array_stream test_array_stream.cpp)
 target_link_libraries (test_array_stream libftk)
 
