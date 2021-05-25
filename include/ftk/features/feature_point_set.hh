@@ -2,10 +2,15 @@
 #define _FTK_FEATURE_POINT_SET_HH
 
 #include <ftk/features/feature_point_set.hh>
+#include <list>
+
+#if FTK_HAVE_VTK
+#include <vtkPolyData.h>
+#endif
 
 namespace ftk {
 
-struct feature_point_set_t : public std::set<feature_point_t>
+struct feature_point_set_t : public std::list<feature_point_t>
 {
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> to_vtp(
@@ -15,7 +20,7 @@ struct feature_point_set_t : public std::set<feature_point_t>
 };
 
 #if FTK_HAVE_VTK
-vtkSmartPointer<vtkPolyData> feature_point_set::to_vtp(
+vtkSmartPointer<vtkPolyData> feature_point_set_t::to_vtp(
     int fpdims, 
     const std::vector<std::string>& scalar_components) const
 {
@@ -24,26 +29,25 @@ vtkSmartPointer<vtkPolyData> feature_point_set::to_vtp(
   vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
  
   vtkIdType pid[1];
-  for (const auto &cp : get_intersections()) {
+  for (const auto &cp : *this) {
     double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; 
     if (fpdims == 2) p[2] = cp.t;
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
   }
 
-  polyData->SetPoints(points);
-  polyData->SetVerts(vertices);
+  poly->SetPoints(points);
+  poly->SetVerts(vertices);
   
   vtkSmartPointer<vtkDoubleArray> time_array = vtkSmartPointer<vtkDoubleArray>::New();
-  time_array->SetNumberOfValues(get_intersections().size());
+  time_array->SetNumberOfValues(size());
   int i = 0;
-  for (const auto &cp : get_intersections())
+  for (const auto &cp : *this)
     time_array->SetValue(i++, cp.t);
   time_array->SetName("time");
-  polyData->GetPointData()->AddArray(time_array);
+  poly->GetPointData()->AddArray(time_array);
 
-  return polyData;
-
+  return poly;
 }
 #endif
 
