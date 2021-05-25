@@ -231,6 +231,7 @@ public: // i/o for vtk image data
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
+  void from_vtk_data_array(vtkSmartPointer<vtkDataArray> d);
   vtkSmartPointer<vtkImageData> to_vtk_image_data(std::string varname=std::string()) const; 
   vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
 #endif
@@ -519,6 +520,27 @@ template<> inline int ndarray<long>::vtk_data_type() {return VTK_LONG;}
 template<> inline int ndarray<unsigned long>::vtk_data_type() {return VTK_UNSIGNED_LONG;}
 template<> inline int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
 template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
+
+template<typename T>
+inline void ndarray<T>::from_vtk_data_array(
+    vtkSmartPointer<vtkDataArray> da)
+{
+  const int nc = da->GetNumberOfComponents(), 
+            ne = da->GetNumberOfTuples();
+  if (nc > 1) {
+    reshape(nc, ne);
+    set_multicomponents(1);
+  } else {
+    reshape(ne);
+    set_multicomponents(0);
+  }
+
+  for (auto i = 0; i < ne; i ++) {
+    double *tuple = da->GetTuple(i);
+    for (auto j = 0; j < nc; j ++)
+      p[i*nc+j] = tuple[j];
+  }
+}
 
 template<typename T>
 inline void ndarray<T>::from_vtk_image_data(
