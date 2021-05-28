@@ -80,6 +80,7 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   void scalar_gradient_jacobian(const ndarray<F>& f, ndarray<F>& g, ndarray<F>& j) const;
 
 public: // io
+  void from_vtu(const std::string filename);
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
   void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid);
@@ -603,6 +604,20 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i) const
 #endif
   } else 
     return std::set<I>();
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::from_vtu(const std::string filename)
+{
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+  vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+  from_vtu(grid);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
 }
 
 #if FTK_HAVE_VTK
