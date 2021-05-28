@@ -94,8 +94,9 @@ inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group>
   m30->smooth_scalar_gradient_jacobian(density, s.scalar, s.vector, s.jacobian);
   
   if (g->has("Er")) {
-    auto Er = g->get<double>("Er").get_transpose();
-    s.Er = m30->smooth_scalar(Er);
+    // auto Er = 
+    // s.Er = m30->smooth_scalar(Er);
+    s.Er = g->get<double>("Er").get_transpose();
   }
   
   field_data_snapshots.emplace_back(s);
