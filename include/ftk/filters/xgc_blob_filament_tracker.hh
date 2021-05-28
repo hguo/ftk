@@ -65,7 +65,8 @@ protected:
       T psin[n], // normalized psi
       T f[n], // scalars
       T v[n][2], // vectors
-      T j[n][2][2]); // jacobians
+      T j[n][2][2], // jacobians
+      T er[n]); 
 
   std::set<int> get_related_penta_cells(size_t tri) const;
   void add_lite_feature_points(const std::vector<feature_point_lite_t>& pts, bool ordinal);
@@ -367,11 +368,11 @@ inline void xgc_blob_filament_tracker::update_timestep()
 inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3], t[3], p[3];
-  double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2];
+  double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2], er[3];
   __int128 vf[3][2];
   const long long factor = 1 << 15; // WIP
  
-  simplex_values<3, double>(i, tri, t, p, rzpt, psin, f, v, j);
+  simplex_values<3, double>(i, tri, t, p, rzpt, psin, f, v, j, er);
 
   // print3x2("rz", rz);
   // print3x2("v", v);
@@ -399,9 +400,10 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
   cp.scalar[0] = lerp_s2(f, mu); // dneOverne0
   cp.scalar[1] = lerp_s2(psin, mu); // psin
-  cp.scalar[2] = m2->theta(cp.x[0], cp.x[1]); // theta
-  /// scalar[2] will be the offset to the magnetic lines
-
+  cp.scalar[2] = m2->theta(cp.x[0], cp.x[1]); // theta /// scalar[2] will be the offset to the magnetic lines in post analysis
+  cp.scalar[4] = lerp_s2(er, mu);
+  // fprintf(stderr, "er=%f, %f, %f\n", er[0], er[1], er[2]);
+  
   double h[2][2];
   ftk::lerp_s2m2x2(j, mu, h);
   h[1][0] = h[0][1] = 0.5 * (h[1][0] + h[0][1]);
@@ -539,7 +541,8 @@ void xgc_blob_filament_tracker::simplex_values(
     T psin[n], // normalized psi
     T f[n],
     T v[n][2],
-    T j[n][2][2])
+    T j[n][2][2], 
+    T er[n])
 {
   const int m2n0 = m2->n(0), m3n0 = m3->n(0);
   const int nphi = m3->get_nphi(), 
@@ -595,6 +598,8 @@ void xgc_blob_filament_tracker::simplex_values(
 
     // m3->interpolate_central_difference(data.scalar, data.vector, data.jacobian, v3, &f[k], v[k], j[k]);
     m3->interpolate(data.scalar, data.vector, data.jacobian, v3, &f[k], v[k], j[k]);
+    if (!data.Er.empty())
+      er[k] = m3->interpolate(data.Er, v3);
   }
 
 #if 1
@@ -663,7 +668,7 @@ inline void xgc_blob_filament_tracker::build_critical_line()
 
 #if FTK_HAVE_VTK
   auto poly = curves.to_vtp(3, {
-      "dneOverne0", "psin", "theta", "offset"});
+      "dneOverne0", "psin", "theta", "offset", "Er"});
   const auto filename = series_filename(ordinal_output_pattern, current_timestep);
   write_polydata(filename, transform_vtp_coordinates(poly));
 #endif
@@ -1058,7 +1063,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
 
     // auto poly = sliced.to_vtp(3, std::vector<std::string>());
     auto poly = sliced.to_vtp(3, {
-        "dneOverne0", "psin", "theta", "offset"});
+        "dneOverne0", "psin", "theta", "offset", "Er"});
     
     const auto filename = series_filename(pattern, i);
     write_polydata(filename, transform_vtp_coordinates(poly));
