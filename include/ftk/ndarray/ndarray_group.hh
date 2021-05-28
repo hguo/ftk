@@ -12,7 +12,6 @@ struct ndarray_group : public std::unordered_map<std::string, std::shared_ptr<nd
   bool has(const std::string key) const { return this->find(key) != this->end(); }
 
   void set(const std::string key, std::shared_ptr<ndarray_base> ptr) { this->emplace(key, ptr); }
-  void set(const std::string key, ndarray_base base);
   template <typename T> void set(const std::string key, ndarray<T> arr);
 
   template <typename T> std::shared_ptr<ndarray<T>> get_ptr(const std::string key) { return std::dynamic_pointer_cast<ndarray<T>>(at(key)); }
