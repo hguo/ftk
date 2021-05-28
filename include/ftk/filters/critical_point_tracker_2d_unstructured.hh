@@ -55,9 +55,6 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker, p
 
   void update_timestep();
 
-  void push_scalar_field_snapshot(const ndarray<double>&) {} // TODO
-  void push_vector_field_snapshot(const ndarray<double>&) {} // TODO
-
 public:
   std::vector<feature_point_t> get_critical_points() const;
   void put_critical_points(const std::vector<feature_point_t>&);

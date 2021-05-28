@@ -227,6 +227,7 @@ public: // i/o for vtk image data
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
+  void from_vtk_array(vtkSmartPointer<vtkAbstractArray> d);
   void from_vtk_data_array(vtkSmartPointer<vtkDataArray> d);
   vtkSmartPointer<vtkImageData> to_vtk_image_data(std::string varname=std::string()) const; 
   vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
@@ -513,6 +514,13 @@ template<> inline int ndarray<long>::vtk_data_type() {return VTK_LONG;}
 template<> inline int ndarray<unsigned long>::vtk_data_type() {return VTK_UNSIGNED_LONG;}
 template<> inline int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
 template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
+
+template <typename T>
+inline void ndarray<T>::from_vtk_array(vtkSmartPointer<vtkAbstractArray> d)
+{
+  vtkSmartPointer<vtkDataArray> da = vtkDataArray::SafeDownCast(d);
+  from_vtk_data_array(da);
+}
 
 template<typename T>
 inline void ndarray<T>::from_vtk_data_array(
