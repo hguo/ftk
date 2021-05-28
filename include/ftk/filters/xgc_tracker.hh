@@ -13,6 +13,7 @@
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3dff_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <iomanip>
 
 namespace ftk {

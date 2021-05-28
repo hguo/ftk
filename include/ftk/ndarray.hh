@@ -24,10 +24,6 @@
 #include <mpi.h>
 #endif
 
-#if FTK_HAVE_HDF5
-#include <hdf5.h>
-#endif
-
 #if FTK_HAVE_NETCDF
 #include <netcdf.h>
 #define NC_SAFE_CALL(call) {\
@@ -238,11 +234,8 @@ public: // i/o for vtk image data
 
 public: // i/o for hdf5
   static ndarray<T> from_h5(const std::string& filename, const std::string& name);
-  bool read_h5(const std::string& filename, const std::string& name); 
 #if FTK_HAVE_HDF5
-  bool read_h5(hid_t fid, const std::string& name);
-  bool read_h5(hid_t did);
-
+  bool read_h5_did(hid_t did);
   static hid_t h5_mem_type_id();
 #endif
 
@@ -1177,36 +1170,9 @@ ndarray<T> ndarray<T>::from_h5(const std::string& filename, const std::string& n
   return array;
 }
 
-template <typename T>
-inline bool ndarray<T>::read_h5(const std::string& filename, const std::string& name)
-{
-#if FTK_HAVE_HDF5
-  auto fid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  if (fid < 0) return false; else {
-    bool succ = read_h5(fid, name);
-    H5Fclose(fid);
-    return succ;
-  }
-#else 
-  fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
-  return false;
-#endif
-}
-
 #if FTK_HAVE_HDF5
 template <typename T>
-inline bool ndarray<T>::read_h5(hid_t fid, const std::string& name)
-{
-  auto did = H5Dopen2(fid, name.c_str(), H5P_DEFAULT);
-  if (did < 0) return false; else {
-    bool succ = read_h5(did);
-    H5Dclose(did);
-    return succ;
-  }
-}
-
-template <typename T>
-inline bool ndarray<T>::read_h5(hid_t did)
+inline bool ndarray<T>::read_h5_did(hid_t did)
 {
   auto sid = H5Dget_space(did); // space id
   auto type = H5Sget_simple_extent_type(sid);
@@ -1235,6 +1201,7 @@ inline bool ndarray<T>::read_h5(hid_t did)
 template <> inline hid_t ndarray<double>::h5_mem_type_id() { return H5T_NATIVE_DOUBLE; }
 template <> inline hid_t ndarray<float>::h5_mem_type_id() { return H5T_NATIVE_FLOAT; }
 template <> inline hid_t ndarray<int>::h5_mem_type_id() { return H5T_NATIVE_INT; }
+template <> inline hid_t ndarray<unsigned long>::h5_mem_type_id() { return H5T_NATIVE_ULONG; }
 #endif
 
 template <typename T>

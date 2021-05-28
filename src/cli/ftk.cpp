@@ -19,6 +19,7 @@
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/io/util.hh"
+#include "ftk/io/xgc_stream.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
 
@@ -46,7 +47,7 @@ bool enable_streaming_trajectories = false,
 int intercept_length = 2;
 double duration_pruning_threshold = 0.0;
 
-size_t ntimesteps = 0;
+size_t ntimesteps = 0, start_timestep = 0;
 std::vector<std::string> input_filenames;
 
 // contour/levelset specific
@@ -57,6 +58,7 @@ std::string adios_config_file;
 std::string adios_name = "BPReader";
 
 // xgc specific
+std::shared_ptr<xgc_stream> xgc_data_stream;
 std::string xgc_data_path, 
   xgc_mesh_filename, 
   xgc_ff_mesh_filename,
@@ -90,9 +92,11 @@ std::shared_ptr<ndarray_stream<>> stream;
 nlohmann::json j_input, j_tracker;
 
 // xgc-specific
+#if 0
 std::shared_ptr<simplicial_xgc_2d_mesh<>> mx2; // 2d mesh
 std::shared_ptr<simplicial_xgc_3d_mesh<>> mx3, // 3d mesh, 
                                           mx30; // 3d mesh for write-backs
+#endif
 
 // input stream
 static const std::string 
@@ -293,6 +297,18 @@ void execute_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_xgc(diy::mpi::communicator comm)
 {
+  xgc_data_stream = xgc_stream::new_xgc_stream( xgc_data_path, comm );
+  if (start_timestep == 0) start_timestep = 1;
+
+  xgc_data_stream->set_start_timestep(start_timestep);
+  xgc_data_stream->set_ntimesteps(ntimesteps);
+  xgc_data_stream->set_smoothing_kernel_size( xgc_smoothing_kernel_size );
+  xgc_data_stream->set_smoothing_kernel_filename( xgc_smoothing_kernel_filename );
+  xgc_data_stream->set_vphi(xgc_vphi);
+  xgc_data_stream->set_interpolant_filename( xgc_interpolant_filename );
+  xgc_data_stream->initialize();
+
+#if 0
   const auto js = stream->get_json();
   ntimesteps = js["n_timesteps"];
 
@@ -386,14 +402,15 @@ void initialize_xgc(diy::mpi::communicator comm)
     }
   } else 
     mx3->initialize_interpolants();
+#endif
 }
 
 void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 {
   initialize_xgc(comm);
-  
+
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
-  tracker.reset(new xgc_blob_filament_tracker(comm, mx3));
+  tracker.reset(new xgc_blob_filament_tracker(comm, xgc_data_stream->get_mx3()));
   tracker->set_device_ids(device_ids);
   tracker->set_device_buffer_size( device_buffer_size );
   tracker->set_use_roi(xgc_use_roi);
@@ -414,7 +431,8 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
     tracker->read_surfaces(archived_traced_filename);
   } else {
     if (archived_intersections_filename.empty() || file_not_exists(archived_intersections_filename)) {
-      stream->set_callback([&](int k, const ndarray<double> &data) {
+      xgc_data_stream->set_callback([&](int k, std::shared_ptr<ndarray_group> g) { // const ndarray<double> &data) {
+        auto data = g->get<double>("density");
         auto scalar = data.get_transpose();
 #if 0 // FTK_HAVE_VTK
         if (xgc_write_back_filename.length()) {
@@ -428,7 +446,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
    
         tracker->push_field_data_snapshot( scalar );
 
-        if (k != 0) tracker->advance_timestep();
+        if (k != start_timestep) tracker->advance_timestep();
         if (k == stream->n_timesteps() - 1) tracker->update_timestep();
 
         // tracker->push_field_data_snapshot(scalar);
@@ -436,8 +454,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
         // if (k == stream->n_timesteps() - 1) tracker->update_timestep();
       });
 
-      stream->start();
-      stream->finish();
+      while (xgc_data_stream->advance_timestep()) { }
     } else {
       fprintf(stderr, "reading archived intersections..\n");
       tracker->read_intersections_binary( archived_intersections_filename );
@@ -477,7 +494,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
   // const double x[2] = {2.3, -0.4};
   // fprintf(stderr, "locator test: %d\n", locator->locate(x));
 
-  tracker.reset(new xgc_blob_threshold_tracker(comm, mx3));
+  tracker.reset(new xgc_blob_threshold_tracker(comm, xgc_data_stream->get_mx3()));
   tracker->set_threshold( threshold );
   tracker->initialize();
 
@@ -488,7 +505,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 #if FTK_HAVE_VTK
     if (xgc_write_back_filename.length()) {
       auto filename = series_filename(xgc_write_back_filename, k);
-      mx3->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+      xgc_data_stream->get_mx3()->scalar_to_vtu_slices_file(filename, "scalar", scalar);
     }
 #endif
 #if 1 // only testing write-backs for now
@@ -702,6 +719,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("h,height", "Height", cxxopts::value<size_t>())
     ("d,depth", "Depth (valid only for 3D regular grid data)", cxxopts::value<size_t>())
     ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>(ntimesteps))
+    ("start-timestep", "Start timestep", cxxopts::value<size_t>(start_timestep))
     ("var", "Variable name(s), e.g. `scalar', `u,v,w'.  Valid only for NetCDF, HDF5, and VTK.", cxxopts::value<std::string>())
     ("adios-config", "ADIOS2 config file", cxxopts::value<std::string>(adios_config_file))
     ("adios-name", "ADIOS2 I/O name", cxxopts::value<std::string>(adios_name))
@@ -784,7 +802,9 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   }
   
   ttype = tracker::str2tracker(feature);
-  if (ttype != TRACKER_TDGL_VORTEX) { // TDGL uses a different reader for now
+  if (ttype == TRACKER_TDGL_VORTEX) { // TDGL uses a different reader for now
+  } else if (ttype == TRACKER_XGC_BLOB_FILAMENT || ttype == TRACKER_XGC_BLOB_THRESHOLD) { // xgc using a different reader for xgc filaments
+  } else {
     j_input = args_to_input_stream_json(results);
     stream->set_input_source_json(j_input);
   }

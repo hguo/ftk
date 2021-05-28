@@ -85,6 +85,12 @@ public: // vtk
 public: // smoothing
   bool has_smoothing_kernel() const { return m2->has_smoothing_kernel(); }
   ndarray<F> smooth_scalar(const ndarray<F>& f) const;
+  void smooth_scalar_gradient_jacobian(
+      const ndarray<F>& f, 
+      ndarray<F>& fs, // smoothed scalar field
+      ndarray<F>& g,  // smoothed gradient field
+      ndarray<F>& j   // smoothed jacobian field
+  ) const; 
 
 public:
   void initialize_interpolants();
@@ -551,6 +557,37 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::smooth_scalar(const ndarray<F>& scalar)
   }
 
   return result;
+}
+  
+
+template <typename I, typename F>
+void simplicial_xgc_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
+      const ndarray<F>& scalar, 
+      ndarray<F>& S, // smoothed scalar field
+      ndarray<F>& G,  // smoothed gradient field
+      ndarray<F>& J   // smoothed jacobian field
+  ) const
+{
+  S.reshape(scalar);
+  G.reshape(2, scalar.dim(0), scalar.dim(1));
+  G.set_multicomponents(1);
+  J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
+  J.set_multicomponents(2);
+  
+  for (size_t i = 0; i < nphi; i ++) {
+    ndarray<double> f, grad, j;
+    auto slice = scalar.slice_time(i);
+    m2->smooth_scalar_gradient_jacobian(slice, f, grad, j);
+    for (size_t k = 0; k < m2->n(0); k ++) {
+      S(k, i) = f(k);
+      G(0, k, i) = grad(0, k);
+      G(1, k, i) = grad(1, k);
+      J(0, 0, k, i) = j(0, 0, k);
+      J(1, 0, k, i) = j(1, 0, k);
+      J(1, 1, k, i) = j(1, 1, k);
+      J(0, 1, k, i) = j(0, 1, k);
+    }
+  }
 }
 
 template <typename I, typename F>

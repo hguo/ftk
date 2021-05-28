@@ -26,6 +26,10 @@
 #include <vtkNew.h>
 #endif
 
+#if FTK_HAVE_HDF5
+#include <hdf5.h>
+#endif
+
 namespace ftk {
 
 enum {
@@ -84,6 +88,13 @@ public: // binary i/o
   virtual void read_binary_file(FILE *fp) = 0;
   void to_binary_file(const std::string& filename);
   virtual void to_binary_file(FILE *fp) = 0;
+
+public: // h5 i/o
+  bool read_h5(const std::string& filename, const std::string& name);
+#if FTK_HAVE_HDF5
+  bool read_h5(hid_t fid, const std::string& name);
+  virtual bool read_h5_did(hid_t did) = 0;
+#endif
 
 public: // vti i/o
   void read_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
@@ -152,6 +163,33 @@ inline void ndarray_base::read_vtk_image_data_file(const std::string& filename, 
   fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
+
+inline bool ndarray_base::read_h5(const std::string& filename, const std::string& name)
+{
+#if FTK_HAVE_HDF5
+  auto fid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  if (fid < 0) return false; else {
+    bool succ = read_h5(fid, name);
+    H5Fclose(fid);
+    return succ;
+  }
+#else 
+  fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
+  return false;
+#endif
+}
+
+#if FTK_HAVE_HDF5
+inline bool ndarray_base::read_h5(hid_t fid, const std::string& name)
+{
+  auto did = H5Dopen2(fid, name.c_str(), H5P_DEFAULT);
+  if (did < 0) return false; else {
+    bool succ = read_h5_did(did);
+    H5Dclose(did);
+    return succ;
+  }
+}
+#endif
 
 } // namespace ftk
 
