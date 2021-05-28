@@ -432,6 +432,7 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   } else {
     if (archived_intersections_filename.empty() || file_not_exists(archived_intersections_filename)) {
       xgc_data_stream->set_callback([&](int k, std::shared_ptr<ndarray_group> g) { // const ndarray<double> &data) {
+#if 0
         auto data = g->get<double>("density");
         auto scalar = data.get_transpose();
 #if 0 // FTK_HAVE_VTK
@@ -445,10 +446,12 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
 #endif
    
         tracker->push_field_data_snapshot( scalar );
+#endif
+
+        tracker->push_field_data_snapshot(g);
 
         if (k != start_timestep) tracker->advance_timestep();
         if (k == stream->n_timesteps() - 1) tracker->update_timestep();
-
         // tracker->push_field_data_snapshot(scalar);
         // tracker->advance_timestep();
         // if (k == stream->n_timesteps() - 1) tracker->update_timestep();

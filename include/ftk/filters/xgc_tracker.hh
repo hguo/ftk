@@ -10,6 +10,7 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/utils/gather.hh>
+#include <ftk/ndarray/field_data_snapshot.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3dff_mesh.hh>
@@ -31,6 +32,7 @@ public:
   void initialize_ff_mesh(const std::string& filename) { mf3.reset(new simplicial_xgc_3dff_mesh<>(m2, m3->get_nphi(), m3->get_iphi(), m3->get_vphi()) ); mf3->initialize_ff_mesh(filename); }
 
 public:
+  virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group>);
   virtual void push_field_data_snapshot(const ndarray<double> &scalar);
   virtual void push_field_data_snapshot(
       const ndarray<double> &scalar, 
@@ -47,6 +49,7 @@ public:
 protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
+    ndarray<double> Er;
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
@@ -81,6 +84,21 @@ xgc_tracker::xgc_tracker(
   m30.reset(new simplicial_xgc_3d_mesh<>(m2, 
         m3->get_nphi(), m3->get_iphi()));
   mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*mr3));
+}
+
+inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group> g) 
+{
+  field_data_snapshot_t s;
+  
+  auto density = g->get<double>("density").get_transpose();
+  m30->smooth_scalar_gradient_jacobian(density, s.scalar, s.vector, s.jacobian);
+  
+  if (g->has("Er")) {
+    auto Er = g->get<double>("Er").get_transpose();
+    s.Er = m30->smooth_scalar(Er);
+  }
+  
+  field_data_snapshots.emplace_back(s);
 }
 
 inline void xgc_tracker::push_field_data_snapshot(

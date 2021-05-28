@@ -42,6 +42,7 @@ struct xgc_blob_filament_tracker : public xgc_tracker {
 public:
   void update_timestep();
   
+  void push_field_data_snapshot(std::shared_ptr<ndarray_group> g) { xgc_tracker::push_field_data_snapshot(g); }
   void push_field_data_snapshot(
       const ndarray<double> &scalar, 
       const ndarray<double> &vector,

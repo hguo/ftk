@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/ndarray/field_data_snapshot.hh>
+#include <ftk/ndarray/ndarray_group.hh>
 #include <ftk/filters/filter.hh>
 #include <ftk/external/diy/master.hpp>
 
@@ -47,8 +48,11 @@ public:
   virtual bool advance_timestep() = 0;
   virtual void update_timestep() = 0;
 
+public:
+  virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group>) {}
+
 protected:
-  std::deque<field_data_snapshot> snapshots;
+  std::deque<field_data_snapshot_t> snapshots;
 
 protected:
   // diy::Master master;

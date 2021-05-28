@@ -9,6 +9,8 @@ namespace ftk {
 struct ndarray_group : public std::unordered_map<std::string, std::shared_ptr<ndarray_base>> {
   ndarray_group() {}
 
+  bool has(const std::string key) const { return this->find(key) != this->end(); }
+
   void set(const std::string key, std::shared_ptr<ndarray_base> ptr) { this->emplace(key, ptr); }
   void set(const std::string key, ndarray_base base);
   template <typename T> void set(const std::string key, ndarray<T> arr);
