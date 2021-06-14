@@ -21,6 +21,35 @@ void gradient_2dsimplex2(const T X[3][2], const T f[3], T gradf[2])
 
 template <typename T>
 __device__ __host__
+void gradient_3dsimplex2(const T X[3][3], const T f[3], T gradf[3])
+{
+  const T A[3][3] = {
+    {X[1][0] - X[0][0], X[1][1] - X[0][1], X[1][2] - X[0][2]}, 
+    {X[2][0] - X[1][0], X[2][1] - X[1][1], X[2][2] - X[2][2]},
+    {X[0][0] - X[2][0], X[0][1] - X[2][1], X[0][2] - X[2][2]}
+  };
+  const T b[3] = {f[1] - f[0], f[2] - f[1], f[0] - f[2]};
+
+  solve_linear3x3(A, b, gradf);
+}
+
+template <typename T>
+__device__ __host__
+void gradient_3dsimplex3(const T X[4][3], const T f[4], T gradf[3])
+{
+  const T A[4][3] = {
+    {X[1][0] - X[0][0], X[1][1] - X[0][1], X[1][2] - X[0][2]},
+    {X[2][0] - X[1][0], X[2][1] - X[1][1], X[2][2] - X[1][2]},
+    {X[3][0] - X[2][0], X[3][1] - X[2][1], X[3][2] - X[2][2]},
+    {X[0][0] - X[3][0], X[0][1] - X[3][1], X[0][2] - X[3][2]}
+  };
+  const T b[4] = {f[1] - f[0], f[2] - f[1], f[3] - f[2], f[0] - f[3]};
+
+  solve_least_square4x3(A, b, gradf);
+}
+
+template <typename T>
+__device__ __host__
 void jacobian_2dsimplex2(const T X[3][2], const T f[3][2], T gradf[2][2])
 // gradient_2dsimplex2_2
 {

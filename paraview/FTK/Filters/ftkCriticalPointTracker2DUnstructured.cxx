@@ -143,11 +143,13 @@ int ftkCriticalPointTracker2DUnstructured::RequestData(
     
     tracker->finalize();
 
+#if 1
     auto &trajs = tracker->get_traced_critical_points();
     trajs.foreach([](ftk::feature_curve_t& t) {
         t.discard_interval_points();
         t.derive_velocity();
     });
+#endif
 
     // auto poly = tracker->get_traced_critical_points_vtk();
     auto poly = tracker->get_traced_critical_points().to_vtp(2, {}, ZTimeScale);

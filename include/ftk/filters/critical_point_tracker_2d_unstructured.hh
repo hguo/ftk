@@ -147,14 +147,37 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
   // deriving types
   if (field_data_snapshots[0].scalar.empty()) { // vector field
     if (field_data_snapshots[0].jacobian.empty()) { // derived jacobian
+#if 1
+      double J[2][2]; // jacobian
       double Xp[3][2] = {
         {X[0][0], X[0][1]}, 
         {X[1][0], X[1][1]},
         {X[2][0], X[2][1]}
       };
-
-      double J[2][2]; // jacobian
       jacobian_2dsimplex2(Xp, V, J);
+     
+      fprintf(stderr, "J=%f, %f, %f, %f\n", J[0][0], J[0][1], J[1][0], J[1][1]);
+#endif
+#if 0
+      double u[3] = {V[0][0], V[0][1], V[0][2]}, 
+             v[3] = {V[1][0], V[1][1], V[1][2]};
+      double du[3], dv[3];
+
+      gradient_3dsimplex2(X, u, du);
+      gradient_3dsimplex2(X, v, dv);
+      
+      double J[2][2] = {
+        {du[0], du[1]}, 
+        {dv[0], dv[1]}
+      };
+
+      fprintf(stderr, "u=%f, %f, %f, du=%f, %f, %f, x0=%f, %f, %f, x1=%f, %f, %f, x2=%f, %f %f\n", 
+          u[0], u[1], u[2], 
+          du[0], du[1], du[2], 
+          X[0][0], X[0][1], X[0][2], 
+          X[1][0], X[1][1], X[1][2],
+          X[2][0], X[2][1], X[2][2]);
+#endif
       cp.type = ftk::critical_point_type_2d(J, false);
     } else { // given jacobian
       double J[2][2]; // jacobian

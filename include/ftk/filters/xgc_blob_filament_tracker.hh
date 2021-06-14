@@ -702,7 +702,7 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
   fprintf(stderr, "#pts=%zu, #tri=%zu\n",
       surfaces.pts.size(), surfaces.tris.size());
 
-  // post_process_surfaces();
+  post_process_surfaces();
 }
 
 inline void xgc_blob_filament_tracker::post_process_surfaces()
