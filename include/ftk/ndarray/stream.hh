@@ -34,8 +34,8 @@ struct ndarray_stream : public object {
   //    current version), string.
   //  - format (required if type is file and format is float32/float64), string.  If not 
   //    given, the format will be determined by the filename extension.  The value of this 
-  //    field must be one of the follows: vti, nc, h5, float32, float64.
-  //  - variables (required if format is nc/h5, optional for vti), array of strings.
+  //    field must be one of the follows: vti, vtu, nc, h5, float32, float64.
+  //  - variables (required if format is nc/h5, optional for vti/vtu), array of strings.
   //    - the number of components is the length of the array.
   //    - if not given, the defaulat value is ["scalar"]
   //  - components (to be determined), array of number of components per variable
@@ -79,6 +79,7 @@ protected:
   ndarray<T> request_timestep_file(int k);
   ndarray<T> request_timestep_file_nc(int k);
   ndarray<T> request_timestep_file_vti(int k);
+  ndarray<T> request_timestep_file_vtu(int k);
   ndarray<T> request_timestep_file_h5(int k);
   ndarray<T> request_timestep_file_bp3(int k);
   ndarray<T> request_timestep_file_bp4(int k);
@@ -409,6 +410,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
       if (j.contains("filenames")) {
         if (j["filenames"].is_array()) {
           // j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
+          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else {
           auto filenames = glob(j["filenames"]);
           if (filenames.empty()) {
@@ -419,10 +421,15 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             } else {
               fatal("unable to find matching filename(s).");
             }
-          } 
-          // if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
-          // else j["n_timesteps"] = filenames.size();
-          j["filenames"] = filenames;
+          } else 
+            j["filenames"] = filenames;
+          
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number()) { 
+            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+            filenames.resize(j["n_timesteps"]);
+          }
+          else 
+            j["n_timesteps"] = j["filenames"].size();
         }
         const std::string filename0 = j["filenames"][0];
 
@@ -430,6 +437,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           const auto ext = file_extension(filename0);
           
           if (ext == FILE_EXT_VTI) j["format"] = "vti";
+          else if (ext == FILE_EXT_VTU) j["format"] = "vtu";
           else if (ext == FILE_EXT_NETCDF) j["format"] = "nc";
           else if (ext == FILE_EXT_HDF5) j["format"] = "h5";
           else if (ext == FILE_EXT_BP) { // need to further distinguish if input is bp3 or bp4
@@ -454,7 +462,6 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             j["components"] = ones;
           }
           
-          j["n_timesteps"] = j["filenames"].size(); // TODO: we are assuming #timesteps = #filenames
         } else if (j["format"] == "vti") {
 #if FTK_HAVE_VTK
           vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
@@ -494,6 +501,12 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             j["n_timesteps"] = j["filenames"].size();
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+        } else if (j["format"] == "vtu") {
+#if FTK_HAVE_VTK
+
+#else 
+
 #endif
         } else if (j["format"] == "nc") {
 #if FTK_HAVE_NETCDF

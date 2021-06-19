@@ -112,6 +112,7 @@ static const std::string
         str_hdf5("h5"),
         str_vti("vti"),
         str_vtp("vtp"),
+        str_vtu("vtu"),
         str_scalar("scalar"),
         str_vector("vector"),
         str_text("text");
@@ -119,6 +120,7 @@ static const std::string
 static const std::string
         str_ext_vti(".vti"), // vtkImageData
         str_ext_vtp(".vtp"), // vtkPolyData
+        str_ext_vtu(".vtu"), // vtkUnstructuredGrid
         str_ext_ply(".ply"),
         str_ext_stl(".stl"),
         str_ext_netcdf(".nc"),
@@ -133,7 +135,7 @@ static const std::string
 static const std::set<std::string>
         set_valid_thread_backend({str_none, "pthread", "openmp", "tbb"}),
         set_valid_accelerator({str_none, "cuda", "sycl"}),
-        set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti, str_adios2}),
+        set_valid_input_format({str_auto, str_float32, str_float64, str_netcdf, str_hdf5, str_vti, str_vtu, str_adios2}),
         set_valid_input_dimension({str_auto, str_two, str_three});
 
 static void fatal(const cxxopts::Options &options, const std::string& str) {
