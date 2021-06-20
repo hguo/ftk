@@ -227,6 +227,7 @@ public: // i/o for vtk image data
 #if FTK_HAVE_VTK
   static int vtk_data_type();
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
+  void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> d, const std::string array_name=std::string());
   void from_vtk_array(vtkSmartPointer<vtkAbstractArray> d);
   void from_vtk_data_array(vtkSmartPointer<vtkDataArray> d);
   vtkSmartPointer<vtkImageData> to_vtk_image_data(std::string varname=std::string()) const; 
@@ -541,6 +542,16 @@ inline void ndarray<T>::from_vtk_data_array(
     for (auto j = 0; j < nc; j ++)
       p[i*nc+j] = tuple[j];
   }
+}
+
+template <typename T>
+inline void ndarray<T>::from_vtu(
+    vtkSmartPointer<vtkUnstructuredGrid> d, 
+    const std::string array_name)
+{
+  vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
+  if (!da) da = d->GetPointData()->GetArray(0);
+  from_vtk_data_array(da);
 }
 
 template<typename T>

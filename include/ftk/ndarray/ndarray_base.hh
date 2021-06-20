@@ -22,6 +22,8 @@
 #include <vtkPointData.h>
 #include <vtkXMLImageDataReader.h>
 #include <vtkXMLImageDataWriter.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkXMLUnstructuredGridReader.h>
 #include <vtkDataReader.h>
 #include <vtkNew.h>
 #endif
@@ -101,6 +103,7 @@ public: // vti i/o
   virtual void read_vtk_image_data_file_sequence(const std::string& pattern) = 0;
 #if FTK_HAVE_VTK
   virtual void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string()) = 0;
+  virtual void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> d, const std::string array_name=std::string()) = 0;
 #endif
 
 protected:

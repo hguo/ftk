@@ -504,9 +504,39 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 #endif
         } else if (j["format"] == "vtu") {
 #if FTK_HAVE_VTK
+          vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
+          reader->SetFileName(filename0.c_str());
+          reader->Update();
 
+          vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+          
+          if (j.contains("dimensions")) 
+            warn("ignoring dimensions");
+          j["dimensions"] = {0}; // workaround
+          
+          if (missing_variables) {
+            const std::string var = grid->GetPointData()->GetArrayName(0);
+            j["variables"] = {var};
+          }
+          
+          // determine number of components per var
+          std::vector<int> components;
+          for (int i = 0; i < j["variables"].size(); i ++) {
+            const std::string var = j["variables"][i];
+            vtkSmartPointer<vtkDataArray> da = grid->GetPointData()->GetArray( var.c_str() );
+            if (!da) fatal(FTK_ERR_VTK_VARIABLE_NOT_FOUND);
+            const int nc = da->GetNumberOfComponents();
+            components.push_back(nc);
+          }
+          j["components"] = components;
+          
+          // determine number timesteps
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+          else 
+            j["n_timesteps"] = j["filenames"].size();
 #else 
-
+          fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
         } else if (j["format"] == "nc") {
 #if FTK_HAVE_NETCDF
@@ -798,6 +828,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
     return request_timestep_file_binary<double>(k);
   else if (fmt == "vti")
     return request_timestep_file_vti(k);
+  else if (fmt == "vtu")
+    return request_timestep_file_vtu(k);
   else if (fmt == "nc")
     return request_timestep_file_nc(k);
   else if (fmt == "h5")
@@ -820,6 +852,42 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_binary(int k)
   ftk::ndarray<T> array(shape());
   array.from_array(array1);
 
+  return array;
+}
+
+template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
+{
+  ftk::ndarray<T> array;
+  const std::string filename = j["filenames"][k];
+
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+
+  vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+
+  const int nv = n_variables();
+  if (nv == 1) { //  (is_single_component()) {
+    array.from_vtu(grid, j["variables"][0]);
+  } else {
+    std::vector<ftk::ndarray<T>> arrays(nv);
+    for (int i = 0; i < nv; i ++)
+      arrays[i].from_vtu(grid, j["variables"][i]);
+
+    array.reshape(shape());
+    for (int i = 0; i < arrays[0].nelem(); i ++) {
+      for (int j = 0; j <nv; j ++) {
+        array[i*nv+j] = arrays[j][i];
+      }
+    }
+
+    array.set_multicomponents();
+  }
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
   return array;
 }
 
@@ -850,7 +918,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 
   // std::cerr << array.shape() << ", " << array.multicomponents() << std::endl;
 #else
-  fatal("FTK not compiled with VTK.");
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
   return array;
 }
