@@ -352,10 +352,49 @@ void json_interface::consume(ndarray_stream<> &stream, diy::mpi::communicator co
 
 void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
-  const std::string mesh_filename = j["mesh_filename"];
+  const std::string filename = j["mesh_filename"];
+  
+  std::shared_ptr<simplicial_unstructured_mesh<>> m;
+  
+  if (file_extension(filename) == FILE_EXT_VTU) {
+#if FTK_HAVE_VTK // currently only support vtu meshes
+    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+    vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+    // return new_from_vtu(grid);
+  
+    vtkSmartPointer<vtkCellTypes> types = vtkSmartPointer<vtkCellTypes>::New();
+    grid->GetCellTypes(types);
+  
+    vtkSmartPointer<vtkUnsignedCharArray> parr = types->GetCellTypesArray();
+    ndarray<unsigned char> arr; // (*parr);
+    arr.from_vtk_data_array(parr);
 
-  fprintf(stderr, "WIP: unstructured....\n");
-  auto m = simplicial_unstructured_mesh<>::from_file(mesh_filename);
+    if (arr.size() == 0) {
+      fatal("type array is empty");
+    } else if (arr.size() == 1) {
+      if (arr[0] == VTK_TRIANGLE) {
+        m.reset(new simplicial_unstructured_2d_mesh<>());
+        m->from_vtu(grid);
+      } else if (arr[0] == VTK_TETRA) {
+        m.reset(new simplicial_unstructured_3d_mesh<>());
+        m->from_vtu(grid);
+      }
+    } else 
+      fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+#else
+    fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+  } else {
+    fatal(FTK_ERR_MESH_UNSUPPORTED_FORMAT);
+  }
+
+  if (m) {
+    fprintf(stderr, "valid mesh! %d\n", m->nd());
+  } else {
+    fprintf(stderr, "empyt mesh!\n");
+  }
 }
 
 void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm)

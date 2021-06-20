@@ -44,7 +44,8 @@ enum {
   FTK_ERR_THREAD_BACKEND_UNSUPPORTED = 5000,
   FTK_ERR_VTK_VARIABLE_NOT_FOUND = 6000,
   FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND = 7000,
-  FTK_ERR_MESH_UNSUPPORTED_FORMAT = 8000
+  FTK_ERR_MESH_UNSUPPORTED_FORMAT = 8000,
+  FTK_ERR_MESH_NONSIMPLICIAL
 };
 
 inline std::string err2str(int e)
@@ -87,6 +88,7 @@ inline std::string err2str(int e)
   case FTK_ERR_VTK_VARIABLE_NOT_FOUND: return "VTK variable not found";
   case FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND: return "adios2 variable not found";
   case FTK_ERR_MESH_UNSUPPORTED_FORMAT: return "unsupported mesh format";
+  case FTK_ERR_MESH_NONSIMPLICIAL: return "unsupported nonsimplicial mesh";
   default: return "unknown error";
   }
 }

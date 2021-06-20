@@ -58,9 +58,6 @@ public: // io
 
   virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const = 0;
   virtual void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid) = 0;
-
-  static std::shared_ptr<simplicial_unstructured_mesh> new_from_vtu(vtkSmartPointer<vtkUnstructuredGrid>);
-  static std::shared_ptr<simplicial_unstructured_mesh> from_file(const std::string filename);
 #endif
 };
 
@@ -180,46 +177,7 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_mesh<I, F>::vector_
 
   return grid;
 }
-
-template <typename I, typename F>
-std::shared_ptr<simplicial_unstructured_mesh<I, F>> simplicial_unstructured_mesh<I, F>::new_from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid)
-{
-  fprintf(stderr, "new from vtu..\n");
-  std::shared_ptr<simplicial_unstructured_mesh> ptr;
-  
-  vtkSmartPointer<vtkCellTypes> types = vtkSmartPointer<vtkCellTypes>::New();
-  grid->GetCellTypes(types);
-
-  vtkSmartPointer<vtkUnsignedCharArray> parr = types->GetCellTypesArray();
-  ndarray<unsigned char> arr; // (*parr);
-  arr.from_vtk_data_array(parr);
-
-  std::cerr<< arr << std::endl;
-  // types->PrintSelf(std::cerr, vtkIndent(2));
-
-  return ptr;
-}
 #endif
-
-template <typename I, typename F>
-std::shared_ptr<simplicial_unstructured_mesh<I, F>> simplicial_unstructured_mesh<I, F>::from_file(const std::string filename)
-{
-  if (file_extension(filename) == FILE_EXT_VTU) {
-#if FTK_HAVE_VTK // currently only support vtu meshes
-    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
-    reader->SetFileName(filename.c_str());
-    reader->Update();
-    vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
-
-    return new_from_vtu(grid);
-#else
-    fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
-#endif
-  } else {
-    fatal(FTK_ERR_MESH_UNSUPPORTED_FORMAT);
-    return NULL;
-  }
-}
 
 } // namespace ftk
 
