@@ -156,6 +156,9 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 
   j_tracker["nblocks"] = std::max(comm.size(), nblocks);
 
+  if (!mesh_filename.empty())
+    j_tracker["mesh_filename"] = mesh_filename;
+
   if (accelerator != str_none)
     j_tracker["accelerator"] = accelerator;
 
@@ -734,7 +737,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("spatial-smoothing-kernel-size", "Spatial smoothing kernel size", cxxopts::value<size_t>())
     ("perturbation", "Gaussian perturbation sigma", cxxopts::value<double>())
     ("threshold", "Threshold", cxxopts::value<double>(threshold))
-    ("m,mesh", "Input mesh file (will shadow arguments including width, height, depth)", cxxopts::value<std::string>())
+    ("m,mesh", "Input mesh file (will shadow arguments including width, height, depth)", cxxopts::value<std::string>(mesh_filename))
     ("nblocks", "Number of total blocks", cxxopts::value<int>(nblocks))
     // ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
     ("archived-intersections", "Archived discrete intersections", cxxopts::value<std::string>(archived_intersections_filename))

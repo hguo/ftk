@@ -77,6 +77,7 @@ struct json_interface : public object {
 private:
   void configure_tracker_general(diy::mpi::communicator comm);
   void consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm);
+  void consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm);
   void consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm);
 
   void write_sliced_results(int k);
@@ -339,12 +340,19 @@ void json_interface::consume(ndarray_stream<> &stream, diy::mpi::communicator co
 {
   if (j.is_null())
     configure(j); // make default options
-  // std::cerr << j << std::endl;
-
+  // std::cerr << stream.get_json() << std::endl;
+  
   if (j.contains("xgc"))
     consume_xgc(stream, comm);
+  else if (j.contains("mesh_filename")) 
+    consume_unstructured(stream, comm);
   else 
     consume_regular(stream, comm);
+}
+
+void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm)
+{
+  fprintf(stderr, "WIP: unstructured....\n");
 }
 
 void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm)
