@@ -390,11 +390,28 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
     fatal(FTK_ERR_MESH_UNSUPPORTED_FORMAT);
   }
 
-  if (m) {
-    fprintf(stderr, "valid mesh! %d\n", m->nd());
-  } else {
-    fprintf(stderr, "empyt mesh!\n");
-  }
+  if (m->nd() == 2)
+    tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
+  else 
+    tracker.reset(new critical_point_tracker_3d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_3d_mesh<>>(m)));
+  
+  configure_tracker_general(comm);
+  tracker->initialize();
+  
+  js = stream.get_json();
+  const size_t DT = js["n_timesteps"];
+  stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+    tracker->push_vector_field_snapshot(field_data);
+    if (k != 0) tracker->advance_timestep();
+    if (k == DT-1) tracker->update_timestep();
+    
+    // if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+    //   write_sliced_results(k-1);
+  });
+
+  stream.start();
+  stream.finish();
+  tracker->finalize();
 }
 
 void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm)
