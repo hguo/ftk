@@ -352,7 +352,10 @@ void json_interface::consume(ndarray_stream<> &stream, diy::mpi::communicator co
 
 void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
+  const std::string mesh_filename = j["mesh_filename"];
+
   fprintf(stderr, "WIP: unstructured....\n");
+  auto m = simplicial_unstructured_mesh<>::from_file(mesh_filename);
 }
 
 void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm)

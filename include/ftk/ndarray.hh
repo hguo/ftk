@@ -1221,6 +1221,8 @@ template <> inline hid_t ndarray<double>::h5_mem_type_id() { return H5T_NATIVE_D
 template <> inline hid_t ndarray<float>::h5_mem_type_id() { return H5T_NATIVE_FLOAT; }
 template <> inline hid_t ndarray<int>::h5_mem_type_id() { return H5T_NATIVE_INT; }
 template <> inline hid_t ndarray<unsigned long>::h5_mem_type_id() { return H5T_NATIVE_ULONG; }
+template <> inline hid_t ndarray<unsigned int>::h5_mem_type_id() { return H5T_NATIVE_UINT; }
+template <> inline hid_t ndarray<unsigned char>::h5_mem_type_id() { return H5T_NATIVE_UCHAR; }
 #endif
 
 template <typename T>
