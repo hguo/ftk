@@ -55,6 +55,7 @@ ftk_option (PNG "Use PNG" FALSE)
 ftk_option (Qt5 "Use Qt5" FALSE)
 ftk_option (RocksDB "Use RocksDB" FALSE)
 ftk_option (HIPSYCL "Use hipSYCL" FALSE) # experimental
+ftk_option (SYCL "Use SYCL" FALSE) # experimental
 ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # experimental
 ftk_option (VTK "Use VTK" FALSE)
 
@@ -280,9 +281,16 @@ endif ()
 if (FTK_HAVE_CUDA)
   include (DetectGPU)
 endif ()
+
+if (FTK_USE_SYCL STREQUAL AUTO)
+  # nothing to do
+elseif (FTK_USE_SYCL)
+  find_package (SYCL REQUIRED)
+  set (FTK_HAVE_SYCL TRUE)
+endif ()
  
 if (FTK_USE_HIPSYCL STREQUAL AUTO)
-  # TODO
+  # nothing to do
 elseif (FTK_USE_HIPSYCL)
   find_package (hipsycl REQUIRED)
   enable_language (SYCL)
@@ -478,6 +486,7 @@ if (${FTK_HAVE_QT5})
   message("      Qt5Core:    ${Qt5Core_DIR}")
   message("      Qt5Gui:     ${Qt5Gui_DIR}")
 endif ()
+message("    SYCL*:       ${FTK_USE_SYCL} ${FTK_HAVE_SYCL}")
 message("    TBB*:        ${FTK_USE_TBB} ${TBB_FOUND}")
 if (${FTK_HAVE_TBB})
   message("      Include path:   ${TBB_INCLUDE_DIR}")
