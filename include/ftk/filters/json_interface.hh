@@ -363,26 +363,23 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
     reader->Update();
     vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
     // return new_from_vtu(grid);
-  
+
     vtkSmartPointer<vtkCellTypes> types = vtkSmartPointer<vtkCellTypes>::New();
     grid->GetCellTypes(types);
-  
-    vtkSmartPointer<vtkUnsignedCharArray> parr = types->GetCellTypesArray();
-    ndarray<unsigned char> arr; // (*parr);
-    arr.from_vtk_data_array(parr);
-
-    if (arr.size() == 0) {
-      fatal("type array is empty");
-    } else if (arr.size() == 1) {
-      if (arr[0] == VTK_TRIANGLE) {
+    
+    const int ntypes = types->GetNumberOfTypes();
+    if (ntypes == 1) {
+      const unsigned char type = types->GetCellType(0);
+      if (type == VTK_TRIANGLE)
         m.reset(new simplicial_unstructured_2d_mesh<>());
-        m->from_vtu(grid);
-      } else if (arr[0] == VTK_TETRA) {
+      else if (type == VTK_TETRA)
         m.reset(new simplicial_unstructured_3d_mesh<>());
-        m->from_vtu(grid);
-      }
-    } else 
+      else
+        fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+    } else
       fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+
+    m->from_vtu(grid);
 #else
     fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
