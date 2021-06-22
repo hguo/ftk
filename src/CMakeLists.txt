@@ -2,7 +2,7 @@ if (FTK_BUILD_PYFTK)
   include_directories (${PYTHON_INCLUDE_DIRS})
 endif ()
 
-if (FTK_HAVE_HIPSYCL)
+if (FTK_HAVE_SYCL)
   set (ftk_sycl_sources
     filters/critical_point_tracer_2d_regular_sycl.cpp ${ftk_sycl_sources})
 endif ()
