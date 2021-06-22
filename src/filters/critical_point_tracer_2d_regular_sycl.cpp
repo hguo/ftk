@@ -10,12 +10,7 @@ static std::vector<cp_t> extract_cp2dt(
     const lattice3_t& domain,
     const lattice3_t& core, 
     const lattice2_t& ext, 
-    const double *Vc, // 3D array: 2*W*H
-    const double *Vn, 
-    const double *Jc,
-    const double *Jn,
-    const double *Sc,
-    const double *Sn,
+    const double *V, // 4D array: 2*W*H*2
     bool use_explicit_coords,
     const double *coords)
 {
@@ -25,17 +20,12 @@ static std::vector<cp_t> extract_cp2dt(
 
   int counter = 0;
   {
-    cl::sycl::buffer<double> dVc(Vc, Vc ? 2 * sizeof(double) * ext.n() : 0);
-    cl::sycl::buffer<double> dVn(Vn, Vn ? 2 * sizeof(double) * ext.n() : 0);
-    cl::sycl::buffer<double> dJc(Jc, Jc ? 4 * sizeof(double) * ext.n() : 0);
-    cl::sycl::buffer<double> dJn(Jn, Jn ? 4 * sizeof(double) * ext.n() : 0);
-    cl::sycl::buffer<double> dSc(Sc, Sc ? sizeof(double) * ext.n() : 0);
-    cl::sycl::buffer<double> dSn(Sn, Sn ? sizeof(double) * ext.n() : 0);
+    cl::sycl::buffer<double> dV(V, 2 * 2 * sizeof(double) * ext.n());
     auto dcounter = cl::sycl::buffer<int>( &counter, 1 );
 
     cl::sycl::queue q;
     q.submit([&](cl::sycl::handler &cgh) {
-      // auto Vc = dVc.get_access<cl::sycl::access::mode::read>(cgh);
+      auto V = dV.get_access<cl::sycl::access::mode::read>(cgh);
       auto counter = dcounter.get_access<cl::sycl::access::mode::write>(cgh);
 
       cgh.parallel_for<class cp2dtk>(work_items, [=](cl::sycl::id<1> tid) {
@@ -67,11 +57,18 @@ std::vector<cp_t> extract_cp2dt_sycl(
   lattice3_t C(core);
   lattice2_t E(ext);
 
+  double *V = (double*)malloc(2*2*sizeof(double)*ext.n());
+  if (Vc) memcpy(V, Vc, 2*sizeof(double)*ext.n());
+  if (Vn) memcpy(V+2*sizeof(double)*ext.n(), Vn, 2*sizeof(double)*ext.n());
+
   // std::cerr << "domain=" << domain 
   //   << ", core=" << core << ", current_timestep=" 
   //   << current_timestep << std::endl;
 
-  return extract_cp2dt(scope, current_timestep, 
-      D, C, E, Vc, Vn, Jc, Jn, Sc, Sn, 
+  auto results = extract_cp2dt(scope, current_timestep, 
+      D, C, E, 
+      V, // Vc, Vn, Jc, Jn, Sc, Sn, 
       use_explicit_coords, coords);
+
+  return results;
 }
