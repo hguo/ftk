@@ -1,6 +1,7 @@
 #ifndef _FTK_VECTOR_NORM_H
 #define _FTK_VECTOR_NORM_H
 
+#include <ftk/config.hh>
 #include <cmath>
 
 namespace ftk {

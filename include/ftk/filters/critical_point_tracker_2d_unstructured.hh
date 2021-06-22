@@ -15,6 +15,7 @@
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/fixed_point.hh>
+#include <ftk/numeric/critical_point_degree.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
@@ -156,7 +157,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
       };
       jacobian_2dsimplex2(Xp, V, J);
      
-      fprintf(stderr, "J=%f, %f, %f, %f\n", J[0][0], J[0][1], J[1][0], J[1][1]);
+      // fprintf(stderr, "J=%f, %f, %f, %f\n", J[0][0], J[0][1], J[1][0], J[1][1]);
 #endif
 #if 0
       double u[3] = {V[0][0], V[0][1], V[0][2]}, 
@@ -194,6 +195,9 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
       cp.type = ftk::critical_point_type_2d(H, true);
     }
   }
+     
+  auto deg = ftk::critical_point_degree_simplex2(V, X);
+  cp.type = deg == 1 ? 1 : 0;
 
   cp.tag = i;
   cp.ordinal = m.is_ordinal(2, i);
