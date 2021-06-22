@@ -21,9 +21,6 @@ if (FTK_BUILD_PYFTK)
   set (FTK_HAVE_PYBIND11 TRUE)
 endif()
 
-set (CMAKE_CXX_STANDARD 11)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
@@ -58,6 +55,14 @@ ftk_option (HIPSYCL "Use hipSYCL" FALSE) # experimental
 ftk_option (SYCL "Use SYCL" FALSE) # experimental
 ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # experimental
 ftk_option (VTK "Use VTK" FALSE)
+
+if (FTK_USE_SYCL)
+  set (CMAKE_CXX_STANDARD 17)
+else ()
+  set (CMAKE_CXX_STANDARD 11)
+endif ()
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 find_package (Threads REQUIRED)
 

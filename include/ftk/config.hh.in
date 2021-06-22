@@ -11,6 +11,7 @@
 #cmakedefine FTK_HAVE_GMP 1
 #cmakedefine FTK_HAVE_HDF5 1
 #cmakedefine FTK_HAVE_HIPSYCL 1
+#cmakedefine FTK_HAVE_SYCL 1
 #cmakedefine FTK_HAVE_KOKKOS 1
 #cmakedefine FTK_HAVE_LEVELDB 1
 #cmakedefine FTK_HAVE_MPI 1

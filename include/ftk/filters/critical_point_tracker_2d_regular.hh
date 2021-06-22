@@ -87,7 +87,7 @@ extract_cp2dt_xl_wrapper(
     return std::vector<ftk::feature_point_lite_t>();
 #endif
   } else if (xl == FTK_XL_SYCL) {
-#if FTK_HAVE_HIPSYCL
+#if FTK_HAVE_SYCL
     return extract_cp2dt_sycl(scope, current_timestep, domain, core, ext, Vc, Vn, Jc, Jn, Sc, Sn, use_explicit_coords, coords);
 #else
     fatal(FTK_ERR_NOT_BUILT_WITH_HIPSYCL);
