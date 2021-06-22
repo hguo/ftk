@@ -4,6 +4,11 @@
 #include <ftk/config.hh>
 #include <cstdio>
 
+static inline int idivup(int a, int b)
+{
+  return (a%b!=0) ? (a/b+1) : (a/b); 
+}
+
 #if FTK_HAVE_CUDA
 inline void checkCuda(cudaError_t e, const char *situation) {
   if (e != cudaSuccess) {
@@ -21,11 +26,6 @@ static inline dim3 idivup(dim3 a, dim3 b)
   return dim3(idivup(a.x, b.x), idivup(a.y, b.y), idivup(a.z, b.z));
 }
 #endif
-
-static inline int idivup(int a, int b)
-{
-  return (a%b!=0) ? (a/b+1) : (a/b); 
-}
 
 template <typename T>
 __device__ __host__
