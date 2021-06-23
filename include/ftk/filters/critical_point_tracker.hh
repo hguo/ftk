@@ -32,13 +32,14 @@ struct critical_point_tracker : public virtual tracker {
   }
 
   void set_enable_robust_detection(bool b) { enable_robust_detection = b; }
+  void set_enable_computing_degrees(bool b) { enable_computing_degrees = b; }
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
   void set_enable_discarding_interval_points(bool b) { enable_discarding_interval_points = b; }
   void set_enable_discarding_degenerate_points(bool b) { enable_discarding_degenerate_points = b; }
   void set_enable_ignoring_degenerate_points(bool b) { enable_ignoring_degenerate_points = b; }
 
   void set_type_filter(unsigned int);
-  
+
   void set_scalar_field_source(int s) {scalar_field_source = s;}
   void set_vector_field_source(int s) {vector_field_source = s;}
   void set_jacobian_field_source(int s) {jacobian_field_source = s;}
@@ -175,6 +176,7 @@ protected:
   std::vector<std::string> scalar_components = {"scalar"};
 
   bool enable_robust_detection = true;
+  bool enable_computing_degrees = false;
   bool enable_streaming_trajectories = false;
   bool enable_discarding_interval_points = false;
   bool enable_discarding_degenerate_points = false;

@@ -39,7 +39,8 @@ int nthreads = std::thread::hardware_concurrency();
 bool affinity = false;
 bool verbose = false, timing = false, help = false;
 int nblocks; 
-bool enable_streaming_trajectories = false, 
+bool enable_streaming_trajectories = false,
+     enable_computing_degrees = false,
      enable_discarding_interval_points = false,
      enable_deriving_velocities = false,
      disable_robust_detection = false,
@@ -176,6 +177,9 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
 
   if (enable_discarding_interval_points)
     j_tracker["enable_discarding_interval_points"] = true;
+
+  if (enable_computing_degrees)
+    j_tracker["enable_computing_degrees"] = true;
 
   if (enable_deriving_velocities)
     j_tracker["enable_deriving_velocities"] = true;
@@ -781,6 +785,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<int>(device_buffer_size)->default_value("512"))
     ("stream",  "Stream trajectories (experimental)",
      cxxopts::value<bool>(enable_streaming_trajectories))
+    ("compute-degrees", "Compute degrees instead of types", 
+     cxxopts::value<bool>(enable_computing_degrees)->default_value("false"))
     ("discard-interval-points", "Discard interval critical points (experimental)", 
      cxxopts::value<bool>(enable_discarding_interval_points))
     ("derive-velocities", "Enable deriving velocities", 
