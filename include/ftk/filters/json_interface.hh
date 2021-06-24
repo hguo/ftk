@@ -125,14 +125,14 @@ void json_interface::configure(const json& j0)
 
   add_boolean_option("enable_robust_detection", true);
   add_boolean_option("enable_computing_degrees", false);
-  add_boolean_option("enable_post_processing", true);
+  // add_boolean_option("enable_post_processing", true);
   add_boolean_option("enable_streaming_trajectories", false);
-  add_boolean_option("enable_discarding_interval_points", false);
-  add_boolean_option("enable_discarding_degenerate_points", false);
-  add_boolean_option("enable_ignoring_degenerate_points", false);
+  // add_boolean_option("enable_discarding_interval_points", false);
+  // add_boolean_option("enable_discarding_degenerate_points", false);
+  // add_boolean_option("enable_ignoring_degenerate_points", false);
   add_boolean_option("enable_timing", false);
 
-  add_number_option("duration_pruning_threshold", 0);
+  // add_number_option("duration_pruning_threshold", 0);
   add_number_option("nblocks", 1);
   
   /// application specific
