@@ -43,10 +43,7 @@ struct json_interface : public object {
   // - nblocks, int, by default 0: number of blocks; 0 will be replaced by the number of processes
   // - nthreads, int, by default 0: number of threads; 0 will replaced by the max available number of CPUs
   // - enable_streaming, bool, by default false
-  // - enable_discarding_interval_points, bool, by default false
   // - enable_fast_detection, bool, by default true
-  // - enable_deriving_velocities, bool, by default false
-  // - enable_post_processing, bool, by default true
   // - post_processing_options, string, by default empty
   // - xgc, json, optional: XGC-specific options
   //    - format, string, by default auto: auto, h5, or bp
@@ -683,6 +680,7 @@ void json_interface::xgc_post_process()
   });
 }
 
+#if 0 // legacy post processing code
 void json_interface::post_process()
 {
   auto &trajs = tracker->get_traced_critical_points();
@@ -726,6 +724,7 @@ void json_interface::post_process()
     });
   }
 }
+#endif
 
 void json_interface::write()
 {
