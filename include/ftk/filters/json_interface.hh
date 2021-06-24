@@ -680,8 +680,7 @@ void json_interface::xgc_post_process()
   });
 }
 
-#if 0 // legacy post processing code
-void json_interface::post_process()
+void json_interface::post_process()  // FIXME: legacy post processing code, to be removed later
 {
   auto &trajs = tracker->get_traced_critical_points();
 
@@ -724,7 +723,6 @@ void json_interface::post_process()
     });
   }
 }
-#endif
 
 void json_interface::write()
 {
