@@ -47,6 +47,7 @@ struct json_interface : public object {
   // - enable_fast_detection, bool, by default true
   // - enable_deriving_velocities, bool, by default false
   // - enable_post_processing, bool, by default true
+  // - post_processing_options, string, by default empty
   // - xgc, json, optional: XGC-specific options
   //    - format, string, by default auto: auto, h5, or bp
   //    - path, string, optional: XGC data path, which contains xgc.mesh, xgc.bfield, units.m, 

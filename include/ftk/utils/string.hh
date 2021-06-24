@@ -9,6 +9,12 @@
 
 namespace ftk {
 
+static inline bool starts_with(std::string const & value, std::string const & starting)
+{
+  if (value.find(starting) == 0) return true;
+  else return false;
+}
+
 static inline bool ends_with(std::string const & value, std::string const & ending)
 {
   if (ending.size() > value.size()) return false;

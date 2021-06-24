@@ -18,6 +18,7 @@
 #include "ftk/filters/xgc_blob_threshold_tracker.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
+#include "ftk/filters/feature_curve_set_post_processor.hh"
 #include "ftk/io/util.hh"
 #include "ftk/io/xgc_stream.hh"
 #include "ftk/ndarray.hh"
@@ -47,6 +48,8 @@ bool enable_streaming_trajectories = false,
      disable_post_processing = false;
 int intercept_length = 2;
 double duration_pruning_threshold = 0.0;
+
+std::string post_processing_options;
 
 size_t ntimesteps = 0, start_timestep = 0;
 std::vector<std::string> input_filenames;
@@ -225,9 +228,15 @@ static void execute_critical_point_tracker(diy::mpi::communicator comm)
 {
   wrapper->consume(*stream, comm);
  
-  if (!disable_post_processing)
-     wrapper->post_process();
-  
+  // if (!disable_post_processing)
+  //    wrapper->post_process();
+ 
+  if (!post_processing_options.empty()) {
+    auto &trajs = wrapper->get_tracker()->get_traced_critical_points();
+    feature_curve_set_post_processor_t pp(post_processing_options);
+    pp.filter(trajs);
+  }
+
   wrapper->write();
 }
 
@@ -777,7 +786,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<int>(nthreads))
     ("timing", "Enable timing", 
      cxxopts::value<bool>(timing))
-    ("a,accelerator", "Accelerator {none|cuda} (experimental)",
+    ("a,accelerator", "Accelerator {none|cuda|sycl} (experimental)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
     ("device", "Device ID(s)", 
      cxxopts::value<std::string>(device_ids)->default_value("0"))
@@ -787,6 +796,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<bool>(enable_streaming_trajectories))
     ("compute-degrees", "Compute degrees instead of types", 
      cxxopts::value<bool>(enable_computing_degrees)->default_value("false"))
+    ("post-process", "Post process based on given options",
+     cxxopts::value<std::string>(post_processing_options)->default_value(""))
     ("discard-interval-points", "Discard interval critical points (experimental)", 
      cxxopts::value<bool>(enable_discarding_interval_points))
     ("derive-velocities", "Enable deriving velocities", 
