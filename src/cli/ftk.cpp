@@ -18,6 +18,7 @@
 #include "ftk/filters/xgc_blob_threshold_tracker.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
+#include "ftk/filters/feature_curve_set_post_processor.hh"
 #include "ftk/io/util.hh"
 #include "ftk/io/xgc_stream.hh"
 #include "ftk/ndarray.hh"
@@ -41,12 +42,10 @@ bool verbose = false, timing = false, help = false;
 int nblocks; 
 bool enable_streaming_trajectories = false,
      enable_computing_degrees = false,
-     enable_discarding_interval_points = false,
-     enable_deriving_velocities = false,
-     disable_robust_detection = false,
-     disable_post_processing = false;
+     disable_robust_detection = false;
 int intercept_length = 2;
-double duration_pruning_threshold = 0.0;
+
+std::string post_processing_options;
 
 size_t ntimesteps = 0, start_timestep = 0;
 std::vector<std::string> input_filenames;
@@ -175,22 +174,11 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
   if (enable_streaming_trajectories) 
     j_tracker["enable_streaming_trajectories"] = true;
 
-  if (enable_discarding_interval_points)
-    j_tracker["enable_discarding_interval_points"] = true;
-
   if (enable_computing_degrees)
     j_tracker["enable_computing_degrees"] = true;
 
-  if (enable_deriving_velocities)
-    j_tracker["enable_deriving_velocities"] = true;
-
   if (disable_robust_detection)
     j_tracker["enable_robust_detection"] = false;
-
-  if (duration_pruning_threshold > 0)
-    j_tracker["duration_pruning_threshold"] = duration_pruning_threshold;
-
-  j_tracker["enable_post_processing"] = !disable_post_processing;
 
   j_tracker["type_filter"] = type_filter_str;
 
@@ -225,9 +213,15 @@ static void execute_critical_point_tracker(diy::mpi::communicator comm)
 {
   wrapper->consume(*stream, comm);
  
-  if (!disable_post_processing)
-     wrapper->post_process();
-  
+  // if (!disable_post_processing)
+  //    wrapper->post_process();
+ 
+  if (!post_processing_options.empty()) {
+    auto &trajs = wrapper->get_tracker()->get_traced_critical_points();
+    feature_curve_set_post_processor_t pp(post_processing_options);
+    pp.filter(trajs);
+  }
+
   wrapper->write();
 }
 
@@ -427,7 +421,6 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   tracker->use_thread_backend(thread_backend);
   tracker->use_accelerator(accelerator);
   tracker->set_number_of_threads(nthreads);
-  tracker->set_enable_post_processing( !disable_post_processing );
 
   if (output_type == "ordinal") {
     tracker->set_ordinal_only(true);
@@ -777,7 +770,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<int>(nthreads))
     ("timing", "Enable timing", 
      cxxopts::value<bool>(timing))
-    ("a,accelerator", "Accelerator {none|cuda} (experimental)",
+    ("a,accelerator", "Accelerator {none|cuda|sycl} (experimental)",
      cxxopts::value<std::string>(accelerator)->default_value(str_none))
     ("device", "Device ID(s)", 
      cxxopts::value<std::string>(device_ids)->default_value("0"))
@@ -787,16 +780,10 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<bool>(enable_streaming_trajectories))
     ("compute-degrees", "Compute degrees instead of types", 
      cxxopts::value<bool>(enable_computing_degrees)->default_value("false"))
-    ("discard-interval-points", "Discard interval critical points (experimental)", 
-     cxxopts::value<bool>(enable_discarding_interval_points))
-    ("derive-velocities", "Enable deriving velocities", 
-     cxxopts::value<bool>(enable_deriving_velocities))
+    ("post-process", "Post process based on given options",
+     cxxopts::value<std::string>(post_processing_options)->default_value(""))
     ("no-robust-detection", "Disable robust detection (faster than robust detection)",
      cxxopts::value<bool>(disable_robust_detection))
-    ("no-post-processing", "Disable post-processing",
-     cxxopts::value<bool>(disable_post_processing))
-    ("duration-pruning", "Prune trajectories below certain duration", 
-     cxxopts::value<double>(duration_pruning_threshold))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
     ("help", "Print usage", cxxopts::value<bool>(help));
   auto results = options.parse(argc, argv);

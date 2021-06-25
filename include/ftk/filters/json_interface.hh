@@ -43,10 +43,8 @@ struct json_interface : public object {
   // - nblocks, int, by default 0: number of blocks; 0 will be replaced by the number of processes
   // - nthreads, int, by default 0: number of threads; 0 will replaced by the max available number of CPUs
   // - enable_streaming, bool, by default false
-  // - enable_discarding_interval_points, bool, by default false
   // - enable_fast_detection, bool, by default true
-  // - enable_deriving_velocities, bool, by default false
-  // - enable_post_processing, bool, by default true
+  // - post_processing_options, string, by default empty
   // - xgc, json, optional: XGC-specific options
   //    - format, string, by default auto: auto, h5, or bp
   //    - path, string, optional: XGC data path, which contains xgc.mesh, xgc.bfield, units.m, 
@@ -127,14 +125,14 @@ void json_interface::configure(const json& j0)
 
   add_boolean_option("enable_robust_detection", true);
   add_boolean_option("enable_computing_degrees", false);
-  add_boolean_option("enable_post_processing", true);
+  // add_boolean_option("enable_post_processing", true);
   add_boolean_option("enable_streaming_trajectories", false);
-  add_boolean_option("enable_discarding_interval_points", false);
-  add_boolean_option("enable_discarding_degenerate_points", false);
-  add_boolean_option("enable_ignoring_degenerate_points", false);
+  // add_boolean_option("enable_discarding_interval_points", false);
+  // add_boolean_option("enable_discarding_degenerate_points", false);
+  // add_boolean_option("enable_ignoring_degenerate_points", false);
   add_boolean_option("enable_timing", false);
 
-  add_number_option("duration_pruning_threshold", 0);
+  // add_number_option("duration_pruning_threshold", 0);
   add_number_option("nblocks", 1);
   
   /// application specific
@@ -682,7 +680,7 @@ void json_interface::xgc_post_process()
   });
 }
 
-void json_interface::post_process()
+void json_interface::post_process()  // FIXME: legacy post processing code, to be removed later
 {
   auto &trajs = tracker->get_traced_critical_points();
 
