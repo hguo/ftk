@@ -2,6 +2,9 @@
 #include <vector>
 #include <ftk/config.hh>
 #include <ftk/mesh/lattice.hh>
+#include <ftk/numeric/inverse_linear_interpolation_solver.hh>
+#include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include "common.cuh"
@@ -21,14 +24,20 @@ static std::vector<cp_t> extract_cp2dt(
     bool use_explicit_coords,
     const double *coords)
 {
-  std::vector<cp_t> results;
+  const unsigned int maxcps = 32768;
 
-  int counter = 0;
+  std::vector<cp_t> results;
+  cp_t *buf = (cp_t*)malloc(sizeof(cp_t) * maxcps); // TODO: there is a limit of #cps
+  memset(buf, 0, sizeof(cp_t) * maxcps);
+
+  unsigned int counter = 0;
   {
     cl::sycl::buffer<double, 1> dV(V, 2 * 2 * ext.n());
     // fprintf(stderr, "dV:%d\n", 2 * 2 * ext.n());
-    auto dcounter = cl::sycl::buffer<int>( &counter, 1 );
+    // auto dscope = cl::sycl::buffer<int>( &scope, 1 );
+    auto dcounter = cl::sycl::buffer<unsigned int>( &counter, 1 );
     auto dcore = cl::sycl::buffer<lattice3_t>( &core, 1 );
+    auto dbuf = cl::sycl::buffer<cp_t>( buf, maxcps );
 
     sycl::gpu_selector selector;
     // sycl::host_selector selector;
@@ -46,9 +55,10 @@ static std::vector<cp_t> extract_cp2dt(
 
       q.submit([&](cl::sycl::handler &cgh) {
         // auto V = dV.get_access<cl::sycl::access::mode::read>(cgh);
-        sycl::accessor V{dV, cgh, sycl::read_only, sycl::noinit};
-        // auto V = dV.get_access<cl::sycl::access::mode::read>(cgh);
+        // sycl::accessor V{dV, cgh, sycl::read_only, sycl::noinit};
+        auto V = dV.get_access<cl::sycl::access::mode::read>(cgh);
         auto counter = dcounter.get_access<cl::sycl::access::mode::write>(cgh);
+        auto buf = dbuf.get_access<cl::sycl::access::mode::write>(cgh);
         auto core = dcore.get_access<cl::sycl::access::mode::read>(cgh);
         sycl::stream out(1024, 256, cgh);
 
@@ -86,22 +96,26 @@ static std::vector<cp_t> extract_cp2dt(
             }
           }
 
-          // for (int i = 0; i < 3; i ++)
-          //   for (int j = 0; j < 2; j ++)
-          //     vf[i][j] = (long long)(v[i][j] * 32768.0);
-          
-          // out << "indices=" << indices[0] << "," << indices[1] << "," << indices[2] << cl::sycl::endl;
-          // out << "v[0]=" << v[0][0] << "," << v[0][1] << cl::sycl::endl;
-          // out << "v[1]=" << v[1][0] << "," << v[1][1] << cl::sycl::endl;
-          // out << "v[0]=" << v[2][0] << "," << v[2][1] << cl::sycl::endl;
-          // out << "vf[0]=" << vf[0][0] << "," << vf[0][1] << cl::sycl::endl;
-          // return;
-          
           bool succ = ftk::robust_critical_point_in_simplex2(vf, indices);
 
           if (succ) {
-            cl::sycl::atomic<int> atomic_counter(cl::sycl::global_ptr<int>{&counter[0]});
-            atomic_counter.fetch_add(1);
+            cl::sycl::atomic<unsigned> atomic_counter(cl::sycl::global_ptr<unsigned int>{&counter[0]});
+            auto k = atomic_counter.fetch_add(1);
+            cp_t &cp = buf[ k ];
+
+            double mu[3], cond;
+            bool succ2 = ftk::inverse_lerp_s2v2(v, mu, &cond);
+            if (!succ2) ftk::clamp_barycentric<3>(mu);
+
+            double X[3][3], x[3];
+            for (int i = 0; i < 3; i ++)
+              for (int j = 0; j < 3; j ++)
+                X[i][j] = vertices[i][j];
+            ftk::lerp_s2v3(X, mu, x);
+            cp.x[0] = x[0];
+            cp.x[1] = x[1];
+            cp.t = x[2];
+            cp.cond = cond;
           }
         });
       });
@@ -110,6 +124,10 @@ static std::vector<cp_t> extract_cp2dt(
     // }
   }
 
+  results.resize(counter);
+  memcpy((void*)results.data(), buf, counter * sizeof(cp_t));
+
+  free(buf);
   fprintf(stderr, "#results=%zu, counter=%d\n", results.size(), counter);
 
   return results;
