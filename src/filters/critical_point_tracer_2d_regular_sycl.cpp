@@ -54,14 +54,14 @@ static std::vector<cp_t> extract_cp2dt(
       q.submit([&](cl::sycl::handler &cgh) {
         // auto V = dV.get_access<cl::sycl::access::mode::read>(cgh);
         // sycl::accessor V{dV, cgh, sycl::read_only, sycl::noinit};
-        auto scope = dscope.get_access<cl::sycl::access::mode::read>(cgh);
+        // auto scope = dscope.get_access<cl::sycl::access::mode::read>(cgh);
         auto V = dV.get_access<cl::sycl::access::mode::read>(cgh);
         auto counter = dcounter.get_access<cl::sycl::access::mode::write>(cgh);
         auto buf = dbuf.get_access<cl::sycl::access::mode::write>(cgh);
         sycl::stream out(1024, 256, cgh); // debug stream
 
         cgh.parallel_for<class cp2dtk>(work_items, [=](cl::sycl::id<1> tid) {
-          const element32_t e = scope[0] == 1 ? 
+          const element32_t e = scope == 1 ? 
             element32_from_index<scope_ordinal>(core, tid) : 
             element32_from_index<scope_interval>(core, tid);
 
@@ -70,7 +70,7 @@ static std::vector<cp_t> extract_cp2dt(
           for (int i = 0; i < 3; i ++) {
             for (int j = 0; j < 3; j ++) {
               vertices[i][j] = e.corner[j] 
-                + (scope[0] == 1 ? // scope_ordinal ? 
+                + (scope == 1 ? // scope_ordinal ? 
                   unit_simplex_offset_3_2<scope_ordinal>(e.type, i, j) :
                   unit_simplex_offset_3_2<scope_interval>(e.type, i, j));
 
@@ -94,7 +94,11 @@ static std::vector<cp_t> extract_cp2dt(
             // size_t k = ext.to_index(vertices[i]);
             const size_t k = local_indices[i];
             for (int j = 0; j < 2; j ++) {
-              v[i][j] = V[k*2+j]; // V[unit_simplex_offset_3_2<scope_ordinal>(e.type, i, 2/*time dimension id*/)][k*2+j];
+              const int offset = (scope == 1) ? 
+                unit_simplex_offset_3_2<scope_ordinal>(e.type, i, 2/*time dimension id*/) : 
+                unit_simplex_offset_3_2<scope_interval>(e.type, i, 2/*time dimension id*/);
+
+              v[i][j] = V[offset*2*ext.n() + k*2+j]; // V[unit_simplex_offset_3_2<scope_ordinal>(e.type, i, 2/*time dimension id*/)][k*2+j];
               // out << k*2+j << "," << v[i][j] << cl::sycl::endl;
               vf[i][j] = v[i][j] * 32768L; // WIP
             }
@@ -120,6 +124,7 @@ static std::vector<cp_t> extract_cp2dt(
             cp.x[1] = x[1];
             cp.t = x[2];
             cp.cond = cond;
+            cp.tag = tid;
           }
         });
       });
