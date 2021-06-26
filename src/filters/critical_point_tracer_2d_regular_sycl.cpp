@@ -33,10 +33,8 @@ static std::vector<cp_t> extract_cp2dt(
   unsigned int counter = 0;
   {
     cl::sycl::buffer<double, 1> dV(V, 2 * 2 * ext.n());
-    // fprintf(stderr, "dV:%d\n", 2 * 2 * ext.n());
-    // auto dscope = cl::sycl::buffer<int>( &scope, 1 );
+    auto dscope = cl::sycl::buffer<int>( &scope, 1 );
     auto dcounter = cl::sycl::buffer<unsigned int>( &counter, 1 );
-    auto dcore = cl::sycl::buffer<lattice3_t>( &core, 1 );
     auto dbuf = cl::sycl::buffer<cp_t>( buf, maxcps );
 
     sycl::gpu_selector selector;
@@ -48,7 +46,7 @@ static std::vector<cp_t> extract_cp2dt(
               << std::endl;
 
     { // if (scope == scope_ordinal) {
-      const size_t ntasks = core.n() * ntypes_3_2<scope_ordinal>();
+      const size_t ntasks = core.n() * (scope == scope_ordinal ? ntypes_3_2<scope_ordinal>() : ntypes_3_2<scope_interval>());
       cl::sycl::range<1> work_items{ntasks};
 
       fprintf(stderr, "ntasks=%zu\n", ntasks);
@@ -56,24 +54,30 @@ static std::vector<cp_t> extract_cp2dt(
       q.submit([&](cl::sycl::handler &cgh) {
         // auto V = dV.get_access<cl::sycl::access::mode::read>(cgh);
         // sycl::accessor V{dV, cgh, sycl::read_only, sycl::noinit};
+        auto scope = dscope.get_access<cl::sycl::access::mode::read>(cgh);
         auto V = dV.get_access<cl::sycl::access::mode::read>(cgh);
         auto counter = dcounter.get_access<cl::sycl::access::mode::write>(cgh);
         auto buf = dbuf.get_access<cl::sycl::access::mode::write>(cgh);
-        auto core = dcore.get_access<cl::sycl::access::mode::read>(cgh);
-        sycl::stream out(1024, 256, cgh);
+        sycl::stream out(1024, 256, cgh); // debug stream
 
         cgh.parallel_for<class cp2dtk>(work_items, [=](cl::sycl::id<1> tid) {
-          const element32_t e = element32_from_index<scope_ordinal>(core[0], tid);
+          const element32_t e = scope[0] == 1 ? 
+            element32_from_index<scope_ordinal>(core, tid) : 
+            element32_from_index<scope_interval>(core, tid);
+
           int vertices[3][3], indices[3];
           size_t local_indices[3];
           for (int i = 0; i < 3; i ++) {
             for (int j = 0; j < 3; j ++) {
               vertices[i][j] = e.corner[j] 
-                + unit_simplex_offset_3_2<scope_ordinal>(e.type, i, j);
+                + (scope[0] == 1 ? // scope_ordinal ? 
+                  unit_simplex_offset_3_2<scope_ordinal>(e.type, i, j) :
+                  unit_simplex_offset_3_2<scope_interval>(e.type, i, j));
+
               if (vertices[i][j] < domain.st[j] || 
                    vertices[i][j] > domain.st[j] + domain.sz[j] - 1)
-              // if (vertices[i][j] < core.st[j] || 
-              //     vertices[i][j] > core.st[j] + core.sz[j] - 1)
+              // if (vertices[i][j] < core[0].st[j] || 
+              //     vertices[i][j] > core[0].st[j] + core[0].sz[j] - 1)
                 return; // false;
             }
             indices[i] = domain.to_index(vertices[i]);
@@ -120,8 +124,7 @@ static std::vector<cp_t> extract_cp2dt(
         });
       });
       q.wait();
-    } // else if (scope == scope_interval) {
-    // }
+    } 
   }
 
   results.resize(counter);
