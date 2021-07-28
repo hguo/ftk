@@ -116,7 +116,7 @@ ndarray<int> xgc_blob_threshold_tracker::get_sliced(int t) const
   ndarray<int> array({m3->n(0)}, -1);
   for (int i = 0; i < m3->n(0); i ++) {
     const int e = i + t * m3->n(0);
-    if (uf.exists(e)) 
+    if (uf.has(e)) 
       array[i] = uf.find(e);
   }
   return array;
@@ -138,7 +138,7 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
   std::map<int, vtkIdType> idmap;
   for (int i = 0; i < m3->n(0); i ++) {
     const int e = i + t * m3->n(0);
-    if (uf.exists(e)) {
+    if (uf.has(e)) {
       double coords[3];
       m3->get_coords(i, coords);
       vtkIdType id = points->InsertNextPoint(coords[0], coords[1], coords[2]);
