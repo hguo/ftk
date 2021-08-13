@@ -53,6 +53,7 @@ struct simplicial_regular_mesh_element {
   simplicial_regular_mesh_element& operator=(const simplicial_regular_mesh_element& e);
   bool operator!=(const simplicial_regular_mesh_element& e) const {return !(*this == e);}
   bool operator<(const simplicial_regular_mesh_element& e) const;
+  bool operator>(const simplicial_regular_mesh_element& e) const;
   bool operator==(const simplicial_regular_mesh_element& e) const;
   // simplicial_regular_mesh_element& operator++();
   friend std::ostream& operator<<(std::ostream& os, const simplicial_regular_mesh_element&);
@@ -81,6 +82,10 @@ struct simplicial_regular_mesh_element {
   std::vector<simplicial_regular_mesh_element> side_of(const simplicial_regular_mesh& m) const;
   
   bool is_ordinal(const simplicial_regular_mesh& m) const;
+
+  static bool corner_equal(const std::vector<int>& a, const std::vector<int>& b) { return a == b; }
+  static bool corner_less(const std::vector<int>&, const std::vector<int>&);
+  static bool corner_greater(const std::vector<int>&, const std::vector<int>&);
 
   // const simplicial_regular_mesh &m; // avoid the ref to mesh to ease (de)serialization
   std::vector<int> corner;
@@ -282,11 +287,52 @@ inline simplicial_regular_mesh_element& simplicial_regular_mesh_element::operato
   return *this;
 }
 
+inline bool simplicial_regular_mesh_element::corner_less(const std::vector<int>& a, const std::vector<int>& b)
+{
+  assert(a.size() == b.size());
+  if (corner_equal(a, b)) return false; 
+  else {
+    for (int i = 0; i < a.size(); i ++)
+      if (a[i] > b[i]) return false;
+      else continue;
+    return true;
+  }
+}
+
+inline bool simplicial_regular_mesh_element::corner_greater(const std::vector<int>& a, const std::vector<int>& b)
+{
+  assert(a.size() == b.size());
+  if (corner_equal(a, b)) return false; 
+  else {
+    for (int i = 0; i < a.size(); i ++)
+      if (a[i] < b[i]) return false;
+      else continue;
+    return true;
+  }
+}
+
 inline bool simplicial_regular_mesh_element::operator<(const simplicial_regular_mesh_element& e) const
 {
+#if 0
   if (corner < e.corner) return true;
   else if (corner == e.corner) return type < e.type;
   else return false;
+#else
+  if (corner == e.corner) return type < e.type;
+  else return corner < e.corner;
+#endif
+}
+
+inline bool simplicial_regular_mesh_element::operator>(const simplicial_regular_mesh_element& e) const
+{
+#if 0
+  if (corner > e.corner) return true;
+  else if (corner == e.corner) return type > e.type;
+  else return false;
+#else
+  if (corner == e.corner) return type > e.type;
+  else return corner > e.corner;
+#endif
 }
 
 inline bool simplicial_regular_mesh_element::operator==(const simplicial_regular_mesh_element& e) const
@@ -1000,6 +1046,19 @@ namespace diy {
       diy::load(bb, e.corner); 
       diy::load(bb, e.dim);
       diy::load(bb, e.type);
+    }
+  };
+}
+
+
+namespace std {
+  template<> struct hash<ftk::simplicial_regular_mesh_element> {
+    std::size_t operator()(ftk::simplicial_regular_mesh_element const& e) const noexcept {
+      std::size_t h = std::hash<int>{}(e.type);
+      for (int i = 0; i < e.corner.size(); i ++) {
+        h ^= std::hash<int>{}(e.corner[i]) << 1;
+      }
+      return h;
     }
   };
 }

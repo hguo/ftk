@@ -152,6 +152,36 @@ inline void critical_point_tracker_2d_regular::finalize()
 
     if (comm.rank() == get_root_proc()) {
       fprintf(stderr, "finalizing...\n");
+#if 0
+      duf<uint64_t> uf(comm);
+
+      for (const auto &kv : discrete_critical_points) {
+        std::set<element_t> neighbors;
+        const auto cells = kv.first.side_of(m);
+        for (const auto c : cells) {
+          const auto elements = c.sides(m);
+          for (const auto f1 : elements)
+            neighbors.insert(f1);
+        }
+
+        for (const auto &n : neighbors)
+          // if (true) // (discrete_critical_points.find(n) != discrete_critical_points.end())
+          if (kv.first != n) {
+            uint64_t i0 = kv.first.to_integer<uint64_t>(m), 
+                     i1 = n.to_integer<uint64_t>(m);
+            // fprintf(stderr, "uniting %lld, %lld, rank=%d\n", i0, i1, comm.rank());
+            uf.unite(kv.first.to_integer<uint64_t>(m), n.to_integer<uint64_t>(m));
+          }
+      }
+      // fprintf(stderr, "dUF sync...\n");
+      uf.sync();
+      // fprintf(stderr, "dUF done.\n");
+      fprintf(stderr, "dUF done., #pts=%zu, #roots=%zu\n", discrete_critical_points.size(), uf.get_roots().size());
+
+      comm.barrier();
+      exit(1);
+#endif
+
       traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 
           [&](element_t f) {
             std::set<element_t> neighbors;

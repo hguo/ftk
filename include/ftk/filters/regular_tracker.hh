@@ -84,6 +84,7 @@ inline void regular_tracker::initialize()
     partitioner.partition(comm.size(), {}, ghost);
 
     local_domain = partitioner.get_core(comm.rank());
+    // local_domain = partitioner.get_ext(comm.rank());
     local_array_domain = partitioner.get_ext(comm.rank());
   }
 
@@ -138,6 +139,9 @@ inline void regular_tracker::simplex_indices(
 inline void regular_tracker::element_for(bool ordinal, int k, std::function<void(element_t)> f) 
 {
   auto st = local_domain.starts(), sz = local_domain.sizes();
+  // fprintf(stderr, "st=%d, %d, sz=%d, %d\n", 
+  //     st[0], st[1], sz[0], sz[1]);
+
   st.push_back(current_timestep);
   sz.push_back(1);
 
