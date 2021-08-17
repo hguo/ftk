@@ -97,6 +97,30 @@ void duf<T, Compare>::sync()
 {
   if (comm.size() == 1) return; // no need to sync
 
+#if 0 // WIP
+  for (auto &kv : parents)
+    kv.second = find(kv.second); // set to root
+
+  fprintf(stderr, "before: rank=%d, #parents=%zu\n", comm.rank(), parents.size());
+
+  diy::mpi::allgather<std::map<T, T, Compare>>(comm, parents, parents, 
+      [](const std::map<T, T, Compare>& in, std::map<T, T, Compare>& out) {
+        for (const auto &kv : in) {
+          auto it = out.find( kv.first );
+          if (it == out.end()) 
+            out.insert( kv );
+          else if (kv.second < it->second) // (Compare(kv.second, it->second))
+          {
+            // fprintf(stderr, "change..\n");
+            it->second = kv.second;
+          }
+        }
+      });
+  
+  fprintf(stderr, "after: rank=%d, #parents=%zu\n", comm.rank(), parents.size());
+#endif
+
+#if 0
   while (1) {
     std::set<T, Compare> local_roots = get_roots();
     std::set<T, Compare> remote_roots;
@@ -125,6 +149,7 @@ void duf<T, Compare>::sync()
     if (remote_updated_parents.size() == 0)
       break;
   }
+#endif
 }
 
 } // namespace ftk

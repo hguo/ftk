@@ -739,7 +739,7 @@ void json_interface::write()
       for (int t = 0; t < js["n_timesteps"]; t ++)
         write_intercepted_results(t, 2);
     } else if (j["output_type"] == "traced") {
-      fprintf(stderr, "writing traced critical points..\n");
+      // fprintf(stderr, "writing traced critical points..\n");
       if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
       else if (j["output_format"] == "text") tracker->write_traced_critical_points_text(j["output"]);
       else if (j["output_format"] == "json") tracker->write_traced_critical_points_json(j["output"]);

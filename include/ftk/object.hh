@@ -6,6 +6,7 @@
 #include <thread>
 #include <vector>
 #include <set>
+#include <map>
 #include <functional>
 #include <algorithm>
 #include <ftk/config.hh>
@@ -110,6 +111,20 @@ struct object {
     std::copy(set.begin(), set.end(), vector.begin());
 
     parallel_for(set.size(), [&](int i) { f(vector[i]); }, 
+        xl, nthreads, affinity);
+  }
+
+  template <typename Container> // =std::map<K, V>>
+  static void parallel_for_container(Container& map, std::function<void(typename Container::iterator)> f,
+      int xl = FTK_THREAD_PTHREAD, 
+      int nthreads = std::thread::hardware_concurrency(), 
+      bool affinity = true)
+  {
+    std::vector<typename Container::iterator> its;
+    for (typename Container::iterator it = map.begin(); it != map.end(); it ++)
+      its.push_back(it);
+
+    parallel_for(its.size(), [&](int i) { f(its[i]); }, 
         xl, nthreads, affinity);
   }
  

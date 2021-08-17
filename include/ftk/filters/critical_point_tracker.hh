@@ -685,19 +685,22 @@ std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offli
   // exit(1);
 #endif
 
-#if 0
+#if 1
   // fprintf(stderr, "dUF..\n");
   duf<element_t> uf(comm);
-
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc()); // TODO FIXME
+  if (!is_root_proc()) discrete_critical_points.clear();
+  
   for (const auto &kv : discrete_critical_points) {
     for (const auto &n : neighbors(kv.first))
-      if (true) // (discrete_critical_points.find(n) != discrete_critical_points.end())
+      // if (true) // (discrete_critical_points.find(n) != discrete_critical_points.end())
+      if (discrete_critical_points.find(n) != discrete_critical_points.end())
         uf.unite(kv.first, n);
   }
   // fprintf(stderr, "dUF sync...\n");
   uf.sync();
   // fprintf(stderr, "dUF done.\n");
-  fprintf(stderr, "dUF done., #pts=%zu, #roots=%zu\n", discrete_critical_points.size(), uf.get_roots().size());
+  // fprintf(stderr, "dUF done., #pts=%zu, #roots=%zu\n", discrete_critical_points.size(), uf.get_roots().size());
 
   std::map<element_t/*root*/, std::map<element_t, feature_point_t>> ccs, rccs; // distributed cc
   for (const auto &kv : discrete_critical_points)
@@ -706,10 +709,11 @@ std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offli
   redistribute(comm, ccs, rccs);
   
   std::mutex my_mutex;
-  // object::parallel_for(rccs.size(), [&](int cid) {
-  for (auto &cc : rccs) { // TODO: parallel
+  // for (auto &cc : rccs) { 
+  object::parallel_for_container<std::map<element_t, std::map<element_t, feature_point_t>>>
+    (rccs, [&](typename std::map<element_t, std::map<element_t, feature_point_t>>::iterator icc) {
     std::set<element_t> component;
-    for (auto &kv : cc.second)
+    for (const auto &kv : icc->second)
       component.insert(kv.first);
 
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
@@ -720,7 +724,7 @@ std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offli
       traj.loop = is_loop(linear_graphs[j], neighbors);
       for (int k = 0; k < linear_graphs[j].size(); k ++) {
         // auto &cp = discrete_critical_points[linear_graphs[j][k]];
-        auto cp = cc.second[linear_graphs[j][k]];
+        auto cp = icc->second.at(linear_graphs[j][k]);
         cp.id = id;
 
         traj.push_back(cp);
@@ -732,16 +736,21 @@ std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offli
         traced_critical_points.emplace_back(traj);
       }
     }
-  }
+  });
 
   fprintf(stderr, "rank=%d, #curves=%zu\n", comm.rank(), traced_critical_points.size());
 
-  diy::mpi::gather_vector(comm, traced_critical_points, traced_critical_points, get_root_proc());
+  diy::mpi::gather<std::vector<feature_curve_t>>(comm, traced_critical_points, traced_critical_points, get_root_proc(), 
+      [](const std::vector<feature_curve_t>& in, std::vector<feature_curve_t>& out) {
+        for (const auto& v : in)
+          out.push_back(v);
+      });
+
   if (comm.rank() == 0) 
     fprintf(stderr, "total curves: %zu\n", traced_critical_points.size());
 #endif
 
-#if 1
+#if 0
   fprintf(stderr, "computing cc..\n");
   std::set<element_t> elements;
   for (const auto &kv : discrete_critical_points)

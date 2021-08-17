@@ -97,10 +97,10 @@ inline void critical_point_tracker_3d_regular::finalize()
   if (enable_streaming_trajectories) {
     // already done
   } else {
-    diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
+    // diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
-    if (comm.rank() == 0) {
-      fprintf(stderr, "finalizing...\n");
+    if (1) { // comm.rank() == 0) {
+      // fprintf(stderr, "finalizing...\n");
       // trace_intersections();
       // trace_connected_components();
       traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 

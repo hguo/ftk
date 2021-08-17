@@ -148,10 +148,10 @@ inline void critical_point_tracker_2d_regular::finalize()
     // done
   } else {
     // fprintf(stderr, "rank=%d, root=%d, #cp=%zu\n", comm.rank(), get_root_proc(), discrete_critical_points.size());
-    diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
+    // diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
-    if (comm.rank() == get_root_proc()) {
-      fprintf(stderr, "finalizing...\n");
+    if (1) { // if (comm.rank() == get_root_proc()) {
+      // fprintf(stderr, "finalizing...\n");
 #if 0
       duf<uint64_t> uf(comm);
 
