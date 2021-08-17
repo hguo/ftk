@@ -423,13 +423,15 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             }
           } else 
             j["filenames"] = filenames;
-          
+         
+#if 0
           if (j.contains("n_timesteps") && j["n_timesteps"].is_number()) { 
             j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
             filenames.resize(j["n_timesteps"]);
           }
           else 
             j["n_timesteps"] = j["filenames"].size();
+#endif
         }
         const std::string filename0 = j["filenames"][0];
 
@@ -462,6 +464,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             j["components"] = ones;
           }
           
+          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+          else 
+            j["n_timesteps"] = j["filenames"].size();
         } else if (j["format"] == "vti") {
 #if FTK_HAVE_VTK
           vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
@@ -756,7 +762,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS1);
 #endif
-        }
+        } 
       } else fatal("missing filenames");
     } else fatal("invalid input type");
   } else fatal("missing `type'");
