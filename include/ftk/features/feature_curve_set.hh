@@ -274,6 +274,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     types->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
+      if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         types->SetValue(i ++, curve[j].type);
       if (curve.loop)
@@ -288,6 +289,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     ids->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](int id, const feature_curve_t& curve) {
+      if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         ids->SetValue(i ++, curve[j].id);
       if (curve.loop)
@@ -303,6 +305,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     vels->SetNumberOfTuples(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
+      if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         vels->SetTuple3(i ++, curve[j].v[0], curve[j].v[1], curve[j].v[2]);
       if (curve.loop)
@@ -317,6 +320,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     time->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
+      if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         time->SetValue(i ++, curve[j].t);
       if (curve.loop)
@@ -331,6 +335,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     conds->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
+      if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         conds->SetValue(i ++, curve[j].cond);
       if (curve.loop)
@@ -347,6 +352,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims
     scalar->SetNumberOfValues(nv);
     size_t i = 0;
     foreach([&](const feature_curve_t& curve) {
+      if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         scalar->SetValue(i ++, curve[j].scalar[k]);
       if (curve.loop)
