@@ -22,6 +22,7 @@
 
 #if FTK_HAVE_MPI
 #include <mpi.h>
+#include <ftk/external/bil/bil.h>
 #endif
 
 #if FTK_HAVE_NETCDF
@@ -93,6 +94,7 @@ struct ndarray : public ndarray_base {
 
   void reshape(const std::vector<size_t> &dims_);
   void reshape(const std::vector<size_t> &dims, T val);
+  template <typename I> void reshape(const int ndims, const I sz[]);
   template <typename T1> void reshape(const ndarray<T1>& array); //! copy shape from another array
 
   void reshape(size_t n0) {reshape(std::vector<size_t>({n0}));}
@@ -224,6 +226,8 @@ public: // i/o for binary file
 
   void from_bov(const std::string& filename);
   void to_bov(const std::string& filename) const;
+ 
+  void bil_add_block_raw(const std::string& filename, const int ndims, const int SZ[], const int st[], const int sz[]);
 
 public: // i/o for vtk image data
   void to_vtk_image_data_file(const std::string& filename, const std::string varname=std::string()) const;
@@ -464,6 +468,17 @@ void ndarray<T>::swap(ndarray& x)
   p.swap(x.p);
   std::swap(x.ncd, ncd);
   std::swap(x.tv, tv);
+}
+
+template <typename T>
+void ndarray<T>::bil_add_block_raw(const std::string& filename, const int ndims, const int SZ[], const int st[], const int sz[])
+{
+#if FTK_HAVE_MPI
+  reshape(ndims, sz);
+  BIL_Add_block_raw(ndims, SZ, st, sz, filename.c_str(), mpi_datatype(), (void**)&p[0]);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_MPI);
+#endif
 }
 
 template <typename T>
@@ -921,6 +936,16 @@ ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
     else s[i] = s[i-1]*dims[i-1];
 
   p.assign(a, a + s[nd()-1]);
+}
+  
+template <typename T> 
+template <typename I> 
+void ndarray<T>::reshape(const int ndims, const I sz[])
+{
+  std::vector<size_t> sizes(ndims);
+  for (int i = 0; i < ndims; i ++)
+    sizes[i] = sz[i];
+  reshape(sizes);
 }
 
 template <typename T>

@@ -23,7 +23,8 @@ set (ftk_sources
   io/tdgl/glpp/stringutils.cpp
   io/tdgl/glpp/datafile.cpp
   io/tdgl/tdgl.cpp
-  io/tdgl/GLGPU_IO_Helper.cpp)
+  io/tdgl/GLGPU_IO_Helper.cpp
+)
 
 if (FTK_HAVE_CUDA)
   set (ftk_cuda_sources
@@ -90,7 +91,8 @@ if (FTK_HAVE_TBB)
 endif ()
 
 if (FTK_HAVE_MPI)
-  target_link_libraries (libftk ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+  add_subdirectory (bil)
+  target_link_libraries (libftk bil ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
 endif ()
 
 if (FTK_HAVE_PNG)
