@@ -69,6 +69,10 @@ if (FTK_HAVE_NETCDF)
   target_link_libraries (libftk ${NETCDF_LIBRARY})
 endif ()
 
+if (FTK_HAVE_PNETCDF)
+  target_link_libraries (libftk ${PNETCDF_LIBRARY})
+endif ()
+
 if (FTK_HAVE_HDF5)
   target_link_libraries (libftk ${HDF5_LIBRARIES})
 endif ()

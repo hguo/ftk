@@ -78,6 +78,7 @@ struct ndarray_stream : public object {
 protected:
   ndarray<T> request_timestep_file(int k);
   ndarray<T> request_timestep_file_nc(int k);
+  ndarray<T> request_timestep_file_pnc(int k);
   ndarray<T> request_timestep_file_vti(int k);
   ndarray<T> request_timestep_file_vtu(int k);
   ndarray<T> request_timestep_file_h5(int k);
@@ -547,7 +548,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
         } else if (j["format"] == "nc") {
 #if FTK_HAVE_NETCDF
           if (missing_variables) 
-            fatal("missing nc variable");
+            fatal(FTK_ERR_NETCDF_MISSING_VARIABLE);
 
           const int nv = j["variables"].size();
           int ncid, ncdims, nd, varids[nv];
@@ -624,6 +625,64 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+        } else if (j["format"] == "pnc") { // parallel-netcdf
+#if FTK_HAVE_PNETCDF
+          if (missing_variables)
+            fatal(FTK_ERR_NETCDF_MISSING_VARIABLE);
+
+          const int nv = j["variables"].size();
+          int ncid, ncdims, nd, varids[nv];
+
+          PNC_SAFE_CALL( ncmpi_open(comm, filename0.c_str(), NC_NOWRITE, MPI_INFO_NULL, &ncid) );
+          for (int i = 0; i < nv; i ++) {
+            const std::string var = j["variables"][i];
+            PNC_SAFE_CALL( ncmpi_inq_varid(ncid, var.c_str(), &varids[i]) );
+          }
+          PNC_SAFE_CALL( ncmpi_inq_varndims(ncid, varids[0], &ncdims) ); // assuming all variables have the same dimensions
+          
+          // components
+          const std::vector<int> components(nv, 1);
+          j["components"] = components;
+          
+          // determin spatial dimensions
+          int dimids[4]; 
+          MPI_Offset dimlens[4];
+          PNC_SAFE_CALL( ncmpi_inq_vardimid(ncid, varids[0], dimids) );
+          for (int i = 0; i < ncdims; i ++) 
+            PNC_SAFE_CALL( ncmpi_inq_dimlen(ncid, dimids[i], &dimlens[i]) );
+
+          int nt;
+          int unlimited_recid;
+          PNC_SAFE_CALL( ncmpi_inq_unlimdim(ncid, &unlimited_recid) );
+          PNC_SAFE_CALL( ncmpi_close(ncid) );
+          if (unlimited_recid >= 0) {
+            j["nc_has_unlimited_time_dimension"] = true;
+
+            // check timesteps per file
+            const int nf = j["filenames"].size();
+            std::vector<int> timesteps_per_file(nf), first_timestep_per_file(nf);
+            int total_timesteps = 0;
+            for (int i = 0; i < nf; i ++) {
+              const std::string filename = j["filenames"][i];
+              size_t nt;
+              PNC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+              PNC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[0], &nt) );
+              PNC_SAFE_CALL( nc_close(ncid) );
+              timesteps_per_file[i] = nt;
+              first_timestep_per_file[i] = total_timesteps;
+              total_timesteps += nt;
+            }
+            j["timesteps_per_file"] = timesteps_per_file;
+            j["first_timestep_per_file"] = first_timestep_per_file;
+          
+            nt = std::accumulate(timesteps_per_file.begin(), timesteps_per_file.end(), 0);
+          } else {
+            nt = j["filenames"].size();
+          }
+
+#else
+          fatal(FTK_ERR_NOT_BUILT_WITH_PNETCDF);
 #endif
         } else if (j["format"] == "h5") {
 #if FTK_HAVE_HDF5
@@ -838,6 +897,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
     return request_timestep_file_vtu(k);
   else if (fmt == "nc")
     return request_timestep_file_nc(k);
+  else if (fmt == "pnc")
+    return request_timestep_file_pnc(k);
   else if (fmt == "h5")
     return request_timestep_file_h5(k);
   else if (fmt == "bp3")
@@ -930,6 +991,17 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
 }
 
 template <typename T>
+ndarray<T> ndarray_stream<T>::request_timestep_file_pnc(int k)
+{
+  ndarray<T> array;
+#if FTK_HAVE_PNETCDF
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_PNETCDF);
+#endif
+  return array;
+}
+
+template <typename T>
 ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
 {
   size_t fid = 0, offset = 0;
@@ -999,7 +1071,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     array.set_multicomponents();
   }
 #else
-  fatal("FTK not compiled with netcdf");
+  fatal(FTK_ERR_NOT_BUILT_WITH_PNETCDF);
 #endif
   return array;
 }
