@@ -553,7 +553,12 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           const int nv = j["variables"].size();
           int ncid, ncdims, nd, varids[nv];
 
+#if NC_HAS_PARALLEL
+          NC_SAFE_CALL( nc_open_par(filename0.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid) );
+#else
           NC_SAFE_CALL( nc_open(filename0.c_str(), NC_NOWRITE, &ncid) );
+#endif
+
           for (int i = 0; i < nv; i ++) {
             const std::string var = j["variables"][i];
             NC_SAFE_CALL( nc_inq_varid(ncid, var.c_str(), &varids[i]) );

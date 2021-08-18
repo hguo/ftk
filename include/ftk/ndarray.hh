@@ -26,6 +26,9 @@
 
 #if FTK_HAVE_NETCDF
 #include <netcdf.h>
+#if NC_HAS_PARALLEL
+#include <netcdf_par.h>
+#endif
 #define NC_SAFE_CALL(call) {\
   int retval = call;\
   if (retval != 0) {\
@@ -681,7 +684,11 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 {
 #if FTK_HAVE_NETCDF
   int ncid, varid;
+#if 0 // NC_HAS_PARALLEL
+  NC_SAFE_CALL( nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid) );
+#else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#endif
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
   read_netcdf(ncid, varid);
   NC_SAFE_CALL( nc_close(ncid) );
@@ -725,6 +732,10 @@ inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const s
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
+
+#if NC_HAS_PARALLEL
+  // NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+#endif
 
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
 #else
@@ -880,7 +891,11 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 {
 #ifdef FTK_HAVE_NETCDF
   int ncid, varid;
+#if NC_HAS_PARALLEL
+  NC_SAFE_CALL( nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid) );
+#else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#endif
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
   read_netcdf(ncid, varid, starts, sizes);
   NC_SAFE_CALL( nc_close(ncid) );
