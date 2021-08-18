@@ -35,7 +35,7 @@ struct json_interface : public object {
   //    - traced, string, optional: file name to load/store traced features
   // - output, json, required:
   //    - type, string, by default "traced": intersections, traced, sliced, or intercepted
-  //    - format, string, by default "auto": auto, text, json, vtp, vtu, ply
+  //    - format, string, by default "auto": auto, text, json, vtp, pvtp, vtu, ply
   //    - pattern, string, required: e.g. "surface.vtp", "sliced-%04d.vtp"
   // - threshold, number, by default 0: threshold for some trackers, e.g. contour trackers
   // - accelerator, string, by default "none": none, cuda, or hipsycl
@@ -199,7 +199,7 @@ void json_interface::configure(const json& j0)
   //   j["enable_streaming_trajectories"] = true;
 
   // output format
-  static const std::set<std::string> valid_output_formats = {"text", "vtp", "json"}; // , "binary"};
+  static const std::set<std::string> valid_output_formats = {"text", "vtp", "pvtp", "json"}; // , "binary"};
   bool output_format_determined = false;
   
   if (j.contains("output_format")) {
@@ -216,6 +216,7 @@ void json_interface::configure(const json& j0)
   if (!output_format_determined) {
     if (j.contains("output")) {
       if (ends_with(j["output"], "vtp")) j["output_format"] = "vtp";
+      else if (ends_with(j["output"], "pvtp")) j["output_format"] = "pvtp";
       else if (ends_with(j["output"], "txt")) j["output_format"] = "text";
       else if (ends_with(j["output"], "json")) j["output_format"] = "json";
       else j["output_format"] = "binary";
@@ -523,7 +524,7 @@ void json_interface::write_sliced_results(int k)
 {
   const std::string pattern = j["output"];
   const std::string filename = series_filename(pattern, k);
-  if (j["output_format"] == "vtp")
+  if (j["output_format"] == "vtp" || j["output_format"] == "pvtp")
     tracker->write_sliced_critical_points_vtk(k, filename);
   else 
     tracker->write_sliced_critical_points_text(k, filename);
@@ -533,7 +534,7 @@ void json_interface::write_intercepted_results(int k, int nt)
 {
   const std::string pattern = j["output"];
   const std::string filename = series_filename(pattern, k);
-  if (j["output_format"] == "vtp") {
+  if (j["output_format"] == "vtp" || j["output_format"] == "pvtp") {
     int nt = 2;
     if (j.contains("intercept_length") && j["intercept_length"].is_number())
       nt = j["intercept_length"];
@@ -740,13 +741,13 @@ void json_interface::write()
         write_intercepted_results(t, 2);
     } else if (j["output_type"] == "traced") {
       // fprintf(stderr, "writing traced critical points..\n");
-      if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
+      if (j["output_format"] == "vtp" || j["output_format"] == "pvtp") tracker->write_traced_critical_points_vtk(j["output"]);
       else if (j["output_format"] == "text") tracker->write_traced_critical_points_text(j["output"]);
       else if (j["output_format"] == "json") tracker->write_traced_critical_points_json(j["output"]);
       else tracker->write_traced_critical_points_binary(j["output"]);
     } else if (j["output_type"] == "discrete") {
       fprintf(stderr, "writing discrete critical points..\n");
-      if (j["output_format"] == "vtp") tracker->write_critical_points_vtk(j["output"]);
+      if (j["output_format"] == "vtp" || j["output_format"] == "pvtp") tracker->write_critical_points_vtk(j["output"]);
       else if (j["output_format"] == "text") tracker->write_critical_points_text(j["output"]);
       else if (j["output_format"] == "json") tracker->write_critical_points_json(j["output"]);
       else tracker->write_critical_points_binary(j["output"]);

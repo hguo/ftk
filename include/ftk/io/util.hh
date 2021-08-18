@@ -68,6 +68,12 @@ static bool file_not_exists(const std::string& filename) {
   return !file_exists(filename); 
 }
 
+static std::string remove_file_extension(const std::string& f)
+{
+  size_t lastindex = f.find_last_of("."); 
+  return f.substr(0, lastindex); 
+}
+
 static inline int file_extension(const std::string& f)
 {
   auto m = [f](std::string e) { return ends_with_lower(f, e); };

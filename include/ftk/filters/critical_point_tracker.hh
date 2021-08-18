@@ -248,10 +248,8 @@ inline void critical_point_tracker::write_intercepted_critical_points_vtk(int t0
 
 inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename) const
 {
-  if (comm.rank() == get_root_proc()) {
-    auto poly = traced_critical_points.to_vtp(cpdims(), scalar_components); 
-    write_polydata(filename, poly);
-  }
+  auto poly = traced_critical_points.to_vtp(cpdims(), scalar_components); 
+  write_polydata(filename, poly, "auto", comm);
 }
 
 inline void critical_point_tracker::write_sliced_critical_points_vtk(int k, const std::string& filename) const
