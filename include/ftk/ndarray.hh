@@ -26,6 +26,7 @@
 
 #if FTK_HAVE_NETCDF
 #include <netcdf.h>
+#include <netcdf_meta.h>
 #if NC_HAS_PARALLEL
 #include <netcdf_par.h>
 #endif
@@ -295,14 +296,14 @@ public: // pybind11
   void to_numpy(const std::string& filename) const;
 
 public: // netcdf
-  void read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
-  void read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
-  void read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[]);
-  void read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]);
-  void read_netcdf(const std::string& filename, const std::string& varname);
-  void read_netcdf(int ncid, const std::string& varname);
-  void read_netcdf(int ncid, int varid);
-  void read_netcdf_slice(const std::string& filename, const std::string& varname, int k);
+  void read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(const std::string& filename, const std::string& varname, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, const std::string& varname, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf_slice(const std::string& filename, const std::string& varname, int k, diy::mpi::communicator comm=MPI_COMM_WORLD);
   // void to_netcdf(int ncid, const std::string& varname);
   // void to_netcdf(int ncid, int varid);
   void to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const;
@@ -680,17 +681,17 @@ inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, cons
 #endif
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname)
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
 {
 #if FTK_HAVE_NETCDF
   int ncid, varid;
-#if 0 // NC_HAS_PARALLEL
+#if NC_HAS_PARALLEL
   NC_SAFE_CALL( nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid) );
 #else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #endif
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid);
+  read_netcdf(ncid, varid, comm);
   NC_SAFE_CALL( nc_close(ncid) );
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
@@ -698,7 +699,7 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 }
 
 template <>
-inline void ndarray<int>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+inline void ndarray<int>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #if FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
@@ -712,12 +713,16 @@ inline void ndarray<int>::read_netcdf(int ncid, int varid, int ndims, const size
 }
 
 template <>
-inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #if FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
+
+#if NC_HAS_PARALLEL
+  NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+#endif
 
   NC_SAFE_CALL( nc_get_vara_float(ncid, varid, starts, sizes, &p[0]) );
 #else
@@ -726,7 +731,7 @@ inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const si
 }
 
 template <>
-inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
@@ -734,7 +739,7 @@ inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const s
   reshape(mysizes);
 
 #if NC_HAS_PARALLEL
-  // NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+  NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
 #endif
 
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
@@ -826,7 +831,7 @@ inline void ndarray<T>::to_netcdf_multivariate_unlimited_time(int ncid, int vari
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int ndims;
@@ -836,14 +841,14 @@ inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], 
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
 
-  read_netcdf(ncid, varid, ndims, starts, sizes);
+  read_netcdf(ncid, varid, ndims, starts, sizes, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, int varid)
+inline void ndarray<T>::read_netcdf(int ncid, int varid, diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int ndims;
@@ -856,38 +861,38 @@ inline void ndarray<T>::read_netcdf(int ncid, int varid)
   for (int i = 0; i < ndims; i ++)
     NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &sizes[i]) );
   
-  read_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname)
+inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int varid;
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid);
+  read_netcdf(ncid, varid, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int varid;
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int ncid, varid;
@@ -896,8 +901,9 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 #else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #endif
+
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes, comm);
   NC_SAFE_CALL( nc_close(ncid) );
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
@@ -1179,7 +1185,7 @@ bool ndarray<T>::read_file(const std::string& filename, const std::string varnam
 
   auto ext = file_extension(filename);
   if (ext == FILE_EXT_BP) read_bp(filename, varname, comm);
-  else if (ext == FILE_EXT_NETCDF) read_netcdf(filename, varname);
+  else if (ext == FILE_EXT_NETCDF) read_netcdf(filename, varname, comm);
   else if (ext == FILE_EXT_VTI) read_vtk_image_data_file(filename, varname);
   else if (ext == FILE_EXT_HDF5) read_h5(filename, varname);
   else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);

@@ -1076,7 +1076,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     array.set_multicomponents();
   }
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_PNETCDF);
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
   return array;
 }
