@@ -9,6 +9,10 @@ set (BIL_SOURCES
 
 include_directories (${CMAKE_SOURCE_DIR}/include/ftk/external/bil)
 
+if (NOT FTK_USE_PNETCDF)
+  add_definitions (-DDISABLE_PNETCDF)
+endif ()
+
 add_library (bil ${BIL_SOURCES})
 target_link_libraries (bil ${MPI_LIBRARIES}) # ${PNETCDF_LIBRARY})
 
