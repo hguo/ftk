@@ -90,8 +90,8 @@ inline void regular_tracker::initialize()
     // local_domain = partitioner.get_ext(comm.rank());
     local_array_domain = partitioner_array.add_ghost(local_domain, ghost, ghost);
 
-    std::cerr << "local_domain: " << local_domain << std::endl;
-    std::cerr << "local_array_domain: " << local_array_domain << std::endl;
+    // std::cerr << "local_domain: " << local_domain << std::endl;
+    // std::cerr << "local_array_domain: " << local_array_domain << std::endl;
   }
 
   if (!is_input_array_partial)
