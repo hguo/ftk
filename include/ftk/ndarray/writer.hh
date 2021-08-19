@@ -181,7 +181,8 @@ void ndarray_writer<T>::write_netcdf(int k, const ndarray<T> &data)
   int ncndims = 0; // temp variable to index new dim ids
   const bool unlimited_time = j["unlimited_time"];
   
-  NC_SAFE_CALL( nc_create(filename.c_str(), NC_CLOBBER | NC_64BIT_OFFSET, &ncid) );
+  // NC_SAFE_CALL( nc_create(filename.c_str(), NC_CLOBBER | NC_64BIT_OFFSET, &ncid) );
+  NC_SAFE_CALL( nc_create(filename.c_str(), NC_CLOBBER | NC_NETCDF4, &ncid) );
 
   // dimensions
   if (unlimited_time) 
