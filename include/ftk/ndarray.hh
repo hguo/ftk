@@ -209,6 +209,9 @@ struct ndarray : public ndarray_base {
   template <typename Iterator>
   void copy(Iterator first, Iterator last);
 
+public: // subarray
+  ndarray<T> subarray(const lattice&) const;
+
 public: // file i/o; automatically determine format based on extensions
   static ndarray<T> from_file(const std::string& filename, const std::string varname="", diy::mpi::communicator comm = MPI_COMM_WORLD);
   bool read_file(const std::string& filename, const std::string varname="", diy::mpi::communicator comm = MPI_COMM_WORLD);
@@ -226,8 +229,8 @@ public: // i/o for binary file
 
   void from_bov(const std::string& filename);
   void to_bov(const std::string& filename) const;
- 
-  void bil_add_block_raw(const std::string& filename, const int ndims, const int SZ[], const int st[], const int sz[]);
+
+  void bil_add_block_raw(const std::string& filename, const std::vector<size_t>& SZ, const lattice& ext);
 
 public: // i/o for vtk image data
   void to_vtk_image_data_file(const std::string& filename, const std::string varname=std::string()) const;
@@ -471,11 +474,32 @@ void ndarray<T>::swap(ndarray& x)
 }
 
 template <typename T>
-void ndarray<T>::bil_add_block_raw(const std::string& filename, const int ndims, const int SZ[], const int st[], const int sz[])
+ndarray<T> ndarray<T>::subarray(const lattice& l) const
+{
+  ndarray<T> arr(l.sizes());
+  for (auto i = 0; i < arr.nelem(); i ++) {
+    auto idx = l.from_integer(i);
+    arr[i] = at(idx);
+  }
+  return arr;
+}
+
+template <typename T>
+void ndarray<T>::bil_add_block_raw(const std::string& filename, 
+    const std::vector<size_t>& SZ, 
+    const lattice& ext)
 {
 #if FTK_HAVE_MPI
-  reshape(ndims, sz);
-  BIL_Add_block_raw(ndims, SZ, st, sz, filename.c_str(), mpi_datatype(), (void**)&p[0]);
+  reshape(ext.sizes());
+  std::vector<int> domain, st, sz;
+ 
+  for (int i = 0; i < nd(); i ++) {
+    domain.push_back(SZ[i]);
+    st.push_back(ext.start(i));
+    sz.push_back(ext.size(i));
+  }
+
+  BIL_Add_block_raw(nd(), domain.data(), st.data(), sz.data(), filename.c_str(), mpi_datatype(), (void**)&p[0]);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_MPI);
 #endif

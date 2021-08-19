@@ -8,6 +8,8 @@
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/filters/streaming_filter.hh>
 #include <ftk/external/json.hh>
+#include <ftk/utils/scatter.hh>
+#include <ftk/utils/bcast.hh>
 
 namespace ftk {
 using nlohmann::json;
@@ -98,6 +100,16 @@ protected:
   ndarray<T> request_timestep_synthetic_tornado(int k);
 
   void modified_callback(int, const ndarray<T>&);
+
+public:
+  void set_part(const lattice& e) { 
+    part = true; ext = e; 
+    std::cerr << "partial domain: " << e << std::endl; 
+  }
+
+protected:
+  bool part = false;
+  lattice ext;
 
 protected:
   json j; // configs, metadata, and everything
@@ -918,13 +930,22 @@ template <typename T1>
 ndarray<T> ndarray_stream<T>::request_timestep_file_binary(int k)
 {
   const std::string filename = j["filenames"][k];
-  ftk::ndarray<T1> array1(shape());
-  array1.read_binary_file(filename);
   
   ftk::ndarray<T> array(shape());
-  array.from_array(array1);
 
-  return array;
+  if (comm.rank() == 0) { // only the root proc reads from the file
+    ftk::ndarray<T1> array1(shape());
+    array1.read_binary_file(filename);
+    array.from_array(array1);
+  }
+
+  if (comm.size() > 1)
+    diy::mpi::bcastv(comm, array);
+
+  if (part)
+    return array.subarray(ext);
+  else 
+    return array;
 }
 
 template <typename T>
@@ -1216,7 +1237,10 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_woven(int k)
 {
   const int nt = j["n_timesteps"];
   const T t = nt == 1 ? 0.0 : double(k)/(nt-1);
-  return ftk::synthetic_woven_2D<T>(j["dimensions"][0], j["dimensions"][1], t);
+  auto arr = ftk::synthetic_woven_2D<T>(j["dimensions"][0], j["dimensions"][1], t);
+
+  if (part) return arr.subarray(ext);
+  else return arr;
 }
 
 template <typename T>

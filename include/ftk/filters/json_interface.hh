@@ -589,6 +589,9 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
   tracker = rtracker;
   
   configure_tracker_general(comm);
+
+  // if (comm.size() > 1)
+  //   tracker->set_input_array_partial(true); // TODO
   tracker->initialize();
  
   if (j.contains("archived_traced_critical_points_filename")) {
@@ -621,6 +624,9 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
     else // vector field
       tracker->push_vector_field_snapshot(field_data);
   };
+
+  if (comm.size() > 1) 
+    stream.set_part( rtracker->get_local_array_domain() );
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     push_timestep(field_data);

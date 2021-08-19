@@ -24,6 +24,8 @@ public:
 
   void initialize();
 
+  lattice get_local_array_domain() const { return local_array_domain; }
+
 protected:
   struct block_t {
     int gid;
@@ -72,7 +74,7 @@ inline void regular_tracker::initialize()
   
   // initialize spattial domain decomposittion
   if (use_default_domain_partition) {
-    lattice_partitioner partitioner(domain);
+    lattice_partitioner partitioner(domain), partitioner_array(array_domain);
    
     // a ghost size of 2 is necessary for jacobian derivaition; 
     // even if jacobian is not necessary, a ghost size of 1 is 
@@ -81,11 +83,15 @@ inline void regular_tracker::initialize()
     for (int i = 0; i < domain.nd(); i ++)
       ghost.push_back(2);
     
-    partitioner.partition(comm.size(), {}, ghost);
+    // partitioner.partition(comm.size(), {}, ghost);
+    partitioner.partition(comm.size()); 
 
     local_domain = partitioner.get_core(comm.rank());
     // local_domain = partitioner.get_ext(comm.rank());
-    local_array_domain = partitioner.get_ext(comm.rank());
+    local_array_domain = partitioner_array.add_ghost(local_domain, ghost, ghost);
+
+    std::cerr << "local_domain: " << local_domain << std::endl;
+    std::cerr << "local_array_domain: " << local_array_domain << std::endl;
   }
 
   if (!is_input_array_partial)
