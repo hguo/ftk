@@ -45,7 +45,7 @@ inline void scatterv(const communicator& comm,
   StringBuffer bb(recvbuf);
   load(bb, out);
 #else
-  out = in[0];
+  out = ins[0];
 #endif
 }
 
