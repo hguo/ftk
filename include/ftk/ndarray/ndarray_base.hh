@@ -57,6 +57,7 @@ struct ndarray_base {
   size_t nelem() const { if (empty()) return 0; else return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>()); }
   
   virtual void reshape(const std::vector<size_t> &dims_) = 0;
+  void reshape(const std::vector<int>& dims);
   void reshape(size_t ndims, const size_t sizes[]);
   void reshape(const ndarray_base& array); //! copy shape from another array
   template <typename T> void reshape(const ndarray<T>& array); //! copy shape from another array
@@ -116,6 +117,14 @@ protected:
 inline lattice ndarray_base::get_lattice() const {
   std::vector<size_t> st(nd(), 0), sz(dims);
   return lattice(st, sz);
+}
+
+inline void ndarray_base::reshape(const std::vector<int>& dims)
+{
+  std::vector<size_t> mydims;
+  for (int i = 0; i < dims.size(); i ++)
+    mydims.push_back(dims[i]);
+  reshape(mydims);
 }
 
 inline void ndarray_base::reshape(size_t ndims, const size_t dims[])

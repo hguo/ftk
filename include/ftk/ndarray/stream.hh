@@ -932,24 +932,66 @@ template <typename T1>
 ndarray<T> ndarray_stream<T>::request_timestep_file_binary(int k)
 {
   const std::string filename = j["filenames"][k];
-  
-  ftk::ndarray<T> array(shape());
 
-  if (comm.rank() == 0) { // only the root proc reads from the file
+  if (comm.size() > 1) { // MPI-IO
+    ndarray<T> array;
+#if FTK_HAVE_MPI
+    MPI_File fp;
+    MPI_File_open(comm, filename.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fp);
+
+    std::vector<int> dsz = j["dimensions"], bst, bsz;
+    if (!part)
+      ext = shape();
+
+    std::vector<size_t> sst = ext.starts(), ssz = ext.sizes();
+    for (int i = 0; i < dsz.size(); i ++) {
+      bst.push_back(ext.start(i));
+      bsz.push_back(ext.size(i));
+    }
+
+    std::reverse(dsz.begin(), dsz.end());
+    std::reverse(bst.begin(), bst.end());
+    std::reverse(bsz.begin(), bsz.end());
+    
+    ftk::ndarray<T1> array1;
+    array1.reshape(ssz);
+    // array1.transpose();
+
+    MPI_Datatype dtype;
+    MPI_Type_create_subarray(
+        dsz.size(), // ndims
+        &dsz[0], 
+        &bsz[0],
+        &bst[0],
+        MPI_ORDER_C,
+        array1.mpi_datatype(),
+        &dtype);
+    MPI_Type_commit(&dtype);
+
+    MPI_File_set_view(fp, 0, array1.mpi_datatype(), dtype, "native", MPI_INFO_NULL);
+
+    // MPI_File_read(fp, array1.data(), array1.size(), 
+    //     array1.mpi_datatype(), MPI_STATUS_IGNORE);
+    MPI_File_read_all(fp, array1.data(), array1.size(), 
+        array1.mpi_datatype(), MPI_STATUS_IGNORE);
+
+    MPI_File_close(&fp);
+    MPI_Type_free(&dtype);
+
+    array.from_array(array1);
+#else
+    fatal(FTK_ERR_NOT_BUILT_WITH_MPI);
+#endif
+    return array;
+  } else {
+    ftk::ndarray<T> array(shape());
+
     ftk::ndarray<T1> array1(shape());
     array1.read_binary_file(filename);
     array.from_array(array1);
-  }
-
-  if (comm.size() > 1)
-    diy::mpi::bcastv(comm, array);
-
-  if (part) {
-    std::cerr << "rank=" << comm.rank() << ", ext=" << ext << std::endl;
-    return array.subarray(ext);
-  }
-  else 
+    
     return array;
+  }
 }
 
 template <typename T>

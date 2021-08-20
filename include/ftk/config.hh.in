@@ -44,4 +44,21 @@
 #define __host__ 
 #endif
 
+// utilities
+#define NC_SAFE_CALL(call) {\
+  int retval = call;\
+  if (retval != 0) {\
+    fprintf(stderr, "[NetCDF Error] %s, in file '%s', line %i.\n", nc_strerror(retval), __FILE__, __LINE__); \
+    exit(EXIT_FAILURE); \
+  }\
+}
+
+#define PNC_SAFE_CALL(call) {\
+  int retval = call;\
+  if (retval != 0) {\
+      fprintf(stderr, "[PNetCDF Error] %s, in file '%s', line %i.\n", ncmpi_strerror(retval), __FILE__, __LINE__); \
+      exit(EXIT_FAILURE); \
+  }\
+}
+
 #endif

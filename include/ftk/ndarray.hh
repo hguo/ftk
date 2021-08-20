@@ -31,24 +31,10 @@
 #if NC_HAS_PARALLEL
 #include <netcdf_par.h>
 #endif
-#define NC_SAFE_CALL(call) {\
-  int retval = call;\
-  if (retval != 0) {\
-    fprintf(stderr, "[NetCDF Error] %s, in file '%s', line %i.\n", nc_strerror(retval), __FILE__, __LINE__); \
-    exit(EXIT_FAILURE); \
-  }\
-}
 #endif
 
 #if FTK_HAVE_PNETCDF
 #include <pnetcdf.h>
-#define PNC_SAFE_CALL(call) {\
-  int retval = call;\
-  if (retval != 0) {\
-      fprintf(stderr, "[PNetCDF Error] %s, in file '%s', line %i.\n", ncmpi_strerror(retval), __FILE__, __LINE__); \
-      exit(EXIT_FAILURE); \
-  }\
-}
 #endif
 
 #if FTK_HAVE_PYBIND11
