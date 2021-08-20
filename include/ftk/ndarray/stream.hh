@@ -568,7 +568,9 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           int ncid, ncdims, nd, varids[nv];
 
 #if NC_HAS_PARALLEL
-          NC_SAFE_CALL( nc_open_par(filename0.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid) );
+          int rtn = nc_open_par(filename0.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
+          if (rtn != NC_NOERR)
+            NC_SAFE_CALL( nc_open(filename0.c_str(), NC_NOWRITE, &ncid) );
 #else
           NC_SAFE_CALL( nc_open(filename0.c_str(), NC_NOWRITE, &ncid) );
 #endif
