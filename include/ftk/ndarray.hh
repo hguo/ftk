@@ -722,7 +722,7 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
   int ncid, varid;
 #if NC_HAS_PARALLEL
   int rtn = nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
-  if (rtn != NC_NC_NOERR)
+  if (rtn != NC_NOERR)
     NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
@@ -937,7 +937,7 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
   int ncid, varid;
 #if NC_HAS_PARALLEL
   int rtn = nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
-  if (rtn != NC_NC_NOERR)
+  if (rtn != NC_NOERR)
     NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
