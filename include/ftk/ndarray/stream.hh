@@ -931,6 +931,7 @@ template <typename T>
 template <typename T1>
 ndarray<T> ndarray_stream<T>::request_timestep_file_binary(int k)
 {
+  // TODO FIXME multicomponent binary inputs
   const std::string filename = j["filenames"][k];
 
   if (comm.size() > 1) { // MPI-IO
@@ -1500,7 +1501,7 @@ bool ndarray_stream<T>::is_partial_read_supported() const
   } else { // file
     const std::string fmt = j["format"];
     if (fmt == "float32" || fmt == "float64") 
-      return true; // compromised performance
+      return true; 
     else if (fmt == "vti")
       return true; // compromised
     else if (fmt == "vtu")
