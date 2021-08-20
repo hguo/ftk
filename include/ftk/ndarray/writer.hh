@@ -17,7 +17,7 @@ struct ndarray_writer : public object {
   //  - filename, string, e.g. "tornado-%04d.nc".  Should be able to expand to file names with sprintf(3)
   //  - format (nc|vti|float32|float64)
   // format-specific fields: 
-  //  - nc (NetCDF)
+  //  - nc (NetCDF), serial
   //    - variable (required), string or array of strings.  Possible to use the same
   //      specification in the input stream config.  Will be converted to array of 
   //      strings internally.  Will write one or multiple variables.

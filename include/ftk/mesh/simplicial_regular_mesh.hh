@@ -19,6 +19,12 @@
 #include <ftk/mesh/lattice.hh>
 #include <ftk/external/diy/serialization.hpp>
 
+#if FTK_HAVE_VTK
+#include <vtkSmartPointer.h>
+#include <vtkRectilinearGrid.h>
+#include <vtkStructuredGrid.h>
+#endif
+
 #if FTK_HAVE_KOKKOS
 #include <Kokkos_Core.hpp>
 #endif
@@ -33,6 +39,13 @@ enum {
   ELEMENT_SCOPE_ALL = 0,
   ELEMENT_SCOPE_ORDINAL = 1, 
   ELEMENT_SCOPE_INTERVAL = 2
+};
+
+enum {
+  MESH_COORDS_REGULAR = 0, // uniform
+  MESH_COORDS_REGULAR_EXTENTS = 1, // uniform with extents
+  MESH_COORDS_REGULAR_RECTILINEAR = 2, // x, y, z in separate arrays
+  MESH_COORDS_REGULAR_EXPLICIT = 3// explicit (x, y, z)
 };
 
 struct simplicial_regular_mesh;
@@ -184,6 +197,24 @@ public: // partitioning
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions);  
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions);  
 #endif
+
+public: // physics coordinates (for rectilinear grid)
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkRectilinearGrid> to_vtr() const;
+  vtkSmartPointer<vtkStructuredGrid> to_vts() const;
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
+#endif
+
+protected: // physics coordinates
+  // modes and coords dimensions 
+  // - 0: uniform; coords is an empty array
+  // - 1: uniform with extents; coords is a 2*n array
+  // - 2: rectilinear; coords is a 1d array
+  //
+  // (explicit x, y, z... in individual components)
+  // - 3: structured (explicit x, y, z... coordinates)
+  int mode_phys_coordinates = 0; 
+  ndarray<float> coords;
 
 public:
   void print_unit_simplices(int d, int scope) const;

@@ -231,6 +231,9 @@ public: // i/o for vtk image data
   vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
 #endif
 
+public: // i/o for vtkStructuredGrid data
+  void to_vtk_rectilinear_grid(const std::string& filename, const std::string varname=std::string()) const;
+
 public: // i/o for hdf5
   static ndarray<T> from_h5(const std::string& filename, const std::string& name);
 #if FTK_HAVE_HDF5
