@@ -721,7 +721,9 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 #if FTK_HAVE_NETCDF
   int ncid, varid;
 #if NC_HAS_PARALLEL
-  NC_SAFE_CALL( nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid) );
+  int rtn = nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
+  if (rtn != NC_NC_NOERR)
+    NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #endif
@@ -756,7 +758,8 @@ inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const si
   reshape(mysizes);
 
 #if NC_HAS_PARALLEL
-  NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+  // NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+  nc_var_par_access(ncid, varid, NC_COLLECTIVE);
 #endif
 
   NC_SAFE_CALL( nc_get_vara_float(ncid, varid, starts, sizes, &p[0]) );
@@ -774,7 +777,8 @@ inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const s
   reshape(mysizes);
 
 #if NC_HAS_PARALLEL
-  NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+  // NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+  nc_var_par_access(ncid, varid, NC_COLLECTIVE);
 #endif
 
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
@@ -932,7 +936,9 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 #ifdef FTK_HAVE_NETCDF
   int ncid, varid;
 #if NC_HAS_PARALLEL
-  NC_SAFE_CALL( nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid) );
+  int rtn = nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
+  if (rtn != NC_NC_NOERR)
+    NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #endif
