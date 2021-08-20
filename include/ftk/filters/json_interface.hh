@@ -590,8 +590,8 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
   
   configure_tracker_general(comm);
 
-  if (comm.size() > 1)
-    tracker->set_input_array_partial(true); // test pending...
+  if (comm.size() > 1 && stream.is_partial_read_supported() )
+    tracker->set_input_array_partial(true); 
   tracker->initialize();
  
   if (j.contains("archived_traced_critical_points_filename")) {

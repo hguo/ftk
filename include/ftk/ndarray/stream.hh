@@ -102,6 +102,8 @@ protected:
   void modified_callback(int, const ndarray<T>&);
 
 public:
+  bool is_partial_read_supported() const;
+
   void set_part(const lattice& e) { 
     part = true; ext = e; 
     std::cerr << "partial domain: " << e << std::endl; 
@@ -1447,6 +1449,35 @@ void ndarray_stream<T>::finish()
     temporal_filter.finish();
 }
 
+template <typename T>
+bool ndarray_stream<T>::is_partial_read_supported() const
+{
+  if (j["type"] == "synthetic") {
+    if (j["name"] == "woven") return true;
+    else return false;
+  } else { // file
+    const std::string fmt = j["format"];
+    if (fmt == "float32" || fmt == "float64") 
+      return true; // compromised performance
+    else if (fmt == "vti")
+      return true; // compromised
+    else if (fmt == "vtu")
+      return true; // compromised
+    else if (fmt == "nc") 
+      return true; // performance depending on if parallel IO is supported
+    else if (fmt == "pnc")
+      return false; // TODO
+    else if (fmt == "h5")
+      return false; // TODO
+    else if (fmt == "bp3")
+      return false; // TODO
+    else if (fmt == "bp4")
+      return false; // TODO
+    else 
+      return false;
+  } 
 }
+
+} // namespace ftk
 
 #endif
