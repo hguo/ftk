@@ -23,7 +23,10 @@ inline void bcastv(const communicator& comm, Obj& inout, int root = 0)
 
   // bcast size
   MPI_Bcast(&count, 1, MPI_INT, root, comm);
+  // fprintf(stderr, "bcast_size=%d\n", count);
   buf.resize(count);
+
+  MPI_Bcast(&buf[0], count, MPI_CHAR, root, comm);
 
   if (comm.rank() != root) {
     StringBuffer sb(buf);

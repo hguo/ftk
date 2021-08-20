@@ -91,11 +91,13 @@ inline std::string err2str(int e)
   case FTK_ERR_ACCELERATOR_UNSUPPORTED: return "unsupported accelerator";
   case FTK_ERR_THREAD_BACKEND_UNSUPPORTED: return "unsupported thread backend";
   case FTK_ERR_VTK_VARIABLE_NOT_FOUND: return "VTK variable not found";
+  case FTK_ERR_VTK_UNSUPPORTED_OUTPUT_FORMAT: return "unsupported vtk output format";
+  case FTK_ERR_NETCDF_MISSING_VARIABLE: return "missing netcdf variable name(s)";
   case FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND: return "adios2 variable not found";
   case FTK_ERR_MESH_UNSUPPORTED_FORMAT: return "unsupported mesh format";
   case FTK_ERR_MESH_NONSIMPLICIAL: return "unsupported nonsimplicial mesh";
   case FTK_ERR_MESH_EMPTY: return "empty mesh";
-  default: return "unknown error";
+  default: return "unknown error: " + std::to_string(e);
   }
 }
 

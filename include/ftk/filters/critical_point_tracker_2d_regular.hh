@@ -235,7 +235,7 @@ inline void critical_point_tracker_2d_regular::reset()
 inline void critical_point_tracker_2d_regular::push_scalar_field_snapshot(const ndarray<double>& s)
 {
   field_data_snapshot_t snapshot;
-  
+
   snapshot.scalar = s;
   if (vector_field_source == SOURCE_DERIVED) {
     snapshot.vector = gradient2D(s);

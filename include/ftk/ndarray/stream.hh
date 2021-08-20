@@ -942,8 +942,10 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_binary(int k)
   if (comm.size() > 1)
     diy::mpi::bcastv(comm, array);
 
-  if (part)
+  if (part) {
+    std::cerr << "rank=" << comm.rank() << ", ext=" << ext << std::endl;
     return array.subarray(ext);
+  }
   else 
     return array;
 }
@@ -955,33 +957,42 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
   const std::string filename = j["filenames"][k];
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
-  reader->SetFileName(filename.c_str());
-  reader->Update();
+  if (comm.rank() == 0) {
+    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
 
-  vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+    vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
 
-  const int nv = n_variables();
-  if (nv == 1) { //  (is_single_component()) {
-    array.from_vtu(grid, j["variables"][0]);
-  } else {
-    std::vector<ftk::ndarray<T>> arrays(nv);
-    for (int i = 0; i < nv; i ++)
-      arrays[i].from_vtu(grid, j["variables"][i]);
+    const int nv = n_variables();
+    if (nv == 1) { //  (is_single_component()) {
+      array.from_vtu(grid, j["variables"][0]);
+    } else {
+      std::vector<ftk::ndarray<T>> arrays(nv);
+      for (int i = 0; i < nv; i ++)
+        arrays[i].from_vtu(grid, j["variables"][i]);
 
-    array.reshape(shape());
-    for (int i = 0; i < arrays[0].nelem(); i ++) {
-      for (int j = 0; j <nv; j ++) {
-        array[i*nv+j] = arrays[j][i];
+      array.reshape(shape());
+      for (int i = 0; i < arrays[0].nelem(); i ++) {
+        for (int j = 0; j <nv; j ++) {
+          array[i*nv+j] = arrays[j][i];
+        }
       }
-    }
 
-    array.set_multicomponents();
+      array.set_multicomponents();
+    }
   }
+  
+  if (comm.size() > 1)
+    diy::mpi::bcastv(comm, array);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
-  return array;
+  
+  if (part)
+    return array.subarray(ext);
+  else 
+    return array;
 }
 
 template <typename T>
@@ -991,23 +1002,33 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vti(int k)
   const std::string filename = j["filenames"][k];
   // std::cerr << j << std::endl;
 #if FTK_HAVE_VTK
-  const int nv = n_variables();
-  if (nv == 1) { //  (is_single_component()) {
-    array.read_vtk_image_data_file(filename, j["variables"][0]);
-  } else {
-    std::vector<ftk::ndarray<T>> arrays(nv);
-    for (int i = 0; i < nv; i ++)
-      arrays[i].read_vtk_image_data_file(filename, j["variables"][i]);
+  if (comm.rank() == 0) {
+    const int nv = n_variables();
+    if (nv == 1) { //  (is_single_component()) {
+      array.read_vtk_image_data_file(filename, j["variables"][0]);
+    } else {
+      std::vector<ftk::ndarray<T>> arrays(nv);
+      for (int i = 0; i < nv; i ++)
+        arrays[i].read_vtk_image_data_file(filename, j["variables"][i]);
 
-    array.reshape(shape());
-    for (int i = 0; i < arrays[0].nelem(); i ++) {
-      for (int j = 0; j <nv; j ++) {
-        array[i*nv+j] = arrays[j][i];
+      array.reshape(shape());
+      for (int i = 0; i < arrays[0].nelem(); i ++) {
+        for (int j = 0; j <nv; j ++) {
+          array[i*nv+j] = arrays[j][i];
+        }
       }
-    }
 
-    array.set_multicomponents();
+      array.set_multicomponents();
+    }
   }
+  
+  if (comm.size() > 1)
+    diy::mpi::bcastv(comm, array);
+  
+  if (part)
+    return array.subarray(ext);
+  else 
+    return array;
 
   // std::cerr << array.shape() << ", " << array.multicomponents() << std::endl;
 #else
@@ -1021,6 +1042,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_pnc(int k)
 {
   ndarray<T> array;
 #if FTK_HAVE_PNETCDF
+  fatal("FTK I/O with parallel-netcdf not fully implemented");
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_PNETCDF);
 #endif
@@ -1032,7 +1054,16 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
 {
   size_t fid = 0, offset = 0;
   size_t starts[4] = {0}, sizes[4] = {0};
-  std::vector<size_t> dims = j["dimensions"];
+
+  std::vector<size_t> dsz = j["dimensions"], bst, bsz;
+
+  if (part) {
+    bst = ext.starts();
+    bsz = ext.sizes();
+  } else {
+    bst.resize(dsz.size(), 0);
+    bsz = dsz;
+  }
   
   // determine which file to read
   if (j.contains("first_timestep_per_file")) {
@@ -1049,27 +1080,38 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     }
 
     starts[0] = offset; sizes[0] = 1;
-    if (dims.size() == 2) {
-      sizes[1] = dims[1];
-      sizes[2] = dims[0];
+    if (bsz.size() == 2) {
+      starts[1] = bst[1];
+      starts[2] = bst[0];
+      sizes[1] = bsz[1];
+      sizes[2] = bsz[0];
     } else {
-      sizes[1] = dims[2];
-      sizes[2] = dims[1];
-      sizes[3] = dims[0];
+      starts[1] = bst[2];
+      starts[2] = bst[1];
+      starts[3] = bst[0];
+      sizes[1] = bsz[2];
+      sizes[2] = bsz[1];
+      sizes[3] = bsz[0];
     }
   } else {
     fid = k;
-    if (dims.size() == 2) {
-      sizes[0] = dims[1];
-      sizes[1] = dims[0];
+    if (bsz.size() == 2) {
+      starts[0] = bst[1];
+      starts[1] = bst[0];
+      sizes[0] = bsz[1];
+      sizes[1] = bsz[0];
     } else {
-      sizes[0] = dims[2];
-      sizes[1] = dims[1];
-      sizes[2] = dims[0];
+      starts[0] = bst[2];
+      starts[1] = bst[1];
+      starts[2] = bst[0];
+      sizes[0] = bsz[2];
+      sizes[1] = bsz[1];
+      sizes[2] = bsz[0];
     }
   }
 
-  fprintf(stderr, "st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
+  fprintf(stderr, "rand=%d, reading nc, st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
+      comm.rank(),
       starts[0], starts[1], starts[2], starts[3], 
       sizes[0], sizes[1], sizes[2], sizes[3]);
   fprintf(stderr, "k=%d, offset=%zu, fid=%zu\n", k, offset, fid);
@@ -1080,14 +1122,16 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
   const int nv = n_variables();
   if (nv == 1) { // all data in one single variable; channels are automatically handled in ndarray
     array.read_netcdf(filename, j["variables"][0], starts, sizes);
-    array.reshape(shape()); // ncdims may not be equal to nd
+    // array.reshape(shape()); // ncdims may not be equal to nd
+    array.reshape(bsz); // ncdims may not be equal to nd
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++)
       arrays[i].read_netcdf(filename, j["variables"][i], starts, sizes);
 
-    array.reshape(shape());
+    // array.reshape(shape());
+    array.reshape(bsz);
     for (int i = 0; i < arrays[0].nelem(); i ++) {
       for (int j = 0; j <nv; j ++) {
         array[i*nv+j] = arrays[j][i];

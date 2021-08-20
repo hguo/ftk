@@ -474,13 +474,23 @@ void ndarray<T>::swap(ndarray& x)
 }
 
 template <typename T>
-ndarray<T> ndarray<T>::subarray(const lattice& l) const
+ndarray<T> ndarray<T>::subarray(const lattice& l0) const
 {
+  lattice l(l0);
+  if (l0.nd_cuttable() < nd()) {
+    for (int i = 0; i < ncd; i ++) {
+      l.starts_.insert(l.starts_.begin(), 0);
+      l.sizes_.insert(l.starts_.begin(), this->shape(i));
+    }
+  }
+
   ndarray<T> arr(l.sizes());
   for (auto i = 0; i < arr.nelem(); i ++) {
     auto idx = l.from_integer(i);
     arr[i] = at(idx);
   }
+  
+  arr.ncd = ncd;
   return arr;
 }
 

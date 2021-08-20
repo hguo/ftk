@@ -15,6 +15,7 @@ namespace ftk {
 
 struct lattice {
   friend class lattice_partitioner;
+  template <typename T> friend class ndarray;
 
   lattice() {}
   lattice(int n);
