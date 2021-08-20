@@ -16,6 +16,7 @@
 #include <iterator>
 #include <functional>
 #include <ftk/object.hh>
+#include <ftk/ndarray.hh>
 #include <ftk/mesh/lattice.hh>
 #include <ftk/external/diy/serialization.hpp>
 
