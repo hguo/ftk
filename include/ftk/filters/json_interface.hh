@@ -7,6 +7,7 @@
 #include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
+#include <ftk/mesh/simplicial_mpas_2d_mesh.hh>
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 #include <ftk/io/util.hh>
@@ -58,6 +59,7 @@ struct json_interface : public object {
   //    - smoothing_kernel_file, string, optional: path to smoothing kernel file; will (over)write 
   //      the file if the file does not exist or the file has a different smoothing kernel size
   //    - smoothing_kernel_size, number, optional: smoothing kernel size
+  //  - mpas, json, optional: MPAS-O specific options
   void configure(const json& j);
 
   void consume(ndarray_stream<> &stream, 
@@ -77,6 +79,7 @@ private:
   void consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm);
   void consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm);
   void consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm);
+  void consume_mpas(ndarray_stream<> &stream, diy::mpi::communicator comm);
 
   void write_sliced_results(int k);
   void write_intercepted_results(int k, int nt);
@@ -151,6 +154,10 @@ void json_interface::configure(const json& j0)
       }
     } else 
       fatal("invalid xgc configuration");
+  }
+
+  if (j.contains("mpas")) {
+    // TODO
   }
 
   /// general options
@@ -347,10 +354,43 @@ void json_interface::consume(ndarray_stream<> &stream, diy::mpi::communicator co
   
   if (j.contains("xgc"))
     consume_xgc(stream, comm);
+  else if (j.contains("mpas"))
+    consume_mpas(stream, comm);
   else if (j.contains("mesh_filename")) 
     consume_unstructured(stream, comm);
   else 
     consume_regular(stream, comm);
+}
+
+void json_interface::consume_mpas(ndarray_stream<> &stream, diy::mpi::communicator comm)
+{
+  fprintf(stderr, "consuming mpas..\n");
+  
+  js = stream.get_json();
+  const std::string filename0 = js["filenames"][0];
+
+  auto m = simplicial_mpas_2d_mesh<>::from_file(filename0);
+  tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
+  
+  configure_tracker_general(comm);
+  tracker->initialize();
+  
+  fprintf(stderr, "starting mpas data stream..\n");
+  
+  stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+    std::cerr << field_data.shape() << std::endl;
+#if 0
+    tracker->push_vector_field_snapshot(field_data);
+    if (k != 0) tracker->advance_timestep();
+    if (k == DT-1) tracker->update_timestep();
+#endif 
+    // if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+    //   write_sliced_results(k-1);
+  });
+
+  stream.start();
+  stream.finish();
+  tracker->finalize();
 }
 
 void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm)

@@ -122,6 +122,8 @@ public: // mesh access
 
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
 
+  virtual int ncoords() const { return 2; }
+
 public: // point locator and misc
   I nearest(F x[]) const; // locate which point is nearest to x
   // I locate(F x[]) const; // locate which triangle contains x
@@ -663,8 +665,12 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_v
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
   pts->SetNumberOfPoints(n(0));
 
-  for (int i=0; i<n(0); i++)
-    pts->SetPoint(i, vertex_coords[i*2], vertex_coords[i*2+1], 0); 
+  for (int i=0; i<n(0); i++) {
+    F coords[3] = {0};
+    get_coords(i, coords);
+    pts->SetPoint(i, coords[0], coords[1], coords[2]);
+    // pts->SetPoint(i, vertex_coords[i*2], vertex_coords[i*2+1], 0); 
+  }
 
   for (int i=0; i<n(2); i ++) {
     vtkIdType ids[3] = {triangles[i*3], triangles[i*3+1], triangles[i*3+2]};
@@ -781,8 +787,8 @@ void simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[]) const
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
-  coords[0] = vertex_coords(0, i);
-  coords[1] = vertex_coords(1, i);
+  for (int k = 0; k < ncoords(); k ++)
+    coords[k] = vertex_coords(k, i);
 }
 
 template <typename I, typename F>

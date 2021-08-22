@@ -1157,11 +1157,11 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     }
   }
 
-  fprintf(stderr, "rand=%d, reading nc, st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
-      comm.rank(),
-      starts[0], starts[1], starts[2], starts[3], 
-      sizes[0], sizes[1], sizes[2], sizes[3]);
-  fprintf(stderr, "k=%d, offset=%zu, fid=%zu\n", k, offset, fid);
+  // fprintf(stderr, "rank=%d, reading nc, st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
+  //     comm.rank(),
+  //     starts[0], starts[1], starts[2], starts[3], 
+  //     sizes[0], sizes[1], sizes[2], sizes[3]);
+  // fprintf(stderr, "k=%d, offset=%zu, fid=%zu\n", k, offset, fid);
 
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][fid];
@@ -1178,7 +1178,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
       arrays[i].read_netcdf(filename, j["variables"][i], starts, sizes);
 
     // array.reshape(shape());
-    array.reshape(bsz);
+    bsz.insert(bsz.begin(), nv);
+    array.reshape(bsz); 
     for (int i = 0; i < arrays[0].nelem(); i ++) {
       for (int j = 0; j <nv; j ++) {
         array[i*nv+j] = arrays[j][i];

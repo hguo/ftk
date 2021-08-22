@@ -19,6 +19,7 @@
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/filters/feature_curve_set_post_processor.hh"
+#include "ftk/mesh/simplicial_mpas_2d_mesh.hh"
 #include "ftk/io/util.hh"
 #include "ftk/io/xgc_stream.hh"
 #include "ftk/ndarray.hh"
@@ -75,6 +76,9 @@ bool xgc_post_process = false,
      xgc_use_roi = false;
 double xgc_smoothing_kernel_size = 0.03;
 int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
+
+// mpas-o specific
+std::shared_ptr<simplicial_mpas_2d_mesh<>> mpas_mesh;
 
 // devices
 std::string device_ids;
@@ -193,6 +197,9 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
       jx["write_back_filename"] = xgc_write_back_filename;
     j_tracker["xgc"] = jx;
   }
+
+  if (ttype == TRACKER_MPAS_O_CRITICAL_POINT)
+    j_tracker["mpas"] = "";
 
   wrapper.reset(new json_interface);
   wrapper->configure(j_tracker);
@@ -752,6 +759,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("xgc-write-back", "XGC: write original data back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("xgc-post-process", "XGC: enable post-processing", cxxopts::value<bool>(xgc_post_process))
     // ("xgc-augmented-mesh", "XGC: read/write augmented mesh", cxxopts::value<std::string>(xgc_augmented_mesh_filename))
+    // ("mpas-data-path", "MPAS: data path", cxxopts::value<std::string>(mpas_data_path))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
      cxxopts::value<std::string>(output_pattern))
     ("output-type", "Output type {discrete|traced|sliced|intercepted}, by default traced", 
@@ -805,6 +813,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   ttype = tracker::str2tracker(feature);
   if (ttype == TRACKER_TDGL_VORTEX) { // TDGL uses a different reader for now
   } else if (ttype == TRACKER_XGC_BLOB_FILAMENT || ttype == TRACKER_XGC_BLOB_THRESHOLD) { // xgc using a different reader for xgc filaments
+  // } else if (ttype == TRACKER_MPAS_O_CRITICAL_POINT) {
   } else {
     j_input = args_to_input_stream_json(results);
     stream->set_input_source_json(j_input);
@@ -813,7 +822,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   if (results.count("xgc-smoothing-kernel-size") || results.count("xgc-smoothing-kernel-file"))
     xgc_use_smoothing_kernel = true;
 
-  if (ttype == TRACKER_CRITICAL_POINT)
+  if (ttype == TRACKER_CRITICAL_POINT || TRACKER_MPAS_O_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);
   else if (ttype == TRACKER_CRITICAL_LINE)
     initialize_critical_line_tracker(comm);
@@ -839,7 +848,7 @@ int main(int argc, char **argv)
  
   parse_arguments(argc, argv, comm);
 
-  if (ttype == TRACKER_CRITICAL_POINT)
+  if (ttype == TRACKER_CRITICAL_POINT || ttype == TRACKER_MPAS_O_CRITICAL_POINT)
     execute_critical_point_tracker(comm);
   else if (ttype == TRACKER_CRITICAL_LINE)
     execute_critical_line_tracker(comm);

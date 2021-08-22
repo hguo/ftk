@@ -20,7 +20,8 @@ enum {
   TRACKER_CONNECTED_COMPONENTS = 5,
   TRACKER_THRESHOLD = 6,
   TRACKER_XGC_BLOB_FILAMENT = 105,
-  TRACKER_XGC_BLOB_THRESHOLD = 106
+  TRACKER_XGC_BLOB_THRESHOLD = 106,
+  TRACKER_MPAS_O_CRITICAL_POINT = 201
 };
 
 struct tracker : public filter
@@ -82,6 +83,8 @@ inline int tracker::str2tracker(const std::string& s)
     return TRACKER_TDGL_VORTEX;
   else if (s == "cl" || s == "critical_line" || s == "critical_lines")
     return TRACKER_CRITICAL_LINE;
+  else if (s == "mpas-o-cp")
+    return TRACKER_MPAS_O_CRITICAL_POINT;
   else if (s == "sujudi_haimes")
     return TRACKER_SUJUDI_HAIMES;
   else if (s == "ridge_valley")
