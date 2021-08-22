@@ -52,7 +52,7 @@ public:
   virtual void write_sliced_vtp(const std::string& pattern) const {}
 
 protected:
-  virtual int cpdims() const = 0;
+  // virtual int cpdims() const = 0;
 
 protected:
   struct field_data_snapshot_t {
@@ -107,7 +107,7 @@ inline vtkSmartPointer<vtkPolyData> contour_tracker::get_intersections_vtp() con
   vtkIdType pid[1];
   for (const auto &cp : get_intersections()) {
     double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; 
-    if (cpdims() == 2) p[2] = cp.t;
+    // if (cpdims() == 2) p[2] = cp.t;
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
   }

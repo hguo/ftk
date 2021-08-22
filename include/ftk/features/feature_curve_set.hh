@@ -48,15 +48,13 @@ public: // IO
   void write_binary(const std::string& filename) const;
   void read_binary(const std::string& filename);
 
-  void write_text(std::ostream& os, const int cpdims, const std::vector<std::string>& scalar_components) const;
-  void write_text(const std::string& filename, const int cpdims, const std::vector<std::string>& scalar_components) const;
+  void write_text(std::ostream& os, /*const int cpdims,*/ const std::vector<std::string>& scalar_components) const;
+  void write_text(const std::string& filename, /*cpdims,*/ const std::vector<std::string>& scalar_components) const;
 
   void write_vtk(const std::string& filename) const;
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> to_vtp(const int ncdims, 
-      const std::vector<std::string> &scalar_components, 
-      double tfactor=1.0) const;
+  vtkSmartPointer<vtkPolyData> to_vtp(const std::vector<std::string> &scalar_components) const;
 #endif
 
 protected:
@@ -161,7 +159,7 @@ inline void feature_curve_set_t::read_binary(const std::string& filename)
 }
 
 
-inline void feature_curve_set_t::write_text(std::ostream& os, const int cpdims, const std::vector<std::string>& scalar_components) const
+inline void feature_curve_set_t::write_text(std::ostream& os, /*const int cpdims,*/ const std::vector<std::string>& scalar_components) const
 {
   os << "#trajectories=" << size() << std::endl;
   for (const auto &kv : *this) {
@@ -188,30 +186,30 @@ inline void feature_curve_set_t::write_text(std::ostream& os, const int cpdims, 
     }
 
     os << "bbmin=(";
-    for (int k = 0; k < cpdims; k ++)
-      if (k < cpdims) os << curve.bbmin[k] << ", ";
+    for (int k = 0; k < 3; k ++)
+      if (k < 3) os << curve.bbmin[k] << ", ";
       else os << curve.bbmin[k] << "), ";
     
     os << "bbmax=(";
-    for (int k = 0; k < cpdims; k ++)
-      if (k < cpdims) os << curve.bbmax[k] << ", ";
+    for (int k = 0; k < 3; k ++)
+      if (k < 3) os << curve.bbmax[k] << ", ";
       else os << curve.bbmax[k] << "), ";
     
     os << "tmin=" << curve.tmin << ", tmax=" << curve.tmax << ", ";
 
-    // os << "consistent_type=" << critical_point_type_to_string(cpdims, curve.consistent_type, scalar_components.size()) << ", ";
+    // os << "consistent_type=" << critical_point_type_to_string(3, curve.consistent_type, scalar_components.size()) << ", ";
     os << "consistent_type=" << curve.consistent_type << ", ";
     os << "loop=" << curve.loop;
     os << std::endl;
 
     for (int k = 0; k < curve.size(); k ++) {
       os << "---";
-      curve[k].print(os, cpdims, scalar_components) << std::endl;
+      curve[k].print(os, scalar_components) << std::endl;
     }
   }
 }
 
-inline void feature_curve_set_t::write_text(const std::string& filename, const int cpdims, const std::vector<std::string>& scalar_components) const
+inline void feature_curve_set_t::write_text(const std::string& filename, const std::vector<std::string>& scalar_components) const
 {
   // TODO
 }
@@ -223,15 +221,15 @@ inline void feature_curve_set_t::write_vtk(const std::string& filename) const
 }
 
 #if FTK_HAVE_VTK
-inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const int cpdims, const std::vector<std::string> &scalar_components, double tfactor) const
+inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vector<std::string> &scalar_components) const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
   vtkSmartPointer<vtkCellArray> lines = vtkCellArray::New();
   vtkSmartPointer<vtkCellArray> verts = vtkCellArray::New();
 
-  auto pt2coords = [tfactor, cpdims](const feature_point_t& p) {
-    return std::array<double, 3>{p.x[0], p.x[1], cpdims == 2 ? p.t * tfactor : p.x[2]};
+  auto pt2coords = [](const feature_point_t& p) {
+    return std::array<double, 3>{p.x[0], p.x[1], p.x[2]};
   };
 
   foreach([&](const feature_curve_t& curve) {

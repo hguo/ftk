@@ -53,7 +53,7 @@ struct contour_tracker_3d_regular : public contour_tracker_regular {
   contour_tracker_3d_regular(diy::mpi::communicator comm) : contour_tracker_regular(comm, 3), tracker(comm) {}
   virtual ~contour_tracker_3d_regular() {}
 
-  int cpdims() const { return 3; }
+  // int cpdims() const { return 3; }
 
   void finalize();
   void reset();

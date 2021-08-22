@@ -1127,12 +1127,15 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     }
 
     starts[0] = offset; sizes[0] = 1;
-    if (bsz.size() == 2) {
+    if (bsz.size() == 1) {
+      starts[1] = bst[0];
+      sizes[1] = bsz[0];
+    } else if (bsz.size() == 2) {
       starts[1] = bst[1];
       starts[2] = bst[0];
       sizes[1] = bsz[1];
       sizes[2] = bsz[0];
-    } else {
+    } else { // 3D
       starts[1] = bst[2];
       starts[2] = bst[1];
       starts[3] = bst[0];
@@ -1142,12 +1145,15 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     }
   } else {
     fid = k;
-    if (bsz.size() == 2) {
+    if (bsz.size() == 1) {
+      starts[0] = bst[0];
+      sizes[0] = bsz[0];
+    } else if (bsz.size() == 2) {
       starts[0] = bst[1];
       starts[1] = bst[0];
       sizes[0] = bsz[1];
       sizes[1] = bsz[0];
-    } else {
+    } else { // 4D
       starts[0] = bst[2];
       starts[1] = bst[1];
       starts[2] = bst[0];
@@ -1174,8 +1180,10 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
   } else { // u, v, w in separate variables
     const int nv = n_variables();
     std::vector<ftk::ndarray<T>> arrays(nv);
-    for (int i = 0; i < nv; i ++)
+    for (int i = 0; i < nv; i ++) {
       arrays[i].read_netcdf(filename, j["variables"][i], starts, sizes);
+      arrays[i].transpose(); // TODO FIXME: this is strange.. works for MPAS-O; will see if works for other applications
+    }
 
     // array.reshape(shape());
     bsz.insert(bsz.begin(), nv);

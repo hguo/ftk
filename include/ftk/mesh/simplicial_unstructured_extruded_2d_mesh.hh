@@ -25,6 +25,8 @@ struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded fr
   int face_type(I i) const; // legacy
   int simplex_type(int d, I i) const;
 
+  int ncoords() const { return m.ncoords() + 1; }
+
 public: // element iteration
   void element_for(int d, std::function<void(I)> f, 
       int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
@@ -348,7 +350,11 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_coords(I i, F coords[])
   const I k = flat_vertex_id(i),
           t = flat_vertex_time(i);
   m.get_coords(k, coords);
-  coords[2] = t;
+
+  if (m.ncoords() == 2)
+    coords[2] = t;
+  else // ncoords == 3
+    coords[3] = t;
 }
 
 template <typename I, typename F>

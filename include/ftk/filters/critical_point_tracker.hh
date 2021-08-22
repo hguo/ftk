@@ -77,7 +77,7 @@ public: // i/o for traced critical points (trajectories)
   void write_traced_critical_points_text(const std::string& filename) const;
   void write_traced_critical_points_vtk(const std::string& filename) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const {return traced_critical_points.to_vtp(cpdims(), scalar_components);}
+  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const {return traced_critical_points.to_vtp(scalar_components);}
 #endif
 
 public: // i/o for sliced critical points
@@ -98,7 +98,7 @@ public: // i/o for intercepted traced
   void write_intercepted_critical_points_text(int t0, int t1, const std::string& filename) const;
   void write_intercepted_critical_points_json(int t0, int t1, const std::string& filename) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_intercepted_critical_points_vtk(int t0, int t1) const {return get_intercepted_critical_point(t0, t1).to_vtp(cpdims(), scalar_components, 0.0);}
+  vtkSmartPointer<vtkPolyData> get_intercepted_critical_points_vtk(int t0, int t1) const {return get_intercepted_critical_point(t0, t1).to_vtp(scalar_components);}
 #endif
 
 public: // i/o for discrete (untraced) critical points
@@ -248,7 +248,7 @@ inline void critical_point_tracker::write_intercepted_critical_points_vtk(int t0
 
 inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename) const
 {
-  auto poly = traced_critical_points.to_vtp(cpdims(), scalar_components); 
+  auto poly = traced_critical_points.to_vtp(scalar_components); 
   write_polydata(filename, poly, "auto", comm);
 }
 
@@ -367,7 +367,7 @@ inline void critical_point_tracker::write_traced_critical_points_text(const std:
 {
   if (is_root_proc()) {
     std::ofstream out(filename);
-    traced_critical_points.write_text(out, cpdims(), scalar_components);
+    traced_critical_points.write_text(out, scalar_components);
     out.close();
   }
 }
@@ -397,7 +397,7 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int k, con
 inline void critical_point_tracker::write_critical_points_text(std::ostream& os) const
 {
   for (const auto &cp : get_critical_points())
-    cp.print(os, cpdims(), scalar_components) << std::endl;
+    cp.print(os, scalar_components) << std::endl;
 }
 
 #if FTK_HAVE_VTK
@@ -468,7 +468,7 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int t, std
   const auto &cps = sliced_critical_points.at(t);
 
   for (const auto &cp: cps) {
-    cp.print(os, cpdims(), scalar_components);
+    cp.print(os, scalar_components);
     os << std::endl;
   }
 }

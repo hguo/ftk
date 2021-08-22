@@ -133,6 +133,8 @@ protected:
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
       double Js[][2][2]) const;
+  
+  void put_critical_points(const std::vector<feature_point_t>&);
 };
 
 
@@ -632,6 +634,15 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
 
   return true;
 } 
+
+inline void critical_point_tracker_2d_regular::put_critical_points(const std::vector<feature_point_t>& data) 
+{
+  for (const auto& cp : data) {
+    element_t e(m, 2, cp.tag);
+    discrete_critical_points[e] = cp;
+  }
+}
+
 
 }
 

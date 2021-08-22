@@ -20,7 +20,7 @@ struct xgc_blob_threshold_tracker : public xgc_tracker {
   
   void set_threshold(double t) { threshold = t; }
 
-  int cpdims() const { return 0; }
+  // int cpdims() const { return 0; }
   
   void initialize() {}
   void update() {}

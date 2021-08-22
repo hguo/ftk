@@ -61,7 +61,7 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   critical_point_tracker_3d_regular(diy::mpi::communicator comm) : critical_point_tracker_regular(comm, 3), tracker(comm) {}
   virtual ~critical_point_tracker_3d_regular() {}
   
-  int cpdims() const { return 3; }
+  // int cpdims() const { return 3; }
 
   void finalize();
 
@@ -83,6 +83,8 @@ protected:
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[4]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
       double Js[4][3][3]) const;
+  
+  void put_critical_points(const std::vector<feature_point_t>&);
 };
 
 
@@ -478,6 +480,14 @@ inline bool critical_point_tracker_3d_regular::check_simplex(
   else return false;
 #endif
 } 
+
+inline void critical_point_tracker_3d_regular::put_critical_points(const std::vector<feature_point_t>& data) 
+{
+  for (const auto& cp : data) {
+    element_t e(m, 3, cp.tag);
+    discrete_critical_points[e] = cp;
+  }
+}
 
 }
 

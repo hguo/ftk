@@ -58,9 +58,8 @@ struct feature_point_t {
     return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
   }
 
-  std::ostream& print(std::ostream& os, const int cpdims, const std::vector<std::string>& scalar_components) const {
-    if (cpdims == 2) os << "x=(" << x[0] << ", " << x[1] << "), ";
-    else os << "x=(" << x[0] << ", " << x[1] << ", " << x[2] << "), ";
+  std::ostream& print(std::ostream& os, const std::vector<std::string>& scalar_components) const {
+    os << "x=(" << x[0] << ", " << x[1] << ", " << x[2] << "), ";
     os << "t=" << t << ", ";
 
     os << "cond=" << cond << ", ";
@@ -69,10 +68,8 @@ struct feature_point_t {
       os << scalar_components[k] << "=" << scalar[k] << ", ";
 
     os << "v=";
-    if (cpdims == 2) os << "(" << v[0] << ", " << v[1] << "), ";
-    else os << "(" << v[0] << ", " << v[1] << ", " << v[2] << "), ";
+    os << "(" << v[0] << ", " << v[1] << ", " << v[2] << "), ";
     
-    // os << "type=" << critical_point_type_to_string(cpdims, type, scalar_components.size()) << ", "; 
     os << "type=" << type << ", "; 
     os << "timestep=" << timestep << ", ";
     os << "ordinal=" << ordinal << ", ";

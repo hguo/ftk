@@ -30,7 +30,7 @@ struct xgc_blob_filament_tracker : public xgc_tracker {
   //     std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2, 
   //     int nphi_, int iphi_);
 
-  int cpdims() const { return 3; }
+  // int cpdims() const { return 3; }
  
   void initialize();
   void reset() {
@@ -667,7 +667,7 @@ inline void xgc_blob_filament_tracker::build_critical_line()
   post_analysis_curves( curves );
 
 #if FTK_HAVE_VTK
-  auto poly = curves.to_vtp(3, {
+  auto poly = curves.to_vtp({
       "dneOverne0", "psin", "theta", "offset", "Er"});
   const auto filename = series_filename(ordinal_output_pattern, current_timestep);
   write_polydata(filename, transform_vtp_coordinates(poly));
@@ -1062,7 +1062,7 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
     fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
     // auto poly = sliced.to_vtp(3, std::vector<std::string>());
-    auto poly = sliced.to_vtp(3, {
+    auto poly = sliced.to_vtp({
         "dneOverne0", "psin", "theta", "offset", "Er"});
     
     const auto filename = series_filename(pattern, i);

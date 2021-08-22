@@ -30,7 +30,7 @@ struct threshold_tracker : public connected_component_tracker<TimeIndexType, Lab
 
   ndarray<LabelIdType> get_last_labeled_array_snapshot() const;
 
-  int cpdims() const {return 0;}
+  // int cpdims() const {return 0;}
 
 protected:
   double threshold = 0.0;

@@ -29,7 +29,7 @@ struct tracker : public filter
   tracker(diy::mpi::communicator comm) : filter(comm) {} // , master(comm) {}
   virtual ~tracker() {}
   
-  virtual int cpdims() const = 0; // featutre dimension
+  // virtual int cpdims() const = 0; // featutre dimension
   
   void set_start_timestep(int t) { start_timestep = t;}
   void set_end_timestep(int t) { end_timestep = t; }

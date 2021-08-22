@@ -377,13 +377,19 @@ void json_interface::consume_mpas(ndarray_stream<> &stream, diy::mpi::communicat
   
   fprintf(stderr, "starting mpas data stream..\n");
   
+  const size_t DT = js["n_timesteps"];
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     std::cerr << field_data.shape() << std::endl;
-#if 0
+    ndarray<double> vf; // extract only the top slice
+    vf.reshape(2, field_data.dim(1));
+
+    for (int i = 0; i < field_data.dim(1); i ++)
+      for (int j = 0; j < 2; j ++)
+        vf(j, i) = field_data(j, i, 0);
+
     tracker->push_vector_field_snapshot(field_data);
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
-#endif 
     // if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
     //   write_sliced_results(k-1);
   });

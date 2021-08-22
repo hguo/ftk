@@ -293,7 +293,7 @@ inline void critical_line_tracker_3d_regular::write_sliced(const std::string& pa
       fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
       // auto poly = sliced.to_vtp(3, {"residue"}); // std::vector<std::string>());
-      auto poly = sliced.to_vtp(3, varnames()); // std::vector<std::string>());
+      auto poly = sliced.to_vtp(varnames()); // std::vector<std::string>());
       
       const auto filename = series_filename(pattern, i);
       write_polydata(filename, poly);
@@ -315,7 +315,7 @@ inline vtkSmartPointer<vtkPolyData> critical_line_tracker_3d_regular::get_inters
   for (const auto &kv : intersections) {
     const auto &cp = kv.second;
     double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; 
-    if (cpdims() == 2) p[2] = cp.t;
+    // if (cpdims() == 2) p[2] = cp.t;
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
   }
