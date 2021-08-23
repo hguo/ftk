@@ -28,30 +28,11 @@ job-intel-mpich:
     - module load mpich/3.4.2-intel
     - module load intel/20.2
 
-job-vtk:
-  extends: .basic_job
-  variables:
-    CMAKE_ARG: "-DFTK_USE_VTK=ON"
-  before_script:
-    - source /nfs/gce/projects/PEDAL-GCE/hguo/spack/share/spack/setup-env.sh
-    - module load gcc/8.3.0-fjpc5ys
-    - spack load /qqzhye5
-
-# build:
-#   tags:
-#     - public
-#   stage: build
-#   # instead of calling g++ directly you can also use some build toolkit like make
-#   # install the necessary build tools when needed
-#   # before_script:
-#   #   - apt update && apt -y install make autoconf
-#   script:
-#     - mkdir build && cd build 
-#     - cmake .. -DFTK_BUILD_TESTS=ON
-#     - make
-
-# # run tests using the binary built before
-# test:
-#   stage: test
-#   script:
-#     - make test
+# job-vtk:
+#   extends: .basic_job
+#   variables:
+#     CMAKE_ARG: "-DFTK_USE_VTK=ON"
+#   before_script:
+#     - source /nfs/gce/projects/PEDAL-GCE/hguo/spack/share/spack/setup-env.sh
+#     - module load gcc/8.3.0-fjpc5ys
+#     - spack load /qqzhye5
