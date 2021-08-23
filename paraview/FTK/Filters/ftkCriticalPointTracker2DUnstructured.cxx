@@ -152,7 +152,7 @@ int ftkCriticalPointTracker2DUnstructured::RequestData(
 #endif
 
     // auto poly = tracker->get_traced_critical_points_vtk();
-    auto poly = tracker->get_traced_critical_points().to_vtp(2, {}, ZTimeScale);
+    auto poly = tracker->get_traced_critical_points().to_vtp({});
     output->DeepCopy(poly);
 
     tracker->reset();
