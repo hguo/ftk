@@ -12,6 +12,9 @@
   script: 
     - ctest -VV
 
+  tags:
+    - shared_ssh
+
 job-no-dependencies:
   extends: .basic_job
 
