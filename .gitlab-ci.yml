@@ -22,6 +22,8 @@ job-mpich:
   extends: .basic_job
   variables:
     CMAKE_ARG: "-DFTK_USE_MPI=ON"
+    CC: mpicc
+    CXX: mpicxx
   before_script:
     - module load mpich/3.4.2-intel
 
