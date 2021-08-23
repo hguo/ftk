@@ -18,6 +18,13 @@
 job-no-dependencies:
   extends: .basic_job
 
+job-mpich:
+  extends: .basic_job
+  variables:
+    - CMAKE_ARG="-DFTK_USE_MPI=ON"
+  before_script:
+    - module load mpich/3.4.2-intel
+
 
 # build:
 #   tags:
