@@ -1,0 +1,18 @@
+image: gcc
+
+build:
+  stage: build
+  # instead of calling g++ directly you can also use some build toolkit like make
+  # install the necessary build tools when needed
+  # before_script:
+  #   - apt update && apt -y install make autoconf
+  script:
+    - mkdir build && cd build 
+    - cmake .. -DFTK_BUILD_TESTS=ON
+    - make
+
+# run tests using the binary built before
+test:
+  stage: test
+  script:
+    - make test
