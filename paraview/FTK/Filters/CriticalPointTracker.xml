@@ -15,6 +15,9 @@
         </ProxyGroupDomain>
         <DataTypeDomain name="input_type">
           <DataType value="vtkImageData"/>
+          <DataType value="vtkRectilinearGrid"/>
+          <DataType value="vtkStructuredGrid"/>
+          <DataType value="vtkUnstructuredGrid"/>
         </DataTypeDomain>
       </InputProperty>
 

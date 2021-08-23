@@ -1,17 +1,17 @@
 #ifndef __ftkCriticalPointTracker_h
 #define __ftkCriticalPointTracker_h
 
-#include "vtkImageAlgorithm.h"
+#include "vtkAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
 #include <ftk/filters/critical_point_tracker_2d_regular.hh>
 
 class vtkDataSet;
 
-class ftkCriticalPointTracker : public vtkImageAlgorithm
+class ftkCriticalPointTracker : public vtkAlgorithm
 {
 public:
   static ftkCriticalPointTracker *New();
-  vtkTypeMacro(ftkCriticalPointTracker, vtkImageAlgorithm);
+  vtkTypeMacro(ftkCriticalPointTracker, vtkAlgorithm);
 
   vtkSetMacro(UseGPU, bool);
   vtkGetMacro(UseGPU, bool);
@@ -29,9 +29,9 @@ protected:
   ftkCriticalPointTracker();
   ~ftkCriticalPointTracker();
 
-  int RequestUpdateExtent(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
-  int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
-  int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
+  int RequestUpdateExtent(vtkInformation*, vtkInformationVector**, vtkInformationVector*); // override;
+  int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*); // override;
+  int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*); // override;
   int FillOutputPortInformation(int, vtkInformation*) override;
 
 private:
