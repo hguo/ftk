@@ -43,10 +43,10 @@ enum {
 };
 
 enum {
-  MESH_COORDS_REGULAR = 0, // uniform
-  MESH_COORDS_REGULAR_EXTENTS = 1, // uniform with extents
-  MESH_COORDS_REGULAR_RECTILINEAR = 2, // x, y, z in separate arrays
-  MESH_COORDS_REGULAR_EXPLICIT = 3// explicit (x, y, z)
+  REGULAR_COORDS_SIMPLE = 0, // uniform
+  REGULAR_COORDS_EXTENTS = 1, // uniform with extents
+  REGULAR_COORDS_RECTILINEAR = 2, // x, y, z in separate arrays
+  REGULAR_COORDS_EXPLICIT = 3// explicit (x, y, z)
 };
 
 struct simplicial_regular_mesh;
@@ -122,7 +122,12 @@ struct simplicial_regular_mesh : public object {
     lattice_.reshape(lb_, sizes()); 
   }
 
-  simplicial_regular_mesh(int n, lattice& _lattice) : simplicial_regular_mesh(n) {
+  simplicial_regular_mesh(const lattice l) : simplicial_regular_mesh(l.nd()) {
+    set_lb_ub(l);
+  }
+
+#if 0
+  simplicial_regular_mesh(int n, const lattice _lattice) : simplicial_regular_mesh(n) {
     std::vector<int> _lb, _ub;
 
     for (int i = 0; i < n; i ++) {
@@ -136,6 +141,7 @@ struct simplicial_regular_mesh : public object {
     // lattice_.set_unlimited_time(_lattice.unlimited_time()); 
     set_lb_ub(_lb, _ub); 
   }
+#endif
 
   // Dimensionality of the mesh
   int nd() const {return nd_;}
@@ -200,7 +206,16 @@ public: // partitioning
 #endif
 
 public: // physics coordinates (for rectilinear grid)
+  void get_coords(const std::vector<int>& v, std::vector<double>& x);
+
+  void set_coords_extents(const std::vector<double>& extents);
+  void set_coords_rectilinear(const std::vector<ndarray<double>> &rectilinear_coords_) { rectilinear_coords = rectilinear_coords_; mode_phys_coords = REGULAR_COORDS_RECTILINEAR; }
+  void set_coords_explicit(const ndarray<double>& explicit_coords);
+
 #if FTK_HAVE_VTK
+  static std::shared_ptr<simplicial_regular_mesh> from_vtr(vtkSmartPointer<vtkRectilinearGrid>);
+  static std::shared_ptr<simplicial_regular_mesh> from_vts(vtkSmartPointer<vtkStructuredGrid>);
+
   vtkSmartPointer<vtkRectilinearGrid> to_vtr() const;
   vtkSmartPointer<vtkStructuredGrid> to_vts() const;
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
@@ -214,8 +229,10 @@ protected: // physics coordinates
   //
   // (explicit x, y, z... in individual components)
   // - 3: structured (explicit x, y, z... coordinates)
-  int mode_phys_coordinates = 0; 
-  ndarray<float> coords;
+  int mode_phys_coords = 0; 
+  ndarray<double> explicit_coords;
+  std::vector<ndarray<double>> rectilinear_coords;
+  std::vector<double> extents;
 
 public:
   void print_unit_simplices(int d, int scope) const;
@@ -1063,7 +1080,32 @@ inline void simplicial_regular_mesh::element_for(
   parallel_for(ntasks, lambda, accelerator, nthreads, affinity);
 }
 
+#if FTK_HAVE_VTK
+inline std::shared_ptr<simplicial_regular_mesh> simplicial_regular_mesh::from_vtr(vtkSmartPointer<vtkRectilinearGrid> grid)
+{
+  const int nd = grid->GetDataDimension();
+  const int *dims = grid->GetDimensions();
+
+  std::shared_ptr<simplicial_regular_mesh> m(
+    new simplicial_regular_mesh(lattice(nd, dims)));
+
+  std::vector<ndarray<double>> rectilinear_coords(nd);
+  for (int i = 0; i < nd; i ++)
+    rectilinear_coords[i].reshape(dims[i]);
+  m->set_coords_rectilinear(rectilinear_coords);
+
+  return m;
 }
+
+inline std::shared_ptr<simplicial_regular_mesh> simplicial_regular_mesh::from_vts(vtkSmartPointer<vtkStructuredGrid> grid)
+{
+  const int nd = grid->GetDataDimension();
+
+  return NULL; // FIXME WIP
+}
+#endif 
+
+} // namespace ftk
 
 
 namespace diy {

@@ -19,6 +19,7 @@ struct lattice {
 
   lattice() {}
   lattice(int n);
+  lattice(int n, const int *dims);
   lattice(const std::vector<size_t> &starts, const std::vector<size_t> &sizes) {reshape(starts, sizes);}
   lattice(const std::vector<size_t> &sizes) {reshape(sizes);}
 
@@ -70,6 +71,14 @@ inline lattice::lattice(int n)
 {
   starts_.resize(n);
   sizes_.resize(n);
+}
+
+inline lattice::lattice(int n, const int *dims)
+{
+  std::vector<size_t> sz;
+  for (int i = 0; i < n; i ++)
+    sz.push_back(dims[i]);
+  reshape(sz);
 }
 
 inline lattice::lattice(const diy::DiscreteBounds& b)
