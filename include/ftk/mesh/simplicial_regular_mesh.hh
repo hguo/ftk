@@ -210,7 +210,10 @@ public: // physics coordinates (for rectilinear grid)
 
   void set_coords_extents(const std::vector<double>& extents);
   void set_coords_rectilinear(const std::vector<ndarray<double>> &rectilinear_coords_) { rectilinear_coords = rectilinear_coords_; mode_phys_coords = REGULAR_COORDS_RECTILINEAR; }
-  void set_coords_explicit(const ndarray<double>& explicit_coords);
+  void set_coords_explicit(const ndarray<double>& explicit_coords_) {  explicit_coords = explicit_coords_; mode_phys_coords = REGULAR_COORDS_EXPLICIT; }
+
+  static std::shared_ptr<simplicial_regular_mesh> from_vtr_file(const std::string &f);
+  static std::shared_ptr<simplicial_regular_mesh> from_vts_file(const std::string &f);
 
 #if FTK_HAVE_VTK
   static std::shared_ptr<simplicial_regular_mesh> from_vtr(vtkSmartPointer<vtkRectilinearGrid>);
@@ -1090,18 +1093,44 @@ inline std::shared_ptr<simplicial_regular_mesh> simplicial_regular_mesh::from_vt
     new simplicial_regular_mesh(lattice(nd, dims)));
 
   std::vector<ndarray<double>> rectilinear_coords(nd);
-  for (int i = 0; i < nd; i ++)
-    rectilinear_coords[i].reshape(dims[i]);
-  m->set_coords_rectilinear(rectilinear_coords);
+  for (int i = 0; i < nd; i ++) {
+    // rectilinear_coords[i].reshape(dims[i]);
+    if (i == 0)
+      rectilinear_coords[i].from_vtk_data_array(grid->GetXCoordinates());
+    else if (i == 1)
+      rectilinear_coords[i].from_vtk_data_array(grid->GetYCoordinates());
+    else  // i == 2
+      rectilinear_coords[i].from_vtk_data_array(grid->GetZCoordinates());
+  }
 
+  m->set_coords_rectilinear(rectilinear_coords);
   return m;
 }
 
 inline std::shared_ptr<simplicial_regular_mesh> simplicial_regular_mesh::from_vts(vtkSmartPointer<vtkStructuredGrid> grid)
 {
   const int nd = grid->GetDataDimension();
+  const int *dims = grid->GetDimensions();
 
-  return NULL; // FIXME WIP
+  std::shared_ptr<simplicial_regular_mesh> m(
+    new simplicial_regular_mesh(lattice(nd, dims)));
+
+  std::vector<size_t> shape_coords;
+  shape_coords.push_back(3);
+  for (int i = 0; i < nd; i ++)
+    shape_coords.push_back(dims[i]);
+
+  ndarray<double> coords;
+  coords.reshape(shape_coords);
+  const auto np = grid->GetNumberOfPoints();
+  for (auto i = 0; i < np; i ++) {
+    double *p = grid->GetPoint(i);
+    for (int j = 0; j < 3; j ++)
+      coords[j + 3*i] = p[j];
+  }
+
+  m->set_coords_explicit(coords);
+  return m; 
 }
 #endif 
 
