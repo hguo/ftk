@@ -39,6 +39,13 @@ job-intel-mpich-hdf5:
     - module load mpich/3.4.2-intel
     - module load intel/20.2
 
+job-cuda-compile-only:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_CUDA=ON"
+  before_script:
+    - module load cuda/10.2
+
 # job-vtk:
 #   extends: .basic_job
 #   variables:
