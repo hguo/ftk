@@ -3,13 +3,13 @@
 .basic_job:
   image: gcc
 
-  before_script:
+  script:
     - mkdir build
     - cd build
     - cmake .. -DFTK_BUILD_TESTS=ON ${CMAKE_ARG}
     - make VERBOSE=1
 
-  script: 
+  after_script: 
     - ctest -VV
 
   tags:
@@ -17,6 +17,13 @@
 
 job-no-dependencies:
   extends: .basic_job
+
+job-mpich:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_MPI=ON"
+  before_script:
+    - module load mpich/3.4.2-intel
 
 
 # build:
