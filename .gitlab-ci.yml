@@ -1,4 +1,5 @@
-# image: gcc
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
 
 .basic_job:
   image: gcc
@@ -45,6 +46,14 @@ job-cuda-compile-only:
     CMAKE_ARG: "-DFTK_USE_CUDA=ON"
   before_script:
     - module load cuda/10.2
+
+job-python3-setup-build-only:
+  before_script:
+    - module load anaconda3/2020.02
+  script:
+    - python setup.py build
+  tags:
+    - shared_ssh
 
 # job-vtk:
 #   extends: .basic_job
