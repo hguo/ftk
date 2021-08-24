@@ -19,6 +19,11 @@ variables:
 job-no-dependencies:
   extends: .basic_job
 
+job-netcdf:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_NETCDF=ON"
+
 job-intel-mpich:
   extends: .basic_job
   variables:
