@@ -16,15 +16,15 @@ variables:
   tags:
     - shared_ssh
 
-job-no-dependencies:
+no-dependencies:
   extends: .basic_job
 
-job-netcdf:
+netcdf:
   extends: .basic_job
   variables:
     CMAKE_ARG: "-DFTK_USE_NETCDF=ON"
 
-job-intel-mpich:
+intel-mpich:
   extends: .basic_job
   variables:
     CMAKE_ARG: "-DFTK_USE_MPI=ON"
@@ -34,7 +34,7 @@ job-intel-mpich:
     - module load mpich/3.4.2-intel
     - module load intel/20.2
 
-job-intel-mpich-hdf5:
+intel-mpich-hdf5:
   extends: .basic_job
   variables:
     CMAKE_ARG: "-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_HDF5_DIR=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/hdf5/1.12.1-mpich-3.4.2-intel-parallel-fortran"
@@ -45,20 +45,44 @@ job-intel-mpich-hdf5:
     - module load mpich/3.4.2-intel
     - module load intel/20.2
 
-job-cuda-compile-only:
+cuda-compile-only:
   extends: .basic_job
   variables:
     CMAKE_ARG: "-DFTK_USE_CUDA=ON"
   before_script:
     - module load cuda/10.2
 
-job-python3-setup-build-only:
+python3-setup-build-only:
   before_script:
     - module load anaconda3/2020.02
   script:
     - python setup.py build
   tags:
     - shared_ssh
+
+python3:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_BUILD_PYFTK=ON -DFTK_BUILD_EXECUTABLES=OFF"
+  before_script:
+    - module load anaconda3/2020.02
+
+intel-tbb:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_TBB=ON -DTBB_ROOT=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/intel/20.2/tbb"
+  before_script:
+    - module load intel/20.2
+
+intel-mpich-tbb:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_MPI=ON -DFTK_USE_TBB=ON -DTBB_ROOT=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/intel/20.2/tbb"
+    CC: mpicc
+    CXX: mpicxx
+  before_script:
+    - module load mpich/3.4.2-intel
+    - module load intel/20.2
 
 # job-vtk:
 #   extends: .basic_job
