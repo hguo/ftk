@@ -498,21 +498,21 @@ inline void critical_point_tracker_2d_regular::simplex_coordinates(
       X[i][0] = vertices[i][0]; // x
       X[i][1] = vertices[i][1]; // y
       X[i][2] = 0.0; // z
-      X[i][3] = vertices[i][3]; // t
+      X[i][3] = vertices[i][2]; // t
     }
   } else if (mode_phys_coords == REGULAR_COORDS_BOUNDS) {
     for (int i = 0; i < vertices.size(); i ++) {
       X[i][0] = (vertices[i][0] - bounds_coords[0]) / (bounds_coords[1] - bounds_coords[0]); // x
       X[i][1] = (vertices[i][1] - bounds_coords[2]) / (bounds_coords[3] - bounds_coords[2]); // y
       X[i][2] = 0.0; // z
-      X[i][3] = vertices[i][3]; // t
+      X[i][3] = vertices[i][2]; // t
     }
   } else if (mode_phys_coords == REGULAR_COORDS_RECTILINEAR) {
     for (int i = 0; i < vertices.size(); i ++) {
       X[i][0] = rectilinear_coords[0][ vertices[i][0] ]; // x
       X[i][1] = rectilinear_coords[1][ vertices[i][1] ]; // y
       X[i][2] = 0.0; // z
-      X[i][3] = vertices[i][3]; // t
+      X[i][3] = vertices[i][2]; // t
     }
   } else if (mode_phys_coords == REGULAR_COORDS_EXPLICIT) {
     for (int i = 0; i < vertices.size(); i ++) {
