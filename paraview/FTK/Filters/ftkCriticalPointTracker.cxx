@@ -191,8 +191,70 @@ int ftkCriticalPointTracker::RequestData_vtu(
     vtkInformationVector* outputVector)
 {
   fprintf(stderr, "requesting vtu data.\n");
+  
+  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+  vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  return 1;
+  vtkUnstructuredGrid *input = vtkUnstructuredGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
+  
+  const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+  // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
+  
+  vtkSmartPointer<vtkAbstractArray> da = input->GetPointData()->GetAbstractArray(InputVariable.c_str());
+  if (!da) da = input->GetPointData()->GetAbstractArray(0);
+ 
+  if (currentTimestep == 0) { // first timestep
+    m2u.from_vtu(input);
+
+    tcp2du.reset(new ftk::critical_point_tracker_2d_unstructured(MPI_COMM_WORLD, m2u));
+    // vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
+    
+    tcp2du->initialize();
+  }
+ 
+  ftk::ndarray<double> field_data;
+  // std::cerr << "InputVariable: " << InputVariable << std::endl;
+  // input->PrintSelf(std::cerr, vtkIndent(2));
+
+  field_data.from_vtk_array(da); // input, InputVariable);
+
+  if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
+    // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
+    tcp2du->push_vector_field_snapshot(field_data);
+
+    if (currentTimestep != 0)
+      tcp2du->advance_timestep();
+
+    request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
+  } else { // the last timestep
+    if (nt == 0) { // the only timestp
+      tcp2du->push_vector_field_snapshot(field_data);
+      tcp2du->update_timestep();
+    }
+
+    request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
+    currentTimestep = 0;
+    
+    tcp2du->finalize();
+
+    auto &trajs = tcp2du->get_traced_critical_points();
+    trajs.foreach([](ftk::feature_curve_t& t) {
+        t.discard_interval_points();
+        t.derive_velocity();
+    });
+
+    // auto poly = tracker->get_traced_critical_points_vtk();
+    auto poly = tcp2du->get_traced_critical_points().to_vtp({});
+    output->DeepCopy(poly);
+
+    tcp2du->reset();
+
+    return 1;
+  }
+
+  currentTimestep ++;
+  return 1; 
 }
 
 int ftkCriticalPointTracker::ProcessRequest(
