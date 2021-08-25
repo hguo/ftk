@@ -204,7 +204,7 @@ int ftkCriticalPointTracker::RequestData_vtu(
 
   vtkUnstructuredGrid *input = vtkUnstructuredGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
-  
+
   const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
   
@@ -212,12 +212,25 @@ int ftkCriticalPointTracker::RequestData_vtu(
   if (!da) da = input->GetPointData()->GetAbstractArray(0);
  
   if (currentTimestep == 0) { // first timestep
-    m2u.from_vtu(input);
+    std::set<unsigned char> cellTypesSet;
+    vtkSmartPointer<vtkCellTypes> cellTypes = vtkNew<vtkCellTypes>(); 
+    input->GetCellTypes(cellTypes);
+    for (vtkIdType i = 0; i < cellTypes->GetNumberOfTypes(); i ++) {
+      cellTypesSet.insert( cellTypes->GetCellType( i ) );
+    }
 
-    tcp2du.reset(new ftk::critical_point_tracker_2d_unstructured(MPI_COMM_WORLD, m2u));
+    if (cellTypesSet.find( VTK_TETRA ) != cellTypesSet.end()) { // the input is regarded as a simplicial 3D mesh
+      // TODO
+    } else if (cellTypesSet.find( VTK_TRIANGLE) != cellTypesSet.end()) { // the input is regarded as a simplicial 2D mesh
+      m2u.from_vtu(input);
+      tcp.reset(new ftk::critical_point_tracker_2d_unstructured(MPI_COMM_WORLD, m2u));
+    } else {
+      assert(false); // unsupported mesh type
+    }
+
     // vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
     
-    tcp2du->initialize();
+    tcp->initialize();
   }
  
   ftk::ndarray<double> field_data;
@@ -228,34 +241,34 @@ int ftkCriticalPointTracker::RequestData_vtu(
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
-    tcp2du->push_vector_field_snapshot(field_data);
+    tcp->push_vector_field_snapshot(field_data);
 
     if (currentTimestep != 0)
-      tcp2du->advance_timestep();
+      tcp->advance_timestep();
 
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
   } else { // the last timestep
     if (nt == 0) { // the only timestp
-      tcp2du->push_vector_field_snapshot(field_data);
-      tcp2du->update_timestep();
+      tcp->push_vector_field_snapshot(field_data);
+      tcp->update_timestep();
     }
 
     request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
     currentTimestep = 0;
     
-    tcp2du->finalize();
+    tcp->finalize();
 
-    auto &trajs = tcp2du->get_traced_critical_points();
+    auto &trajs = tcp->get_traced_critical_points();
     trajs.foreach([](ftk::feature_curve_t& t) {
         t.discard_interval_points();
         t.derive_velocity();
     });
 
     // auto poly = tracker->get_traced_critical_points_vtk();
-    auto poly = tcp2du->get_traced_critical_points().to_vtp({});
+    auto poly = tcp->get_traced_critical_points().to_vtp({});
     output->DeepCopy(poly);
 
-    tcp2du->reset();
+    tcp->reset();
 
     return 1;
   }
