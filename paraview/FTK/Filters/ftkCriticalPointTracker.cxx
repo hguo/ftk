@@ -62,6 +62,10 @@ int ftkCriticalPointTracker::RequestData_vti(
   // vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkDataSet *input = vtkDataSet::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
+    
+  vtkImageData *vti = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkRectilinearGrid *vtr = vtkRectilinearGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkStructuredGrid *vts = vtkStructuredGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
 
   const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
@@ -72,22 +76,18 @@ int ftkCriticalPointTracker::RequestData_vti(
   ftk::ndarray<double> field_data;
   
   if (itype == VTK_IMAGE_DATA) {
-    vtkImageData *vti = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
     nd = vti->GetDataDimension();
     DW = vti->GetDimensions()[0];
     DH = vti->GetDimensions()[1];
     DD = vti->GetDimensions()[2];
     field_data.from_vtk_image_data(vti, InputVariable);
   } else if (itype == VTK_RECTILINEAR_GRID) {
-    vtkRectilinearGrid *vtr = vtkRectilinearGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
     nd = vtr->GetDataDimension();
     DW = vtr->GetDimensions()[0];
     DH = vtr->GetDimensions()[1];
     DD = vtr->GetDimensions()[2];
     field_data.from_vtk_regular_data<vtkRectilinearGrid>(vtr, InputVariable);
   } else if (itype == VTK_STRUCTURED_GRID) {
-    vtkStructuredGrid *vts = vtkStructuredGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
-    vts->PrintSelf(std::cerr, vtkIndent(2));
     nd = vts->GetDataDimension();
     DW = vts->GetDimensions()[0];
     DH = vts->GetDimensions()[1];
@@ -143,6 +143,15 @@ int ftkCriticalPointTracker::RequestData_vti(
       } else 
         assert(false);
     } else 
+      assert(false);
+
+    if (itype == VTK_IMAGE_DATA)
+      tcpr->set_coords_bounds(vti);
+    else if (itype == VTK_RECTILINEAR_GRID)
+      tcpr->set_coords_rectilinear(vtr);
+    else if (itype == VTK_STRUCTURED_GRID)
+      tcpr->set_coords_explicit(vts);
+    else 
       assert(false);
     
     tcpr->initialize();

@@ -42,13 +42,6 @@ enum {
   ELEMENT_SCOPE_INTERVAL = 2
 };
 
-enum {
-  REGULAR_COORDS_SIMPLE = 0, // uniform
-  REGULAR_COORDS_EXTENTS = 1, // uniform with extents
-  REGULAR_COORDS_RECTILINEAR = 2, // x, y, z in separate arrays
-  REGULAR_COORDS_EXPLICIT = 3// explicit (x, y, z)
-};
-
 struct simplicial_regular_mesh;
 
 struct simplicial_regular_mesh_element {
@@ -204,38 +197,6 @@ public: // partitioning
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions);  
   void partition(int np, const std::vector<size_t> &given, const std::vector<size_t> &ghost_low, const std::vector<size_t> &ghost_high, std::vector<std::tuple<simplicial_regular_mesh, simplicial_regular_mesh>>& partitions);  
 #endif
-
-public: // physics coordinates (for rectilinear grid)
-  void get_coords(const std::vector<int>& v, std::vector<double>& x);
-
-  void set_coords_extents(const std::vector<double>& extents);
-  void set_coords_rectilinear(const std::vector<ndarray<double>> &rectilinear_coords_) { rectilinear_coords = rectilinear_coords_; mode_phys_coords = REGULAR_COORDS_RECTILINEAR; }
-  void set_coords_explicit(const ndarray<double>& explicit_coords_) {  explicit_coords = explicit_coords_; mode_phys_coords = REGULAR_COORDS_EXPLICIT; }
-
-  static std::shared_ptr<simplicial_regular_mesh> from_vtr_file(const std::string &f);
-  static std::shared_ptr<simplicial_regular_mesh> from_vts_file(const std::string &f);
-
-#if FTK_HAVE_VTK
-  static std::shared_ptr<simplicial_regular_mesh> from_vtr(vtkSmartPointer<vtkRectilinearGrid>);
-  static std::shared_ptr<simplicial_regular_mesh> from_vts(vtkSmartPointer<vtkStructuredGrid>);
-
-  vtkSmartPointer<vtkRectilinearGrid> to_vtr() const;
-  vtkSmartPointer<vtkStructuredGrid> to_vts() const;
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
-#endif
-
-protected: // physics coordinates
-  // modes and coords dimensions 
-  // - 0: uniform; coords is an empty array
-  // - 1: uniform with extents; coords is a 2*n array
-  // - 2: rectilinear; coords is a 1d array
-  //
-  // (explicit x, y, z... in individual components)
-  // - 3: structured (explicit x, y, z... coordinates)
-  int mode_phys_coords = 0; 
-  ndarray<double> explicit_coords;
-  std::vector<ndarray<double>> rectilinear_coords;
-  std::vector<double> extents;
 
 public:
   void print_unit_simplices(int d, int scope) const;
@@ -1083,7 +1044,7 @@ inline void simplicial_regular_mesh::element_for(
   parallel_for(ntasks, lambda, accelerator, nthreads, affinity);
 }
 
-#if FTK_HAVE_VTK
+#if 0 // FTK_HAVE_VTK
 inline std::shared_ptr<simplicial_regular_mesh> simplicial_regular_mesh::from_vtr(vtkSmartPointer<vtkRectilinearGrid> grid)
 {
   const int nd = grid->GetDataDimension();

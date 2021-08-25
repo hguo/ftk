@@ -128,7 +128,7 @@ protected:
   void trace_intersections();
   void trace_connected_components();
 
-  virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
+  virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][4]) const;
   template <typename T=double> void simplex_vectors(const std::vector<std::vector<int>>& vertices, T v[][2]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
@@ -491,8 +491,41 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
 }
 
 inline void critical_point_tracker_2d_regular::simplex_coordinates(
-    const std::vector<std::vector<int>>& vertices, double X[][3]) const
+    const std::vector<std::vector<int>>& vertices, double X[][4]) const
 {
+  if (mode_phys_coords == REGULAR_COORDS_SIMPLE) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = vertices[i][0]; // x
+      X[i][1] = vertices[i][1]; // y
+      X[i][2] = 0.0; // z
+      X[i][3] = vertices[i][3]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_BOUNDS) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = (vertices[i][0] - bounds_coords[0]) / (bounds_coords[1] - bounds_coords[0]); // x
+      X[i][1] = (vertices[i][1] - bounds_coords[2]) / (bounds_coords[3] - bounds_coords[2]); // y
+      X[i][2] = 0.0; // z
+      X[i][3] = vertices[i][3]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_RECTILINEAR) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = rectilinear_coords[0][ vertices[i][0] ]; // x
+      X[i][1] = rectilinear_coords[1][ vertices[i][1] ]; // y
+      X[i][2] = 0.0; // z
+      X[i][3] = vertices[i][3]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_EXPLICIT) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = explicit_coords(0, vertices[i][0], vertices[i][1]); // x
+      X[i][1] = explicit_coords(1, vertices[i][0], vertices[i][1]); // y
+      if (explicit_coords.dim(0) > 2) // z
+        X[i][2] = explicit_coords(2, vertices[i][0], vertices[i][1]);
+      else 
+        X[i][2] = 0.0;
+      X[i][3] = vertices[i][2]; // t
+    }
+  }
+#if 0
   if (use_explicit_coords) {
     for (int i = 0; i < vertices.size(); i ++) {
       for (int j = 0; j < 2; j ++) 
@@ -504,6 +537,7 @@ inline void critical_point_tracker_2d_regular::simplex_coordinates(
       for (int j = 0; j < 3; j ++)
         X[i][j] = vertices[i][j];
   }
+#endif
 }
 
 template <typename T>
@@ -595,12 +629,13 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
 
   if (!succ2) clamp_barycentric<3>(mu);
 
-  double X[3][3], x[3]; // position
+  double X[3][4], x[4]; // position
   simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, x);
+  lerp_s2v4(X, mu, x);
   cp.x[0] = x[0];
   cp.x[1] = x[1];
-  cp.t = x[2];
+  cp.x[2] = x[2];
+  cp.t = x[3];
   cp.cond = cond;
   // fprintf(stderr, "x=%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
 
