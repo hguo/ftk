@@ -286,7 +286,7 @@ endif ()
 
 if (FTK_USE_DECAF STREQUAL AUTO)
   find_package (DECAF QUIET)
-else (FTK_USE_DECAF)
+elseif (FTK_USE_DECAF)
   find_package (DECAF REQUIRED)
 endif ()
 if (DECAF_FOUND)
