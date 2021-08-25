@@ -57,7 +57,7 @@ private:
   int currentTimestep;
   int inputDataComponents;
   
-  ftk::critical_point_tracker_2d_regular tracker; 
+  std::shared_ptr<ftk::critical_point_tracker_2d_regular> tcp2dr; 
 };
 
 #endif

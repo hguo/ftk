@@ -18,8 +18,7 @@
 
 vtkStandardNewMacro(ftkCriticalPointTracker);
 
-ftkCriticalPointTracker::ftkCriticalPointTracker()
-  : tracker(diy::mpi::communicator()), 
+ftkCriticalPointTracker::ftkCriticalPointTracker() :
     UseGPU(false),
     GaussianKernelSize(1.0)
 {
@@ -106,26 +105,28 @@ int ftkCriticalPointTracker::RequestData_vti(
     inputDataComponents = da->GetNumberOfComponents();
     const size_t DW = input->GetDimensions()[0], 
                  DH = input->GetDimensions()[1];
-    
+   
+    tcp2dr.reset(new ftk::critical_point_tracker_2d_regular(MPI_COMM_WORLD));
+
     fprintf(stderr, "DW=%zu, DH=%zu, components=%d\n", DW, DH, inputDataComponents);
     if (inputDataComponents == 1) { // scalar field
-      tracker.set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
-      tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
-      tracker.set_input_array_partial(false);
-      tracker.set_scalar_field_source(ftk::SOURCE_GIVEN);
-      tracker.set_vector_field_source(ftk::SOURCE_DERIVED);
-      tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
+      tcp2dr->set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+      tcp2dr->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+      tcp2dr->set_input_array_partial(false);
+      tcp2dr->set_scalar_field_source(ftk::SOURCE_GIVEN);
+      tcp2dr->set_vector_field_source(ftk::SOURCE_DERIVED);
+      tcp2dr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
     } else if (inputDataComponents > 1) { // vector field
-      tracker.set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
-      tracker.set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
-      tracker.set_input_array_partial(false);
-      tracker.set_scalar_field_source(ftk::SOURCE_NONE);
-      tracker.set_vector_field_source(ftk::SOURCE_GIVEN);
-      tracker.set_jacobian_field_source(ftk::SOURCE_DERIVED);
+      tcp2dr->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
+      tcp2dr->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+      tcp2dr->set_input_array_partial(false);
+      tcp2dr->set_scalar_field_source(ftk::SOURCE_NONE);
+      tcp2dr->set_vector_field_source(ftk::SOURCE_GIVEN);
+      tcp2dr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
     } else 
       assert(false);
     
-    tracker.initialize();
+    tcp2dr->initialize();
   }
   
   ftk::ndarray<double> field_data;
@@ -136,29 +137,28 @@ int ftkCriticalPointTracker::RequestData_vti(
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
-    if (inputDataComponents == 1) tracker.push_scalar_field_snapshot(field_data);
-    else tracker.push_vector_field_snapshot(field_data);
+    if (inputDataComponents == 1) tcp2dr->push_scalar_field_snapshot(field_data);
+    else tcp2dr->push_vector_field_snapshot(field_data);
 
     if (currentTimestep != 0)
-      tracker.advance_timestep();
+      tcp2dr->advance_timestep();
 
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
   } else { // the last timestep
     if (nt == 0) { // the only timestp
-      if (inputDataComponents == 1) tracker.push_scalar_field_snapshot(field_data);
-      else tracker.push_vector_field_snapshot(field_data);
-      tracker.update_timestep();
+      if (inputDataComponents == 1) tcp2dr->push_scalar_field_snapshot(field_data);
+      else tcp2dr->push_vector_field_snapshot(field_data);
+      tcp2dr->update_timestep();
     }
 
     request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
     currentTimestep = 0;
     
-    tracker.finalize();
-    // auto poly = tracker.get_traced_critical_points_vtk();
-    auto poly = tracker.get_traced_critical_points().to_vtp({});
+    tcp2dr->finalize();
+    auto poly = tcp2dr->get_traced_critical_points().to_vtp({});
     output->DeepCopy(poly);
 
-    tracker.reset();
+    tcp2dr->reset();
 
     return 1;
   }
