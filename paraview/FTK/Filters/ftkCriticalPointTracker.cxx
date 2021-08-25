@@ -91,22 +91,31 @@ int ftkCriticalPointTracker::RequestData_vti(
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-  vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  // vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkDataSet *input = vtkDataSet::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
   const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
   
+  const int itype = input->GetDataObjectType();
   if (currentTimestep == 0) { // first timestep
+    int nd;
+    size_t DW, DH, DD;
+    
+    if (itype == VTK_IMAGE_DATA) {
+      vtkImageData *vti = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+      nd = vti->GetDataDimension();
+      DW = vti->GetDimensions()[0];
+      DH = vti->GetDimensions()[1];
+      DD = vti->GetDimensions()[2];
+    }
+    
     // vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
     vtkSmartPointer<vtkAbstractArray> da = input->GetPointData()->GetAbstractArray(InputVariable.c_str());
     if (!da) da = input->GetPointData()->GetAbstractArray(0);
 
     inputDataComponents = da->GetNumberOfComponents();
-    const size_t DW = input->GetDimensions()[0], 
-                 DH = input->GetDimensions()[1], 
-                 DD = input->GetDimensions()[2];
-    const int nd = input->GetDataDimension();
 
     if (nd == 2) {
       fprintf(stderr, "DW=%zu, DH=%zu, components=%d\n", DW, DH, inputDataComponents);
@@ -156,7 +165,11 @@ int ftkCriticalPointTracker::RequestData_vti(
   // std::cerr << "InputVariable: " << InputVariable << std::endl;
   // input->PrintSelf(std::cerr, vtkIndent(2));
 
-  field_data.from_vtk_image_data(input, InputVariable);
+  if (itype == VTK_IMAGE_DATA) {
+    vtkImageData *vti = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+    field_data.from_vtk_image_data(vti, InputVariable);
+  } else 
+    assert(false); // TODO FIXME not implemented yet
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
@@ -187,24 +200,6 @@ int ftkCriticalPointTracker::RequestData_vti(
   }
 
   currentTimestep ++;
-  return 1;
-}
-
-int ftkCriticalPointTracker::RequestData_vtr(
-    vtkInformation* request, 
-    vtkInformationVector** inputVector, 
-    vtkInformationVector* outputVector)
-{
-  fprintf(stderr, "requesting vtr data.\n");
-  return 1;
-}
-
-int ftkCriticalPointTracker::RequestData_vts(
-    vtkInformation* request, 
-    vtkInformationVector** inputVector, 
-    vtkInformationVector* outputVector)
-{
-  fprintf(stderr, "requesting vts data.\n");
   return 1;
 }
 
@@ -311,12 +306,8 @@ int ftkCriticalPointTracker::ProcessRequest(
     const int itype = input->GetDataObjectType();
     // fprintf(stderr, "itype=%d\n", itype);
 
-    if (itype == VTK_IMAGE_DATA)
+    if (itype == VTK_IMAGE_DATA || itype == VTK_STRUCTURED_GRID || itype == VTK_RECTILINEAR_GRID)
       return RequestData_vti(request, inputVector, outputVector);
-    else if (itype == VTK_STRUCTURED_GRID)
-      return RequestData_vts(request, inputVector, outputVector);
-    else if (itype == VTK_RECTILINEAR_GRID)
-      return RequestData_vtr(request, inputVector, outputVector);
     else if (itype == VTK_UNSTRUCTURED_GRID)
       return RequestData_vtu(request, inputVector, outputVector);
     else 

@@ -42,8 +42,6 @@ protected:
 
 private:
   int RequestData_vti(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
-  int RequestData_vtr(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
-  int RequestData_vts(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
   int RequestData_vtu(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
 
 private:
