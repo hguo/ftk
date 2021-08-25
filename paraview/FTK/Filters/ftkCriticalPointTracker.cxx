@@ -38,6 +38,7 @@ ftkCriticalPointTracker::~ftkCriticalPointTracker()
 {
 }
 
+#if 0
 int ftkCriticalPointTracker::RequestInformation(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
@@ -65,7 +66,13 @@ int ftkCriticalPointTracker::RequestUpdateExtent(
 
   return 1;
 }
+#endif
 
+int ftkCriticalPointTracker::FillInputPortInformation(int, vtkInformation *info)
+{
+  // info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
+  return 1;
+}
 
 int ftkCriticalPointTracker::FillOutputPortInformation(int, vtkInformation *info)
 {
@@ -73,16 +80,18 @@ int ftkCriticalPointTracker::FillOutputPortInformation(int, vtkInformation *info
   return 1;
 }
 
-int ftkCriticalPointTracker::RequestData(
+int ftkCriticalPointTracker::RequestData_vti(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
 {
-  fprintf(stderr, "requesting data.\n");
+  fprintf(stderr, "requesting vti data.\n");
 
+  // TODO FIXME check if input is 2D or 3D
+  
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
-#if 0
+
   vtkImageData *input = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
   vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
@@ -153,8 +162,82 @@ int ftkCriticalPointTracker::RequestData(
 
     return 1;
   }
-#endif 
 
   currentTimestep ++;
-  return 1; 
+  return 1;
+}
+
+int ftkCriticalPointTracker::RequestData_vtr(
+    vtkInformation* request, 
+    vtkInformationVector** inputVector, 
+    vtkInformationVector* outputVector)
+{
+  fprintf(stderr, "requesting vtr data.\n");
+  return 1;
+}
+
+int ftkCriticalPointTracker::RequestData_vts(
+    vtkInformation* request, 
+    vtkInformationVector** inputVector, 
+    vtkInformationVector* outputVector)
+{
+  fprintf(stderr, "requesting vts data.\n");
+  return 1;
+}
+
+int ftkCriticalPointTracker::RequestData_vtu(
+    vtkInformation* request, 
+    vtkInformationVector** inputVector, 
+    vtkInformationVector* outputVector)
+{
+  fprintf(stderr, "requesting vtu data.\n");
+
+  return 1;
+}
+
+int ftkCriticalPointTracker::ProcessRequest(
+    vtkInformation* request, 
+    vtkInformationVector** inputVector, 
+    vtkInformationVector* outputVector)
+{
+  if (request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_INFORMATION())) {
+    vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
+    outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_RANGE());
+
+    return 1;
+  } else if (request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_UPDATE_EXTENT())) {
+    vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+    vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+    double *inTimes = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
+    if (inTimes) 
+      inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP(), inTimes[currentTimestep]);
+
+    return 1;
+  } else if (request->Has(vtkStreamingDemandDrivenPipeline::REQUEST_DATA())) {
+    vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+    // vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+    vtkDataSet *input = vtkDataSet::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+    // vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
+   
+    const int itype = input->GetDataObjectType();
+    fprintf(stderr, "itype=%d\n", itype);
+
+    if (itype == VTK_IMAGE_DATA)
+      return RequestData_vti(request, inputVector, outputVector);
+    else if (itype == VTK_STRUCTURED_GRID)
+      return RequestData_vts(request, inputVector, outputVector);
+    else if (itype == VTK_RECTILINEAR_GRID)
+      return RequestData_vtr(request, inputVector, outputVector);
+    else if (itype == VTK_UNSTRUCTURED_GRID)
+      return RequestData_vtu(request, inputVector, outputVector);
+    else 
+      assert(false);
+
+    return 1;
+  } else 
+    return 1;
 }

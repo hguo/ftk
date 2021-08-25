@@ -3,6 +3,9 @@
 
 #include "vtkAlgorithm.h"
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkRectilinearGrid.h"
+#include "vtkStructuredGrid.h"
+#include "vtkUnstructuredGrid.h"
 #include <ftk/filters/critical_point_tracker_2d_regular.hh>
 
 class vtkDataSet;
@@ -29,10 +32,17 @@ protected:
   ftkCriticalPointTracker();
   ~ftkCriticalPointTracker();
 
-  int RequestUpdateExtent(vtkInformation*, vtkInformationVector**, vtkInformationVector*); // override;
-  int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*); // override;
-  int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*); // override;
+  // int RequestUpdateExtent(vtkInformation*, vtkInformationVector**, vtkInformationVector*); // override;
+  // int RequestInformation(vtkInformation*, vtkInformationVector**, vtkInformationVector*); // override;
+  int ProcessRequest(vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
   int FillOutputPortInformation(int, vtkInformation*) override;
+  int FillInputPortInformation(int, vtkInformation*) override;
+
+private:
+  int RequestData_vti(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
+  int RequestData_vtr(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
+  int RequestData_vts(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
+  int RequestData_vtu(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
 
 private:
   ftkCriticalPointTracker(const ftkCriticalPointTracker&);
