@@ -222,9 +222,11 @@ int ftkCriticalPointTracker::RequestData_vtu(
     if (cellTypesSet.find( VTK_TETRA ) != cellTypesSet.end()) { // the input is regarded as a simplicial 3D mesh
       // TODO
     } else if (cellTypesSet.find( VTK_TRIANGLE) != cellTypesSet.end()) { // the input is regarded as a simplicial 2D mesh
+      fprintf(stderr, "treating the input as a 2D grid..\n");
       m2u.from_vtu(input);
       tcp.reset(new ftk::critical_point_tracker_2d_unstructured(MPI_COMM_WORLD, m2u));
     } else {
+      fprintf(stderr, "treating the input as a 3D grid..\n");
       assert(false); // unsupported mesh type
     }
 
