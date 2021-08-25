@@ -223,12 +223,15 @@ public: // i/o for vtk image data
   void read_vtk_image_data_file_sequence(const std::string& pattern);
 #if FTK_HAVE_VTK
   static int vtk_data_type();
-  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
   void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> d, const std::string array_name=std::string());
+  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string()) { from_vtk_regular_data<>(d, array_name); }
   void from_vtk_array(vtkSmartPointer<vtkAbstractArray> d);
   void from_vtk_data_array(vtkSmartPointer<vtkDataArray> d);
   vtkSmartPointer<vtkImageData> to_vtk_image_data(std::string varname=std::string()) const; 
   vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
+  
+  template <typename VTK_REGULAR_DATA=vtkImageData> /*vtkImageData, vtkRectilinearGrid, or vtkStructuredGrid*/
+  void from_vtk_regular_data(vtkSmartPointer<VTK_REGULAR_DATA> d, const std::string array_name=std::string());
 #endif
 
 public: // i/o for vtkStructuredGrid data
@@ -596,9 +599,10 @@ inline void ndarray<T>::from_vtu(
   from_vtk_data_array(da);
 }
 
-template<typename T>
-inline void ndarray<T>::from_vtk_image_data(
-    vtkSmartPointer<vtkImageData> d, 
+template <typename T>
+template <typename VTK_REGULAR_DATA>
+inline void ndarray<T>::from_vtk_regular_data(
+    vtkSmartPointer<VTK_REGULAR_DATA> d, 
     const std::string array_name)
 {
   vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
