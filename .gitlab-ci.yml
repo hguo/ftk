@@ -3,7 +3,7 @@ variables:
 
 .basic_job:
   image: gcc
-  stage: build
+  stage: test
   needs: []
 
   script:
