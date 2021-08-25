@@ -3,6 +3,8 @@ variables:
 
 .basic_job:
   image: gcc
+  stage: build
+  needs: []
 
   script:
     - mkdir build
