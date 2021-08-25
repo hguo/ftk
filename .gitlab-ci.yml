@@ -101,3 +101,8 @@ vtk:
   extends: .basic_job
   variables:
     CMAKE_ARG: "-DFTK_USE_VTK=ON -DVTK_DIR=/nfs/gce/projects/PEDAL-GCE/hguo/ci/vtk-9.0.3/lib/cmake/vtk-9.0"
+
+paraview:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=/nfs/gce/projects/PEDAL-GCE/hguo/ci/paraview-5.9.1/lib/cmake/paraview-5.9"
