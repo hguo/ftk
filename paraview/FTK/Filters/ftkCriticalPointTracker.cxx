@@ -37,36 +37,6 @@ ftkCriticalPointTracker::~ftkCriticalPointTracker()
 {
 }
 
-#if 0
-int ftkCriticalPointTracker::RequestInformation(
-    vtkInformation* request, 
-    vtkInformationVector** inputVector, 
-    vtkInformationVector* outputVector)
-{
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
-
-  outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
-  outInfo->Remove(vtkStreamingDemandDrivenPipeline::TIME_RANGE());
-
-  return 1;
-}
-
-int ftkCriticalPointTracker::RequestUpdateExtent(
-    vtkInformation* request, 
-    vtkInformationVector** inputVector, 
-    vtkInformationVector* outputVector)
-{
-  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
-
-  double *inTimes = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
-  if (inTimes) 
-    inInfo->Set(vtkStreamingDemandDrivenPipeline::UPDATE_TIME_STEP(), inTimes[currentTimestep]);
-
-  return 1;
-}
-#endif
-
 int ftkCriticalPointTracker::FillInputPortInformation(int, vtkInformation *info)
 {
   // info->Set(vtkDataObject::DATA_TYPE_NAME(), "vtkPolyData");
@@ -86,8 +56,6 @@ int ftkCriticalPointTracker::RequestData_vti(
 {
   fprintf(stderr, "requesting vti data.\n");
 
-  // TODO FIXME check if input is 2D or 3D
-  
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
   vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
@@ -99,17 +67,36 @@ int ftkCriticalPointTracker::RequestData_vti(
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
   
   const int itype = input->GetDataObjectType();
+  int nd;
+  size_t DW, DH, DD;
+  ftk::ndarray<double> field_data;
+  
+  if (itype == VTK_IMAGE_DATA) {
+    vtkImageData *vti = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+    nd = vti->GetDataDimension();
+    DW = vti->GetDimensions()[0];
+    DH = vti->GetDimensions()[1];
+    DD = vti->GetDimensions()[2];
+    field_data.from_vtk_image_data(vti, InputVariable);
+  } else if (itype == VTK_RECTILINEAR_GRID) {
+    vtkRectilinearGrid *vtr = vtkRectilinearGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+    nd = vtr->GetDataDimension();
+    DW = vtr->GetDimensions()[0];
+    DH = vtr->GetDimensions()[1];
+    DD = vtr->GetDimensions()[2];
+    field_data.from_vtk_regular_data<vtkRectilinearGrid>(vtr, InputVariable);
+  } else if (itype == VTK_STRUCTURED_GRID) {
+    vtkStructuredGrid *vts = vtkStructuredGrid::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+    vts->PrintSelf(std::cerr, vtkIndent(2));
+    nd = vts->GetDataDimension();
+    DW = vts->GetDimensions()[0];
+    DH = vts->GetDimensions()[1];
+    DD = vts->GetDimensions()[2];
+    field_data.from_vtk_regular_data<vtkStructuredGrid>(vts, InputVariable);
+  } else 
+    assert(false);
+  
   if (currentTimestep == 0) { // first timestep
-    int nd;
-    size_t DW, DH, DD;
-    
-    if (itype == VTK_IMAGE_DATA) {
-      vtkImageData *vti = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
-      nd = vti->GetDataDimension();
-      DW = vti->GetDimensions()[0];
-      DH = vti->GetDimensions()[1];
-      DD = vti->GetDimensions()[2];
-    }
     
     // vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
     vtkSmartPointer<vtkAbstractArray> da = input->GetPointData()->GetAbstractArray(InputVariable.c_str());
@@ -161,15 +148,8 @@ int ftkCriticalPointTracker::RequestData_vti(
     tcpr->initialize();
   }
   
-  ftk::ndarray<double> field_data;
   // std::cerr << "InputVariable: " << InputVariable << std::endl;
   // input->PrintSelf(std::cerr, vtkIndent(2));
-
-  if (itype == VTK_IMAGE_DATA) {
-    vtkImageData *vti = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
-    field_data.from_vtk_image_data(vti, InputVariable);
-  } else 
-    assert(false); // TODO FIXME not implemented yet
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
