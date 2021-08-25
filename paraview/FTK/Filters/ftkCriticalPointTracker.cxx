@@ -104,29 +104,52 @@ int ftkCriticalPointTracker::RequestData_vti(
 
     inputDataComponents = da->GetNumberOfComponents();
     const size_t DW = input->GetDimensions()[0], 
-                 DH = input->GetDimensions()[1];
-   
-    tcp2dr.reset(new ftk::critical_point_tracker_2d_regular(MPI_COMM_WORLD));
+                 DH = input->GetDimensions()[1], 
+                 DD = input->GetDimensions()[2];
+    const int nd = input->GetDataDimension();
 
-    fprintf(stderr, "DW=%zu, DH=%zu, components=%d\n", DW, DH, inputDataComponents);
-    if (inputDataComponents == 1) { // scalar field
-      tcp2dr->set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
-      tcp2dr->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
-      tcp2dr->set_input_array_partial(false);
-      tcp2dr->set_scalar_field_source(ftk::SOURCE_GIVEN);
-      tcp2dr->set_vector_field_source(ftk::SOURCE_DERIVED);
-      tcp2dr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
-    } else if (inputDataComponents > 1) { // vector field
-      tcp2dr->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
-      tcp2dr->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
-      tcp2dr->set_input_array_partial(false);
-      tcp2dr->set_scalar_field_source(ftk::SOURCE_NONE);
-      tcp2dr->set_vector_field_source(ftk::SOURCE_GIVEN);
-      tcp2dr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
+    if (nd == 2) {
+      fprintf(stderr, "DW=%zu, DH=%zu, components=%d\n", DW, DH, inputDataComponents);
+      tcpr.reset(new ftk::critical_point_tracker_2d_regular(MPI_COMM_WORLD));
+      if (inputDataComponents == 1) { // scalar field
+        tcpr->set_domain(ftk::lattice({2, 2}, {DW-3, DH-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+        tcpr->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+        tcpr->set_input_array_partial(false);
+        tcpr->set_scalar_field_source(ftk::SOURCE_GIVEN);
+        tcpr->set_vector_field_source(ftk::SOURCE_DERIVED);
+        tcpr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
+      } else if (inputDataComponents > 1) { // vector field
+        tcpr->set_domain(ftk::lattice({1, 1}, {DW-2, DH-2})); // the indentation is needed becase the jacoobian field will be automatically derived
+        tcpr->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
+        tcpr->set_input_array_partial(false);
+        tcpr->set_scalar_field_source(ftk::SOURCE_NONE);
+        tcpr->set_vector_field_source(ftk::SOURCE_GIVEN);
+        tcpr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
+      } else 
+        assert(false);
+    } else if (nd == 3) {
+      fprintf(stderr, "DW=%zu, DH=%zu, DD=%zu, components=%d\n", DW, DH, DD, inputDataComponents);
+      tcpr.reset(new ftk::critical_point_tracker_3d_regular(MPI_COMM_WORLD));
+      if (inputDataComponents == 1) { // scalar field
+        tcpr->set_domain(ftk::lattice({2, 2, 2}, {DW-3, DH-3, DD-3})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+        tcpr->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+        tcpr->set_input_array_partial(false);
+        tcpr->set_scalar_field_source(ftk::SOURCE_GIVEN);
+        tcpr->set_vector_field_source(ftk::SOURCE_DERIVED);
+        tcpr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
+      } else if (inputDataComponents > 1) { // vector field
+        tcpr->set_domain(ftk::lattice({1, 1, 1}, {DW-2, DH-2, DD-2})); // the indentation is needed becase both gradient and jacoobian field will be automatically derived
+        tcpr->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
+        tcpr->set_input_array_partial(false);
+        tcpr->set_scalar_field_source(ftk::SOURCE_NONE);
+        tcpr->set_vector_field_source(ftk::SOURCE_GIVEN);
+        tcpr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
+      } else 
+        assert(false);
     } else 
       assert(false);
     
-    tcp2dr->initialize();
+    tcpr->initialize();
   }
   
   ftk::ndarray<double> field_data;
@@ -137,28 +160,28 @@ int ftkCriticalPointTracker::RequestData_vti(
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);
-    if (inputDataComponents == 1) tcp2dr->push_scalar_field_snapshot(field_data);
-    else tcp2dr->push_vector_field_snapshot(field_data);
+    if (inputDataComponents == 1) tcpr->push_scalar_field_snapshot(field_data);
+    else tcpr->push_vector_field_snapshot(field_data);
 
     if (currentTimestep != 0)
-      tcp2dr->advance_timestep();
+      tcpr->advance_timestep();
 
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
   } else { // the last timestep
     if (nt == 0) { // the only timestp
-      if (inputDataComponents == 1) tcp2dr->push_scalar_field_snapshot(field_data);
-      else tcp2dr->push_vector_field_snapshot(field_data);
-      tcp2dr->update_timestep();
+      if (inputDataComponents == 1) tcpr->push_scalar_field_snapshot(field_data);
+      else tcpr->push_vector_field_snapshot(field_data);
+      tcpr->update_timestep();
     }
 
     request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
     currentTimestep = 0;
     
-    tcp2dr->finalize();
-    auto poly = tcp2dr->get_traced_critical_points().to_vtp({});
+    tcpr->finalize();
+    auto poly = tcpr->get_traced_critical_points().to_vtp({});
     output->DeepCopy(poly);
 
-    tcp2dr->reset();
+    tcpr->reset();
 
     return 1;
   }
@@ -286,7 +309,7 @@ int ftkCriticalPointTracker::ProcessRequest(
     // vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
    
     const int itype = input->GetDataObjectType();
-    fprintf(stderr, "itype=%d\n", itype);
+    // fprintf(stderr, "itype=%d\n", itype);
 
     if (itype == VTK_IMAGE_DATA)
       return RequestData_vti(request, inputVector, outputVector);

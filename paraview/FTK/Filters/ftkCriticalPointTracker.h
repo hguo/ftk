@@ -7,6 +7,7 @@
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
 #include <ftk/filters/critical_point_tracker_2d_regular.hh>
+#include <ftk/filters/critical_point_tracker_3d_regular.hh>
 #include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
 
 class vtkDataSet;
@@ -58,7 +59,7 @@ private:
   int currentTimestep;
   int inputDataComponents;
   
-  std::shared_ptr<ftk::critical_point_tracker_2d_regular> tcp2dr;
+  std::shared_ptr<ftk::critical_point_tracker_regular> tcpr;
   std::shared_ptr<ftk::critical_point_tracker_2d_unstructured> tcp2du;
   
   ftk::simplicial_unstructured_2d_mesh<> m2u;
