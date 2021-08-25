@@ -37,6 +37,7 @@ ftk_option (ADIOS2 "Use ADIOS2" FALSE)
 ftk_option (Boost "Use Boost" FALSE) # not used
 ftk_option (CGAL "Use CGAL" FALSE) # experimental
 ftk_option (CUDA "Use CUDA" FALSE) # experimental
+ftk_option (DECAF "Use Decaf" FALSE) #experimental
 ftk_option (GSL "Use GSL (GNU Scientific Library)" FALSE)
 ftk_option (GMP "Use GMP (GNU Multiple Precision Arithmetic Library)" FALSE)
 ftk_option (HDF5 "Use HDF5" FALSE)
@@ -281,6 +282,15 @@ if (FTK_USE_CUDA STREQUAL AUTO)
 elseif (FTK_USE_CUDA)
   enable_language (CUDA)
   set (FTK_HAVE_CUDA TRUE)
+endif ()
+
+if (FTK_USE_DECAF STREQUAL AUTO)
+  find_package (DECAF QUIET)
+else (FTK_USE_DECAF)
+  find_package (DECAF REQUIRED)
+endif ()
+if (DECAF_FOUND)
+  set (FTK_HAVE_DECAF TRUE)
 endif ()
 
 if (FTK_HAVE_CUDA)
