@@ -97,11 +97,7 @@ intel-mpich-hdf5-tbb:
     - module load mpich/3.4.2-intel
     - module load intel/20.2
 
-job-vtk:
+vtk:
   extends: .basic_job
   variables:
-    CMAKE_ARG: "-DFTK_USE_VTK=ON"
-  before_script:
-    - source /nfs/gce/projects/PEDAL-GCE/hguo/spack/share/spack/setup-env.sh
-    # - module load gcc/8.3.0-fjpc5ys
-    - spack load /qqzhye5
+    CMAKE_ARG: "-DFTK_USE_VTK=ON -DVTK_DIR=/nfs/gce/projects/PEDAL-GCE/hguo/ci/vtk-9.0.3/lib/cmake/vtk-9.0"
