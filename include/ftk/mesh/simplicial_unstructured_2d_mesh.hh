@@ -376,10 +376,12 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
   // for (auto i = 0; i < n(0); i ++) {
   object::parallel_for(n(0), [&](int i) {
     std::set<I> set;
-    const F xi[2] = {vertex_coords[i*2], vertex_coords[i*2+1]};
+    // const F xi[2] = {vertex_coords[i*2], vertex_coords[i*2+1]};
+    const F xi[2] = {vertex_coords(0, i), vertex_coords(1, i)};
 
     auto criteron = [&](I j) {
-      const F xj[2] = {vertex_coords[j*2], vertex_coords[j*2+1]};
+      // const F xj[2] = {vertex_coords[j*2], vertex_coords[j*2+1]};
+      const F xj[2] = {vertex_coords(0, j), vertex_coords(1, j)};
       if (vector_dist_2norm_2(xi, xj) < limit) {
         // fprintf(stderr, "%d (%f, %f) add %d (%f, %f)\n", i, xi[0], xi[1], j, xj[0], xj[1]);
         // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
@@ -395,7 +397,8 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
 
     auto &kernel = smoothing_kernel[i];
     for (auto k : set) {
-      const F xk[2] = {vertex_coords[2*k], vertex_coords[2*k+1]};
+      // const F xk[2] = {vertex_coords[2*k], vertex_coords[2*k+1]};
+      const F xk[2] = {vertex_coords(0, k), vertex_coords(1, k)};
       const F d = vector_dist_2norm_2(xi, xk);
       const F w = std::exp(-(d*d) / (2*sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
       // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
@@ -460,8 +463,10 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
       const auto k = std::get<0>(tuple);
       const auto w = std::get<1>(tuple);
     
-      const F d[2] = {vertex_coords[k*2] - vertex_coords[i*2], 
-                      vertex_coords[k*2+1] - vertex_coords[i*2+1]};
+      // const F d[2] = {vertex_coords[k*2] - vertex_coords[i*2], 
+      //                 vertex_coords[k*2+1] - vertex_coords[i*2+1]};
+      const F d[2] = {vertex_coords(0, k) - vertex_coords(0, i),
+                      vertex_coords(1, k) - vertex_coords(1, i)};
       // const F r2 = d[0]*d[0] + d[1]*d[1];
       // const F r = std::sqrt(r2);
 
@@ -647,12 +652,13 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
   triangles.from_vector(m_triangles);
 
   vtkIdType npts = grid->GetNumberOfPoints();
-  vertex_coords.reshape({2, size_t(npts)});
+  vertex_coords.reshape({3, size_t(npts)});
   for (vtkIdType i = 0; i < npts; i ++) {
-    double x[3];
+    double x[3] = {0};
     grid->GetPoint(i, x);
     vertex_coords(0, i) = x[0];
     vertex_coords(1, i) = x[1];
+    vertex_coords(2, i) = x[2];
   }
 
   build_triangles();
@@ -803,7 +809,8 @@ I simplicial_unstructured_2d_mesh<I, F>::nearest(F x[]) const
   F mindist = std::numeric_limits<F>::max();
   I imindist;
   for (int i = 0; i < n(0); i ++) {
-    F y[2] = {vertex_coords[2*i], vertex_coords[2*i+1]};
+    // F y[2] = {vertex_coords[2*i], vertex_coords[2*i+1]};
+    F y[2] = {vertex_coords(0, i), vertex_coords(1, i)};
     F dist = vector_dist_2norm_2(x, y);
     if (mindist > dist) { 
       mindist = dist;
