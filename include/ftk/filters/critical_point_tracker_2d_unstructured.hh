@@ -144,12 +144,16 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
   ftk::lerp_s2v4(X, mu, x);
   cp.x[0] = x[0];
   cp.x[1] = x[1];
+  cp.x[2] = x[2];
+  cp.t = x[3];
+#if 0
   if (m.ncoords() == 3) {
     cp.t = x[2];
   } else { // ncoords == 4
     cp.x[2] = x[2];
     cp.t = x[3];
   }
+#endif
 
   // deriving types
   if (enable_computing_degrees) { // compute degress instead of types

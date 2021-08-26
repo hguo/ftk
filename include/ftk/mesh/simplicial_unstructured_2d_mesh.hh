@@ -122,7 +122,8 @@ public: // mesh access
 
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
 
-  virtual int ncoords() const { return 2; }
+  // virtual int ncoords() const { return vertex_coords.dim(0); } // { return 2; }
+  // virtual int ncoords() const { return 3; }
 
 public: // point locator and misc
   I nearest(F x[]) const; // locate which point is nearest to x
@@ -787,8 +788,12 @@ void simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[]) const
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
-  for (int k = 0; k < ncoords(); k ++)
-    coords[k] = vertex_coords(k, i);
+  coords[0] = vertex_coords(0, i);
+  coords[1] = vertex_coords(1, i);
+  if (vertex_coords.dim(0) > 2)
+    coords[2] = vertex_coords(2, i);
+  else 
+    coords[2] = F(0);
 }
 
 template <typename I, typename F>
