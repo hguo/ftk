@@ -224,12 +224,13 @@ inline void feature_curve_set_t::write_vtk(const std::string& filename) const
 #if FTK_HAVE_VTK
 inline void feature_curve_set_t::from_vtp(vtkSmartPointer<vtkPolyData> poly) 
 {
-  vtkSmartPointer<vtkPoints> points = poly.GetPoints();
-  vtkSmartPointer<vtkCellArray> lines = poly.GetLines();
-  vtkSmartPointer<vtkCellArray> verts = poly.GetVerts();
+  vtkSmartPointer<vtkPoints> points = poly->GetPoints();
+  vtkSmartPointer<vtkCellArray> lines = poly->GetLines();
+  vtkSmartPointer<vtkCellArray> verts = poly->GetVerts();
 
   clear();
 
+#if 0
   auto iter = vtk::TakeSmartPointer(lines->NewIterator());
   for (iter->GoToFirstCell(); !iter->IsDoneWithTraversal(); iter->GoToNextCell())
   {
@@ -237,6 +238,7 @@ inline void feature_curve_set_t::from_vtp(vtkSmartPointer<vtkPolyData> poly)
     feature_curve_t curve;
     // WIP
   }
+#endif
 }
 
 inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vector<std::string> &scalar_components) const
@@ -256,27 +258,31 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
       const auto p = pt2coords(curve[i]);
       points->InsertNextPoint(p[0], p[1], p[2]);
     }
-    if (curve.loop) {
-      const auto p = pt2coords(curve[0]);
-      points->InsertNextPoint(p[0], p[1], p[2]);
-    }
+    // if (curve.loop) {
+    //   const auto p = pt2coords(curve[0]);
+    //   points->InsertNextPoint(p[0], p[1], p[2]);
+    // }
   });
 
   size_t nv = 0;
   foreach([&](const feature_curve_t& curve) {
     if (curve.empty()) return;
-    const auto npts = curve.loop ? curve.size()+1 : curve.size();
-    
+  
+    const auto npts = curve.size();
     vtkSmartPointer<vtkPolyLine> obj = vtkPolyLine::New();
-    obj->GetPointIds()->SetNumberOfIds(npts);
+    obj->GetPointIds()->SetNumberOfIds( curve.loop ? (npts + 1) : npts );
+
     for (int i = 0; i < npts; i ++)
       obj->GetPointIds()->SetId(i, i+nv);
-      
+
+    if (curve.loop)
+      obj->GetPointIds()->SetId(npts, nv);
+
     if (curve.size() < 2) // isolated vertex
       verts->InsertNextCell(obj);
     else 
       lines->InsertNextCell(obj);
-    
+
     nv += npts;
   });
  
@@ -293,8 +299,6 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
       if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         types->SetValue(i ++, curve[j].type);
-      if (curve.loop)
-        types->SetValue(i ++, curve[0].type);
     });
     types->SetName("type");
     polyData->GetPointData()->AddArray(types);
@@ -308,8 +312,6 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
       if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         ids->SetValue(i ++, curve[j].id);
-      if (curve.loop)
-        ids->SetValue(i ++, curve[0].id);
     });
     ids->SetName("id");
     polyData->GetPointData()->AddArray(ids);
@@ -321,9 +323,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
     size_t i = 0;
     foreach([&](int id, const feature_curve_t& curve) {
       for (auto j = 0; j < curve.size(); j ++)
-        ids->SetValue(i ++, curve[j].tag);
-      if (curve.loop)
-        ids->SetValue(i ++, curve[0].tag);
+        tags->SetValue(i ++, curve[j].tag);
     });
     tags->SetName("tag");
     polyData->GetPointData()->AddArray(tags);
@@ -338,8 +338,6 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
       if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         vels->SetTuple3(i ++, curve[j].v[0], curve[j].v[1], curve[j].v[2]);
-      if (curve.loop)
-        vels->SetTuple3(i ++, curve[0].v[0], curve[0].v[1], curve[0].v[2]);
     });
     vels->SetName("velocity");
     polyData->GetPointData()->AddArray(vels);
@@ -353,8 +351,6 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
       if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         time->SetValue(i ++, curve[j].t);
-      if (curve.loop)
-        time->SetValue(i ++, curve[0].t);
     });
     time->SetName("time");
     polyData->GetPointData()->AddArray(time);
@@ -368,8 +364,6 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
       if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         conds->SetValue(i ++, curve[j].cond);
-      if (curve.loop)
-        conds->SetValue(i ++, curve[0].cond);
     });
     conds->SetName("cond");
     polyData->GetPointData()->AddArray(conds);
@@ -385,8 +379,6 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
       if (curve.empty()) return;
       for (auto j = 0; j < curve.size(); j ++)
         scalar->SetValue(i ++, curve[j].scalar[k]);
-      if (curve.loop)
-        scalar->SetValue(i ++, curve[0].scalar[k]);
     });
     scalar->SetName(scalar_components[k].c_str());
     polyData->GetPointData()->AddArray(scalar);
