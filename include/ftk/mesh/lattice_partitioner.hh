@@ -29,16 +29,16 @@ public: // partitioning
   const lattice& get_ext(size_t i) const {return extents[i];}
 
   size_t partition_id(const std::vector<size_t> &p) const;
+  
+  lattice add_ghost(const lattice& b, 
+      const std::vector<size_t>&, 
+      const std::vector<size_t>&) const;
 
 private:
   void partition(std::vector<std::vector<size_t>> prime_factors_dims);
 
   template<typename uint = size_t>
   static std::vector<uint> prime_factorization(uint n);
-
-  lattice add_ghost(const lattice& b, 
-      const std::vector<size_t>&, 
-      const std::vector<size_t>&) const;
 
 protected:
   const lattice &l;
@@ -161,6 +161,7 @@ inline void lattice_partitioner::partition(size_t np,
 
   // apply ghosts
   for(const auto& core : cores) {
+#if 0
     auto starts = core.starts(), 
          sizes = core.sizes();
 
@@ -186,8 +187,10 @@ inline void lattice_partitioner::partition(size_t np,
         sizes[d] += offset;
       }
     }
+#endif
 
-    lattice ext(starts, sizes);
+    // lattice ext(starts, sizes);
+    lattice ext = add_ghost(core, ghost_low, ghost_high);
     extents.push_back(ext);
   }
 }
@@ -300,6 +303,41 @@ inline std::ostream& operator<<(std::ostream& os, const lattice_partitioner& par
   }
   
   return os;
+}
+  
+inline lattice lattice_partitioner::add_ghost(const lattice& b, 
+      const std::vector<size_t>& ghost_low, 
+      const std::vector<size_t>& ghost_high) const
+{
+  if (ghost_low.empty() || ghost_high.empty()) return b;
+
+  auto starts = b.starts(), 
+       sizes = b.sizes();
+
+  for(int d = 0; d < l.nd_cuttable(); ++d) {
+    // ghost_low layer
+    {
+      size_t offset = starts[d] - l.start(d); 
+      if(ghost_low[d] < offset) {
+        offset = ghost_low[d]; 
+      }
+
+      starts[d] -= offset; 
+      sizes[d] += offset;
+    }
+
+    // ghost_high layer
+    {
+      size_t offset = (l.start(d) + l.size(d)) - (starts[d] + sizes[d]); 
+      if(ghost_high[d] < offset) {
+        offset = ghost_high[d]; 
+      }
+
+      sizes[d] += offset;
+    }
+  }
+
+  return lattice(starts, sizes);
 }
 
 };

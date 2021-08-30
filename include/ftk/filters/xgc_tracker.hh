@@ -10,9 +10,11 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/utils/gather.hh>
+#include <ftk/ndarray/field_data_snapshot.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3dff_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <iomanip>
 
 namespace ftk {
@@ -30,6 +32,7 @@ public:
   void initialize_ff_mesh(const std::string& filename) { mf3.reset(new simplicial_xgc_3dff_mesh<>(m2, m3->get_nphi(), m3->get_iphi(), m3->get_vphi()) ); mf3->initialize_ff_mesh(filename); }
 
 public:
+  virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group>);
   virtual void push_field_data_snapshot(const ndarray<double> &scalar);
   virtual void push_field_data_snapshot(
       const ndarray<double> &scalar, 
@@ -46,11 +49,12 @@ public:
 protected:
   struct field_data_snapshot_t {
     ndarray<double> scalar, vector, jacobian;
+    ndarray<double> Er;
   };
   std::deque<field_data_snapshot_t> field_data_snapshots;
 
   std::shared_ptr<simplicial_xgc_2d_mesh<>> m2; 
-  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3; 
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3, m30;
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4;
 
   // roi meshes
@@ -76,8 +80,26 @@ xgc_tracker::xgc_tracker(
   m2->initialize_roi();
   mr2 = m2->new_roi_mesh(roi_node_map, roi_inverse_node_map);
   mr3.reset(new simplicial_xgc_3d_mesh<>(mr2, 
-        m3->get_nphi(), m3->get_vphi(), m3->get_iphi()));
+        m3->get_nphi(), m3->get_iphi(), m3->get_vphi()));
+  m30.reset(new simplicial_xgc_3d_mesh<>(m2, 
+        m3->get_nphi(), m3->get_iphi()));
   mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*mr3));
+}
+
+inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group> g) 
+{
+  field_data_snapshot_t s;
+  
+  auto density = g->get<double>("density").get_transpose();
+  m30->smooth_scalar_gradient_jacobian(density, s.scalar, s.vector, s.jacobian);
+  
+  if (g->has("Er")) {
+    // auto Er = 
+    // s.Er = m30->smooth_scalar(Er);
+    s.Er = g->get<double>("Er").get_transpose();
+  }
+  
+  field_data_snapshots.emplace_back(s);
 }
 
 inline void xgc_tracker::push_field_data_snapshot(
@@ -96,16 +118,31 @@ inline void xgc_tracker::push_field_data_snapshot(
 inline void xgc_tracker::push_field_data_snapshot(
       const ndarray<double> &scalar)
 {
+#if 0
+  auto filename = series_filename("xgc-smoothed-%05d.vtu", current_timestep);
+  m30->scalar_to_vtu_slices_file(filename, "scalar", scalar);
+  return;
+  // m30->scalar_to_vtu_slices_file(filename, "vector", G);
+#endif
+
   ndarray<double> F, G, J;
 
   F.reshape(scalar);
   G.reshape(2, scalar.dim(0), scalar.dim(1));
+  G.set_multicomponents(1);
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
+  J.set_multicomponents(2);
   
   for (size_t i = 0; i < m3->get_nphi(); i ++) {
     ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
     m2->smooth_scalar_gradient_jacobian(slice, f, grad, j);
+    // f = m2->smooth_scalar(slice);
+    // m2->scalar_gradient_jacobian(slice, grad, j);
+    // m2->scalar_gradient_jacobian(f, grad, j);
+    // if (i == 0)
+    //   m2->array_to_vtu("nonsmooth-grad.vtu", "grad", grad);
+    // f = slice;
     for (size_t k = 0; k < m2->n(0); k ++) {
       F(k, i) = f(k);
       G(0, k, i) = grad(0, k);

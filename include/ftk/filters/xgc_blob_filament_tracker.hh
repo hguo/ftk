@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/filters/xgc_tracker.hh>
+#include <ftk/features/feature_line.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
@@ -29,7 +30,7 @@ struct xgc_blob_filament_tracker : public xgc_tracker {
   //     std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2, 
   //     int nphi_, int iphi_);
 
-  int cpdims() const { return 3; }
+  // int cpdims() const { return 3; }
  
   void initialize();
   void reset() {
@@ -41,6 +42,7 @@ struct xgc_blob_filament_tracker : public xgc_tracker {
 public:
   void update_timestep();
   
+  void push_field_data_snapshot(std::shared_ptr<ndarray_group> g) { xgc_tracker::push_field_data_snapshot(g); }
   void push_field_data_snapshot(
       const ndarray<double> &scalar, 
       const ndarray<double> &vector,
@@ -63,14 +65,28 @@ protected:
       T psin[n], // normalized psi
       T f[n], // scalars
       T v[n][2], // vectors
-      T j[n][2][2]); // jacobians
+      T j[n][2][2], // jacobians
+      T er[n]); 
+
+  std::set<int> get_related_penta_cells(size_t tri) const;
+  void add_lite_feature_points(const std::vector<feature_point_lite_t>& pts, bool ordinal);
+
+public:
+  void start_lite_feature_point_consumer_threads(int);
+  void join_lite_feature_point_consumer_threads();
+
+public:
+  void build_critical_line();
 
 public:
   void build_critical_surfaces();
   void post_process_surfaces();
   void post_process_curves(feature_curve_set_t& curves) const;
-
   void post_analysis_curves(feature_curve_set_t& curves) const; // compute magnetic line alignment, etc.
+
+  void set_enable_post_processing(bool b) { enable_post_processing = b; }
+  void set_ordinal_only(bool b) { ordinal_only = b; }
+  void set_ordinal_output_pattern(const std::string &str) { ordinal_output_pattern = str; }
 
 public:
   void write_intersections_binary(const std::string& filename) const;
@@ -102,6 +118,18 @@ protected:
 #endif
   feature_surface_t surfaces;
 
+  bool enable_post_processing = true;
+  bool ordinal_only = false;
+
+  std::string ordinal_output_pattern;
+
+protected:
+  double vector_field_maxabs = 0;
+  double vector_field_resolution = std::numeric_limits<double>::max(); // min abs nonzero value of vector field.  for robust cp detection w/o gmp
+  double vector_field_scaling_factor = 1;
+  
+  void update_vector_field_scaling_factor(int minbits=8, int maxbits=16);
+
 protected:
 #if FTK_HAVE_CUDA
   xft_ctx_t *ctx = NULL;
@@ -125,11 +153,39 @@ xgc_blob_filament_tracker::~xgc_blob_filament_tracker()
 #endif
 }
 
+inline void xgc_blob_filament_tracker::update_vector_field_scaling_factor(int minbits, int maxbits)
+{
+  // vector_field_resolution = std::numeric_limits<double>::max();
+  for (const auto &s : field_data_snapshots) {
+    // vector_field_resolution = std::min(vector_field_resolution, s.vector.resolution());
+    vector_field_maxabs = std::max(vector_field_maxabs, s.vector.maxabs());
+  }
+
+  vector_field_scaling_factor = std::exp2(-std::ceil(std::log2(vector_field_maxabs)) + 60); // 20 bits
+
+  fprintf(stderr, "maxabs=%f, factor=%f\n", vector_field_maxabs, vector_field_scaling_factor);
+
+#if 0
+  int nbits = std::ceil(std::log2(1.0 / vector_field_resolution));
+  nbits = std::max(minbits, std::min(nbits, maxbits));
+
+  vector_field_scaling_factor = 1 << nbits;
+ 
+  std::cerr 
+    << "maxabs=" << vector_field_maxabs
+    << ", resolution=" << vector_field_resolution 
+    << ", factor=" << vector_field_scaling_factor 
+    << ", nbits=" << nbits << std::endl;
+#endif
+}
+
 inline void xgc_blob_filament_tracker::initialize()
 {
 #if FTK_HAVE_CUDA
   if (xl == FTK_XL_CUDA) {
-    xft_create_ctx(&ctx);
+    int device = device_ids.empty() ? 0 : device_ids[0];
+
+    xft_create_ctx(&ctx, device, device_buffer_size_in_mb);
     xft_load_mesh(ctx, 
         m3->get_nphi(), m3->get_iphi(), m3->get_vphi(), 
         m2->n(0), m2->n(1), m2->n(2), 
@@ -177,33 +233,84 @@ inline void xgc_blob_filament_tracker::push_field_data_snapshot(
 #endif
 }
 
+inline std::set<int> xgc_blob_filament_tracker::get_related_penta_cells(size_t i) const
+{
+  std::set<int> my_related_cells;
+
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
+
+  auto tets = m4->side_of(2, i);
+  for (auto tet : tets) {
+    if (1) { // TODO: if valid tet
+      auto pents = m4->side_of(3, tet);
+      for (auto pent : pents)
+        if (1) // TODO if valid pent
+          my_related_cells.insert(pent);
+    }
+  }
+
+  return my_related_cells;
+}
+
+inline void xgc_blob_filament_tracker::start_lite_feature_point_consumer_threads(int nt)
+{
+  for (int i = 0; i < nt; i ++) {
+    // worker_threads.push_back(std::thread([=]() {
+    // }));
+  }
+}
+
+inline void xgc_blob_filament_tracker::add_lite_feature_points(const std::vector<feature_point_lite_t>& pts, bool ordinal) 
+{
+  // tbb::parallel_for(tbb::blocked_range<size_t>(0, pts.size()), 
+  //   [=](const tbb::blocked_range<size_t>& r) {
+  //     for (size_t i = r.begin(); i != r.end(); ++ i) {
+#if FTK_HAVE_TBB
+  fprintf(stderr, "deriving and inserting related cells...\n");
+  parallel_for(pts.size(), [=](int i) {
+    feature_point_t cp(pts[i]);
+    cp.tag += current_timestep * m4->n(2);
+    cp.ordinal = ordinal;
+    cp.timestep = current_timestep;
+    
+    std::set<int> related = get_related_penta_cells(cp.tag);
+
+    // fprintf(stderr, "adding tag %llu, ordinal=%d, current_timestep=%d, #related=%zu\n", 
+    //     cp.tag, cp.ordinal, cp.timestep, related.size());
+
+    // both intersections and related_cells are concurrent tbb containers
+    intersections.insert({cp.tag, cp});
+    related_cells.insert( related.begin(), related.end() );
+  });
+  fprintf(stderr, "done.\n");
+#else
+  for (auto lcp : pts) {
+    feature_point_t cp(lcp);
+    cp.tag += current_timestep * m4->n(2);
+    cp.ordinal = ordinal;
+    cp.timestep = current_timestep;
+
+    intersections.insert({cp.tag, cp});
+
+    if (!ordinal_only) {
+      std::set<int> related = get_related_penta_cells(cp.tag);
+      related_cells.insert( related.begin(), related.end() );
+    }
+  }
+#endif
+};
+
+
 inline void xgc_blob_filament_tracker::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+  update_vector_field_scaling_factor();
  
-  auto get_related_cels = [&](int i) {
-    std::set<int> my_related_cells;
-  
-    std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
-      use_roi ? this->mr4 : this->m4;
-
-    auto tets = m4->side_of(2, i);
-    for (auto tet : tets) {
-      if (1) { // TODO: if valid tet
-        auto pents = m4->side_of(3, tet);
-        for (auto pent : pents)
-          if (1) // TODO if valid pent
-            my_related_cells.insert(pent);
-      }
-    }
-
-    return my_related_cells;
-  };
-
-  auto func = [&](int i) {
+  auto func = [=](int i) {
     feature_point_t cp;
     if (check_simplex(i, cp)) {
-      std::set<int> my_related_cells = get_related_cels(i);
+      std::set<int> my_related_cells = get_related_penta_cells(i);
 
       {
 #if !FTK_HAVE_TBB
@@ -215,7 +322,7 @@ inline void xgc_blob_filament_tracker::update_timestep()
       }
     }
   };
-
+  
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     // ordinal
@@ -223,73 +330,61 @@ inline void xgc_blob_filament_tracker::update_timestep()
       xft_swap(ctx); // swap buffers in order to correctly access the very last timestep
     xft_execute(ctx, 1 /* ordinal */, current_timestep);
     std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
-    for (auto lcp : results) {
-      feature_point_t cp(lcp);
-      cp.tag += current_timestep * m4->n(2);
-      cp.ordinal = true;
-      cp.timestep = current_timestep;
-
-      intersections.insert({cp.tag, cp});
-
-      std::set<int> related = get_related_cels(cp.tag);
-      related_cells.insert( related.begin(), related.end() );
-    }
+    add_lite_feature_points(results, true);
 
     // interval
     if (field_data_snapshots.size() >= 2) {
       xft_execute(ctx, 2 /* interval */, current_timestep);
       // fprintf(stderr, "** current_timestep=%d, gpu done interval.\n", current_timestep);
       std::vector<feature_point_lite_t> results(ctx->hcps, ctx->hcps + ctx->hncps);
-      for (auto lcp : results) {
-        feature_point_t cp(lcp);
-        cp.tag += current_timestep * m4->n(2);
-        cp.ordinal = false;
-        cp.timestep = current_timestep; // - 1;
-
-        intersections.insert({cp.tag, cp});
-
-        std::set<int> related = get_related_cels(cp.tag);
-        related_cells.insert( related.begin(), related.end() );
-      }
+      add_lite_feature_points(results, false);
     }
 #else
     fatal("FTK not compiled with CUDA.");
 #endif
   } else {
-    if (use_roi) {
-      const auto nd = mr4->n(2), no = mr4->n_ordinal(2), ni = mr4->n_interval(2);
-      parallel_for(no, [&](int i) {func(i + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+    std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+      use_roi ? this->mr4 : this->m4;
 
-      if (field_data_snapshots.size() >= 2)
-        parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
-    } else {
-      // TODO: strange that m4->element_for has proformance problem...
-      // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
-      const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
-      parallel_for(no, [&](int i) {func(i + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
+    // TODO: strange that m4->element_for has proformance problem...
+    // m4->element_for_ordinal(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
+    const auto nd = m4->n(2), no = m4->n_ordinal(2), ni = m4->n_interval(2);
+    // object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);}, FTK_THREAD_PTHREAD, 8, true);
+    
+    if (ordinal_only) 
+      object::parallel_for(no, [=](int i) {func(i);});
+    else 
+      object::parallel_for(no, [=](int i) {func(i + current_timestep * nd);});
 
-      if (field_data_snapshots.size() >= 2)
-        parallel_for(ni, [&](int i) {func(i + no + current_timestep * nd);}, xl, nthreads, enable_set_affinity);
-        //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
-    }
+    if (ordinal_only) {
+      build_critical_line();
+      intersections.clear();
+    } else if (field_data_snapshots.size() >= 2)
+      object::parallel_for(ni, [=](int i) {func(i + no + current_timestep * nd);});
+      //   m4->element_for_interval(2, current_timestep, func, xl, nthreads, false); // enable_set_affinity);
   }
 }
 
 inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3], t[3], p[3];
-  double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2];
-  long long vf[3][2];
+  double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2], er[3];
+  __int128 vf[3][2];
   const long long factor = 1 << 15; // WIP
  
-  simplex_values<3, double>(i, tri, t, p, rzpt, psin, f, v, j);
+  simplex_values<3, double>(i, tri, t, p, rzpt, psin, f, v, j, er);
 
   // print3x2("rz", rz);
   // print3x2("v", v);
 
   for (int k = 0; k < 3; k ++) 
     for (int l = 0; l < 2; l ++) 
-      vf[k][l] = factor * v[k][l];
+      // vf[k][l] = vector_field_scaling_factor * v[k][l];
+      vf[k][l] = vector_field_scaling_factor * v[k][l];
+
+  // if (vf[0][0] + vf[0][1] + vf[1][0] + vf[1][1] + vf[2][0] + vf[2][1] != 0)
+  //   fprintf(stderr, "vf=%lld, %lld; %lld, %lld; %lld, %lld\n", 
+  //       vf[0][0], vf[0][1], vf[1][0], vf[1][1], vf[2][0], vf[2][1]);
 
   bool succ = ftk::robust_critical_point_in_simplex2(vf, tri);
   if (!succ) return false;
@@ -305,11 +400,13 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
   cp.scalar[0] = lerp_s2(f, mu); // dneOverne0
   cp.scalar[1] = lerp_s2(psin, mu); // psin
-  cp.scalar[2] = m2->theta(cp.x[0], cp.x[1]); // theta
-  /// scalar[2] will be the offset to the magnetic lines
-
+  cp.scalar[2] = m2->theta(cp.x[0], cp.x[1]); // theta /// scalar[2] will be the offset to the magnetic lines in post analysis
+  cp.scalar[4] = lerp_s2(er, mu);
+  // fprintf(stderr, "er=%f, %f, %f\n", er[0], er[1], er[2]);
+  
   double h[2][2];
   ftk::lerp_s2m2x2(j, mu, h);
+  h[1][0] = h[0][1] = 0.5 * (h[1][0] + h[0][1]);
   cp.type = ftk::critical_point_type_2d(h, true);
 
   cp.tag = i;
@@ -328,10 +425,17 @@ inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 
 void xgc_blob_filament_tracker::add_penta_tri(int i0, int i1, int i2)
 {
-  std::lock_guard<std::mutex> guard(mutex);
-  // tri_count ++;
-  // fprintf(stderr, "pushing %d, %d, %d, count=%zu\n", i0, i1, i2, surfaces.tris.size()); // , tri_count);
-  surfaces.tris.push_back({i0, i1, i2});
+  auto type0 = surfaces.pts[i0].type,
+       type1 = surfaces.pts[i1].type,
+       type2 = surfaces.pts[i2].type;
+
+  // if (type0 == type1 && type1 == type2 && type0 == CRITICAL_POINT_2D_MAXIMUM)
+  //   surfaces.tris.push_back({i0, i1, i2});
+  
+  {
+    std::lock_guard<std::mutex> guard(mutex);
+    surfaces.tris.push_back({i0, i1, i2});
+  }
 }
 
 void xgc_blob_filament_tracker::check_penta(int e)
@@ -422,7 +526,8 @@ void xgc_blob_filament_tracker::finalize()
   if (is_root_proc()) {
     fprintf(stderr, "#intersections=%zu, #related_cells=%zu\n", 
         intersections.size(), related_cells.size());
-    build_critical_surfaces();
+    if (!ordinal_only)
+      build_critical_surfaces();
   }
 }
 
@@ -436,7 +541,8 @@ void xgc_blob_filament_tracker::simplex_values(
     T psin[n], // normalized psi
     T f[n],
     T v[n][2],
-    T j[n][2][2])
+    T j[n][2][2], 
+    T er[n])
 {
   const int m2n0 = m2->n(0), m3n0 = m3->n(0);
   const int nphi = m3->get_nphi(), 
@@ -490,56 +596,10 @@ void xgc_blob_filament_tracker::simplex_values(
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
     const field_data_snapshot_t &data = field_data_snapshots[iv];
 
-#if 1
+    // m3->interpolate_central_difference(data.scalar, data.vector, data.jacobian, v3, &f[k], v[k], j[k]);
     m3->interpolate(data.scalar, data.vector, data.jacobian, v3, &f[k], v[k], j[k]);
-#else
-    const int dp0 = p[k] / iphi / vphi, // plane id in the density array
-              dp1 = dp0 + 1; // (dp0 + 1) % nphi;
-    const int vc0 = v2 + dp0 * m2n0;
-   
-    // if (m3->is_poloidal(p[k])) {
-    // if (p[k] % vphi == 0) { // poloidal
-    if (1) { 
-      f[k] = data.scalar[vc0];
-
-      v[k][0] = data.vector[vc0*2];
-      v[k][1] = data.vector[vc0*2+1];
-
-      j[k][0][0] = data.jacobian[vc0*4];
-      j[k][0][1] = data.jacobian[vc0*4+1];
-      j[k][1][0] = data.jacobian[vc0*4+2];
-      j[k][1][1] = data.jacobian[vc0*4+3];
-    } else { // virtual polodal plane, using linear interpolation
-      int next = m2->nextnode(v2);
-      const int vc1 = next + (dp1 % nphi) * m2n0;
-      const T beta = T(p[k]) / iphi / vphi - dp0, 
-              alpha = T(1) - beta;
-      
-      f[k] = alpha * data.scalar[vc0] + beta * data.scalar[vc1];
-
-      v[k][0] = alpha * data.vector[vc0*2] + beta * data.vector[vc1*2];
-      v[k][1] = alpha * data.vector[vc0*2+1] + beta * data.vector[vc1*2+1];
-
-      j[k][0][0] = alpha * data.jacobian[vc0*4] + beta * data.jacobian[vc1*4];
-      j[k][0][1] = alpha * data.jacobian[vc0*4+1] + beta * data.jacobian[vc1*4+1];
-      j[k][1][0] = alpha * data.jacobian[vc0*4+2] + beta * data.jacobian[vc1*4+2];
-      j[k][1][1] = alpha * data.jacobian[vc0*4+3] + beta * data.jacobian[vc1*4+3];
-
-#if 0
-      T rzp0[3], rzp1[3];
-      m3->get_coords_rzp(v2 + dp0 * m2n0 * iphi * vphi, rzp0);
-      m3->get_coords_rzp(next + dp1 * m2n0 * iphi * vphi, rzp1);
-      if (dp1 == nphi) { // the next plane is in the next period
-        // rzp1[2] += nphi * iphi * vphi;
-        // fprintf(stderr, "alpha=%f, beta=%f, dp0=%d, dp1=%d, p0=%f, p1=%f\n", alpha, beta, 
-        //     dp0, dp1, rzp0[2], rzp1[2]);
-      }
-
-      for (int j = 0; j < 3; j ++)
-        rzpt[k][j] = alpha * rzp0[j] + beta * rzp1[j];
-#endif
-    }
-#endif
+    if (!data.Er.empty())
+      er[k] = m3->interpolate(data.Er, v3);
   }
 
 #if 1
@@ -560,6 +620,61 @@ void xgc_blob_filament_tracker::simplex_values(
 #endif
 }
 
+inline void xgc_blob_filament_tracker::build_critical_line()
+{
+#if FTK_HAVE_TBB // TODO
+#else
+  feature_line_t line;
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
+  
+  int i = 0; 
+  // auto lower = intersections.lower_bound(m4->n(2) * current_timestep), 
+  //      upper = intersections.upper_bound(m4->n(2) * current_timestep + m4->n_ordinal(2));
+  auto lower = intersections.lower_bound(0),
+       upper = intersections.upper_bound(m4->n_ordinal(2));
+
+  for (auto it = lower; it != upper; it ++) {
+    it->second.id = i ++;
+    line.pts.push_back(it->second);
+  }
+
+  m4->element_for_ordinal(3, 0, // current_timestep,
+    [&](const int tetid) {
+      auto sides = m4->sides(3, tetid);
+      int count = 0;
+      int ids[4]; // some large number;
+      for (auto i : sides) {
+        if (intersections.find(i) != intersections.end()) {
+          ids[count ++] = intersections[i].id;
+        }
+      }
+
+      if (count == 0) return; 
+      else if (count == 2) {
+        std::lock_guard<std::mutex> guard(mutex);
+        line.edges.push_back(std::array<int, 2>({ids[0], ids[1]}));
+      }
+      else fprintf(stderr, "irregular count=%d\n", count);
+    }, FTK_THREAD_PTHREAD, nthreads, true);
+
+  line.relabel();
+  feature_curve_set_t curves = line.to_curve_set();
+  fprintf(stderr, "critical line built, #pts=%zu, #edge=%zu, #curves=%zu\n", 
+      line.pts.size(), line.edges.size(), curves.size());
+
+  post_process_curves( curves );
+  post_analysis_curves( curves );
+
+#if FTK_HAVE_VTK
+  auto poly = curves.to_vtp({
+      "dneOverne0", "psin", "theta", "offset", "Er"});
+  const auto filename = series_filename(ordinal_output_pattern, current_timestep);
+  write_polydata(filename, transform_vtp_coordinates(poly));
+#endif
+#endif
+}
+
 inline void xgc_blob_filament_tracker::build_critical_surfaces()
 {
   fprintf(stderr, "building critical surfaces...\n");
@@ -570,7 +685,6 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
     surfaces.pts.push_back(kv.second);
   }
 
-  int tri_count = 0;
 #if 0 // for all 4-simplicies
   for (int timestep = 0; timestep < current_timestep; timestep ++) {
     fprintf(stderr, "pass II, timestep=%d\n", timestep);
@@ -579,14 +693,97 @@ inline void xgc_blob_filament_tracker::build_critical_surfaces()
         xl, nthreads, enable_set_affinity);
   }
 #else // for all related 4-simplicies
-  parallel_for<int>(related_cells, [&](const int e) {
+  parallel_for<int>(related_cells, [=](const int e) {
     check_penta(e);
-  }, FTK_XL_NONE, nthreads, enable_set_affinity);
+  }, FTK_XL_NONE, nthreads, true);
 #endif
 
   surfaces.relabel();
-  fprintf(stderr, "#pts=%zu, #tri=%zu, #tri_count=%d\n", 
-      surfaces.pts.size(), surfaces.tris.size(), tri_count);
+  fprintf(stderr, "#pts=%zu, #tri=%zu\n",
+      surfaces.pts.size(), surfaces.tris.size());
+
+  post_process_surfaces();
+}
+
+inline void xgc_blob_filament_tracker::post_process_surfaces()
+{
+  // an alternative way to calculate radial velocities:
+  // for each ordinal+poloidal point, find all ordinal+poloidal point in 
+  // the next timestep at the same poloidal plane (and with the same type), 
+  // and then find the nearest.
+  // for now, maybe find one with bfs is ok.
+  
+  fprintf(stderr, "post processing critical surfaces...\n");
+
+  std::shared_ptr<simplicial_xgc_3d_mesh<>> m3 = 
+    use_roi ? this->mr3 : this->m3;
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
+  
+  std::vector<std::set<int>> neighbors(surfaces.pts.size());
+  for (int i = 0; i < surfaces.tris.size(); i ++) {
+    const auto tri = surfaces.tris[i];
+
+    for (int j = 0; j < 3; j ++)
+      for (int k = 0; k < 3; k ++)
+        if (j != k)
+          neighbors[tri[j]].insert(tri[k]);
+  }
+
+  parallel_for(surfaces.pts.size(), [=](int i) {
+  // for (int i = 0; i < surfaces.pts.size(); i ++) {
+    // compute only for poloidal+ordinal elements
+    auto &p = surfaces.pts[i];
+    const int tp = p.timestep;
+    const int pp = m3->get_poloidal(2, p.tag % m4->n(2));
+
+    if (m3->is_poloidal(2, p.tag % m4->n(2)) && p.ordinal) {
+      // fprintf(stderr, "investigating %d\n", i);
+      std::set<int> visited;
+      std::queue<int> Q;
+      Q.push(i);
+      visited.insert(i);
+
+      while (!Q.empty()) {
+        int current = Q.front();
+        Q.pop();
+
+        const auto &q = surfaces.pts[current];
+        if (current != i &&
+            q.ordinal && 
+            q.timestep == tp + 1 && 
+            // q.type == p.type &&
+            m3->is_poloidal(2, q.tag % m4->n(2)) && 
+            m3->get_poloidal(2, q.tag % m4->n(2)) == pp)
+        {
+          p.v[0] = q.scalar[1] - p.scalar[1]; // dpsin
+          p.v[1] = q.scalar[2] - p.scalar[2]; // dtheta
+          // p.v[0] = q.x[0] - p.x[0];
+          // p.v[1] = q.x[1] - p.x[1];
+#if 1
+          fprintf(stderr, "gotcha: i=%d, j=%d, xi=%f, %f, %f, %f, xj=%f, %f, %f, %f, v=%f, %f\n", 
+              i, current,
+              p.x[0], p.x[1], p.x[2], p.t, 
+              q.x[0], q.x[1], q.x[2], q.t, 
+              p.v[0], p.v[1]);
+#endif
+          break;
+        }
+
+        for (auto j : neighbors[current]) {
+          if (visited.find(j) == visited.end()
+              && surfaces.pts[j].timestep >= tp
+              && surfaces.pts[j].timestep <= tp + 1)
+          {
+            visited.insert(j);
+            Q.push(j);
+          }
+        }
+      }
+    }
+  });
+
+
 }
 
 #if 0 // legacy code, to be removed later
@@ -635,13 +832,18 @@ inline void xgc_blob_filament_tracker::to_augmented_mesh_file(const std::string&
 inline void xgc_blob_filament_tracker::write_intersections_binary(const std::string& filename) const
 {
   if (is_root_proc())
-    diy::serializeToFile(intersections, filename); // TODO: TBB
+    diy::serializeToFile(intersections, filename); 
 }
 
 inline void xgc_blob_filament_tracker::read_intersections_binary(const std::string& filename)
 {
-  if (is_root_proc())
-    diy::unserializeFromFile(filename, intersections); // TODO: TBB
+  if (is_root_proc()) {
+    diy::unserializeFromFile(filename, intersections); 
+    for (const auto &kv : intersections) {
+      std::set<int> related = get_related_penta_cells(kv.second.tag);
+      related_cells.insert( related.begin(), related.end() );
+    }
+  }
 }
 
 inline void xgc_blob_filament_tracker::write_surfaces(const std::string& filename, std::string format, bool torus) const 
@@ -666,6 +868,18 @@ inline void xgc_blob_filament_tracker::read_surfaces(const std::string& filename
 
   surfaces.load(filename, format);
   fprintf(stderr, "readed surfaces #pts=%zu, #tris=%zu\n", surfaces.pts.size(), surfaces.tris.size());
+
+#if 0
+  // simplify
+  fprintf(stderr, "simplifying critical surfaces...");
+  surfaces.discard([&](const feature_point_t& p) {
+    if (p.type != CRITICAL_POINT_2D_MAXIMUM) return true;
+    // if (!p.ordinal) return true;
+    return false;
+  });
+  fprintf(stderr, "after simplification: #pts=%zu, #tri=%zu\n",
+      surfaces.pts.size(), surfaces.tris.size());
+#endif
 }
 
 inline void xgc_blob_filament_tracker::post_analysis_curves(feature_curve_set_t& curves) const
@@ -705,6 +919,8 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
 
   std::shared_ptr<simplicial_xgc_3d_mesh<>> m3 = 
     use_roi ? this->mr3 : this->m3;
+  std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
+    use_roi ? this->mr4 : this->m4;
 
   const int nphi = m3->get_nphi(), 
             iphi = m3->get_iphi(),
@@ -722,8 +938,7 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
     // c.discard_high_cond();
     c.discard([&](const feature_point_t& p) {
       return !m3->is_poloidal(2, p.tag % m4->n(2));
-      // return (p.scalar[2] != 0);
-      // return !m3->is_actual_poloidal(2, p.tag); // remove virtual planes as well
+      // return !m3->is_actual_poloidal(2, p.tag % m4->n(2)); // remove virtual planes as well
     });
   });
   
@@ -769,7 +984,7 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
   
   // remove trajectories with no points (again)
   curves.filter([&](const feature_curve_t& c) {
-    return c.size() > 0;
+    return c.size() > 1;
   });
 
   // if the curve is loop and has inconsistent type, rotate the loop
@@ -819,8 +1034,14 @@ inline void xgc_blob_filament_tracker::post_process_curves(feature_curve_set_t& 
     
   // remove saddle curves
   curves.filter([&](const feature_curve_t& c) {
-    return c.consistent_type == CRITICAL_POINT_2D_MAXIMUM ||
-           c.consistent_type == CRITICAL_POINT_2D_MINIMUM;
+    // return c.consistent_type == CRITICAL_POINT_2D_MAXIMUM ||
+    //        c.consistent_type == CRITICAL_POINT_2D_MINIMUM;
+    return c.consistent_type == CRITICAL_POINT_2D_MAXIMUM;
+  });
+  
+  // remove trajectories with no points (again..)
+  curves.filter([&](const feature_curve_t& c) {
+    return c.size() > 1;
   });
 
   fprintf(stderr, "after post process: #%zu\n", curves.size());
@@ -832,14 +1053,17 @@ inline void xgc_blob_filament_tracker::write_sliced(const std::string& pattern, 
 
 #if FTK_HAVE_VTK
   for (int i = 0; i < end_timestep; i ++) { // TODO
+    fprintf(stderr, "slicing timestep %d\n", i);
     auto sliced = surfaces.slice_time(i);
-    post_process_curves(sliced);
-    post_analysis_curves(sliced);
+    if (enable_post_processing) {
+      post_process_curves(sliced);
+      post_analysis_curves(sliced);
+    }
     fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
     // auto poly = sliced.to_vtp(3, std::vector<std::string>());
-    auto poly = sliced.to_vtp(3, {
-        "dneOverne0", "psin", "theta", "offset"});
+    auto poly = sliced.to_vtp({
+        "dneOverne0", "psin", "theta", "offset", "Er"});
     
     const auto filename = series_filename(pattern, i);
     write_polydata(filename, transform_vtp_coordinates(poly));

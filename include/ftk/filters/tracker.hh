@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/ndarray/field_data_snapshot.hh>
+#include <ftk/ndarray/ndarray_group.hh>
 #include <ftk/filters/filter.hh>
 #include <ftk/external/diy/master.hpp>
 
@@ -19,7 +20,8 @@ enum {
   TRACKER_CONNECTED_COMPONENTS = 5,
   TRACKER_THRESHOLD = 6,
   TRACKER_XGC_BLOB_FILAMENT = 105,
-  TRACKER_XGC_BLOB_THRESHOLD = 106
+  TRACKER_XGC_BLOB_THRESHOLD = 106,
+  TRACKER_MPAS_O_CRITICAL_POINT = 201
 };
 
 struct tracker : public filter
@@ -27,7 +29,7 @@ struct tracker : public filter
   tracker(diy::mpi::communicator comm) : filter(comm) {} // , master(comm) {}
   virtual ~tracker() {}
   
-  virtual int cpdims() const = 0; // featutre dimension
+  // virtual int cpdims() const = 0; // featutre dimension
   
   void set_start_timestep(int t) { start_timestep = t;}
   void set_end_timestep(int t) { end_timestep = t; }
@@ -47,8 +49,11 @@ public:
   virtual bool advance_timestep() = 0;
   virtual void update_timestep() = 0;
 
+public:
+  virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group>) {}
+
 protected:
-  std::deque<field_data_snapshot> snapshots;
+  std::deque<field_data_snapshot_t> snapshots;
 
 protected:
   // diy::Master master;
@@ -78,6 +83,8 @@ inline int tracker::str2tracker(const std::string& s)
     return TRACKER_TDGL_VORTEX;
   else if (s == "cl" || s == "critical_line" || s == "critical_lines")
     return TRACKER_CRITICAL_LINE;
+  else if (s == "mpas-o-cp")
+    return TRACKER_MPAS_O_CRITICAL_POINT;
   else if (s == "sujudi_haimes")
     return TRACKER_SUJUDI_HAIMES;
   else if (s == "ridge_valley")

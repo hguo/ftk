@@ -15,12 +15,14 @@ enum {
   FTK_ERR_FILE_FORMAT,
   FTK_ERR_FILE_FORMAT_AMIRA,
   FTK_ERR_NOT_BUILT_WITH_ADIOS2 = 2000,
+  FTK_ERR_NOT_BUILT_WITH_ADIOS1,
   FTK_ERR_NOT_BUILT_WITH_BOOST,
   FTK_ERR_NOT_BUILT_WITH_CGAL,
   FTK_ERR_NOT_BUILT_WITH_CUDA,
   FTK_ERR_NOT_BUILT_WITH_GMP,
   FTK_ERR_NOT_BUILT_WITH_HDF5,
   FTK_ERR_NOT_BUILT_WITH_HIPSYCL,
+  FTK_ERR_NOT_BUILT_WITH_SYCL,
   FTK_ERR_NOT_BUILT_WITH_KOKKOS,
   FTK_ERR_NOT_BUILT_WITH_LEVELDB,
   FTK_ERR_NOT_BUILT_WITH_MPI,
@@ -42,7 +44,13 @@ enum {
   FTK_ERR_ACCELERATOR_UNSUPPORTED = 4000,
   FTK_ERR_THREAD_BACKEND_UNSUPPORTED = 5000,
   FTK_ERR_VTK_VARIABLE_NOT_FOUND = 6000,
+  FTK_ERR_VTK_UNSUPPORTED_OUTPUT_FORMAT,
+  FTK_ERR_NETCDF_MISSING_VARIABLE = 6500,
   FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND = 7000,
+  FTK_ERR_MESH_UNSUPPORTED_FORMAT = 8000,
+  FTK_ERR_MESH_NONSIMPLICIAL, 
+  FTK_ERR_MESH_EMPTY,
+  FTK_ERR_UNKNOWN_OPTIONS = 10000
 };
 
 inline std::string err2str(int e)
@@ -83,8 +91,13 @@ inline std::string err2str(int e)
   case FTK_ERR_ACCELERATOR_UNSUPPORTED: return "unsupported accelerator";
   case FTK_ERR_THREAD_BACKEND_UNSUPPORTED: return "unsupported thread backend";
   case FTK_ERR_VTK_VARIABLE_NOT_FOUND: return "VTK variable not found";
+  case FTK_ERR_VTK_UNSUPPORTED_OUTPUT_FORMAT: return "unsupported vtk output format";
+  case FTK_ERR_NETCDF_MISSING_VARIABLE: return "missing netcdf variable name(s)";
   case FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND: return "adios2 variable not found";
-  default: return "unknown error";
+  case FTK_ERR_MESH_UNSUPPORTED_FORMAT: return "unsupported mesh format";
+  case FTK_ERR_MESH_NONSIMPLICIAL: return "unsupported nonsimplicial mesh";
+  case FTK_ERR_MESH_EMPTY: return "empty mesh";
+  default: return "unknown error: " + std::to_string(e);
   }
 }
 
@@ -124,14 +137,14 @@ inline void warn(int err, std::string str = "")
 }
 
 inline void fatal(const std::string& str) {
-  std::cerr << "[FTK FATAL]" << str << std::endl;
+  std::cerr << "[FTK FATAL] " << str << std::endl;
   
   print_backtrace();
   exit(1);
 }
 
 inline void warn(const std::string& str) {
-  std::cerr << "WARN: " << str << std::endl;
+  std::cerr << "[FTK WARN] " << str << std::endl;
 }
 
 }

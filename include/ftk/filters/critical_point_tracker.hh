@@ -6,12 +6,14 @@
 #include <ftk/features/feature_point.hh>
 #include <ftk/features/feature_curve.hh>
 #include <ftk/features/feature_curve_set.hh>
+#include <ftk/basic/duf.hh>
 #include <ftk/filters/filter.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/write_polydata.hh>
 #include <ftk/utils/gather.hh>
+#include <ftk/utils/redistribution.hh>
 #include <iomanip>
 
 namespace ftk {
@@ -32,13 +34,14 @@ struct critical_point_tracker : public virtual tracker {
   }
 
   void set_enable_robust_detection(bool b) { enable_robust_detection = b; }
+  void set_enable_computing_degrees(bool b) { enable_computing_degrees = b; }
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
   void set_enable_discarding_interval_points(bool b) { enable_discarding_interval_points = b; }
   void set_enable_discarding_degenerate_points(bool b) { enable_discarding_degenerate_points = b; }
   void set_enable_ignoring_degenerate_points(bool b) { enable_ignoring_degenerate_points = b; }
 
   void set_type_filter(unsigned int);
-  
+
   void set_scalar_field_source(int s) {scalar_field_source = s;}
   void set_vector_field_source(int s) {vector_field_source = s;}
   void set_jacobian_field_source(int s) {jacobian_field_source = s;}
@@ -74,7 +77,7 @@ public: // i/o for traced critical points (trajectories)
   void write_traced_critical_points_text(const std::string& filename) const;
   void write_traced_critical_points_vtk(const std::string& filename) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const {return traced_critical_points.to_vtp(cpdims(), scalar_components);}
+  vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const {return traced_critical_points.to_vtp(scalar_components);}
 #endif
 
 public: // i/o for sliced critical points
@@ -95,7 +98,7 @@ public: // i/o for intercepted traced
   void write_intercepted_critical_points_text(int t0, int t1, const std::string& filename) const;
   void write_intercepted_critical_points_json(int t0, int t1, const std::string& filename) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_intercepted_critical_points_vtk(int t0, int t1) const {return get_intercepted_critical_point(t0, t1).to_vtp(cpdims(), scalar_components, 0.0);}
+  vtkSmartPointer<vtkPolyData> get_intercepted_critical_points_vtk(int t0, int t1) const {return get_intercepted_critical_point(t0, t1).to_vtp(scalar_components);}
 #endif
 
 public: // i/o for discrete (untraced) critical points
@@ -175,6 +178,7 @@ protected:
   std::vector<std::string> scalar_components = {"scalar"};
 
   bool enable_robust_detection = true;
+  bool enable_computing_degrees = false;
   bool enable_streaming_trajectories = false;
   bool enable_discarding_interval_points = false;
   bool enable_discarding_degenerate_points = false;
@@ -244,10 +248,8 @@ inline void critical_point_tracker::write_intercepted_critical_points_vtk(int t0
 
 inline void critical_point_tracker::write_traced_critical_points_vtk(const std::string& filename) const
 {
-  if (comm.rank() == get_root_proc()) {
-    auto poly = traced_critical_points.to_vtp(cpdims(), scalar_components); 
-    write_polydata(filename, poly);
-  }
+  auto poly = traced_critical_points.to_vtp(scalar_components); 
+  write_polydata(filename, poly, "auto", comm);
 }
 
 inline void critical_point_tracker::write_sliced_critical_points_vtk(int k, const std::string& filename) const
@@ -365,7 +367,7 @@ inline void critical_point_tracker::write_traced_critical_points_text(const std:
 {
   if (is_root_proc()) {
     std::ofstream out(filename);
-    traced_critical_points.write_text(out, cpdims(), scalar_components);
+    traced_critical_points.write_text(out, scalar_components);
     out.close();
   }
 }
@@ -395,7 +397,7 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int k, con
 inline void critical_point_tracker::write_critical_points_text(std::ostream& os) const
 {
   for (const auto &cp : get_critical_points())
-    cp.print(os, cpdims(), scalar_components) << std::endl;
+    cp.print(os, scalar_components) << std::endl;
 }
 
 #if FTK_HAVE_VTK
@@ -466,7 +468,7 @@ inline void critical_point_tracker::write_sliced_critical_points_text(int t, std
   const auto &cps = sliced_critical_points.at(t);
 
   for (const auto &cp: cps) {
-    cp.print(os, cpdims(), scalar_components);
+    cp.print(os, scalar_components);
     os << std::endl;
   }
 }
@@ -669,20 +671,125 @@ std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offli
 	std::function<std::set<element_t>(element_t)> neighbors)
 {
   std::vector<feature_curve_t> traced_critical_points;
+ 
+#if 0
+	std::map<element_t, feature_point_t> all_discrete_critical_points;
+  // diy::mpi::gather(comm, discrete_critical_points, all_discrete_critical_points, get_root_proc());
+  diy::mpi::gather<std::map<element_t, feature_point_t>>(comm, discrete_critical_points, all_discrete_critical_points, get_root_proc());
+  int ncps = discrete_critical_points.size(), nallcps;
+  diy::mpi::all_reduce(comm, ncps, nallcps, std::plus<int>());
+  fprintf(stderr, "#cps=%d, #sumcps=%d, #allcps=%zu\n", ncps, nallcps, all_discrete_critical_points.size());
+  comm.barrier();
+  // exit(1);
+#endif
 
+#if 1
+  // fprintf(stderr, "dUF..\n");
+  duf<element_t> uf(comm);
+  diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc()); // TODO FIXME
+  if (!is_root_proc()) discrete_critical_points.clear();
+  
+  for (const auto &kv : discrete_critical_points) {
+    for (const auto &n : neighbors(kv.first))
+      // if (true) // (discrete_critical_points.find(n) != discrete_critical_points.end())
+      if (discrete_critical_points.find(n) != discrete_critical_points.end())
+        uf.unite(kv.first, n);
+  }
+  // fprintf(stderr, "dUF sync...\n");
+  uf.sync();
+  // fprintf(stderr, "dUF done.\n");
+  // fprintf(stderr, "dUF done., #pts=%zu, #roots=%zu\n", discrete_critical_points.size(), uf.get_roots().size());
+
+  std::map<element_t/*root*/, std::map<element_t, feature_point_t>> ccs, rccs; // distributed cc
+  for (const auto &kv : discrete_critical_points)
+    ccs[ uf.find(kv.first) ].insert(kv);
+
+  redistribute(comm, ccs, rccs);
+  
+  std::mutex my_mutex;
+  // for (auto &cc : rccs) { 
+  object::parallel_for_container<std::map<element_t, std::map<element_t, feature_point_t>>>
+    (rccs, [&](typename std::map<element_t, std::map<element_t, feature_point_t>>::iterator icc) {
+    std::set<element_t> component;
+    for (const auto &kv : icc->second)
+      component.insert(kv.first);
+
+    auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      const unsigned int id = traced_critical_points.size(); 
+
+      feature_curve_t traj; 
+      traj.loop = is_loop(linear_graphs[j], neighbors);
+      for (int k = 0; k < linear_graphs[j].size(); k ++) {
+        // auto &cp = discrete_critical_points[linear_graphs[j][k]];
+        auto cp = icc->second.at(linear_graphs[j][k]);
+        cp.id = id;
+
+        traj.push_back(cp);
+        // sum1 ++;
+      }
+      
+      {
+        std::lock_guard<std::mutex> guard(my_mutex);
+        traced_critical_points.emplace_back(traj);
+      }
+    }
+  });
+
+  fprintf(stderr, "rank=%d, #curves=%zu\n", comm.rank(), traced_critical_points.size());
+
+  diy::mpi::gather<std::vector<feature_curve_t>>(comm, traced_critical_points, traced_critical_points, get_root_proc(), 
+      [](const std::vector<feature_curve_t>& in, std::vector<feature_curve_t>& out) {
+        for (const auto& v : in)
+          out.push_back(v);
+      });
+
+  if (comm.rank() == 0) 
+    fprintf(stderr, "total curves: %zu\n", traced_critical_points.size());
+#endif
+
+#if 0
+  fprintf(stderr, "computing cc..\n");
   std::set<element_t> elements;
   for (const auto &kv : discrete_critical_points)
     elements.insert(kv.first);
   auto connected_components = extract_connected_components<element_t, std::set<element_t>>(
       neighbors, elements);
 
-  // fprintf(stderr, "#cc=%zu\n", connected_components.size());
+  fprintf(stderr, "#cc=%zu\n", connected_components.size());
   // int sum = 0;
   // for (auto c : connected_components)
   //   sum += c.size();
   // fprintf(stderr, "#sum=%d, #dcp=%zu\n", sum, discrete_critical_points.size());
 
   // int sum1 = 0;
+  std::mutex my_mutex;
+  object::parallel_for(connected_components.size(), [&](int cid) {
+    const auto &component = connected_components[cid];
+    
+    auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      const unsigned int id = traced_critical_points.size(); 
+
+      feature_curve_t traj; 
+      traj.loop = is_loop(linear_graphs[j], neighbors);
+      for (int k = 0; k < linear_graphs[j].size(); k ++) {
+        auto &cp = discrete_critical_points[linear_graphs[j][k]];
+        cp.id = id;
+
+        traj.push_back(cp);
+        // sum1 ++;
+      }
+      
+      {
+        std::lock_guard<std::mutex> guard(my_mutex);
+        traced_critical_points.emplace_back(traj);
+      }
+    }
+  });
+#endif
+
+#if 0
   for (const auto &component : connected_components) {
     std::vector<std::vector<double>> mycurves;
     auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
@@ -701,6 +808,7 @@ std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offli
       traced_critical_points.emplace_back(traj);
     }
   }
+#endif
 
   // fprintf(stderr, "#sum1=%d\n", sum1);
 

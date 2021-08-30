@@ -17,7 +17,7 @@ struct ndarray_writer : public object {
   //  - filename, string, e.g. "tornado-%04d.nc".  Should be able to expand to file names with sprintf(3)
   //  - format (nc|vti|float32|float64)
   // format-specific fields: 
-  //  - nc (NetCDF)
+  //  - nc (NetCDF), serial
   //    - variable (required), string or array of strings.  Possible to use the same
   //      specification in the input stream config.  Will be converted to array of 
   //      strings internally.  Will write one or multiple variables.
@@ -181,7 +181,8 @@ void ndarray_writer<T>::write_netcdf(int k, const ndarray<T> &data)
   int ncndims = 0; // temp variable to index new dim ids
   const bool unlimited_time = j["unlimited_time"];
   
-  NC_SAFE_CALL( nc_create(filename.c_str(), NC_CLOBBER | NC_64BIT_OFFSET, &ncid) );
+  // NC_SAFE_CALL( nc_create(filename.c_str(), NC_CLOBBER | NC_64BIT_OFFSET, &ncid) );
+  NC_SAFE_CALL( nc_create(filename.c_str(), NC_CLOBBER | NC_NETCDF4, &ncid) );
 
   // dimensions
   if (unlimited_time) 

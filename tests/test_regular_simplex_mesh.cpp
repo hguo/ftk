@@ -1,5 +1,3 @@
-#include <ftk/basic/distributed_union_find.hh>
-#include <ftk/basic/duf.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/mesh/lattice_partitioner.hh>
 #include <ftk/utils/gather.hh>

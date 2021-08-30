@@ -2,7 +2,7 @@ if (FTK_BUILD_PYFTK)
   include_directories (${PYTHON_INCLUDE_DIRS})
 endif ()
 
-if (FTK_HAVE_HIPSYCL)
+if (FTK_HAVE_SYCL)
   set (ftk_sycl_sources
     filters/critical_point_tracer_2d_regular_sycl.cpp ${ftk_sycl_sources})
 endif ()
@@ -23,7 +23,8 @@ set (ftk_sources
   io/tdgl/glpp/stringutils.cpp
   io/tdgl/glpp/datafile.cpp
   io/tdgl/tdgl.cpp
-  io/tdgl/GLGPU_IO_Helper.cpp)
+  io/tdgl/GLGPU_IO_Helper.cpp
+)
 
 if (FTK_HAVE_CUDA)
   set (ftk_cuda_sources
@@ -36,6 +37,10 @@ endif ()
 
 add_library (libftk SHARED ${ftk_sources} ${ftk_cuda_sources})
 target_link_libraries (libftk ${CMAKE_THREAD_LIBS_INIT})
+
+if (FTK_HAVE_ADIOS1)
+  target_link_libraries (libftk ${ADIOS_LIBRARIES})
+endif ()
 
 if (FTK_HAVE_ADIOS2)
   target_link_libraries (libftk adios2::adios2)
@@ -65,6 +70,10 @@ if (FTK_HAVE_NETCDF)
   target_link_libraries (libftk ${NETCDF_LIBRARY})
 endif ()
 
+if (FTK_HAVE_PNETCDF)
+  target_link_libraries (libftk ${PNETCDF_LIBRARY})
+endif ()
+
 if (FTK_HAVE_HDF5)
   target_link_libraries (libftk ${HDF5_LIBRARIES})
 endif ()
@@ -82,7 +91,8 @@ if (FTK_HAVE_TBB)
 endif ()
 
 if (FTK_HAVE_MPI)
-  target_link_libraries (libftk ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+  add_subdirectory (bil)
+  target_link_libraries (libftk bil ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
 endif ()
 
 if (FTK_HAVE_PNG)

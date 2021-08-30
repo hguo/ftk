@@ -46,6 +46,8 @@ struct feature_surface_t {
   void triangulate(); // WIP
   void reorient(); // WIP
 
+  void discard(std::function<bool(const feature_point_t&)> f);
+
 public: // IO
   void save(const std::string& filename, std::string format="") const;
   void load(const std::string& filename, std::string format="");
@@ -133,12 +135,23 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_norm
   array_id->SetNumberOfComponents(1);
   array_id->SetNumberOfTuples(pts.size());
 
-  vtkSmartPointer<vtkDataArray> array_time = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_time = vtkFloatArray::New();
   array_time->SetName("time");
   array_time->SetNumberOfComponents(1);
   array_time->SetNumberOfTuples(pts.size());
+  
+  vtkSmartPointer<vtkDataArray> array_scalar = vtkFloatArray::New();
+  array_scalar->SetName("scalar");
+  array_scalar->SetNumberOfComponents(1);
+  array_scalar->SetNumberOfTuples(pts.size());
+  
+  vtkSmartPointer<vtkDataArray> array_type = vtkUnsignedIntArray::New();
+  array_type->SetName("type");
+  array_type->SetNumberOfComponents(1);
+  array_type->SetNumberOfTuples(pts.size());
 
-  vtkSmartPointer<vtkDataArray> array_grad = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_grad = vtkFloatArray::New();
+  array_grad->SetName("grad");
   array_grad->SetNumberOfComponents(3);
   array_grad->SetNumberOfTuples(pts.size());
 
@@ -151,11 +164,15 @@ inline vtkSmartPointer<vtkPolyData> feature_surface_t::to_vtp(bool generate_norm
 
     array_id->SetTuple1(i, p.id);
     array_time->SetTuple1(i, p.t);
+    array_scalar->SetTuple1(i, p.scalar[0]);
+    array_type->SetTuple1(i, p.type);
     array_grad->SetTuple3(i, p.v[0], p.v[1], p.v[2]);
   }
   poly->SetPoints(points);
   poly->GetPointData()->AddArray(array_id);
   poly->GetPointData()->AddArray(array_time);
+  poly->GetPointData()->AddArray(array_scalar);
+  poly->GetPointData()->AddArray(array_type);
   poly->GetPointData()->SetNormals(array_grad);
 
   for (int i = 0; i < tris.size(); i ++) {
@@ -198,17 +215,17 @@ inline vtkSmartPointer<vtkUnstructuredGrid> feature_surface_t::to_vtu() const
   array_id->SetNumberOfComponents(1);
   array_id->SetNumberOfTuples(pts.size());
 
-  vtkSmartPointer<vtkDataArray> array_time = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_time = vtkFloatArray::New();
   array_time->SetName("time");
   array_time->SetNumberOfComponents(1);
   array_time->SetNumberOfTuples(pts.size());
   
-  vtkSmartPointer<vtkDataArray> array_scalar = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_scalar = vtkFloatArray::New();
   array_scalar->SetName("scalar");
   array_scalar->SetNumberOfComponents(1);
   array_scalar->SetNumberOfTuples(pts.size());
   
-  vtkSmartPointer<vtkDataArray> array_grad = vtkDoubleArray::New();
+  vtkSmartPointer<vtkDataArray> array_grad = vtkFloatArray::New();
   array_grad->SetNumberOfComponents(3);
   array_grad->SetNumberOfTuples(pts.size());
 
@@ -389,6 +406,99 @@ inline void feature_surface_t::save(const std::string& filename, std::string for
     // fatal("unsupported file format");
 #endif
   }
+}
+
+inline void feature_surface_t::discard(std::function<bool(const feature_point_t&)> f)
+{
+  std::vector<int> parent(pts.size());
+  for (int i = 0; i < pts.size(); i ++) 
+    parent[i] = i;
+  std::vector<std::set<int>> children(pts.size());
+
+  // build node-edge-node links
+  std::vector<std::set<int>> neighbors(pts.size());
+  for (int i = 0; i < tris.size(); i ++) {
+    const auto tri = tris[i];
+
+    for (int j = 0; j < 3; j ++)
+      for (int k = 0; k < 3; k ++)
+        if (j != k)
+          neighbors[tri[j]].insert(tri[k]);
+  }
+
+  // def find_nearest(i):
+  //   find nearest j among neighbors of i
+  //   while parent[j] != j:   // j is deleted
+  //     j <-- parent[j]
+  auto nearest = [&](int i) {
+    double mindist = std::numeric_limits<double>::max();
+    int mindistj = -1;
+    for (auto j : neighbors[i]) {
+      double d = dist(pts[i], pts[j]);
+      if (d < mindist) {
+        mindist = d;
+        mindistj = j;
+      }
+    }
+
+    int j = mindistj;
+    while (j != -1 && parent[j] != j) 
+      j = parent[j];
+
+    return j;
+  };
+
+  // foreach i : verts
+  //   if f(i):
+  //     if j <-- find_nearest(i):
+  //       parent[i] <-- j
+  //       children[j].add(i)
+  //       children[j].unite(children[i])
+  //       foreach k : children[i]: 
+  //         parent[k] <-- j
+  //       children[i] <-- empty
+  //       mark i as deleted, i.e. parent[i] != i
+  //     else: 
+  //       mark i as permenantly deleted, or parent[i] = -1;
+  for (int i = 0; i < pts.size(); i ++) {
+    if (f(pts[i])) {
+      const int j = nearest(i);
+      if (j != -1) {
+        children[j].insert(i);
+        children[j].insert( children[i].begin(), children[i].end() );
+        for (auto k : children[i])
+          parent[k] = j;
+        children[i].clear();
+        parent[i] = j;
+      } else 
+        parent[i] = -1;
+    }
+  }
+
+  // build new pts and tris
+  std::map<int, int> ptsmap; // old id to new id
+  std::vector<feature_point_t> newpts;
+  std::vector<std::array<int, 3>> newtris;
+  for (int i = 0; i < pts.size(); i ++) {
+    if (parent[i] == i) {
+      ptsmap[i] = newpts.size();
+      newpts.push_back(pts[i]);
+    }
+  }
+
+  for (int i = 0; i < tris.size(); i ++) {
+    const auto tri = tris[i];
+    bool b[3];
+    for (int k = 0; k < 3; k ++)
+      b[k] = ptsmap.find(tri[k]) != ptsmap.end();
+
+    if (b[0] && b[1] && b[2]) {
+      newtris.push_back( {ptsmap[tri[0]], ptsmap[tri[1]], ptsmap[tri[2]]} );
+    }
+  }
+
+  pts = newpts;
+  tris = newtris;
 }
 
 }

@@ -18,7 +18,7 @@ namespace ftk {
 struct critical_line_tracker : public virtual tracker {
   critical_line_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
-  int cpdims() const { return 3; }
+  // int cpdims() const { return 3; }
   
   virtual void update() {}; 
   void reset() {

@@ -9,6 +9,12 @@
 #include <adios2.h>
 #endif
 
+#if FTK_HAVE_ADIOS1
+#include <adios.h>
+#include <adios_read.h>
+#include <adios_error.h>
+#endif
+
 #if FTK_HAVE_CUDA
 // #include <cuda.h>
 // #include <cuda_runtime.h>
@@ -16,32 +22,19 @@
 
 #if FTK_HAVE_MPI
 #include <mpi.h>
-#endif
-
-#if FTK_HAVE_HDF5
-#include <hdf5.h>
+#include <ftk/external/bil/bil.h>
 #endif
 
 #if FTK_HAVE_NETCDF
 #include <netcdf.h>
-#define NC_SAFE_CALL(call) {\
-  int retval = call;\
-  if (retval != 0) {\
-    fprintf(stderr, "[NetCDF Error] %s, in file '%s', line %i.\n", nc_strerror(retval), __FILE__, __LINE__); \
-    exit(EXIT_FAILURE); \
-  }\
-}
+#include <netcdf_meta.h>
+#if NC_HAS_PARALLEL
+#include <netcdf_par.h>
+#endif
 #endif
 
 #if FTK_HAVE_PNETCDF
 #include <pnetcdf.h>
-#define PNC_SAFE_CALL(call) {\
-  int retval = call;\
-  if (retval != 0) {\
-      fprintf(stderr, "[PNetCDF Error] %s, in file '%s', line %i.\n", ncmpi_strerror(retval), __FILE__, __LINE__); \
-      exit(EXIT_FAILURE); \
-  }\
-}
 #endif
 
 #if FTK_HAVE_PYBIND11
@@ -87,6 +80,7 @@ struct ndarray : public ndarray_base {
 
   void reshape(const std::vector<size_t> &dims_);
   void reshape(const std::vector<size_t> &dims, T val);
+  template <typename I> void reshape(const int ndims, const I sz[]);
   template <typename T1> void reshape(const ndarray<T1>& array); //! copy shape from another array
 
   void reshape(size_t n0) {reshape(std::vector<size_t>({n0}));}
@@ -201,6 +195,9 @@ struct ndarray : public ndarray_base {
   template <typename Iterator>
   void copy(Iterator first, Iterator last);
 
+public: // subarray
+  ndarray<T> subarray(const lattice&) const;
+
 public: // file i/o; automatically determine format based on extensions
   static ndarray<T> from_file(const std::string& filename, const std::string varname="", diy::mpi::communicator comm = MPI_COMM_WORLD);
   bool read_file(const std::string& filename, const std::string varname="", diy::mpi::communicator comm = MPI_COMM_WORLD);
@@ -219,23 +216,31 @@ public: // i/o for binary file
   void from_bov(const std::string& filename);
   void to_bov(const std::string& filename) const;
 
+  void bil_add_block_raw(const std::string& filename, const std::vector<size_t>& SZ, const lattice& ext);
+
 public: // i/o for vtk image data
   void to_vtk_image_data_file(const std::string& filename, const std::string varname=std::string()) const;
   void read_vtk_image_data_file_sequence(const std::string& pattern);
 #if FTK_HAVE_VTK
   static int vtk_data_type();
-  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string());
+  void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> d, const std::string array_name=std::string());
+  void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string()) { from_vtk_regular_data<>(d, array_name); }
+  void from_vtk_array(vtkSmartPointer<vtkAbstractArray> d);
+  void from_vtk_data_array(vtkSmartPointer<vtkDataArray> d);
   vtkSmartPointer<vtkImageData> to_vtk_image_data(std::string varname=std::string()) const; 
   vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
+  
+  template <typename VTK_REGULAR_DATA=vtkImageData> /*vtkImageData, vtkRectilinearGrid, or vtkStructuredGrid*/
+  void from_vtk_regular_data(vtkSmartPointer<VTK_REGULAR_DATA> d, const std::string array_name=std::string());
 #endif
+
+public: // i/o for vtkStructuredGrid data
+  void to_vtk_rectilinear_grid(const std::string& filename, const std::string varname=std::string()) const;
 
 public: // i/o for hdf5
   static ndarray<T> from_h5(const std::string& filename, const std::string& name);
-  bool read_h5(const std::string& filename, const std::string& name); 
 #if FTK_HAVE_HDF5
-  bool read_h5(hid_t fid, const std::string& name);
-  bool read_h5(hid_t did);
-
+  bool read_h5_did(hid_t did);
   static hid_t h5_mem_type_id();
 #endif
 
@@ -253,12 +258,24 @@ public: // i/o for adios2
       adios2::IO &io, 
       adios2::Engine& reader, 
       const std::string &varname); // read all
+  
+  void read_bp(
+      adios2::IO &io, 
+      adios2::Engine& reader, 
+      adios2::Variable<T>& var);
 
   void read_bp(
       adios2::IO &io, 
       adios2::Engine& reader, 
       const std::string &varname, 
       int step_start);
+#endif
+
+public: // i/o for adios1
+  static ndarray<T> from_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm);
+  bool read_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm);
+#if FTK_HAVE_ADIOS1
+  bool read_bp_legacy(ADIOS_FILE *fp, const std::string& varname);
 #endif
 
 public: // i/o for png
@@ -278,14 +295,14 @@ public: // pybind11
   void to_numpy(const std::string& filename) const;
 
 public: // netcdf
-  void read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[]);
-  void read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[]);
-  void read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[]);
-  void read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]);
-  void read_netcdf(const std::string& filename, const std::string& varname);
-  void read_netcdf(int ncid, const std::string& varname);
-  void read_netcdf(int ncid, int varid);
-  void read_netcdf_slice(const std::string& filename, const std::string& varname, int k);
+  void read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(const std::string& filename, const std::string& varname, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, const std::string& varname, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf_slice(const std::string& filename, const std::string& varname, int k, diy::mpi::communicator comm=MPI_COMM_WORLD);
   // void to_netcdf(int ncid, const std::string& varname);
   // void to_netcdf(int ncid, int varid);
   void to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const;
@@ -303,6 +320,7 @@ public: // netcdf
 
 public: // statistics & misc
   std::tuple<T, T> min_max() const;
+  T maxabs() const;
   T resolution() const; // the min abs nonzero value
   
   ndarray<uint64_t> quantize() const; // quantization based on resolution
@@ -355,6 +373,17 @@ ndarray<T>& ndarray<T>::operator+=(const ndarray<T>& x)
       p[i] += x.p[i];
   }
   return *this;
+}
+
+template <typename T>
+ndarray<T> operator+(const ndarray<T>& lhs, const ndarray<T>& rhs)
+{
+  ndarray<T> array;
+  array.reshape(lhs);
+
+  for (auto i = 0; i < array.nelem(); i ++)
+    array[i] = lhs[i] + rhs[i];
+  return array;
 }
 
 template <typename T, typename T1>
@@ -437,6 +466,48 @@ void ndarray<T>::swap(ndarray& x)
 }
 
 template <typename T>
+ndarray<T> ndarray<T>::subarray(const lattice& l0) const
+{
+  lattice l(l0);
+  if (l0.nd_cuttable() < nd()) {
+    for (int i = 0; i < ncd; i ++) {
+      l.starts_.insert(l.starts_.begin(), 0);
+      l.sizes_.insert(l.starts_.begin(), this->shape(i));
+    }
+  }
+
+  ndarray<T> arr(l.sizes());
+  for (auto i = 0; i < arr.nelem(); i ++) {
+    auto idx = l.from_integer(i);
+    arr[i] = at(idx);
+  }
+  
+  arr.ncd = ncd;
+  return arr;
+}
+
+template <typename T>
+void ndarray<T>::bil_add_block_raw(const std::string& filename, 
+    const std::vector<size_t>& SZ, 
+    const lattice& ext)
+{
+#if FTK_HAVE_MPI
+  reshape(ext.sizes());
+  std::vector<int> domain, st, sz;
+ 
+  for (int i = 0; i < nd(); i ++) {
+    domain.push_back(SZ[i]);
+    st.push_back(ext.start(i));
+    sz.push_back(ext.size(i));
+  }
+
+  BIL_Add_block_raw(nd(), domain.data(), st.data(), sz.data(), filename.c_str(), mpi_datatype(), (void**)&p[0]);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_MPI);
+#endif
+}
+
+template <typename T>
 void ndarray<T>::read_binary_file(FILE *fp)
 {
   auto s = fread(&p[0], sizeof(T), nelem(), fp);
@@ -490,9 +561,48 @@ template<> inline int ndarray<unsigned long>::vtk_data_type() {return VTK_UNSIGN
 template<> inline int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
 template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
 
+template <typename T>
+inline void ndarray<T>::from_vtk_array(vtkSmartPointer<vtkAbstractArray> d)
+{
+  vtkSmartPointer<vtkDataArray> da = vtkDataArray::SafeDownCast(d);
+  from_vtk_data_array(da);
+}
+
 template<typename T>
-inline void ndarray<T>::from_vtk_image_data(
-    vtkSmartPointer<vtkImageData> d, 
+inline void ndarray<T>::from_vtk_data_array(
+    vtkSmartPointer<vtkDataArray> da)
+{
+  const int nc = da->GetNumberOfComponents(), 
+            ne = da->GetNumberOfTuples();
+  if (nc > 1) {
+    reshape(nc, ne);
+    set_multicomponents(1);
+  } else {
+    reshape(ne);
+    set_multicomponents(0);
+  }
+
+  for (auto i = 0; i < ne; i ++) {
+    double *tuple = da->GetTuple(i);
+    for (auto j = 0; j < nc; j ++)
+      p[i*nc+j] = tuple[j];
+  }
+}
+
+template <typename T>
+inline void ndarray<T>::from_vtu(
+    vtkSmartPointer<vtkUnstructuredGrid> d, 
+    const std::string array_name)
+{
+  vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
+  if (!da) da = d->GetPointData()->GetArray(0);
+  from_vtk_data_array(da);
+}
+
+template <typename T>
+template <typename VTK_REGULAR_DATA>
+inline void ndarray<T>::from_vtk_regular_data(
+    vtkSmartPointer<VTK_REGULAR_DATA> d, 
     const std::string array_name)
 {
   vtkSmartPointer<vtkDataArray> da = d->GetPointData()->GetArray(array_name.c_str());
@@ -613,13 +723,19 @@ inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, cons
 #endif
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname)
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
 {
 #if FTK_HAVE_NETCDF
   int ncid, varid;
+#if NC_HAS_PARALLEL
+  int rtn = nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
+  if (rtn != NC_NOERR)
+    NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#endif
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid);
+  read_netcdf(ncid, varid, comm);
   NC_SAFE_CALL( nc_close(ncid) );
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
@@ -627,7 +743,7 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 }
 
 template <>
-inline void ndarray<int>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+inline void ndarray<int>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #if FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
@@ -641,12 +757,17 @@ inline void ndarray<int>::read_netcdf(int ncid, int varid, int ndims, const size
 }
 
 template <>
-inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #if FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
+
+#if NC_HAS_PARALLEL
+  // NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+  nc_var_par_access(ncid, varid, NC_COLLECTIVE);
+#endif
 
   NC_SAFE_CALL( nc_get_vara_float(ncid, varid, starts, sizes, &p[0]) );
 #else
@@ -655,12 +776,17 @@ inline void ndarray<float>::read_netcdf(int ncid, int varid, int ndims, const si
 }
 
 template <>
-inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[])
+inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
+
+#if NC_HAS_PARALLEL
+  // NC_SAFE_CALL( nc_var_par_access(ncid, varid, NC_COLLECTIVE) );
+  nc_var_par_access(ncid, varid, NC_COLLECTIVE);
+#endif
 
   NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, &p[0]) );
 #else
@@ -751,7 +877,7 @@ inline void ndarray<T>::to_netcdf_multivariate_unlimited_time(int ncid, int vari
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int ndims;
@@ -761,14 +887,14 @@ inline void ndarray<T>::read_netcdf(int ncid, int varid, const size_t starts[], 
   std::reverse(mysizes.begin(), mysizes.end());
   reshape(mysizes);
 
-  read_netcdf(ncid, varid, ndims, starts, sizes);
+  read_netcdf(ncid, varid, ndims, starts, sizes, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, int varid)
+inline void ndarray<T>::read_netcdf(int ncid, int varid, diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int ndims;
@@ -781,44 +907,51 @@ inline void ndarray<T>::read_netcdf(int ncid, int varid)
   for (int i = 0; i < ndims; i ++)
     NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &sizes[i]) );
   
-  read_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname)
+inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int varid;
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid);
+  read_netcdf(ncid, varid, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int varid;
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
 template <typename T>
-inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[])
+inline void ndarray<T>::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
 {
 #ifdef FTK_HAVE_NETCDF
   int ncid, varid;
+#if NC_HAS_PARALLEL
+  int rtn = nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
+  if (rtn != NC_NOERR)
+    NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#endif
+
   NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid, starts, sizes);
+  read_netcdf(ncid, varid, starts, sizes, comm);
   NC_SAFE_CALL( nc_close(ncid) );
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
@@ -836,6 +969,16 @@ ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
     else s[i] = s[i-1]*dims[i-1];
 
   p.assign(a, a + s[nd()-1]);
+}
+  
+template <typename T> 
+template <typename I> 
+void ndarray<T>::reshape(const int ndims, const I sz[])
+{
+  std::vector<size_t> sizes(ndims);
+  for (int i = 0; i < ndims; i ++)
+    sizes[i] = sz[i];
+  reshape(sizes);
 }
 
 template <typename T>
@@ -882,6 +1025,16 @@ std::tuple<T, T> ndarray<T>::min_max() const {
 }
 
 template <typename T>
+T ndarray<T>::maxabs() const 
+{
+  T r = 0;
+  for (size_t i = 0; i < nelem(); i ++)
+    r = std::max(r, std::abs(p[i]));
+
+  return r;
+}
+
+template <typename T>
 T ndarray<T>::resolution() const {
   T r = std::numeric_limits<T>::max();
 
@@ -914,21 +1067,25 @@ inline void ndarray<T>::read_bp(const std::string& filename, const std::string& 
   
   read_bp(io, reader, varname);
   reader.Close();
+  
+  // empty array; try legacy reader
+  if (empty()) read_bp_legacy(filename, varname, comm);
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+  warn(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+  read_bp_legacy(filename, varname, comm);
 #endif
 }
 
 #if FTK_HAVE_ADIOS2
 template <typename T>
-inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::Variable<T>& var)
 {
-  auto var = io.template InquireVariable<T>(varname);
   if (var) {
     // std::cerr << var << std::endl;
     // std::cerr << var.Shape() << std::endl;
 
     std::vector<size_t> shape(var.Shape());
+    if (shape.empty()) return;
     // std::cerr << shape << std::endl;
 
     if (shape.size()) { // array type
@@ -945,8 +1102,17 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const st
       reshape(1);
       reader.Get<T>(var, p);
     }
-  } else 
-    fatal(FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND);
+  } else {
+    throw FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND;
+    // fatal(FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND);
+  }
+}
+
+template <typename T>
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+{
+  auto var = io.template InquireVariable<T>(varname);
+  read_bp(io, reader, var);
 }
 
 template <typename T>
@@ -961,6 +1127,82 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const st
   }
 }
 #endif
+
+#if FTK_HAVE_ADIOS1
+template <typename T>
+bool ndarray<T>::read_bp_legacy(ADIOS_FILE *fp, const std::string& varname)
+{
+  warn("reading bp file with legacy ADIOS1 API..");
+  ADIOS_VARINFO *avi = adios_inq_var(fp, varname.c_str());
+  if (avi == NULL)
+    throw FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND;
+
+  adios_inq_var_stat(fp, avi, 0, 0);
+  adios_inq_var_blockinfo(fp, avi);
+  adios_inq_var_meshinfo(fp, avi);
+    
+  int nt = 1;
+  uint64_t st[4] = {0, 0, 0, 0}, sz[4] = {0, 0, 0, 0};
+  std::vector<size_t> mydims;
+  
+  for (int i = 0; i < avi->ndim; i++) {
+    st[i] = 0;
+    sz[i] = avi->dims[i];
+    nt = nt * sz[i];
+    mydims.push_back(sz[i]);
+  }
+  // fprintf(stderr, "%d, %d, %d, %d\n", sz[0], sz[1], sz[2], sz[3]);
+  
+  if (!mydims.empty()) {
+    std::reverse(mydims.begin(), mydims.end());
+    reshape(mydims);
+
+    ADIOS_SELECTION *sel = adios_selection_boundingbox(avi->ndim, st, sz);
+    assert(sel->type == ADIOS_SELECTION_BOUNDINGBOX);
+
+    adios_schedule_read_byid(fp, sel, avi->varid, 0, 1, &p[0]);
+    int retval = adios_perform_reads(fp, 1);
+    
+    adios_selection_delete(sel);
+    return true; // avi->ndim;
+  } else {
+    if (avi->type == adios_integer) { // TODO: other data types
+      reshape({1});
+      p[0] = *((int*)avi->value);
+      return true;
+    }
+    else return false;
+  }
+}
+#endif
+
+template <typename T>
+ndarray<T> ndarray<T>::from_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
+{
+  ndarray<T> arr;
+  arr.read_bp_legacy(filename, varname, comm);
+  return arr;
+}
+
+template <typename T>
+bool ndarray<T>::read_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
+{
+#if FTK_HAVE_ADIOS1
+  adios_read_init_method( ADIOS_READ_METHOD_BP, comm, "" );
+  ADIOS_FILE *fp = adios_read_open_file(filename.c_str(), ADIOS_READ_METHOD_BP, comm); 
+  // adios_read_bp_reset_dimension_order(fp, 0);
+
+  bool succ = read_bp_legacy(fp, varname);
+  
+  adios_read_finalize_method (ADIOS_READ_METHOD_BP);
+  adios_read_close(fp);
+  return succ;
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_ADIOS1);
+  return false;
+#endif
+}
+
 
 template <typename T>
 inline void ndarray<T>::copy_to_cuda_device()
@@ -1001,7 +1243,7 @@ bool ndarray<T>::read_file(const std::string& filename, const std::string varnam
 
   auto ext = file_extension(filename);
   if (ext == FILE_EXT_BP) read_bp(filename, varname, comm);
-  else if (ext == FILE_EXT_NETCDF) read_netcdf(filename, varname);
+  else if (ext == FILE_EXT_NETCDF) read_netcdf(filename, varname, comm);
   else if (ext == FILE_EXT_VTI) read_vtk_image_data_file(filename, varname);
   else if (ext == FILE_EXT_HDF5) read_h5(filename, varname);
   else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
@@ -1014,6 +1256,7 @@ ndarray<T> ndarray<T>::from_bp(const std::string& filename, const std::string& n
 {
   ndarray<T> array;
   array.read_bp(filename, name, comm);
+    
   return array;
 }
 
@@ -1025,36 +1268,9 @@ ndarray<T> ndarray<T>::from_h5(const std::string& filename, const std::string& n
   return array;
 }
 
-template <typename T>
-inline bool ndarray<T>::read_h5(const std::string& filename, const std::string& name)
-{
-#if FTK_HAVE_HDF5
-  auto fid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-  if (fid < 0) return false; else {
-    bool succ = read_h5(fid, name);
-    H5Fclose(fid);
-    return succ;
-  }
-#else 
-  fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
-  return false;
-#endif
-}
-
 #if FTK_HAVE_HDF5
 template <typename T>
-inline bool ndarray<T>::read_h5(hid_t fid, const std::string& name)
-{
-  auto did = H5Dopen2(fid, name.c_str(), H5P_DEFAULT);
-  if (did < 0) return false; else {
-    bool succ = read_h5(did);
-    H5Dclose(did);
-    return succ;
-  }
-}
-
-template <typename T>
-inline bool ndarray<T>::read_h5(hid_t did)
+inline bool ndarray<T>::read_h5_did(hid_t did)
 {
   auto sid = H5Dget_space(did); // space id
   auto type = H5Sget_simple_extent_type(sid);
@@ -1083,6 +1299,9 @@ inline bool ndarray<T>::read_h5(hid_t did)
 template <> inline hid_t ndarray<double>::h5_mem_type_id() { return H5T_NATIVE_DOUBLE; }
 template <> inline hid_t ndarray<float>::h5_mem_type_id() { return H5T_NATIVE_FLOAT; }
 template <> inline hid_t ndarray<int>::h5_mem_type_id() { return H5T_NATIVE_INT; }
+template <> inline hid_t ndarray<unsigned long>::h5_mem_type_id() { return H5T_NATIVE_ULONG; }
+template <> inline hid_t ndarray<unsigned int>::h5_mem_type_id() { return H5T_NATIVE_UINT; }
+template <> inline hid_t ndarray<unsigned char>::h5_mem_type_id() { return H5T_NATIVE_UCHAR; }
 #endif
 
 template <typename T>

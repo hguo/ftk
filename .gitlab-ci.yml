@@ -1,0 +1,124 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+.basic_job:
+  image: gcc
+  stage: test
+  needs: []
+
+  script:
+    - mkdir build
+    - cd build
+    - cmake .. -DFTK_BUILD_TESTS=ON ${CMAKE_ARG}
+    - make VERBOSE=1
+
+  after_script: 
+    - ctest -VV
+
+  tags:
+    - shared_ssh
+
+no-dependencies:
+  extends: .basic_job
+
+netcdf:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_NETCDF=ON"
+
+adios2-mpich-gnu:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_MPI=ON -DFTK_USE_ADIOS2=ON -DADIOS2_DIR=/nfs/gce/projects/PEDAL-GCE/hguo/ci/adios2-2.7.1-mpich-3.4.2-gnu/lib/cmake/adios2"
+    CC: mpicc
+    CXX: mpicxx
+  before_script:
+    - module load mpich/3.4.2-gnu
+
+intel-mpich:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_MPI=ON"
+    CC: mpicc
+    CXX: mpicxx
+  before_script:
+    - module load mpich/3.4.2-intel
+    - module load intel/20.2
+
+intel-mpich-hdf5:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_HDF5_DIR=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/hdf5/1.12.1-mpich-3.4.2-intel-parallel-fortran"
+    CC: mpicc
+    CXX: mpicxx
+  before_script:
+    - module load hdf5/1.12.1-mpich-3.4.2-intel-parallel-fortran
+    - module load mpich/3.4.2-intel
+    - module load intel/20.2
+
+cuda-compile-only:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_CUDA=ON"
+  before_script:
+    - module load cuda/10.2
+
+python3-setup-build-only:
+  before_script:
+    - module load anaconda3/2020.02
+  script:
+    - python setup.py build
+  tags:
+    - shared_ssh
+
+python3:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_BUILD_PYFTK=ON -DFTK_BUILD_EXECUTABLES=OFF"
+  before_script:
+    - module load anaconda3/2020.02
+
+intel-tbb:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_TBB=ON -DTBB_ROOT=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/intel/20.2/tbb"
+  before_script:
+    - module load intel/20.2
+
+intel-mpich-tbb:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_MPI=ON -DFTK_USE_TBB=ON -DTBB_ROOT=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/intel/20.2/tbb"
+    CC: mpicc
+    CXX: mpicxx
+  before_script:
+    - module load mpich/3.4.2-intel
+    - module load intel/20.2
+
+intel-mpich-hdf5-tbb:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_MPI=ON -DFTK_USE_HDF5=ON -DFTK_HDF5_DIR=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/hdf5/1.12.1-mpich-3.4.2-intel-parallel-fortran -DFTK_USE_TBB=ON -DTBB_ROOT=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/intel/20.2/tbb"
+    CC: mpicc
+    CXX: mpicxx
+  before_script:
+    - module load hdf5/1.12.1-mpich-3.4.2-intel-parallel-fortran
+    - module load mpich/3.4.2-intel
+    - module load intel/20.2
+
+vtk:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_VTK=ON -DVTK_DIR=/nfs/gce/projects/PEDAL-GCE/hguo/ci/vtk-9.0.3/lib/cmake/vtk-9.0"
+
+paraview:
+  extends: .basic_job
+  before_script:
+    - module load cmake/3.20.5-yjp2hz6
+  variables:
+    CMAKE_ARG: "-DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=/nfs/gce/projects/PEDAL-GCE/hguo/ci/paraview-5.9.1/lib/cmake/paraview-5.9"
+
+mpsolve:
+  extends: .basic_job
+  variables:
+    CMAKE_ARG: "-DFTK_USE_MPSolve=ON -DMPSolve_INCLUDE_DIR=/nfs/gce/projects/PEDAL-GCE/hguo/ci/mpsolve-3.2.1/include -DMPSolve_LIBRARY=/nfs/gce/projects/PEDAL-GCE/hguo/ci/mpsolve-3.2.1/lib/libmps.so"

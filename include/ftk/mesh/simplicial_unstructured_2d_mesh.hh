@@ -9,6 +9,32 @@ namespace ftk {
 
 template <typename I, typename F> struct point_locator_2d;
 
+template <typename I=int>
+struct hash_compare_tuple_i2 {
+  hash_compare_tuple_i2() {}
+  hash_compare_tuple_i2(const hash_compare_tuple_i2&) {}
+  ~hash_compare_tuple_i2() {}
+
+  bool equal(const std::tuple<I, I>& a, const std::tuple<I, I>& b) const { return a == b; }
+  size_t hash(const std::tuple<I, I>& x) const {
+    I a = std::get<0>(x), b = std::get<1>(x);
+    return a * b * 2654435761;
+  };
+};
+
+template <typename I=int>
+struct hash_compare_tuple_i3 {
+  hash_compare_tuple_i3() {}
+  hash_compare_tuple_i3(const hash_compare_tuple_i3&) {}
+  ~hash_compare_tuple_i3() {}
+
+  bool equal(const std::tuple<I, I, I>& a, const std::tuple<I, I, I>& b) const { return a == b; }
+  size_t hash(const std::tuple<I, I, I>& x) const {
+    I a = std::get<0>(x), b = std::get<1>(x), c = std::get<2>(x);
+    return a * b * c * 2654435761;
+  };
+};
+
 template <typename I=int, typename F=double>
 struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   public simplicial_unstructured_mesh<I, F>
@@ -49,7 +75,12 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   ) const; 
   ndarray<F> smooth_scalar(const ndarray<F>& f) const;
 
+  ndarray<F> scalar_gradient(const ndarray<F>& f) const;
+  ndarray<F> vector_gradient(const ndarray<F>& f) const;
+  void scalar_gradient_jacobian(const ndarray<F>& f, ndarray<F>& g, ndarray<F>& j) const;
+
 public: // io
+  void from_vtu(const std::string filename);
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
   void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid);
@@ -58,6 +89,11 @@ public: // io
 
   template <typename T>
   void array_to_vtu(const std::string& filename, const std::string& varname, const ndarray<T>&) const;
+  
+  template <typename T>
+  void array_to_vtu(const std::string& filename, 
+      const std::vector<std::string>& varnames, 
+      const std::vector<ndarray<T>>& arrays) const;
 
   void write_smoothing_kernel(const std::string& filename);
   bool read_smoothing_kernel(const std::string& filename);
@@ -86,6 +122,9 @@ public: // mesh access
 
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
 
+  // virtual int ncoords() const { return vertex_coords.dim(0); } // { return 2; }
+  // virtual int ncoords() const { return 3; }
+
 public: // point locator and misc
   I nearest(F x[]) const; // locate which point is nearest to x
   // I locate(F x[]) const; // locate which triangle contains x
@@ -107,8 +146,13 @@ protected: // mesh connectivities
   ndarray<I> triangle_sides; // 3 * n_triangles
 
 public: // additional mesh info
+#if FTK_HAVE_TBB
+  tbb::concurrent_hash_map<std::tuple<I, I>, int, hash_compare_tuple_i2<I>> edge_id_map;
+  tbb::concurrent_hash_map<std::tuple<I, I, I>, int, hash_compare_tuple_i3<I>> triangle_id_map;
+#else
   std::map<std::tuple<I, I>, int> edge_id_map;
   std::map<std::tuple<I, I, I>, int> triangle_id_map;
+#endif
 
 private:
   F sigma; // smoothing kernel size
@@ -162,6 +206,17 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v_[2], I &i) const
   I v[2] = {v_[0], v_[1]};
   if (v[0] > v[1]) std::swap(v[0], v[1]);
 
+#if FTK_HAVE_TBB
+  typename tbb::concurrent_hash_map<std::tuple<I, I>, int, hash_compare_tuple_i2<I>>::const_accessor it;
+  bool found = edge_id_map.find(it, std::make_tuple(v[0], v[1]));
+  if (found) {
+    i = it->second;
+    assert(edges(0, i) == v[0]);
+    assert(edges(1, i) == v[1]);
+    return true;
+  } else 
+    return false;
+#else
   const auto it = edge_id_map.find( std::make_tuple(v[0], v[1]) );
   if (it == edge_id_map.end()) return false;
   else {
@@ -172,6 +227,7 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v_[2], I &i) const
     assert(edges(1, i) == v[1]);
     return true;
   }
+#endif
 }
 
 template <typename I, typename F>
@@ -180,6 +236,18 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v_[3], I &i) c
   int v[3] = {v_[0], v_[1], v_[2]};
   std::sort(v, v+3);
 
+#if FTK_HAVE_TBB
+  typename tbb::concurrent_hash_map<std::tuple<I, I, I>, int, hash_compare_tuple_i3<I>>::const_accessor it;
+  bool found = triangle_id_map.find(it, std::make_tuple(v[0], v[1], v[2]));
+  if (found) {
+    i = it->second;
+    assert(triangles(0, i) == v[0]);
+    assert(triangles(1, i) == v[1]);
+    assert(triangles(2, i) == v[2]);
+    return true;
+  } else 
+    return false;
+#else
   const auto it = triangle_id_map.find( std::make_tuple(v[0], v[1], v[2]) );
   if (it == triangle_id_map.end()) return false;
   else {
@@ -189,6 +257,7 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v_[3], I &i) c
     assert(triangles(2, i) == v[2]);
     return true;
   }
+#endif
 }
 
 template <typename I, typename F>
@@ -201,7 +270,8 @@ void simplicial_unstructured_2d_mesh<I, F>::build_triangles()
     for (auto j = 0; j < 3; j ++)
       triangles(j, i) = v[j];
 
-    triangle_id_map[ std::make_tuple(v[0], v[1], v[2]) ] = i;
+    // triangle_id_map[ std::make_tuple(v[0], v[1], v[2]) ] = i;
+    triangle_id_map.insert( { std::make_tuple(v[0], v[1], v[2]), i } );
   }
 }
 
@@ -216,11 +286,21 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
     if (v0 > v1) std::swap(v0, v1);
     const auto edge = std::make_tuple(v0, v1);
     I id;
+#if FTK_HAVE_TBB
+    typename tbb::concurrent_hash_map<std::tuple<I, I>, int, hash_compare_tuple_i2<I>>::const_accessor it;
+    bool found = edge_id_map.find(it, edge);
+    if (!found) {
+      id = edge_count ++;
+      edge_id_map.insert( {edge, id} );
+    } else 
+      id = it->second;
+#else
     if (edge_id_map.find(edge) == edge_id_map.end()) {
       id = edge_count ++;
       edge_id_map[edge] = id;
     } else 
       id = edge_id_map[edge];
+#endif
 
     map_edges_side_of[id].insert(tid);
       
@@ -296,10 +376,12 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
   // for (auto i = 0; i < n(0); i ++) {
   object::parallel_for(n(0), [&](int i) {
     std::set<I> set;
-    const F xi[2] = {vertex_coords[i*2], vertex_coords[i*2+1]};
+    // const F xi[2] = {vertex_coords[i*2], vertex_coords[i*2+1]};
+    const F xi[2] = {vertex_coords(0, i), vertex_coords(1, i)};
 
     auto criteron = [&](I j) {
-      const F xj[2] = {vertex_coords[j*2], vertex_coords[j*2+1]};
+      // const F xj[2] = {vertex_coords[j*2], vertex_coords[j*2+1]};
+      const F xj[2] = {vertex_coords(0, j), vertex_coords(1, j)};
       if (vector_dist_2norm_2(xi, xj) < limit) {
         // fprintf(stderr, "%d (%f, %f) add %d (%f, %f)\n", i, xi[0], xi[1], j, xj[0], xj[1]);
         // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
@@ -315,7 +397,8 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
 
     auto &kernel = smoothing_kernel[i];
     for (auto k : set) {
-      const F xk[2] = {vertex_coords[2*k], vertex_coords[2*k+1]};
+      // const F xk[2] = {vertex_coords[2*k], vertex_coords[2*k+1]};
+      const F xk[2] = {vertex_coords(0, k), vertex_coords(1, k)};
       const F d = vector_dist_2norm_2(xi, xk);
       const F w = std::exp(-(d*d) / (2*sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
       // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
@@ -380,8 +463,10 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
       const auto k = std::get<0>(tuple);
       const auto w = std::get<1>(tuple);
     
-      const F d[2] = {vertex_coords[k*2] - vertex_coords[i*2], 
-                      vertex_coords[k*2+1] - vertex_coords[i*2+1]};
+      // const F d[2] = {vertex_coords[k*2] - vertex_coords[i*2], 
+      //                 vertex_coords[k*2+1] - vertex_coords[i*2+1]};
+      const F d[2] = {vertex_coords(0, k) - vertex_coords(0, i),
+                      vertex_coords(1, k) - vertex_coords(1, i)};
       // const F r2 = d[0]*d[0] + d[1]*d[1];
       // const F r = std::sqrt(r2);
 
@@ -399,6 +484,101 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
       J(1, 1, i) += (d[1]*d[1] / sigma2 - 1) / sigma2 * f[k] * w;
     }
   });
+}
+
+template <typename I, typename F>
+ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<F>& vector) const
+{
+  ndarray<F> jacobian;
+  jacobian.reshape({2, 2, n(0)});
+  jacobian.set_multicomponents(2);
+
+  for (int i = 0; i < n(0); i ++) {
+    const auto neighbors = vertex_edge_vertex[i];
+    const F x0  = vertex_coords(0, i), 
+            y0  = vertex_coords(1, i),
+            vx0 = vector(0, i),
+            vy0 = vector(1, i);
+
+    F dvxdx = 0, dvxdy = 0, 
+      dvydx = 0, dvydy = 0;
+
+    int ix = 0, iy = 0;
+    for (const auto k : neighbors) {
+      const F x = vertex_coords(0, k), 
+              y = vertex_coords(1, k),
+              vx = vector(0, k), 
+              vy = vector(1, k);
+
+      if (std::abs(x - x0) > 1e-10) {
+        dvxdx += (vx - vx0) / (x - x0);
+        dvydx += (vy - vy0) / (x - x0);
+        ix ++;
+      }
+      
+      if (std::abs(y - y0) > 1e-10) {
+        dvxdy += (vx - vx0) / (y - y0);
+        dvydy += (vy - vy0) / (y - y0);
+        iy ++;
+      }
+    }
+
+    if (ix) {
+      jacobian(0, 0, i) = dvxdx / ix;
+      jacobian(0, 1, i) = dvydx / ix;
+    }
+    if (iy) {
+      jacobian(1, 0, i) = dvxdy / iy;
+      jacobian(1, 1, i) = dvydy / iy;
+    }
+  }
+
+  return jacobian;
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::scalar_gradient_jacobian(const ndarray<F>& f, ndarray<F>& g, ndarray<F>& j) const
+{
+  g = scalar_gradient(f);
+  j = vector_gradient(g);
+}
+
+template <typename I, typename F>
+ndarray<F> simplicial_unstructured_2d_mesh<I, F>::scalar_gradient(const ndarray<F>& scalar) const
+{
+  ndarray<F> grad;
+  grad.reshape({2, n(0)});
+  grad.set_multicomponents();
+
+  for (int i = 0; i < n(0); i ++) {
+    const auto neighbors = vertex_edge_vertex[i];
+    const F x0 = vertex_coords(0, i), 
+            y0 = vertex_coords(1, i), 
+            f0 = scalar(i);
+
+    F dfdx = 0, dfdy = 0;
+    int ix = 0, iy = 0;
+    for (const auto k : neighbors) {
+      const F x = vertex_coords(0, k), 
+              y = vertex_coords(1, k), 
+              f = scalar(k);
+
+      if (std::abs(x - x0) > 1e-10) {
+        dfdx += (f - f0) / (x - x0);
+        ix ++;
+      }
+      
+      if (std::abs(y - y0) > 1e-10) {
+        dfdy += (f - f0) / (y - y0);
+        iy ++;
+      }
+    }
+
+    if (ix) grad(0, i) = dfdx / ix;
+    if (iy) grad(1, i) = dfdy / iy;
+  }
+
+  return grad;
 }
 
 template <typename I, typename F>
@@ -439,6 +619,20 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i) const
     return std::set<I>();
 }
 
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::from_vtu(const std::string filename)
+{
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+  vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+  from_vtu(grid);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+}
+
 #if FTK_HAVE_VTK
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid)
@@ -458,12 +652,13 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
   triangles.from_vector(m_triangles);
 
   vtkIdType npts = grid->GetNumberOfPoints();
-  vertex_coords.reshape({2, size_t(npts)});
+  vertex_coords.reshape({3, size_t(npts)});
   for (vtkIdType i = 0; i < npts; i ++) {
-    double x[3];
+    double x[3] = {0};
     grid->GetPoint(i, x);
     vertex_coords(0, i) = x[0];
     vertex_coords(1, i) = x[1];
+    vertex_coords(2, i) = x[2];
   }
 
   build_triangles();
@@ -477,8 +672,12 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_v
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
   pts->SetNumberOfPoints(n(0));
 
-  for (int i=0; i<n(0); i++)
-    pts->SetPoint(i, vertex_coords[i*2], vertex_coords[i*2+1], 0); 
+  for (int i=0; i<n(0); i++) {
+    F coords[3] = {0};
+    get_coords(i, coords);
+    pts->SetPoint(i, coords[0], coords[1], coords[2]);
+    // pts->SetPoint(i, vertex_coords[i*2], vertex_coords[i*2+1], 0); 
+  }
 
   for (int i=0; i<n(2); i ++) {
     vtkIdType ids[3] = {triangles[i*3], triangles[i*3+1], triangles[i*3+2]};
@@ -495,6 +694,30 @@ void simplicial_unstructured_2d_mesh<I, F>::to_vtu(const std::string& filename) 
 {
 #if FTK_HAVE_VTK
   auto grid = to_vtu();
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName( filename.c_str() );
+  writer->SetInputData( grid );
+  writer->Write();
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+}
+
+template <typename I, typename F>
+template <typename T>
+void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(
+    const std::string& filename, 
+    const std::vector<std::string>& varnames, 
+    const std::vector<ndarray<T>>& arrays) const
+{
+#if FTK_HAVE_VTK
+  auto grid = to_vtu();
+
+  for (int i = 0; i < varnames.size(); i ++) {
+    auto data = arrays[i].to_vtk_data_array(varnames[i]);
+    grid->GetPointData()->AddArray(data);
+  }
+
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName( filename.c_str() );
   writer->SetInputData( grid );
@@ -527,13 +750,14 @@ void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(const std::string& file
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::write_smoothing_kernel(const std::string& f)
 {
-  fprintf(stderr, "writing smoothing kernel...\n");
+  fprintf(stderr, "writing smoothing kernel to %s\n", f.c_str());
   diy::serializeToFile(sigma, smoothing_kernel, f);
 }
 
 template <typename I, typename F>
 bool simplicial_unstructured_2d_mesh<I, F>::read_smoothing_kernel(const std::string& f)
 {
+  fprintf(stderr, "reading smoothing kernel from %s\n", f.c_str());
   bool succ = diy::unserializeFromFile(f, sigma, smoothing_kernel);
   return succ;
 }
@@ -548,16 +772,23 @@ void simplicial_unstructured_2d_mesh<I, F>::element_for(int d, std::function<voi
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
 {
+  tri[0] = triangles[i*3];
+  tri[1] = triangles[i*3+1];
+  tri[2] = triangles[i*3+2];
+#if 0
   tri[0] = triangles(0, i);
   tri[1] = triangles(1, i);
   tri[2] = triangles(2, i);
+#endif
 }
 
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[]) const
 {
-  v[0] = edges(0, i);
-  v[1] = edges(1, i);
+  v[0] = edges(i*2);
+  v[1] = edges(i*2+1);
+  // v[0] = edges(0, i);
+  // v[1] = edges(1, i);
 }
 
 template <typename I, typename F>
@@ -565,6 +796,10 @@ void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
   coords[0] = vertex_coords(0, i);
   coords[1] = vertex_coords(1, i);
+  if (vertex_coords.dim(0) > 2)
+    coords[2] = vertex_coords(2, i);
+  else 
+    coords[2] = F(0);
 }
 
 template <typename I, typename F>
@@ -574,7 +809,8 @@ I simplicial_unstructured_2d_mesh<I, F>::nearest(F x[]) const
   F mindist = std::numeric_limits<F>::max();
   I imindist;
   for (int i = 0; i < n(0); i ++) {
-    F y[2] = {vertex_coords[2*i], vertex_coords[2*i+1]};
+    // F y[2] = {vertex_coords[2*i], vertex_coords[2*i+1]};
+    F y[2] = {vertex_coords(0, i), vertex_coords(1, i)};
     F dist = vector_dist_2norm_2(x, y);
     if (mindist > dist) { 
       mindist = dist;

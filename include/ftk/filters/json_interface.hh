@@ -7,6 +7,7 @@
 #include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
+#include <ftk/mesh/simplicial_mpas_2d_mesh.hh>
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 #include <ftk/io/util.hh>
@@ -35,7 +36,7 @@ struct json_interface : public object {
   //    - traced, string, optional: file name to load/store traced features
   // - output, json, required:
   //    - type, string, by default "traced": intersections, traced, sliced, or intercepted
-  //    - format, string, by default "auto": auto, text, json, vtp, vtu, ply
+  //    - format, string, by default "auto": auto, text, json, vtp, pvtp, vtu, ply
   //    - pattern, string, required: e.g. "surface.vtp", "sliced-%04d.vtp"
   // - threshold, number, by default 0: threshold for some trackers, e.g. contour trackers
   // - accelerator, string, by default "none": none, cuda, or hipsycl
@@ -43,10 +44,8 @@ struct json_interface : public object {
   // - nblocks, int, by default 0: number of blocks; 0 will be replaced by the number of processes
   // - nthreads, int, by default 0: number of threads; 0 will replaced by the max available number of CPUs
   // - enable_streaming, bool, by default false
-  // - enable_discarding_interval_points, bool, by default false
   // - enable_fast_detection, bool, by default true
-  // - enable_deriving_velocities, bool, by default false
-  // - enable_post_processing, bool, by default true
+  // - post_processing_options, string, by default empty
   // - xgc, json, optional: XGC-specific options
   //    - format, string, by default auto: auto, h5, or bp
   //    - path, string, optional: XGC data path, which contains xgc.mesh, xgc.bfield, units.m, 
@@ -60,6 +59,7 @@ struct json_interface : public object {
   //    - smoothing_kernel_file, string, optional: path to smoothing kernel file; will (over)write 
   //      the file if the file does not exist or the file has a different smoothing kernel size
   //    - smoothing_kernel_size, number, optional: smoothing kernel size
+  //  - mpas, json, optional: MPAS-O specific options
   void configure(const json& j);
 
   void consume(ndarray_stream<> &stream, 
@@ -77,7 +77,9 @@ struct json_interface : public object {
 private:
   void configure_tracker_general(diy::mpi::communicator comm);
   void consume_regular(ndarray_stream<> &stream, diy::mpi::communicator comm);
+  void consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm);
   void consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm);
+  void consume_mpas(ndarray_stream<> &stream, diy::mpi::communicator comm);
 
   void write_sliced_results(int k);
   void write_intercepted_results(int k, int nt);
@@ -125,14 +127,15 @@ void json_interface::configure(const json& j0)
   };
 
   add_boolean_option("enable_robust_detection", true);
-  add_boolean_option("enable_post_processing", true);
+  add_boolean_option("enable_computing_degrees", false);
+  // add_boolean_option("enable_post_processing", true);
   add_boolean_option("enable_streaming_trajectories", false);
-  add_boolean_option("enable_discarding_interval_points", false);
-  add_boolean_option("enable_discarding_degenerate_points", false);
-  add_boolean_option("enable_ignoring_degenerate_points", false);
+  // add_boolean_option("enable_discarding_interval_points", false);
+  // add_boolean_option("enable_discarding_degenerate_points", false);
+  // add_boolean_option("enable_ignoring_degenerate_points", false);
   add_boolean_option("enable_timing", false);
 
-  add_number_option("duration_pruning_threshold", 0);
+  // add_number_option("duration_pruning_threshold", 0);
   add_number_option("nblocks", 1);
   
   /// application specific
@@ -151,6 +154,10 @@ void json_interface::configure(const json& j0)
       }
     } else 
       fatal("invalid xgc configuration");
+  }
+
+  if (j.contains("mpas")) {
+    // TODO
   }
 
   /// general options
@@ -199,7 +206,7 @@ void json_interface::configure(const json& j0)
   //   j["enable_streaming_trajectories"] = true;
 
   // output format
-  static const std::set<std::string> valid_output_formats = {"text", "vtp", "json"}; // , "binary"};
+  static const std::set<std::string> valid_output_formats = {"text", "vtp", "pvtp", "json"}; // , "binary"};
   bool output_format_determined = false;
   
   if (j.contains("output_format")) {
@@ -216,6 +223,7 @@ void json_interface::configure(const json& j0)
   if (!output_format_determined) {
     if (j.contains("output")) {
       if (ends_with(j["output"], "vtp")) j["output_format"] = "vtp";
+      else if (ends_with(j["output"], "pvtp")) j["output_format"] = "pvtp";
       else if (ends_with(j["output"], "txt")) j["output_format"] = "text";
       else if (ends_with(j["output"], "json")) j["output_format"] = "json";
       else j["output_format"] = "binary";
@@ -307,6 +315,9 @@ void json_interface::configure_tracker_general(diy::mpi::communicator comm)
 
   if (j.contains("enable_robust_detection"))
     tracker->set_enable_robust_detection( j["enable_robust_detection"].get<bool>() );
+  
+  if (j.contains("enable_computing_degrees"))
+    tracker->set_enable_computing_degrees( j["enable_computing_degrees"].get<bool>() );
 
   if (j["enable_streaming_trajectories"] == true)
     tracker->set_enable_streaming_trajectories(true);
@@ -339,12 +350,114 @@ void json_interface::consume(ndarray_stream<> &stream, diy::mpi::communicator co
 {
   if (j.is_null())
     configure(j); // make default options
-  // std::cerr << j << std::endl;
-
+  // std::cerr << stream.get_json() << std::endl;
+  
   if (j.contains("xgc"))
     consume_xgc(stream, comm);
+  else if (j.contains("mpas"))
+    consume_mpas(stream, comm);
+  else if (j.contains("mesh_filename")) 
+    consume_unstructured(stream, comm);
   else 
     consume_regular(stream, comm);
+}
+
+void json_interface::consume_mpas(ndarray_stream<> &stream, diy::mpi::communicator comm)
+{
+  fprintf(stderr, "consuming mpas..\n");
+  
+  js = stream.get_json();
+  const std::string filename0 = js["filenames"][0];
+
+  auto m = simplicial_mpas_2d_mesh<>::from_file(filename0);
+  tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
+  
+  configure_tracker_general(comm);
+  tracker->initialize();
+  
+  fprintf(stderr, "starting mpas data stream..\n");
+  
+  const size_t DT = js["n_timesteps"];
+  stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+    std::cerr << field_data.shape() << std::endl;
+    ndarray<double> vf; // extract only the top slice
+    vf.reshape(2, field_data.dim(1));
+
+    for (int i = 0; i < field_data.dim(1); i ++)
+      for (int j = 0; j < 2; j ++)
+        vf(j, i) = field_data(j, i, 0);
+
+    tracker->push_vector_field_snapshot(field_data);
+    if (k != 0) tracker->advance_timestep();
+    if (k == DT-1) tracker->update_timestep();
+    // if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+    //   write_sliced_results(k-1);
+  });
+
+  stream.start();
+  stream.finish();
+  tracker->finalize();
+}
+
+void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm)
+{
+  const std::string filename = j["mesh_filename"];
+  
+  std::shared_ptr<simplicial_unstructured_mesh<>> m;
+  
+  if (file_extension(filename) == FILE_EXT_VTU) {
+#if FTK_HAVE_VTK // currently only support vtu meshes
+    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
+    reader->SetFileName(filename.c_str());
+    reader->Update();
+    vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+    // return new_from_vtu(grid);
+
+    vtkSmartPointer<vtkCellTypes> types = vtkSmartPointer<vtkCellTypes>::New();
+    grid->GetCellTypes(types);
+    
+    const int ntypes = types->GetNumberOfTypes();
+    if (ntypes == 1) {
+      const unsigned char type = types->GetCellType(0);
+      if (type == VTK_TRIANGLE)
+        m.reset(new simplicial_unstructured_2d_mesh<>());
+      else if (type == VTK_TETRA)
+        m.reset(new simplicial_unstructured_3d_mesh<>());
+      else
+        fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+    } else
+      fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+
+    m->from_vtu(grid);
+#else
+    fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+  } else {
+    fatal(FTK_ERR_MESH_UNSUPPORTED_FORMAT);
+  }
+
+  if (m->nd() == 2)
+    tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
+  else 
+    tracker.reset(new critical_point_tracker_3d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_3d_mesh<>>(m)));
+  
+  configure_tracker_general(comm);
+  tracker->initialize();
+  
+  js = stream.get_json();
+  const size_t DT = js["n_timesteps"];
+  stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
+    tracker->push_vector_field_snapshot(field_data);
+    if (k != 0) tracker->advance_timestep();
+    if (k == DT-1) tracker->update_timestep();
+    
+    // if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+    //   write_sliced_results(k-1);
+  });
+
+  stream.start();
+  stream.finish();
+  tracker->finalize();
 }
 
 void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicator comm)
@@ -457,7 +570,7 @@ void json_interface::write_sliced_results(int k)
 {
   const std::string pattern = j["output"];
   const std::string filename = series_filename(pattern, k);
-  if (j["output_format"] == "vtp")
+  if (j["output_format"] == "vtp" || j["output_format"] == "pvtp")
     tracker->write_sliced_critical_points_vtk(k, filename);
   else 
     tracker->write_sliced_critical_points_text(k, filename);
@@ -467,7 +580,7 @@ void json_interface::write_intercepted_results(int k, int nt)
 {
   const std::string pattern = j["output"];
   const std::string filename = series_filename(pattern, k);
-  if (j["output_format"] == "vtp") {
+  if (j["output_format"] == "vtp" || j["output_format"] == "pvtp") {
     int nt = 2;
     if (j.contains("intercept_length") && j["intercept_length"].is_number())
       nt = j["intercept_length"];
@@ -522,6 +635,9 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
   tracker = rtracker;
   
   configure_tracker_general(comm);
+
+  if (comm.size() > 1 && stream.is_partial_read_supported() )
+    tracker->set_input_array_partial(true); 
   tracker->initialize();
  
   if (j.contains("archived_traced_critical_points_filename")) {
@@ -554,6 +670,9 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
     else // vector field
       tracker->push_vector_field_snapshot(field_data);
   };
+
+  if (comm.size() > 1) 
+    stream.set_part( rtracker->get_local_array_domain() );
 
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     push_timestep(field_data);
@@ -614,7 +733,7 @@ void json_interface::xgc_post_process()
   });
 }
 
-void json_interface::post_process()
+void json_interface::post_process()  // FIXME: legacy post processing code, to be removed later
 {
   auto &trajs = tracker->get_traced_critical_points();
 
@@ -673,14 +792,14 @@ void json_interface::write()
       for (int t = 0; t < js["n_timesteps"]; t ++)
         write_intercepted_results(t, 2);
     } else if (j["output_type"] == "traced") {
-      fprintf(stderr, "writing traced critical points..\n");
-      if (j["output_format"] == "vtp") tracker->write_traced_critical_points_vtk(j["output"]);
+      // fprintf(stderr, "writing traced critical points..\n");
+      if (j["output_format"] == "vtp" || j["output_format"] == "pvtp") tracker->write_traced_critical_points_vtk(j["output"]);
       else if (j["output_format"] == "text") tracker->write_traced_critical_points_text(j["output"]);
       else if (j["output_format"] == "json") tracker->write_traced_critical_points_json(j["output"]);
       else tracker->write_traced_critical_points_binary(j["output"]);
     } else if (j["output_type"] == "discrete") {
       fprintf(stderr, "writing discrete critical points..\n");
-      if (j["output_format"] == "vtp") tracker->write_critical_points_vtk(j["output"]);
+      if (j["output_format"] == "vtp" || j["output_format"] == "pvtp") tracker->write_critical_points_vtk(j["output"]);
       else if (j["output_format"] == "text") tracker->write_critical_points_text(j["output"]);
       else if (j["output_format"] == "json") tracker->write_critical_points_json(j["output"]);
       else tracker->write_critical_points_binary(j["output"]);

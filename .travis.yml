@@ -66,15 +66,6 @@ jobs:
       env: 
         - CMAKE_ARG="-DFTK_USE_VTK=ON -DFTK_USE_MPI=OFF -DFTK_USE_HDF5=OFF -DFTK_USE_NETCDF=OFF"
     
-    - name: build with mpich (osx)
-      os: osx
-      before_install:
-        - brew install mpich
-        #- sh tests/travis/install-mpich.sh
-      osx_image: xcode11
-      env:
-        - CMAKE_ARG="-DFTK_USE_MPI=ON"
-
     - name: build with mpich (linux)
       os: linux
       dist: bionic
@@ -98,6 +89,21 @@ jobs:
         - UBUNTU_VERSION=ubuntu1804
         - CMAKE_ARG="-DFTK_USE_CUDA=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda-10.1/bin/nvcc"
 
+    - name: build with dpcpp (linux)
+      os: linux
+      dist: bionic
+      addons:
+        apt:
+          sources:
+            - sourceline: 'deb https://apt.repos.intel.com/oneapi all main'
+              key_url: 'https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB'
+          packages:
+            - intel-oneapi-dpcpp-compiler
+      before_install:
+        - source /opt/intel/inteloneapi/compiler/latest/env/vars.sh
+      env:
+        - CMAKE_ARG="-DFTK_USE_SYCL=ON -DCMAKE_CXX_COMPILER=dpcpp"
+
     - name: build with paraview (linux)
       os: linux
       dist: bionic
@@ -108,6 +114,15 @@ jobs:
 
 
   allow_failures:
+    - name: build with mpich (osx)
+      os: osx
+      before_install:
+        - brew install mpich
+        #- sh tests/travis/install-mpich.sh
+      osx_image: xcode11
+      env:
+        - CMAKE_ARG="-DFTK_USE_MPI=ON"
+
     - name: build with openmpi (linux)
       os: linux
       dist: bionic

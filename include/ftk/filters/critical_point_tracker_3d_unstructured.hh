@@ -34,7 +34,8 @@ namespace ftk {
 
 // typedef critical_point_t<3, double> critical_point_t;
 
-struct critical_point_tracker_3d_unstructured : public critical_point_tracker, public unstructured_3d_tracker
+struct critical_point_tracker_3d_unstructured : 
+  public critical_point_tracker, public unstructured_3d_tracker
 {
   // critical_point_tracker_3d_unstructured(const simplicial_unstructured_extruded_3d_mesh<>& m) : m(m) {}
   // critical_point_tracker_3d_unstructured() {}
@@ -42,7 +43,7 @@ struct critical_point_tracker_3d_unstructured : public critical_point_tracker, p
     critical_point_tracker(comm), unstructured_3d_tracker(comm, m), tracker(comm) {}
   virtual ~critical_point_tracker_3d_unstructured() {};
   
-  int cpdims() const { return 2; }
+  // int cpdims() const { return 2; }
 
   void initialize() {}
   void finalize();

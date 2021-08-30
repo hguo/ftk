@@ -16,8 +16,15 @@
 #include <iterator>
 #include <functional>
 #include <ftk/object.hh>
+#include <ftk/ndarray.hh>
 #include <ftk/mesh/lattice.hh>
 #include <ftk/external/diy/serialization.hpp>
+
+#if FTK_HAVE_VTK
+#include <vtkSmartPointer.h>
+#include <vtkRectilinearGrid.h>
+#include <vtkStructuredGrid.h>
+#endif
 
 #if FTK_HAVE_KOKKOS
 #include <Kokkos_Core.hpp>
@@ -53,6 +60,7 @@ struct simplicial_regular_mesh_element {
   simplicial_regular_mesh_element& operator=(const simplicial_regular_mesh_element& e);
   bool operator!=(const simplicial_regular_mesh_element& e) const {return !(*this == e);}
   bool operator<(const simplicial_regular_mesh_element& e) const;
+  bool operator>(const simplicial_regular_mesh_element& e) const;
   bool operator==(const simplicial_regular_mesh_element& e) const;
   // simplicial_regular_mesh_element& operator++();
   friend std::ostream& operator<<(std::ostream& os, const simplicial_regular_mesh_element&);
@@ -82,6 +90,10 @@ struct simplicial_regular_mesh_element {
   
   bool is_ordinal(const simplicial_regular_mesh& m) const;
 
+  static bool corner_equal(const std::vector<int>& a, const std::vector<int>& b) { return a == b; }
+  static bool corner_less(const std::vector<int>&, const std::vector<int>&);
+  static bool corner_greater(const std::vector<int>&, const std::vector<int>&);
+
   // const simplicial_regular_mesh &m; // avoid the ref to mesh to ease (de)serialization
   std::vector<int> corner;
   int dim, type;
@@ -103,7 +115,12 @@ struct simplicial_regular_mesh : public object {
     lattice_.reshape(lb_, sizes()); 
   }
 
-  simplicial_regular_mesh(int n, lattice& _lattice) : simplicial_regular_mesh(n) {
+  simplicial_regular_mesh(const lattice l) : simplicial_regular_mesh(l.nd()) {
+    set_lb_ub(l);
+  }
+
+#if 0
+  simplicial_regular_mesh(int n, const lattice _lattice) : simplicial_regular_mesh(n) {
     std::vector<int> _lb, _ub;
 
     for (int i = 0; i < n; i ++) {
@@ -117,6 +134,7 @@ struct simplicial_regular_mesh : public object {
     // lattice_.set_unlimited_time(_lattice.unlimited_time()); 
     set_lb_ub(_lb, _ub); 
   }
+#endif
 
   // Dimensionality of the mesh
   int nd() const {return nd_;}
@@ -282,11 +300,52 @@ inline simplicial_regular_mesh_element& simplicial_regular_mesh_element::operato
   return *this;
 }
 
+inline bool simplicial_regular_mesh_element::corner_less(const std::vector<int>& a, const std::vector<int>& b)
+{
+  assert(a.size() == b.size());
+  if (corner_equal(a, b)) return false; 
+  else {
+    for (int i = 0; i < a.size(); i ++)
+      if (a[i] > b[i]) return false;
+      else continue;
+    return true;
+  }
+}
+
+inline bool simplicial_regular_mesh_element::corner_greater(const std::vector<int>& a, const std::vector<int>& b)
+{
+  assert(a.size() == b.size());
+  if (corner_equal(a, b)) return false; 
+  else {
+    for (int i = 0; i < a.size(); i ++)
+      if (a[i] < b[i]) return false;
+      else continue;
+    return true;
+  }
+}
+
 inline bool simplicial_regular_mesh_element::operator<(const simplicial_regular_mesh_element& e) const
 {
+#if 0
   if (corner < e.corner) return true;
   else if (corner == e.corner) return type < e.type;
   else return false;
+#else
+  if (corner == e.corner) return type < e.type;
+  else return corner < e.corner;
+#endif
+}
+
+inline bool simplicial_regular_mesh_element::operator>(const simplicial_regular_mesh_element& e) const
+{
+#if 0
+  if (corner > e.corner) return true;
+  else if (corner == e.corner) return type > e.type;
+  else return false;
+#else
+  if (corner == e.corner) return type > e.type;
+  else return corner > e.corner;
+#endif
 }
 
 inline bool simplicial_regular_mesh_element::operator==(const simplicial_regular_mesh_element& e) const
@@ -985,7 +1044,58 @@ inline void simplicial_regular_mesh::element_for(
   parallel_for(ntasks, lambda, accelerator, nthreads, affinity);
 }
 
+#if 0 // FTK_HAVE_VTK
+inline std::shared_ptr<simplicial_regular_mesh> simplicial_regular_mesh::from_vtr(vtkSmartPointer<vtkRectilinearGrid> grid)
+{
+  const int nd = grid->GetDataDimension();
+  const int *dims = grid->GetDimensions();
+
+  std::shared_ptr<simplicial_regular_mesh> m(
+    new simplicial_regular_mesh(lattice(nd, dims)));
+
+  std::vector<ndarray<double>> rectilinear_coords(nd);
+  for (int i = 0; i < nd; i ++) {
+    // rectilinear_coords[i].reshape(dims[i]);
+    if (i == 0)
+      rectilinear_coords[i].from_vtk_data_array(grid->GetXCoordinates());
+    else if (i == 1)
+      rectilinear_coords[i].from_vtk_data_array(grid->GetYCoordinates());
+    else  // i == 2
+      rectilinear_coords[i].from_vtk_data_array(grid->GetZCoordinates());
+  }
+
+  m->set_coords_rectilinear(rectilinear_coords);
+  return m;
 }
+
+inline std::shared_ptr<simplicial_regular_mesh> simplicial_regular_mesh::from_vts(vtkSmartPointer<vtkStructuredGrid> grid)
+{
+  const int nd = grid->GetDataDimension();
+  const int *dims = grid->GetDimensions();
+
+  std::shared_ptr<simplicial_regular_mesh> m(
+    new simplicial_regular_mesh(lattice(nd, dims)));
+
+  std::vector<size_t> shape_coords;
+  shape_coords.push_back(3);
+  for (int i = 0; i < nd; i ++)
+    shape_coords.push_back(dims[i]);
+
+  ndarray<double> coords;
+  coords.reshape(shape_coords);
+  const auto np = grid->GetNumberOfPoints();
+  for (auto i = 0; i < np; i ++) {
+    double *p = grid->GetPoint(i);
+    for (int j = 0; j < 3; j ++)
+      coords[j + 3*i] = p[j];
+  }
+
+  m->set_coords_explicit(coords);
+  return m; 
+}
+#endif 
+
+} // namespace ftk
 
 
 namespace diy {
@@ -1000,6 +1110,19 @@ namespace diy {
       diy::load(bb, e.corner); 
       diy::load(bb, e.dim);
       diy::load(bb, e.type);
+    }
+  };
+}
+
+
+namespace std {
+  template<> struct hash<ftk::simplicial_regular_mesh_element> {
+    std::size_t operator()(ftk::simplicial_regular_mesh_element const& e) const noexcept {
+      std::size_t h = std::hash<int>{}(e.type);
+      for (int i = 0; i < e.corner.size(); i ++) {
+        h ^= std::hash<int>{}(e.corner[i]) << 1;
+      }
+      return h;
     }
   };
 }

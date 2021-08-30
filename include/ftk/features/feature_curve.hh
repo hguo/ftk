@@ -429,39 +429,41 @@ namespace nlohmann
 
 // serialization
 namespace diy {
-  static void save(diy::BinaryBuffer& bb, const ftk::feature_curve_t &t) {
-    diy::save(bb, t.complete);
-    diy::save(bb, t.max);
-    diy::save(bb, t.min);
-    diy::save(bb, t.persistence);
-    diy::save(bb, t.bbmin);
-    diy::save(bb, t.bbmax);
-    diy::save(bb, t.tmin);
-    diy::save(bb, t.tmax);
-    diy::save(bb, t.consistent_type);
-    diy::save(bb, t.size());
-    for (auto i = 0; i < t.size(); i ++)
-      diy::save(bb, t[i]);
-    // diy::save<std::vector<ftk::feature_point_t>>(bb, t);
-  }
-  
-  static void load(diy::BinaryBuffer& bb, ftk::feature_curve_t &t) {
-    diy::load(bb, t.complete);
-    diy::load(bb, t.max);
-    diy::load(bb, t.min);
-    diy::load(bb, t.persistence);
-    diy::load(bb, t.bbmin);
-    diy::load(bb, t.bbmax);
-    diy::load(bb, t.tmin);
-    diy::load(bb, t.tmax);
-    diy::load(bb, t.consistent_type);
-    size_t s;
-    diy::load(bb, s);
-    t.resize(s);
-    for (auto i = 0; i < t.size(); i ++)
-      diy::load(bb, t[i]);
-    // diy::load<std::vector<ftk::feature_point_t>>(bb, t);
-  }
+  template <> struct Serialization<ftk::feature_curve_t> {
+    static void save(diy::BinaryBuffer& bb, const ftk::feature_curve_t &t) {
+      diy::save(bb, t.complete);
+      diy::save(bb, t.max);
+      diy::save(bb, t.min);
+      diy::save(bb, t.persistence);
+      diy::save(bb, t.bbmin);
+      diy::save(bb, t.bbmax);
+      diy::save(bb, t.tmin);
+      diy::save(bb, t.tmax);
+      diy::save(bb, t.consistent_type);
+      diy::save(bb, t.size());
+      for (auto i = 0; i < t.size(); i ++)
+        diy::save(bb, t[i]);
+      // diy::save<std::vector<ftk::feature_point_t>>(bb, t);
+    }
+    
+    static void load(diy::BinaryBuffer& bb, ftk::feature_curve_t &t) {
+      diy::load(bb, t.complete);
+      diy::load(bb, t.max);
+      diy::load(bb, t.min);
+      diy::load(bb, t.persistence);
+      diy::load(bb, t.bbmin);
+      diy::load(bb, t.bbmax);
+      diy::load(bb, t.tmin);
+      diy::load(bb, t.tmax);
+      diy::load(bb, t.consistent_type);
+      size_t s;
+      diy::load(bb, s);
+      t.resize(s);
+      for (auto i = 0; i < t.size(); i ++)
+        diy::load(bb, t[i]);
+      // diy::load<std::vector<ftk::feature_point_t>>(bb, t);
+    }
+  };
 } // namespace diy
 
 #endif

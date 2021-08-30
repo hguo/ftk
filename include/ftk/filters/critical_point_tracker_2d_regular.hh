@@ -87,7 +87,7 @@ extract_cp2dt_xl_wrapper(
     return std::vector<ftk::feature_point_lite_t>();
 #endif
   } else if (xl == FTK_XL_SYCL) {
-#if FTK_HAVE_HIPSYCL
+#if FTK_HAVE_SYCL
     return extract_cp2dt_sycl(scope, current_timestep, domain, core, ext, Vc, Vn, Jc, Jn, Sc, Sn, use_explicit_coords, coords);
 #else
     fatal(FTK_ERR_NOT_BUILT_WITH_HIPSYCL);
@@ -128,11 +128,13 @@ protected:
   void trace_intersections();
   void trace_connected_components();
 
-  virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
+  virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][4]) const;
   template <typename T=double> void simplex_vectors(const std::vector<std::vector<int>>& vertices, T v[][2]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
       double Js[][2][2]) const;
+  
+  void put_critical_points(const std::vector<feature_point_t>&);
 };
 
 
@@ -148,10 +150,40 @@ inline void critical_point_tracker_2d_regular::finalize()
     // done
   } else {
     // fprintf(stderr, "rank=%d, root=%d, #cp=%zu\n", comm.rank(), get_root_proc(), discrete_critical_points.size());
-    diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
+    // diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
-    if (comm.rank() == get_root_proc()) {
-      fprintf(stderr, "finalizing...\n");
+    if (1) { // if (comm.rank() == get_root_proc()) {
+      // fprintf(stderr, "finalizing...\n");
+#if 0
+      duf<uint64_t> uf(comm);
+
+      for (const auto &kv : discrete_critical_points) {
+        std::set<element_t> neighbors;
+        const auto cells = kv.first.side_of(m);
+        for (const auto c : cells) {
+          const auto elements = c.sides(m);
+          for (const auto f1 : elements)
+            neighbors.insert(f1);
+        }
+
+        for (const auto &n : neighbors)
+          // if (true) // (discrete_critical_points.find(n) != discrete_critical_points.end())
+          if (kv.first != n) {
+            uint64_t i0 = kv.first.to_integer<uint64_t>(m), 
+                     i1 = n.to_integer<uint64_t>(m);
+            // fprintf(stderr, "uniting %lld, %lld, rank=%d\n", i0, i1, comm.rank());
+            uf.unite(kv.first.to_integer<uint64_t>(m), n.to_integer<uint64_t>(m));
+          }
+      }
+      // fprintf(stderr, "dUF sync...\n");
+      uf.sync();
+      // fprintf(stderr, "dUF done.\n");
+      fprintf(stderr, "dUF done., #pts=%zu, #roots=%zu\n", discrete_critical_points.size(), uf.get_roots().size());
+
+      comm.barrier();
+      exit(1);
+#endif
+
       traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 
           [&](element_t f) {
             std::set<element_t> neighbors;
@@ -205,7 +237,7 @@ inline void critical_point_tracker_2d_regular::reset()
 inline void critical_point_tracker_2d_regular::push_scalar_field_snapshot(const ndarray<double>& s)
 {
   field_data_snapshot_t snapshot;
-  
+
   snapshot.scalar = s;
   if (vector_field_source == SOURCE_DERIVED) {
     snapshot.vector = gradient2D(s);
@@ -459,8 +491,41 @@ inline void critical_point_tracker_2d_regular::trace_connected_components()
 }
 
 inline void critical_point_tracker_2d_regular::simplex_coordinates(
-    const std::vector<std::vector<int>>& vertices, double X[][3]) const
+    const std::vector<std::vector<int>>& vertices, double X[][4]) const
 {
+  if (mode_phys_coords == REGULAR_COORDS_SIMPLE) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = vertices[i][0]; // x
+      X[i][1] = vertices[i][1]; // y
+      X[i][2] = 0.0; // z
+      X[i][3] = vertices[i][2]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_BOUNDS) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = (vertices[i][0] - bounds_coords[0]) / (bounds_coords[1] - bounds_coords[0]); // x
+      X[i][1] = (vertices[i][1] - bounds_coords[2]) / (bounds_coords[3] - bounds_coords[2]); // y
+      X[i][2] = 0.0; // z
+      X[i][3] = vertices[i][2]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_RECTILINEAR) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = rectilinear_coords[0][ vertices[i][0] ]; // x
+      X[i][1] = rectilinear_coords[1][ vertices[i][1] ]; // y
+      X[i][2] = 0.0; // z
+      X[i][3] = vertices[i][2]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_EXPLICIT) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = explicit_coords(0, vertices[i][0], vertices[i][1]); // x
+      X[i][1] = explicit_coords(1, vertices[i][0], vertices[i][1]); // y
+      if (explicit_coords.dim(0) > 2) // z
+        X[i][2] = explicit_coords(2, vertices[i][0], vertices[i][1]);
+      else 
+        X[i][2] = 0.0;
+      X[i][3] = vertices[i][2]; // t
+    }
+  }
+#if 0
   if (use_explicit_coords) {
     for (int i = 0; i < vertices.size(); i ++) {
       for (int j = 0; j < 2; j ++) 
@@ -472,6 +537,7 @@ inline void critical_point_tracker_2d_regular::simplex_coordinates(
       for (int j = 0; j < 3; j ++)
         X[i][j] = vertices[i][j];
   }
+#endif
 }
 
 template <typename T>
@@ -563,12 +629,13 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
 
   if (!succ2) clamp_barycentric<3>(mu);
 
-  double X[3][3], x[3]; // position
+  double X[3][4], x[4]; // position
   simplex_coordinates(vertices, X);
-  lerp_s2v3(X, mu, x);
+  lerp_s2v4(X, mu, x);
   cp.x[0] = x[0];
   cp.x[1] = x[1];
-  cp.t = x[2];
+  cp.x[2] = x[2];
+  cp.t = x[3];
   cp.cond = cond;
   // fprintf(stderr, "x=%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
 
@@ -602,6 +669,15 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
 
   return true;
 } 
+
+inline void critical_point_tracker_2d_regular::put_critical_points(const std::vector<feature_point_t>& data) 
+{
+  for (const auto& cp : data) {
+    element_t e(m, 2, cp.tag);
+    discrete_critical_points[e] = cp;
+  }
+}
+
 
 }
 

@@ -42,7 +42,7 @@ struct contour_tracker_2d_regular : public contour_tracker_regular {
   {}
   virtual ~contour_tracker_2d_regular() {}
 
-  int cpdims() const { return 2; }
+  // int cpdims() const { return 2; }
 
   void finalize();
   void reset();

@@ -2,15 +2,18 @@
 #define _FTK_INVERSE_BILINEAR_INTERPOLATION_SOLVER_HH
 
 #include <ftk/config.hh>
+#include <cmath>
 
 namespace ftk {
 
 // find the zero point in [0, 1]x[0, 1] quad, using generalized eigenvalue problem
+// inputs u and v are counter-clockwise
+// returns number of roots
 template <typename T>
-bool inverse_bilinear_interpolation(const T u[4], const T v[4], T pos[2])
+int inverse_bilinear_interpolation(const T u[4], const T v[4], T pos[2][2])
 {
   // find_zero_unit_quad_bilinear(const T re[4], const T im[4], T pos[2], T epsilon=0)
-  T f00 = u[0], f10 = u[1], f01 = u[3], f11 = u[2], // counter-clockwise
+  T f00 = u[0], f10 = u[1], f01 = u[3], f11 = u[2], 
     g00 = v[0], g10 = v[1], g01 = v[3], g11 = v[2];
   T A0 = f00 - f10 - f01 + f11,  // Axy + Bx + Cy + D = 0
     B0 = f10 - f00, 
@@ -38,8 +41,8 @@ bool inverse_bilinear_interpolation(const T u[4], const T v[4], T pos[2])
   T trace = Q[0] + Q[3];
   T det = Q[0]*Q[3] - Q[1]*Q[2];
   T lambda[2] = {
-    static_cast<T>(trace/2 + sqrt(trace*trace/4 - det)), 
-    static_cast<T>(trace/2 - sqrt(trace*trace/4 - det))
+    static_cast<T>(trace/2 + std::sqrt(trace*trace/4 - det)), 
+    static_cast<T>(trace/2 - std::sqrt(trace*trace/4 - det))
   }; 
 
   T x[2] = {
@@ -52,16 +55,15 @@ bool inverse_bilinear_interpolation(const T u[4], const T v[4], T pos[2])
   };
 
   T xx, yy;
-  bool found = false; 
+  int nroots = 0;
   for (int i=0; i<2; i++) // check the two roots 
     if (x[i]>=0 && x[i]<=1 && y[i]>=0 && y[i]<=1) {
-      pos[0] = x[i]; 
-      pos[1] = y[i];
-      found = true; 
-      break; 
+      pos[nroots][0] = x[i];
+      pos[nroots][1] = y[i];
+      nroots ++;
     }
   
-  return found; 
+  return nroots;
 }
 
 template <typename T>

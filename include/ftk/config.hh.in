@@ -3,13 +3,16 @@
 
 #define FTK_VERSION "${FTK_VERSION}"
 
+#cmakedefine FTK_HAVE_ADIOS1 1
 #cmakedefine FTK_HAVE_ADIOS2 1
 #cmakedefine FTK_HAVE_BOOST 1
 #cmakedefine FTK_HAVE_CGAL 1
 #cmakedefine FTK_HAVE_CUDA 1
+#cmakedefine FTK_HAVE_DECAF 1
 #cmakedefine FTK_HAVE_GMP 1
 #cmakedefine FTK_HAVE_HDF5 1
 #cmakedefine FTK_HAVE_HIPSYCL 1
+#cmakedefine FTK_HAVE_SYCL 1
 #cmakedefine FTK_HAVE_KOKKOS 1
 #cmakedefine FTK_HAVE_LEVELDB 1
 #cmakedefine FTK_HAVE_MPI 1
@@ -41,5 +44,22 @@
 #define __device__ 
 #define __host__ 
 #endif
+
+// utilities
+#define NC_SAFE_CALL(call) {\
+  int retval = call;\
+  if (retval != 0) {\
+    fprintf(stderr, "[NetCDF Error] %s, in file '%s', line %i.\n", nc_strerror(retval), __FILE__, __LINE__); \
+    exit(EXIT_FAILURE); \
+  }\
+}
+
+#define PNC_SAFE_CALL(call) {\
+  int retval = call;\
+  if (retval != 0) {\
+      fprintf(stderr, "[PNetCDF Error] %s, in file '%s', line %i.\n", ncmpi_strerror(retval), __FILE__, __LINE__); \
+      exit(EXIT_FAILURE); \
+  }\
+}
 
 #endif

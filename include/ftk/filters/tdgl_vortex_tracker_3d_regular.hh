@@ -453,7 +453,7 @@ inline void tdgl_vortex_tracker_3d_regular::write_sliced(const std::string& patt
       auto sliced = surfaces.slice_time(i);
       fprintf(stderr, "sliced timestep %d, #curves=%zu\n", i, sliced.size());
 
-      auto poly = sliced.to_vtp(3, std::vector<std::string>());
+      auto poly = sliced.to_vtp(std::vector<std::string>());
       
       const auto filename = series_filename(pattern, i);
       write_polydata(filename, poly);
@@ -471,7 +471,7 @@ inline vtkSmartPointer<vtkPolyData> tdgl_vortex_tracker_3d_regular::get_intersec
   for (const auto &kv : intersections) {
     const auto &cp = kv.second;
     double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; 
-    if (cpdims() == 2) p[2] = cp.t;
+    // if (cpdims() == 2) p[2] = cp.t;
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
   }

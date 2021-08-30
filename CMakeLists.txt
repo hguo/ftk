@@ -21,9 +21,6 @@ if (FTK_BUILD_PYFTK)
   set (FTK_HAVE_PYBIND11 TRUE)
 endif()
 
-set (CMAKE_CXX_STANDARD 11)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set (CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
@@ -35,12 +32,14 @@ function (ftk_option name description default)
   set_property (CACHE FTK_USE_${name} PROPERTY STRINGS "TRUE;AUTO;FALSE")
 endfunction ()
 
+ftk_option (ADIOS1 "Use ADIOS1" FALSE) # not recommended
 ftk_option (ADIOS2 "Use ADIOS2" FALSE)
 ftk_option (Boost "Use Boost" FALSE) # not used
 ftk_option (CGAL "Use CGAL" FALSE) # experimental
 ftk_option (CUDA "Use CUDA" FALSE) # experimental
+ftk_option (DECAF "Use Decaf" FALSE) #experimental
 ftk_option (GSL "Use GSL (GNU Scientific Library)" FALSE)
-ftk_option (GMP "Use GMP (GNU Multiple Precision Arithmetic Library)" AUTO) # strongly recommended to have GMP
+ftk_option (GMP "Use GMP (GNU Multiple Precision Arithmetic Library)" FALSE)
 ftk_option (HDF5 "Use HDF5" FALSE)
 ftk_option (Kokkos "Use Kokkos" FALSE) # experimental
 ftk_option (LevelDB "Use LevelDB" FALSE)
@@ -54,8 +53,17 @@ ftk_option (PNG "Use PNG" FALSE)
 ftk_option (Qt5 "Use Qt5" FALSE)
 ftk_option (RocksDB "Use RocksDB" FALSE)
 ftk_option (HIPSYCL "Use hipSYCL" FALSE) # experimental
+ftk_option (SYCL "Use SYCL" FALSE) # experimental
 ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # experimental
 ftk_option (VTK "Use VTK" FALSE)
+
+if (FTK_USE_SYCL)
+  set (CMAKE_CXX_STANDARD 17)
+else ()
+  set (CMAKE_CXX_STANDARD 11)
+endif ()
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 find_package (Threads REQUIRED)
 
@@ -69,6 +77,16 @@ if (CGAL_FOUND)
   set (FTK_USE_GMP TRUE)
   set (FTK_USE_MPFR TRUE)
   set (FTK_HAVE_CGAL TRUE)
+endif ()
+
+if (FTK_USE_ADIOS1 STREQUAL AUTO)
+  find_package (ADIOS QUIET)
+elseif (FTK_USE_ADIOS1) 
+  find_package (ADIOS REQUIRED)
+endif ()
+if (ADIOS_FOUND)
+  set (FTK_HAVE_ADIOS1 ON)
+  include_directories (${ADIOS_INCLUDE_DIRS})
 endif ()
 
 if (FTK_USE_ADIOS2 STREQUAL AUTO)
@@ -266,12 +284,28 @@ elseif (FTK_USE_CUDA)
   set (FTK_HAVE_CUDA TRUE)
 endif ()
 
+if (FTK_USE_DECAF STREQUAL AUTO)
+  find_package (DECAF QUIET)
+elseif (FTK_USE_DECAF)
+  find_package (DECAF REQUIRED)
+endif ()
+if (DECAF_FOUND)
+  set (FTK_HAVE_DECAF TRUE)
+endif ()
+
 if (FTK_HAVE_CUDA)
   include (DetectGPU)
 endif ()
+
+if (FTK_USE_SYCL STREQUAL AUTO)
+  # nothing to do
+elseif (FTK_USE_SYCL)
+  find_package (SYCL REQUIRED)
+  set (FTK_HAVE_SYCL TRUE)
+endif ()
  
 if (FTK_USE_HIPSYCL STREQUAL AUTO)
-  # TODO
+  # nothing to do
 elseif (FTK_USE_HIPSYCL)
   find_package (hipsycl REQUIRED)
   enable_language (SYCL)
@@ -391,6 +425,11 @@ if (${FTK_HAVE_ADIOS2})
   message("      Include path:    ${ADIOS2_INCLUDES}")
   message("      Libraries:       ${ADIOS2_LIBRARIES}")
 endif ()
+message("    ADIOS1*      ${FTK_USE_ADIOS1} ${ADIOS_FOUND}")
+if (${FTK_HAVE_ADIOS1})
+  message("      Include path:    ${ADIOS_INCLUDE_DIRS}")
+  message("      Libraries:       ${ADIOS_LIBRARIES}")
+endif ()
 message("    Boost:       ${FTK_USE_Boost} ${Boost_FOUND}")
 if (${FTK_HAVE_BOOST})
   message("      Version:         ${Boost_VERSION_STRING}")
@@ -450,7 +489,15 @@ if (${FTK_HAVE_OPENMP})
   message("      Flags:           ${OpenMP_CXX_FLAGS}")
   message("      Library:         ${OpenMP_CXX_LIBRARY}")
 endif ()
+message("    ParaView:     ${FTK_BUILD_PARAVIEW}")
+if (${FTK_HAVE_PARAVIEW})
+  message("      ParaView path:   ${ParaView_DIR}")
+endif ()
 message("    PNETCDF*:    ${FTK_USE_PNETCDF} ${PNetCDF_FOUND}")
+if (${FTK_HAVE_PNETCDF})
+  message("      Include path:   ${PNETCDF_INCLUDE_DIR}")
+  message("      Library:        ${PNETCDF_LIBRARY}")
+endif ()
 message("    PNG:         ${FTK_USE_PNG} ${PNG_FOUND}")
 if (${FTK_HAVE_PNG})
   message("      Library:   ${PNG_LIBRARY}")
@@ -462,6 +509,7 @@ if (${FTK_HAVE_QT5})
   message("      Qt5Core:    ${Qt5Core_DIR}")
   message("      Qt5Gui:     ${Qt5Gui_DIR}")
 endif ()
+message("    SYCL*:       ${FTK_USE_SYCL} ${FTK_HAVE_SYCL}")
 message("    TBB*:        ${FTK_USE_TBB} ${TBB_FOUND}")
 if (${FTK_HAVE_TBB})
   message("      Include path:   ${TBB_INCLUDE_DIR}")

@@ -22,8 +22,14 @@
 #include <vtkPointData.h>
 #include <vtkXMLImageDataReader.h>
 #include <vtkXMLImageDataWriter.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkXMLUnstructuredGridReader.h>
 #include <vtkDataReader.h>
 #include <vtkNew.h>
+#endif
+
+#if FTK_HAVE_HDF5
+#include <hdf5.h>
 #endif
 
 namespace ftk {
@@ -48,9 +54,10 @@ struct ndarray_base {
   size_t dim(size_t i) const {return dims[i];}
   size_t shape(size_t i) const {return dim(i);}
   const std::vector<size_t> &shape() const {return dims;}
-  size_t nelem() const {return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>());}
+  size_t nelem() const { if (empty()) return 0; else return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>()); }
   
   virtual void reshape(const std::vector<size_t> &dims_) = 0;
+  void reshape(const std::vector<int>& dims);
   void reshape(size_t ndims, const size_t sizes[]);
   void reshape(const ndarray_base& array); //! copy shape from another array
   template <typename T> void reshape(const ndarray<T>& array); //! copy shape from another array
@@ -85,11 +92,19 @@ public: // binary i/o
   void to_binary_file(const std::string& filename);
   virtual void to_binary_file(FILE *fp) = 0;
 
+public: // h5 i/o
+  bool read_h5(const std::string& filename, const std::string& name);
+#if FTK_HAVE_HDF5
+  bool read_h5(hid_t fid, const std::string& name);
+  virtual bool read_h5_did(hid_t did) = 0;
+#endif
+
 public: // vti i/o
   void read_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
   virtual void read_vtk_image_data_file_sequence(const std::string& pattern) = 0;
 #if FTK_HAVE_VTK
   virtual void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string()) = 0;
+  virtual void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> d, const std::string array_name=std::string()) = 0;
 #endif
 
 protected:
@@ -102,6 +117,14 @@ protected:
 inline lattice ndarray_base::get_lattice() const {
   std::vector<size_t> st(nd(), 0), sz(dims);
   return lattice(st, sz);
+}
+
+inline void ndarray_base::reshape(const std::vector<int>& dims)
+{
+  std::vector<size_t> mydims;
+  for (int i = 0; i < dims.size(); i ++)
+    mydims.push_back(dims[i]);
+  reshape(mydims);
 }
 
 inline void ndarray_base::reshape(size_t ndims, const size_t dims[])
@@ -152,6 +175,33 @@ inline void ndarray_base::read_vtk_image_data_file(const std::string& filename, 
   fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
+
+inline bool ndarray_base::read_h5(const std::string& filename, const std::string& name)
+{
+#if FTK_HAVE_HDF5
+  auto fid = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  if (fid < 0) return false; else {
+    bool succ = read_h5(fid, name);
+    H5Fclose(fid);
+    return succ;
+  }
+#else 
+  fatal(FTK_ERR_NOT_BUILT_WITH_HDF5);
+  return false;
+#endif
+}
+
+#if FTK_HAVE_HDF5
+inline bool ndarray_base::read_h5(hid_t fid, const std::string& name)
+{
+  auto did = H5Dopen2(fid, name.c_str(), H5P_DEFAULT);
+  if (did < 0) return false; else {
+    bool succ = read_h5_did(did);
+    H5Dclose(did);
+    return succ;
+  }
+}
+#endif
 
 } // namespace ftk
 

@@ -61,7 +61,7 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   critical_point_tracker_3d_regular(diy::mpi::communicator comm) : critical_point_tracker_regular(comm, 3), tracker(comm) {}
   virtual ~critical_point_tracker_3d_regular() {}
   
-  int cpdims() const { return 3; }
+  // int cpdims() const { return 3; }
 
   void finalize();
 
@@ -78,11 +78,13 @@ protected:
   void trace_intersections();
   void trace_connected_components();
 
-  virtual void simplex_positions(const std::vector<std::vector<int>>& vertices, double X[][4]) const;
+  virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][4]) const;
   virtual void simplex_vectors(const std::vector<std::vector<int>>& vertices, double v[4][3]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[4]) const;
   virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
       double Js[4][3][3]) const;
+  
+  void put_critical_points(const std::vector<feature_point_t>&);
 };
 
 
@@ -97,10 +99,10 @@ inline void critical_point_tracker_3d_regular::finalize()
   if (enable_streaming_trajectories) {
     // already done
   } else {
-    diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
+    // diy::mpi::gather(comm, discrete_critical_points, discrete_critical_points, get_root_proc());
 
-    if (comm.rank() == 0) {
-      fprintf(stderr, "finalizing...\n");
+    if (1) { // comm.rank() == 0) {
+      // fprintf(stderr, "finalizing...\n");
       // trace_intersections();
       // trace_connected_components();
       traced_critical_points.add( trace_critical_points_offline<element_t>(discrete_critical_points, 
@@ -337,12 +339,44 @@ inline void critical_point_tracker_3d_regular::trace_connected_components()
   }
 }
 
-inline void critical_point_tracker_3d_regular::simplex_positions(
+inline void critical_point_tracker_3d_regular::simplex_coordinates(
     const std::vector<std::vector<int>>& vertices, double X[][4]) const
 {
+#if 0 // legacy
   for (int i = 0; i < vertices.size(); i ++)
     for (int j = 0; j < 4; j ++)
       X[i][j] = vertices[i][j];
+#endif
+
+  if (mode_phys_coords == REGULAR_COORDS_SIMPLE) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = vertices[i][0]; // x
+      X[i][1] = vertices[i][1]; // y
+      X[i][2] = vertices[i][2]; // z
+      X[i][3] = vertices[i][3]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_BOUNDS) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = (vertices[i][0] - bounds_coords[0]) / (bounds_coords[1] - bounds_coords[0]); // x
+      X[i][1] = (vertices[i][1] - bounds_coords[2]) / (bounds_coords[3] - bounds_coords[2]); // y
+      X[i][2] = (vertices[i][2] - bounds_coords[4]) / (bounds_coords[5] - bounds_coords[4]); // z
+      X[i][3] = vertices[i][3]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_RECTILINEAR) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = rectilinear_coords[0][ vertices[i][0] ]; // x
+      X[i][1] = rectilinear_coords[1][ vertices[i][1] ]; // y
+      X[i][2] = rectilinear_coords[2][ vertices[i][2] ]; // z
+      X[i][3] = vertices[i][3]; // t
+    }
+  } else if (mode_phys_coords == REGULAR_COORDS_EXPLICIT) {
+    for (int i = 0; i < vertices.size(); i ++) {
+      X[i][0] = explicit_coords(0, vertices[i][0], vertices[i][1]); // x
+      X[i][1] = explicit_coords(1, vertices[i][0], vertices[i][1]); // y
+      X[i][2] = explicit_coords(2, vertices[i][0], vertices[i][1]);
+      X[i][3] = vertices[i][2]; // t
+    }
+  }
 }
 
 inline void critical_point_tracker_3d_regular::simplex_vectors(
@@ -436,7 +470,7 @@ inline bool critical_point_tracker_3d_regular::check_simplex(
   clamp_barycentric<4>(mu);
 
   double X[4][4], x[4]; // position
-  simplex_positions(vertices, X);
+  simplex_coordinates(vertices, X);
   lerp_s3v4(X, mu, x);
   cp.x[0] = x[0];
   cp.x[1] = x[1];
@@ -478,6 +512,14 @@ inline bool critical_point_tracker_3d_regular::check_simplex(
   else return false;
 #endif
 } 
+
+inline void critical_point_tracker_3d_regular::put_critical_points(const std::vector<feature_point_t>& data) 
+{
+  for (const auto& cp : data) {
+    element_t e(m, 3, cp.tag);
+    discrete_critical_points[e] = cp;
+  }
+}
 
 }
 

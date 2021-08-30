@@ -9,6 +9,8 @@
   }\
 }
 
+#ifdef __CUDACC__
+
 __device__ inline int getGlobalIdx_1D_1D()
 {
 	return blockIdx.x *blockDim.x + threadIdx.x;
@@ -81,5 +83,7 @@ __device__ inline int getGlobalIdx_3D_3D()
 			  + threadIdx.x;
 	return threadId;
 }
+
+#endif // cudacc
 
 #endif

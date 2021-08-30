@@ -28,12 +28,13 @@
 #include <vtkUnstructuredGridReader.h>
 #include <vtkPointData.h>
 #include <vtkPoints2D.h>
+#include <vtkCellTypes.h>
 #endif
 
 namespace ftk {
 
 template <typename I=int, typename F=double>
-struct simplicial_unstructured_mesh : public object { // 2D triangular mesh
+struct simplicial_unstructured_mesh : public object { 
   simplicial_unstructured_mesh() {}
 
   // dimensionality of the mesh
@@ -70,7 +71,7 @@ void simplicial_unstructured_mesh<I, F>::from_legacy_vtk_file(const std::string&
   reader->Update();
   from_vtu(reader->GetOutput());
 #else
-  fatal("FTK not compiled with VTK");
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -83,7 +84,7 @@ void simplicial_unstructured_mesh<I, F>::from_vtk_unstructured_grid_file(const s
   reader->Update();
   from_vtu(reader->GetOutput());
 #else
-  fatal("FTK not compiled with VTK");
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -96,7 +97,7 @@ void simplicial_unstructured_mesh<I, F>::to_vtk_unstructured_grid_file(const std
   writer->SetInputData( to_vtu() );
   writer->Write();
 #else
-  fatal("FTK not compiled with VTK");
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -112,7 +113,7 @@ void simplicial_unstructured_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_fi
   writer->SetInputData( scalar_to_vtk_unstructured_grid_data(varname, scalar) );
   writer->Write();
 #else
-  fatal("FTK not compiled with VTK");
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -128,7 +129,7 @@ void simplicial_unstructured_mesh<I, F>::vector_to_vtk_unstructured_grid_data_fi
   writer->SetInputData( vector_to_vtk_unstructured_grid_data(varname, vector) );
   writer->Write();
 #else
-  fatal("FTK not compiled with VTK");
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 

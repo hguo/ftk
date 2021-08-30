@@ -24,7 +24,7 @@ public: // cp io
   const std::map<element_t, feature_point_t>& get_discrete_critical_points() const {return discrete_critical_points;}
 
   std::vector<feature_point_t> get_critical_points() const;
-  void put_critical_points(const std::vector<feature_point_t>&);
+  // void put_critical_points(const std::vector<feature_point_t>&);
 };
 
 /////
@@ -35,14 +35,6 @@ inline std::vector<feature_point_t> critical_point_tracker_regular::get_critical
   for (const auto &kv : discrete_critical_points) 
     results.push_back(kv.second);
   return results;
-}
-
-inline void critical_point_tracker_regular::put_critical_points(const std::vector<feature_point_t>& data) 
-{
-  for (const auto& cp : data) {
-    element_t e(m, cpdims(), cp.tag);
-    discrete_critical_points[e] = cp;
-  }
 }
 
 }

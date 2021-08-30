@@ -46,8 +46,11 @@ struct filter : public object {
 
   void set_device_id(int d) {set_device_ids(std::vector<int>({d}));}
   void set_device_ids(const std::vector<int>& ids) {device_ids = ids;}
+  void set_device_ids(const std::string &ids);
   const std::vector<int>& get_device_ids() const {return device_ids;}
   int get_number_devices() const {return device_ids.size();}
+
+  void set_device_buffer_size(int mb) { device_buffer_size_in_mb = mb; }
 
 protected:
   int xl = FTK_XL_NONE, thread_backend = FTK_THREAD_PTHREAD;
@@ -55,6 +58,7 @@ protected:
   bool enable_set_affinity = false; // true;
 
   std::vector<int> device_ids;
+  int device_buffer_size_in_mb = 512;
 
   std::mutex mutex;
 };
@@ -72,6 +76,19 @@ inline void filter::use_accelerator(const std::string& acc)
   if (acc == "cuda") use_accelerator(FTK_XL_CUDA);
   else if (acc == "sycl") use_accelerator(FTK_XL_SYCL);
   else use_accelerator(FTK_XL_NONE);
+}
+
+inline void filter::set_device_ids(const std::string& ids)
+{
+  if (ids.empty()) return;
+
+  auto strs = split(ids, ",");
+  std::vector<int> myids;
+  for (auto str : strs)
+    myids.push_back( std::stoi(str) );
+  // for (auto i : myids) 
+  //   fprintf(stderr, "using device %d\n", i);
+  set_device_ids(myids);
 }
 
 }
