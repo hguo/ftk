@@ -13,6 +13,7 @@ variables:
     - make VERBOSE=1
 
   after_script: 
+    - cd build
     - ctest -VV
 
   tags:
