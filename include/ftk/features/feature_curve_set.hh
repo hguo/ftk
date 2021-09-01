@@ -10,6 +10,7 @@
 #include <vtkVertex.h>
 #include <vtkSmartPointer.h>
 #include <vtkCellArray.h>
+#include <vtkCellArrayIterator.h>
 #include <vtkPolyLine.h>
 #include <vtkPolyData.h>
 #endif
@@ -54,8 +55,8 @@ public: // IO
   void write_vtk(const std::string& filename) const;
 
 #if FTK_HAVE_VTK
-  void from_vtp(vtkSmartPointer<vtkPolyData>);
-  vtkSmartPointer<vtkPolyData> to_vtp(const std::vector<std::string> &scalar_components) const;
+  void from_vtp(vtkSmartPointer<vtkPolyData>, const std::vector<std::string> scalar_components = {});
+  vtkSmartPointer<vtkPolyData> to_vtp(const std::vector<std::string> scalar_components = {}) const;
 #endif
 
 protected:
@@ -222,26 +223,63 @@ inline void feature_curve_set_t::write_vtk(const std::string& filename) const
 }
 
 #if FTK_HAVE_VTK
-inline void feature_curve_set_t::from_vtp(vtkSmartPointer<vtkPolyData> poly) 
+inline void feature_curve_set_t::from_vtp(vtkSmartPointer<vtkPolyData> poly, const std::vector<std::string> scalar_components)
 {
+  clear();
+  
   vtkSmartPointer<vtkPoints> points = poly->GetPoints();
   vtkSmartPointer<vtkCellArray> lines = poly->GetLines();
   vtkSmartPointer<vtkCellArray> verts = poly->GetVerts();
 
-  clear();
+  vtkSmartPointer<vtkPointData> pd = poly->GetPointData();
 
-#if 0
+  // TODO: additional scalars
+  vtkSmartPointer<vtkUnsignedIntArray> arr_type = vtkUnsignedIntArray::SafeDownCast( pd->GetAbstractArray("type") );
+  vtkSmartPointer<vtkUnsignedIntArray> arr_id = vtkUnsignedIntArray::SafeDownCast( pd->GetAbstractArray("id") );
+  vtkSmartPointer<vtkUnsignedIntArray> arr_tag = vtkUnsignedIntArray::SafeDownCast( pd->GetAbstractArray("tag") );
+  vtkSmartPointer<vtkFloatArray> arr_vel = vtkFloatArray::SafeDownCast( pd->GetAbstractArray("velocity") );
+  vtkSmartPointer<vtkFloatArray> arr_time = vtkFloatArray::SafeDownCast( pd->GetAbstractArray("time") );
+  vtkSmartPointer<vtkFloatArray> arr_cond = vtkFloatArray::SafeDownCast( pd->GetAbstractArray("cond") );
+
   auto iter = vtk::TakeSmartPointer(lines->NewIterator());
   for (iter->GoToFirstCell(); !iter->IsDoneWithTraversal(); iter->GoToNextCell())
   {
-    auto idlist = iter->GetCurrentCell();
     feature_curve_t curve;
-    // WIP
+    const vtkIdType *idlist;
+    vtkIdType size;
+    iter->GetCurrentCell(size, idlist);
+    if (size == 0) continue;
+
+    for (auto i = 0; i < size; i ++) {
+      feature_point_t p;
+
+      const double *x = points->GetPoint(i);
+      p.x[0] = x[0];
+      p.x[1] = x[1];
+      p.x[2] = x[2];
+      
+      p.t = arr_time->GetValue(i);
+      p.type = arr_type->GetValue(i);
+      p.id = arr_id->GetValue(i);
+      p.tag = arr_tag->GetValue(i);
+      p.cond = arr_cond->GetValue(i);
+
+      const double *v = arr_vel->GetTuple(i);
+      p.v[0] = v[0];
+      p.v[1] = v[1];
+      p.v[2] = v[2];
+    
+      curve.push_back(p);
+    }
+
+    if (curve.front().tag == curve.back().tag)
+      curve.loop = true;
+
+    this->insert({curve[0].id, curve});
   }
-#endif
 }
 
-inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vector<std::string> &scalar_components) const
+inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vector<std::string> scalar_components) const
 {
   vtkSmartPointer<vtkPolyData> polyData = vtkPolyData::New();
   vtkSmartPointer<vtkPoints> points = vtkPoints::New();
