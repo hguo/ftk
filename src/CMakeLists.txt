@@ -10,6 +10,15 @@ endif ()
 add_executable (ftk cli/ftk.cpp ${ftk_sycl_sources})
 target_link_libraries (ftk PRIVATE libftk)
 
+if (FTK_HAVE_DECAF)
+  add_executable (ftk-decaf-mpas cli/ftk-decaf-mpas.cpp)
+  target_link_libraries (ftk-decaf-mpas PRIVATE libftk 
+    ${MANALA_LIBRARY}
+    ${DECAF_CXX_DATA_MODEL_LIBRARY}
+    ${DECAF_CXX_TRANSPORT_MPI_LIBRARY}
+    ${DECAF_CXX_RUNTIME_LIBRARY})
+endif ()
+
 if (FTK_HAVE_HIPSYCL)
   add_sycl_to_target(TARGET ftk SOURCES ${ftk_sycl_sources})
 endif ()
@@ -90,10 +99,10 @@ if (FTK_HAVE_TBB)
   target_link_libraries (libftk ${TBB_LIBRARIES})
 endif ()
 
-if (FTK_HAVE_MPI)
-  add_subdirectory (bil)
-  target_link_libraries (libftk bil ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
-endif ()
+#if (FTK_HAVE_MPI)
+#  add_subdirectory (bil)
+#  target_link_libraries (libftk bil ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+#endif ()
 
 if (FTK_HAVE_PNG)
   target_link_libraries (libftk ${PNG_LIBRARIES})

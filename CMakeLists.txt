@@ -291,6 +291,7 @@ elseif (FTK_USE_DECAF)
 endif ()
 if (DECAF_FOUND)
   set (FTK_HAVE_DECAF TRUE)
+  include_directories (${DECAF_CXX_INCLUDE_DIR})
 endif ()
 
 if (FTK_HAVE_CUDA)
