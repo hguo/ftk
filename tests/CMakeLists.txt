@@ -125,6 +125,18 @@ add_executable (test_critical_point_tracking_double_gyre test_critical_point_tra
 target_link_libraries (test_critical_point_tracking_double_gyre libftk)
 catch_discover_tests (test_critical_point_tracking_double_gyre)
 
+# in situ adios2 test
+if (FTK_HAVE_ADIOS2)
+  add_executable (heat2d
+    heat2d/HeatTransfer.cpp
+    heat2d/IO_adios2.cpp
+    heat2d/Settings.cpp
+    heat2d/heatSimulation.cpp)
+  target_link_libraries (heat2d libftk)
+  add_test (NAME test_adios2_heat2d_insitu
+    COMMAND ${MPIEXEC} -n 12 $<TARGET_FILE:heat2d> sim.bp 4 3 5 10 200 1 : -n 2 $<TARGET_FILE:ftk> --adios-config heat2d_adios2.xml --adios-name SimulationOutput -f cp --input sim.bp --var T --output-type traced --output heat.txt --stream)
+endif ()
+
 function (add_mpi_test target maxp args)
   add_executable (${target} ${target}.cpp)
   target_link_libraries (${target} libftk)

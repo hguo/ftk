@@ -433,6 +433,9 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
               // OK, input are adios streams
               filenames.push_back( j["filenames"] ); // one single "filename"
               j["format"] = "bp4"; // the input format must be adios2/bp4
+              
+              const std::string filename0 = j["filenames"];
+              j["filenames"] = { filename0 };
             } else {
               fatal("unable to find matching filename(s).");
             }
@@ -448,6 +451,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             j["n_timesteps"] = j["filenames"].size();
 #endif
         }
+        // std::cerr << j << std::endl;
         const std::string filename0 = j["filenames"][0];
 
         if (!j.contains("format")) { // probing file format

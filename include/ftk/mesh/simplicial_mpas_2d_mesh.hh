@@ -12,7 +12,7 @@ struct simplicial_mpas_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
       const ndarray<F>& coords, 
       const ndarray<I>& triangles) : simplicial_unstructured_2d_mesh<I, F>(coords, triangles) {}
 
-  int ncoords() const { return 3; }
+  // int ncoords() const { return 3; }
 
   static std::shared_ptr<simplicial_mpas_2d_mesh<I, F>> from_file(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
 };
