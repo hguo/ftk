@@ -2,14 +2,14 @@
 #define __THREADINDEX_CUH
 
 #define CUDA_SAFE_CALL(call) {\
-  cudaError_t err = call;\
-  if (cudaSuccess != err) {\
-    fprintf(stderr, "[CUDA Error] %s, in file '%s', line%i.\n", cudaGetErrorString(err), __FILE__, __LINE__); \
+  hipError_t err = call;\
+  if (hipSuccess != err) {\
+    fprintf(stderr, "[CUDA Error] %s, in file '%s', line%i.\n", hipGetErrorString(err), __FILE__, __LINE__); \
     exit(EXIT_FAILURE); \
   }\
 }
 
-// #ifdef __CUDACC__
+#ifdef __HIPCC__
 
 __device__ inline int getGlobalIdx_1D_1D()
 {
@@ -84,6 +84,6 @@ __device__ inline int getGlobalIdx_3D_3D()
 	return threadId;
 }
 
-// #endif // cudacc
+#endif // cudacc
 
 #endif

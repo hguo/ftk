@@ -25,14 +25,12 @@ set (ftk_sources
   io/tdgl/tdgl.cpp
   io/tdgl/GLGPU_IO_Helper.cpp)
 
-if (FTK_HAVE_CUDA)
-  set (ftk_cuda_sources
-    filters/critical_point_tracer_3d_regular.cu
-    filters/tdgl_vortex_tracker_3d_regular.cu
-    filters/critical_point_tracer_2d_regular.cu
-    filters/contour_tracker_3d_regular.cu
-    filters/xgc_blob_filament_tracker.cu)
-endif ()
+set (ftk_cuda_sources
+  filters/critical_point_tracer_3d_regular.cu.cpp
+  filters/tdgl_vortex_tracker_3d_regular.cu.cpp
+  filters/critical_point_tracer_2d_regular.cu.cpp
+  filters/contour_tracker_3d_regular.cu.cpp
+  filters/xgc_blob_filament_tracker.cu.cpp)
 
 add_library (libftk SHARED ${ftk_sources} ${ftk_cuda_sources})
 target_link_libraries (libftk ${CMAKE_THREAD_LIBS_INIT})

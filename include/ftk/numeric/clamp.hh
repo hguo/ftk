@@ -2,6 +2,7 @@
 #define _FTK_CLAMP_HH
 
 #include <ftk/config.hh>
+#include "hip/hip_runtime.h"
 
 namespace ftk {
 

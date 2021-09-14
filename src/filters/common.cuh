@@ -1,8 +1,8 @@
 #ifndef _FTK_COMMON_CUH
 #define _FTK_COMMON_CUH
 
-#include "threadIdx.cuh"
-#include "utils.cuh"
+#include "threadIdx.cuh.hh"
+#include "utils.cuh.hh"
 #include <ftk/mesh/lattice.hh>
 #include <ftk/features/feature_point_lite.hh>
 
