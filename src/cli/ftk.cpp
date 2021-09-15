@@ -818,11 +818,10 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     j_input = args_to_input_stream_json(results);
     stream->set_input_source_json(j_input);
   }
-  
   if (results.count("xgc-smoothing-kernel-size") || results.count("xgc-smoothing-kernel-file"))
     xgc_use_smoothing_kernel = true;
 
-  if (ttype == TRACKER_CRITICAL_POINT || TRACKER_MPAS_O_CRITICAL_POINT)
+  if (ttype == TRACKER_CRITICAL_POINT || ttype == TRACKER_MPAS_O_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);
   else if (ttype == TRACKER_CRITICAL_LINE)
     initialize_critical_line_tracker(comm);
