@@ -5,16 +5,6 @@
 #include <ftk/ndarray/ndarray_base.hh>
 #include <ftk/numeric/clamp.hh>
 
-#if FTK_HAVE_ADIOS2
-#include <adios2.h>
-#endif
-
-#if FTK_HAVE_ADIOS1
-#include <adios.h>
-#include <adios_read.h>
-#include <adios_error.h>
-#endif
-
 #if FTK_HAVE_CUDA
 // #include <cuda.h>
 // #include <cuda_runtime.h>
@@ -251,7 +241,7 @@ public: // i/o for parallel-netcdf
 
 public: // i/o for adios2
   static ndarray<T> from_bp(const std::string& filename, const std::string& name, diy::mpi::communicator comm = MPI_COMM_WORLD);
-  void read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm = MPI_COMM_WORLD);
+  void read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm = MPI_COMM_WORLD) { ndarray_base::read_bp(filename, varname, comm); }
 
 #if FTK_HAVE_ADIOS2
   void read_bp(
@@ -1057,25 +1047,6 @@ template <> inline int ndarray<float>::nc_datatype() { return NC_FLOAT; }
 template <> inline int ndarray<int>::nc_datatype() { return NC_INT; }
 #endif
 
-template <typename T>
-inline void ndarray<T>::read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
-{
-#if FTK_HAVE_ADIOS2
-  adios2::ADIOS adios(comm);
-  adios2::IO io = adios.DeclareIO("BPReader");
-  adios2::Engine reader = io.Open(filename, adios2::Mode::Read); // , MPI_COMM_SELF);
-  
-  read_bp(io, reader, varname);
-  reader.Close();
-  
-  // empty array; try legacy reader
-  if (empty()) read_bp_legacy(filename, varname, comm);
-#else
-  warn(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
-  read_bp_legacy(filename, varname, comm);
-#endif
-}
-
 #if FTK_HAVE_ADIOS2
 template <typename T>
 inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::Variable<T>& var)
@@ -1109,13 +1080,6 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::
 }
 
 template <typename T>
-inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
-{
-  auto var = io.template InquireVariable<T>(varname);
-  read_bp(io, reader, var);
-}
-
-template <typename T>
 inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname, int step_start)
 {
   auto var = io.template InquireVariable<T>(varname);
@@ -1125,6 +1089,13 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const st
     // var.SetSelection({{0, 0}, {var.Shape()[0], var.Shape()[1]}});
     reader.Get<T>(var, p);
   }
+}
+
+template <typename T>
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
+{
+  auto var = io.template InquireVariable<T>(varname);
+  read_bp(io, reader, var);
 }
 #endif
 

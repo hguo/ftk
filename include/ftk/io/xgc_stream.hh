@@ -109,14 +109,16 @@ inline void xgc_stream::probe_nphi_iphi()
 } // namespace ftk
 
 #include "xgc_stream_h5.hpp"
+#include "xgc_stream_adios2.hpp"
 
 namespace ftk {
 
 std::shared_ptr<xgc_stream> xgc_stream::new_xgc_stream(const std::string& path, diy::mpi::communicator comm)
 {
   std::shared_ptr<xgc_stream> s;
-  if (file_exists( path + "/xgc.mesh.h5" )) s.reset(new xgc_stream_h5(path, comm)); 
-  // TODO: adios
+  if (file_exists( path + "/xgc.mesh.h5" )) s.reset(new xgc_stream_h5(path, comm));
+  else if (is_directory( path + "/xgc.mesh.bp" )) s.reset(new xgc_stream_adios2(path, comm));
+  else assert(false);
 
   return s;
 }

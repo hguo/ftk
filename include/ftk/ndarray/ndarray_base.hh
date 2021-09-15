@@ -32,6 +32,16 @@
 #include <hdf5.h>
 #endif
 
+#if FTK_HAVE_ADIOS2
+#include <adios2.h>
+#endif
+
+#if FTK_HAVE_ADIOS1
+#include <adios.h>
+#include <adios_read.h>
+#include <adios_error.h>
+#endif
+
 namespace ftk {
 
 enum {
@@ -98,6 +108,25 @@ public: // h5 i/o
   bool read_h5(hid_t fid, const std::string& name);
   virtual bool read_h5_did(hid_t did) = 0;
 #endif
+
+public: // adios2 i/o
+  virtual void read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm = MPI_COMM_WORLD) = 0;
+
+#if FTK_HAVE_ADIOS2
+  virtual void read_bp(
+      adios2::IO &io, 
+      adios2::Engine& reader, 
+      const std::string &varname) = 0; // read all
+
+  virtual void read_bp(
+      adios2::IO &io, 
+      adios2::Engine& reader, 
+      const std::string &varname, 
+      int step_start) = 0;
+#endif
+
+public: // adios1 io
+  virtual bool read_bp_legacy(const std::string& filename, const std::string& varname, diy::mpi::communicator comm) = 0;
 
 public: // vti i/o
   void read_vtk_image_data_file(const std::string& filename, const std::string array_name=std::string());
@@ -202,6 +231,24 @@ inline bool ndarray_base::read_h5(hid_t fid, const std::string& name)
   }
 }
 #endif
+
+inline void ndarray_base::read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
+{
+#if FTK_HAVE_ADIOS2
+  adios2::ADIOS adios(comm);
+  adios2::IO io = adios.DeclareIO("BPReader");
+  adios2::Engine reader = io.Open(filename, adios2::Mode::Read); // , MPI_COMM_SELF);
+  
+  read_bp(io, reader, varname);
+  reader.Close();
+  
+  // empty array; try legacy reader
+  if (empty()) read_bp_legacy(filename, varname, comm); 
+#else
+  warn(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
+  read_bp_legacy(filename, varname, comm);
+#endif
+}
 
 } // namespace ftk
 
