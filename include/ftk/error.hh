@@ -46,7 +46,8 @@ enum {
   FTK_ERR_VTK_VARIABLE_NOT_FOUND = 6000,
   FTK_ERR_VTK_UNSUPPORTED_OUTPUT_FORMAT,
   FTK_ERR_NETCDF_MISSING_VARIABLE = 6500,
-  FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND = 7000,
+  FTK_ERR_ADIOS2 = 7000,
+  FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND,
   FTK_ERR_MESH_UNSUPPORTED_FORMAT = 8000,
   FTK_ERR_MESH_NONSIMPLICIAL, 
   FTK_ERR_MESH_EMPTY,
@@ -64,6 +65,7 @@ inline std::string err2str(int e)
   case FTK_ERR_FILE_FORMAT_AMIRA: return "file format error with AmiraMesh data";
   case FTK_ERR_FILE_UNRECOGNIZED_EXTENSION: return "unrecognized file extension";
   case FTK_ERR_NOT_BUILT_WITH_ADIOS2: return "FTK not compiled with ADIOS2";
+  case FTK_ERR_NOT_BUILT_WITH_ADIOS1: return "FTK not compiled with ADIOS1";
   case FTK_ERR_NOT_BUILT_WITH_BOOST: return "FTK not compiled with Boost";
   case FTK_ERR_NOT_BUILT_WITH_CGAL: return "FTK not compiled with CGAL";
   case FTK_ERR_NOT_BUILT_WITH_CUDA: return "FTK not compiled with CUDA";
@@ -93,6 +95,7 @@ inline std::string err2str(int e)
   case FTK_ERR_VTK_VARIABLE_NOT_FOUND: return "VTK variable not found";
   case FTK_ERR_VTK_UNSUPPORTED_OUTPUT_FORMAT: return "unsupported vtk output format";
   case FTK_ERR_NETCDF_MISSING_VARIABLE: return "missing netcdf variable name(s)";
+  case FTK_ERR_ADIOS2: return "adios2 error";
   case FTK_ERR_ADIOS2_VARIABLE_NOT_FOUND: return "adios2 variable not found";
   case FTK_ERR_MESH_UNSUPPORTED_FORMAT: return "unsupported mesh format";
   case FTK_ERR_MESH_NONSIMPLICIAL: return "unsupported nonsimplicial mesh";

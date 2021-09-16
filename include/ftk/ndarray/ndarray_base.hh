@@ -243,7 +243,15 @@ inline void ndarray_base::read_bp(const std::string& filename, const std::string
   reader.Close();
   
   // empty array; try legacy reader
-  if (empty()) read_bp_legacy(filename, varname, comm); 
+  if (empty()) {
+#if FTK_HAVE_ADIOS1
+    read_bp_legacy(filename, varname, comm);
+#else
+    throw FTK_ERR_ADIOS2;
+#endif
+  }
+  
+  // if (empty()) read_bp_legacy(filename, varname, comm); 
 #else
   warn(FTK_ERR_NOT_BUILT_WITH_ADIOS2);
   read_bp_legacy(filename, varname, comm);

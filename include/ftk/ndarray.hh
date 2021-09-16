@@ -1056,8 +1056,6 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::
     // std::cerr << var.Shape() << std::endl;
 
     std::vector<size_t> shape(var.Shape());
-    if (shape.empty()) return;
-    // std::cerr << shape << std::endl;
 
     if (shape.size()) { // array type
       std::vector<size_t> zeros(shape.size(), 0);

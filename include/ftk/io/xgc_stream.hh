@@ -35,7 +35,10 @@ struct xgc_stream : public object {
   std::string oneddiag_filename() const { return path + "/xgc.oneddiag" + postfix(); }
   std::string bfield_filename() const { return path + "/xgc.bfield" + postfix(); }
   std::string units_filename() const { return path + "/units.m"; }
-  std::string filename(int t) const { return series_filename(path + "/xgc.3d.%05d" + postfix(), t); }
+  std::string filename(int t) const { 
+    if (filenames.empty()) return series_filename(path + "/xgc.3d.%05d" + postfix(), std::max(t, 1));
+    else return filenames[t];
+  }
 
   std::shared_ptr<simplicial_xgc_2d_mesh<>> get_m2() { return m2; }
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_m3() { return m3; }
@@ -43,6 +46,8 @@ struct xgc_stream : public object {
 
 protected:
   const std::string path;
+  std::vector<std::string> filenames;
+
   std::string smoothing_kernel_filename, interpolant_filename;
 
   int nphi = 1, iphi = 1, vphi = 1;
@@ -59,6 +64,8 @@ protected:
 /////
 inline void xgc_stream::initialize()
 {
+  filenames = glob(path + "/xgc.3d.*");
+
   m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(mesh_filename(), this->comm);
   m2->initialize_point_locator();
 
@@ -97,7 +104,7 @@ inline void xgc_stream::initialize()
 
 inline void xgc_stream::probe_nphi_iphi()
 {
-  const auto filename0 = filename(1);
+  const auto filename0 = filename(0);
 
   const auto array_nphi = ndarray<int>::from_file(filename0, "nphi");
   const auto array_iphi = ndarray<int>::from_file(filename0, "iphi");
