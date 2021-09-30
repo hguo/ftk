@@ -2,6 +2,7 @@
 #define _FTK_POINT_LOCATOR_2D_QUAD_HH
 
 #include <ftk/mesh/point_locator_2d.hh>
+#include <stack>
 
 namespace ftk {
 
