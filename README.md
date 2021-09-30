@@ -22,7 +22,7 @@ FTK provides one single executable `ftk`.  See [this page](docs/cli.md) for mor 
 
 ### Building ParaView plugins
 
-FTK provides ParaView plugins to allow users track critical points (maxima, minima, and saddles) in scalar field data.  In order to build the plugins, we recommend to build and use 
+FTK provides ParaView plugins to allow users track critical points (maxima, minima, and saddles) in scalar field data.  In order to build the plugins, we recommend to build and use (ParaView version 5.8.0 and higher required)
 
 ```bash
 $ git clone https://github.com/hguo/ftk $FTK_SOURCE_DIR
