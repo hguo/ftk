@@ -21,8 +21,9 @@ inline bool xgc_stream_adios2::advance_timestep()
     return false;
 
   const auto current_filename = filename( current_timestep );
+  fprintf(stderr, "advancing.., %d, %d, %d, filename=%s\n", start_timestep, current_timestep, ntimesteps, current_filename.c_str());
 
-  if (file_exists( current_filename )) {
+  if (is_directory( current_filename )) {
     std::shared_ptr<ndarray_base> density( new ndarray<double> );
     density->read_bp(current_filename, "dpot");
     g->set("density", density);

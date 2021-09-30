@@ -90,13 +90,17 @@ inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group>
 {
   field_data_snapshot_t s;
   
-  auto density = g->get<double>("density").get_transpose();
+  auto density = g->get<double>("density"); // .get_transpose();
+  if (density.dim(0) < density.dim(1))
+    density.transpose();
   m30->smooth_scalar_gradient_jacobian(density, s.scalar, s.vector, s.jacobian);
   
   if (g->has("Er")) {
     // auto Er = 
     // s.Er = m30->smooth_scalar(Er);
-    s.Er = g->get<double>("Er").get_transpose();
+    s.Er = g->get<double>("Er"); // .get_transpose();
+    if (s.Er.dim(0) < s.Er.dim(1))
+      s.Er.transpose();
   }
   
   field_data_snapshots.emplace_back(s);

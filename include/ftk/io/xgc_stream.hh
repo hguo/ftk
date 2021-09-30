@@ -36,6 +36,7 @@ struct xgc_stream : public object {
   std::string bfield_filename() const { return path + "/xgc.bfield" + postfix(); }
   std::string units_filename() const { return path + "/units.m"; }
   std::string filename(int t) const { 
+    // fprintf(stderr, "%zu\n", filenames.size());
     if (filenames.empty()) return series_filename(path + "/xgc.3d.%05d" + postfix(), std::max(t, 1));
     else return filenames[t];
   }
@@ -65,6 +66,7 @@ protected:
 inline void xgc_stream::initialize()
 {
   filenames = glob(path + "/xgc.3d.*");
+  ntimesteps = filenames.size();
 
   m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(mesh_filename(), this->comm);
   m2->initialize_point_locator();

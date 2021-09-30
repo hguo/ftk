@@ -159,6 +159,7 @@ inline void xgc_blob_filament_tracker::update_vector_field_scaling_factor(int mi
   for (const auto &s : field_data_snapshots) {
     // vector_field_resolution = std::min(vector_field_resolution, s.vector.resolution());
     vector_field_maxabs = std::max(vector_field_maxabs, s.vector.maxabs());
+    // std::cerr << s.vector << std::endl;
   }
 
   vector_field_scaling_factor = std::exp2(-std::ceil(std::log2(vector_field_maxabs)) + 60); // 20 bits
@@ -591,6 +592,8 @@ void xgc_blob_filament_tracker::simplex_values(
 
     // if (m3->is_poloidal(p[k])) fprintf(stderr, "non-poloidal virtual plane\n");
     m3->get_coords_rzp(v3, rzpt[k]);
+    // rzpt[k][3] = t[k];
+    rzpt[k][2] = rzpt[k][3]; 
     rzpt[k][3] = t[k];
 
     const int iv = (t[k] == current_timestep) ? 0 : 1; 
