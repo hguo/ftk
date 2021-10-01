@@ -4,6 +4,7 @@
 #include <ftk/config.hh>
 #include <ftk/algorithms/bfs.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
+#include <ftk/numeric/gradient.hh>
 
 namespace ftk {
 
@@ -137,6 +138,7 @@ protected: // mesh connectivities
   ndarray<F> vertex_coords; // 2 * n_vertices
   std::vector<std::set<I>> vertex_side_of;
   std::vector<std::set<I>> vertex_edge_vertex;
+  std::vector<std::set<I>> vertex_triangles;
 
   ndarray<I> edges; // 2 * n_edges
   ndarray<I> edges_side_of; // 2 * n_edges
@@ -263,6 +265,8 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v_[3], I &i) c
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::build_triangles()
 {
+  vertex_triangles.resize(n(0));
+
   for (auto i = 0; i < n(2); i ++) {
     I v[3];
     get_triangle(i, v);
@@ -272,6 +276,9 @@ void simplicial_unstructured_2d_mesh<I, F>::build_triangles()
 
     // triangle_id_map[ std::make_tuple(v[0], v[1], v[2]) ] = i;
     triangle_id_map.insert( { std::make_tuple(v[0], v[1], v[2]), i } );
+
+    for (int j = 0; j < 3; j ++)
+      vertex_triangles[v[j]].insert(i);
   }
 }
 
@@ -546,10 +553,45 @@ void simplicial_unstructured_2d_mesh<I, F>::scalar_gradient_jacobian(const ndarr
 template <typename I, typename F>
 ndarray<F> simplicial_unstructured_2d_mesh<I, F>::scalar_gradient(const ndarray<F>& scalar) const
 {
+  // compute cellwise gradient
+  ndarray<F> cellgrad;
+  cellgrad.reshape({2, n(2)});
+  cellgrad.set_multicomponents();
+  for (int i = 0; i < n(2); i ++) {
+    I tri[3];
+    get_triangle(i, tri);
+    
+    F X[3][2], f[3], gradf[2];
+    for (int j = 0; j < 3; j ++) {
+      const I k = tri[j];
+      X[j][0] = vertex_coords(0, k);
+      X[j][1] = vertex_coords(1, k);
+      f[j] = scalar[k];
+    }
+
+    gradient_2dsimplex2(X, f, gradf);
+    cellgrad(0, i) = gradf[0];
+    cellgrad(1, i) = gradf[1];
+  }
+  
+  // compute pointwise gradient
   ndarray<F> grad;
   grad.reshape({2, n(0)});
   grad.set_multicomponents();
+  for (int i = 0; i < n(0); i ++) {
+    F gradf[2] = {0};
+    const auto tris = vertex_triangles[i];
+    const auto ntris = tris.size();
+    for (const auto tri : tris) {
+      gradf[0] += cellgrad(0, tri);
+      gradf[1] += cellgrad(1, tri);
+    }
 
+    grad(0, i) = gradf[0] / ntris;
+    grad(1, i) = gradf[1] / ntris;
+  }
+
+#if 0
   for (int i = 0; i < n(0); i ++) {
     const auto neighbors = vertex_edge_vertex[i];
     const F x0 = vertex_coords(0, i), 
@@ -577,7 +619,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::scalar_gradient(const ndarray<
     if (ix) grad(0, i) = dfdx / ix;
     if (iy) grad(1, i) = dfdy / iy;
   }
-
+#endif
   return grad;
 }
 
