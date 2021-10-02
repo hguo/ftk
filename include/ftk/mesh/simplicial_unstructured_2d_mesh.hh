@@ -496,51 +496,55 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
 template <typename I, typename F>
 ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<F>& vector) const
 {
-  ndarray<F> jacobian;
-  jacobian.reshape({2, 2, n(0)});
-  jacobian.set_multicomponents(2);
-
-  for (int i = 0; i < n(0); i ++) {
-    const auto neighbors = vertex_edge_vertex[i];
-    const F x0  = vertex_coords(0, i), 
-            y0  = vertex_coords(1, i),
-            vx0 = vector(0, i),
-            vy0 = vector(1, i);
-
-    F dvxdx = 0, dvxdy = 0, 
-      dvydx = 0, dvydy = 0;
-
-    int ix = 0, iy = 0;
-    for (const auto k : neighbors) {
-      const F x = vertex_coords(0, k), 
-              y = vertex_coords(1, k),
-              vx = vector(0, k), 
-              vy = vector(1, k);
-
-      if (std::abs(x - x0) > 1e-10) {
-        dvxdx += (vx - vx0) / (x - x0);
-        dvydx += (vy - vy0) / (x - x0);
-        ix ++;
-      }
-      
-      if (std::abs(y - y0) > 1e-10) {
-        dvxdy += (vx - vx0) / (y - y0);
-        dvydy += (vy - vy0) / (y - y0);
-        iy ++;
-      }
+  // compute cellwise gradient
+  ndarray<F> cellgrad;
+  cellgrad.reshape({2, vector.dim(0), n(2)});
+  cellgrad.set_multicomponents(2);
+  for (int i = 0; i < n(2); i ++) {
+    I tri[3];
+    get_triangle(i, tri);
+   
+    F X[3][2]; 
+    for (int j = 0; j < 3; j ++) {
+      const I k = tri[j];
+      X[j][0] = vertex_coords(0, k);
+      X[j][1] = vertex_coords(1, k);
     }
+    
+    for (int c = 0; c < vector.dim(0); c ++) {
+      F f[3], gradf[2];
+      for (int j = 0; j < 3; j ++) {
+        f[j] = vector(c, tri[j]);
+      }
 
-    if (ix) {
-      jacobian(0, 0, i) = dvxdx / ix;
-      jacobian(0, 1, i) = dvydx / ix;
-    }
-    if (iy) {
-      jacobian(1, 0, i) = dvxdy / iy;
-      jacobian(1, 1, i) = dvydy / iy;
+      gradient_2dsimplex2(X, f, gradf);
+      cellgrad(0, c, i) = gradf[0];
+      cellgrad(1, c, i) = gradf[1];
     }
   }
+  
+  // compute pointwise gradient
+  ndarray<F> grad;
+  grad.reshape({2, vector.dim(0), n(0)});
+  grad.set_multicomponents(2);
+  for (int i = 0; i < n(0); i ++) {
+    const auto tris = vertex_triangles[i];
+    const auto ntris = tris.size();
 
-  return jacobian;
+    for (const auto tri : tris) {
+      for (int c = 0; c < vector.dim(0); c ++) {
+        grad(0, c, i) += cellgrad(0, c, tri);
+        grad(1, c, i) += cellgrad(1, c, tri);
+      }
+    }
+
+    for (int c = 0; c < vector.dim(0); c ++) {
+      grad(0, c, i) = grad(0, c, i) / ntris;
+      grad(1, c, i) = grad(0, c, i) / ntris;
+    }
+  }
+  
+  return grad;
 }
 
 template <typename I, typename F>
@@ -590,36 +594,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::scalar_gradient(const ndarray<
     grad(0, i) = gradf[0] / ntris;
     grad(1, i) = gradf[1] / ntris;
   }
-
-#if 0
-  for (int i = 0; i < n(0); i ++) {
-    const auto neighbors = vertex_edge_vertex[i];
-    const F x0 = vertex_coords(0, i), 
-            y0 = vertex_coords(1, i), 
-            f0 = scalar(i);
-
-    F dfdx = 0, dfdy = 0;
-    int ix = 0, iy = 0;
-    for (const auto k : neighbors) {
-      const F x = vertex_coords(0, k), 
-              y = vertex_coords(1, k), 
-              f = scalar(k);
-
-      if (std::abs(x - x0) > 1e-10) {
-        dfdx += (f - f0) / (x - x0);
-        ix ++;
-      }
-      
-      if (std::abs(y - y0) > 1e-10) {
-        dfdy += (f - f0) / (y - y0);
-        iy ++;
-      }
-    }
-
-    if (ix) grad(0, i) = dfdx / ix;
-    if (iy) grad(1, i) = dfdy / iy;
-  }
-#endif
+  
   return grad;
 }
 

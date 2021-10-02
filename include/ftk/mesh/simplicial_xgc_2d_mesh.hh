@@ -51,6 +51,12 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
 
   double theta(double r, double z) const;
 
+  void derive_bfield0();
+  void derive_curl_bfield0();
+
+  ndarray<F> derive_delta_B(const ndarray<F>& As) const;
+  ndarray<F> derive_total_B(const ndarray<F>& As) const;
+
 public:
   std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> new_roi_mesh(
       std::vector<I> &node_map, /* vert id of original mesh --> vert id of new mesh */
@@ -59,7 +65,8 @@ public:
 
 protected:
   xgc_units_t units;
-  ndarray<F> psifield, bfield;
+  ndarray<F> psifield, bfield, bfield0; // b0 = B/|B|
+  ndarray<F> curl_bfield0;
   ndarray<F> etemp_par, etemp_per, Te1d;
 
   ndarray<I> nextnodes;
@@ -94,6 +101,67 @@ void simplicial_xgc_2d_mesh<I, F>::read_oneddiag(const std::string& filename, di
 }
 
 template <typename I, typename F>
+ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_total_B(const ndarray<F>& As) const
+{
+  return bfield + derive_delta_B(As);
+#if 0
+  ndarray<F> totalB = bfield, deltaB = derive_delta_B(As);
+  for (int i = 0; i < bfield.nelem(); i ++)
+    totalB[i] = bfield[i] + deltaB[i];
+  return totalB;
+#endif
+}
+
+template <typename I, typename F>
+ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_delta_B(const ndarray<F>& As) const
+{
+  ndarray<F> gradAs = this->scalar_gradient(As);
+  ndarray<F> deltaB;
+  deltaB.reshape(3, this->n(0));
+  deltaB.set_multicomponents();
+
+  for (int i = 0; i < this->n(0); i ++) {
+    deltaB(0, i) =  gradAs(1, i) * bfield0(2, i) - gradAs(2, i) * bfield0(1, i)  + As(i) * curl_bfield0(0, i);
+    deltaB(1, i) = -gradAs(0, i) * bfield0(2, i) + gradAs(2, i) * bfield0(0, i)  + As(i) * curl_bfield0(1, i);
+    deltaB(2, i) =  gradAs(0, i) * bfield0(1, i) - gradAs(1, i) * bfield0(0, i)  + As(i) * curl_bfield0(2, i);
+  }
+
+  return deltaB;
+}
+
+template <typename I, typename F>
+void simplicial_xgc_2d_mesh<I, F>::derive_curl_bfield0()
+{
+  if (bfield0.empty()) derive_bfield0();
+  
+  ndarray<F> gradRZ_bfield0 = this->vector_gradient(bfield0); // dbr/dphi, dbz/dphi, dbphi/dphi are zero
+  curl_bfield0.reshape(3, bfield0.dim(1));
+
+  for (int i = 0; i < bfield0.dim(1); i ++) {
+    const F R = this->vertex_coords(0, i);
+    curl_bfield0(0, i) = -gradRZ_bfield0(1, 2, i); // R
+    curl_bfield0(1, i) = bfield0(2, i) / R + gradRZ_bfield0(0, 2, i); // Z
+    curl_bfield0(2, i) = gradRZ_bfield0(1, 0, i) - gradRZ_bfield0(0, 1, i); // Phi
+  }
+}
+
+template <typename I, typename F>
+void simplicial_xgc_2d_mesh<I, F>::derive_bfield0()
+{
+  bfield0.reshape(bfield);
+  bfield0.set_multicomponents();
+  for (int i = 0; i < bfield.dim(1); i ++) {
+    const F br = bfield(0, i), 
+            bz = bfield(1, i),
+            bphi = bfield(2, i);
+    const F norm = std::sqrt(br*br + bz*bz + bphi*bphi);
+    bfield0(0, i) = br / norm;
+    bfield0(1, i) = bz / norm;
+    bfield0(2, i) = bphi / norm;
+  }
+}
+
+template <typename I, typename F>
 void simplicial_xgc_2d_mesh<I, F>::read_bfield(const std::string& filename, diy::mpi::communicator comm)
 {
   auto ext = file_extension(filename);
@@ -102,6 +170,8 @@ void simplicial_xgc_2d_mesh<I, F>::read_bfield(const std::string& filename, diy:
   else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
 
   bfield.set_multicomponents();
+  // derive_bfield0();
+  derive_curl_bfield0();
 }
 
 template <typename I, typename F>
