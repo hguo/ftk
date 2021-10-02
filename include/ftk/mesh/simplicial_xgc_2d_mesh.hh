@@ -103,27 +103,69 @@ void simplicial_xgc_2d_mesh<I, F>::read_oneddiag(const std::string& filename, di
 template <typename I, typename F>
 ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_total_B(const ndarray<F>& As) const
 {
-  return bfield + derive_delta_B(As);
-#if 0
-  ndarray<F> totalB = bfield, deltaB = derive_delta_B(As);
-  for (int i = 0; i < bfield.nelem(); i ++)
-    totalB[i] = bfield[i] + deltaB[i];
+  ndarray<F> totalB;
+  if (As.nd() == 1) {
+    totalB = bfield + derive_delta_B(As);
+    totalB.set_multicomponents();
+  } else if (As.nd() == 2) {
+    const auto deltaB = derive_delta_B(As);
+    totalB.reshape(deltaB);
+    for (int p = 0; p < As.dim(1); p ++)
+      for (int i = 0; i < this->n(0); i ++)
+        for (int j = 0; j < 3; j ++)
+          totalB(j, i, p) = deltaB(j, i, p) + bfield(j, i);
+    totalB.set_multicomponents(2);
+  }
   return totalB;
-#endif
 }
 
 template <typename I, typename F>
 ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_delta_B(const ndarray<F>& As) const
 {
-  ndarray<F> gradAs = this->scalar_gradient(As);
   ndarray<F> deltaB;
-  deltaB.reshape(3, this->n(0));
-  deltaB.set_multicomponents();
+  if (As.nd() == 1) { // wrong..
+#if 0
+    ndarray<F> gradAs = this->scalar_gradient(As);
+    deltaB.reshape(3, this->n(0));
+    deltaB.set_multicomponents();
 
-  for (int i = 0; i < this->n(0); i ++) {
-    deltaB(0, i) =  gradAs(1, i) * bfield0(2, i) - gradAs(2, i) * bfield0(1, i)  + As(i) * curl_bfield0(0, i);
-    deltaB(1, i) = -gradAs(0, i) * bfield0(2, i) + gradAs(2, i) * bfield0(0, i)  + As(i) * curl_bfield0(1, i);
-    deltaB(2, i) =  gradAs(0, i) * bfield0(1, i) - gradAs(1, i) * bfield0(0, i)  + As(i) * curl_bfield0(2, i);
+    for (int i = 0; i < this->n(0); i ++) {
+      deltaB(0, i) =  gradAs(1, i) * bfield0(2, i) - gradAs(2, i) * bfield0(1, i)  + As(i) * curl_bfield0(0, i);
+      deltaB(1, i) = -gradAs(0, i) * bfield0(2, i) + gradAs(2, i) * bfield0(0, i)  + As(i) * curl_bfield0(1, i);
+      deltaB(2, i) =  gradAs(0, i) * bfield0(1, i) - gradAs(1, i) * bfield0(0, i)  + As(i) * curl_bfield0(2, i);
+    }
+#endif
+    assert(false);
+  } else if (As.nd() == 2) {
+    const int np = As.dim(1);
+    const F dphi = 2 * M_PI / np;
+
+    // ndarray<F> gradAs = this->vector_gradient(As.get_transpose()); // we only have dB/dR and dB/dZ
+
+    deltaB.reshape(3, this->n(0), As.dim(1));
+    deltaB.set_multicomponents(2);
+
+    for (int c = 0; c < As.dim(1); c ++) {
+      const int cnext = (c + 1) % np, 
+                cprev = (c + np - 1) % np;
+
+      ndarray<F> Asp;
+      Asp.reshape(this->n(0));
+      for (int i = 0; i < this->n(0); i ++)
+        Asp[i] = As(i, c);
+      ndarray<F> gradAs = this->scalar_gradient(As);
+
+      for (int i = 0; i < this->n(0); i ++) {
+        const F dAsdphi = (As(i, cnext) - As(i, cprev)) / (dphi * 2);
+
+        // deltaB(0, i, c) =  gradAs(1, c, i) * bfield0(2, i) - gradAs(2, c, i) * bfield0(1, i)  + As(i, c) * curl_bfield0(0, i);
+        // deltaB(1, i, c) = -gradAs(0, c, i) * bfield0(2, i) + gradAs(2, c, i) * bfield0(0, i)  + As(i, c) * curl_bfield0(1, i);
+        // deltaB(2, i, c) =  gradAs(0, c, i) * bfield0(1, i) - gradAs(1, c, i) * bfield0(0, i)  + As(i, c) * curl_bfield0(2, i);
+        deltaB(0, i, c) =  gradAs(1, i) * bfield0(2, i) - dAsdphi      * bfield0(1, i)  + As(i, c) * curl_bfield0(0, i);
+        deltaB(1, i, c) = -gradAs(0, i) * bfield0(2, i) + dAsdphi      * bfield0(0, i)  + As(i, c) * curl_bfield0(1, i);
+        deltaB(2, i, c) =  gradAs(0, i) * bfield0(1, i) - gradAs(1, i) * bfield0(0, i)  + As(i, c) * curl_bfield0(2, i);
+      }
+    }
   }
 
   return deltaB;
