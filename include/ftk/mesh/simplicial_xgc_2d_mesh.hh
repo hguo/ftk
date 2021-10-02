@@ -5,6 +5,7 @@
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/point_locator_2d_quad.hh>
 #include <ftk/numeric/linear_interpolation.hh>
+#include <ftk/numeric/fmod.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/io/xgc_units.hh>
 
@@ -44,10 +45,12 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   const std::vector<I>& get_roi_nodes() const { return roi_nodes; }
 
   bool eval_b(const F x[], F b[]) const; // get magnetic field value at x
+  bool eval_total_B(const ndarray<F>& totalB, const F rzp[3], F b[3]) const;
   // bool eval_f(const F rzp[3], F f[2]) const;
   F eval_psi(const F x[]) const; // get psi value at x
 
   void magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
+  bool magnetic_map_2pi_total_B(const ndarray<F>& totalB, F rzp[3]) const;
 
   double theta(double r, double z) const;
 
@@ -98,6 +101,59 @@ void simplicial_xgc_2d_mesh<I, F>::read_oneddiag(const std::string& filename, di
   } catch (...) {
     warn("unable to read e_parallel_mean_en_avg or e_perp_temperature_avg");
   }
+}
+
+template <typename I, typename F>
+bool simplicial_xgc_2d_mesh<I, F>::eval_total_B(const ndarray<F>& totalB, const F rzp[3], F b[3]) const
+{
+  F mu[3];
+  I tid = this->locator->locate(rzp, mu);
+  if (tid < 0) {
+    b[0] = b[1] = b[2] = F(0); 
+    return false;
+  } else {
+    const F phin = mod2pi(rzp[2]) / (M_PI * 2);
+    const int np = totalB.dim(1);
+    const int i0 = (phin * np) % np;
+    const int i1 = (i0 + 1) % np;
+
+    const F beta = phin * np - i0, alpha = F(1) - beta;
+
+    F B[3][3];
+    I tri[3];
+    this->get_simplex(2, tid, tri);
+
+    for (int i = 0; i < 3; i ++) 
+      for (int j = 0; j < 3; j ++)
+        B[i][j] = alpha * totalB(j, tri[i], i0) + beta * totalB(j, tri[i], i1); //  bfield(j, tri[i]);
+    lerp_s2v3(B, mu, b);
+    
+    // print3x3("B", B);
+    // fprintf(stderr, "mu=%f, %f, %f, b=%f, %f, %f\n", 
+    //     mu[0], mu[1], mu[2], b[0], b[1], b[2]);
+    return true;
+  }
+}
+
+template <typename I, typename F>
+bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& totalB, F rzp[3]) const
+{
+  const int nsteps = 3600;
+  const F delta = 2 * M_PI / nsteps;
+
+  // rk1
+  for (int k = 0; k < nsteps; k ++) {
+    F B[3];
+    if (eval_total_B(totalB, rzp, B)) {
+      const F r = rzp[0], z = rzp[1], phi = rzp[2];
+      rzp[0] += delta * r * B[0] / B[2];
+      rzp[1] += delta * r * B[1] / B[2];
+      rzp[2] += delta;
+    } else
+      return false;
+  }
+  rzp[2] = 0;
+  return true;
 }
 
 template <typename I, typename F>
