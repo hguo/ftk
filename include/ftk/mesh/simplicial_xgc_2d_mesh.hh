@@ -6,6 +6,7 @@
 #include <ftk/mesh/point_locator_2d_quad.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/fmod.hh>
+#include <ftk/numeric/rk4.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/io/xgc_units.hh>
 
@@ -141,8 +142,8 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& to
   const int nsteps = 3600;
   const F delta = 2 * M_PI / nsteps;
 
-  // rk1
   for (int k = 0; k < nsteps; k ++) {
+#if 0
     F B[3];
     // if (eval_b(rzp, B)) {
     if (eval_total_B(totalB, rzp, B)) {
@@ -151,6 +152,18 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& to
       rzp[1] += delta * r * B[1] / B[2];
       rzp[2] += delta;
     } else
+      return false;
+#endif
+    if (!rk4<3, F>(rzp, [&](const F* rzp, F* v) {
+          F B[3];
+          if (eval_total_B(totalB, rzp, B)) {
+            v[0] = rzp[0] * B[0] / B[2];
+            v[1] = rzp[0] * B[1] / B[2];
+            v[2] = 1;
+            return true;
+          } else 
+            return false;
+        }, delta))
       return false;
   }
   rzp[2] = 0;
@@ -281,8 +294,9 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps)
 
   const F delta = (phi_end - rzp[2]) / nsteps;
 
-  // rk1
   for (int k = 0; k < nsteps; k ++) {
+#if 0
+    // rk1
     F B[3];
     bool succ = eval_b(rzp, B);
 
@@ -294,8 +308,23 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps)
       // rzp[0] += delta * r * B[0] / B[2];
       // rzp[1] += delta * r * B[1] / B[2];
       // rzp[2] += delta;
+      // rk4
     } else 
       return false;
+#endif
+  
+    if (!rk4<3, F>(rzp, [&](const F* rzp, F* v) {
+          F B[3];
+          if (eval_b(rzp, B)) {
+            v[0] = rzp[0] * B[0] / B[2];
+            v[1] = rzp[0] * B[1] / B[2];
+            v[2] = 1;
+            return true;
+          } else 
+            return false;
+        }, delta))
+      return false;
+
     // fprintf(stderr, "integrating %f, %f, %f\n", rzp[0], rzp[1], rzp[2]);
   }
   return true;
