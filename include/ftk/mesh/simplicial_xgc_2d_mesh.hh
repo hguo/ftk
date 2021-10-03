@@ -49,7 +49,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   // bool eval_f(const F rzp[3], F f[2]) const;
   F eval_psi(const F x[]) const; // get psi value at x
 
-  void magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
+  bool magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
   bool magnetic_map_2pi_total_B(const ndarray<F>& totalB, F rzp[3]) const;
 
   double theta(double r, double z) const;
@@ -113,8 +113,8 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_total_B(const ndarray<F>& totalB, const 
     return false;
   } else {
     const F phin = mod2pi(rzp[2]) / (M_PI * 2);
-    const int np = totalB.dim(1);
-    const int i0 = (phin * np) % np;
+    const int np = totalB.dim(2);
+    const int i0 = (int(phin * np)) % np;
     const int i1 = (i0 + 1) % np;
 
     const F beta = phin * np - i0, alpha = F(1) - beta;
@@ -144,6 +144,7 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& to
   // rk1
   for (int k = 0; k < nsteps; k ++) {
     F B[3];
+    // if (eval_b(rzp, B)) {
     if (eval_total_B(totalB, rzp, B)) {
       const F r = rzp[0], z = rzp[1], phi = rzp[2];
       rzp[0] += delta * r * B[0] / B[2];
@@ -273,7 +274,7 @@ void simplicial_xgc_2d_mesh<I, F>::read_bfield(const std::string& filename, diy:
 }
 
 template <typename I, typename F>
-void simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps) const
+bool simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps) const
 {
   if (bfield.empty()) 
     fatal("missing xgc bfield.");
@@ -289,10 +290,15 @@ void simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps)
       const F r = rzp[0], z = rzp[1], phi = rzp[2];
       rzp[0] += delta * r * B[0] / B[2];
       rzp[1] += delta * r * B[1] / B[2];
-    }
-    rzp[2] += delta;
+      rzp[2] += delta;
+      // rzp[0] += delta * r * B[0] / B[2];
+      // rzp[1] += delta * r * B[1] / B[2];
+      // rzp[2] += delta;
+    } else 
+      return false;
     // fprintf(stderr, "integrating %f, %f, %f\n", rzp[0], rzp[1], rzp[2]);
   }
+  return true;
 }
 
 template <typename I, typename F>
