@@ -1,7 +1,7 @@
 #ifndef _FTK_FEATURE_POINT_SET_HH
 #define _FTK_FEATURE_POINT_SET_HH
 
-#include <ftk/features/feature_point_set.hh>
+#include <ftk/features/feature_point.hh>
 #include <list>
 
 #if FTK_HAVE_VTK
@@ -14,14 +14,12 @@ struct feature_point_set_t : public std::list<feature_point_t>
 {
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> to_vtp(
-      int fpdims, 
       const std::vector<std::string>& scalar_components) const;
 #endif
 };
 
 #if FTK_HAVE_VTK
 vtkSmartPointer<vtkPolyData> feature_point_set_t::to_vtp(
-    int fpdims, 
     const std::vector<std::string>& scalar_components) const
 {
   vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
@@ -31,7 +29,6 @@ vtkSmartPointer<vtkPolyData> feature_point_set_t::to_vtp(
   vtkIdType pid[1];
   for (const auto &cp : *this) {
     double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; 
-    if (fpdims == 2) p[2] = cp.t;
     pid[0] = points->InsertNextPoint(p);
     vertices->InsertNextCell(1, pid);
   }
