@@ -51,7 +51,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   F eval_psi(const F x[]) const; // get psi value at x
 
   bool magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
-  bool magnetic_map_2pi_total_B(const ndarray<F>& totalB, F rzp[3]) const;
+  bool magnetic_map_2pi_total_B(const ndarray<F>& totalB, F rzp[3], const int nsteps=3600) const;
 
   double theta(double r, double z) const;
 
@@ -137,9 +137,8 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_total_B(const ndarray<F>& totalB, const 
 }
 
 template <typename I, typename F>
-bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& totalB, F rzp[3]) const
+bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& totalB, F rzp[3], const int nsteps) const
 {
-  const int nsteps = 3600;
   const F delta = 2 * M_PI / nsteps;
 
   for (int k = 0; k < nsteps; k ++) {
@@ -166,7 +165,7 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& to
         }, delta))
       return false;
   }
-  rzp[2] = 0;
+  // rzp[2] = 0;
   return true;
 }
 

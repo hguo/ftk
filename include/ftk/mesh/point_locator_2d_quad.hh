@@ -2,6 +2,7 @@
 #define _FTK_POINT_LOCATOR_2D_QUAD_HH
 
 #include <ftk/mesh/point_locator_2d.hh>
+#include <ftk/mesh/bvh2d.hh>
 #include <stack>
 
 namespace ftk {
@@ -15,6 +16,8 @@ struct point_locator_2d_quad : public point_locator_2d<I, F> {
   void initialize();
   // I locate(const F x[], F mu[]) const { return locate_point_recursive(x, root, mu); }
   I locate(const F x[], F mu[]) const { return locate_point_nonrecursive(x, mu); }
+
+  std::vector<bvh2d_node_t<I, F>> to_bvh_nodes() const;
 
 protected:
   struct quad_node {
@@ -262,12 +265,14 @@ void point_locator_2d_quad<I, F>::initialize()
   // subdivide_quad_node(root);
   // traversequad_node(root);
   
+  // std::vector<bvh2d_node_t<I, F>> rd = to_bvh_nodes();
+  
 #if 0
   const double X[2] = {2.3, -0.4};
   int r1 = locate(X);
   fprintf(stderr, "r1=%d\n", r1);
   
-  std::vector<BVHNodeD> rd = convertBVH(root, conn, coords);
+  std::vector<bvh2d_node_t<I, F>> rd = to_bvh_nodes(root, conn, coords);
 
 #if 1
   fprintf(stderr, "BVH built.\n");
@@ -283,9 +288,9 @@ void point_locator_2d_quad<I, F>::initialize()
   auto t3 = clock::now();
 #if 0 
   float alpha, beta, gamma;
-  int r3 = BVHNodeD_locatePoint(rd, X[0], X[1], alpha, beta, gamma);
+  int r3 = bvh2d_node_t<I, F>_locatePoint(rd, X[0], X[1], alpha, beta, gamma);
   auto t4 = clock::now();
-  int r4 = BVHNodeD_locatePoint_recursive(rd, rd, X[0], X[1], alpha, beta, gamma);
+  int r4 = bvh2d_node_t<I, F>_locatePoint_recursive(rd, rd, X[0], X[1], alpha, beta, gamma);
   auto t5 = clock::now();
   fprintf(stderr, "r0=%d, r1=%d, r2=%d, r3=%d, r4=%d\n", r0, r1, r2, r3, r4);
 #endif
@@ -303,6 +308,86 @@ void point_locator_2d_quad<I, F>::initialize()
 
   return rd;
 #endif
+}
+
+template <typename I, typename F>
+std::vector<bvh2d_node_t<I, F>> point_locator_2d_quad<I, F>::to_bvh_nodes() const {
+  // quad_node* r, const std::vector<int> &conn, const std::vector<double> &coords) {
+  quad_node *r = root;
+  
+  std::map<quad_node*, int> node_map;
+  std::map<int, quad_node*> node_reverse_map;
+  std::stack<quad_node*> S;
+  S.push(r);
+
+  int quad_node_count = 0;
+  int max_stack_size = 0;
+  while (!S.empty()) {
+    max_stack_size = std::max(max_stack_size, static_cast<int>(S.size()));
+
+    quad_node *q = S.top();
+    S.pop();
+
+    int nodeId = quad_node_count ++;
+    node_map[q] = nodeId;
+    node_reverse_map[nodeId] = q;
+
+    for (int j=0; j<4; j++) 
+      if (q->children[j] != NULL)
+        S.push(q->children[j]);
+  }
+
+  std::vector<bvh2d_node_t<I, F>> rd(quad_node_count);
+
+  for (int i=0; i<quad_node_count; i++) {
+    quad_node q = *node_reverse_map[i];
+    bvh2d_node_t<I, F> &d = rd[i];
+
+    // parent
+    if (q.parent == NULL) d.parentId = -1; // root
+    else d.parentId = node_map[q.parent];
+
+    // children
+    for (int j=0; j<4; j++)
+      if (q.children[j] == NULL) d.childrenIds[j] = -1;
+      else d.childrenIds[j] = node_map[q.children[j]];
+
+    // bounds
+    d.Ax = q.aabb.A[0];
+    d.Ay = q.aabb.A[1];
+    d.Bx = q.aabb.B[0];
+    d.By = q.aabb.B[1];
+    // fprintf(stderr, "%f, %f, %f, %f\n", d.Ax, d.Ay, d.Bx, d.By);
+
+    // triangle
+    if (q.is_leaf()) {
+      const int id = q.elements[0].id;
+      d.triangleId = id;
+
+      I tri[3];
+      this->m2.get_triangle(id, tri);
+
+      F p0[3], p1[3], p2[3];
+      this->m2.get_coords(tri[0], p0);
+      this->m2.get_coords(tri[1], p1);
+      this->m2.get_coords(tri[2], p2);
+
+      d.i0 = tri[0];
+      d.i1 = tri[1];
+      d.i2 = tri[2];
+      d.x0 = p0[0];
+      d.y0 = p0[1];
+      d.x1 = p1[0];
+      d.y1 = p1[1];
+      d.x2 = p2[0];
+      d.y2 = p2[1];
+    } else 
+      d.triangleId = -1;
+  }
+
+  fprintf(stderr, "quad_node_count=%d, max_stack_size=%d\n", quad_node_count, max_stack_size);
+  return rd; 
+  // return quad_node_count;
 }
 
 
