@@ -52,7 +52,7 @@ protected:
   std::string smoothing_kernel_filename, interpolant_filename;
 
   int nphi = 1, iphi = 1, vphi = 1;
-  int start_timestep = 1, current_timestep = 1, ntimesteps = 1;
+  int start_timestep = 1, current_timestep = 1, ntimesteps = 0;
 
   double smoothing_kernel_size = 0.03;
 
@@ -66,7 +66,10 @@ protected:
 inline void xgc_stream::initialize()
 {
   filenames = glob(path + "/xgc.3d.*");
-  ntimesteps = filenames.size();
+  if (ntimesteps > 0)
+    ntimesteps = std::min(size_t(ntimesteps), filenames.size());
+  else 
+    ntimesteps = filenames.size();
 
   m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(mesh_filename(), this->comm);
   m2->initialize_point_locator();
