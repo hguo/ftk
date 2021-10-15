@@ -5,6 +5,7 @@
 #include <ftk/algorithms/bfs.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
 #include <ftk/numeric/gradient.hh>
+#include <ftk/numeric/sign_det.hh>
 
 namespace ftk {
 
@@ -122,6 +123,8 @@ public: // mesh access
   const ndarray<I>& get_edges() const {return edges;}
 
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
+  
+  int get_triangle_chi(I i) const { return triangles_chi[i] ? -1 : 1; }
 
   // virtual int ncoords() const { return vertex_coords.dim(0); } // { return 2; }
   // virtual int ncoords() const { return 3; }
@@ -146,6 +149,7 @@ protected: // mesh connectivities
 
   ndarray<I> triangles; // 3 * n_triangles
   ndarray<I> triangle_sides; // 3 * n_triangles
+  std::vector<bool> triangles_chi; // chiralities of triangles, 1 means +1; 0 means -1
 
 public: // additional mesh info
 #if FTK_HAVE_TBB
@@ -266,11 +270,20 @@ template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::build_triangles()
 {
   vertex_triangles.resize(n(0));
+  triangles_chi.resize(n(2), 0);
 
   for (auto i = 0; i < n(2); i ++) {
-    I v[3];
+    I v[3], order[3];
     get_triangle(i, v);
-    std::sort(v, v+3);
+    // fprintf(stderr, "id=%d, v=%d, %d, %d\n", 
+    //     i, v[0], v[1], v[2]);
+    const int nswaps = nswaps_bubble_sort<3, I>(v, order);
+    // std::sort(v, v+3);
+    
+    if (nswaps % 2 == 0) triangles_chi[i] = 0;
+    else triangles_chi[i] = 1;
+    // fprintf(stderr, "id=%d, nswaps=%d\n", i, nswaps);
+
     for (auto j = 0; j < 3; j ++)
       triangles(j, i) = v[j];
 
@@ -660,7 +673,7 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
     vtkSmartPointer<vtkCell> cell = grid->GetCell(i);
     if (cell->GetCellType() == VTK_TRIANGLE) {
       vtkIdType v[3] = {cell->GetPointId(0), cell->GetPointId(1), cell->GetPointId(2)};
-      std::sort(v, v+3);
+      // std::sort(v, v+3);
       for (int j = 0; j < 3; j ++)
         m_triangles.push_back(v[j]);
     }

@@ -25,6 +25,8 @@ struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded fr
   int face_type(I i) const; // legacy
   int simplex_type(int d, I i) const;
 
+  int get_triangle_chi(I i) const;
+
   // int ncoords() const { return m.ncoords() + 1; }
 
 public: // element iteration
@@ -742,6 +744,17 @@ bool simplicial_unstructured_extruded_2d_mesh<I, F>::find_simplex(int d, I v[], 
     return true;
   }
   return false;
+}
+
+template <typename I, typename F>
+int simplicial_unstructured_extruded_2d_mesh<I, F>::get_triangle_chi(I i) const
+{
+  const int d = 2;
+  const I k = mod(i, n(d)); // t = std::floor(double(k) / n(d));
+  if (k < n_ordinal(d)) {
+    return m.get_triangle_chi(k);
+  } else 
+    return 0; // no chirality
 }
 
 }
