@@ -166,7 +166,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
       auto deg = positive2(Vf, tri);
       auto chi = m.get_triangle_chi(i);
       deg *= chi;
-      fprintf(stderr, "deg=%d, chi=%d\n", deg, chi);
+      // fprintf(stderr, "deg=%d, chi=%d\n", deg, chi);
       if (deg == 1) cp.type = 1; 
       else cp.type = 2;
     } else 
