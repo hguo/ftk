@@ -18,13 +18,12 @@
 
 vtkStandardNewMacro(ftkCriticalPointTracker);
 
-ftkCriticalPointTracker::ftkCriticalPointTracker() :
-    UseGPU(false),
-    GaussianKernelSize(1.0)
+ftkCriticalPointTracker::ftkCriticalPointTracker()
 {
   SetNumberOfInputPorts(1);
   SetNumberOfOutputPorts(1);
-  
+ 
+  SetComputeDegrees(false);
   SetUseGPU(false);
   SetGaussianKernelSize(2.0);
 
@@ -123,6 +122,8 @@ int ftkCriticalPointTracker::RequestData_vti(
         tcpr->set_jacobian_field_source(ftk::SOURCE_DERIVED);
       } else 
         assert(false);
+      
+      tcpr->set_enable_computing_degrees( ComputeDegrees );
     } else if (nd == 3) {
       fprintf(stderr, "DW=%zu, DH=%zu, DD=%zu, components=%d\n", DW, DH, DD, inputDataComponents);
       tcpr.reset(new ftk::critical_point_tracker_3d_regular(MPI_COMM_WORLD));
@@ -178,8 +179,15 @@ int ftkCriticalPointTracker::RequestData_vti(
 
     request->Remove( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING() );
     currentTimestep = 0;
-    
+   
     tcpr->finalize();
+    // fprintf(stderr, "FINALIZING...\n");
+    auto &trajs = tcpr->get_traced_critical_points();
+    trajs.foreach([](ftk::feature_curve_t& t) {
+        t.discard_interval_points();
+        t.derive_velocity();
+    });
+    
     auto poly = tcpr->get_traced_critical_points().to_vtp({});
     output->DeepCopy(poly);
 
@@ -225,6 +233,7 @@ int ftkCriticalPointTracker::RequestData_vtu(
       fprintf(stderr, "treating the input as a 2D grid..\n");
       m2u.from_vtu(input);
       tcp.reset(new ftk::critical_point_tracker_2d_unstructured(MPI_COMM_WORLD, m2u));
+      tcp->set_enable_computing_degrees( ComputeDegrees );
     } else {
       fprintf(stderr, "treating the input as a 3D grid..\n");
       assert(false); // unsupported mesh type
