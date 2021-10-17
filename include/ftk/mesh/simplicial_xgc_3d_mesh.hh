@@ -646,18 +646,28 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
   for (int j = 0; j < m2n0; j ++)
     mean_eden[j] /= nphi;
 
+  ndarray<F> mean_pot;
+  mean_pot.reshape(m2n0);
+  for (int i = 0; i < nphi; i ++) 
+    for (int j = 0; j < m2n0; j ++) 
+      mean_pot[j] += dpot[i*m2n0+j]; // eden(j, i);
+  for (int j = 0; j < m2n0; j ++)
+    mean_pot[j] /= nphi;
+
   // ndarray<F> arr({size_t(m2n0), size_t(nphi)});
   ndarray<F> arr(eden.shape());
   for (int i = 0; i < nphi; i ++) {
     for (int j = 0; j < m2n0; j ++) {
       const int idx = i*m2n0 + j;
-      F v1 = dpot[idx] - (potm0[j] - pot0[j]);
+      // F v1 = dpot[idx] - (potm0[j] - pot0[j]);
+      F v1 = dpot[idx] - mean_pot[j]; 
       v1 = v1 / te[j];
 
       F v2 = eden[idx] - mean_eden[j];
       v2 = v2 / de[j];
 
-      arr[idx] = v1 + v2;
+      // arr[idx] = v1 + v2;
+      arr[idx] = v1;
     }
   }
 
