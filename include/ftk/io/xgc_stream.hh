@@ -28,6 +28,7 @@ struct xgc_stream : public object {
 
   void set_callback(std::function<void(int, std::shared_ptr<ndarray_group>)> f) { callback = f; }
 
+  virtual bool read_oneddiag() = 0;
   virtual bool advance_timestep() = 0;
 
   virtual std::string postfix() const = 0; 
@@ -44,6 +45,10 @@ struct xgc_stream : public object {
   std::shared_ptr<simplicial_xgc_2d_mesh<>> get_m2() { return m2; }
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_m3() { return m3; }
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_mx3() { return mx3; }
+
+protected:
+  ndarray<int> steps;
+  ndarray<double> time, Te1d;
 
 protected:
   const std::string path;
@@ -65,6 +70,8 @@ protected:
 /////
 inline void xgc_stream::initialize()
 {
+  bool has_oneddiag = read_oneddiag();
+
   filenames = glob(path + "/xgc.3d.*");
   if (ntimesteps > 0)
     ntimesteps = std::min(size_t(ntimesteps), filenames.size());
