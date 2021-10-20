@@ -60,8 +60,9 @@ static bool is_directory(const std::string& filename) {
 }
 
 static bool file_exists(const std::string& filename) {
-  std::ifstream f(filename);
-  return f.good();
+  return access( filename.c_str(), F_OK ) == 0;
+  // std::ifstream f(filename);
+  // return f.good();
 }
 
 static bool file_not_exists(const std::string& filename) { 
