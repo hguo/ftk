@@ -52,6 +52,8 @@ protected:
   ndarray<int> steps;
   ndarray<double> time, Te1d;
 
+  std::set<int> availabe_steps;
+
 protected:
   const std::string path;
   std::vector<std::string> filenames;
@@ -87,9 +89,14 @@ inline int xgc_stream::filename2step(const std::string& str)
 
 inline void xgc_stream::initialize()
 {
-  bool has_oneddiag = read_oneddiag();
+  const bool has_oneddiag = read_oneddiag();
     
   filenames = glob(path + "/xgc.3d.*");
+  for (int i = 0; i < filenames.size(); i ++) {
+    int s = filename2step(filenames[i]);
+    if (s >= 0)
+      availabe_steps.insert(s);
+  }
 
   if (ntimesteps > 0)
     ntimesteps = std::min(size_t(ntimesteps), filenames.size());
