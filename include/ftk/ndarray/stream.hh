@@ -141,7 +141,7 @@ private:
 
 template <typename T>
 ndarray_stream<T>::ndarray_stream(diy::mpi::communicator comm)
-#if FTK_HAVE_ADIOS2
+#if ADIOS2_USE_MPI
   : adios(comm)
 #endif
 {
@@ -155,7 +155,8 @@ ndarray_stream<T>::ndarray_stream(
     const std::string adios2_config_filename, 
     const std::string adios2_io_name,
     diy::mpi::communicator comm)
-#if FTK_HAVE_ADIOS2
+// #if FTK_HAVE_ADIOS2
+#if ADIOS2_USE_MPI
   : adios(adios2_config_filename, comm, adios2::DebugON)
 #endif
 {

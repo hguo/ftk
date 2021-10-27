@@ -16,6 +16,7 @@
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/fixed_point.hh>
+#include <ftk/numeric/critical_point_degree.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
@@ -645,27 +646,40 @@ inline bool critical_point_tracker_2d_regular::check_simplex(
     cp.scalar[0] = lerp_s2(values, mu);
   }
 
-  double J[2][2] = {0}; // jacobian
-  if (jacobian_field_source != SOURCE_NONE) { // lerp jacobian
-    double Js[3][2][2];
-    simplex_jacobians(vertices, Js);
-    lerp_s2m2x2(Js, mu, J);
-    ftk::make_symmetric2x2(J); // TODO
-  } else {
-    // TODO: jacobian is not given
-  }
-#if 0
-  double X2[3][2];
-  for (int i = 0; i < 3; i ++)
-    for (int j = 0; j < 2; j ++)
-      X2[i][j] = X[i][j];
-  jacobian_3dsimplex2(X2, v, J);
-  ftk::make_symmetric2x2(J); // TODO
-#endif
-  cp.type = critical_point_type_2d(J, is_jacobian_field_symmetric);
   cp.tag = e.to_integer(m);
   cp.ordinal = e.is_ordinal(m);
   cp.timestep = current_timestep;
+
+  if (enable_computing_degrees) {
+    if (cp.ordinal) {
+      auto deg = positive2(vf, indices);
+      int chi = e.type == 4 ? 1 : -1;
+      deg *= chi;
+      // fprintf(stderr, "deg=%d, chi=%d\n", deg, chi);
+      if (deg == 1) cp.type = 1; 
+      else cp.type = 2;
+    } else 
+      cp.type = 0;
+  } else {
+    double J[2][2] = {0}; // jacobian
+    if (jacobian_field_source != SOURCE_NONE) { // lerp jacobian
+      double Js[3][2][2];
+      simplex_jacobians(vertices, Js);
+      lerp_s2m2x2(Js, mu, J);
+      ftk::make_symmetric2x2(J); // TODO
+    } else {
+      // TODO: jacobian is not given
+    }
+#if 0
+    double X2[3][2];
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 2; j ++)
+        X2[i][j] = X[i][j];
+    jacobian_3dsimplex2(X2, v, J);
+    ftk::make_symmetric2x2(J); // TODO
+#endif
+    cp.type = critical_point_type_2d(J, is_jacobian_field_symmetric);
+  }
 
   return true;
 } 

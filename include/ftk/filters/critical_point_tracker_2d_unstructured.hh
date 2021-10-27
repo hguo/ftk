@@ -154,13 +154,23 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
     cp.t = x[3];
   }
 #endif
+  
+  cp.tag = i;
+  cp.ordinal = m.is_ordinal(2, i);
+  cp.timestep = current_timestep;
 
   // deriving types
   if (enable_computing_degrees) { // compute degress instead of types
-#if 0 // FIXME
-    auto deg = ftk::critical_point_degree_simplex2(V, X);
-    cp.type = deg == 1 ? 1 : 0;
-#endif
+    if (cp.ordinal){
+      // auto deg = ftk::critical_point_degree_simplex2(V, X);
+      auto deg = positive2(Vf, tri);
+      auto chi = m.get_triangle_chi(i);
+      deg *= chi;
+      // fprintf(stderr, "deg=%d, chi=%d\n", deg, chi);
+      if (deg == 1) cp.type = 1; 
+      else cp.type = 2;
+    } else 
+      cp.type = 0; // cannot determine
   } else if (field_data_snapshots[0].scalar.empty()) { // vector field
     if (field_data_snapshots[0].jacobian.empty()) { // derived jacobian
 #if 1
@@ -210,10 +220,6 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
       cp.type = ftk::critical_point_type_2d(H, true);
     }
   }
-
-  cp.tag = i;
-  cp.ordinal = m.is_ordinal(2, i);
-  cp.timestep = current_timestep;
 
   return true;
 }

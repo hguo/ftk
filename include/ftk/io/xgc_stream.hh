@@ -28,6 +28,7 @@ struct xgc_stream : public object {
 
   void set_callback(std::function<void(int, std::shared_ptr<ndarray_group>)> f) { callback = f; }
 
+  virtual bool read_oneddiag() = 0;
   virtual bool advance_timestep() = 0;
 
   virtual std::string postfix() const = 0; 
@@ -41,9 +42,17 @@ struct xgc_stream : public object {
     else return filenames[t];
   }
 
+  static int filename2step(const std::string&);
+
   std::shared_ptr<simplicial_xgc_2d_mesh<>> get_m2() { return m2; }
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_m3() { return m3; }
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_mx3() { return mx3; }
+
+protected:
+  ndarray<int> steps;
+  ndarray<double> time, Te1d;
+
+  std::set<int> availabe_steps;
 
 protected:
   const std::string path;
@@ -52,7 +61,7 @@ protected:
   std::string smoothing_kernel_filename, interpolant_filename;
 
   int nphi = 1, iphi = 1, vphi = 1;
-  int start_timestep = 1, current_timestep = 1, ntimesteps = 1;
+  int start_timestep = 1, current_timestep = 1, ntimesteps = 0;
 
   double smoothing_kernel_size = 0.03;
 
@@ -63,11 +72,37 @@ protected:
 };
 
 /////
+inline int xgc_stream::filename2step(const std::string& str)
+{
+  size_t last = str.find_last_of("xgc.3d.");
+  std::string sub = str.substr(last-5, 5);
+  
+  int i = -1;
+  try {
+    i = std::stoi(sub);
+  } catch (...) {
+    return -1;
+  }
+
+  return i;
+}
+
 inline void xgc_stream::initialize()
 {
+  const bool has_oneddiag = read_oneddiag();
+    
   filenames = glob(path + "/xgc.3d.*");
-  ntimesteps = filenames.size();
+  for (int i = 0; i < filenames.size(); i ++) {
+    int s = filename2step(filenames[i]);
+    if (s >= 0)
+      availabe_steps.insert(s);
+  }
 
+  if (ntimesteps > 0)
+    ntimesteps = std::min(size_t(ntimesteps), filenames.size());
+  else 
+    ntimesteps = filenames.size();
+  
   m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(mesh_filename(), this->comm);
   m2->initialize_point_locator();
 

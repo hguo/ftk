@@ -235,7 +235,11 @@ inline bool ndarray_base::read_h5(hid_t fid, const std::string& name)
 inline void ndarray_base::read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
 {
 #if FTK_HAVE_ADIOS2
+#if ADIOS2_USE_MPI
   adios2::ADIOS adios(comm);
+#else
+  adios2::ADIOS adios;
+#endif
   adios2::IO io = adios.DeclareIO("BPReader");
   adios2::Engine reader = io.Open(filename, adios2::Mode::Read); // , MPI_COMM_SELF);
   

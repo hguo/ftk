@@ -20,6 +20,9 @@ public:
 
   vtkSetMacro(UseGPU, bool);
   vtkGetMacro(UseGPU, bool);
+  
+  vtkSetMacro(ComputeDegrees, bool);
+  vtkGetMacro(ComputeDegrees, bool);
 
   vtkSetMacro(GaussianKernelSize, double);
   vtkGetMacro(GaussianKernelSize, double);
@@ -50,6 +53,7 @@ private:
 
 private:
   bool UseGPU;
+  bool ComputeDegrees;
   double GaussianKernelSize;
   double ZTimeScale;
   std::string InputVariable;
