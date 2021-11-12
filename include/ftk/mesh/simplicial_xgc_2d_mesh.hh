@@ -42,6 +42,8 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   const xgc_units_t& get_units() const { return units; }
   const ndarray<I>& get_nextnodes() const { return nextnodes; }
   const ndarray<F>& get_bfield() const { return bfield; }
+  const ndarray<F>& get_bfield0() const { return bfield0; }
+  const ndarray<F>& get_curl_bfield0() const { return curl_bfield0; }
   const ndarray<F>& get_psifield() const { return psifield; }
   const std::vector<I>& get_roi_nodes() const { return roi_nodes; }
 
@@ -130,7 +132,9 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_total_B(const ndarray<F>& totalB, const 
       rzp1[k] = rzp[k];
     }
 
-    bool b0 = magnetic_map(rzp0, i0 * 2 * M_PI / np, 256); // TODO
+    const int nsteps = 512; // TODO
+
+    bool b0 = magnetic_map(rzp0, i0 * 2 * M_PI / np, beta * nsteps); 
     F B0[3] = {0}, B1[3] = {0};
     if (b0) {
       F mu[3];
@@ -146,7 +150,7 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_total_B(const ndarray<F>& totalB, const 
       }
     } else 
       return false;
-    bool b1 = magnetic_map(rzp1, i1 * 2 * M_PI / np, 256);
+    bool b1 = magnetic_map(rzp1, i1 * 2 * M_PI / np, alpha * nsteps);
     if (b1) {
       F mu[3];
       I tid = this->locate(rzp1, mu);
@@ -255,7 +259,7 @@ ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_delta_B(const ndarray<F>& As) co
       Asp.reshape(this->n(0));
       for (int i = 0; i < this->n(0); i ++)
         Asp[i] = As(i, c);
-      ndarray<F> gradAs = this->scalar_gradient(As);
+      ndarray<F> gradAs = this->scalar_gradient(As); // FIXME: this won't work as expected.  need to eval grad plane by plane
 
       for (int i = 0; i < this->n(0); i ++) {
         const F dAsdphi = (As(i, cnext) - As(i, cprev)) / (dphi * 2);
@@ -321,6 +325,7 @@ void simplicial_xgc_2d_mesh<I, F>::read_bfield(const std::string& filename, diy:
 template <typename I, typename F>
 bool simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps) const
 {
+  if (nsteps == 0) return true;
   if (bfield.empty()) 
     fatal("missing xgc bfield.");
 
