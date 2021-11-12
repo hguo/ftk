@@ -124,10 +124,54 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_total_B(const ndarray<F>& totalB, const 
     I tri[3];
     this->get_simplex(2, tid, tri);
 
+    F rzp0[3], rzp1[3];
+    for (int k = 0; k < 3; k ++) {
+      rzp0[k] = rzp[k];
+      rzp1[k] = rzp[k];
+    }
+
+    bool b0 = magnetic_map(rzp0, i0 * 2 * M_PI / np, 256); // TODO
+    F B0[3] = {0}, B1[3] = {0};
+    if (b0) {
+      F mu[3];
+      I tid = this->locate(rzp0, mu);
+      if (tid < 0) 
+        return false;
+      else {
+        I tri[3];
+        this->get_simplex(2, tid, tri);
+        for (int i = 0; i < 3; i ++) 
+          for (int j = 0; j < 3; j ++)
+            B0[j] += mu[i] * totalB(j, tri[i], i0);
+      }
+    } else 
+      return false;
+    bool b1 = magnetic_map(rzp1, i1 * 2 * M_PI / np, 256);
+    if (b1) {
+      F mu[3];
+      I tid = this->locate(rzp1, mu);
+      if (tid < 0) 
+        return false;
+      else {
+        I tri[3];
+        this->get_simplex(2, tid, tri);
+        for (int i = 0; i < 3; i ++) 
+          for (int j = 0; j < 3; j ++)
+            B1[j] += mu[i] * totalB(j, tri[i], i1);
+      }
+    } else 
+      return false;
+
+    for (int i = 0; i < 3; i ++)
+      b[i] = alpha * B0[i] + beta * B1[i];
+
+    // FIXME: use magnetic map instead
+#if 0
     for (int i = 0; i < 3; i ++) 
       for (int j = 0; j < 3; j ++)
         B[i][j] = alpha * totalB(j, tri[i], i0) + beta * totalB(j, tri[i], i1); //  bfield(j, tri[i]);
     lerp_s2v3(B, mu, b);
+#endif
     
     // print3x3("B", B);
     // fprintf(stderr, "mu=%f, %f, %f, b=%f, %f, %f\n", 
@@ -142,17 +186,6 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& to
   const F delta = 2 * M_PI / nsteps;
 
   for (int k = 0; k < nsteps; k ++) {
-#if 0
-    F B[3];
-    // if (eval_b(rzp, B)) {
-    if (eval_total_B(totalB, rzp, B)) {
-      const F r = rzp[0], z = rzp[1], phi = rzp[2];
-      rzp[0] += delta * r * B[0] / B[2];
-      rzp[1] += delta * r * B[1] / B[2];
-      rzp[2] += delta;
-    } else
-      return false;
-#endif
     if (!rk4<3, F>(rzp, [&](const F* rzp, F* v) {
           F B[3];
           if (eval_total_B(totalB, rzp, B)) {
@@ -294,24 +327,6 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps)
   const F delta = (phi_end - rzp[2]) / nsteps;
 
   for (int k = 0; k < nsteps; k ++) {
-#if 0
-    // rk1
-    F B[3];
-    bool succ = eval_b(rzp, B);
-
-    if (succ) {
-      const F r = rzp[0], z = rzp[1], phi = rzp[2];
-      rzp[0] += delta * r * B[0] / B[2];
-      rzp[1] += delta * r * B[1] / B[2];
-      rzp[2] += delta;
-      // rzp[0] += delta * r * B[0] / B[2];
-      // rzp[1] += delta * r * B[1] / B[2];
-      // rzp[2] += delta;
-      // rk4
-    } else 
-      return false;
-#endif
-  
     if (!rk4<3, F>(rzp, [&](const F* rzp, F* v) {
           F B[3];
           if (eval_b(rzp, B)) {
