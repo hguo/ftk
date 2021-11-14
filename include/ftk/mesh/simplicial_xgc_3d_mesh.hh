@@ -93,6 +93,7 @@ public: // smoothing
   ) const; 
 
 public:
+  void initialize_interpolants_cached(); // if the default interpolant file exists, load interpolants; otherwise initialize and write interpolants to the default file
   void initialize_interpolants();
   ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
  
@@ -151,6 +152,18 @@ simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
 }
 
 template <typename I, typename F>
+void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants_cached()
+{
+  const auto f = default_interpolant_filename();
+  if (file_exists(f))
+    read_interpolants(f);
+  else {
+    initialize_interpolants();
+    write_interpolants(f);
+  }
+}
+
+template <typename I, typename F>
 std::string simplicial_xgc_3d_mesh<I, F>::default_interpolant_filename() const
 {
   // hash of conn (2d), nphi, iphi, vphi
@@ -160,7 +173,8 @@ std::string simplicial_xgc_3d_mesh<I, F>::default_interpolant_filename() const
   unsigned int h1 = murmurhash2(arr, 3*sizeof(int), h0);
 
   std::stringstream ss;
-  ss << std::hex << h1;
+  ss << "xgc.interpolants." 
+     << std::hex << h1;
   return ss.str();
 }
 
