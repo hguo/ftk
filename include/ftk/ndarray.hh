@@ -4,6 +4,7 @@
 #include <ftk/config.hh>
 #include <ftk/ndarray/ndarray_base.hh>
 #include <ftk/numeric/clamp.hh>
+#include <ftk/basic/murmurhash2.hh>
 
 #if FTK_HAVE_CUDA
 // #include <cuda.h>
@@ -38,6 +39,8 @@ struct ndarray : public ndarray_base {
   friend class diy::Serialization<ndarray<T>>;
 
   int type() const;
+
+  unsigned int hash() const;
 
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshape(dims);}
@@ -334,6 +337,14 @@ template <typename T> int ndarray<T>::type() const { return NDARRAY_TYPE_UNKNOWN
 template <> inline int ndarray<double>::type() const { return NDARRAY_TYPE_DOUBLE; }
 template <> inline int ndarray<float>::type() const { return NDARRAY_TYPE_FLOAT; }
 template <> inline int ndarray<int>::type() const { return NDARRAY_TYPE_INT; }
+
+template <typename T>
+unsigned int ndarray<T>::hash() const
+{
+  unsigned int h0 = murmurhash2(p.data(), sizeof(T)*p.size(), 0);
+  unsigned int h1 = murmurhash2(dims.data(), sizeof(size_t)*dims.size(), h0);
+  return h1;
+}
 
 template <typename T>
 template <typename T1>

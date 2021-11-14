@@ -95,7 +95,9 @@ public: // smoothing
 public:
   void initialize_interpolants();
   ndarray<F> interpolate(const ndarray<F>& scalar) const; // interpolate virtual planes
-  
+ 
+  std::string default_interpolant_filename() const;
+
   F interpolate(const ndarray<F>& scalar, I i); // interpolate scalar value at vertex i
   F interpolate(const ndarray<F>& scalar, F r, F z, I pi); // interpolate scalar value at rz and pi
 
@@ -146,6 +148,20 @@ simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
   nphi(nphi_), iphi(iphi_), vphi(vphi_)
 {
 
+}
+
+template <typename I, typename F>
+std::string simplicial_xgc_3d_mesh<I, F>::default_interpolant_filename() const
+{
+  // hash of conn (2d), nphi, iphi, vphi
+  const int arr[3] = {nphi, iphi, vphi};
+
+  unsigned int h0 = m2->get_triangles().hash();
+  unsigned int h1 = murmurhash2(arr, 3*sizeof(int), h0);
+
+  std::stringstream ss;
+  ss << std::hex << h1;
+  return ss.str();
 }
 
 template <typename I, typename F>
