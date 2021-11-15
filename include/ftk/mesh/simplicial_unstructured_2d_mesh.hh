@@ -64,6 +64,9 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   void build_edges();
   void build_triangles();
 
+  void build_smoothing_kernel_cached(F sigma);
+  std::string default_smoothing_kernel_filename(F sigma) const;
+
   bool has_smoothing_kernel() const { return smoothing_kernel.size() > 0; }
   void build_smoothing_kernel(F sigma);
   const std::vector<std::vector<std::tuple<I, F>>> &get_smoothing_kernel() const { return smoothing_kernel; }
@@ -169,6 +172,30 @@ private:
 
 
 /////////
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel_cached(F sigma)
+{
+  const auto f = default_smoothing_kernel_filename(sigma);
+  if (file_exists(f))
+    read_smoothing_kernel(f);
+  else {
+    build_smoothing_kernel(sigma);
+    write_smoothing_kernel(f);
+  }
+}
+
+template <typename I, typename F>
+std::string simplicial_unstructured_2d_mesh<I, F>::default_smoothing_kernel_filename(F sigma) const
+{
+  unsigned int h0 = triangles.hash();
+  unsigned int h1 = murmurhash2(&sigma, sizeof(F), h0);
+
+  std::stringstream ss;
+  ss << "ftk.smoothing.kernels.2d." 
+     << std::hex << h1;
+  return ss.str();
+}
 
 template <typename I, typename F>
 simplicial_unstructured_2d_mesh<I, F>::simplicial_unstructured_2d_mesh(const std::vector<F> &coords_, const std::vector<I> &triangles_)

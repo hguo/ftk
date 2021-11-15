@@ -122,7 +122,7 @@ inline void xgc_stream::initialize()
   if (file_exists( smoothing_kernel_filename ))
     m2->read_smoothing_kernel( smoothing_kernel_filename );
   else {
-    m2->build_smoothing_kernel( smoothing_kernel_size );
+    m2->build_smoothing_kernel_cached( smoothing_kernel_size );
     if (!smoothing_kernel_filename.empty())
       m2->write_smoothing_kernel( smoothing_kernel_filename );
   }
@@ -131,7 +131,7 @@ inline void xgc_stream::initialize()
   if (file_exists(interpolant_filename)) 
     mx3->read_interpolants( interpolant_filename );
   else {
-    mx3->initialize_interpolants();
+    mx3->initialize_interpolants_cached();
     if (!interpolant_filename.empty())
       mx3->write_interpolants( interpolant_filename );
   }
