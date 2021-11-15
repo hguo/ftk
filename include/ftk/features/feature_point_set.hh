@@ -55,6 +55,16 @@ vtkSmartPointer<vtkPolyData> feature_point_set_t::to_vtp(
     types->SetName("type");
     poly->GetPointData()->AddArray(types);
   }
+  
+  for (auto k = 0; k < scalar_components.size(); k ++) {
+    vtkSmartPointer<vtkFloatArray> scalar = vtkSmartPointer<vtkFloatArray>::New();
+    scalar->SetNumberOfValues(size());
+    size_t i = 0;
+    for (const auto &cp : *this)
+      scalar->SetValue(i++, cp.scalar[k]);
+    scalar->SetName(scalar_components[k].c_str());
+    poly->GetPointData()->AddArray(scalar);
+  }
 
   return poly;
 }
