@@ -51,6 +51,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   bool eval_total_B(const ndarray<F>& totalB, const F rzp[3], F b[3]) const;
   // bool eval_f(const F rzp[3], F f[2]) const;
   F eval_psi(const F x[]) const; // get psi value at x
+  F eval_psin(const F x[]) const; // get normalized psi at x
 
   bool magnetic_map(F rzp[3], F phi_end, int nsteps=100) const;
   bool magnetic_map_2pi_total_B(const ndarray<F>& totalB, F rzp[3], const int nsteps=3600) const;
@@ -353,6 +354,21 @@ template <typename I, typename F>
 void simplicial_xgc_2d_mesh<I, F>::initialize_point_locator()
 {
   this->locator.reset( new point_locator_2d_quad<I, F>(*this) );
+}
+
+template <typename I, typename F>
+F simplicial_xgc_2d_mesh<I, F>::eval_psi(const F x[]) const
+{
+  F val;
+  if (simplicial_unstructured_2d_mesh<I, F>::eval(psifield, x, &val))
+    return val;
+  else return NAN;
+}
+
+template <typename I, typename F>
+F simplicial_xgc_2d_mesh<I, F>::eval_psin(const F x[]) const
+{
+  return eval_psi(x) / units.psi_x;
 }
 
 template <typename I, typename F>

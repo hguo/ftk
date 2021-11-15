@@ -4,6 +4,7 @@
 #include <ftk/config.hh>
 #include <ftk/algorithms/bfs.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
+#include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/gradient.hh>
 #include <ftk/numeric/sign_det.hh>
 
@@ -83,6 +84,8 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   ndarray<F> scalar_gradient(const ndarray<F>& f) const;
   ndarray<F> vector_gradient(const ndarray<F>& f) const;
   void scalar_gradient_jacobian(const ndarray<F>& f, ndarray<F>& g, ndarray<F>& j) const;
+
+  template <typename T> bool eval(const ndarray<T>& f, const F x[], T val[]) const; // will not work for 2.5d meshes
 
 public: // io
   void from_vtu(const std::string filename);
@@ -172,6 +175,40 @@ private:
 
 
 /////////
+
+template <typename I, typename F>
+template <typename T>
+bool simplicial_unstructured_2d_mesh<I, F>::eval(const ndarray<T>& f, const F x[], T val[]) const
+{
+  F mu[3];
+  I tid = this->locator->locate(x, mu);
+  if (tid < 0) {
+    return false;
+  } else {
+    I tri[3];
+    this->get_simplex(2, tid, tri);
+   
+    if (f.multicomponents() == 0) { // scalar field
+      T fs[3];
+      for (int i = 0; i < 3; i ++)
+        fs[i] = f[tri[i]];
+      val[0] = lerp_s2(fs, mu);
+      return true;
+    } else if (f.multicomponents() == 1) { // vector field
+      const int d = f.dim(0);
+      T fs[3][d];
+
+      for (int i = 0; i < 3; i ++)
+        for (int j = 0; j < d; j ++)
+          fs[i][j] = f(j, tri[i]);
+
+      for (int j = 0; j < d; j ++)
+        val[j] = lerp_s2(fs[j], mu);
+      return true;
+    } else // not supported
+      return false;
+  }
+}
 
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel_cached(F sigma)
