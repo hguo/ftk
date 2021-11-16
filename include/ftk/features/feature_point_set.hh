@@ -35,6 +35,16 @@ vtkSmartPointer<vtkPolyData> feature_point_set_t::to_vtp(
 
   poly->SetPoints(points);
   poly->SetVerts(vertices);
+  
+  if (1) {
+    vtkSmartPointer<vtkUnsignedIntArray> id_array = vtkSmartPointer<vtkUnsignedIntArray>::New();
+    id_array->SetNumberOfValues(size());
+    int i = 0;
+    for (const auto &cp : *this)
+      id_array->SetValue(i++, cp.id);
+    id_array->SetName("id");
+    poly->GetPointData()->AddArray(id_array);
+  }
  
   if (1) {
     vtkSmartPointer<vtkDoubleArray> time_array = vtkSmartPointer<vtkDoubleArray>::New();
