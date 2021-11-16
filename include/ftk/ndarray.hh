@@ -397,6 +397,16 @@ ndarray<T> operator*(const ndarray<T>& lhs, const T1& rhs)
   return array;
 }
 
+template <typename T, typename T1>
+ndarray<T> operator/(const ndarray<T>& lhs, const T1& rhs) 
+{
+  ndarray<T> array;
+  array.reshape(lhs);
+  for (auto i = 0; i < array.nelem(); i ++)
+    array[i] = lhs[i] / rhs;
+  return array;
+}
+
 template <typename T>
 void ndarray<T>::fill(T v)
 {
