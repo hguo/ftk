@@ -67,7 +67,7 @@ if (FTK_HAVE_KOKKOS)
 endif ()
 
 if (FTK_HAVE_NETCDF)
-  target_link_libraries (libftk ${NETCDF_LIBRARY})
+  target_link_libraries (libftk ${netCDF_LIBRARIES})
 endif ()
 
 if (FTK_HAVE_PNETCDF)
