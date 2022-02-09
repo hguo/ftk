@@ -18,7 +18,9 @@ struct xgc_stream : public object {
   void set_start_timestep(int s) { start_timestep = s; }
   void set_ntimesteps(int n) { ntimesteps = n; }
   void set_vphi(int v) { vphi = v; }
-  
+
+  void set_enable_initialize_smoothing_kernel(bool b) { enable_initialize_smoothing_kernel = b; }
+
   void initialize();
   void probe_nphi_iphi();
 
@@ -47,6 +49,9 @@ struct xgc_stream : public object {
   std::shared_ptr<simplicial_xgc_2d_mesh<>> get_m2() { return m2; }
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_m3() { return m3; }
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_mx3() { return mx3; }
+
+protected:
+  bool enable_initialize_smoothing_kernel = true;
 
 protected:
   ndarray<int> steps;
@@ -119,12 +124,14 @@ inline void xgc_stream::initialize()
     mx3.reset( new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi, vphi) );
 
   // smoothing kernels
-  if (file_exists( smoothing_kernel_filename ))
-    m2->read_smoothing_kernel( smoothing_kernel_filename );
-  else {
-    m2->build_smoothing_kernel_cached( smoothing_kernel_size );
-    if (!smoothing_kernel_filename.empty())
-      m2->write_smoothing_kernel( smoothing_kernel_filename );
+  if (enable_initialize_smoothing_kernel) {
+    if (file_exists( smoothing_kernel_filename ))
+      m2->read_smoothing_kernel( smoothing_kernel_filename );
+    else {
+      m2->build_smoothing_kernel_cached( smoothing_kernel_size );
+      if (!smoothing_kernel_filename.empty())
+        m2->write_smoothing_kernel( smoothing_kernel_filename );
+    }
   }
 
   // interpolants
