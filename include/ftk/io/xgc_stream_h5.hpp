@@ -11,6 +11,8 @@ struct xgc_stream_h5 : public xgc_stream
   xgc_stream_h5(const std::string& path, diy::mpi::communicator comm = MPI_COMM_WORLD) : xgc_stream(path, comm) {}
   
   std::string postfix() const { return ".h5"; }
+  
+  std::shared_ptr<ndarray_group> request_step(int step) {}
 
   bool read_oneddiag();
   bool advance_timestep();

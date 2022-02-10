@@ -10,6 +10,8 @@ struct xgc_stream_adios2 : public xgc_stream
   
   std::string postfix() const { return ".bp"; }
 
+  std::shared_ptr<ndarray_group> request_step(int step);
+
   bool read_oneddiag();
   bool advance_timestep();
 };
@@ -17,18 +19,30 @@ struct xgc_stream_adios2 : public xgc_stream
 inline bool xgc_stream_adios2::read_oneddiag()
 {
   const auto f = oneddiag_filename();
-  ndarray<double> etemp_par, etemp_per;
   
   try {
     steps.read_bp(f, "step");
     time.read_bp(f, "time");
+    psi_mks.read_bp(f, "psi_mks");
 
     try {
-      etemp_par.read_bp(f, "e_parallel_mean_en_avg");
+      e_gc_density_avg.read_bp(f, "e_gc_density_avg");
+    } catch (...) {
+      warn("cannot read e_gc_density_avg, use _df_1d instead");
+      try {
+        e_gc_density_avg.read_bp(f, "e_gc_density_df_1d");
+      } catch (...) {
+        warn("cannot read e_gc_density_avg");
+        return false;
+      }
+    }
+
+    try {
+      e_parallel_mean_en_avg.read_bp(f, "e_parallel_mean_en_avg");
     } catch (...) {
       warn("cannot read e_parallel_mean_en_avg, use _df_1d instead");
       try {
-        etemp_par.read_bp(f, "e_parallel_mean_en_df_1d");
+        e_parallel_mean_en_avg.read_bp(f, "e_parallel_mean_en_df_1d");
       } catch (...) {
         warn("cannot read e_parallel_mean_en_df_1d");
         return false;
@@ -36,22 +50,57 @@ inline bool xgc_stream_adios2::read_oneddiag()
     }
 
     try {
-      etemp_per.read_bp(f, "e_perp_temperature_avg");
+      e_perp_temperature_avg.read_bp(f, "e_perp_temperature_avg");
     } catch (...) {
-      warn("cannot read e_prep_temperature_avg, use _df_1d instead");
+      warn("cannot read e_perp_temperature_avg, use _df_1d instead");
       try {
-        etemp_per.read_bp(f, "e_perp_temperature_df_1d");
+        e_perp_temperature_avg.read_bp(f, "e_perp_temperature_df_1d");
       } catch (...) {
         warn("cannot read e_perp_temperature_df_1d");
         return false;
       }
     }
 
-    Te1d = (etemp_par + etemp_per) * (2.0 / 3.0);
+    Te1d = (e_parallel_mean_en_avg + e_perp_temperature_avg) * (2.0 / 3.0);
     return true;
   } catch (...) {
     warn("cannot read oneddiag file");
     return false;
+  }
+}
+
+inline std::shared_ptr<ndarray_group> xgc_stream_adios2::request_step(int step)
+{
+  std::shared_ptr<ndarray_group> g(new ndarray_group);
+
+  const auto f = filename_step(step);
+
+  if (is_directory(f)) {
+    try {
+      std::shared_ptr<ndarray_base>
+        dpot( new ndarray<double> ),
+        pot0( new ndarray<double> ),
+        potm0( new ndarray<double> ),
+        eden( new ndarray<double> );
+
+      dpot->read_bp(f, "dpot");
+      pot0->read_bp(f, "pot0");
+      potm0->read_bp(f, "potm0");
+      eden->read_bp(f, "eden");
+
+      g->set("dpot", dpot);
+      g->set("pot0", pot0);
+      g->set("potm0", potm0);
+      g->set("eden", eden);
+
+      return g;
+    } catch (...) {
+      warn("error requesting step " + std::to_string(step));
+      return NULL;
+    }
+  } else {
+    fatal("cannot open file " + f);
+    return NULL;
   }
 }
 

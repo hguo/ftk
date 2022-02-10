@@ -20,6 +20,7 @@ struct xgc_stream : public object {
   void set_vphi(int v) { vphi = v; }
 
   void set_enable_initialize_smoothing_kernel(bool b) { enable_initialize_smoothing_kernel = b; }
+  void set_enable_initialize_interpolants(bool b) { enable_initialize_interpolants = b; }
 
   void initialize();
   void probe_nphi_iphi();
@@ -30,6 +31,8 @@ struct xgc_stream : public object {
 
   void set_callback(std::function<void(int, std::shared_ptr<ndarray_group>)> f) { callback = f; }
 
+  virtual std::shared_ptr<ndarray_group> request_step(int i) = 0;
+
   virtual bool read_oneddiag() = 0;
   virtual bool advance_timestep() = 0;
 
@@ -38,6 +41,7 @@ struct xgc_stream : public object {
   std::string oneddiag_filename() const { return path + "/xgc.oneddiag" + postfix(); }
   std::string bfield_filename() const { return path + "/xgc.bfield" + postfix(); }
   std::string units_filename() const { return path + "/units.m"; }
+  std::string filename_step(int step) const { return series_filename(path + "/xgc.3d.%05d" + postfix(), step); }
   std::string filename(int t) const { 
     // fprintf(stderr, "%zu\n", filenames.size());
     if (filenames.empty()) return series_filename(path + "/xgc.3d.%05d" + postfix(), std::max(t, 1));
@@ -50,14 +54,20 @@ struct xgc_stream : public object {
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_m3() { return m3; }
   std::shared_ptr<simplicial_xgc_3d_mesh<>> get_mx3() { return mx3; }
 
+  const std::set<int>& get_available_steps() const { return available_steps; }
+
 protected:
-  bool enable_initialize_smoothing_kernel = true;
+  bool enable_initialize_smoothing_kernel = true, 
+       enable_initialize_interpolants = true;
 
 protected:
   ndarray<int> steps;
-  ndarray<double> time, Te1d;
+  ndarray<double> time, Te1d, psi_mks, 
+    e_gc_density_avg, 
+    e_perp_temperature_avg, 
+    e_parallel_mean_en_avg; // 1d
 
-  std::set<int> availabe_steps;
+  std::set<int> available_steps;
 
 protected:
   const std::string path;
@@ -100,7 +110,7 @@ inline void xgc_stream::initialize()
   for (int i = 0; i < filenames.size(); i ++) {
     int s = filename2step(filenames[i]);
     if (s >= 0)
-      availabe_steps.insert(s);
+      available_steps.insert(s);
   }
 
   if (ntimesteps > 0)
@@ -135,12 +145,14 @@ inline void xgc_stream::initialize()
   }
 
   // interpolants
-  if (file_exists(interpolant_filename)) 
-    mx3->read_interpolants( interpolant_filename );
-  else {
-    mx3->initialize_interpolants_cached();
-    if (!interpolant_filename.empty())
-      mx3->write_interpolants( interpolant_filename );
+  if (vphi > 1 && enable_initialize_interpolants) {
+    if (file_exists(interpolant_filename)) 
+      mx3->read_interpolants( interpolant_filename );
+    else {
+      mx3->initialize_interpolants_cached();
+      if (!interpolant_filename.empty())
+        mx3->write_interpolants( interpolant_filename );
+    }
   }
   
   current_timestep = start_timestep;
@@ -169,7 +181,7 @@ std::shared_ptr<xgc_stream> xgc_stream::new_xgc_stream(const std::string& path, 
   std::shared_ptr<xgc_stream> s;
   if (file_exists( path + "/xgc.mesh.h5" )) s.reset(new xgc_stream_h5(path, comm));
   else if (is_directory( path + "/xgc.mesh.bp" )) s.reset(new xgc_stream_adios2(path, comm));
-  else assert(false);
+  else fatal("cannot find xgc.mesh file");
 
   return s;
 }
