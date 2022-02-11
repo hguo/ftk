@@ -9,6 +9,7 @@
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/filters/xgc_blob_filament_tracker.cuh>
 #include "common.cuh"
+#include "locator2.cuh"
 #include "mx4.cuh"
 
 // what are needed in device memory:

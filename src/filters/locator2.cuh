@@ -1,6 +1,8 @@
 #ifndef _FTK_LOCATOR2_HH
 #define _FTK_LOCATOR2_HH
 
+#include <ftk/mesh/bvh2d.hh>
+
 template <typename I, typename F>
 __device__ __host__
 inline bool bvh2_inside_quad(const bvh2d_node_t<I, F> &q, F x, F y)
@@ -24,11 +26,12 @@ inline bool bvh2_inside_triangle(const bvh2d_node_t<I, F> &q, F x, F y, F lambda
          ((q.y1 - q.y2)*(q.x0 - q.x2) + (q.x2 - q.x1)*(q.y0 - q.y2));
 #endif
   const F d = invdet[q.triangleId];
-  lambda.x = ((q.y1 - q.y2)*(x - q.x2) + (q.x2 - q.x1)*(y - q.y2)) * d; 
-  lambda.y = ((q.y2 - q.y0)*(x - q.x2) + (q.x0 - q.x2)*(y - q.y2)) * d;
-  lambda.z = 1.0 - lambda.x - lambda.y;
+  lambda[0] = ((q.y1 - q.y2)*(x - q.x2) + (q.x2 - q.x1)*(y - q.y2)) * d; 
+  lambda[1] = ((q.y2 - q.y0)*(x - q.x2) + (q.x0 - q.x2)*(y - q.y2)) * d;
+  lambda[2] = 1.0 - lambda[0] - lambda[1];
   // fprintf(stderr, "barycentric=%f, %f, %f\n", lambda.x, lambda.y, lambda.z);
-  return lambda.x >= 0 && lambda.y >= 0 && lambda.z >= 0;
+  return lambda[0] >= 0 && lambda[1] >= 0 && lambda[2] >= 0 && 
+         lambda[0] <= 1 && lambda[1] <= 1 && lambda[2] <= 1;
 }
 
 template <typename I, typename F>
@@ -39,7 +42,7 @@ inline int bvh2_locate_point_recursive(const bvh2d_node_t<I, F> *q, const bvh2d_
     bool succ = bvh2_inside_triangle(*q, x, y, lambda, invdet);
     if (succ) return q->triangleId;
   } else if (bvh2_inside_quad(*q, x, y)) {
-    for (int j=0; j<BVH_NUM_CHILDREN; j++) {
+    for (int j=0; j<4; j++) {
       if (q->childrenIds[j] > 0) {
         int result = bvh2_locate_point_recursive(&nodes[q->childrenIds[j]], nodes, x, y, lambda, invdet);
         if (result >= 0) return result;
@@ -70,7 +73,7 @@ inline int bvh2_locate_point(bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3], c
       bool succ = bvh2_inside_triangle(q, x, y, lambda, invdet);
       if (succ) return i; // q.triangleId;
     } else if (bvh2_inside_quad(q, x, y)) { // non-leaf node
-      for (int j=0; j<BVH_NUM_CHILDREN; j++) {
+      for (int j=0; j<4; j++) {
         if (q.childrenIds[j] > 0)
           stack[stackPos++] = q.childrenIds[j];
       }
