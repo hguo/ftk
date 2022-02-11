@@ -2,6 +2,7 @@
 #define _XGC_BLOB_FILAMENT_TRACKER_CUH
 
 #include <vector>
+#include <set>
 #include <ftk/numeric/xgc_interpolant.hh>
 #include <ftk/features/feature_point_lite.hh>
 

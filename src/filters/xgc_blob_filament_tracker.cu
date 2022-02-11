@@ -4,6 +4,7 @@
 #include <ftk/numeric/clamp.hh>
 #include <ftk/numeric/symmetric_matrix.hh>
 #include <ftk/numeric/fixed_point.hh>
+#include <ftk/numeric/gradient.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/filters/xgc_blob_filament_tracker.cuh>
@@ -20,8 +21,7 @@ using namespace ftk;
 typedef xft_ctx_t ctx_t;
 
 template <typename I, typename F>
-__global__
-inline void m2_cellwise_scalar_gradient(
+__global__ void m2_cellwise_scalar_gradient(
     const I m2n2, 
     const I m2tris[], 
     const F m2coords[],
@@ -49,8 +49,7 @@ inline void m2_cellwise_scalar_gradient(
 }
 
 template <typename I, typename F>
-__global__
-inline void m2_cellwise2vertexwise_scalar_gradient(
+__global__ void m2_cellwise2vertexwise_scalar_gradient(
     const I m2n0, const I max_vertex_triangles,
     const I vertex_triangles[],
     const F cwgrad[], // input
@@ -74,8 +73,7 @@ inline void m2_cellwise2vertexwise_scalar_gradient(
 }
 
 template <typename I, typename F>
-__global__
-inline void mx3_upsample_scalar(
+__global__ void mx3_upsample_scalar(
     const I nphi, const I iphi, const I vphi,
     const I m2n0, 
     const ftk::xgc_interpolant_t<I, F>* interpolants,
@@ -92,15 +90,14 @@ inline void mx3_upsample_scalar(
 }
 
 template <typename I, typename F>
-__global__
-inline void mx3_derive_deltaB(
+__global__ void mx3_derive_deltaB(
     const I nphi, const I iphi, const I vphi, 
     const I m2n0, 
     const F *apars, // upsampled
     const F *gradAs, 
     const F *bfield,
     const F *bfield0, 
-    const F *curl_bfield0
+    const F *curl_bfield0,
     F *deltaB) // output
 {
   int tid = getGlobalIdx_3D_1D();
@@ -637,14 +634,14 @@ void xft_load_psin(ctx_t *c, const double *psin)
 
 void xft_load_magnetic_field(ctx_t *c, const double *bfield, const double *bfield0, const double *curl_bfield0)
 {
-  cudaMalloc((void**)&c->d_bfield, size_t(m2n0) * sizeof(double) * 3);
-  cudaMemcpy(c->d_bfield, bfield, size_t(m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_bfield, size_t(c->m2n0) * sizeof(double) * 3);
+  cudaMemcpy(c->d_bfield, bfield, size_t(c->m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
 
-  cudaMalloc((void**)&c->d_bfield0, size_t(m2n0) * sizeof(double) * 3);
-  cudaMemcpy(c->d_bfield0, bfield0, size_t(m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_bfield0, size_t(c->m2n0) * sizeof(double) * 3);
+  cudaMemcpy(c->d_bfield0, bfield0, size_t(c->m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
   
-  cudaMalloc((void**)&c->d_curl_bfield0, size_t(m2n0) * sizeof(double) * 3);
-  cudaMemcpy(c->d_curl_bfield0, curl_bfield0, size_t(m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_curl_bfield0, size_t(c->m2n0) * sizeof(double) * 3);
+  cudaMemcpy(c->d_curl_bfield0, curl_bfield0, size_t(c->m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
 
   checkLastCudaError("[FTK-CUDA] loading xgc magnetic field");
 }
@@ -656,7 +653,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
   
   if (c->d_apars == NULL) {
     cudaMalloc((void**)&c->d_apars, size_t(c->m2n0 * c->nphi) * sizeof(double));
-    cudaMemcpy(c->d_apars, size_t(c->m2n0 * c->nphi) * sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy(c->d_apars, apars, size_t(c->m2n0 * c->nphi) * sizeof(double), cudaMemcpyHostToDevice);
   }
 
   // TODO:
@@ -689,7 +686,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
       else gridSize = dim3(nBlocks);
 
       m2_cellwise_scalar_gradient<<<gridSize, blockSize>>>(
-          c->m2n2, c->m2tris, c->m2coords,
+          c->m2n2, c->d_m2tris, c->d_m2coords,
           c->d_apars_upsample + i * c->m2n0, 
           c->d_gradAs_cw + i * c->m2n2 * 2);
     }
@@ -726,7 +723,7 @@ void xft_load_vertex_triangles(ctx_t *c, const std::vector<std::set<int>> &verte
 
   if (c->d_vertex_triangles != NULL) cudaFree(c->d_vertex_triangles);
   cudaMalloc((void**)&c->d_vertex_triangles, size_t(c->m2n0 * mt) * sizeof(int));
-  cudaMemcpy(c->d_vertex_triangles, size_t(c->m2n0 * mt) * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(c->d_vertex_triangles, &vertex_triangles[0], size_t(c->m2n0 * mt) * sizeof(int), cudaMemcpyHostToDevice);
 }
 
 void xft_load_mesh(ctx_t *c,
