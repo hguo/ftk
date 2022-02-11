@@ -154,6 +154,8 @@ simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
 template <typename I, typename F>
 void simplicial_xgc_3d_mesh<I, F>::initialize_interpolants_cached()
 {
+  if (vphi == 1) return; // no interpolants needed
+
   const auto f = default_interpolant_filename();
   if (file_exists(f))
     read_interpolants(f);
