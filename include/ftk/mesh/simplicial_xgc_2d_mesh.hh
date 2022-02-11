@@ -314,7 +314,7 @@ template <typename I, typename F>
 void simplicial_xgc_2d_mesh<I, F>::read_bfield(const std::string& filename, diy::mpi::communicator comm)
 {
   auto ext = file_extension(filename);
-  if (ext == FILE_EXT_BP) bfield.read_bp(filename, "/node_data[0]/values", comm);
+  if (ext == FILE_EXT_BP) bfield.read_bp(filename, "/node_data[0]/values", -1, comm);
   else if (ext == FILE_EXT_HDF5) bfield.read_h5(filename, "/node_data[0]/values");
   else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
 
@@ -414,10 +414,10 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
     const std::string& filename,
     diy::mpi::communicator comm)
 {
-  ndarray<I> triangles = ndarray<I>::from_bp(filename, "/cell_set[0]/node_connect_list", comm);
-  ndarray<F> coords = ndarray<F>::from_bp(filename, "/coordinates/values", comm);
-  ndarray<I> nextnodes = ndarray<I>::from_bp(filename, "nextnode", comm);
-  ndarray<F> psifield = ndarray<F>::from_bp(filename, "psi", comm);
+  ndarray<I> triangles = ndarray<I>::from_bp(filename, "/cell_set[0]/node_connect_list", -1, comm);
+  ndarray<F> coords = ndarray<F>::from_bp(filename, "/coordinates/values", -1, comm);
+  ndarray<I> nextnodes = ndarray<I>::from_bp(filename, "nextnode", -1, comm);
+  ndarray<F> psifield = ndarray<F>::from_bp(filename, "psi", -1, comm);
 
   // triangles.transpose();
   // coords.transpose();

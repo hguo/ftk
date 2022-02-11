@@ -12,7 +12,7 @@ struct xgc_stream_h5 : public xgc_stream
   
   std::string postfix() const { return ".h5"; }
   
-  std::shared_ptr<ndarray_group> request_step(int step) {}
+  std::shared_ptr<ndarray_group> request_step(int step) { return NULL; } // TODO
 
   bool read_oneddiag();
   bool advance_timestep();

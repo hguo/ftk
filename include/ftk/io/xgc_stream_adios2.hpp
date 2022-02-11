@@ -21,8 +21,15 @@ inline bool xgc_stream_adios2::read_oneddiag()
   const auto f = oneddiag_filename();
   
   try {
-    steps.read_bp(f, "step");
+    steps.read_bp(f, "step", NDARRAY_ADIOS2_STEPS_ALL);
+    for (int i = 0; i < steps.size(); i ++) {
+      step2istep[steps[i]] = i;
+      // fprintf(stderr, "step=%d, istep=%d\n", steps[i], i);
+    }
+
     time.read_bp(f, "time");
+
+#if 0
     psi_mks.read_bp(f, "psi_mks");
 
     try {
@@ -62,6 +69,7 @@ inline bool xgc_stream_adios2::read_oneddiag()
     }
 
     Te1d = (e_parallel_mean_en_avg + e_perp_temperature_avg) * (2.0 / 3.0);
+#endif
     return true;
   } catch (...) {
     warn("cannot read oneddiag file");
@@ -73,25 +81,87 @@ inline std::shared_ptr<ndarray_group> xgc_stream_adios2::request_step(int step)
 {
   std::shared_ptr<ndarray_group> g(new ndarray_group);
 
-  const auto f = filename_step(step);
+  const int istep = step2istep[step];
+  fprintf(stderr, "istep=%d\n", istep);
 
-  if (is_directory(f)) {
+  // read f1d
+  const auto f1d = oneddiag_filename();
+  const auto f = filename_step(step);
+  if (is_directory(f1d) && is_directory(f)) {
     try {
-      std::shared_ptr<ndarray_base>
+      std::shared_ptr<ndarray_base> // 1d profiles
+        psi_mks( new ndarray<double> ),
+        e_gc_density_avg( new ndarray<double> ), 
+        e_parallel_mean_en_avg( new ndarray<double> ),
+        e_perp_temperature_avg( new ndarray<double> );
+
+      psi_mks->read_bp(f1d, "psi_mks", istep);
+      g->set("psi_mks", psi_mks);
+    
+      try {
+        e_gc_density_avg->read_bp(f1d, "e_gc_density_avg", istep);
+      } catch (...) {
+        warn("cannot read e_gc_density_avg, use _df_1d instead");
+        try {
+          e_gc_density_avg->read_bp(f1d, "e_gc_density_df_1d", istep);
+        } catch (...) {
+          warn("cannot read e_gc_density_df_1d");
+        }
+      }
+      g->set("e_gc_density_avg", e_gc_density_avg);
+
+      try {
+        e_parallel_mean_en_avg->read_bp(f1d, "e_parallel_mean_en_avg", istep);
+      } catch (...) {
+        warn("cannot read e_parallel_mean_en_avg, use _df_1d instead");
+        try {
+          e_parallel_mean_en_avg->read_bp(f1d, "e_parallel_mean_en_df_1d", istep);
+        } catch (...) {
+          warn("cannot read e_parallel_mean_en_df_1d");
+        }
+      }
+      g->set("e_parallel_mean_en_avg", e_parallel_mean_en_avg);
+
+      try {
+        e_perp_temperature_avg->read_bp(f1d, "e_perp_temperature_avg", istep);
+      } catch (...) {
+        warn("cannot read e_perp_temperature_avg, use _df_1d instead");
+        try {
+          e_perp_temperature_avg->read_bp(f1d, "e_perp_temperature_df_1d", istep);
+        } catch (...) {
+          warn("cannot read e_perp_temperature_df_1d");
+        }
+      }
+      g->set("e_perp_temperature_avg", e_perp_temperature_avg);
+
+      std::shared_ptr<ndarray_base> // 3d
         dpot( new ndarray<double> ),
         pot0( new ndarray<double> ),
         potm0( new ndarray<double> ),
         eden( new ndarray<double> );
 
       dpot->read_bp(f, "dpot");
-      pot0->read_bp(f, "pot0");
-      potm0->read_bp(f, "potm0");
-      eden->read_bp(f, "eden");
-
       g->set("dpot", dpot);
+      
+      pot0->read_bp(f, "pot0");
       g->set("pot0", pot0);
+      
+      potm0->read_bp(f, "potm0");
       g->set("potm0", potm0);
+      
+      eden->read_bp(f, "eden");
       g->set("eden", eden);
+
+      ndarray<double> dneOverne0 = mx3->derive_turbulence(
+          g->get<double>("dpot"),
+          g->get<double>("pot0"), 
+          g->get<double>("potm0"),
+          g->get<double>("eden"),
+          g->get<double>("psi_mks"),
+          g->get<double>("e_gc_density_avg"),
+          g->get<double>("e_perp_temperature_avg"),
+          g->get<double>("e_parallel_mean_en_avg"));
+      g->set("dneOverne0", dneOverne0);
 
       return g;
     } catch (...) {

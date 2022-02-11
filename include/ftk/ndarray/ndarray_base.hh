@@ -51,6 +51,11 @@ enum {
   NDARRAY_TYPE_INT = 3
 };
 
+enum {
+  NDARRAY_ADIOS2_STEPS_UNSPECIFIED = -1, 
+  NDARRAY_ADIOS2_STEPS_ALL = -2
+};
+
 template <typename T> struct ndarray;
 
 // the non-template base class for ndarray
@@ -110,19 +115,18 @@ public: // h5 i/o
 #endif
 
 public: // adios2 i/o
-  virtual void read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm = MPI_COMM_WORLD) = 0;
+  virtual void read_bp(
+      const std::string& filename, 
+      const std::string& varname, 
+      int step = NDARRAY_ADIOS2_STEPS_UNSPECIFIED, 
+      diy::mpi::communicator comm = MPI_COMM_WORLD) = 0;
 
 #if FTK_HAVE_ADIOS2
   virtual void read_bp(
       adios2::IO &io, 
       adios2::Engine& reader, 
-      const std::string &varname) = 0; // read all
-
-  virtual void read_bp(
-      adios2::IO &io, 
-      adios2::Engine& reader, 
       const std::string &varname, 
-      int step_start) = 0;
+      int step = NDARRAY_ADIOS2_STEPS_UNSPECIFIED) = 0; // read all
 #endif
 
 public: // adios1 io
@@ -232,7 +236,7 @@ inline bool ndarray_base::read_h5(hid_t fid, const std::string& name)
 }
 #endif
 
-inline void ndarray_base::read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
+inline void ndarray_base::read_bp(const std::string& filename, const std::string& varname, int step, diy::mpi::communicator comm)
 {
 #if FTK_HAVE_ADIOS2
 #if ADIOS2_USE_MPI
@@ -243,7 +247,7 @@ inline void ndarray_base::read_bp(const std::string& filename, const std::string
   adios2::IO io = adios.DeclareIO("BPReader");
   adios2::Engine reader = io.Open(filename, adios2::Mode::Read); // , MPI_COMM_SELF);
   
-  read_bp(io, reader, varname);
+  read_bp(io, reader, varname, step);
   reader.Close();
   
   // empty array; try legacy reader

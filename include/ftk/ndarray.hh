@@ -243,25 +243,21 @@ public: // i/o for parallel-netcdf
 #endif
 
 public: // i/o for adios2
-  static ndarray<T> from_bp(const std::string& filename, const std::string& name, diy::mpi::communicator comm = MPI_COMM_WORLD);
-  void read_bp(const std::string& filename, const std::string& varname, diy::mpi::communicator comm = MPI_COMM_WORLD) { ndarray_base::read_bp(filename, varname, comm); }
+  static ndarray<T> from_bp(const std::string& filename, const std::string& name, int step = -1, diy::mpi::communicator comm = MPI_COMM_WORLD);
+  void read_bp(const std::string& filename, const std::string& varname, int step = -1, diy::mpi::communicator comm = MPI_COMM_WORLD) { ndarray_base::read_bp(filename, varname, step, comm); }
 
 #if FTK_HAVE_ADIOS2
   void read_bp(
       adios2::IO &io, 
-      adios2::Engine& reader, 
-      const std::string &varname); // read all
+      adios2::Engine& reader,
+      const std::string &varname, 
+      int step = -1); // read all
   
   void read_bp(
       adios2::IO &io, 
       adios2::Engine& reader, 
-      adios2::Variable<T>& var);
-
-  void read_bp(
-      adios2::IO &io, 
-      adios2::Engine& reader, 
-      const std::string &varname, 
-      int step_start);
+      adios2::Variable<T>& var, 
+      int step = -1);
 #endif
 
 public: // i/o for adios1
@@ -1070,11 +1066,19 @@ template <> inline int ndarray<int>::nc_datatype() { return NC_INT; }
 
 #if FTK_HAVE_ADIOS2
 template <typename T>
-inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::Variable<T>& var)
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::Variable<T>& var, int step)
 {
   if (var) {
     // std::cerr << var << std::endl;
     // std::cerr << var.Shape() << std::endl;
+
+    if (step == NDARRAY_ADIOS2_STEPS_UNSPECIFIED) {
+      // nothing to do
+    } else if (step == NDARRAY_ADIOS2_STEPS_ALL) {
+      const size_t nsteps = var.Steps();
+      var.SetStepSelection({0, nsteps-1});
+    } else 
+      var.SetStepSelection({step, 1});
 
     std::vector<size_t> shape(var.Shape());
 
@@ -1099,22 +1103,10 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::
 }
 
 template <typename T>
-inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname, int step_start)
+inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname, int step)
 {
   auto var = io.template InquireVariable<T>(varname);
-  if (var) {
-    var.SetStepSelection({step_start, 1});
-    reshape(var.Shape());
-    // var.SetSelection({{0, 0}, {var.Shape()[0], var.Shape()[1]}});
-    reader.Get<T>(var, p);
-  }
-}
-
-template <typename T>
-inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, const std::string &varname)
-{
-  auto var = io.template InquireVariable<T>(varname);
-  read_bp(io, reader, var);
+  read_bp(io, reader, var, step);
 }
 #endif
 
@@ -1232,7 +1224,7 @@ bool ndarray<T>::read_file(const std::string& filename, const std::string varnam
   }
 
   auto ext = file_extension(filename);
-  if (ext == FILE_EXT_BP) read_bp(filename, varname, comm);
+  if (ext == FILE_EXT_BP) read_bp(filename, varname, -1, comm); // TODO: step
   else if (ext == FILE_EXT_NETCDF) read_netcdf(filename, varname, comm);
   else if (ext == FILE_EXT_VTI) read_vtk_image_data_file(filename, varname);
   else if (ext == FILE_EXT_HDF5) read_h5(filename, varname);
@@ -1242,10 +1234,10 @@ bool ndarray<T>::read_file(const std::string& filename, const std::string varnam
 }
 
 template <typename T>
-ndarray<T> ndarray<T>::from_bp(const std::string& filename, const std::string& name, diy::mpi::communicator comm)
+ndarray<T> ndarray<T>::from_bp(const std::string& filename, const std::string& name, int step, diy::mpi::communicator comm)
 {
   ndarray<T> array;
-  array.read_bp(filename, name, comm);
+  array.read_bp(filename, name, step, comm);
     
   return array;
 }

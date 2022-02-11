@@ -10,7 +10,10 @@
 
 namespace ftk {
 using nlohmann::json;
-  
+
+// step: time index in the simulation
+// timestep: index of all available steps
+
 struct xgc_stream : public object {
   static std::shared_ptr<xgc_stream> new_xgc_stream(const std::string& path, diy::mpi::communicator comm = MPI_COMM_WORLD);
   xgc_stream(const std::string& path_, diy::mpi::communicator comm = MPI_COMM_WORLD) : path(path_), object(comm) {}
@@ -68,6 +71,7 @@ protected:
     e_parallel_mean_en_avg; // 1d
 
   std::set<int> available_steps;
+  std::map<int, int> step2istep; // in oneddiag
 
 protected:
   const std::string path;
