@@ -20,6 +20,108 @@ using namespace ftk;
 typedef xft_ctx_t ctx_t;
 
 template <typename I, typename F>
+__global__
+inline void m2_cellwise_scalar_gradient(
+    const I m2n2, 
+    const I m2tris[], 
+    const F m2coords[],
+    const F scalar[], // input
+    F cwgrad[]) // output
+{
+  int tid = getGlobalIdx_3D_1D();
+  I i = tid;
+  if (i >= m2n2) return;
+
+  I tri[3];
+  m2_get_tri(i, tri, m2tris);
+
+  F X[3][2], f[3], gradf[2];
+  for (int j = 0; j < 3; j ++) {
+    const I k = tri[j];
+    X[j][0] = m2coords[2*k];
+    X[j][1] = m2coords[2*k+1];
+    f[j] = scalar[k];
+  }
+
+  gradient_2dsimplex2(X, f, gradf);
+  cwgrad[2*i] = gradf[0];
+  cwgrad[2*i+1] = gradf[1];
+}
+
+template <typename I, typename F>
+__global__
+inline void m2_cellwise2vertexwise_scalar_gradient(
+    const I m2n0, const I max_vertex_triangles,
+    const I vertex_triangles[],
+    const F cwgrad[], // input
+    F grad[]) // output
+{
+  int tid = getGlobalIdx_3D_1D();
+  I i = tid;
+  if (i >= m2n0) return;
+
+  F gradf[2] = {0};
+  int ntris = 0;
+  for (int j = 0; j < max_vertex_triangles; j ++) {
+    const I tri = vertex_triangles[i*max_vertex_triangles+j];
+    if (tri >= 0) {
+      gradf[0] += cwgrad[tri*2];
+      gradf[1] += cwgrad[tri*2+1];
+    }
+  }
+  grad[i*2] = gradf[0] / ntris;
+  grad[i*2+1] = gradf[1] / ntris;
+}
+
+template <typename I, typename F>
+__global__
+inline void mx3_upsample_scalar(
+    const I nphi, const I iphi, const I vphi,
+    const I m2n0, 
+    const ftk::xgc_interpolant_t<I, F>* interpolants,
+    const F *input, 
+    F *output)
+{
+  int tid = getGlobalIdx_3D_1D();
+  I i = tid;
+  if (i >= m2n0 * nphi * vphi) return;
+
+  output[i] = mx3_interpolate_scalar(i, 
+      nphi, iphi, vphi, m2n0, 
+      interpolants, input);
+}
+
+template <typename I, typename F>
+__global__
+inline void mx3_derive_deltaB(
+    const I nphi, const I iphi, const I vphi, 
+    const I m2n0, 
+    const F *apars, // upsampled
+    const F *gradAs, 
+    const F *bfield,
+    const F *bfield0, 
+    const F *curl_bfield0
+    F *deltaB) // output
+{
+  int tid = getGlobalIdx_3D_1D();
+  I ii = tid;
+  if (ii >= m2n0 * nphi * vphi) return;
+
+  const I np = nphi * vphi;
+  const I p = ii / m2n0;
+  const I i = ii % m2n0;
+  const I pnext = (p + 1) % np, 
+          pprev = (p + np - 1) % np;
+  const F dphi = 2 * M_PI / np;
+
+  const F dAsdphi = (apars[pnext*m2n0+i] - apars[pprev*m2n0+i]) / (dphi * 2);
+
+  deltaB[ii*3] = gradAs[ii*2+1] * bfield0[i*3+2] - dAsdphi * bfield0[i*3+1] + apars[ii] * curl_bfield0[i*3];
+  deltaB[ii*3+1] = -gradAs[ii*2] * bfield0[i*3+2] + dAsdphi * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+1];
+  deltaB[ii*3+2] = gradAs[ii*2] * bfield0[i*3+1] - gradAs[ii*2+1] * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+2];
+}
+
+template <typename I, typename F>
 __device__
 bool check_simplex(
     I current_timestep, 
@@ -195,6 +297,15 @@ void sweep_simplices(
   }
 }
 
+void xft_create_poincare_ctx(ctx_t **c_, int nseeds, int nsteps, int device)
+{
+  xft_create_ctx(c_, device, std::ceil((nseeds * nsteps * sizeof(double) * 2) / (1024 * 1024)));
+  ctx_t *c = *c_;
+ 
+  c->nseeds = nseeds;
+  c->nsteps = nsteps;
+}
+
 void xft_create_ctx(ctx_t **c_, int device, int device_buffer_size_in_mb)
 {
   *c_ = (ctx_t*)malloc(sizeof(ctx_t));
@@ -239,6 +350,8 @@ void xft_destroy_ctx(ctx_t **c_)
   if (c->d_m2tris != NULL) cudaFree(c->d_m2tris);
   if (c->d_psin != NULL) cudaFree(c->d_psin);
 
+  if (c->d_vertex_triangles != NULL) cudaFree(c->d_vertex_triangles);
+
   if (c->d_interpolants != NULL) cudaFree(c->d_interpolants);
 
   if (c->d_kernel_nodes != NULL) cudaFree(c->d_kernel_nodes);
@@ -253,7 +366,14 @@ void xft_destroy_ctx(ctx_t **c_)
   if (c->d_vector[1] != NULL) cudaFree(c->d_vector[1]);
   if (c->d_jacobian[0] != NULL) cudaFree(c->d_jacobian[0]);
   if (c->d_jacobian[1] != NULL) cudaFree(c->d_jacobian[1]);
-  
+ 
+  if (c->d_apars != NULL) cudaFree(c->d_apars);
+  if (c->d_apars_upsample != NULL) cudaFree(c->d_apars_upsample);
+  if (c->d_bfield != NULL) cudaFree(c->d_bfield);
+  if (c->d_bfield0 != NULL) cudaFree(c->d_bfield0);
+  if (c->d_curl_bfield0 != NULL) cudaFree(c->d_curl_bfield0);
+  if (c->d_seeds != NULL) cudaFree(c->d_seeds);
+
   checkLastCudaError("[FTK-CUDA] cuda free");
 
   free(*c_);
@@ -513,6 +633,100 @@ void xft_load_psin(ctx_t *c, const double *psin)
   cudaMalloc((void**)&c->d_psin, size_t(c->m2n0) * sizeof(double));
   cudaMemcpy(c->d_psin, psin, size_t(c->m2n0) * sizeof(double), cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] loading psin");
+}
+
+void xft_load_magnetic_field(ctx_t *c, const double *bfield, const double *bfield0, const double *curl_bfield0)
+{
+  cudaMalloc((void**)&c->d_bfield, size_t(m2n0) * sizeof(double) * 3);
+  cudaMemcpy(c->d_bfield, bfield, size_t(m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_bfield0, size_t(m2n0) * sizeof(double) * 3);
+  cudaMemcpy(c->d_bfield0, bfield0, size_t(m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
+  
+  cudaMalloc((void**)&c->d_curl_bfield0, size_t(m2n0) * sizeof(double) * 3);
+  cudaMemcpy(c->d_curl_bfield0, curl_bfield0, size_t(m2n0) * sizeof(double) * 3, cudaMemcpyHostToDevice);
+
+  checkLastCudaError("[FTK-CUDA] loading xgc magnetic field");
+}
+
+void xft_load_apars(ctx_t *c, const double *apars)
+{
+  const int maxGridDim = 1024;
+  const int blockSize = 256;
+  
+  if (c->d_apars == NULL) {
+    cudaMalloc((void**)&c->d_apars, size_t(c->m2n0 * c->nphi) * sizeof(double));
+    cudaMemcpy(c->d_apars, size_t(c->m2n0 * c->nphi) * sizeof(double), cudaMemcpyHostToDevice);
+  }
+
+  // TODO:
+  // 1. upsample apars
+  if (c->d_apars_upsample == NULL) {
+    cudaMalloc((void**)&c->d_apars_upsample, size_t(c->m2n0 * c->nphi * c->vphi) * sizeof(double));
+  }
+  {
+    const int nBlocks = idivup(c->m2n0 * c->nphi * c->vphi, blockSize);
+    dim3 gridSize;
+    if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+    else gridSize = dim3(nBlocks);
+
+    mx3_upsample_scalar<<<gridSize, blockSize>>>(
+        c->nphi, c->iphi, c->vphi, c->m2n0,
+        c->d_interpolants,
+        c->d_apars, c->d_apars_upsample);
+  }
+
+  // 2. derive gradient of upsampled apars
+  if (c->d_gradAs == NULL) {
+    cudaMalloc((void**)&c->d_gradAs_cw, size_t(2 * c->m2n2 * c->nphi * c->vphi) * sizeof(double));
+    cudaMalloc((void**)&c->d_gradAs, size_t(2 * c->m2n0 * c->nphi * c->vphi) * sizeof(double));
+  }
+  for (int i = 0; i < c->nphi * c->iphi; i ++) {
+    {
+      const int nBlocks = idivup(c->m2n2, blockSize);
+      dim3 gridSize;
+      if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+      else gridSize = dim3(nBlocks);
+
+      m2_cellwise_scalar_gradient<<<gridSize, blockSize>>>(
+          c->m2n2, c->m2tris, c->m2coords,
+          c->d_apars_upsample + i * c->m2n0, 
+          c->d_gradAs_cw + i * c->m2n2 * 2);
+    }
+
+    {
+      const int nBlocks = idivup(c->m2n0, blockSize);
+      dim3 gridSize;
+      if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+      else gridSize = dim3(nBlocks);
+
+      m2_cellwise2vertexwise_scalar_gradient<<<gridSize, blockSize>>>(
+          c->m2n0, c->max_vertex_triangles, c->d_vertex_triangles, 
+          c->d_gradAs_cw, c->d_gradAs);
+    }
+  }
+
+  // 3. derive deltaB
+}
+
+void xft_load_vertex_triangles(ctx_t *c, const std::vector<std::set<int>> &vertex_triangles)
+{
+  size_t mt = 0;
+  for (const auto &tris : vertex_triangles)
+    mt = std::max(mt, tris.size());
+
+  std::vector<int> h_vertex_triangles(mt * c->m2n0, -1);
+  for (int i = 0; i < c->m2n0; i ++) {
+    int j = 0;
+    for (const auto tri : vertex_triangles[i]) {
+      h_vertex_triangles[i*mt + j] = tri;
+      j ++;
+    }
+  }
+
+  if (c->d_vertex_triangles != NULL) cudaFree(c->d_vertex_triangles);
+  cudaMalloc((void**)&c->d_vertex_triangles, size_t(c->m2n0 * mt) * sizeof(int));
+  cudaMemcpy(c->d_vertex_triangles, size_t(c->m2n0 * mt) * sizeof(int), cudaMemcpyHostToDevice);
 }
 
 void xft_load_mesh(ctx_t *c,

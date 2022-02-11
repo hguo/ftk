@@ -17,5 +17,4 @@ inline void m2_get_edge(I i, I edge[2], const I m2edges[])
   edge[1] = m2edges[2*i+1];
 }
 
-
 #endif

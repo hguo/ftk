@@ -6,14 +6,17 @@
 #include <ftk/features/feature_point_lite.hh>
 
 typedef struct {
-  int m2n0, m2n1, m2n2;
+  int m2n0, m2n1, m2n2, max_vertex_triangles;
   int nphi = 16, iphi = 1, vphi = 1;
 
   // mesh
   double *d_m2coords;
   int *d_m2edges, *d_m2tris;
-  ftk::xgc_interpolant_t<> *d_interpolants = NULL;
+  int *d_vertex_triangles = 0;
   double *d_psin; // normalized psi
+
+  // interpolants
+  ftk::xgc_interpolant_t<> *d_interpolants = NULL;
 
   // smoothing kernel
   double sigma;
@@ -30,14 +33,24 @@ typedef struct {
   int device;
 
   double factor; // scaling factor
+  
+  // for poincare plot
+  double *d_apars = NULL, *d_apars_upsample = NULL; // apars (nphi) and its upsampled (nphi*iphi) version
+  double *d_gradAs = NULL, *d_gradAs_cw = NULL; // 2D gradient of upsampled apars, vertexwise and cellwise
+  double *d_bfield = NULL, *d_bfield0 = NULL, *d_curl_bfield0 = NULL;
+  double *d_deltaB = NULL; // (upsampled) deltaB
+  double *d_seeds = NULL;
+  int nseeds, nsteps;
 } xft_ctx_t;
 
 void xft_create_ctx(xft_ctx_t **c_, int device=0, int buffer_size_in_mb=512);
+void xft_create_poincare_ctx(xft_ctx_t **c_, int nseeds, int nsteps, int device=0);
 void xft_destroy_ctx(xft_ctx_t **c_);
 void xft_load_mesh(xft_ctx_t *c,
     int nphi, int iphi, int vphi,
     int m2n0, int m2n1, int m2n2,
     const double *m2coords, const int *m2edges, const int *m2tris);
+void xft_load_vertex_triangles(xft_ctx_t *c, const std::vector<std::set<int>>& vertex_triangles);
 void xft_load_interpolants(xft_ctx_t *c, const std::vector<std::vector<ftk::xgc_interpolant_t<>>> &interpolants);
 void xft_load_smoothing_kernel(xft_ctx_t *c, double sigma, const std::vector<std::vector<std::tuple<int, double>>>& kernels);
 void xft_load_psin(xft_ctx_t *c, const double *psin);
@@ -49,5 +62,16 @@ void xft_load_data(xft_ctx_t *c,
     const double *jacobian);
 void xft_swap(xft_ctx_t *c);
 
+// poincare
+void xft_load_magnetic_field(xft_ctx_t *c, 
+    const double *bfield, 
+    const double *bfield0, 
+    const double *curl_bfield0);
+
+void xft_load_apars(xft_ctx_t *c, 
+    const double *apars);
+
+void xft_load_apars_upsample(xft_ctx_t *c, 
+    const double *apars_upsample);
 
 #endif

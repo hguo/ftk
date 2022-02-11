@@ -54,6 +54,37 @@ void mx3_get_tri(I k, I verts[3], const
   sort3(verts);
 }
 
+template <typename I, typename F>
+__device__
+inline F mx3_interpolate_scalar(const I i,
+    const I nphi, const I iphi, const I vphi,
+    const I m2n0, 
+    const ftk::xgc_interpolant_t<I, F> *interpolants,
+    const F *scalar)
+{
+  const I p = i / m2n0; // poloidal plane
+  if (p % vphi == 0) {
+    const I p0 = p / vphi;
+    const I k = i % m2n0;
+    const I idx = m2n0 * p0 + k;
+
+    return scalar[idx];
+  } else { // virtual plane
+    const I p0 = p / vphi, p1 = (p0 + 1) % nphi;
+    const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
+    const auto& l = interpolants[(p % vphi - 1) * m2n0 + i % m2n0];
+
+    F f = 0;
+    for (int k = 0; k < 3; k ++) {
+      const I idx0 = m2n0 * p0 + l.tri0[k], 
+              idx1 = m2n0 * p1 + l.tri1[k];
+
+      f += alpha * l.mu0[k] * scalar[idx0] + beta * l.mu1[k] * scalar[idx1];
+    }
+
+    return f;
+  }
+}
 
 template <typename I, typename F>
 __device__
@@ -78,7 +109,6 @@ inline void mx3_interpolate(const I i,
     j[1][0] = jacobian[4*idx+2];
     j[1][1] = jacobian[4*idx+3];
   } else { // virtual plane
-#if 1
     const I p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
     // const auto& l = interpolants[p % vphi][i % m2n0];
@@ -104,7 +134,6 @@ inline void mx3_interpolate(const I i,
           j[k0][k1] += alpha * l.mu0[k] * jacobian[idx0*4+k0*2+k1] + beta * l.mu1[k] * jacobian[idx1*4+k0*2+k1];
       }
     }
-#endif
   }
 }
 
