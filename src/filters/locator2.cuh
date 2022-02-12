@@ -36,7 +36,7 @@ inline bool bvh2_inside_triangle(const bvh2d_node_t<I, F> &q, F x, F y, F lambda
 
 template <typename I, typename F>
 __device__ __host__
-inline int bvh2_locate_point_recursive(const bvh2d_node_t<I, F> *q, const bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3], const F *invdet)
+inline I bvh2_locate_point_recursive(const bvh2d_node_t<I, F> *q, const bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3], const F *invdet)
 {
   if (q->triangleId >= 0) { //leaf node
     bool succ = bvh2_inside_triangle(*q, x, y, lambda, invdet);
@@ -44,7 +44,7 @@ inline int bvh2_locate_point_recursive(const bvh2d_node_t<I, F> *q, const bvh2d_
   } else if (bvh2_inside_quad(*q, x, y)) {
     for (int j=0; j<4; j++) {
       if (q->childrenIds[j] > 0) {
-        int result = bvh2_locate_point_recursive(&nodes[q->childrenIds[j]], nodes, x, y, lambda, invdet);
+        I result = bvh2_locate_point_recursive(&nodes[q->childrenIds[j]], nodes, x, y, lambda, invdet);
         if (result >= 0) return result;
       }
     }
@@ -54,7 +54,7 @@ inline int bvh2_locate_point_recursive(const bvh2d_node_t<I, F> *q, const bvh2d_
 
 template <typename I, typename F>
 __device__ __host__
-inline int bvh2_locate_point(bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3], const F *invdet, int root=0)
+inline I bvh2_locate_point(bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3], const F *invdet, int root=0)
 {
   // float lambda.x, lambda.y, lambda.z;
   static const int maxStackSize = 64;

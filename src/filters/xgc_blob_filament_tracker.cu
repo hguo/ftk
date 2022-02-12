@@ -148,6 +148,119 @@ __global__ void mx3_derive_deltaB(
 
 template <typename I, typename F>
 __device__
+bool poincare_eval( // evaluate total B for computing poincare plot
+    const I nphi, const I iphi, const I vphi,
+    const F *m2invdet, 
+    const F *staticB,
+    const F *deltaB,
+    const bvh2d_node_t *bvh, 
+    const F rz[2], // input rz
+    const I p, // input poloidal plane
+    F v[2]) // output normalized vector
+{
+  F mu[3]; // barycentric coordinates
+  const I tid = bvh2_locate_point(bvh, rz[0], rz[1], mu, m2invdet);
+
+  if (tid >= 0) {
+    F B[3][3], b[3];
+    I tri[3];
+    m2_get_tri(tid, tri, m2tris);
+    
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 3; j ++)
+        B[i][j] = staticB[tri[i]*3 + j] + deltaB[p*m2n0*3 + tri[i]*3 + j];
+
+    lerp_s2v3(B, mu, b);
+    v[0] = rz[0] * b[0] / b[2];
+    v[1] = rz[0] * b[1] / b[2];
+
+    return true;
+  } else 
+    return false;
+}
+
+template <typename I, typename F>
+__device__
+bool poincare_integrate2pi(
+    const I nphi, const I iphi, const I vphi,
+    const F *m2invdet, 
+    const F *staticB,
+    const F *deltaB,
+    const bvh2d_node_t *bvh, 
+    F rz[2]) // input/output rz
+{
+  const I np = nphi * vphi;
+  const F half_h = 2 * M_PI / np;
+  const F h = half_h * 2;
+  
+  F v[2]; 
+  for (int p = 0; p < np; p += 2) {
+    const F rz0[2] = {rz[0], rz[1]};
+      
+    if (!poincare_eval(nphi, iphi, vphi, m2invdet, staticB, deltaB, bvh, rz, p, v)) 
+      return false;
+    const F k1[2] = {h * v[0], h * v[1]};
+
+    const F rz2[2] = {rz[0] + k1[0]/2, rz[1] + k1[1]/2};
+    if (!poincare_eval(nphi, iphi, vphi, m2invdet, staticB, deltaB, bvh, rz2, p+1, v)) 
+      return false;
+    const F k2[2] = {h * v[0], h * v[1]};
+
+    const F rz3[2] = {rz[0] + k2[0]/2, rz[1] + k2[1]/2};
+    if (!poincare_eval(nphi, iphi, vphi, m2invdet, staticB, deltaB, bvh, rz3, p+1, v)) 
+      return false;
+    const F k3[2] = {h * v[0], h * v[1]};
+    
+    const F rz4[2] = {rz[0] + k3[0], rz[1] + k3[1]};
+    if (!poincare_eval(nphi, iphi, vphi, m2invdet, staticB, deltaB, bvh, rz4, (p+2)%np, v)) 
+      return false;
+    const F k4[2] = {h * v[0], h * v[1]};
+
+    for (int i = 0; i < 2; i ++) 
+      rz[i] = rz[i] + (k1[i] + 2.0*(k2[i]+k3[i]) + h*v[i])/6.0;
+  }
+
+  return true;
+}
+
+template <typename I, typename F>
+__global__ void poincare_integrate(
+    const I nphi, const I iphi, const I vphi, 
+    const I m2n0, 
+    const F *m2invdet,
+    const F *staticB,
+    const F *deltaB, 
+    const bvh2d_node_t *bvh, 
+    const I nseeds, 
+    const I nsteps,
+    F *plot)
+{
+  int tid = getGlobalIdx_3D_1D();
+  I i = tid;
+  if (i >= nseeds) return;
+
+  for (int k = 1; k < nsteps; k ++) {
+    const auto offset = i*nsteps + k - 1;
+    F rz[2] = {plot[offset*2], plot[offset*2+1];
+
+    bool succ = poincare_integrate2pi(
+        nphi, iphi, vphi, m2n0, m2invdet,
+        staticB, deltaB, bvh, rz);
+    
+    const auto offset1 = i*nsteps + k;
+    if (succ) {
+      plot[offset1*2] = rz[0];
+      plot[offset1*2+1] = rz[1];
+    } else {
+      plot[offset1*2] = CUDART_NAN;
+      plot[offset1*2+1] = CUDART_NAN;
+      return;
+    }
+  }
+}
+
+template <typename I, typename F>
+__device__
 bool check_simplex(
     I current_timestep, 
     I i,
