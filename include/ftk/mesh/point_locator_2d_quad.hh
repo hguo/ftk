@@ -340,28 +340,28 @@ std::vector<bvh2d_node_t<I, F>> point_locator_2d_quad<I, F>::to_bvh() const {
   std::vector<bvh2d_node_t<I, F>> rd(quad_node_count);
 
   for (int i=0; i<quad_node_count; i++) {
-    quad_node q = *node_reverse_map[i];
+    quad_node *q = node_reverse_map[i];
     bvh2d_node_t<I, F> &d = rd[i];
 
     // parent
-    if (q.parent == NULL) d.parentId = -1; // root
-    else d.parentId = node_map[q.parent];
+    if (q->parent == NULL) d.parentId = -1; // root
+    else d.parentId = node_map[q->parent];
 
     // children
     for (int j=0; j<4; j++)
-      if (q.children[j] == NULL) d.childrenIds[j] = -1;
-      else d.childrenIds[j] = node_map[q.children[j]];
+      if (q->children[j] == NULL) d.childrenIds[j] = -1;
+      else d.childrenIds[j] = node_map[q->children[j]];
 
     // bounds
-    d.Ax = q.aabb.A[0];
-    d.Ay = q.aabb.A[1];
-    d.Bx = q.aabb.B[0];
-    d.By = q.aabb.B[1];
+    d.Ax = q->aabb.A[0];
+    d.Ay = q->aabb.A[1];
+    d.Bx = q->aabb.B[0];
+    d.By = q->aabb.B[1];
     // fprintf(stderr, "%f, %f, %f, %f\n", d.Ax, d.Ay, d.Bx, d.By);
 
     // triangle
-    if (q.is_leaf()) {
-      const int id = q.elements[0].id;
+    if (q->is_leaf()) {
+      const int id = q->elements[0].id;
       d.triangleId = id;
 
       I tri[3];
