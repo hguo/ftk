@@ -528,6 +528,27 @@ void xft_destroy_ctx(ctx_t **c_)
   *c_ = NULL;
 }
 
+void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
+{
+  cudaMemcpy(c->dcps, seeds, c->nseeds * sizeof(double) * 2, cudaMemcpyHostToDevice);
+  
+  const int maxGridDim = 1024;
+  const int blockSize = 256;
+  const int nBlocks = idivup(c->nseeds, blockSize);
+  dim3 gridSize;
+
+  if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else gridSize = dim3(nBlocks);
+
+  poincare_integrate<int, double><<<gridSize, blockSize>>>(
+      c->m2n0, c->nphi, c->iphi, c->vphi, 
+      c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
+      c->d_bvh, c->nseeds, c->nsteps, (double*)c->dcps);
+
+  cudaMemcpy(c->hcps, c->dcps, c->nseeds * c->nsteps * sizeof(double) * 2, cudaMemcpyDeviceToHost);
+  checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot");
+}
+
 void xft_execute(ctx_t *c, int scope, int current_timestep)
 {
   const int np = c->nphi * c->iphi * c->vphi;

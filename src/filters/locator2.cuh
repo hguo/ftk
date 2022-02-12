@@ -54,7 +54,7 @@ inline I bvh2_locate_point_recursive(const bvh2d_node_t<I, F> *q, const bvh2d_no
 
 template <typename I, typename F>
 __device__ __host__
-inline I bvh2_locate_point(bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3], const F *invdet, int root=0)
+inline I bvh2_locate_point(const bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3], const F *invdet, int root=0)
 {
   // float lambda.x, lambda.y, lambda.z;
   static const int maxStackSize = 64;
@@ -84,7 +84,7 @@ inline I bvh2_locate_point(bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3], con
 
 template <typename I, typename F>
 __device__ __host__
-inline int bvh2_locate_point_coherent(bvh2d_node_t<I, F> *bvh, int last_nid, F x, F y, F lambda[3], const F *invdet, const I *neighbors)
+inline int bvh2_locate_point_coherent(const bvh2d_node_t<I, F> *bvh, int last_nid, F x, F y, F lambda[3], const F *invdet, const I *neighbors)
 {
   // check if last_nid is valid
   if (last_nid<0) return bvh2_locate_point(bvh, x, y, lambda, invdet);

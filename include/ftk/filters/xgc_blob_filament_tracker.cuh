@@ -81,4 +81,7 @@ void xft_load_apars(xft_ctx_t *c,
 void xft_load_apars_upsample(xft_ctx_t *c, 
     const double *apars_upsample);
 
+void xft_compute_poincare_plot(xft_ctx_t *c,
+    const double *seeds);
+
 #endif
