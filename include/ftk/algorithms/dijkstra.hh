@@ -4,6 +4,8 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <limits>
+#include <algorithm>
 #include <functional>
 
 namespace ftk {
