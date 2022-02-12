@@ -5,16 +5,20 @@
 #include <set>
 #include <ftk/numeric/xgc_interpolant.hh>
 #include <ftk/features/feature_point_lite.hh>
+#include <ftk/mesh/bvh2d.hh>
 
 typedef struct {
   int m2n0, m2n1, m2n2, max_vertex_triangles;
   int nphi = 16, iphi = 1, vphi = 1;
 
   // mesh
-  double *d_m2coords;
+  double *d_m2coords, *d_m2invdet = NULL;
   int *d_m2edges, *d_m2tris;
-  int *d_vertex_triangles = 0;
+  int *d_vertex_triangles = NULL;
   double *d_psin; // normalized psi
+
+  // bvh
+  bvh2d_node_t<> *d_bvh = NULL;
 
   // interpolants
   ftk::xgc_interpolant_t<> *d_interpolants = NULL;
@@ -36,6 +40,7 @@ typedef struct {
   double factor; // scaling factor
   
   // for poincare plot
+  bool poincare = false;
   double *d_apars = NULL, *d_apars_upsample = NULL; // apars (nphi) and its upsampled (nphi*iphi) version
   double *d_gradAs = NULL, *d_gradAs_cw = NULL; // 2D gradient of upsampled apars, vertexwise and cellwise
   double *d_bfield = NULL, *d_bfield0 = NULL, *d_curl_bfield0 = NULL;
@@ -52,6 +57,7 @@ void xft_load_mesh(xft_ctx_t *c,
     int m2n0, int m2n1, int m2n2,
     const double *m2coords, const int *m2edges, const int *m2tris);
 void xft_load_vertex_triangles(xft_ctx_t *c, const std::vector<std::set<int>>& vertex_triangles);
+void xft_load_bvh(xft_ctx_t *c, const std::vector<bvh2d_node_t<int, double>>& bvh);
 void xft_load_interpolants(xft_ctx_t *c, const std::vector<std::vector<ftk::xgc_interpolant_t<>>> &interpolants);
 void xft_load_smoothing_kernel(xft_ctx_t *c, double sigma, const std::vector<std::vector<std::tuple<int, double>>>& kernels);
 void xft_load_psin(xft_ctx_t *c, const double *psin);

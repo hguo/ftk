@@ -50,6 +50,33 @@ __global__ void m2_cellwise_scalar_gradient(
 }
 
 template <typename I, typename F>
+__global__ void m2_compute_invdet(
+    const I m2n2, 
+    const I m2tris[], 
+    const F m2coords[],
+    F invdet[]) // output
+{
+  int tid = getGlobalIdx_3D_1D();
+  I i = tid;
+  if (i >= m2n2) return;
+  
+  I tri[3];
+  m2_get_tri(i, tri, m2tris);
+  
+  F X[3][2];
+  for (int j = 0; j < 3; j ++) {
+    const I k = tri[j];
+    X[j][0] = m2coords[2*k];
+    X[j][1] = m2coords[2*k+1];
+  }
+
+  const F det = (X[1][1] - X[2][1]) * (X[0][0] - X[2][0]) 
+    + (X[2][0] - X[1][0]) * (X[0][1] - X[2][1]);
+
+  invdet[i] = F(1) / det;
+}
+
+template <typename I, typename F>
 __global__ void m2_cellwise2vertexwise_scalar_gradient(
     const I m2n0, const I max_vertex_triangles,
     const I vertex_triangles[],
@@ -302,6 +329,7 @@ void xft_create_poincare_ctx(ctx_t **c_, int nseeds, int nsteps, int device)
  
   c->nseeds = nseeds;
   c->nsteps = nsteps;
+  c->poincare = true;
 }
 
 void xft_create_ctx(ctx_t **c_, int device, int device_buffer_size_in_mb)
@@ -347,8 +375,11 @@ void xft_destroy_ctx(ctx_t **c_)
   if (c->d_m2edges != NULL) cudaFree(c->d_m2edges);
   if (c->d_m2tris != NULL) cudaFree(c->d_m2tris);
   if (c->d_psin != NULL) cudaFree(c->d_psin);
+  if (c->d_m2invdet != NULL) cudaFree(c->d_m2invdet);
 
   if (c->d_vertex_triangles != NULL) cudaFree(c->d_vertex_triangles);
+
+  if (c->d_bvh != NULL) cudaFree(c->d_bvh);
 
   if (c->d_interpolants != NULL) cudaFree(c->d_interpolants);
 
@@ -727,6 +758,12 @@ void xft_load_vertex_triangles(ctx_t *c, const std::vector<std::set<int>> &verte
   cudaMemcpy(c->d_vertex_triangles, &vertex_triangles[0], size_t(c->m2n0 * mt) * sizeof(int), cudaMemcpyHostToDevice);
 }
 
+void xft_load_bvh(ctx_t *c, const std::vector<bvh2d_node_t<>>& bvh)
+{
+  cudaMalloc((void**)&c->d_bvh, bvh.size() * sizeof(bvh2d_node_t<>));
+  cudaMemcpy(c->d_bvh, &bvh[0], bvh.size() * sizeof(bvh2d_node_t<>));
+}
+
 void xft_load_mesh(ctx_t *c,
     int nphi, int iphi, int vphi,
     int m2n0, int m2n1, int m2n2,
@@ -749,7 +786,22 @@ void xft_load_mesh(ctx_t *c,
 
   cudaMalloc((void**)&c->d_m2tris, size_t(m2n2) * sizeof(int) * 3);
   cudaMemcpy(c->d_m2tris, m2tris, size_t(m2n2) * sizeof(int) * 3, cudaMemcpyHostToDevice);
+ 
+  if (c->poincare) { // compute invdet for point locator
+    cudaMalloc((void**)&c->d_m2invdet, size_t(m2n2) * sizeof(double));
   
+    const int maxGridDim = 1024;
+    const int blockSize = 256;
+    const int nBlocks = idivup(c->m2n2, blockSize);
+    dim3 gridSize;
+    if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+    else gridSize = dim3(nBlocks);
+
+    m2_compute_invdet<<<gridSize, blockSize>>>(
+        c->m2n2, c->d_m2tris, c->d_m2coords,
+        c->d_m2invdet);
+  }
+
   checkLastCudaError("[FTK-CUDA] loading xgc mesh");
 }
 

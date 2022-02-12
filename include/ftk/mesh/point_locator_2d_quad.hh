@@ -17,7 +17,7 @@ struct point_locator_2d_quad : public point_locator_2d<I, F> {
   // I locate(const F x[], F mu[]) const { return locate_point_recursive(x, root, mu); }
   I locate(const F x[], F mu[]) const { return locate_point_nonrecursive(x, mu); }
 
-  std::vector<bvh2d_node_t<I, F>> to_bvh_nodes() const;
+  std::vector<bvh2d_node_t<I, F>> to_bvh() const;
 
 protected:
   struct quad_node {
@@ -311,7 +311,7 @@ void point_locator_2d_quad<I, F>::initialize()
 }
 
 template <typename I, typename F>
-std::vector<bvh2d_node_t<I, F>> point_locator_2d_quad<I, F>::to_bvh_nodes() const {
+std::vector<bvh2d_node_t<I, F>> point_locator_2d_quad<I, F>::to_bvh() const {
   // quad_node* r, const std::vector<int> &conn, const std::vector<double> &coords) {
   quad_node *r = root;
   
