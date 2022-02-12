@@ -149,11 +149,13 @@ __global__ void mx3_derive_deltaB(
 template <typename I, typename F>
 __device__
 bool poincare_eval( // evaluate total B for computing poincare plot
+    const I m2n0,
     const I nphi, const I iphi, const I vphi,
+    const I *m2tris,
     const F *m2invdet, 
     const F *staticB,
     const F *deltaB,
-    const bvh2d_node_t *bvh, 
+    const bvh2d_node_t<I, F> *bvh, 
     const F rz[2], // input rz
     const I p, // input poloidal plane
     F v[2]) // output normalized vector
@@ -182,11 +184,13 @@ bool poincare_eval( // evaluate total B for computing poincare plot
 template <typename I, typename F>
 __device__
 bool poincare_integrate2pi(
+    const I m2n0,
     const I nphi, const I iphi, const I vphi,
+    const I *m2tris,
     const F *m2invdet, 
     const F *staticB,
     const F *deltaB,
-    const bvh2d_node_t *bvh, 
+    const bvh2d_node_t<I, F> *bvh, 
     F rz[2]) // input/output rz
 {
   const I np = nphi * vphi;
@@ -197,22 +201,22 @@ bool poincare_integrate2pi(
   for (int p = 0; p < np; p += 2) {
     const F rz0[2] = {rz[0], rz[1]};
       
-    if (!poincare_eval(nphi, iphi, vphi, m2invdet, staticB, deltaB, bvh, rz, p, v)) 
+    if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz, p, v)) 
       return false;
     const F k1[2] = {h * v[0], h * v[1]};
 
     const F rz2[2] = {rz[0] + k1[0]/2, rz[1] + k1[1]/2};
-    if (!poincare_eval(nphi, iphi, vphi, m2invdet, staticB, deltaB, bvh, rz2, p+1, v)) 
+    if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz2, p+1, v)) 
       return false;
     const F k2[2] = {h * v[0], h * v[1]};
 
     const F rz3[2] = {rz[0] + k2[0]/2, rz[1] + k2[1]/2};
-    if (!poincare_eval(nphi, iphi, vphi, m2invdet, staticB, deltaB, bvh, rz3, p+1, v)) 
+    if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz3, p+1, v)) 
       return false;
     const F k3[2] = {h * v[0], h * v[1]};
     
     const F rz4[2] = {rz[0] + k3[0], rz[1] + k3[1]};
-    if (!poincare_eval(nphi, iphi, vphi, m2invdet, staticB, deltaB, bvh, rz4, (p+2)%np, v)) 
+    if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz4, (p+2)%np, v)) 
       return false;
     const F k4[2] = {h * v[0], h * v[1]};
 
@@ -225,12 +229,13 @@ bool poincare_integrate2pi(
 
 template <typename I, typename F>
 __global__ void poincare_integrate(
-    const I nphi, const I iphi, const I vphi, 
     const I m2n0, 
+    const I nphi, const I iphi, const I vphi, 
+    const I *m2tris,
     const F *m2invdet,
     const F *staticB,
     const F *deltaB, 
-    const bvh2d_node_t *bvh, 
+    const bvh2d_node_t<I, F> *bvh, 
     const I nseeds, 
     const I nsteps,
     F *plot)
@@ -241,10 +246,11 @@ __global__ void poincare_integrate(
 
   for (int k = 1; k < nsteps; k ++) {
     const auto offset = i*nsteps + k - 1;
-    F rz[2] = {plot[offset*2], plot[offset*2+1];
+    F rz[2] = {plot[offset*2], plot[offset*2+1]};
 
     bool succ = poincare_integrate2pi(
-        nphi, iphi, vphi, m2n0, m2invdet,
+        m2n0, nphi, iphi, vphi,
+        m2tris, m2invdet,
         staticB, deltaB, bvh, rz);
     
     const auto offset1 = i*nsteps + k;
@@ -252,8 +258,8 @@ __global__ void poincare_integrate(
       plot[offset1*2] = rz[0];
       plot[offset1*2+1] = rz[1];
     } else {
-      plot[offset1*2] = CUDART_NAN;
-      plot[offset1*2+1] = CUDART_NAN;
+      plot[offset1*2] = 1e38;
+      plot[offset1*2+1] = 1e38;
       return;
     }
   }
@@ -874,7 +880,7 @@ void xft_load_vertex_triangles(ctx_t *c, const std::vector<std::set<int>> &verte
 void xft_load_bvh(ctx_t *c, const std::vector<bvh2d_node_t<>>& bvh)
 {
   cudaMalloc((void**)&c->d_bvh, bvh.size() * sizeof(bvh2d_node_t<>));
-  cudaMemcpy(c->d_bvh, &bvh[0], bvh.size() * sizeof(bvh2d_node_t<>));
+  cudaMemcpy(c->d_bvh, &bvh[0], bvh.size() * sizeof(bvh2d_node_t<>), cudaMemcpyHostToDevice);
 }
 
 void xft_load_mesh(ctx_t *c,
