@@ -162,6 +162,7 @@ bool poincare_eval( // evaluate total B for computing poincare plot
     F v[2]) // output normalized vector
 {
   F mu[3]; // barycentric coordinates
+  // const I tid = bvh2_locate_point_recursive(bvh, bvh, rz[0], rz[1], mu, m2invdet);
   const I tid = bvh2_locate_point(bvh, rz[0], rz[1], mu, m2invdet);
 
   if (tid >= 0) {
@@ -176,7 +177,8 @@ bool poincare_eval( // evaluate total B for computing poincare plot
     lerp_s2v3(B, mu, b);
     v[0] = rz[0] * b[0] / b[2];
     v[1] = rz[0] * b[1] / b[2];
-
+    
+    // printf("tid=%d, rz=%f, %f, v=%f, %f\n", tid, rz[0], rz[1], v[0], v[1]);
     return true;
   } else 
     return false;
@@ -205,6 +207,8 @@ bool poincare_integrate2pi(
     if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz, p, v)) 
       return false;
     const F k1[2] = {h * v[0], h * v[1]};
+    
+    // printf("rz=%f, %f, v=%f, %f\n", rz[0], rz[1], v[0], v[1]);
 
     const F rz2[2] = {rz[0] + k1[0]/2, rz[1] + k1[1]/2};
     if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz2, p+1, v)) 
@@ -222,7 +226,8 @@ bool poincare_integrate2pi(
     const F k4[2] = {h * v[0], h * v[1]};
 
     for (int i = 0; i < 2; i ++) 
-      rz[i] = rz[i] + (k1[i] + 2.0*(k2[i]+k3[i]) + h*v[i])/6.0;
+      // rz[i] = rz[i] + (k1[i] + 2.0*(k2[i]+k3[i]) + h*v[i])/6.0;
+      rz[i] = rz[i] + (k1[i] + 2.0*(k2[i]+k3[i]) + k4[i])/6.0;
   }
 
   return true;
@@ -991,6 +996,7 @@ void xft_load_mesh(ctx_t *c,
     if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
     else gridSize = dim3(nBlocks);
 
+    fprintf(stderr, "computing m2invdet..\n");
     m2_compute_invdet<<<gridSize, blockSize>>>(
         c->m2n2, c->d_m2tris, c->d_m2coords,
         c->d_m2invdet);

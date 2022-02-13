@@ -71,7 +71,7 @@ inline I bvh2_locate_point(const bvh2d_node_t<I, F> *nodes, F x, F y, F lambda[3
 
     if (q.triangleId >= 0) { // leaf node
       bool succ = bvh2_inside_triangle(q, x, y, lambda, invdet);
-      if (succ) return i; // q.triangleId;
+      if (succ) return q.triangleId; // i; // q.triangleId;
     } else if (bvh2_inside_quad(q, x, y)) { // non-leaf node
       for (int j=0; j<4; j++) {
         if (q.childrenIds[j] > 0)
