@@ -127,7 +127,8 @@ public: // mesh access
   const ndarray<F>& get_coords() const {return vertex_coords;}
   const ndarray<I>& get_triangles() const {return triangles;}
   const ndarray<I>& get_edges() const {return edges;}
-
+  const std::vector<std::set<I>>& get_vertex_triangles() const {return vertex_triangles;}
+  
   const std::set<I>& get_vertex_edge_vertex(I i) const {return vertex_edge_vertex[i];}
   
   int get_triangle_chi(I i) const { return triangles_chi[i] ? -1 : 1; }

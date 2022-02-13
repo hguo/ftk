@@ -43,7 +43,7 @@ __global__ void m2_cellwise_scalar_gradient(
     X[j][1] = m2coords[2*k+1];
     f[j] = scalar[k];
   }
-
+  
   gradient_2dsimplex2(X, f, gradf);
   cwgrad[2*i] = gradf[0];
   cwgrad[2*i+1] = gradf[1];
@@ -94,6 +94,7 @@ __global__ void m2_cellwise2vertexwise_scalar_gradient(
     if (tri >= 0) {
       gradf[0] += cwgrad[tri*2];
       gradf[1] += cwgrad[tri*2+1];
+      ntris ++;
     }
   }
   grad[i*2] = gradf[0] / ntris;
@@ -170,7 +171,7 @@ bool poincare_eval( // evaluate total B for computing poincare plot
     
     for (int i = 0; i < 3; i ++)
       for (int j = 0; j < 3; j ++)
-        B[i][j] = staticB[tri[i]*3 + j] + deltaB[p*m2n0*3 + tri[i]*3 + j];
+        B[i][j] = staticB[tri[i]*3 + j]; //  + deltaB[p*m2n0*3 + tri[i]*3 + j];
 
     lerp_s2v3(B, mu, b);
     v[0] = rz[0] * b[0] / b[2];
@@ -245,7 +246,7 @@ __global__ void poincare_integrate(
   if (i >= nseeds) return;
 
   for (int k = 1; k < nsteps; k ++) {
-    const auto offset = i*nsteps + k - 1;
+    const auto offset = (k-1)*nseeds + i;
     F rz[2] = {plot[offset*2], plot[offset*2+1]};
 
     bool succ = poincare_integrate2pi(
@@ -253,7 +254,7 @@ __global__ void poincare_integrate(
         m2tris, m2invdet,
         staticB, deltaB, bvh, rz);
     
-    const auto offset1 = i*nsteps + k;
+    const auto offset1 = k*nseeds + i;
     if (succ) {
       plot[offset1*2] = rz[0];
       plot[offset1*2+1] = rz[1];
@@ -443,7 +444,7 @@ void sweep_simplices(
 
 void xft_create_poincare_ctx(ctx_t **c_, int nseeds, int nsteps, int device)
 {
-  xft_create_ctx(c_, device, std::ceil((nseeds * nsteps * sizeof(double) * 2) / (1024 * 1024)));
+  xft_create_ctx(c_, device, std::ceil((nseeds * nsteps * sizeof(double) * 2.0) / (1024 * 1024))+16);
   ctx_t *c = *c_;
  
   c->nseeds = nseeds;
@@ -455,6 +456,7 @@ void xft_create_ctx(ctx_t **c_, int device, int device_buffer_size_in_mb)
 {
   *c_ = (ctx_t*)malloc(sizeof(ctx_t));
   ctx_t *c = *c_;
+  memset(c, 0, sizeof(ctx_t));
 
   c->device = device;
   cudaSetDevice(device);
@@ -463,6 +465,7 @@ void xft_create_ctx(ctx_t **c_, int device, int device_buffer_size_in_mb)
   cudaMemset(c->dncps, 0, sizeof(unsigned long long));
   checkLastCudaError("[FTK-CUDA] cuda malloc");
 
+  fprintf(stderr, "allocating %d MB\n", device_buffer_size_in_mb);
   c->bufsize = device_buffer_size_in_mb * size_t(1024 * 1024); 
   c->hcps = (cp_t*)malloc(c->bufsize);
   cudaMalloc((void**)&c->dcps, c->bufsize);
@@ -530,7 +533,10 @@ void xft_destroy_ctx(ctx_t **c_)
 
 void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
 {
+  // fprintf(stderr, "loading seeds..., %p, %p\n", c->dcps, seeds);
   cudaMemcpy(c->dcps, seeds, c->nseeds * sizeof(double) * 2, cudaMemcpyHostToDevice);
+  // fprintf(stderr, "seeds loaded.\n");
+  checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: load seeds");
   
   const int maxGridDim = 1024;
   const int blockSize = 256;
@@ -544,9 +550,11 @@ void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
       c->m2n0, c->nphi, c->iphi, c->vphi, 
       c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
       c->d_bvh, c->nseeds, c->nsteps, (double*)c->dcps);
+  checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: exec");
 
   cudaMemcpy(c->hcps, c->dcps, c->nseeds * c->nsteps * sizeof(double) * 2, cudaMemcpyDeviceToHost);
-  checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot");
+  cudaDeviceSynchronize();
+  checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: memcpy");
 }
 
 void xft_execute(ctx_t *c, int scope, int current_timestep)
@@ -823,10 +831,13 @@ void xft_load_apars(ctx_t *c, const double *apars)
   const int maxGridDim = 1024;
   const int blockSize = 256;
   
-  if (c->d_apars == NULL) {
+  if (c->d_apars == NULL)
     cudaMalloc((void**)&c->d_apars, size_t(c->m2n0 * c->nphi) * sizeof(double));
-    cudaMemcpy(c->d_apars, apars, size_t(c->m2n0 * c->nphi) * sizeof(double), cudaMemcpyHostToDevice);
-  }
+  cudaMemcpy(c->d_apars, apars, size_t(c->m2n0 * c->nphi) * sizeof(double), cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] xft_load_apars: copy apars");
+
+  cudaDeviceSynchronize();
+  fprintf(stderr, "apars copied\n");
 
   // TODO:
   // 1. upsample apars
@@ -844,6 +855,10 @@ void xft_load_apars(ctx_t *c, const double *apars)
         c->d_interpolants,
         c->d_apars, c->d_apars_upsample);
   }
+  checkLastCudaError("[FTK-CUDA] xft_load_apars: upsample apars");
+  
+  cudaDeviceSynchronize();
+  fprintf(stderr, "apars upsampled\n");
 
   // 2. derive gradient of upsampled apars
   if (c->d_gradAs == NULL) {
@@ -851,6 +866,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
     cudaMalloc((void**)&c->d_gradAs, size_t(2 * c->m2n0 * c->nphi * c->vphi) * sizeof(double));
   }
   for (int i = 0; i < c->nphi * c->iphi; i ++) {
+    // fprintf(stderr, "deriving gradAs for plane %d\n", i);
     {
       const int nBlocks = idivup(c->m2n2, blockSize);
       dim3 gridSize;
@@ -861,6 +877,10 @@ void xft_load_apars(ctx_t *c, const double *apars)
           c->m2n2, c->d_m2tris, c->d_m2coords,
           c->d_apars_upsample + i * c->m2n0, 
           c->d_gradAs_cw + i * c->m2n2 * 2);
+    
+      cudaDeviceSynchronize();
+      // fprintf(stderr, "cw\n");
+      checkLastCudaError("[FTK-CUDA] xft_load_apars: cw");
     }
 
     {
@@ -869,13 +889,40 @@ void xft_load_apars(ctx_t *c, const double *apars)
       if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
       else gridSize = dim3(nBlocks);
 
+      // fprintf(stderr, "mt=%d\n", c->max_vertex_triangles);
       m2_cellwise2vertexwise_scalar_gradient<<<gridSize, blockSize>>>(
           c->m2n0, c->max_vertex_triangles, c->d_vertex_triangles, 
           c->d_gradAs_cw, c->d_gradAs);
+      
+      cudaDeviceSynchronize();
+      // fprintf(stderr, "vw\n");
+      checkLastCudaError("[FTK-CUDA] xft_load_apars: vw");
     }
   }
+  fprintf(stderr, "grad_apars derived\n");
+  checkLastCudaError("[FTK-CUDA] xft_load_apars: grad of upsampled apars");
 
   // 3. derive deltaB
+  if (c->d_deltaB == NULL) {
+    cudaMalloc((void**)&c->d_deltaB, size_t(c->m2n0 * c->nphi * c->vphi) * sizeof(double) * 3);
+  }
+  {
+    const int nBlocks = idivup(c->m2n0 * c->nphi * c->vphi, blockSize);
+    dim3 gridSize;
+    if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+    else gridSize = dim3(nBlocks);
+
+    mx3_derive_deltaB<<<gridSize, blockSize>>>(
+        c->nphi, c->iphi, c->vphi, c->m2n0,
+        c->d_apars_upsample,
+        c->d_gradAs,
+        c->d_bfield,
+        c->d_bfield0,
+        c->d_curl_bfield0, 
+        c->d_deltaB);
+  }
+  cudaDeviceSynchronize();
+  checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB");
 }
 
 void xft_load_vertex_triangles(ctx_t *c, const std::vector<std::set<int>> &vertex_triangles)
@@ -893,15 +940,22 @@ void xft_load_vertex_triangles(ctx_t *c, const std::vector<std::set<int>> &verte
     }
   }
 
+  // fprintf(stderr, "#vertex=%zu, mt=%zu\n", vertex_triangles.size(), mt);
+
   if (c->d_vertex_triangles != NULL) cudaFree(c->d_vertex_triangles);
   cudaMalloc((void**)&c->d_vertex_triangles, size_t(c->m2n0 * mt) * sizeof(int));
-  cudaMemcpy(c->d_vertex_triangles, &vertex_triangles[0], size_t(c->m2n0 * mt) * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(c->d_vertex_triangles, &h_vertex_triangles[0], size_t(c->m2n0 * mt) * sizeof(int), cudaMemcpyHostToDevice);
+  c->max_vertex_triangles = mt;
+  checkLastCudaError("[FTK-CUDA] xft_load_vertex_triangles");
 }
 
 void xft_load_bvh(ctx_t *c, const std::vector<bvh2d_node_t<>>& bvh)
 {
   cudaMalloc((void**)&c->d_bvh, bvh.size() * sizeof(bvh2d_node_t<>));
   cudaMemcpy(c->d_bvh, &bvh[0], bvh.size() * sizeof(bvh2d_node_t<>), cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] xft_load_bvh");
+  fprintf(stderr, "bvh loaded.\n");
+  cudaDeviceSynchronize();
 }
 
 void xft_load_mesh(ctx_t *c,
@@ -960,6 +1014,9 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
   }
   
   checkLastCudaError("[FTK-CUDA] loading xgc interpolants");
+  
+  fprintf(stderr, "interpolants loaded.\n");
+  cudaDeviceSynchronize();
 }
 
 void xft_load_scalar_data(ctx_t *c, const double *scalar)
