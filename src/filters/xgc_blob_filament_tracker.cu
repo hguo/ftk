@@ -149,7 +149,7 @@ __global__ void mx3_derive_deltaB(
 
 template <typename I, typename F>
 __device__
-bool poincare_eval( // evaluate total B for computing poincare plot
+inline bool poincare_eval( // evaluate total B for computing poincare plot
     const I m2n0,
     const I nphi, const I iphi, const I vphi,
     const I *m2tris,
@@ -172,7 +172,8 @@ bool poincare_eval( // evaluate total B for computing poincare plot
     
     for (int i = 0; i < 3; i ++)
       for (int j = 0; j < 3; j ++)
-        B[i][j] = staticB[tri[i]*3 + j]; //  + deltaB[p*m2n0*3 + tri[i]*3 + j];
+        // B[i][j] = staticB[tri[i]*3 + j]; //  + deltaB[p*m2n0*3 + tri[i]*3 + j];
+        B[i][j] = staticB[tri[i]*3 + j] + deltaB[p*m2n0*3 + tri[i]*3 + j];
 
     lerp_s2v3(B, mu, b);
     v[0] = rz[0] * b[0] / b[2];
@@ -186,7 +187,7 @@ bool poincare_eval( // evaluate total B for computing poincare plot
 
 template <typename I, typename F>
 __device__
-bool poincare_integrate2pi(
+inline bool poincare_integrate2pi(
     const I m2n0,
     const I nphi, const I iphi, const I vphi,
     const I *m2tris,
@@ -235,6 +236,7 @@ bool poincare_integrate2pi(
 
 template <typename I, typename F>
 __global__ void poincare_integrate(
+    const int k, // kth step
     const I m2n0, 
     const I nphi, const I iphi, const I vphi, 
     const I *m2tris,
@@ -250,30 +252,28 @@ __global__ void poincare_integrate(
   I i = tid;
   if (i >= nseeds) return;
 
-  for (int k = 1; k < nsteps; k ++) {
-    const auto offset = (k-1)*nseeds + i;
-    F rz[2] = {plot[offset*2], plot[offset*2+1]};
+  const auto offset = (k-1)*nseeds + i;
+  F rz[2] = {plot[offset*2], plot[offset*2+1]};
 
-    bool succ = poincare_integrate2pi(
-        m2n0, nphi, iphi, vphi,
-        m2tris, m2invdet,
-        staticB, deltaB, bvh, rz);
-    
-    const auto offset1 = k*nseeds + i;
-    if (succ) {
-      plot[offset1*2] = rz[0];
-      plot[offset1*2+1] = rz[1];
-    } else {
-      plot[offset1*2] = 1e38;
-      plot[offset1*2+1] = 1e38;
-      return;
-    }
+  bool succ = poincare_integrate2pi(
+      m2n0, nphi, iphi, vphi,
+      m2tris, m2invdet,
+      staticB, deltaB, bvh, rz);
+  
+  const auto offset1 = k*nseeds + i;
+  if (succ) {
+    plot[offset1*2] = rz[0];
+    plot[offset1*2+1] = rz[1];
+  } else {
+    plot[offset1*2] = 1e38;
+    plot[offset1*2+1] = 1e38;
+    return;
   }
 }
 
 template <typename I, typename F>
 __device__
-bool check_simplex(
+inline bool check_simplex(
     I current_timestep, 
     I i,
     const F factor,
@@ -544,17 +544,20 @@ void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
   checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: load seeds");
   
   const int maxGridDim = 1024;
-  const int blockSize = 256;
+  const int blockSize = 32;
   const int nBlocks = idivup(c->nseeds, blockSize);
   dim3 gridSize;
 
   if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else gridSize = dim3(nBlocks);
 
-  poincare_integrate<int, double><<<gridSize, blockSize>>>(
-      c->m2n0, c->nphi, c->iphi, c->vphi, 
-      c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
-      c->d_bvh, c->nseeds, c->nsteps, (double*)c->dcps);
+  for (int k = 1; k < c->nsteps; k ++) {
+    fprintf(stderr, "step k=%d\n", k);
+    poincare_integrate<int, double><<<gridSize, blockSize>>>(
+        k, c->m2n0, c->nphi, c->iphi, c->vphi, 
+        c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
+        c->d_bvh, c->nseeds, c->nsteps, (double*)c->dcps);
+  }
   checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: exec");
 
   cudaMemcpy(c->hcps, c->dcps, c->nseeds * c->nsteps * sizeof(double) * 2, cudaMemcpyDeviceToHost);
@@ -841,7 +844,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
   cudaMemcpy(c->d_apars, apars, size_t(c->m2n0 * c->nphi) * sizeof(double), cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] xft_load_apars: copy apars");
 
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   fprintf(stderr, "apars copied\n");
 
   // TODO:
@@ -862,7 +865,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
   }
   checkLastCudaError("[FTK-CUDA] xft_load_apars: upsample apars");
   
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   fprintf(stderr, "apars upsampled\n");
 
   // 2. derive gradient of upsampled apars
@@ -883,7 +886,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
           c->d_apars_upsample + i * c->m2n0, 
           c->d_gradAs_cw + i * c->m2n2 * 2);
     
-      cudaDeviceSynchronize();
+      // cudaDeviceSynchronize();
       // fprintf(stderr, "cw\n");
       checkLastCudaError("[FTK-CUDA] xft_load_apars: cw");
     }
@@ -899,7 +902,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
           c->m2n0, c->max_vertex_triangles, c->d_vertex_triangles, 
           c->d_gradAs_cw, c->d_gradAs);
       
-      cudaDeviceSynchronize();
+      // cudaDeviceSynchronize();
       // fprintf(stderr, "vw\n");
       checkLastCudaError("[FTK-CUDA] xft_load_apars: vw");
     }
@@ -926,7 +929,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
         c->d_curl_bfield0, 
         c->d_deltaB);
   }
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB");
 }
 
@@ -960,7 +963,7 @@ void xft_load_bvh(ctx_t *c, const std::vector<bvh2d_node_t<>>& bvh)
   cudaMemcpy(c->d_bvh, &bvh[0], bvh.size() * sizeof(bvh2d_node_t<>), cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] xft_load_bvh");
   fprintf(stderr, "bvh loaded.\n");
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
 }
 
 void xft_load_mesh(ctx_t *c,
@@ -1022,7 +1025,7 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
   checkLastCudaError("[FTK-CUDA] loading xgc interpolants");
   
   fprintf(stderr, "interpolants loaded.\n");
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
 }
 
 void xft_load_scalar_data(ctx_t *c, const double *scalar)
