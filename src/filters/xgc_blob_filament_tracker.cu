@@ -552,7 +552,10 @@ void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
   else gridSize = dim3(nBlocks);
 
   for (int k = 1; k < c->nsteps; k ++) {
-    fprintf(stderr, "step k=%d\n", k);
+    if (k % 100 == 1) {
+      cudaDeviceSynchronize();
+      fprintf(stderr, "step k=%d, total steps %d\n", k, c->nsteps);
+    }
     poincare_integrate<int, double><<<gridSize, blockSize>>>(
         k, c->m2n0, c->nphi, c->iphi, c->vphi, 
         c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
