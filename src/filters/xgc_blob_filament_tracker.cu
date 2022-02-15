@@ -225,7 +225,7 @@ template <typename I, typename F>
 __global__ void mx2_derive_interpolants(
     const I m2n0,
     const I nphi, const I iphi, const I vphi,
-    const I *m2tris, const I *m2coords,
+    const I *m2tris, const F *m2coords,
     const F *m2invdet,
     const F *staticB,
     const bvh2d_node_t<I, F> *bvh,
@@ -254,7 +254,7 @@ __global__ void mx2_derive_interpolants(
         -delta, bsteps, rz) ) {
       const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], interpolant.mu0, m2invdet);
       if (tid >= 0) {
-        m2_get_tri(tid, interpolant.tri0);
+        m2_get_tri(tid, interpolant.tri0, m2tris);
       } else {
         interpolant.tri0[0] = -1;
       }
@@ -269,7 +269,7 @@ __global__ void mx2_derive_interpolants(
         delta, fsteps, rz) ) {
       const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], interpolant.mu1, m2invdet);
       if (tid >= 0) {
-        m2_get_tri(tid, interpolant.tri1);
+        m2_get_tri(tid, interpolant.tri1, m2tris);
       } else {
         interpolant.tri1[0] = -1;
       }
@@ -1141,6 +1141,32 @@ void xft_load_mesh(ctx_t *c,
   checkLastCudaError("[FTK-CUDA] loading xgc mesh");
 }
 
+void xft_derive_interpolants(ctx_t *c)
+{
+  if (c->d_interpolants == NULL)
+    cudaMalloc((void**)&c->d_interpolants,
+        size_t(c->m2n0) * sizeof(ftk::xgc_interpolant_t<>) * (c->vphi-1));
+      
+  const int maxGridDim = 1024;
+  const int blockSize = 256;
+  const int nBlocks = idivup(c->m2n0, blockSize);
+  dim3 gridSize;
+  if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else gridSize = dim3(nBlocks);
+
+  for (size_t p = 1; p < c->vphi; p ++) {
+    mx2_derive_interpolants<int, double><<<gridSize, blockSize>>>(
+        c->m2n0, c->nphi, c->iphi, c->vphi, 
+        c->d_m2tris, c->d_m2coords, c->d_m2invdet, 
+        c->d_bfield, c->d_bvh, p,
+        c->d_interpolants + (p-1) * size_t(c->m2n0));
+  }
+
+  cudaDeviceSynchronize();
+  fprintf(stderr, "interpolants derived.\n");
+  checkLastCudaError("[FTK-CUDA] deriving interpolants");
+}
+
 void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_interpolant_t<>>> &interpolants)
 {
   assert(c->vphi == interpolants.size());
@@ -1157,7 +1183,7 @@ void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_inte
   
   checkLastCudaError("[FTK-CUDA] loading xgc interpolants");
   
-  fprintf(stderr, "interpolants loaded.\n");
+  // fprintf(stderr, "interpolants loaded.\n");
   // cudaDeviceSynchronize();
 }
 
