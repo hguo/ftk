@@ -58,6 +58,7 @@ void xft_load_mesh(xft_ctx_t *c,
     const double *m2coords, const int *m2edges, const int *m2tris);
 void xft_load_vertex_triangles(xft_ctx_t *c, const std::vector<std::set<int>>& vertex_triangles);
 void xft_load_bvh(xft_ctx_t *c, const std::vector<bvh2d_node_t<int, double>>& bvh);
+void xft_derive_interpolants(xft_ctx_t *c);
 void xft_load_interpolants(xft_ctx_t *c, const std::vector<std::vector<ftk::xgc_interpolant_t<>>> &interpolants);
 void xft_load_smoothing_kernel(xft_ctx_t *c, double sigma, const std::vector<std::vector<std::tuple<int, double>>>& kernels);
 void xft_load_psin(xft_ctx_t *c, const double *psin);

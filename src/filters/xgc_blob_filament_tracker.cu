@@ -1153,16 +1153,19 @@ void xft_derive_interpolants(ctx_t *c)
   dim3 gridSize;
   if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else gridSize = dim3(nBlocks);
+  
+  cudaDeviceSynchronize();
 
   for (size_t p = 1; p < c->vphi; p ++) {
+  fprintf(stderr, "deriving interpolants for plane %d...\n", p);
     mx2_derive_interpolants<int, double><<<gridSize, blockSize>>>(
         c->m2n0, c->nphi, c->iphi, c->vphi, 
         c->d_m2tris, c->d_m2coords, c->d_m2invdet, 
         c->d_bfield, c->d_bvh, p,
         c->d_interpolants + (p-1) * size_t(c->m2n0));
+    cudaDeviceSynchronize();
   }
 
-  cudaDeviceSynchronize();
   fprintf(stderr, "interpolants derived.\n");
   checkLastCudaError("[FTK-CUDA] deriving interpolants");
 }
