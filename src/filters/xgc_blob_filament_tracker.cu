@@ -238,7 +238,7 @@ __global__ void mx2_derive_interpolants(
 
   const I np = nphi * iphi * vphi;
   const I steps_per_vp = 32; // TODO
-  const F delta = M_PI / (np * steps_per_vp);
+  const F delta = 2 * M_PI / (np * steps_per_vp);
 
   const I bsteps = p * steps_per_vp, 
           fsteps = (vphi - p) * steps_per_vp;
