@@ -190,7 +190,7 @@ inline bool static_magnetic_map(
     const F *m2invdet,
     const F *staticB,
     const bvh2d_node_t<I, F> *bvh,
-    const F delta,
+    const F h, // delta,
     const I nsteps,
     F rz[2]) // input/output rz
 {
@@ -244,7 +244,7 @@ __global__ void mx2_derive_interpolants(
           fsteps = (vphi - p) * steps_per_vp;
 
   F rz0[2] = { m2coords[i*2], m2coords[i*2+1] };
-  xgc_interpolant_t<I, F> &interpolant = interpolants[i];
+  ftk::xgc_interpolant_t<I, F> &interpolant = interpolants[i];
 
   { // backward
     F rz[2] = {rz0[0], rz0[1]};
@@ -256,7 +256,7 @@ __global__ void mx2_derive_interpolants(
       if (tid >= 0) {
         m2_get_tri(tid, interpolant.tri0);
       } else {
-        interpolants.tri0[0] = -1;
+        interpolant.tri0[0] = -1;
       }
     }
   }
@@ -271,7 +271,7 @@ __global__ void mx2_derive_interpolants(
       if (tid >= 0) {
         m2_get_tri(tid, interpolant.tri1);
       } else {
-        interpolants.tri1[0] = -1;
+        interpolant.tri1[0] = -1;
       }
     }
   }

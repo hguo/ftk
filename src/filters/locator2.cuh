@@ -88,7 +88,7 @@ inline I bvh2_locate_point_tri(const bvh2d_node_t<I, F> *nodes, F x, F y, F lamb
 {
   I nid = bvh2_locate_point(nodes, x, y, lambda, invdet, root);
   if (nid < 0) return -1;
-  else return bvh[nid].triangleId;
+  else return nodes[nid].triangleId;
 }
 
 template <typename I, typename F>
