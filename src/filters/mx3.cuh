@@ -70,6 +70,9 @@ inline F mx3_interpolate_scalar(const I i,
 
     return scalar[idx];
   } else { // virtual plane
+    if (isnan(l.tri0[0]) || isnan(l.tri1[0])) 
+      return nan("");
+
     const I p0 = p / vphi, p1 = (p0 + 1) % nphi;
     const F beta = F(p) / vphi - p0, alpha = F(1) - beta;
     const auto& l = interpolants[(p % vphi - 1) * m2n0 + i % m2n0];

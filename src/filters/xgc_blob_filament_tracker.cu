@@ -149,6 +149,136 @@ __global__ void mx3_derive_deltaB(
 
 template <typename I, typename F>
 __device__
+inline bool eval_static_b(
+    const I m2n0,
+    const I nphi, const I iphi, const I vphi,
+    const I *m2tris,
+    const F *m2invdet, 
+    const F *staticB,
+    const bvh2d_node_t<I, F> *bvh, 
+    const F rz[2], // input rz
+    F v[2]) // output normalized vector
+{
+  F mu[3]; // barycentric coordinates
+  const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], mu, m2invdet);
+  if (tid < 0) return false;
+
+  if (tid >= 0) {
+    F B[3][3], b[3];
+    I tri[3];
+    m2_get_tri(tid, tri, m2tris);
+    
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 3; j ++)
+        B[i][j] = staticB[tri[i]*3 + j];
+
+    lerp_s2v3(B, mu, b);
+    v[0] = rz[0] * b[0] / b[2];
+    v[1] = rz[0] * b[1] / b[2];
+    
+    return true;
+  } else 
+    return false;
+}
+
+template <typename I, typename F>
+__device__
+inline bool static_magnetic_map(
+    const I m2n0,
+    const I nphi, const I iphi, const I vphi,
+    const I *m2tris,
+    const F *m2invdet,
+    const F *staticB,
+    const bvh2d_node_t<I, F> *bvh,
+    const F delta,
+    const I nsteps,
+    F rz[2]) // input/output rz
+{
+  F v[2];
+  for (int k = 0; k < nsteps; k ++) {
+    if (!eval_static_b(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, bvh, rz, v))
+      return false;
+    const F k1[2] = {h * v[0], h * v[1]};
+
+    const F rz2[2] = {rz[0] + k1[0]/2, rz[1] + k1[1]/2};
+    if (!eval_static_b(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, bvh, rz2, v)) 
+      return false;
+    const F k2[2] = {h * v[0], h * v[1]};
+
+    const F rz3[2] = {rz[0] + k2[0]/2, rz[1] + k2[1]/2};
+    if (!eval_static_b(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, bvh, rz3, v)) 
+      return false;
+    const F k3[2] = {h * v[0], h * v[1]};
+    
+    const F rz4[2] = {rz[0] + k3[0], rz[1] + k3[1]};
+    if (!eval_static_b(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, bvh, rz4, v)) 
+      return false;
+    const F k4[2] = {h * v[0], h * v[1]};
+    
+    for (int i = 0; i < 2; i ++) 
+      rz[i] = rz[i] + (k1[i] + 2.0*(k2[i]+k3[i]) + k4[i])/6.0;
+  }
+  return true;
+}
+
+template <typename I, typename F>
+__global__ void mx2_derive_interpolants(
+    const I m2n0,
+    const I nphi, const I iphi, const I vphi,
+    const I *m2tris, const I *m2coords,
+    const F *m2invdet,
+    const F *staticB,
+    const bvh2d_node_t<I, F> *bvh,
+    const I p, // ith poloidal plane in vphi
+    ftk::xgc_interpolant_t<I, F> *interpolants) // output
+{
+  int tid = getGlobalIdx_3D_1D();
+  I i = tid;
+  if (i >= m2n0) return;
+
+  const I np = nphi * iphi * vphi;
+  const I steps_per_vp = 32; // TODO
+  const F delta = M_PI / (np * steps_per_vp);
+
+  const I bsteps = p * steps_per_vp, 
+          fsteps = (vphi - p) * steps_per_vp;
+
+  F rz0[2] = { m2coords[i*2], m2coords[i*2+1] };
+  xgc_interpolant_t<I, F> &interpolant = interpolants[i];
+
+  { // backward
+    F rz[2] = {rz0[0], rz0[1]};
+    if ( static_magnetic_map(
+        m2n0, nphi, iphi, vphi, 
+        m2tris, m2invdet, staticB, bvh, 
+        -delta, bsteps, rz) ) {
+      const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], interpolant.mu0, m2invdet);
+      if (tid >= 0) {
+        m2_get_tri(tid, interpolant.tri0);
+      } else {
+        interpolants.tri0[0] = -1;
+      }
+    }
+  }
+  
+  { // forward 
+    F rz[2] = {rz0[0], rz0[1]};
+    if ( static_magnetic_map(
+        m2n0, nphi, iphi, vphi, 
+        m2tris, m2invdet, staticB, bvh, 
+        delta, fsteps, rz) ) {
+      const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], interpolant.mu1, m2invdet);
+      if (tid >= 0) {
+        m2_get_tri(tid, interpolant.tri1);
+      } else {
+        interpolants.tri1[0] = -1;
+      }
+    }
+  }
+}
+
+template <typename I, typename F>
+__device__
 inline bool poincare_eval( // evaluate total B for computing poincare plot
     const I m2n0,
     const I nphi, const I iphi, const I vphi,
@@ -163,7 +293,7 @@ inline bool poincare_eval( // evaluate total B for computing poincare plot
 {
   F mu[3]; // barycentric coordinates
   // const I tid = bvh2_locate_point_recursive(bvh, bvh, rz[0], rz[1], mu, m2invdet);
-  const I tid = bvh2_locate_point(bvh, rz[0], rz[1], mu, m2invdet);
+  const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], mu, m2invdet);
 
   if (tid >= 0) {
     F B[3][3], b[3];
