@@ -1,8 +1,8 @@
 set(classes
   ftkCriticalPointTracker
-  ftkCriticalPointTracker2D
-  ftkCriticalPointTracker2DUnstructured
-  ftkCriticalPointTracker3D
+  # ftkCriticalPointTracker2D
+  # ftkCriticalPointTracker2DUnstructured
+  # ftkCriticalPointTracker3D
   # ftkThresholdTracker2D
   ftkLevelsetTracker2D
   ftkLevelsetTracker3D
@@ -26,9 +26,9 @@ vtk_module_link(FTKFilters
 
 paraview_add_server_manager_xmls(XMLS 
   CriticalPointTracker.xml
-  CriticalPointTracker2D.xml
-  CriticalPointTracker2DUnstructured.xml
-  CriticalPointTracker3D.xml
+  # CriticalPointTracker2D.xml
+  # CriticalPointTracker2DUnstructured.xml
+  # CriticalPointTracker3D.xml
   # ThresholdTracker2D.xml
   LevelsetTracker2D.xml
   LevelsetTracker3D.xml
