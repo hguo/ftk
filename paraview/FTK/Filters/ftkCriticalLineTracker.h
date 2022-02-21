@@ -29,12 +29,9 @@ public:
   vtkSetMacro(ZTimeScale, double);
   vtkGetMacro(ZTimeScale, double);
 
-  vtkSetMacro(InputVariable1, std::string);
-  vtkGetMacro(InputVariable1, std::string);
+  vtkSetMacro(InputVariable, std::string);
+  vtkGetMacro(InputVariable, std::string);
   
-  vtkSetMacro(InputVariable2, std::string);
-  vtkGetMacro(InputVariable2, std::string);
-
 protected:
   ftkCriticalLineTracker();
   ~ftkCriticalLineTracker();
@@ -58,7 +55,7 @@ private:
   bool ComputeDegrees;
   double GaussianKernelSize;
   double ZTimeScale;
-  std::string InputVariable1, InputVariable2;
+  std::string InputVariable, InputVariable2;
 
   int currentTimestep;
   int inputDataComponents;

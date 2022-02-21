@@ -79,35 +79,35 @@ int ftkCriticalLineTracker::RequestData_vti(
     DW = vti->GetDimensions()[0];
     DH = vti->GetDimensions()[1];
     DD = vti->GetDimensions()[2];
-    field_data.from_vtk_image_data(vti, InputVariable1);
+    field_data.from_vtk_image_data(vti, InputVariable);
   } else if (itype == VTK_RECTILINEAR_GRID) { // TODO
     nd = vtr->GetDataDimension();
     DW = vtr->GetDimensions()[0];
     DH = vtr->GetDimensions()[1];
     DD = vtr->GetDimensions()[2];
-    field_data.from_vtk_regular_data<vtkRectilinearGrid>(vtr, InputVariable1);
+    field_data.from_vtk_regular_data<vtkRectilinearGrid>(vtr, InputVariable);
   } else if (itype == VTK_STRUCTURED_GRID) { // TODO
     nd = vts->GetDataDimension();
     DW = vts->GetDimensions()[0];
     DH = vts->GetDimensions()[1];
     DD = vts->GetDimensions()[2];
-    field_data.from_vtk_regular_data<vtkStructuredGrid>(vts, InputVariable1);
+    field_data.from_vtk_regular_data<vtkStructuredGrid>(vts, InputVariable);
   } else 
     assert(false);
   
   if (currentTimestep == 0) { // first timestep
     
     // vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
-    vtkSmartPointer<vtkAbstractArray> da = input->GetPointData()->GetAbstractArray(InputVariable1.c_str());
+    vtkSmartPointer<vtkAbstractArray> da = input->GetPointData()->GetAbstractArray(InputVariable.c_str());
     if (!da) da = input->GetPointData()->GetAbstractArray(0);
 
     inputDataComponents = da->GetNumberOfComponents();
 
     if (nd == 3) {
-      fprintf(stderr, "DW=%zu, DH=%zu, DD=%zu, components=%d\n", DW, DH, DD, inputDataComponents);
+      fprintf(stderr, "DW=%zu, DH=%zu, DD=%zu, components=%d, nt=%d\n", DW, DH, DD, inputDataComponents, nt);
       tlpr.reset(new ftk::critical_line_tracker_3d_regular(MPI_COMM_WORLD));
       
-      tlpr->set_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD})); 
+      tlpr->set_domain(ftk::lattice({0, 0, 0}, {DW-1, DH-1, DD-1})); 
       tlpr->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
       tlpr->set_input_array_partial(false);
     } else 
@@ -137,7 +137,9 @@ int ftkCriticalLineTracker::RequestData_vti(
 
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
   } else { // the last timestep
-    if (nt == 0) { // the only timestp
+    if (nt == 0 || nt == 1) { // the only timestp
+      tlpr->push_field_data_snapshot(field_data);
+      // push for the sole timestep for the second time
       tlpr->push_field_data_snapshot(field_data);
       tlpr->update_timestep();
     }
@@ -149,6 +151,14 @@ int ftkCriticalLineTracker::RequestData_vti(
     // fprintf(stderr, "FINALIZING...\n");
     
     auto &surfs = tlpr->get_traced_surfaces();
+    if (nt == 0 || nt == 1) { // the only timestp
+      auto curves = surfs.slice_time(0);
+      auto poly = curves.to_vtp({});
+      output->DeepCopy(poly);
+    } else {
+      auto poly = surfs.to_vtp();
+      output->DeepCopy(poly);
+    }
 #if 0 // TODO
     auto &trajs = tlpr->get_traced_critical_points();
     trajs.foreach([](ftk::feature_curve_t& t) {
@@ -185,7 +195,7 @@ int ftkCriticalLineTracker::RequestData_vtu(
   const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
   
-  vtkSmartPointer<vtkAbstractArray> da = input->GetPointData()->GetAbstractArray(InputVariable1.c_str());
+  vtkSmartPointer<vtkAbstractArray> da = input->GetPointData()->GetAbstractArray(InputVariable.c_str());
   if (!da) da = input->GetPointData()->GetAbstractArray(0);
 
   assert(false); // unsupported for now
@@ -211,7 +221,7 @@ int ftkCriticalLineTracker::RequestData_vtu(
       assert(false); // unsupported mesh type
     }
 
-    // vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable1.c_str());
+    // vtkSmartPointer<vtkDataArray> da = input->GetPointData()->GetArray(InputVariable.c_str());
     
     tlp->initialize();
   }
@@ -220,7 +230,7 @@ int ftkCriticalLineTracker::RequestData_vtu(
   // std::cerr << "InputVariable: " << InputVariable << std::endl;
   // input->PrintSelf(std::cerr, vtkIndent(2));
 
-  field_data.from_vtk_array(da); // input, InputVariable1);
+  field_data.from_vtk_array(da); // input, InputVariable);
 
   if (currentTimestep < inInfo->Length( vtkStreamingDemandDrivenPipeline::TIME_STEPS() )) {
     // fprintf(stderr, "currentTimestep=%d\n", currentTimestep);

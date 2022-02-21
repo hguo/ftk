@@ -23,23 +23,8 @@
       </InputProperty>
 
       <StringVectorProperty 
-        name="InputVariable1"
-        command="SetInputVariable1"
-        number_of_elements="1"
-        animateable="1">
-        <ArrayListDomain name="array_list"
-          attribute_type="Scalars"
-          input_domain_name="inputs_array">
-          <RequiredProperties>
-            <Property name="Input"
-              function="Input" />
-          </RequiredProperties>
-        </ArrayListDomain>
-      </StringVectorProperty>
-      
-      <StringVectorProperty 
-        name="InputVariable2"
-        command="SetInputVariable2"
+        name="InputVariable"
+        command="SetInputVariable"
         number_of_elements="1"
         animateable="1">
         <ArrayListDomain name="array_list"
