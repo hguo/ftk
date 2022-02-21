@@ -3,6 +3,8 @@
 
 #include <ftk/config.hh>
 #include <ftk/filters/critical_line_tracker.hh>
+#include <ftk/filters/regular_tracker.hh>
+#include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 
@@ -29,6 +31,8 @@ public:
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
 #endif
+
+  const feature_surface_t& get_traced_surfaces() const { return surfaces; }
 
 protected:
   typedef simplicial_regular_mesh_element element_t;

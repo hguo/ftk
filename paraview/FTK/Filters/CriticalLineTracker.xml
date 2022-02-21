@@ -1,0 +1,60 @@
+<ServerManagerConfiguration>
+  <ProxyGroup name="filters">
+    <SourceProxy name="CriticalLineTracker" class="ftkCriticalLineTracker" label="CriticalLineTracker">
+      <Documentation
+        short_help="track critical lines in time-varying scalar field data"
+        long_help="track critical lines in time-varying scalar field data">
+      </Documentation>
+      
+      <InputProperty
+        name="Input"
+        command="SetInputConnection">
+        <ProxyGroupDomain name="groups">
+          <Group name="sources"/>
+          <Group name="filters"/>
+        </ProxyGroupDomain>
+        <DataTypeDomain name="input_type">
+          <DataType value="vtkImageData"/>
+          <!---
+          <DataType value="vtkRectilinearGrid"/>
+          <DataType value="vtkStructuredGrid"/>
+          <DataType value="vtkUnstructuredGrid"/>-->
+        </DataTypeDomain>
+      </InputProperty>
+
+      <StringVectorProperty 
+        name="InputVariable1"
+        command="SetInputVariable1"
+        number_of_elements="1"
+        animateable="1">
+        <ArrayListDomain name="array_list"
+          attribute_type="Scalars"
+          input_domain_name="inputs_array">
+          <RequiredProperties>
+            <Property name="Input"
+              function="Input" />
+          </RequiredProperties>
+        </ArrayListDomain>
+      </StringVectorProperty>
+      
+      <StringVectorProperty 
+        name="InputVariable2"
+        command="SetInputVariable2"
+        number_of_elements="1"
+        animateable="1">
+        <ArrayListDomain name="array_list"
+          attribute_type="Scalars"
+          input_domain_name="inputs_array">
+          <RequiredProperties>
+            <Property name="Input"
+              function="Input" />
+          </RequiredProperties>
+        </ArrayListDomain>
+      </StringVectorProperty>
+
+      <Hints>
+        <ShowInMenu category="FTK"/>
+      </Hints>
+    </SourceProxy>
+  </ProxyGroup>
+</ServerManagerConfiguration>

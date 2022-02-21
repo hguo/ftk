@@ -1,5 +1,6 @@
 set(classes
   ftkCriticalPointTracker
+  ftkCriticalLineTracker
   # ftkCriticalPointTracker2D
   # ftkCriticalPointTracker2DUnstructured
   # ftkCriticalPointTracker3D
@@ -26,6 +27,7 @@ vtk_module_link(FTKFilters
 
 paraview_add_server_manager_xmls(XMLS 
   CriticalPointTracker.xml
+  CriticalLineTracker.xml
   # CriticalPointTracker2D.xml
   # CriticalPointTracker2DUnstructured.xml
   # CriticalPointTracker3D.xml
