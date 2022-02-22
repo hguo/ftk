@@ -7,50 +7,52 @@
 #include <ftk/features/feature_point_lite.hh>
 #include <ftk/mesh/bvh2d.hh>
 
+static const int maxgpus = 8;
+
 typedef struct {
   int m2n0, m2n1, m2n2, max_vertex_triangles;
   int nphi = 16, iphi = 1, vphi = 1;
 
   // mesh
-  double *d_m2coords, *d_m2invdet = NULL;
-  int *d_m2edges, *d_m2tris;
-  int *d_vertex_triangles = NULL;
-  double *d_psin; // normalized psi
+  double *d_m2coords[maxgpus], *d_m2invdet[maxgpus];
+  int *d_m2edges[maxgpus], *d_m2tris[maxgpus];
+  int *d_vertex_triangles[maxgpus];
+  double *d_psin[maxgpus]; // normalized psi
 
   // bvh
-  bvh2d_node_t<> *d_bvh = NULL;
+  bvh2d_node_t<> *d_bvh[maxgpus];
 
   // interpolants
-  ftk::xgc_interpolant_t<> *d_interpolants = NULL;
+  ftk::xgc_interpolant_t<> *d_interpolants[maxgpus];
 
   // smoothing kernel
   double sigma;
-  int *d_kernel_nodes;
-  double *d_kernel_values;
-  size_t *d_kernel_lengths, *d_kernel_offsets;
+  int *d_kernel_nodes[maxgpus];
+  double *d_kernel_values[maxgpus];
+  size_t *d_kernel_lengths[maxgpus], *d_kernel_offsets[maxgpus];
 
-  double *d_scalar_in;
-  double *d_scalar[2], *d_vector[2], *d_jacobian[2];
+  double *d_scalar_in[maxgpus];
+  double *d_scalar[maxgpus][2], *d_vector[maxgpus][2], *d_jacobian[maxgpus][2];
 
-  ftk::feature_point_lite_t *hcps = NULL, *dcps = NULL;
-  unsigned long long hncps = 0, *dncps = NULL;
+  ftk::feature_point_lite_t *hcps, *dcps[maxgpus];
+  unsigned long long hncps = 0, *dncps[maxgpus];
   size_t bufsize; //  = 512 * 1024 * 1024; // 512 MB of buffer
-  int device;
+  int ndevices;
 
   double factor; // scaling factor
   
   // for poincare plot
   bool poincare = false;
-  double *d_apars = NULL, *d_apars_upsample = NULL; // apars (nphi) and its upsampled (nphi*iphi) version
-  double *d_gradAs = NULL, *d_gradAs_cw = NULL; // 2D gradient of upsampled apars, vertexwise and cellwise
-  double *d_bfield = NULL, *d_bfield0 = NULL, *d_curl_bfield0 = NULL;
-  double *d_deltaB = NULL; // (upsampled) deltaB
-  double *d_seeds = NULL;
+  double *d_apars[maxgpus], *d_apars_upsample[maxgpus]; // apars (nphi) and its upsampled (nphi*iphi) version
+  double *d_gradAs[maxgpus], *d_gradAs_cw[maxgpus]; // 2D gradient of upsampled apars, vertexwise and cellwise
+  double *d_bfield[maxgpus], *d_bfield0[maxgpus], *d_curl_bfield0[maxgpus];
+  double *d_deltaB[maxgpus]; // (upsampled) deltaB
+  double *d_seeds[maxgpus];
   int nseeds, nsteps;
 } xft_ctx_t;
 
-void xft_create_ctx(xft_ctx_t **c_, int device=0, int buffer_size_in_mb=512);
-void xft_create_poincare_ctx(xft_ctx_t **c_, int nseeds, int nsteps, int device=0);
+void xft_create_ctx(xft_ctx_t **c_, int buffer_size_in_mb=512);
+void xft_create_poincare_ctx(xft_ctx_t **c_, int nseeds, int nsteps);
 void xft_destroy_ctx(xft_ctx_t **c_);
 void xft_load_mesh(xft_ctx_t *c,
     int nphi, int iphi, int vphi,
