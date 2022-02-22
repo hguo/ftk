@@ -42,24 +42,24 @@ bool check_simplex_3dclt(
     local_indices[i] = ext.to_index(vertices[i]);
   }
  
-  F X[3][4], A[3][3];
+  F X[3][4], UV[3][2];
   F u[3], v[3];
   for (int i = 0; i < 3; i ++) {
     const size_t k = local_indices[i]; // k = ext.to_index(vertices[i]);
     const size_t t = unit_simplex_offset_4_2<scope>(e.type, i, 3);
       
-    u[i] = uv[t][k*2];
-    v[i] = uv[t][k*2+1];
+    UV[i][0] = uv[t][k*2];
+    UV[i][1] = uv[t][k*2+1];
 
     for (int j = 0; j < 3; j ++)
-      X[i][j] = vertices[i][j] * h[0]->cell_lengths[j] + h[0]->origins[j];
+      X[i][j] = vertices[i][j]; 
     X[i][3] = vertices[i][3];
   }
 
   // locate zero
   F mu[3], // barycentric coordinates
     cond; // condition number
-  inverse_lerp_s2v2(psi, mu, &cond);
+  inverse_lerp_s2v2(UV, mu, &cond);
 
   // interpolation
   F x[4];
@@ -103,7 +103,7 @@ void sweep_simplices(
   }
 }
 
-template <int scope>
+template <int scope, typename F>
 static std::vector<cp_t> extract_3dclt(
     int current_timestep,
     const lattice4_t& domain,
@@ -128,15 +128,15 @@ static std::vector<cp_t> extract_3dclt(
 
   F *duv_c = NULL, *duv_n = NULL;
   if (duv_c) {
-    cudaMalloc((void**)&_c, sizeof(double) * ext.n());
+    cudaMalloc((void**)&duv_c, sizeof(double) * ext.n());
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating _c");
-    cudaMemcpy(_c, uv_c, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMemcpy(duv_c, uv_c, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying _c");
   }
   if (duv_n) {
-    cudaMalloc((void**)&_n, sizeof(double) * ext.n());
+    cudaMalloc((void**)&duv_n, sizeof(double) * ext.n());
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating _l");
-    cudaMemcpy(_n, uv_n, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMemcpy(duv_n, uv_n, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying _l");
   }
   
@@ -197,7 +197,7 @@ extract_3dclt_cuda(
   lattice3_t E(ext);
 
   if (scope == scope_interval) 
-    return extract_3dclt<scope_interval>(current_timestep, D, C, E, uv_c, uv_l);
+    return extract_3dclt<scope_interval, double>(current_timestep, D, C, E, uv_c, uv_l);
   else
-    return extract_3dclt<scope_ordinal>(current_timestep, D, C, E, uv_c, uv_l);
+    return extract_3dclt<scope_ordinal, double>(current_timestep, D, C, E, uv_c, uv_l);
 }

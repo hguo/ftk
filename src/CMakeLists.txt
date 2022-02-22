@@ -29,6 +29,7 @@ set (ftk_sources
 if (FTK_HAVE_CUDA)
   set (ftk_cuda_sources
     filters/critical_point_tracer_3d_regular.cu
+    filters/critical_line_tracer_3d_regular.cu
     filters/tdgl_vortex_tracker_3d_regular.cu
     filters/critical_point_tracer_2d_regular.cu
     filters/contour_tracker_3d_regular.cu
