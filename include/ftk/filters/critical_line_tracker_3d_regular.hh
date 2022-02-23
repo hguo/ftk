@@ -287,14 +287,14 @@ inline void critical_line_tracker_3d_regular::update_timestep()
          field_data_snapshots[0].uv.dim(3)});
 
     // ordinal
-    auto results = extract_tdgl_vortex_3dt_cuda(
+    auto results = extract_3dclt_cuda(
         ELEMENT_SCOPE_ORDINAL, 
         current_timestep, 
         domain4,
         ordinal_core,
         ext,
         field_data_snapshots[0].uv.data(),
-        NULL, // gradV[0].data(),
+        NULL // gradV[0].data(),
       );
   
     for (auto lcp : results) {
@@ -312,7 +312,7 @@ inline void critical_line_tracker_3d_regular::update_timestep()
 
     if (field_data_snapshots.size() >= 2) { // interval
       fprintf(stderr, "processing interval %d, %d\n", current_timestep, current_timestep + 1);
-      auto results = extract_tdgl_vortex_3dt_cuda(
+      auto results = extract_3dclt_cuda(
           ELEMENT_SCOPE_INTERVAL, 
           current_timestep,
           domain4,
