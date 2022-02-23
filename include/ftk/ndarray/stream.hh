@@ -630,25 +630,32 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             j["n_timesteps"] = std::min(j["n_timesteps"].template get<int>(), nt);
           else 
             j["n_timesteps"] = nt;
-          
-          if (j.contains("dimensions"))
-            warn("ignorning dimensions");
+        
+          std::vector<int> given_dimensions;
+          if (j.contains("dimensions")) {
+            auto dims = j["dimensions"];
+            for (int i = 0; i < dims.size(); i ++)
+              given_dimensions.push_back(dims[i]);
+            // fprintf(stderr, "#given_dimensions=%zu\n", given_dimensions.size());
+            // warn("ignorning dimensions");
+          }
 
-          if (ncdims == 4) { // 3 spatial dims + 1 time dimension; nd not required
-            j["dimensions"] = {dimlens[3], dimlens[2], dimlens[1]};
-          } else if (ncdims == 3) {
-            if (unlimited_recid >= 0)
-              j["dimensions"] = {dimlens[2], dimlens[1]};
-            else 
-              j["dimensions"] = {dimlens[2], dimlens[1], dimlens[0]};
-          } else if (ncdims == 2) {
-            if (unlimited_recid >= 0)
-              j["dimensions"] = {dimlens[1]};
-            else 
-              j["dimensions"] = {dimlens[1], dimlens[0]};
-          } else 
-            fatal("unsupported netcdf variable dimensionality");
-
+          if (given_dimensions.size() == 0) {
+            if (ncdims == 4) { // 3 spatial dims + 1 time dimension; nd not required
+              j["dimensions"] = {dimlens[3], dimlens[2], dimlens[1]};
+            } else if (ncdims == 3) {
+              if (unlimited_recid >= 0)
+                j["dimensions"] = {dimlens[2], dimlens[1]};
+              else 
+                j["dimensions"] = {dimlens[2], dimlens[1], dimlens[0]};
+            } else if (ncdims == 2) {
+              if (unlimited_recid >= 0)
+                j["dimensions"] = {dimlens[1]};
+              else 
+                j["dimensions"] = {dimlens[1], dimlens[0]};
+            } else 
+              fatal("unsupported netcdf variable dimensionality");
+          }
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
