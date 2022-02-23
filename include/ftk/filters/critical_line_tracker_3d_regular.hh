@@ -14,7 +14,8 @@ extract_3dclt_cuda(
     int current_timestep, 
     const ftk::lattice& domain,
     const ftk::lattice& core, 
-    const ftk::lattice& ext, 
+    const ftk::lattice& ext,
+    const int nchannels,
     const float *uv_c,
     const float *uv_l);
 
@@ -286,6 +287,8 @@ inline void critical_line_tracker_3d_regular::update_timestep()
          field_data_snapshots[0].uv.dim(2),
          field_data_snapshots[0].uv.dim(3)});
 
+    const int nchannels = field_data_snapshots[0].uv.dim(0);
+
     // ordinal
     auto results = extract_3dclt_cuda(
         ELEMENT_SCOPE_ORDINAL, 
@@ -293,6 +296,7 @@ inline void critical_line_tracker_3d_regular::update_timestep()
         domain4,
         ordinal_core,
         ext,
+        nchannels,
         field_data_snapshots[0].uv.data(),
         NULL // gradV[0].data(),
       );
@@ -318,6 +322,7 @@ inline void critical_line_tracker_3d_regular::update_timestep()
           domain4,
           interval_core,
           ext,
+          nchannels,
           field_data_snapshots[0].uv.data(),
           field_data_snapshots[1].uv.data()
         );

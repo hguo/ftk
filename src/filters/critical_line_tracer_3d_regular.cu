@@ -22,9 +22,12 @@ bool check_simplex_3dclt(
     const lattice4_t& core, 
     const lattice3_t& ext, // array dimension
     const element42_t& e,
+    const int nc,
     const F *uv[2],
     cp_t &p)
 {
+  typedef ftk::fixed_point<> fp_t;
+  
   if (e.corner[3] != current_timestep)
     return false;
   
@@ -43,36 +46,46 @@ bool check_simplex_3dclt(
   }
  
   F X[3][4], UV[3][2];
-  F u[3], v[3];
+  fp_t UVf[3][2];
   for (int i = 0; i < 3; i ++) {
     const size_t k = local_indices[i]; // k = ext.to_index(vertices[i]);
     const size_t t = unit_simplex_offset_4_2<scope>(e.type, i, 3);
-      
-    UV[i][0] = uv[t][k*2];
-    UV[i][1] = uv[t][k*2+1];
+    
+    UV[i][0] = uv[t][k*nc];
+    UV[i][1] = uv[t][k*nc+1];
+
+    UVf[i][0] = UV[i][0];
+    UVf[i][1] = UV[i][1];
 
     for (int j = 0; j < 3; j ++)
       X[i][j] = vertices[i][j]; 
     X[i][3] = vertices[i][3];
   }
 
-  // locate zero
-  F mu[3], // barycentric coordinates
-    cond; // condition number
-  inverse_lerp_s2v2(UV, mu, &cond);
+  bool succ = robust_critical_point_in_simplex2(UVf, indices);
+  if (succ) {
+    // locate zero
+    F mu[3], // barycentric coordinates
+      cond; // condition number
+    inverse_lerp_s2v2(UV, mu, &cond);
+    ftk::clamp_barycentric<3>(mu);
 
-  // interpolation
-  F x[4];
-  lerp_s2v4(X, mu, x);
+    // interpolation
+    F x[4];
+    lerp_s2v4(X, mu, x);
 
-  // result
-  p.x[0] = x[0];
-  p.x[1] = x[1];
-  p.x[2] = x[2];
-  p.t = x[3];
-  p.cond = cond;
+    // result
+    p.x[0] = x[0];
+    p.x[1] = x[1];
+    p.x[2] = x[2];
+    p.t = x[3];
+    p.cond = cond;
 
-  return true;
+    // printf("%f, %f, %f, %f\n", x[0], x[1], x[2], x[3]);
+
+    return true;
+  } else 
+    return false;
 }
 
 template <int scope, typename F>
@@ -82,6 +95,7 @@ void sweep_simplices(
     const lattice4_t domain,
     const lattice4_t core,
     const lattice3_t ext, // array dimension
+    const int nc,
     const F *uv_c, // current timestep
     const F *uv_n, // next timestep
     unsigned long long &ncps, cp_t *cps)
@@ -94,7 +108,7 @@ void sweep_simplices(
   cp_t cp;
   bool succ = check_simplex_3dclt<scope>(
       current_timestep,
-      domain, core, ext, e, uv, cp);
+      domain, core, ext, e, nc, uv, cp);
 
   if (succ) {
     unsigned long long i = atomicAdd(&ncps, 1ul);
@@ -109,6 +123,7 @@ static std::vector<cp_t> extract_3dclt(
     const lattice4_t& domain,
     const lattice4_t& core, 
     const lattice3_t& ext,
+    const int nc,
     const float *uv_c,
     const float *uv_n)
 {
@@ -127,17 +142,17 @@ static std::vector<cp_t> extract_3dclt(
     gridSize = dim3(nBlocks);
 
   F *duv_c = NULL, *duv_n = NULL;
-  if (duv_c) {
-    cudaMalloc((void**)&duv_c, sizeof(float) * ext.n());
-    checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating _c");
-    cudaMemcpy(duv_c, uv_c, sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
-    checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying _c");
+  if (uv_c) {
+    cudaMalloc((void**)&duv_c, sizeof(float) * ext.n() * nc);
+    checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating uv_c");
+    cudaMemcpy(duv_c, uv_c, sizeof(float) * ext.n() * nc, cudaMemcpyHostToDevice);
+    checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying uv_c");
   }
-  if (duv_n) {
-    cudaMalloc((void**)&duv_n, sizeof(float) * ext.n());
-    checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating _l");
-    cudaMemcpy(duv_n, uv_n, sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
-    checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying _l");
+  if (uv_n) {
+    cudaMalloc((void**)&duv_n, sizeof(float) * ext.n() * nc);
+    checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating uv_l");
+    cudaMemcpy(duv_n, uv_n, sizeof(float) * ext.n() * nc, cudaMemcpyHostToDevice);
+    checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying uv_l");
   }
   
   unsigned long long *dncps; // number of cps
@@ -146,14 +161,14 @@ static std::vector<cp_t> extract_3dclt(
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating dncps");
 
   cp_t *dcps;
-  cudaMalloc((void**)&dcps, sizeof(cp_t) * core.n());
+  cudaMalloc((void**)&dcps, 1024*1024*256); // sizeof(cp_t) * core.n());
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating dcps");
   cudaDeviceSynchronize();
 
   fprintf(stderr, "calling kernel func...\n");
   sweep_simplices<scope><<<gridSize, blockSize>>>(
       current_timestep, 
-      domain, core, ext, duv_c, duv_n, 
+      domain, core, ext, nc, duv_c, duv_n, 
       *dncps, dcps);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] error: sweep_simplices, kernel function");
@@ -189,15 +204,16 @@ extract_3dclt_cuda(
     const ftk::lattice& domain,
     const ftk::lattice& core, 
     const ftk::lattice& ext, 
+    const int nc,
     const float *uv_c, 
-    const float *uv_l)
+    const float *uv_n)
 {
   lattice4_t D(domain);
   lattice4_t C(core);
   lattice3_t E(ext);
 
   if (scope == scope_interval) 
-    return extract_3dclt<scope_interval, float>(current_timestep, D, C, E, uv_c, uv_l);
+    return extract_3dclt<scope_interval, float>(current_timestep, D, C, E, nc, uv_c, uv_n);
   else
-    return extract_3dclt<scope_ordinal, float>(current_timestep, D, C, E, uv_c, uv_l);
+    return extract_3dclt<scope_ordinal, float>(current_timestep, D, C, E, nc, uv_c, uv_n);
 }
