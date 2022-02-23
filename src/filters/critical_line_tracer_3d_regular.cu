@@ -109,8 +109,8 @@ static std::vector<cp_t> extract_3dclt(
     const lattice4_t& domain,
     const lattice4_t& core, 
     const lattice3_t& ext,
-    const double *uv_c,
-    const double *uv_n)
+    const float *uv_c,
+    const float *uv_n)
 {
   auto t0 = std::chrono::high_resolution_clock::now();
 
@@ -128,15 +128,15 @@ static std::vector<cp_t> extract_3dclt(
 
   F *duv_c = NULL, *duv_n = NULL;
   if (duv_c) {
-    cudaMalloc((void**)&duv_c, sizeof(double) * ext.n());
+    cudaMalloc((void**)&duv_c, sizeof(float) * ext.n());
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating _c");
-    cudaMemcpy(duv_c, uv_c, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMemcpy(duv_c, uv_c, sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying _c");
   }
   if (duv_n) {
-    cudaMalloc((void**)&duv_n, sizeof(double) * ext.n());
+    cudaMalloc((void**)&duv_n, sizeof(float) * ext.n());
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: allocating _l");
-    cudaMemcpy(duv_n, uv_n, sizeof(double) * ext.n(), cudaMemcpyHostToDevice);
+    cudaMemcpy(duv_n, uv_n, sizeof(float) * ext.n(), cudaMemcpyHostToDevice);
     checkLastCudaError("[FTK-CUDA] error: sweep_simplices: copying _l");
   }
   
@@ -175,7 +175,7 @@ static std::vector<cp_t> extract_3dclt(
  
   cudaDeviceSynchronize();
   auto t1 = std::chrono::high_resolution_clock::now();
-  double duration = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
+  float duration = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
 
   fprintf(stderr, "exitting gpu kernel, ncps=%llu, time=%f\n", ncps, duration);
   
@@ -189,15 +189,15 @@ extract_3dclt_cuda(
     const ftk::lattice& domain,
     const ftk::lattice& core, 
     const ftk::lattice& ext, 
-    const double *uv_c, 
-    const double *uv_l)
+    const float *uv_c, 
+    const float *uv_l)
 {
   lattice4_t D(domain);
   lattice4_t C(core);
   lattice3_t E(ext);
 
   if (scope == scope_interval) 
-    return extract_3dclt<scope_interval, double>(current_timestep, D, C, E, uv_c, uv_l);
+    return extract_3dclt<scope_interval, float>(current_timestep, D, C, E, uv_c, uv_l);
   else
-    return extract_3dclt<scope_ordinal, double>(current_timestep, D, C, E, uv_c, uv_l);
+    return extract_3dclt<scope_ordinal, float>(current_timestep, D, C, E, uv_c, uv_l);
 }
