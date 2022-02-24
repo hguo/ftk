@@ -564,6 +564,9 @@ void initialize_critical_line_tracker(diy::mpi::communicator comm)
     std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
     // fprintf(stderr, "=============\n");
   }
+  
+  if (accelerator == "cuda")
+    tracker_critical_line->use_accelerator(FTK_XL_CUDA);
 }
 
 void execute_critical_line_tracker(diy::mpi::communicator comm)

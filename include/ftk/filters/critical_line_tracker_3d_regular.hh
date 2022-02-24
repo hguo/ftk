@@ -3,8 +3,21 @@
 
 #include <ftk/config.hh>
 #include <ftk/filters/critical_line_tracker.hh>
+#include <ftk/filters/regular_tracker.hh>
+#include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
+
+extern std::vector<ftk::feature_point_lite_t> 
+extract_3dclt_cuda(
+    int scope, 
+    int current_timestep, 
+    const ftk::lattice& domain,
+    const ftk::lattice& core, 
+    const ftk::lattice& ext,
+    const int nchannels,
+    const float *uv_c,
+    const float *uv_l);
 
 namespace ftk {
 
@@ -29,6 +42,8 @@ public:
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
 #endif
+
+  const feature_surface_t& get_traced_surfaces() const { return surfaces; }
 
 protected:
   typedef simplicial_regular_mesh_element element_t;
@@ -228,9 +243,113 @@ inline void critical_line_tracker_3d_regular::update_timestep()
     }
   };
 
-  element_for_ordinal(2, func);
-  if (field_data_snapshots.size() >= 2) 
-    element_for_interval(2, func);
+  if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    ftk::lattice domain4({
+          domain.start(0), 
+          domain.start(1), 
+          domain.start(2), 
+          0
+        }, {
+          domain.size(0),
+          domain.size(1),
+          domain.size(2),
+          std::numeric_limits<int>::max()
+        });
+
+    ftk::lattice ordinal_core({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        });
+
+    ftk::lattice interval_core({
+          local_domain.start(0), 
+          local_domain.start(1), 
+          local_domain.start(2), 
+          // static_cast<size_t>(current_timestep-1), 
+          static_cast<size_t>(current_timestep), 
+        }, {
+          local_domain.size(0), 
+          local_domain.size(1), 
+          local_domain.size(2), 
+          1
+        });
+
+    ftk::lattice ext({0, 0, 0}, 
+        {field_data_snapshots[0].uv.dim(1), 
+         field_data_snapshots[0].uv.dim(2),
+         field_data_snapshots[0].uv.dim(3)});
+
+    const int nchannels = field_data_snapshots[0].uv.dim(0);
+
+    // ordinal
+    auto results = extract_3dclt_cuda(
+        ELEMENT_SCOPE_ORDINAL, 
+        current_timestep, 
+        domain4,
+        ordinal_core,
+        ext,
+        nchannels,
+        field_data_snapshots[0].uv.data(),
+        NULL // gradV[0].data(),
+      );
+  
+    for (auto lcp : results) {
+      feature_point_t cp(lcp);
+      element_t e(4, 2);
+      e.from_work_index(m, cp.tag, ordinal_core, ELEMENT_SCOPE_ORDINAL);
+      cp.tag = e.to_integer(m);
+      cp.ordinal = true;
+      cp.timestep = current_timestep;
+
+      intersections[e] = cp;
+      std::set<element_t> my_related_cells = get_relatetd_cels(e);
+      related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+    }
+
+    if (field_data_snapshots.size() >= 2) { // interval
+      fprintf(stderr, "processing interval %d, %d\n", current_timestep, current_timestep + 1);
+      auto results = extract_3dclt_cuda(
+          ELEMENT_SCOPE_INTERVAL, 
+          current_timestep,
+          domain4,
+          interval_core,
+          ext,
+          nchannels,
+          field_data_snapshots[0].uv.data(),
+          field_data_snapshots[1].uv.data()
+        );
+      
+      fprintf(stderr, "interval_results#=%zu\n", results.size());
+      for (auto lcp : results) {
+        feature_point_t cp(lcp);
+        element_t e(4, 2);
+        e.from_work_index(m, cp.tag, interval_core, ELEMENT_SCOPE_INTERVAL);
+        cp.tag = e.to_integer(m);
+        cp.ordinal = false;
+        cp.timestep = current_timestep;
+      
+        intersections[e] = cp;
+        std::set<element_t> my_related_cells = get_relatetd_cels(e);
+        related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+      }
+    }
+
+#else
+    fatal("FTK not compiled with CUDA.");
+#endif
+  } else {
+    element_for_ordinal(2, func);
+    if (field_data_snapshots.size() >= 2) 
+      element_for_interval(2, func);
+  }
   
   auto t1 = clock_type::now();
   accumulated_kernel_time += std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9;
