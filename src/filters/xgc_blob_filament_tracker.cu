@@ -8,6 +8,7 @@
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/filters/xgc_blob_filament_tracker.cuh>
+#include <ftk/object.hh>
 #include "common.cuh"
 #include "locator2.cuh"
 #include "mx4.cuh"
@@ -662,11 +663,20 @@ void xft_destroy_ctx(ctx_t **c_)
 
 void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
 {
-  for (int dev = 0; dev < c->ndevices; dev ++) {
+  std::vector<double> local_seeds[c->ndevices];
+
+  ftk::object::parallel_for(c->ndevices, [&](int dev) {
     cudaSetDevice(dev);
 
+    for (int i = dev; i < c->nseeds; i += c->ndevices) {
+      local_seeds[dev].push_back( seeds[i*2] );
+      local_seeds[dev].push_back( seeds[i*2+1] );
+    }
+    const int n_local_seeds = local_seeds[dev].size() / 2;
+
     // fprintf(stderr, "loading seeds..., %p, %p\n", c->dcps, seeds);
-    cudaMemcpy(c->dcps[dev], seeds, c->nseeds * sizeof(double) * 2, cudaMemcpyHostToDevice);
+    // cudaMemcpy(c->dcps[dev], seeds, c->nseeds * sizeof(double) * 2, cudaMemcpyHostToDevice);
+    cudaMemcpy(c->dcps[dev], &local_seeds[dev][0], n_local_seeds * sizeof(double) * 2, cudaMemcpyHostToDevice);
     // fprintf(stderr, "seeds loaded.\n");
     checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: load seeds");
     
@@ -681,18 +691,30 @@ void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
     for (int k = 1; k < c->nsteps; k ++) {
       if (k % 100 == 1) {
         cudaDeviceSynchronize();
-        fprintf(stderr, "step k=%d, total steps %d\n", k, c->nsteps);
+        fprintf(stderr, "gpu %d, nseeds=%d, step k=%d, total steps %d\n", dev, n_local_seeds, k, c->nsteps);
       }
       poincare_integrate<int, double><<<gridSize, blockSize>>>(
           k, c->m2n0, c->nphi, c->iphi, c->vphi, 
           c->d_m2tris[dev], c->d_m2invdet[dev], c->d_bfield[dev], c->d_deltaB[dev],
-          c->d_bvh[dev], c->nseeds, c->nsteps, (double*)c->dcps[dev]);
+          c->d_bvh[dev], 
+          n_local_seeds, // c->nseeds, 
+          c->nsteps, (double*)c->dcps[dev]);
     }
     checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: exec");
+   
+    std::vector<double> local_plot(n_local_seeds*2*c->nsteps);
 
-    cudaMemcpy(c->hcps, c->dcps[dev], c->nseeds * c->nsteps * sizeof(double) * 2, cudaMemcpyDeviceToHost);
+    cudaMemcpy(&local_plot[0], c->dcps[dev], n_local_seeds * c->nsteps * sizeof(double) * 2, cudaMemcpyDeviceToHost);
+    // cudaMemcpy(c->hcps, c->dcps[dev], c->nseeds * c->nsteps * sizeof(double) * 2, cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();
     checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: memcpy");
+  }, FTK_THREAD_PTHREAD, c->ndevices);
+
+  size_t offset = 0;
+  for (int dev = 0; dev < c->ndevices; dev ++) {
+    memcpy(c->hcps + offset, &local_seeds[dev][0], 
+        local_seeds[dev].size());
+    offset += local_seeds[dev].size();
   }
 }
 
