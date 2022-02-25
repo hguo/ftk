@@ -44,6 +44,11 @@ public:
 #endif
 
   const feature_surface_t& get_traced_surfaces() const { return surfaces; }
+  
+protected: // danger zone: for single-timestep data only
+  void build_vortex_lines(); 
+ 
+  feature_curve_set_t traced_curves;
 
 protected:
   typedef simplicial_regular_mesh_element element_t;
@@ -77,10 +82,48 @@ inline void critical_line_tracker_3d_regular::finalize()
   diy::mpi::gather(comm, related_cells, related_cells, get_root_proc());
   
   if (comm.rank() == get_root_proc()) {
-    fprintf(stderr, "#intersecttions=%zu, #related_cells=%zu\n", 
+    fprintf(stderr, "#intersections=%zu, #related_cells=%zu\n", 
         intersections.size(), related_cells.size());
-    build_vortex_surfaces();
+ 
+    if (start_timestep == current_timestep) // single timestep
+      build_vortex_lines();
+    else // multi timesteps
+      build_vortex_surfaces();
   }
+}
+
+inline void critical_line_tracker_3d_regular::build_vortex_lines()
+{
+  fprintf(stderr, "building vortex lines...\n");
+  
+  auto neighbors = [&](element_t f) {
+    std::set<element_t> neighbors;
+    const auto cells = f.side_of(m);
+    for (const auto c : cells) {
+      const auto elements = c.sides(m);
+      for (const auto f1 : elements)
+        neighbors.insert(f1);
+    }
+    return neighbors;
+  };
+
+  std::set<element_t> elements;
+  for (const auto &kv : intersections)
+    elements.insert(kv.first);
+  auto connected_components = extract_connected_components<element_t, std::set<element_t>>(
+      neighbors, elements);
+
+  for (const auto &component : connected_components) {
+    // std::vector<std::vector<double>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      feature_curve_t traj; 
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        traj.push_back(intersections[linear_graphs[j][k]]);
+      traced_curves.add(traj);
+    }
+  }
+  fprintf(stderr, "done, #curves=%zu\n", traced_curves.size());
 }
 
 inline void critical_line_tracker_3d_regular::build_vortex_surfaces()
@@ -98,6 +141,27 @@ inline void critical_line_tracker_3d_regular::build_vortex_surfaces()
     std::lock_guard<std::mutex> guard(my_mutex);
     surfaces.tris.push_back({i0, i1, i2});
   };
+  
+  auto get_relatetd_cels = [&](element_t e) {
+    std::set<element_t> my_related_cells;
+    
+    auto tets = e.side_of(m);
+    for (auto tet : tets) {
+      if (tet.valid(m)) {
+        auto pents = tet.side_of(m);
+        for (auto pent : pents)
+          if (pent.valid(m))
+            my_related_cells.insert(pent);
+      }
+    }
+
+    return my_related_cells;
+  };
+
+  for (const auto &kv : intersections) {
+    std::set<element_t> my_related_cells = get_relatetd_cels(kv.first);
+    related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+  }
 
   parallel_for<element_t>(related_cells, [&](const element_t &e) {
     int count = 0;
@@ -214,31 +278,15 @@ inline void critical_line_tracker_3d_regular::update_timestep()
   typedef std::chrono::high_resolution_clock clock_type;
   auto t0 = clock_type::now();
 
-  auto get_relatetd_cels = [&](element_t e) {
-    std::set<element_t> my_related_cells;
-    
-    auto tets = e.side_of(m);
-    for (auto tet : tets) {
-      if (tet.valid(m)) {
-        auto pents = tet.side_of(m);
-        for (auto pent : pents)
-          if (pent.valid(m))
-            my_related_cells.insert(pent);
-      }
-    }
-
-    return my_related_cells;
-  };
-
   auto func = [=](element_t e) {
     feature_point_t p;
     if (check_simplex(e, p)) {
-      std::set<element_t> my_related_cells = get_relatetd_cels(e);
+      // std::set<element_t> my_related_cells = get_relatetd_cels(e);
 
       {
         std::lock_guard<std::mutex> guard(mutex);
         intersections[e] = p;
-        related_cells.insert(my_related_cells.begin(), my_related_cells.end());
+        // related_cells.insert(my_related_cells.begin(), my_related_cells.end());
       }
     }
   };
@@ -381,7 +429,13 @@ inline void critical_line_tracker_3d_regular::simplex_values(
 inline void critical_line_tracker_3d_regular::write_surfaces(const std::string& filename, std::string format) const 
 {
   if (comm.rank() == get_root_proc()) {
-    surfaces.save(filename, format);
+    if (current_timestep == start_timestep) { // single timestep
+      fprintf(stderr, "writing single-timestep results..\n");
+      fprintf(stderr, "#curves=%zu\n", traced_curves.size());
+      traced_curves.write(filename, format);
+    }
+    else 
+      surfaces.save(filename, format);
   }
 }
 

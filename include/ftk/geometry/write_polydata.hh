@@ -49,6 +49,7 @@ inline void write_polydata(
     const auto f = prefix + "_" + std::to_string(comm.rank()) + ".vtp";
     write_polydata(f, poly, "vtp", comm);
   } else if (format == "vtp") {
+    fprintf(stderr, "writing vtp to %s\n", filename.c_str());
     vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
     writer->SetFileName(filename.c_str());
     writer->SetInputData(poly);

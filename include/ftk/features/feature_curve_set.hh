@@ -1,6 +1,8 @@
 #ifndef _FTK_CRITICAL_POINT_TRAJ_SET_HH
 #define _FTK_CRITICAL_POINT_TRAJ_SET_HH
 
+#include <ftk/geometry/write_polydata.hh>
+// #include <ftk/utils/serialization.hh>
 #include <ftk/features/feature_curve.hh>
 #include <map>
 
@@ -130,9 +132,21 @@ inline void feature_curve_set_t::from_list(const std::list<feature_curve_t>& lis
     this->insert({get_new_id(), c});
 }
 
-inline void feature_curve_set_t::write(const std::string& format, const std::string& filename) const
+inline void feature_curve_set_t::write(const std::string& filename, const std::string& format) const
 {
-  // TODO
+  const int fmt = file_extension(filename, format);
+  if (fmt == FILE_EXT_BIN || fmt == FILE_EXT_NULL) {
+    fatal("file writer not implemented yet");
+    // diy::serializeToFile(*this, filename);
+  } else {
+#if FTK_HAVE_VTK
+    write_polydata(filename, to_vtp({}), format);
+#else
+    fprintf(stderr, "unsupported file format\n");
+    assert(false);
+    // fatal("unsupported file format");
+#endif
+  }
 }
 
 inline void feature_curve_set_t::read(const std::string& format, const std::string& filename)
