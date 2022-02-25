@@ -66,6 +66,8 @@ protected:
       float X[][4],
       float UV[][2]) const;
 
+  std::set<element_t> get_relatetd_cels(const element_t& e);
+
   virtual std::vector<std::string> varnames() const { return {}; } // varnames for additional variables stored in scalar
 };
 
@@ -125,6 +127,23 @@ inline void critical_line_tracker_3d_regular::build_vortex_lines()
   }
   fprintf(stderr, "done, #curves=%zu\n", traced_curves.size());
 }
+  
+inline std::set<simplicial_regular_mesh_element> critical_line_tracker_3d_regular::get_relatetd_cels(const simplicial_regular_mesh_element& e) 
+{
+  std::set<simplicial_regular_mesh_element> my_related_cells;
+  
+  auto tets = e.side_of(m);
+  for (auto tet : tets) {
+    if (tet.valid(m)) {
+      auto pents = tet.side_of(m);
+      for (auto pent : pents)
+        if (pent.valid(m))
+          my_related_cells.insert(pent);
+    }
+  }
+
+  return my_related_cells;
+}
 
 inline void critical_line_tracker_3d_regular::build_vortex_surfaces()
 {
@@ -142,22 +161,6 @@ inline void critical_line_tracker_3d_regular::build_vortex_surfaces()
     surfaces.tris.push_back({i0, i1, i2});
   };
   
-  auto get_relatetd_cels = [&](element_t e) {
-    std::set<element_t> my_related_cells;
-    
-    auto tets = e.side_of(m);
-    for (auto tet : tets) {
-      if (tet.valid(m)) {
-        auto pents = tet.side_of(m);
-        for (auto pent : pents)
-          if (pent.valid(m))
-            my_related_cells.insert(pent);
-      }
-    }
-
-    return my_related_cells;
-  };
-
   for (const auto &kv : intersections) {
     std::set<element_t> my_related_cells = get_relatetd_cels(kv.first);
     related_cells.insert(my_related_cells.begin(), my_related_cells.end());

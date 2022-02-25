@@ -1172,6 +1172,7 @@ void xft_derive_interpolants(ctx_t *c)
 
 void xft_load_interpolants(ctx_t *c, const std::vector<std::vector<ftk::xgc_interpolant_t<>>> &interpolants)
 {
+  fprintf(stderr, "loading interpolants, %zu, %zu\n", c->vphi, interpolants.size());
   assert(c->vphi == interpolants.size());
 
   cudaMalloc((void**)&c->d_interpolants, 
