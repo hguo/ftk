@@ -161,7 +161,6 @@ inline bool eval_static_b(
 {
   F mu[3]; // barycentric coordinates
   const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], mu, m2invdet);
-  if (tid < 0) return false;
 
   if (tid >= 0) {
     F B[3][3], b[3];
@@ -302,8 +301,8 @@ inline bool poincare_eval( // evaluate total B for computing poincare plot
     
     for (int i = 0; i < 3; i ++)
       for (int j = 0; j < 3; j ++)
-        // B[i][j] = staticB[tri[i]*3 + j]; //  + deltaB[p*m2n0*3 + tri[i]*3 + j];
-        B[i][j] = staticB[tri[i]*3 + j] + deltaB[p*m2n0*3 + tri[i]*3 + j];
+        B[i][j] = staticB[tri[i]*3 + j]; //  + deltaB[p*m2n0*3 + tri[i]*3 + j];
+        // B[i][j] = staticB[tri[i]*3 + j] + deltaB[p*m2n0*3 + tri[i]*3 + j];
 
     lerp_s2v3(B, mu, b);
     v[0] = rz[0] * b[0] / b[2];
@@ -362,6 +361,38 @@ inline bool poincare_integrate2pi(
   }
 
   return true;
+}
+
+template <typename I, typename F>
+__global__ void poincare_compute_psin(
+    const I m2n0,
+    const I *m2tris,
+    const F *m2invdet,
+    const F *psin,
+    const bvh2d_node_t<I, F> *bvh, 
+    const I nseeds,
+    const F *plot, 
+    F *plot_psin)
+{
+  I i = getGlobalIdx_3D_1D();
+  if (i >= nseeds) return;
+
+  const F rz[2] = {plot[i*2], plot[i*2+1]};
+
+  F mu[3];
+  const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], mu, m2invdet);
+
+  if (tid >= 0) {
+    F psins[3];
+    I tri[3];
+    m2_get_tri(tid, tri, m2tris);
+
+    for (int j = 0; j < 3; j ++)
+      psins[j] = psin[tri[j]];
+
+    plot_psin[i] = lerp_s2(psins, mu);
+  } else 
+    plot_psin[i] = 1e38;
 }
 
 template <typename I, typename F>
