@@ -720,7 +720,7 @@ void xft_compute_poincare_psin(ctx_t *c)
 
   poincare_compute_psin<<<gridSize, blockSize>>>(
       c->m2n0, c->d_m2tris, c->d_m2invdet, 
-      c->d_psin, c->d_bvh, c->nseeds, 
+      c->d_psin, c->d_bvh, c->nseeds * c->nsteps, 
       (const double*)c->dcps, c->d_poincare_psin);
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] cuda compute poincare psin: kernel");
