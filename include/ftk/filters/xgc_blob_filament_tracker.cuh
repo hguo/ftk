@@ -45,7 +45,8 @@ typedef struct {
   double *d_gradAs = NULL, *d_gradAs_cw = NULL; // 2D gradient of upsampled apars, vertexwise and cellwise
   double *d_bfield = NULL, *d_bfield0 = NULL, *d_curl_bfield0 = NULL;
   double *d_deltaB = NULL; // (upsampled) deltaB
-  double *d_seeds = NULL;
+  // double *d_seeds = NULL;
+  double *d_poincare_psin, *h_poincare_psin;
   int nseeds, nsteps;
 } xft_ctx_t;
 
@@ -84,5 +85,7 @@ void xft_load_apars_upsample(xft_ctx_t *c,
 
 void xft_compute_poincare_plot(xft_ctx_t *c,
     const double *seeds);
+
+void xft_compute_poincare_psin(xft_ctx_t *c);
 
 #endif

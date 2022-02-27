@@ -689,12 +689,46 @@ void xft_destroy_ctx(ctx_t **c_)
   if (c->d_bfield != NULL) cudaFree(c->d_bfield);
   if (c->d_bfield0 != NULL) cudaFree(c->d_bfield0);
   if (c->d_curl_bfield0 != NULL) cudaFree(c->d_curl_bfield0);
-  if (c->d_seeds != NULL) cudaFree(c->d_seeds);
+  // if (c->d_seeds != NULL) cudaFree(c->d_seeds);
+  if (c->d_poincare_psin != NULL) cudaFree(c->d_poincare_psin);
 
   checkLastCudaError("[FTK-CUDA] cuda free");
 
+  if (c->hcps != NULL) free(c->hcps);
+  if (c->h_poincare_psin != NULL) free(c->h_poincare_psin);
+
   free(*c_);
   *c_ = NULL;
+}
+
+void xft_compute_poincare_psin(ctx_t *c)
+{
+  fprintf(stderr, "poincare_psin...\n");
+  if (c->d_poincare_psin == NULL) {
+    cudaMalloc((void**)&c->d_poincare_psin, sizeof(double) * c->nseeds * c->nsteps);
+    checkLastCudaError("[FTK-CUDA] cuda compute poincare psin: malloc");
+  }
+  if (c->h_poincare_psin == NULL)
+    c->h_poincare_psin = (double*)malloc(sizeof(double) * c->nseeds * c->nsteps);
+  
+  const int maxGridDim = 1024;
+  const int blockSize = 256;
+  const int nBlocks = idivup(c->nseeds * c->nsteps, blockSize);
+  dim3 gridSize;
+  if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else gridSize = dim3(nBlocks);
+
+  poincare_compute_psin<<<gridSize, blockSize>>>(
+      c->m2n0, c->d_m2tris, c->d_m2invdet, 
+      c->d_psin, c->d_bvh, c->nseeds, 
+      (const double*)c->dcps, c->d_poincare_psin);
+  cudaDeviceSynchronize();
+  checkLastCudaError("[FTK-CUDA] cuda compute poincare psin: kernel");
+
+  cudaMemcpy(c->h_poincare_psin, c->d_poincare_psin, 
+      sizeof(double) * c->nseeds * c->nsteps, 
+      cudaMemcpyDeviceToHost);
+  checkLastCudaError("[FTK-CUDA] cuda compute poincare psin: memcpy");
 }
 
 void xft_compute_poincare_plot(ctx_t *c, const double *seeds)

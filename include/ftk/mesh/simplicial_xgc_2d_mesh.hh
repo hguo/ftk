@@ -45,6 +45,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   const ndarray<F>& get_bfield0() const { return bfield0; }
   const ndarray<F>& get_curl_bfield0() const { return curl_bfield0; }
   const ndarray<F>& get_psifield() const { return psifield; }
+  ndarray<F> get_psinfield() const { return psifield * (1.0 / units.psi_x); }
   const std::vector<I>& get_roi_nodes() const { return roi_nodes; }
 
   bool eval_b(const F x[], F b[]) const; // get magnetic field value at x
