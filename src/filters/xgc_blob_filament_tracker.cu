@@ -276,7 +276,7 @@ __global__ void mx2_derive_interpolants(
   }
 }
 
-template <typename I, typename F>
+template <bool UseStaticB, typename I, typename F>
 __device__
 inline bool poincare_eval( // evaluate total B for computing poincare plot
     const I m2n0,
@@ -300,9 +300,11 @@ inline bool poincare_eval( // evaluate total B for computing poincare plot
     m2_get_tri(tid, tri, m2tris);
     
     for (int i = 0; i < 3; i ++)
-      for (int j = 0; j < 3; j ++)
-        B[i][j] = staticB[tri[i]*3 + j]; //  + deltaB[p*m2n0*3 + tri[i]*3 + j];
-        // B[i][j] = staticB[tri[i]*3 + j] + deltaB[p*m2n0*3 + tri[i]*3 + j];
+      for (int j = 0; j < 3; j ++) 
+        if (UseStaticB)
+          B[i][j] = staticB[tri[i]*3 + j]; 
+        else 
+          B[i][j] = staticB[tri[i]*3 + j] + deltaB[p*m2n0*3 + tri[i]*3 + j];
 
     lerp_s2v3(B, mu, b);
     v[0] = rz[0] * b[0] / b[2];
@@ -314,7 +316,7 @@ inline bool poincare_eval( // evaluate total B for computing poincare plot
     return false;
 }
 
-template <typename I, typename F>
+template <bool UseStaticB, typename I, typename F>
 __device__
 inline bool poincare_integrate2pi(
     const I m2n0,
@@ -334,24 +336,24 @@ inline bool poincare_integrate2pi(
   for (int p = 0; p < np; p += 2) {
     const F rz0[2] = {rz[0], rz[1]};
       
-    if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz, p, v)) 
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz, p, v)) 
       return false;
     const F k1[2] = {h * v[0], h * v[1]};
     
     // printf("rz=%f, %f, v=%f, %f\n", rz[0], rz[1], v[0], v[1]);
 
     const F rz2[2] = {rz[0] + k1[0]/2, rz[1] + k1[1]/2};
-    if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz2, p+1, v)) 
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz2, p+1, v)) 
       return false;
     const F k2[2] = {h * v[0], h * v[1]};
 
     const F rz3[2] = {rz[0] + k2[0]/2, rz[1] + k2[1]/2};
-    if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz3, p+1, v)) 
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz3, p+1, v)) 
       return false;
     const F k3[2] = {h * v[0], h * v[1]};
     
     const F rz4[2] = {rz[0] + k3[0], rz[1] + k3[1]};
-    if (!poincare_eval(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz4, (p+2)%np, v)) 
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz4, (p+2)%np, v)) 
       return false;
     const F k4[2] = {h * v[0], h * v[1]};
 
@@ -395,7 +397,7 @@ __global__ void poincare_compute_psin(
     plot_psin[i] = 1e38;
 }
 
-template <typename I, typename F>
+template <bool UseStaticB, typename I, typename F>
 __global__ void poincare_integrate(
     const int k, // kth step
     const I m2n0, 
@@ -416,7 +418,7 @@ __global__ void poincare_integrate(
   const auto offset = (k-1)*nseeds + i;
   F rz[2] = {plot[offset*2], plot[offset*2+1]};
 
-  bool succ = poincare_integrate2pi(
+  bool succ = poincare_integrate2pi<UseStaticB, I, F>(
       m2n0, nphi, iphi, vphi,
       m2tris, m2invdet,
       staticB, deltaB, bvh, rz);
@@ -731,7 +733,7 @@ void xft_compute_poincare_psin(ctx_t *c)
   checkLastCudaError("[FTK-CUDA] cuda compute poincare psin: memcpy");
 }
 
-void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
+void xft_compute_poincare_plot(ctx_t *c, const double *seeds, bool use_static_b)
 {
   // fprintf(stderr, "loading seeds..., %p, %p\n", c->dcps, seeds);
   cudaMemcpy(c->dcps, seeds, c->nseeds * sizeof(double) * 2, cudaMemcpyHostToDevice);
@@ -751,10 +753,17 @@ void xft_compute_poincare_plot(ctx_t *c, const double *seeds)
       cudaDeviceSynchronize();
       fprintf(stderr, "step k=%d, total steps %d\n", k, c->nsteps);
     }
-    poincare_integrate<int, double><<<gridSize, blockSize>>>(
-        k, c->m2n0, c->nphi, c->iphi, c->vphi, 
-        c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
-        c->d_bvh, c->nseeds, c->nsteps, (double*)c->dcps);
+
+    if (use_static_b)
+      poincare_integrate<true, int, double><<<gridSize, blockSize>>>(
+          k, c->m2n0, c->nphi, c->iphi, c->vphi, 
+          c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
+          c->d_bvh, c->nseeds, c->nsteps, (double*)c->dcps);
+    else 
+      poincare_integrate<false, int, double><<<gridSize, blockSize>>>(
+          k, c->m2n0, c->nphi, c->iphi, c->vphi, 
+          c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
+          c->d_bvh, c->nseeds, c->nsteps, (double*)c->dcps);
   }
   checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: exec");
 
