@@ -104,6 +104,8 @@ inline bool xgc_units_t::read(const std::string& filename)
       else if (var == "eq_axis_r") eq_axis_r = val;
       else if (var == "eq_axis_z") eq_axis_z = val;
       else if (var == "eq_axis_b") eq_axis_b = val;
+      else if (var == "eq_x_r") eq_x_r = val;
+      else if (var == "eq_x_z") eq_x_z = val;
       else if (var == "eq_tempi_v1") eq_tempi_v1 = val;
       else if (var == "ptl_ion_mass_au") ptl_ion_mass_au = val;
       else if (var == "ptl_ion_charge_eu") ptl_ion_charge_eu = val;
