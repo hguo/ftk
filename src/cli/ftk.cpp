@@ -845,8 +845,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 int main(int argc, char **argv)
 {
   diy::mpi::environment env(argc, argv);
-  diy::mpi::communicator wcomm; // world
-  diy::mpi::communicator comm = wcomm.split(wcomm, 20 /* a magic number as color */);
+  diy::mpi::communicator comm; // world
+  // diy::mpi::communicator comm = wcomm.split(wcomm, 20 /* a magic number as color */);
  
   parse_arguments(argc, argv, comm);
 
