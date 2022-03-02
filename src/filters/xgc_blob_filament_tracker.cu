@@ -318,6 +318,70 @@ inline bool poincare_eval( // evaluate total B for computing poincare plot
 
 template <bool UseStaticB, typename I, typename F>
 __device__
+inline bool poincare_integrate2pi_butcher_rk5(
+    const I m2n0,
+    const I nphi, const I iphi, const I vphi,
+    const I *m2tris,
+    const F *m2invdet, 
+    const F *staticB,
+    const F *deltaB,
+    const bvh2d_node_t<I, F> *bvh, 
+    F rz[2]) // input/output rz
+{
+  const I np = nphi * vphi;
+  const F half_h = 2 * M_PI / np;
+  const F quarter_h = half_h * 0.5;
+  const F h = half_h * 2;
+  
+  F v[2]; 
+  for (int p = 0; p < np; p += 4) {
+    const F rz0[2] = {rz[0], rz[1]};
+      
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz, p, v)) 
+      return false;
+    const F k1[2] = {v[0], v[1]};
+    
+    // printf("rz=%f, %f, v=%f, %f\n", rz[0], rz[1], v[0], v[1]);
+
+    const F rz2[2] = {rz[0] + h*k1[0]/4, 
+                      rz[1] + h*k1[1]/4};
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz2, p+1, v))  // 1/4 delta
+      return false;
+    const F k2[2] = {v[0], v[1]};
+
+    const F rz3[2] = {rz[0] + h*k1[0]/8 + h*k2[0]/8, 
+                      rz[1] + h*k1[1]/8 + h*k2[1]/8};
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz3, p+1, v)) // 1/4 delta
+      return false;
+    const F k3[2] = {v[0], v[1]};
+    
+    const F rz4[2] = {rz[0] - h*k2[0]/2 + h*k3[0], 
+                      rz[1] - h*k2[1]/2 + h*k3[1]};
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz4, p+2, v)) // 1/2 delta
+      return false;
+    const F k4[2] = {v[0], v[1]};
+    
+    const F rz5[2] = {rz[0] + h*k1[0]*3/16 + h*k4[0]*9/16, 
+                      rz[1] + h*k1[1]*3/16 + h*k4[1]*9/16};
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz5, p+3, v)) // 3/4 delta
+      return false;
+    const F k5[2] = {v[0], v[1]};
+    
+    const F rz6[2] = {rz[0] - h*k1[0]*3/7 + h*k2[0]*2/7 + h*k3[0]*12/7 - h*k4[0]*12/7 + h*k5[0]*8/7, 
+                      rz[1] - h*k1[1]*3/7 + h*k2[1]*2/7 + h*k3[1]*12/7 - h*k4[1]*12/7 + h*k5[1]*8/7};
+    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz6, (p+4)%np, v)) // 1 delta
+      return false;
+    const F k6[2] = {v[0], v[1]};
+
+    for (int i = 0; i < 2; i ++) 
+      rz[i] = rz[i] + h * (7*k1[i] + 32*k3[i] + 12*k4[i] + 32*k5[i] + 7*k6[i]) / 90;
+  }
+
+  return true;
+}
+
+template <bool UseStaticB, typename I, typename F>
+__device__
 inline bool poincare_integrate2pi(
     const I m2n0,
     const I nphi, const I iphi, const I vphi,
@@ -418,7 +482,8 @@ __global__ void poincare_integrate(
   const auto offset = (k-1)*nseeds + i;
   F rz[2] = {plot[offset*2], plot[offset*2+1]};
 
-  bool succ = poincare_integrate2pi<UseStaticB, I, F>(
+  // bool succ = poincare_integrate2pi<UseStaticB, I, F>(
+  bool succ = poincare_integrate2pi_butcher_rk5<UseStaticB, I, F>(
       m2n0, nphi, iphi, vphi,
       m2tris, m2invdet,
       staticB, deltaB, bvh, rz);
@@ -1051,7 +1116,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
   cudaMemcpy(c->d_apars, apars, size_t(c->m2n0 * c->nphi) * sizeof(double), cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] xft_load_apars: copy apars");
 
-  // cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   fprintf(stderr, "apars copied\n");
 
   // TODO:
@@ -1069,16 +1134,21 @@ void xft_load_apars(ctx_t *c, const double *apars)
         c->nphi, c->iphi, c->vphi, c->m2n0,
         c->d_interpolants,
         c->d_apars, c->d_apars_upsample);
+
+    cudaFree(c->d_apars);
+    c->d_apars = NULL;
   }
   checkLastCudaError("[FTK-CUDA] xft_load_apars: upsample apars");
   
-  // cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   fprintf(stderr, "apars upsampled\n");
 
   // 2. derive gradient of upsampled apars
   if (c->d_gradAs == NULL) {
     cudaMalloc((void**)&c->d_gradAs_cw, size_t(2 * c->m2n2 * c->nphi * c->vphi) * sizeof(double));
     cudaMalloc((void**)&c->d_gradAs, size_t(2 * c->m2n0 * c->nphi * c->vphi) * sizeof(double));
+    cudaDeviceSynchronize();
+    checkLastCudaError("[FTK-CUDA] xft_load_apars: malloc gradAs");
   }
   for (int i = 0; i < c->nphi * c->iphi; i ++) {
     // fprintf(stderr, "deriving gradAs for plane %d\n", i);
@@ -1093,7 +1163,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
           c->d_apars_upsample + i * c->m2n0, 
           c->d_gradAs_cw + i * c->m2n2 * 2);
     
-      // cudaDeviceSynchronize();
+      cudaDeviceSynchronize();
       // fprintf(stderr, "cw\n");
       checkLastCudaError("[FTK-CUDA] xft_load_apars: cw");
     }
@@ -1109,11 +1179,16 @@ void xft_load_apars(ctx_t *c, const double *apars)
           c->m2n0, c->max_vertex_triangles, c->d_vertex_triangles, 
           c->d_gradAs_cw, c->d_gradAs);
       
-      // cudaDeviceSynchronize();
+      cudaDeviceSynchronize();
       // fprintf(stderr, "vw\n");
       checkLastCudaError("[FTK-CUDA] xft_load_apars: vw");
     }
+
   }
+    
+  cudaFree(c->d_gradAs_cw);
+  c->d_gradAs_cw = NULL;
+  
   fprintf(stderr, "grad_apars derived\n");
   checkLastCudaError("[FTK-CUDA] xft_load_apars: grad of upsampled apars");
 
@@ -1136,7 +1211,10 @@ void xft_load_apars(ctx_t *c, const double *apars)
         c->d_curl_bfield0, 
         c->d_deltaB);
   }
-  // cudaDeviceSynchronize();
+    
+  cudaFree(c->d_gradAs);
+  c->d_gradAs = NULL;
+  cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB");
 }
 
