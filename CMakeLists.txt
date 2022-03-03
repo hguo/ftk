@@ -10,6 +10,7 @@ option (FTK_BUILD_TESTS "Build tests" OFF)
 # option (FTK_BUILD_TESTS_XGC "Build XGC-specific tests" OFF)
 option (FTK_BUILD_PARAVIEW "Build ParaView plugins" OFF)
 option (FTK_BUILD_PYFTK "Build Python bindings" OFF)
+option (FTK_BUILD_XGC_UTILS "Build XGC utilities" OFF)
 
 if (FTK_BUILD_PARAVIEW)
   find_package (ParaView REQUIRED)
