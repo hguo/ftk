@@ -48,6 +48,7 @@ typedef struct {
   double *d_bfield[maxgpus], *d_bfield0[maxgpus], *d_curl_bfield0[maxgpus];
   double *d_deltaB[maxgpus]; // (upsampled) deltaB
   double *d_seeds[maxgpus];
+  double *d_poincare_psin[maxgpus], *h_poincare_psin;
   int nseeds, nsteps;
 } xft_ctx_t;
 
@@ -85,6 +86,8 @@ void xft_load_apars_upsample(xft_ctx_t *c,
     const double *apars_upsample);
 
 void xft_compute_poincare_plot(xft_ctx_t *c,
-    const double *seeds);
+    const double *seeds, bool use_static_b = false);
+
+void xft_compute_poincare_psin(xft_ctx_t *c);
 
 #endif

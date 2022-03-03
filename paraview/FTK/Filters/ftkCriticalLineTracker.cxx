@@ -48,6 +48,122 @@ int ftkCriticalLineTracker::FillOutputPortInformation(int, vtkInformation *info)
   return 1;
 }
 
+int ftkCriticalLineTracker::RequestData_vti_single_timestep(
+    vtkInformation* request, 
+    vtkInformationVector** inputVector, 
+    vtkInformationVector* outputVector)
+{
+  using namespace ftk;
+
+  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+  vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+  vtkDataSet *input = vtkDataSet::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkPolyData *output = vtkPolyData::SafeDownCast(outInfo->Get(vtkDataObject::DATA_OBJECT()));
+    
+  vtkImageData *vti = vtkImageData::SafeDownCast(inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  
+  const int nd = vti->GetDataDimension(),
+            DW = vti->GetDimensions()[0],
+            DH = vti->GetDimensions()[1],
+            DD = vti->GetDimensions()[2];
+  
+  ftk::ndarray<float> uv;
+  uv.from_vtk_image_data(vti, InputVariable);
+
+  ftk::simplicial_regular_mesh m(3);
+  m.set_lb_ub({0, 0, 0}, {DW-1, DH-1, DD-1});
+
+  const float factor = 32768.0; // TODO
+  
+  typedef simplicial_regular_mesh_element element_t;
+  std::map<element_t, feature_point_t> discrete_critical_points;
+  std::mutex mutex;
+
+  m.element_for(2, [&](const ftk::simplicial_regular_mesh_element& e) {
+    if (!e.valid(m)) return;
+    const auto &vertices = e.vertices(m); // obtain the vertices of the simplex
+    
+    double v[3][2];
+    for (int i = 0; i < 3; i ++) {
+      v[i][0] = uv(0, vertices[i][0], vertices[i][1], vertices[i][2]);
+      v[i][1] = uv(1, vertices[i][0], vertices[i][1], vertices[i][2]);
+    }
+    
+    int64_t vf[3][2];
+    for (int i = 0; i < 3; i ++)
+      for (int j = 0; j < 2; j ++)
+        vf[i][j] = v[i][j] * factor;
+ 
+    double X[3][3];
+    int indices[3];
+    for (int i = 0; i < vertices.size(); i ++) {
+      indices[i] = m.get_lattice().to_integer(vertices[i]);
+      X[i][0] = vertices[i][0];
+      X[i][1] = vertices[i][1];
+      X[i][2] = vertices[i][2];
+    }
+  
+    bool succ = ftk::robust_critical_point_in_simplex2(vf, indices);
+    if (succ) {
+      ftk::feature_point_t cp;
+      double mu[3], x[3], cond;
+      ftk::inverse_lerp_s2v2(v, mu, &cond);
+      ftk::clamp_barycentric<3>(mu);
+      ftk::lerp_s2v3(X, mu, x);
+      for (int i = 0; i < 3; i ++)
+        cp.x[i] = x[i];
+      // fprintf(stderr, "x=%f, %f, %f\n", cp.x[0], cp.x[1], cp.x[2]);
+
+      {  
+        std::lock_guard<std::mutex> guard(mutex);
+        discrete_critical_points[e] = cp;
+      }
+    }
+  });
+  
+
+  // convert connected components to geometries
+  fprintf(stderr, "reconstructing curves..\n");
+  auto neighbors = [&](element_t f) {
+    std::set<element_t> neighbors;
+    const auto cells = f.side_of(m);
+    for (const auto c : cells) {
+      const auto elements = c.sides(m);
+      for (const auto f1 : elements)
+        neighbors.insert(f1);
+    }
+    return neighbors;
+  };
+
+  std::set<element_t> elements;
+  for (const auto &kv : discrete_critical_points)
+    elements.insert(kv.first);
+  auto connected_components = extract_connected_components<element_t, std::set<element_t>>(
+      neighbors, elements);
+
+  feature_curve_set_t traced_critical_points;
+
+  for (const auto &component : connected_components) {
+    // std::vector<std::vector<double>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<element_t>(component, neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      feature_curve_t traj; 
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        traj.push_back(discrete_critical_points[linear_graphs[j][k]]);
+      traced_critical_points.add(traj);
+      // const auto subtrajs = traj.to_consistent_sub_traj();
+      // traced_critical_points.insert(traced_critical_points.end(), subtrajs.begin(), subtrajs.end());
+    }
+  }
+  fprintf(stderr, "done.\n");
+      
+  auto poly = traced_critical_points.to_vtp({});
+  output->DeepCopy(poly);
+
+  return 1;
+}
+
 int ftkCriticalLineTracker::RequestData_vti(
     vtkInformation* request, 
     vtkInformationVector** inputVector, 
@@ -68,7 +184,11 @@ int ftkCriticalLineTracker::RequestData_vti(
 
   const int nt = inInfo->Length(vtkStreamingDemandDrivenPipeline::TIME_STEPS());
   // const double *timesteps = inInfo->Get( vtkStreamingDemandDrivenPipeline::TIME_STEPS() );
-  
+ 
+  if (nt == 0 || nt == 1) // temporary workaround for single timestep data
+    return RequestData_vti_single_timestep(
+        request, inputVector, outputVector);
+
   const int itype = input->GetDataObjectType();
   int nd;
   size_t DW, DH, DD;
@@ -137,7 +257,7 @@ int ftkCriticalLineTracker::RequestData_vti(
 
     request->Set( vtkStreamingDemandDrivenPipeline::CONTINUE_EXECUTING(), 1 );
   } else { // the last timestep
-    if (nt == 0 || nt == 1) { // the only timestp
+    if (nt == 0 || nt == 1) { // single-timestep data
       tlpr->push_field_data_snapshot(field_data);
       // push for the sole timestep for the second time
       tlpr->push_field_data_snapshot(field_data);

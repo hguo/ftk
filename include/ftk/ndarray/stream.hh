@@ -1194,7 +1194,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_nc(int k)
     std::vector<ftk::ndarray<T>> arrays(nv);
     for (int i = 0; i < nv; i ++) {
       arrays[i].read_netcdf(filename, j["variables"][i], starts, sizes);
-      arrays[i].transpose(); // TODO FIXME: this is strange.. works for MPAS-O; will see if works for other applications
+      // arrays[i].transpose(); // TODO FIXME: this is strange.. works for MPAS-O; will see if works for other applications
     }
 
     // array.reshape(shape());

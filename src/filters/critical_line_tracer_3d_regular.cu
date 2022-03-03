@@ -26,7 +26,7 @@ bool check_simplex_3dclt(
     const F *uv[2],
     cp_t &p)
 {
-  typedef ftk::fixed_point<> fp_t;
+  // typedef ftk::fixed_point<> fp_t;
   
   if (e.corner[3] != current_timestep)
     return false;
@@ -46,7 +46,9 @@ bool check_simplex_3dclt(
   }
  
   F X[3][4], UV[3][2];
-  fp_t UVf[3][2];
+  // fp_t UVf[3][2];
+  const F factor = 32768;
+  int64_t UVf[3][2];
   for (int i = 0; i < 3; i ++) {
     const size_t k = local_indices[i]; // k = ext.to_index(vertices[i]);
     const size_t t = unit_simplex_offset_4_2<scope>(e.type, i, 3);
@@ -54,8 +56,8 @@ bool check_simplex_3dclt(
     UV[i][0] = uv[t][k*nc];
     UV[i][1] = uv[t][k*nc+1];
 
-    UVf[i][0] = UV[i][0];
-    UVf[i][1] = UV[i][1];
+    UVf[i][0] = UV[i][0] * factor;
+    UVf[i][1] = UV[i][1] * factor;
 
     for (int j = 0; j < 3; j ++)
       X[i][j] = vertices[i][j]; 

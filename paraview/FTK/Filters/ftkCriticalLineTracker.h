@@ -45,6 +45,8 @@ protected:
 private:
   int RequestData_vti(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
   int RequestData_vtu(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
+  
+  int RequestData_vti_single_timestep(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
 
 private:
   ftkCriticalLineTracker(const ftkCriticalLineTracker&);
