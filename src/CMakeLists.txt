@@ -10,6 +10,11 @@ endif ()
 add_executable (ftk cli/ftk.cpp ${ftk_sycl_sources})
 target_link_libraries (ftk PRIVATE libftk)
 
+if (FTK_BUILD_XGC_UTILS)
+  add_executable (ftk.xgc.poincare cli/xgc.poincare.cpp ${ftk_sycl_sources})
+  target_link_libraries (ftk.xgc.poincare PRIVATE libftk)
+endif ()
+
 if (FTK_HAVE_HIPSYCL)
   add_sycl_to_target(TARGET ftk SOURCES ${ftk_sycl_sources})
 endif ()
