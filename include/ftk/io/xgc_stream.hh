@@ -39,6 +39,8 @@ struct xgc_stream : public object {
   virtual bool read_oneddiag() = 0;
   virtual bool advance_timestep() = 0;
 
+  virtual bool read_units();
+
   virtual std::string postfix() const = 0; 
   std::string mesh_filename() const { return path + "/xgc.mesh" + postfix(); }
   std::string oneddiag_filename() const { return path + "/xgc.oneddiag" + postfix(); }
@@ -106,6 +108,11 @@ inline int xgc_stream::filename2step(const std::string& str)
   return i;
 }
 
+inline bool xgc_stream::read_units()
+{
+  return m2->read_units_m( units_filename() ); // TODO: adios2
+}
+
 inline void xgc_stream::initialize()
 {
   const bool has_oneddiag = read_oneddiag();
@@ -126,7 +133,9 @@ inline void xgc_stream::initialize()
   m2->initialize_point_locator();
 
   m2->read_bfield( bfield_filename() );
-  m2->read_units_m( units_filename() );
+
+  read_units();
+
   // m2->read_oneddiag( oneddiag_filename() );
 
   probe_nphi_iphi();

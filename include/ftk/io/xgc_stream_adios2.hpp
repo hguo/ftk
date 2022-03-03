@@ -12,9 +12,24 @@ struct xgc_stream_adios2 : public xgc_stream
 
   std::shared_ptr<ndarray_group> request_step(int step);
 
+  bool read_units();
+
   bool read_oneddiag();
   bool advance_timestep();
 };
+
+inline bool xgc_stream_adios2::read_units()
+{
+  xgc_units_t u;
+  bool succ = true;
+
+  if (!u.read(units_filename())) 
+    succ = u.read_bp( path + "/xgc.units.bp");
+
+  if (succ) 
+    m2->set_units(u);
+  return succ;
+}
 
 inline bool xgc_stream_adios2::read_oneddiag()
 {

@@ -117,7 +117,8 @@ inline bool xgc_units_t::read(const std::string& filename)
     }
     ifs.close();
     return true;
-  } else return false;
+  } else 
+    return false; 
 }
 
 bool xgc_units_t::read_bp(const std::string& filename, diy::mpi::communicator comm)
@@ -152,6 +153,7 @@ bool xgc_units_t::read_bp(const std::string& filename, diy::mpi::communicator co
 
   auto var_eq_x_psi = io.InquireVariable<double>("eq_x_psi");
   reader.Get<double>(var_eq_x_psi, &psi_x);
+  fprintf(stderr, "psi_x=%f\n", psi_x);
 
   auto var_eq_x_r = io.InquireVariable<double>("eq_x_r");
   reader.Get<double>(var_eq_x_r, &eq_x_r);
