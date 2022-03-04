@@ -191,6 +191,7 @@ int main(int argc, char **argv)
   int nseeds_per_rake = 500, nrakes = 6;
   int nrevs = 3000;
   bool trace_static = false;
+  bool trace_reverse = false;
   bool xpoint = false;
 
   cxxopts::Options options(argv[0]);
@@ -199,6 +200,7 @@ int main(int argc, char **argv)
     ("i,input", "input", cxxopts::value<std::string>(input))
     ("d,device", "device id", cxxopts::value<int>(device)->default_value("0"))
     ("static", "trace with static magnetic field", cxxopts::value<bool>(trace_static))
+    ("reverse", "trace in reverse direction", cxxopts::value<bool>(trace_reverse))
     ("psin0", "psin0", cxxopts::value<double>(psin0)->default_value("0.8"))
     ("psin1", "psin1", cxxopts::value<double>(psin1)->default_value("1.03"))
     ("v,vphi", "number of virtual poloidal planes", cxxopts::value<int>(vphi)->default_value("64"))
@@ -282,7 +284,10 @@ int main(int argc, char **argv)
     xft_load_apars(ctx, apars.data());
   }
 
-  xft_compute_poincare_plot(ctx, &seeds[0], trace_static);
+  xft_compute_poincare_plot(ctx, &seeds[0], 
+      trace_static, 
+      trace_reverse ? -1 : 1);
+
   xft_compute_poincare_psin(ctx);
 
   fprintf(stderr, "finalizing...\n");
