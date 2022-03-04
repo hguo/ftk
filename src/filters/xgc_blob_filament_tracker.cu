@@ -134,13 +134,14 @@ __global__ void mx3_derive_deltaB(
   if (ii >= m2n0 * nphi * vphi) return;
 
   const I np = nphi * vphi;
+  const I nip = np * iphi; // considering iphi
   const I p = ii / m2n0;
   const I i = ii % m2n0;
   const I pnext = (p + 1) % np, 
           pprev = (p + np - 1) % np;
-  const F dphi = 2 * M_PI / np;
+  const F dphi = 2 * M_PI / nip;
 
-  const F dAsdphi = (apars[pnext*m2n0+i] - apars[pprev*m2n0+i]) / (dphi * 2);
+  const F dAsdphi = (apars[pnext*m2n0+i] - apars[pprev*m2n0+i]) / (dphi * 2); // central difference
 
   deltaB[ii*3] = gradAs[ii*2+1] * bfield0[i*3+2] - dAsdphi * bfield0[i*3+1] + apars[ii] * curl_bfield0[i*3];
   deltaB[ii*3+1] = -gradAs[ii*2] * bfield0[i*3+2] + dAsdphi * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+1];
@@ -151,7 +152,7 @@ template <typename I, typename F>
 __device__
 inline bool eval_static_b(
     const I m2n0,
-    const I nphi, const I iphi, const I vphi,
+    const I nphi, // const I iphi, const I vphi,
     const I *m2tris,
     const F *m2invdet, 
     const F *staticB,
@@ -184,7 +185,7 @@ template <typename I, typename F>
 __device__
 inline bool static_magnetic_map(
     const I m2n0,
-    const I nphi, const I iphi, const I vphi,
+    const I nphi, // const I iphi, const I vphi,
     const I *m2tris,
     const F *m2invdet,
     const F *staticB,
@@ -195,22 +196,22 @@ inline bool static_magnetic_map(
 {
   F v[2];
   for (int k = 0; k < nsteps; k ++) {
-    if (!eval_static_b(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, bvh, rz, v))
+    if (!eval_static_b(m2n0, nphi, m2tris, m2invdet, staticB, bvh, rz, v))
       return false;
     const F k1[2] = {h * v[0], h * v[1]};
 
     const F rz2[2] = {rz[0] + k1[0]/2, rz[1] + k1[1]/2};
-    if (!eval_static_b(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, bvh, rz2, v)) 
+    if (!eval_static_b(m2n0, nphi, m2tris, m2invdet, staticB, bvh, rz2, v)) 
       return false;
     const F k2[2] = {h * v[0], h * v[1]};
 
     const F rz3[2] = {rz[0] + k2[0]/2, rz[1] + k2[1]/2};
-    if (!eval_static_b(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, bvh, rz3, v)) 
+    if (!eval_static_b(m2n0, nphi, m2tris, m2invdet, staticB, bvh, rz3, v)) 
       return false;
     const F k3[2] = {h * v[0], h * v[1]};
     
     const F rz4[2] = {rz[0] + k3[0], rz[1] + k3[1]};
-    if (!eval_static_b(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, bvh, rz4, v)) 
+    if (!eval_static_b(m2n0, nphi, m2tris, m2invdet, staticB, bvh, rz4, v)) 
       return false;
     const F k4[2] = {h * v[0], h * v[1]};
     
@@ -235,9 +236,10 @@ __global__ void mx2_derive_interpolants(
   I i = tid;
   if (i >= m2n0) return;
 
-  const I np = nphi * iphi * vphi;
+  const I np = nphi * vphi;
+  const I nip = nphi * iphi * vphi;
   const I steps_per_vp = 32; // TODO
-  const F delta = 2 * M_PI / (np * steps_per_vp);
+  const F delta = 2 * M_PI / (nip * steps_per_vp);
 
   const I bsteps = p * steps_per_vp, 
           fsteps = (vphi - p) * steps_per_vp;
@@ -248,7 +250,7 @@ __global__ void mx2_derive_interpolants(
   { // backward
     F rz[2] = {rz0[0], rz0[1]};
     if ( static_magnetic_map(
-        m2n0, nphi, iphi, vphi, 
+        m2n0, nphi, // iphi, vphi, 
         m2tris, m2invdet, staticB, bvh, 
         -delta, bsteps, rz) ) {
       const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], interpolant.mu0, m2invdet);
@@ -263,7 +265,7 @@ __global__ void mx2_derive_interpolants(
   { // forward 
     F rz[2] = {rz0[0], rz0[1]};
     if ( static_magnetic_map(
-        m2n0, nphi, iphi, vphi, 
+        m2n0, nphi, // iphi, vphi, 
         m2tris, m2invdet, staticB, bvh, 
         delta, fsteps, rz) ) {
       const I tid = bvh2_locate_point_tri(bvh, rz[0], rz[1], interpolant.mu1, m2invdet);
@@ -280,7 +282,7 @@ template <bool UseStaticB, typename I, typename F>
 __device__
 inline bool poincare_eval( // evaluate total B for computing poincare plot
     const I m2n0,
-    const I nphi, const I iphi, const I vphi,
+    // const I nphi, const I iphi, const I vphi,
     const I *m2tris,
     const F *m2invdet, 
     const F *staticB,
@@ -330,59 +332,63 @@ inline bool poincare_integrate2pi_butcher_rk5(
     F rz[2]) // input/output rz
 {
   const I np = nphi * vphi;
-  const F half_h = 2 * M_PI / np * dir;
+  const I nip = np * iphi;
+  const F half_h = 2 * M_PI / nip * dir;
   const F quarter_h = half_h * 0.5;
   const F h = half_h * 2;
 
   F v[2]; 
-  for (int ip = 0; ip < np; ip += 4) {
-    int p = dir == 1 ? ip : (np-ip);
+  for (int ii = 0; ii < iphi; ii ++) { // for iphi
+    for (int ip = 0; ip < np; ip += 4) {
+      int p = dir == 1 ? ip : (np-ip);
 
-    const F rz0[2] = {rz[0], rz[1]};
+      const F rz0[2] = {rz[0], rz[1]};
+        
+      if (!poincare_eval<UseStaticB, I, F>(m2n0, m2tris, m2invdet, staticB, deltaB, bvh, rz, p%np, v)) 
+        return false;
+      const F k1[2] = {v[0], v[1]};
       
-    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz, p%np, v)) 
-      return false;
-    const F k1[2] = {v[0], v[1]};
-    
-    // printf("rz=%f, %f, v=%f, %f\n", rz[0], rz[1], v[0], v[1]);
+      // printf("rz=%f, %f, v=%f, %f\n", rz[0], rz[1], v[0], v[1]);
 
-    const F rz2[2] = {rz[0] + h*k1[0]/4, 
-                      rz[1] + h*k1[1]/4};
-    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz2, p+dir, v))  // 1/4 delta
-      return false;
-    const F k2[2] = {v[0], v[1]};
+      const F rz2[2] = {rz[0] + h*k1[0]/4, 
+                        rz[1] + h*k1[1]/4};
+      if (!poincare_eval<UseStaticB, I, F>(m2n0, m2tris, m2invdet, staticB, deltaB, bvh, rz2, p+dir, v))  // 1/4 delta
+        return false;
+      const F k2[2] = {v[0], v[1]};
 
-    const F rz3[2] = {rz[0] + h*k1[0]/8 + h*k2[0]/8, 
-                      rz[1] + h*k1[1]/8 + h*k2[1]/8};
-    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz3, p+dir, v)) // 1/4 delta
-      return false;
-    const F k3[2] = {v[0], v[1]};
-    
-    const F rz4[2] = {rz[0] - h*k2[0]/2 + h*k3[0], 
-                      rz[1] - h*k2[1]/2 + h*k3[1]};
-    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz4, p+2*dir, v)) // 1/2 delta
-      return false;
-    const F k4[2] = {v[0], v[1]};
-    
-    const F rz5[2] = {rz[0] + h*k1[0]*3/16 + h*k4[0]*9/16, 
-                      rz[1] + h*k1[1]*3/16 + h*k4[1]*9/16};
-    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz5, p+3*dir, v)) // 3/4 delta
-      return false;
-    const F k5[2] = {v[0], v[1]};
-    
-    const F rz6[2] = {rz[0] - h*k1[0]*3/7 + h*k2[0]*2/7 + h*k3[0]*12/7 - h*k4[0]*12/7 + h*k5[0]*8/7, 
-                      rz[1] - h*k1[1]*3/7 + h*k2[1]*2/7 + h*k3[1]*12/7 - h*k4[1]*12/7 + h*k5[1]*8/7};
-    if (!poincare_eval<UseStaticB, I, F>(m2n0, nphi, iphi, vphi, m2tris, m2invdet, staticB, deltaB, bvh, rz6, (p+4*dir)%np, v)) // 1 delta
-      return false;
-    const F k6[2] = {v[0], v[1]};
+      const F rz3[2] = {rz[0] + h*k1[0]/8 + h*k2[0]/8, 
+                        rz[1] + h*k1[1]/8 + h*k2[1]/8};
+      if (!poincare_eval<UseStaticB, I, F>(m2n0, m2tris, m2invdet, staticB, deltaB, bvh, rz3, p+dir, v)) // 1/4 delta
+        return false;
+      const F k3[2] = {v[0], v[1]};
+      
+      const F rz4[2] = {rz[0] - h*k2[0]/2 + h*k3[0], 
+                        rz[1] - h*k2[1]/2 + h*k3[1]};
+      if (!poincare_eval<UseStaticB, I, F>(m2n0, m2tris, m2invdet, staticB, deltaB, bvh, rz4, p+2*dir, v)) // 1/2 delta
+        return false;
+      const F k4[2] = {v[0], v[1]};
+      
+      const F rz5[2] = {rz[0] + h*k1[0]*3/16 + h*k4[0]*9/16, 
+                        rz[1] + h*k1[1]*3/16 + h*k4[1]*9/16};
+      if (!poincare_eval<UseStaticB, I, F>(m2n0, m2tris, m2invdet, staticB, deltaB, bvh, rz5, p+3*dir, v)) // 3/4 delta
+        return false;
+      const F k5[2] = {v[0], v[1]};
+      
+      const F rz6[2] = {rz[0] - h*k1[0]*3/7 + h*k2[0]*2/7 + h*k3[0]*12/7 - h*k4[0]*12/7 + h*k5[0]*8/7, 
+                        rz[1] - h*k1[1]*3/7 + h*k2[1]*2/7 + h*k3[1]*12/7 - h*k4[1]*12/7 + h*k5[1]*8/7};
+      if (!poincare_eval<UseStaticB, I, F>(m2n0, m2tris, m2invdet, staticB, deltaB, bvh, rz6, (p+4*dir)%np, v)) // 1 delta
+        return false;
+      const F k6[2] = {v[0], v[1]};
 
-    for (int i = 0; i < 2; i ++) 
-      rz[i] = rz[i] + h * (7*k1[i] + 32*k3[i] + 12*k4[i] + 32*k5[i] + 7*k6[i]) / 90;
+      for (int i = 0; i < 2; i ++) 
+        rz[i] = rz[i] + h * (7*k1[i] + 32*k3[i] + 12*k4[i] + 32*k5[i] + 7*k6[i]) / 90;
+    }
   }
 
   return true;
 }
 
+#if 0
 template <bool UseStaticB, typename I, typename F>
 __device__
 inline bool poincare_integrate2pi(
@@ -431,6 +437,7 @@ inline bool poincare_integrate2pi(
 
   return true;
 }
+#endif
 
 template <typename I, typename F>
 __global__ void poincare_compute_psin(

@@ -218,9 +218,11 @@ int main(int argc, char **argv)
 
   xs->set_enable_initialize_smoothing_kernel( false );
   xs->set_enable_initialize_interpolants( false );
+  xs->set_vphi( vphi );
   xs->initialize();
 
   auto mx2 = xs->get_m2(); // simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(argv[1]);
+  auto mx3 = xs->get_mx3();
 
   // const auto psifield = mx2->get_psifield();
   // ndarray<double> psinfield = psifield * (1.0 / mx2->get_units().psi_x);
@@ -234,17 +236,14 @@ int main(int argc, char **argv)
   // mx2->initialize_point_locator();
   // mx2->read_bfield(argv[2]);
   mx2->derive_curl_bfield0();
-  
-  ftk::ndarray<double> apars;
-  apars.read_bp(input, "apars");
-
+ 
+#if 0
   const int nphi = apars.dim(1), iphi = 1;
   fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", nphi, iphi, vphi);
   // const int nphi = 16, iphi = 1, vphi = 16; 
   auto mx3 = new simplicial_xgc_3d_mesh<>(mx2, nphi, iphi, vphi);
- 
-  if (!trace_static)
-    mx3->initialize_interpolants_cached();
+#endif
+
 #if 0
   ftk::ndarray<double> apars_upsample = mx3->interpolate(apars);
   apars_upsample.set_multicomponents();
@@ -255,9 +254,8 @@ int main(int argc, char **argv)
   const ndarray<double>& bfield0 = mx2->get_bfield0();
   const ndarray<double>& curl_bfield0 = mx2->get_curl_bfield0();
 
-  const int n0 = apars.dim(0);
-  const int np = nphi * iphi * vphi;
-  const double dphi = 2 * M_PI / np;
+  const int n0 = mx2->n(0); // apars.dim(0);
+  const int nphi = mx3->get_nphi(), iphi = mx3->get_iphi();
 
   xft_ctx_t *ctx;
   xft_create_poincare_ctx(&ctx, nseeds, nrevs);
@@ -278,8 +276,16 @@ int main(int argc, char **argv)
   xft_load_bvh(ctx, bvh);
 
   if (!trace_static) {
-    // xft_derive_interpolants(ctx);
+ 
+#if 0
+    mx3->initialize_interpolants_cached();
     xft_load_interpolants(ctx, mx3->get_interpolants());
+#else
+    xft_derive_interpolants(ctx);
+#endif
+
+    ftk::ndarray<double> apars;
+    apars.read_bp(input, "apars");
 
     xft_load_apars(ctx, apars.data());
   }

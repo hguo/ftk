@@ -26,7 +26,7 @@ struct xgc_stream : public object {
   void set_enable_initialize_interpolants(bool b) { enable_initialize_interpolants = b; }
 
   void initialize();
-  void probe_nphi_iphi();
+  void probe_nphi();
 
   void set_smoothing_kernel_size(double s) { smoothing_kernel_size = s; }
   void set_smoothing_kernel_filename(const std::string f) { smoothing_kernel_filename = f; }
@@ -133,12 +133,13 @@ inline void xgc_stream::initialize()
   m2->initialize_point_locator();
 
   m2->read_bfield( bfield_filename() );
-
+  
   read_units();
 
   // m2->read_oneddiag( oneddiag_filename() );
 
-  probe_nphi_iphi();
+  probe_nphi();
+  fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", nphi, iphi, vphi);
   m3.reset( new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi) );
 
   if (vphi == 1) 
@@ -171,15 +172,15 @@ inline void xgc_stream::initialize()
   current_timestep = start_timestep;
 }
 
-inline void xgc_stream::probe_nphi_iphi()
+inline void xgc_stream::probe_nphi()
 {
   const auto filename0 = filename(0);
 
   const auto array_nphi = ndarray<int>::from_file(filename0, "nphi");
-  const auto array_iphi = ndarray<int>::from_file(filename0, "iphi");
+  // const auto array_iphi = ndarray<int>::from_file(filename0, "iphi"); // iphi in xgc outputs are zero nowadays
 
   nphi = array_nphi[0];
-  iphi = std::max(1, array_iphi[0]);
+  // iphi = std::max(1, array_iphi[0]);
 }
 
 } // namespace ftk
