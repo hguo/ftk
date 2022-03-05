@@ -39,6 +39,7 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   I nextnode(I i) const { return nextnodes[i]; }
   F psin(I i) const { return psifield[i] / units.psi_x; } // get normalized psi
 
+  void set_units(const xgc_units_t& u) { units = u; }
   const xgc_units_t& get_units() const { return units; }
   const ndarray<I>& get_nextnodes() const { return nextnodes; }
   const ndarray<F>& get_bfield() const { return bfield; }

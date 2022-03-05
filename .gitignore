@@ -3,7 +3,7 @@ build*/
 *.bak
 *.DS_Store
 docs/html
-
+*~
 dist/
 *.egg-info/
 __pycache__
