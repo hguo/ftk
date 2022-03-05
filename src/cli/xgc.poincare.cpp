@@ -193,6 +193,7 @@ int main(int argc, char **argv)
   bool trace_static = false;
   bool trace_reverse = false;
   bool xpoint = false;
+  bool help = false;
 
   cxxopts::Options options(argv[0]);
   options.add_options()
@@ -208,8 +209,14 @@ int main(int argc, char **argv)
     ("s,seeds", "number of seeds per rake", cxxopts::value<int>(nseeds_per_rake)->default_value("500"))
     ("r,rakes", "number of rakes", cxxopts::value<int>(nrakes)->default_value("6"))
     ("x,xpoint", "include x-point", cxxopts::value<bool>(xpoint))
-    ("o,output", "output file", cxxopts::value<std::string>(output));
+    ("o,output", "output file", cxxopts::value<std::string>(output))
+    ("h,help", "usage", cxxopts::value<bool>(help));
   auto parse_results = options.parse(argc, argv);
+
+  if (help) {
+    std::cerr << options.help() << std::endl;
+    exit(1);
+  }
 
   fprintf(stderr, "nseeds_per_rake=%d, nrakes=%d, nrevs=%d\n", 
       nseeds_per_rake, nrakes, nrevs);

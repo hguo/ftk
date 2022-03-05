@@ -777,14 +777,21 @@ void xft_destroy_ctx(ctx_t **c_)
 void xft_compute_poincare_psin(ctx_t *c)
 {
   fprintf(stderr, "poincare_psin...\n");
+    
+  if (c->h_poincare_psin == NULL)
+    c->h_poincare_psin = (double*)malloc(sizeof(double) * c->nseeds * c->nsteps);
+  memset(c->h_poincare_psin, 0, sizeof(double) * c->nseeds * c->nsteps);
 
+#if 0 // FIXME: use local seeds later
   for (int dev = 0; dev < c->ndevices; dev ++) {
     if (c->d_poincare_psin[dev] == NULL) {
       cudaMalloc((void**)&c->d_poincare_psin[dev], sizeof(double) * c->nseeds * c->nsteps);
       checkLastCudaError("[FTK-CUDA] cuda compute poincare psin: malloc");
     }
-    if (c->h_poincare_psin == NULL)
-      c->h_poincare_psin = (double*)malloc(sizeof(double) * c->nseeds * c->nsteps);
+
+    double *h_poincare_psin = (double*)malloc(sizeof(double) * c->nseeds * c->nsteps);
+    // if (c->h_poincare_psin == NULL)
+    //   c->h_poincare_psin = (double*)malloc(sizeof(double) * c->nseeds * c->nsteps);
     
     const int maxGridDim = 1024;
     const int blockSize = 256;
@@ -800,11 +807,12 @@ void xft_compute_poincare_psin(ctx_t *c)
     cudaDeviceSynchronize();
     checkLastCudaError("[FTK-CUDA] cuda compute poincare psin: kernel");
 
-    cudaMemcpy(c->h_poincare_psin, c->d_poincare_psin[dev], 
+    cudaMemcpy(h_poincare_psin, c->d_poincare_psin[dev], 
         sizeof(double) * c->nseeds * c->nsteps, 
         cudaMemcpyDeviceToHost);
     checkLastCudaError("[FTK-CUDA] cuda compute poincare psin: memcpy");
   }
+#endif
 }
 
 void xft_compute_poincare_plot(ctx_t *c, const double *seeds, bool use_static_b, int dir)
