@@ -1156,8 +1156,11 @@ void xft_load_apars(ctx_t *c, const double *apars)
 
   // 2. derive gradient of upsampled apars
   if (c->d_gradAs == NULL) {
-    cudaMalloc((void**)&c->d_gradAs_cw, size_t(2 * c->m2n2 * c->nphi * c->vphi) * sizeof(double));
-    cudaMalloc((void**)&c->d_gradAs, size_t(2 * c->m2n0 * c->nphi * c->vphi) * sizeof(double));
+    // cudaMalloc((void**)&c->d_gradAs_cw, 2 * size_t(c->m2n2) * c->nphi * c->vphi * sizeof(double));
+    cudaMalloc((void**)&c->d_gradAs_cw, 2 * size_t(c->m2n2) * sizeof(double));
+    cudaDeviceSynchronize();
+    checkLastCudaError("[FTK-CUDA] xft_load_apars: malloc gradAs_cw");
+    cudaMalloc((void**)&c->d_gradAs, 2 * size_t(c->m2n0) * c->nphi * c->vphi * sizeof(double));
     cudaDeviceSynchronize();
     checkLastCudaError("[FTK-CUDA] xft_load_apars: malloc gradAs");
   }
@@ -1172,7 +1175,8 @@ void xft_load_apars(ctx_t *c, const double *apars)
       m2_cellwise_scalar_gradient<<<gridSize, blockSize>>>(
           c->m2n2, c->d_m2tris, c->d_m2coords,
           c->d_apars_upsample + i * c->m2n0, 
-          c->d_gradAs_cw + i * c->m2n2 * 2);
+          // c->d_gradAs_cw + i * c->m2n2 * 2);
+          c->d_gradAs_cw);
     
       cudaDeviceSynchronize();
       // fprintf(stderr, "cw\n");
@@ -1188,7 +1192,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
       // fprintf(stderr, "mt=%d\n", c->max_vertex_triangles);
       m2_cellwise2vertexwise_scalar_gradient<<<gridSize, blockSize>>>(
           c->m2n0, c->max_vertex_triangles, c->d_vertex_triangles, 
-          c->d_gradAs_cw, c->d_gradAs);
+          c->d_gradAs_cw, c->d_gradAs + i * c->m2n0 * 2);
       
       cudaDeviceSynchronize();
       // fprintf(stderr, "vw\n");
@@ -1225,6 +1229,10 @@ void xft_load_apars(ctx_t *c, const double *apars)
     
   cudaFree(c->d_gradAs);
   c->d_gradAs = NULL;
+
+  cudaFree(c->d_apars_upsample);
+  c->d_apars_upsample = NULL;
+
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB");
 }
