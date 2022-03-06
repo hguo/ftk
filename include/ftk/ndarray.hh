@@ -968,6 +968,8 @@ inline void ndarray<T>::read_netcdf(const std::string& filename, const std::stri
 template <typename T>
 ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
 {
+  from_array(a, dims_);
+#if 0
   dims = dims_;
   s.resize(dims.size());
 
@@ -976,6 +978,7 @@ ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
     else s[i] = s[i-1]*dims[i-1];
 
   p.assign(a, a + s[nd()-1]);
+#endif
 }
   
 template <typename T> 
