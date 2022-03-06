@@ -277,7 +277,7 @@ int main(int argc, char **argv)
 
   if (!trace_static) {
  
-#if 0
+#if 1
     mx3->initialize_interpolants_cached();
     xft_load_interpolants(ctx, mx3->get_interpolants());
 #else

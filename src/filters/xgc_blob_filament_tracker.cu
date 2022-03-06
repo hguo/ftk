@@ -1164,7 +1164,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
     cudaDeviceSynchronize();
     checkLastCudaError("[FTK-CUDA] xft_load_apars: malloc gradAs");
   }
-  for (int i = 0; i < c->nphi * c->iphi; i ++) {
+  for (int i = 0; i < c->nphi * c->vphi; i ++) {
     // fprintf(stderr, "deriving gradAs for plane %d\n", i);
     {
       const int nBlocks = idivup(c->m2n2, blockSize);
