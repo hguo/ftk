@@ -41,13 +41,15 @@ typedef struct {
   
   // for poincare plot
   bool poincare = false;
-  double *d_apars = NULL, *d_apars_upsample = NULL; // apars (nphi) and its upsampled (nphi*iphi) version
+  double *d_apars = NULL, *d_apars_upsample = NULL, *h_apars_upsample; // apars (nphi) and its upsampled (nphi*iphi) version
   double *d_gradAs = NULL, *d_gradAs_cw = NULL; // 2D gradient of upsampled apars, vertexwise and cellwise
   double *d_bfield = NULL, *d_bfield0 = NULL, *d_curl_bfield0 = NULL;
-  double *d_deltaB = NULL; // (upsampled) deltaB
+  double *d_deltaB = NULL, *h_deltaB; // (upsampled) deltaB
   // double *d_seeds = NULL;
   double *d_poincare_psin, *h_poincare_psin;
   int nseeds, nsteps;
+
+  bool retrieve_apars_upsample;
 } xft_ctx_t;
 
 void xft_create_ctx(xft_ctx_t **c_, int device=0, int buffer_size_in_mb=512);
@@ -82,6 +84,8 @@ void xft_load_apars(xft_ctx_t *c,
 
 void xft_load_apars_upsample(xft_ctx_t *c, 
     const double *apars_upsample);
+
+void xft_retrieve_deltaB(xft_ctx_t *c);
 
 void xft_compute_poincare_plot(xft_ctx_t *c,
     const double *seeds, bool use_static_b = false, 
