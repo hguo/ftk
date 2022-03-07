@@ -123,7 +123,7 @@ __global__ void mx3_derive_deltaB(
     const I nphi, const I iphi, const I vphi, 
     const I m2n0, 
     const F *apars, // upsampled
-    const F *gradAs, 
+    const F *gradAs, // single plane
     const F *bfield,
     const F *bfield0, 
     const F *curl_bfield0,
@@ -145,9 +145,9 @@ __global__ void mx3_derive_deltaB(
 
   const F dAsdphi = (apars[pnext*m2n0+i] - apars[pprev*m2n0+i]) / (dphi * 2); // central difference
 
-  deltaB[i*3] = gradAs[ii*2+1] * bfield0[i*3+2] - dAsdphi * bfield0[i*3+1] + apars[ii] * curl_bfield0[i*3];
-  deltaB[i*3+1] = -gradAs[ii*2] * bfield0[i*3+2] + dAsdphi * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+1];
-  deltaB[i*3+2] = gradAs[ii*2] * bfield0[i*3+1] - gradAs[ii*2+1] * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+2];
+  deltaB[i*3] = gradAs[i*2+1] * bfield0[i*3+2] - dAsdphi * bfield0[i*3+1] + apars[ii] * curl_bfield0[i*3];
+  deltaB[i*3+1] = -gradAs[i*2] * bfield0[i*3+2] + dAsdphi * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+1];
+  deltaB[i*3+2] = gradAs[i*2] * bfield0[i*3+1] - gradAs[i*2+1] * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+2];
 }
 
 template <typename I, typename F>
@@ -1167,6 +1167,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
     fprintf(stderr, "apars_upsample retrieved.\n");
   }
 
+#if 0
   // 2. derive gradient of upsampled apars
   if (c->d_gradAs == NULL) {
     // cudaMalloc((void**)&c->d_gradAs_cw, 2 * size_t(c->m2n2) * c->nphi * c->vphi * sizeof(double));
@@ -1211,7 +1212,6 @@ void xft_load_apars(ctx_t *c, const double *apars)
       // fprintf(stderr, "vw\n");
       checkLastCudaError("[FTK-CUDA] xft_load_apars: vw");
     }
-
   }
     
   cudaFree(c->d_gradAs_cw);
@@ -1220,6 +1220,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
   fprintf(stderr, "grad_apars derived\n");
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] xft_load_apars: grad of upsampled apars");
+#endif
 
   // 3. derive deltaB
 #if 0
@@ -1231,22 +1232,40 @@ void xft_load_apars(ctx_t *c, const double *apars)
   }
 #endif
   {
-    const int nBlocks = idivup(c->m2n0 * c->nphi * c->vphi, blockSize);
+    const int nBlocks = idivup(std::max(c->m2n0, c->m2n2), blockSize);
     dim3 gridSize;
     if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
     else gridSize = dim3(nBlocks);
 
+    // partial delta B
     double *d_partial_deltaB, *h_full_deltaB = (double*)malloc(3 * c->nphi * c->vphi * c->m2n0 * sizeof(double));
     cudaMalloc(&d_partial_deltaB, 3 * c->m2n0 * sizeof(double));
 
+    double *d_partial_gradAs_cw; //  = d_partial_deltaB; // reusing the memory for gradAs_cw
+    cudaMalloc(&d_partial_gradAs_cw, 2 * c->m2n2 * sizeof(double));
+    double *d_partial_gradAs;
+    cudaMalloc(&d_partial_gradAs, 2 * c->m2n0 * sizeof(double));
+
     for (int p = 0; p < c->nphi * c->vphi; p ++) { // the full deltaB is too large; compute each individually and copy back to host before copy to device again
+      // fprintf(stderr, "computing deltaB for plane %d\n", p);
       // cudaMalloc((void**)&c->hdp_deltaB[p], 3 * c->m2n0 * sizeof(double));
+
+      // cellwise gradient
+      m2_cellwise_scalar_gradient<<<gridSize, blockSize>>>(
+          c->m2n2, c->d_m2tris, c->d_m2coords, 
+          c->d_apars_upsample + p * c->m2n0, 
+          d_partial_gradAs_cw);
+
+      // vertexwise gradient
+      m2_cellwise2vertexwise_scalar_gradient<<<gridSize, blockSize>>>(
+          c->m2n0, c->max_vertex_triangles, c->d_vertex_triangles, 
+          d_partial_gradAs_cw, d_partial_gradAs);
 
       // fprintf(stderr, "deriving deltaB for plane %d..\n", p);
       mx3_derive_deltaB<<<gridSize, blockSize>>>(
           c->nphi, c->iphi, c->vphi, c->m2n0,
           c->d_apars_upsample,
-          c->d_gradAs,
+          d_partial_gradAs, // c->d_gradAs,
           c->d_bfield,
           c->d_bfield0,
           c->d_curl_bfield0,
@@ -1257,20 +1276,30 @@ void xft_load_apars(ctx_t *c, const double *apars)
           d_partial_deltaB, 
           3 * c->m2n0 * sizeof(double), 
           cudaMemcpyDeviceToHost);
-      // cudaDeviceSynchronize();
-      checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB: kernel");
     }
+    cudaDeviceSynchronize();
+    checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB: kernel");
+
+    cudaFree(d_partial_gradAs_cw);
+    cudaFree(d_partial_gradAs);
     cudaFree(d_partial_deltaB);
     cudaFree(c->d_gradAs); c->d_gradAs = NULL;
     cudaFree(c->d_apars_upsample); c->d_apars_upsample = NULL;
     
+    cudaDeviceSynchronize();
+    checkLastCudaError("[FTK-CUDA] xft_load_apars: free up partial arrays");
+    
     c->hdp_deltaB = (double**)malloc(c->nphi * c->vphi * sizeof(double*));
     for (int p = 0; p < c->nphi * c->vphi; p ++) {
+      // fprintf(stderr, "copying back deltaB to plane %d\n", p);
       cudaMalloc((void**)&c->hdp_deltaB[p], 3 * c->m2n0 * sizeof(double));
+      checkLastCudaError("[FTK-CUDA] xft_load_apars: allocating partial deltaB");
       cudaMemcpy(c->hdp_deltaB[p], 
           h_full_deltaB + p * 3 * c->m2n0,
           3 * c->m2n0 * sizeof(double),
           cudaMemcpyHostToDevice);
+      cudaDeviceSynchronize();
+      checkLastCudaError("[FTK-CUDA] xft_load_apars: copy deltaB back to gpu");
     }
     free(h_full_deltaB);
 
