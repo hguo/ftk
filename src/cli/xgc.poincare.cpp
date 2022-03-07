@@ -296,7 +296,7 @@ int main(int argc, char **argv)
   const int nphi = mx3->get_nphi(), iphi = mx3->get_iphi();
 
   xft_ctx_t *ctx;
-  xft_create_poincare_ctx(&ctx, nseeds, nrevs);
+  xft_create_poincare_ctx(&ctx, nseeds, nrevs, device);
   
   xft_load_mesh(ctx, nphi, iphi, vphi, 
       mx2->n(0), mx2->n(1), mx2->n(2), 

@@ -29,7 +29,7 @@ inline bool xgc_stream_adios2::read_units()
   if (succ) 
     m2->set_units(u);
 
-  iphi = std::max(1, u.sml_wedge_n);
+  // iphi = std::max(1, u.sml_wedge_n);
   return succ;
 }
 
