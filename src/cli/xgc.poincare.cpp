@@ -96,6 +96,42 @@ std::vector<double> initialize_seeds(
   return seeds;
 }
 
+void write_apars(
+    std::shared_ptr<simplicial_xgc_2d_mesh<>> mx2,
+    const int np,
+    const std::string& filenames, 
+    const double *apars)
+{
+  for (int i = 0; i < np; i ++) {
+    fprintf(stderr, "writing apars for plane %d.., %p\n", i, apars);
+    ndarray<double> arr(apars + i * mx2->n(0), {mx2->n(0)});
+    // arr.from_array(apars + i * mx2->n(0), {mx2->n(0)});
+    
+    auto minmax = arr.min_max();
+    // fprintf(stderr, "arr_minmax=%f, %f\n", std::get<0>(minmax), std::get<1>(minmax));
+
+    mx2->array_to_vtu( ftk::series_filename(filenames, i), 
+        "apars", arr);
+  }
+}
+
+
+void write_deltaB(
+    std::shared_ptr<simplicial_xgc_2d_mesh<>> mx2,
+    const int np,
+    const std::string& filenames, 
+    const double *deltaB)
+{
+  for (int i = 0; i < np; i ++) {
+    fprintf(stderr, "writing deltaB for plane %d..\n", i);
+    ndarray<double> arr(deltaB + i * mx2->n(0) * 3, {3, mx2->n(0)});
+    arr.set_multicomponents();
+
+    mx2->array_to_vtu( ftk::series_filename(filenames, i), 
+        "deltaB", arr);
+  }
+}
+
 void write_results(
     const std::string& filename,
     const double *results,
@@ -185,7 +221,7 @@ void write_results(
 int main(int argc, char **argv)
 {
   int device;
-  std::string path, input, output;
+  std::string path, input, output, deltaB_filenames, apars_filenames;
   double psin0 = 0.8, psin1 = 1.03;
   int vphi = 64;
   int nseeds_per_rake = 500, nrakes = 6;
@@ -208,7 +244,9 @@ int main(int argc, char **argv)
     ("s,seeds", "number of seeds per rake", cxxopts::value<int>(nseeds_per_rake)->default_value("500"))
     ("r,rakes", "number of rakes", cxxopts::value<int>(nrakes)->default_value("6"))
     ("x,xpoint", "include x-point", cxxopts::value<bool>(xpoint))
-    ("o,output", "output file", cxxopts::value<std::string>(output));
+    ("o,output", "output file", cxxopts::value<std::string>(output))
+    ("dump-deltaB", "dump deltaB for debugging", cxxopts::value<std::string>(deltaB_filenames))
+    ("dump-apars", "dump apars for debugging", cxxopts::value<std::string>(apars_filenames));
   auto parse_results = options.parse(argc, argv);
 
   fprintf(stderr, "nseeds_per_rake=%d, nrakes=%d, nrevs=%d\n", 
@@ -276,7 +314,6 @@ int main(int argc, char **argv)
   xft_load_bvh(ctx, bvh);
 
   if (!trace_static) {
- 
 #if 1
     mx3->initialize_interpolants_cached();
     xft_load_interpolants(ctx, mx3->get_interpolants());
@@ -286,8 +323,30 @@ int main(int argc, char **argv)
 
     ftk::ndarray<double> apars;
     apars.read_bp(input, "apars");
+    
+    // auto minmax = apars.min_max();
+    // fprintf(stderr, "apar_minmax=%f, %f\n", std::get<0>(minmax), std::get<1>(minmax));
+    // std::cerr << apars.shape() << std::endl;
+    // write_apars(mx2, nphi, apars_filenames, apars.data()); // diagnosis
+    // exit(1);
+    
+    if (apars_filenames.size() > 0)
+      ctx->retrieve_apars_upsample = true;
 
     xft_load_apars(ctx, apars.data());
+
+    if (apars_filenames.size() > 0) {
+      write_apars(mx2, nphi * vphi, apars_filenames, ctx->h_apars_upsample);
+      xft_destroy_ctx(&ctx);
+      return 0;
+    }
+
+    if (deltaB_filenames.size() > 0) { // dump deltaB field
+      xft_retrieve_deltaB(ctx);
+      write_deltaB(mx2, nphi * vphi, deltaB_filenames, ctx->h_deltaB);
+      xft_destroy_ctx(&ctx);
+      exit(0);
+    }
   }
 
   xft_compute_poincare_plot(ctx, &seeds[0], 

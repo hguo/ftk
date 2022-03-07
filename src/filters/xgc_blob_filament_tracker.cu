@@ -1153,6 +1153,17 @@ void xft_load_apars(ctx_t *c, const double *apars)
   
   cudaDeviceSynchronize();
   fprintf(stderr, "apars upsampled\n");
+ 
+  if (c->retrieve_apars_upsample) {
+    // if (c->h_apars_upsample)
+    c->h_apars_upsample = (double*)malloc(c->m2n0 * c->nphi * c->vphi * sizeof(double));
+
+    cudaMemcpy(c->h_apars_upsample, c->d_apars_upsample,
+        c->m2n0 * c->nphi * c->vphi * sizeof(double), 
+        cudaMemcpyDeviceToHost);
+
+    fprintf(stderr, "apars_upsample retrieved.\n");
+  }
 
   // 2. derive gradient of upsampled apars
   if (c->d_gradAs == NULL) {
@@ -1235,6 +1246,22 @@ void xft_load_apars(ctx_t *c, const double *apars)
 
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB");
+  
+  fprintf(stderr, "deltaB derived\n");
+}
+
+void xft_retrieve_deltaB(ctx_t *c)
+{
+  if (c->h_deltaB == NULL)
+    c->h_deltaB = (double*)malloc(c->m2n0 * c->nphi * c->vphi * sizeof(double) * 3);
+
+  cudaMemcpy(c->h_deltaB, c->d_deltaB, 
+      c->m2n0 * c->nphi * c->vphi * sizeof(double) * 3, 
+      cudaMemcpyDeviceToHost);
+  cudaDeviceSynchronize();
+
+  checkLastCudaError("[FTK-CUDA] xft_retrieve_deltaB");
+  fprintf(stderr, "deltaB retrieved\n");
 }
 
 void xft_load_vertex_triangles(ctx_t *c, const std::vector<std::set<int>> &vertex_triangles)
