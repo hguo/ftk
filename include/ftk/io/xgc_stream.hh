@@ -26,7 +26,7 @@ struct xgc_stream : public object {
   void set_enable_initialize_interpolants(bool b) { enable_initialize_interpolants = b; }
 
   void initialize();
-  void probe_nphi();
+  void probe_nphi_iphi();
 
   void set_smoothing_kernel_size(double s) { smoothing_kernel_size = s; }
   void set_smoothing_kernel_filename(const std::string f) { smoothing_kernel_filename = f; }
@@ -110,7 +110,7 @@ inline int xgc_stream::filename2step(const std::string& str)
 
 inline bool xgc_stream::read_units()
 {
-  return m2->read_units_m( units_filename() ); // TODO: adios2
+  return m2->read_units_m( units_filename() );
 }
 
 inline void xgc_stream::initialize()
@@ -138,7 +138,7 @@ inline void xgc_stream::initialize()
 
   // m2->read_oneddiag( oneddiag_filename() );
 
-  probe_nphi();
+  probe_nphi_iphi();
   fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", nphi, iphi, vphi);
   m3.reset( new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi) );
 
@@ -172,15 +172,52 @@ inline void xgc_stream::initialize()
   current_timestep = start_timestep;
 }
 
-inline void xgc_stream::probe_nphi()
+inline void xgc_stream::probe_nphi_iphi()
 {
-  const auto filename0 = filename(0);
+  // try if we can find the information in xgc input file
+  std::ifstream ifs(path + "/input");
+  if (ifs.is_open()) {
+    std::string str;
+    std::string varname, dummy;
+    double value;
+    while (std::getline(ifs, str)) {
+      if (str.find("&") == 0) // section begins
+        continue;
+      else if (str.find("/") == 0) // section ends
+        continue;
+      else if (str.find("!") == 0) // comment at the beginning
+        continue; 
+      else if (str.find("=")) { // kv pair
+        if (str.find("!") != std::string::npos)
+          str = str.substr(0, str.find("!")); // remove comment in the end of the line
 
-  const auto array_nphi = ndarray<int>::from_file(filename0, "nphi");
-  // const auto array_iphi = ndarray<int>::from_file(filename0, "iphi"); // iphi in xgc outputs are zero nowadays
+        str.erase(std::remove(str.begin(), str.end(), ' '), str.end()); // remove spaces
+        auto strs = split(str, "=");
 
-  nphi = array_nphi[0];
-  // iphi = std::max(1, array_iphi[0]);
+        const auto var = strs[0];
+        double val = std::stod(strs[1]);
+
+        if (var == "sml_wedge_n") {
+          fprintf(stderr, "sml_wedge_n=%f\n", val);
+          iphi = val;
+        } else if (var == "sml_nphi_total") {
+          fprintf(stderr, "sml_nphi_total=%f\n", val);
+          nphi = val;
+        }
+      }
+    }
+  } else {
+    iphi = m2->get_units().sml_wedge_n;
+  
+    // probe nphi from the first availabe timestep
+    const auto filename0 = filename(0);
+
+    const auto array_nphi = ndarray<int>::from_file(filename0, "nphi");
+    // const auto array_iphi = ndarray<int>::from_file(filename0, "iphi"); // iphi in xgc outputs are zero nowadays
+
+    nphi = array_nphi[0];
+    // iphi = std::max(1, array_iphi[0]);
+  }
 }
 
 } // namespace ftk
