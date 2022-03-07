@@ -187,23 +187,29 @@ inline void xgc_stream::probe_nphi_iphi()
         continue;
       else if (str.find("!") == 0) // comment at the beginning
         continue; 
-      else if (str.find("=")) { // kv pair
+      else if (str.find("=") != std::string::npos) { // kv pair
+        // fprintf(stderr, "----%s\n", str.c_str());
         if (str.find("!") != std::string::npos)
           str = str.substr(0, str.find("!")); // remove comment in the end of the line
 
         str.erase(std::remove(str.begin(), str.end(), ' '), str.end()); // remove spaces
         auto strs = split(str, "=");
 
-        const auto var = strs[0];
-        double val = std::stod(strs[1]);
+        try {
+          const auto var = strs[0];
+          double val = std::stod(strs[1]); // note that the val may not be numeric
 
-        if (var == "sml_wedge_n") {
-          fprintf(stderr, "sml_wedge_n=%f\n", val);
-          iphi = val;
-        } else if (var == "sml_nphi_total") {
-          fprintf(stderr, "sml_nphi_total=%f\n", val);
-          nphi = val;
+          if (var == "sml_wedge_n") {
+            fprintf(stderr, "sml_wedge_n=%f\n", val);
+            iphi = val;
+          } else if (var == "sml_nphi_total") {
+            fprintf(stderr, "sml_nphi_total=%f\n", val);
+            nphi = val;
+          }
+        } catch (...) {
+          continue;
         }
+
       }
     }
   } else {
