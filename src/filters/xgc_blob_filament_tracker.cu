@@ -127,25 +127,27 @@ __global__ void mx3_derive_deltaB(
     const F *bfield,
     const F *bfield0, 
     const F *curl_bfield0,
-    F *deltaB) // output
+    const I p,
+    F *deltaB) // output for one single poloidal plane
 {
   int tid = getGlobalIdx_3D_1D();
-  I ii = tid;
-  if (ii >= m2n0 * nphi * vphi) return;
+  I i = tid;
+  if (i >= m2n0) return; 
 
   const I np = nphi * vphi;
   const I nip = np * iphi; // considering iphi
-  const I p = ii / m2n0;
-  const I i = ii % m2n0;
+  const I ii = p * m2n0 + i;
+  // const I p = ii / m2n0;
+  // const I i = ii % m2n0;
   const I pnext = (p + 1) % np, 
           pprev = (p + np - 1) % np;
   const F dphi = 2 * M_PI / nip;
 
   const F dAsdphi = (apars[pnext*m2n0+i] - apars[pprev*m2n0+i]) / (dphi * 2); // central difference
 
-  deltaB[ii*3] = gradAs[ii*2+1] * bfield0[i*3+2] - dAsdphi * bfield0[i*3+1] + apars[ii] * curl_bfield0[i*3];
-  deltaB[ii*3+1] = -gradAs[ii*2] * bfield0[i*3+2] + dAsdphi * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+1];
-  deltaB[ii*3+2] = gradAs[ii*2] * bfield0[i*3+1] - gradAs[ii*2+1] * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+2];
+  deltaB[i*3] = gradAs[ii*2+1] * bfield0[i*3+2] - dAsdphi * bfield0[i*3+1] + apars[ii] * curl_bfield0[i*3];
+  deltaB[i*3+1] = -gradAs[ii*2] * bfield0[i*3+2] + dAsdphi * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+1];
+  deltaB[i*3+2] = gradAs[ii*2] * bfield0[i*3+1] - gradAs[ii*2+1] * bfield0[i*3] + apars[ii] * curl_bfield0[i*3+2];
 }
 
 template <typename I, typename F>
@@ -286,7 +288,7 @@ inline bool poincare_eval( // evaluate total B for computing poincare plot
     const I *m2tris,
     const F *m2invdet, 
     const F *staticB,
-    const F *deltaB,
+    /* const */ F **deltaB,
     const bvh2d_node_t<I, F> *bvh, 
     const F rz[2], // input rz
     const I p, // input poloidal plane
@@ -306,7 +308,7 @@ inline bool poincare_eval( // evaluate total B for computing poincare plot
         if (UseStaticB)
           B[i][j] = staticB[tri[i]*3 + j]; 
         else 
-          B[i][j] = staticB[tri[i]*3 + j] + deltaB[p*m2n0*3 + tri[i]*3 + j];
+          B[i][j] = staticB[tri[i]*3 + j] + deltaB[p][tri[i]*3 + j]; // + deltaB[p*m2n0*3 + tri[i]*3 + j];
 
     lerp_s2v3(B, mu, b);
     v[0] = rz[0] * b[0] / b[2];
@@ -326,7 +328,7 @@ inline bool poincare_integrate2pi_butcher_rk5(
     const I *m2tris,
     const F *m2invdet, 
     const F *staticB,
-    const F *deltaB,
+    /* const */ F **deltaB,
     const bvh2d_node_t<I, F> *bvh,
     const int dir, // +1 or -1
     F rz[2]) // input/output rz
@@ -479,7 +481,7 @@ __global__ void poincare_integrate(
     const I *m2tris,
     const F *m2invdet,
     const F *staticB,
-    const F *deltaB, 
+    /* const */ F **deltaB, 
     const bvh2d_node_t<I, F> *bvh, 
     const I nseeds, 
     const I nsteps,
@@ -833,12 +835,12 @@ void xft_compute_poincare_plot(ctx_t *c, const double *seeds, bool use_static_b,
     if (use_static_b)
       poincare_integrate<true, int, double><<<gridSize, blockSize>>>(
           k, c->m2n0, c->nphi, c->iphi, c->vphi, 
-          c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
+          c->d_m2tris, c->d_m2invdet, c->d_bfield, c->ddp_deltaB, 
           c->d_bvh, c->nseeds, c->nsteps, dir, (double*)c->dcps);
     else 
       poincare_integrate<false, int, double><<<gridSize, blockSize>>>(
           k, c->m2n0, c->nphi, c->iphi, c->vphi, 
-          c->d_m2tris, c->d_m2invdet, c->d_bfield, c->d_deltaB, 
+          c->d_m2tris, c->d_m2invdet, c->d_bfield, c->ddp_deltaB, 
           c->d_bvh, c->nseeds, c->nsteps, dir, (double*)c->dcps);
   }
   checkLastCudaError("[FTK-CUDA] xft_compute_poincare_plot: exec");
@@ -1133,7 +1135,7 @@ void xft_load_apars(ctx_t *c, const double *apars)
   // TODO:
   // 1. upsample apars
   if (c->d_apars_upsample == NULL) {
-    cudaMalloc((void**)&c->d_apars_upsample, size_t(c->m2n0 * c->nphi * c->vphi) * sizeof(double));
+    cudaMalloc((void**)&c->d_apars_upsample, size_t(c->m2n0) * c->nphi * c->vphi * sizeof(double));
   }
   {
     const int nBlocks = idivup(c->m2n0 * c->nphi * c->vphi, blockSize);
@@ -1216,40 +1218,75 @@ void xft_load_apars(ctx_t *c, const double *apars)
   c->d_gradAs_cw = NULL;
   
   fprintf(stderr, "grad_apars derived\n");
+  cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] xft_load_apars: grad of upsampled apars");
 
   // 3. derive deltaB
+#if 0
   if (c->d_deltaB == NULL) {
-    cudaMalloc((void**)&c->d_deltaB, size_t(c->m2n0 * c->nphi * c->vphi) * sizeof(double) * 3);
+    fprintf(stderr, "allocating deltaB, %llu\n", 3ll * c->m2n0 * c->nphi * c->vphi * sizeof(double));
+    cudaMalloc((void**)&c->d_deltaB, 3ll * c->m2n0 * c->nphi * c->vphi * sizeof(double));
+    cudaDeviceSynchronize();
+    checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB: malloc");
   }
+#endif
   {
     const int nBlocks = idivup(c->m2n0 * c->nphi * c->vphi, blockSize);
     dim3 gridSize;
     if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
     else gridSize = dim3(nBlocks);
 
-    mx3_derive_deltaB<<<gridSize, blockSize>>>(
-        c->nphi, c->iphi, c->vphi, c->m2n0,
-        c->d_apars_upsample,
-        c->d_gradAs,
-        c->d_bfield,
-        c->d_bfield0,
-        c->d_curl_bfield0, 
-        c->d_deltaB);
-  }
+    double *d_partial_deltaB, *h_full_deltaB = (double*)malloc(3 * c->nphi * c->vphi * c->m2n0 * sizeof(double));
+    cudaMalloc(&d_partial_deltaB, 3 * c->m2n0 * sizeof(double));
+
+    for (int p = 0; p < c->nphi * c->vphi; p ++) { // the full deltaB is too large; compute each individually and copy back to host before copy to device again
+      // cudaMalloc((void**)&c->hdp_deltaB[p], 3 * c->m2n0 * sizeof(double));
+
+      // fprintf(stderr, "deriving deltaB for plane %d..\n", p);
+      mx3_derive_deltaB<<<gridSize, blockSize>>>(
+          c->nphi, c->iphi, c->vphi, c->m2n0,
+          c->d_apars_upsample,
+          c->d_gradAs,
+          c->d_bfield,
+          c->d_bfield0,
+          c->d_curl_bfield0,
+          p,
+          d_partial_deltaB); // c->hdp_deltaB[p]); // c->d_deltaB);
+
+      cudaMemcpy(h_full_deltaB + p * 3 * c->m2n0, 
+          d_partial_deltaB, 
+          3 * c->m2n0 * sizeof(double), 
+          cudaMemcpyDeviceToHost);
+      // cudaDeviceSynchronize();
+      checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB: kernel");
+    }
+    cudaFree(d_partial_deltaB);
+    cudaFree(c->d_gradAs); c->d_gradAs = NULL;
+    cudaFree(c->d_apars_upsample); c->d_apars_upsample = NULL;
     
-  cudaFree(c->d_gradAs);
-  c->d_gradAs = NULL;
+    c->hdp_deltaB = (double**)malloc(c->nphi * c->vphi * sizeof(double*));
+    for (int p = 0; p < c->nphi * c->vphi; p ++) {
+      cudaMalloc((void**)&c->hdp_deltaB[p], 3 * c->m2n0 * sizeof(double));
+      cudaMemcpy(c->hdp_deltaB[p], 
+          h_full_deltaB + p * 3 * c->m2n0,
+          3 * c->m2n0 * sizeof(double),
+          cudaMemcpyHostToDevice);
+    }
+    free(h_full_deltaB);
 
-  cudaFree(c->d_apars_upsample);
-  c->d_apars_upsample = NULL;
-
+    cudaMalloc((void**)&c->ddp_deltaB, c->nphi * c->vphi * sizeof(double*));
+    cudaMemcpy(c->ddp_deltaB, c->hdp_deltaB, 
+        c->nphi * c->vphi * sizeof(double*), 
+        cudaMemcpyHostToDevice);
+  }
+  
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] xft_load_apars: derive deltaB");
   
   fprintf(stderr, "deltaB derived\n");
 }
 
+#if 0
 void xft_retrieve_deltaB(ctx_t *c)
 {
   if (c->h_deltaB == NULL)
@@ -1263,6 +1300,7 @@ void xft_retrieve_deltaB(ctx_t *c)
   checkLastCudaError("[FTK-CUDA] xft_retrieve_deltaB");
   fprintf(stderr, "deltaB retrieved\n");
 }
+#endif
 
 void xft_load_vertex_triangles(ctx_t *c, const std::vector<std::set<int>> &vertex_triangles)
 {

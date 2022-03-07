@@ -330,8 +330,8 @@ int main(int argc, char **argv)
     // write_apars(mx2, nphi, apars_filenames, apars.data()); // diagnosis
     // exit(1);
     
-    if (apars_filenames.size() > 0)
-      ctx->retrieve_apars_upsample = true;
+    // if (apars_filenames.size() > 0)
+    //   ctx->retrieve_apars_upsample = true;
 
     xft_load_apars(ctx, apars.data());
 
@@ -341,12 +341,15 @@ int main(int argc, char **argv)
       return 0;
     }
 
+#if 0
     if (deltaB_filenames.size() > 0) { // dump deltaB field
+      assert(false); // TODO
       xft_retrieve_deltaB(ctx);
-      write_deltaB(mx2, nphi * vphi, deltaB_filenames, ctx->h_deltaB);
+      // write_deltaB(mx2, nphi * vphi, deltaB_filenames, ctx->h_deltaB);
       xft_destroy_ctx(&ctx);
       exit(0);
     }
+#endif
   }
 
   xft_compute_poincare_plot(ctx, &seeds[0], 

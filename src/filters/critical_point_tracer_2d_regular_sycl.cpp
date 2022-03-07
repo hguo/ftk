@@ -83,7 +83,8 @@ static std::vector<cp_t> extract_cp2dt(
             indices[i] = domain.to_index(vertices[i]);
             local_indices[i] = ext.to_index(vertices[i]);
           }
-          
+         
+          printf("local_indices=%d, %d, %d\n", local_indices[0], local_indices[1], local_indices[2]);
           // out << "local_indices=" << local_indices[0] << "," << local_indices[1] << "," << local_indices[2] << cl::sycl::endl;
           // out << "vf[0]=" << vf[0][0] << "," << vf[0][1] << cl::sycl::endl;
           // return;
@@ -100,7 +101,7 @@ static std::vector<cp_t> extract_cp2dt(
 
               v[i][j] = V[offset*2*ext.n() + k*2+j]; // V[unit_simplex_offset_3_2<scope_ordinal>(e.type, i, 2/*time dimension id*/)][k*2+j];
               // out << k*2+j << "," << v[i][j] << cl::sycl::endl;
-              vf[i][j] = v[i][j] * 32768L; // WIP
+              vf[i][j] = v[i][j] * 33554432; // 32768L; // WIP
             }
           }
 
