@@ -55,7 +55,7 @@ intel-mpich-hdf5:
   before_script:
     - module load hdf5/1.12.1-mpich-3.4.2-intel-parallel-fortran
     - module load mpich/3.4.2-intel
-    - module load intel/20.2
+    - module load intel/20.4
 
 cuda-compile-only:
   extends: .basic_job
@@ -84,7 +84,7 @@ intel-tbb:
   variables:
     CMAKE_ARG: "-DFTK_USE_TBB=ON -DTBB_ROOT=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/intel/20.2/tbb"
   before_script:
-    - module load intel/20.2
+    - module load intel/20.4
 
 intel-mpich-tbb:
   extends: .basic_job
