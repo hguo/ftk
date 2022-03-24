@@ -62,7 +62,7 @@ cuda-compile-only:
   variables:
     CMAKE_ARG: "-DFTK_USE_CUDA=ON"
   before_script:
-    - export PATH=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/cuda/10.2/bin:$PATH
+    - export PATH=/nfs/gce/projects/PEDAL-GCE/hguo/ci/cuda-11.6/bin:$PATH
 
 python3-setup-build-only:
   before_script:
