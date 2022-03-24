@@ -66,7 +66,7 @@ cuda-compile-only:
 
 python3-setup-build-only:
   before_script:
-    - module load anaconda3/2020.02
+    - module load anaconda3/2021.05
   script:
     - python setup.py build
   tags:
@@ -77,7 +77,7 @@ python3:
   variables:
     CMAKE_ARG: "-DFTK_BUILD_PYFTK=ON -DFTK_BUILD_EXECUTABLES=OFF"
   before_script:
-    - module load anaconda3/2020.02
+    - module load anaconda3/2021.05
 
 intel-tbb:
   extends: .basic_job
