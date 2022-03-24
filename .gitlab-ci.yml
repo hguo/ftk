@@ -55,18 +55,18 @@ intel-mpich-hdf5:
   before_script:
     - module load hdf5/1.12.1-mpich-3.4.2-intel-parallel-fortran
     - module load mpich/3.4.2-intel
-    - module load intel/20.2
+    - module load intel/20.4
 
 cuda-compile-only:
   extends: .basic_job
   variables:
     CMAKE_ARG: "-DFTK_USE_CUDA=ON"
   before_script:
-    - module load cuda/10.2
+    - export PATH=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/cuda/10.2/bin:$PATH
 
 python3-setup-build-only:
   before_script:
-    - module load anaconda3/2020.02
+    - module load anaconda3/2021.05
   script:
     - python setup.py build
   tags:
@@ -77,14 +77,14 @@ python3:
   variables:
     CMAKE_ARG: "-DFTK_BUILD_PYFTK=ON -DFTK_BUILD_EXECUTABLES=OFF"
   before_script:
-    - module load anaconda3/2020.02
+    - module load anaconda3/2021.05
 
 intel-tbb:
   extends: .basic_job
   variables:
     CMAKE_ARG: "-DFTK_USE_TBB=ON -DTBB_ROOT=/nfs/gce/software/custom/linux-ubuntu18.04-x86_64/intel/20.2/tbb"
   before_script:
-    - module load intel/20.2
+    - module load intel/20.4
 
 intel-mpich-tbb:
   extends: .basic_job
