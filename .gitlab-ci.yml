@@ -17,7 +17,7 @@ variables:
     - ctest -VV
 
   tags:
-    - 20.04
+    - "20.04"
 
 no-dependencies:
   extends: .basic_job
