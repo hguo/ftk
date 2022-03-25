@@ -19,8 +19,6 @@ variables:
   tags:
     - "20.04"
 
-  parallel: 32
-
 no-dependencies:
   extends: .basic_job
 
