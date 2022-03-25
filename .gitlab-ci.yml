@@ -114,8 +114,6 @@ vtk:
 
 paraview:
   extends: .basic_job
-  before_script:
-    - module load cmake/3.20.5-yjp2hz6
   variables:
     CMAKE_ARG: "-DFTK_BUILD_PARAVIEW=ON -DParaView_DIR=/nfs/gce/projects/PEDAL-GCE/hguo/ci/paraview-5.9.1/lib/cmake/paraview-5.9"
 
