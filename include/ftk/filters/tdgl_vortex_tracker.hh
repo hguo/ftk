@@ -18,7 +18,7 @@ namespace ftk {
 struct tdgl_vortex_tracker : public virtual tracker {
   tdgl_vortex_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
-  int cpdims() const { return 3; }
+  // int cpdims() const { return 3; }
   
   virtual void update() {}; 
   void reset() {

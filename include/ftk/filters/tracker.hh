@@ -19,6 +19,7 @@ enum {
   TRACKER_CONTOUR = 4,
   TRACKER_CONNECTED_COMPONENTS = 5,
   TRACKER_THRESHOLD = 6,
+  TRACKER_PARTICLE = 7,
   TRACKER_XGC_BLOB_FILAMENT = 105,
   TRACKER_XGC_BLOB_THRESHOLD = 106,
   TRACKER_MPAS_O_CRITICAL_POINT = 201
@@ -91,6 +92,8 @@ inline int tracker::str2tracker(const std::string& s)
     return TRACKER_RIDGE_VALLEY;
   else if (s == "levy_degani_seginer")
     return TRACKER_LEVY_DEGANI_SEGINER;
+  else if (s == "particle" || s == "pt")
+    return TRACKER_PARTICLE;
   else if (s == "cc" || s == "connected_component" || s == "connected_components")
     return TRACKER_CONNECTED_COMPONENTS;
   else if (s == "xgc_blob_filament" || s == "xgc-blob-filament")
