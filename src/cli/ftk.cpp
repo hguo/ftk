@@ -91,6 +91,7 @@ std::shared_ptr<json_interface> wrapper;
 std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
 std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
+std::shared_ptr<particle_tracer> tracker_particle;
 std::shared_ptr<threshold_tracker<>> tracker_threshold;
 std::shared_ptr<ndarray_stream<>> stream;
 
@@ -537,6 +538,11 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
   tracker->finalize();
 }
 
+void initialize_particle_tracer(diy::mpi::communicator comm)
+{
+  // TODO
+}
+
 void initialize_critical_line_tracker(diy::mpi::communicator comm)
 {
   const auto js = stream->get_json();
@@ -833,6 +839,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     initialize_contour_tracker(comm); 
   else if (ttype == TRACKER_TDGL_VORTEX)
     initialize_tdgl_tracker(comm);
+  else if (ttype == TRACKER_PARTICLE)
+    initialize_particle_tracer(comm);
   else if (ttype == TRACKER_XGC_BLOB_FILAMENT)
     initialize_xgc_blob_filament_tracker(comm);
   else if (ttype == TRACKER_XGC_BLOB_THRESHOLD)

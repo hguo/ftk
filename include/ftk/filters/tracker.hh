@@ -52,6 +52,7 @@ public:
 
 public:
   virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group>) {}
+  virtual bool pop_field_data_snapshot();
 
 protected:
   std::deque<field_data_snapshot_t> snapshots;
@@ -101,6 +102,14 @@ inline int tracker::str2tracker(const std::string& s)
   else if (s == "xgc_blob_threshold" || s == "xgc-blob-threshold")
     return TRACKER_XGC_BLOB_THRESHOLD;
   else return 0;
+}
+
+inline bool tracker::pop_field_data_snapshot()
+{
+  if (snapshots.size() > 0) {
+    snapshots.pop_front();
+    return true;
+  } else return false;
 }
 
 }

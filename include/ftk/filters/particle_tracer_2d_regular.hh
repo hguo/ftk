@@ -31,7 +31,14 @@ struct particle_tracer_2d_regular : public particle_tracer_regular
     tracker(comm)
   {}
   virtual ~particle_tracer_2d_regular() {}
+
+  void update_timestep();
 };
+
+inline void particle_tracer_2d_regular::update_timestep()
+{
+  if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+}
 
 }
 
