@@ -11,7 +11,12 @@ namespace ftk {
 
 struct particle_tracer_regular : public particle_tracer, public regular_tracker
 {
-  particle_tracer_regular(diy::mpi::communicator comm, int nd);
+  particle_tracer_regular(diy::mpi::communicator comm, int nd) : 
+    particle_tracer(comm), 
+    regular_tracker(comm, nd), 
+    tracker(comm) 
+  {} 
+
   virtual ~particle_tracer_regular() {}
 };
 

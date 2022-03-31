@@ -32,8 +32,31 @@ struct particle_tracer_2d_regular : public particle_tracer_regular
   {}
   virtual ~particle_tracer_2d_regular() {}
 
+  void initialize_particles_at_grid_points();
   void update_timestep();
+
+protected:
+  bool eval_v(const double* x, double *v);
 };
+
+inline bool particle_tracer_2d_regular::eval_v(
+    const double *x, double *v)
+{
+  const double t = (x[3] - current_t) / current_delta_t;
+  return false;
+}
+
+inline void particle_tracer_2d_regular::initialize_particles_at_grid_points()
+{
+  this->m.element_for(0,
+      [&](simplicial_regular_mesh_element e) {
+        feature_point_lite_t p;
+        p.x[0] = e.corner[0];
+        p.x[1] = e.corner[1];
+        particles.push_back(p);
+      }, 
+      FTK_XL_NONE, 1);
+}
 
 inline void particle_tracer_2d_regular::update_timestep()
 {

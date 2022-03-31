@@ -540,7 +540,36 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_particle_tracer(diy::mpi::communicator comm)
 {
-  // TODO
+  const auto js = stream->get_json();
+  const size_t nd = stream->n_dimensions(),
+               DW = js["dimensions"][0], 
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0; 
+               // DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+  const int nt = js["n_timesteps"];
+
+  std::shared_ptr<particle_tracer_2d_regular> t2dr(new particle_tracer_2d_regular(comm));
+  tracker_particle = t2dr;
+  
+  t2dr->set_domain(lattice({0, 0}, {DW-1, DH-1}));
+  t2dr->set_array_domain(lattice({0, 0}, {DW, DH}));
+  t2dr->set_end_timestep(nt - 1);
+  t2dr->set_number_of_threads(nthreads);
+
+  if (comm.rank() == 0) {
+    std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
+  }
+
+  tracker_particle->initialize();
+  tracker_particle->initialize_particles_at_grid_points();
+
+  stream->set_callback([&](int k, const ndarray<double>& field_data) {
+    tracker_particle->push_field_data_snapshot("vector", field_data);
+
+    if (k != 0) tracker_particle->advance_timestep();
+    if (k == stream->n_timesteps() - 1) tracker_particle->update_timestep();
+  });
+  stream->start();
+  stream->finish();
 }
 
 void initialize_critical_line_tracker(diy::mpi::communicator comm)

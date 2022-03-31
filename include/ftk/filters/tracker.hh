@@ -51,11 +51,16 @@ public:
   virtual void update_timestep() = 0;
 
 public:
-  virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group>) {}
+  virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group> g) {snapshots.push_back(g);}
+  virtual void push_field_data_snapshot(const std::string key, const ndarray<double>& arr) {
+    std::shared_ptr<ndarray_group> g(new ndarray_group);
+    g->set(key, arr);
+    push_field_data_snapshot(g);
+  }
   virtual bool pop_field_data_snapshot();
 
 protected:
-  std::deque<field_data_snapshot_t> snapshots;
+  std::deque<std::shared_ptr<ndarray_group>> snapshots;
 
 protected:
   // diy::Master master;
