@@ -7,6 +7,7 @@
 namespace ftk {
 
 enum {
+  FTK_ERR_NOT_IMPLEMENTED = 1,
   FTK_ERR_FILE_NOT_FOUND = 1000,
   FTK_ERR_FILE_CANNOT_OPEN,
   FTK_ERR_FILE_CANNOT_WRITE,
@@ -57,6 +58,7 @@ enum {
 inline std::string err2str(int e)
 {
   switch (e) {
+  case FTK_ERR_NOT_IMPLEMENTED: return "not implemented yet";
   case FTK_ERR_FILE_NOT_FOUND: return "file not found";
   case FTK_ERR_FILE_CANNOT_OPEN: return "cannot open file";
   case FTK_ERR_FILE_CANNOT_WRITE: return "cannot write file";

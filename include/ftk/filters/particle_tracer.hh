@@ -19,7 +19,7 @@ struct particle_tracer : public virtual tracker
   bool advance_timestep();
 
 protected:
-  virtual bool eval_v(const double *x, double *v);
+  virtual bool eval_v(const double *x, double *v) = 0;
 
 protected:
   std::vector<feature_point_lite_t> particles;

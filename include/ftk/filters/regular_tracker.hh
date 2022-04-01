@@ -73,9 +73,35 @@ protected: // internal use
   void element_for_ordinal(int k, std::function<void(element_t)> f) { element_for(true, k, f); }
   void element_for_interval(int k, std::function<void(element_t)> f) { element_for(false, k, f); }
   void element_for(bool ordinal, int k, std::function<void(element_t)> f);
+
+  bool locate_spatial_quad(const double *x, int *corner, double *quad_coords) const;
 };
 
 /////////////////////////////
+
+inline bool regular_tracker::locate_spatial_quad(const double *x, int *corner, double *quad_coords) const
+{
+  if (mode_phys_coords == REGULAR_COORDS_EXPLICIT) {
+    fatal(FTK_ERR_NOT_IMPLEMENTED);
+    return false;
+  } else if (mode_phys_coords == REGULAR_COORDS_RECTILINEAR) {
+    fatal(FTK_ERR_NOT_IMPLEMENTED);
+    return false;
+  } else if (mode_phys_coords == REGULAR_COORDS_BOUNDS) {
+    fatal(FTK_ERR_NOT_IMPLEMENTED);
+    return false;
+  } else { // simple
+    const int nd = m.nd() - 1;
+    for (int i = 0; i < nd; i ++) {
+      corner[i] = x[i];
+      quad_coords[i] = x[i] - corner[i];
+      if (corner[i] < 0 || corner[i] >= domain.upper_bound(i))
+        return false;
+    }
+    return true;
+  }
+}
+
 inline void regular_tracker::initialize()
 {
 #if 0
