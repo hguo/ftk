@@ -609,9 +609,9 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
     rtracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
   // vti with bounds
-  const std::string filename0 = js["filenames"][0];
-  if (file_extension(filename0) == FILE_EXT_VTI) {
+  if (js.contains("format") && js["format"] == "vti") {
 #if FTK_HAVE_VTK
+    const std::string filename0 = js["filenames"][0];
     vtkSmartPointer<vtkXMLImageDataReader> reader = vtkXMLImageDataReader::New();
     reader->SetFileName(filename0.c_str());
     reader->Update();
