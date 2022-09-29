@@ -608,6 +608,19 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
     rtracker.reset(new critical_point_tracker_3d_regular(comm));
     rtracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
+  // vti with bounds
+  const std::string filename0 = js["filenames"][0];
+  if (file_extension(filename0) == FILE_EXT_VTI) {
+#if FTK_HAVE_VTK
+    vtkSmartPointer<vtkXMLImageDataReader> reader = vtkXMLImageDataReader::New();
+    reader->SetFileName(filename0.c_str());
+    reader->Update();
+    vtkSmartPointer<vtkImageData> image = reader->GetOutput();
+    rtracker->set_coords_bounds(image);
+#else
+    fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+  }
 
   if (nv == 1) { // scalar field
     rtracker->set_scalar_field_source( ftk::SOURCE_GIVEN );

@@ -33,6 +33,7 @@ struct lattice {
   size_t start(size_t i) const {return starts_[i];}
   size_t size(size_t i) const {return sizes_[i];}
   size_t upper_bound(size_t i) const {return starts_[i] + sizes_[i] - 1;}
+  size_t lower_bound(size_t i) const {return starts_[i];} // + sizes_[i] - 1;}
 
   size_t n() const {return prod_[nd()-1] * sizes_[nd()-1];}
   const std::vector<size_t>& starts() const {return starts_;}
