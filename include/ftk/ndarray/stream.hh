@@ -503,7 +503,11 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1]};
           else 
             j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1], image->GetDimensions()[2]};
-          
+        
+          std::vector<double> bounds(6, 0);
+          image->GetBounds(&bounds[0]);
+          j["image_bounds"] = bounds;
+
           if (missing_variables) {
             const std::string var = image->GetPointData()->GetArrayName(0);
             j["variables"] = {var};
