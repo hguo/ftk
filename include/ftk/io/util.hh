@@ -24,6 +24,7 @@ enum {
   FILE_EXT_VTI, // vtk xml image data
   FILE_EXT_VTP, // vtk xml poly data
   FILE_EXT_VTU, // vtk xml unstructured grid data
+  FILE_EXT_PVTU, // vtk xml parallel unstructured grid data
   FILE_EXT_VTK, // legacy vtk format
   FILE_EXT_PLY, // surface
   FILE_EXT_STL  // surface

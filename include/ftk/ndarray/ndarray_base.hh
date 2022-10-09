@@ -24,6 +24,7 @@
 #include <vtkXMLImageDataWriter.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkXMLUnstructuredGridReader.h>
+#include <vtkXMLPUnstructuredGridReader.h>
 #include <vtkDataReader.h>
 #include <vtkNew.h>
 #endif

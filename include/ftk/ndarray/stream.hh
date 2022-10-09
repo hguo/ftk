@@ -460,6 +460,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           
           if (ext == FILE_EXT_VTI) j["format"] = "vti";
           else if (ext == FILE_EXT_VTU) j["format"] = "vtu";
+          else if (ext == FILE_EXT_PVTU) j["format"] = "pvtu";
           else if (ext == FILE_EXT_NETCDF) j["format"] = "nc";
           else if (ext == FILE_EXT_HDF5) j["format"] = "h5";
           else if (ext == FILE_EXT_BP) { // need to further distinguish if input is bp3 or bp4
@@ -532,13 +533,20 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
-        } else if (j["format"] == "vtu") {
+        } else if (j["format"] == "vtu" || j["format"] == "pvtu") {
 #if FTK_HAVE_VTK
-          vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
-          reader->SetFileName(filename0.c_str());
-          reader->Update();
-
-          vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+          vtkSmartPointer<vtkUnstructuredGrid> grid;
+          if (j["format" ] == "vtu") {
+            vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
+            reader->SetFileName(filename0.c_str());
+            reader->Update();
+            grid = reader->GetOutput();
+          } else if (j["format"] == "pvtu") {
+            vtkSmartPointer<vtkXMLPUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLPUnstructuredGridReader>::New();
+            reader->SetFileName(filename0.c_str());
+            reader->Update();
+            grid = reader->GetOutput();
+          }
           
           if (j.contains("dimensions")) 
             warn("ignoring dimensions");
@@ -930,7 +938,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
     return request_timestep_file_binary<double>(k);
   else if (fmt == "vti")
     return request_timestep_file_vti(k);
-  else if (fmt == "vtu")
+  else if (fmt == "vtu" || fmt == "pvtu")
     return request_timestep_file_vtu(k);
   else if (fmt == "nc")
     return request_timestep_file_nc(k);
@@ -1021,11 +1029,18 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
 
 #if FTK_HAVE_VTK
   if (comm.rank() == 0) {
-    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
-    reader->SetFileName(filename.c_str());
-    reader->Update();
-
-    vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+    vtkSmartPointer<vtkUnstructuredGrid> grid;
+    if (j["format" ] == "vtu") {
+      vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
+      reader->SetFileName(filename.c_str());
+      reader->Update();
+      grid = reader->GetOutput();
+    } else if (j["format"] == "pvtu") {
+      vtkSmartPointer<vtkXMLPUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLPUnstructuredGridReader>::New();
+      reader->SetFileName(filename.c_str());
+      reader->Update();
+      grid = reader->GetOutput();
+    }
 
     const int nv = n_variables();
     if (nv == 1) { //  (is_single_component()) {
