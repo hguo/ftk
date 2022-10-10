@@ -720,7 +720,8 @@ static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& res
 
   if (results.count("input-format")) j["format"] = results["input-format"].as<std::string>();
   if (results.count("dim")) j["nd"] = results["dim"].as<std::string>();
-  
+  if (results.count("bounds")) j["bounds"] = results["bounds"].as<std::string>();
+
   std::vector<size_t> dims;
   if (results.count("depth")) {
     dims.resize(3);
@@ -769,6 +770,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("w,width", "Width", cxxopts::value<size_t>())
     ("h,height", "Height", cxxopts::value<size_t>())
     ("d,depth", "Depth (valid only for 3D regular grid data)", cxxopts::value<size_t>())
+    ("bounds", "Bounds for resampling to regular grid data", cxxopts::value<std::string>())
     ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>(ntimesteps))
     ("start-timestep", "Start timestep", cxxopts::value<size_t>(start_timestep))
     ("var", "Variable name(s), e.g. `scalar', `u,v,w'.  Valid only for NetCDF, HDF5, and VTK.", cxxopts::value<std::string>())

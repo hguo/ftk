@@ -511,7 +511,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
         
           std::vector<double> bounds(6, 0);
           image->GetBounds(&bounds[0]);
-          j["image_bounds"] = bounds;
+          j["bounds"] = bounds;
 
           if (missing_variables) {
             const std::string var = image->GetPointData()->GetArrayName(0);
@@ -561,9 +561,19 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
               fatal("missing dimensions.");
 
             // check resample bounds; if resample bounds are missing, will use auto bounds
-            if (j.contains("image_bounds") && j["image_bounds"].is_array()) {
-              auto jb = j["image_bounds"];
+            if (j.contains("bounds")) {
+              auto jb = j["bounds"];
+              std::vector<double> mybounds;
+              if (jb.is_string()) { // parse comma separated bounds
+                auto strs = ftk::split(jb.template get<std::string>(), ",");
+                for (const auto str : strs) {
+                  mybounds.push_back(std::stod(str));
+                  // fprintf(stderr, "%f\n", std::stod(str));
+                }
+              }
+              j["bounds"] = mybounds;
             }
+
           } else {
             if (j.contains("dimensions")) 
               warn("ignoring dimensions");
@@ -956,7 +966,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
     return request_timestep_file_binary<double>(k);
   else if (fmt == "vti")
     return request_timestep_file_vti(k);
-  else if (fmt == "vtu" || fmt == "pvtu")
+  else if (fmt == "vtu" || fmt == "pvtu" || fmt == "pvtu_resample")
     return request_timestep_file_vtu(k);
   else if (fmt == "nc")
     return request_timestep_file_nc(k);
@@ -1054,8 +1064,9 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
       reader->SetFileName(filename.c_str());
       reader->Update();
       grid = reader->GetOutput();
-    } else if (j["format"] == "pvtu" || j["format"] == "pvtu") {
-      resample = true;
+    } else if (j["format"] == "pvtu" || j["format"] == "pvtu_resample") {
+      if (j["format"] == "pvtu_resample")
+        resample = true;
       vtkSmartPointer<vtkXMLPUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLPUnstructuredGridReader>::New();
       reader->SetFileName(filename.c_str());
       reader->Update();
@@ -1070,8 +1081,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
         dims[i] = j["dimensions"][i];
       resample->SetSamplingDimensions(dims[0], dims[1], dims[2]);
 
-      if (j.contains("image_bounds") && j["image_bounds"].is_array()) {
-        auto jb = j["image_bounds"];
+      if (j.contains("bounds") && j["bounds"].is_array()) {
+        auto jb = j["bounds"];
         std::array<double, 6> b{0};
         for (int i = 0; i < jb.size(); i ++)
           b[i] = jb[i];
@@ -1085,9 +1096,26 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
       resample->Update();
 
       vtkSmartPointer<vtkImageData> vti = resample->GetOutput();
+      // vti->PrintSelf(std::cerr, vtkIndent(2));
 
-      // TODO: read arrays from vti
+      // read arrays from vti
+      const int nv = n_variables();
+      if (nv == 1) { //  (is_single_component()) {
+        array.from_vtk_image_data(vti, j["variables"][0]);
+      } else {
+        std::vector<ftk::ndarray<T>> arrays(nv);
+        for (int i = 0; i < nv; i ++)
+          arrays[i].from_vtk_image_data(vti, j["variables"][i]);
 
+        array.reshape(shape());
+        for (int i = 0; i < arrays[0].nelem(); i ++) {
+          for (int j = 0; j <nv; j ++) {
+            array[i*nv+j] = arrays[j][i];
+          }
+        }
+
+        array.set_multicomponents();
+      }
     } else { // no resample
       const int nv = n_variables();
       if (nv == 1) { //  (is_single_component()) {
