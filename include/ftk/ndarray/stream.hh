@@ -11,6 +11,10 @@
 #include <ftk/utils/scatter.hh>
 #include <ftk/utils/bcast.hh>
 
+#if FTK_HAVE_VTK
+#include <vtkResampleToImage.h>
+#endif
+
 namespace ftk {
 using nlohmann::json;
 
@@ -533,24 +537,38 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
-        } else if (j["format"] == "vtu" || j["format"] == "pvtu") {
+        } else if (j["format"] == "vtu" || j["format"] == "pvtu" || j["format"] == "pvtu_resample") {
 #if FTK_HAVE_VTK
+          bool resample = false;
+          if (j["format"] == "pvtu_resample") 
+            resample = true;
+
           vtkSmartPointer<vtkUnstructuredGrid> grid;
           if (j["format" ] == "vtu") {
             vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
             reader->SetFileName(filename0.c_str());
             reader->Update();
             grid = reader->GetOutput();
-          } else if (j["format"] == "pvtu") {
+          } else if (j["format"] == "pvtu" || j["format"] == "pvtu_resample") {
             vtkSmartPointer<vtkXMLPUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLPUnstructuredGridReader>::New();
             reader->SetFileName(filename0.c_str());
             reader->Update();
             grid = reader->GetOutput();
           }
-          
-          if (j.contains("dimensions")) 
-            warn("ignoring dimensions");
-          j["dimensions"] = {0}; // workaround
+         
+          if (resample) {
+            if (missing_dimensions)
+              fatal("missing dimensions.");
+
+            // check resample bounds; if resample bounds are missing, will use auto bounds
+            if (j.contains("image_bounds") && j["image_bounds"].is_array()) {
+              auto jb = j["image_bounds"];
+            }
+          } else {
+            if (j.contains("dimensions")) 
+              warn("ignoring dimensions");
+            j["dimensions"] = {0}; // workaround
+          }
           
           if (missing_variables) {
             const std::string var = grid->GetPointData()->GetArrayName(0);
@@ -1026,6 +1044,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
 {
   ftk::ndarray<T> array;
   const std::string filename = j["filenames"][k];
+  bool resample = false;
 
 #if FTK_HAVE_VTK
   if (comm.rank() == 0) {
@@ -1035,29 +1054,58 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
       reader->SetFileName(filename.c_str());
       reader->Update();
       grid = reader->GetOutput();
-    } else if (j["format"] == "pvtu") {
+    } else if (j["format"] == "pvtu" || j["format"] == "pvtu") {
+      resample = true;
       vtkSmartPointer<vtkXMLPUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLPUnstructuredGridReader>::New();
       reader->SetFileName(filename.c_str());
       reader->Update();
       grid = reader->GetOutput();
     }
 
-    const int nv = n_variables();
-    if (nv == 1) { //  (is_single_component()) {
-      array.from_vtu(grid, j["variables"][0]);
-    } else {
-      std::vector<ftk::ndarray<T>> arrays(nv);
-      for (int i = 0; i < nv; i ++)
-        arrays[i].from_vtu(grid, j["variables"][i]);
+    if (resample) {
+      vtkSmartPointer<vtkResampleToImage> resample = vtkResampleToImage::New();
 
-      array.reshape(shape());
-      for (int i = 0; i < arrays[0].nelem(); i ++) {
-        for (int j = 0; j <nv; j ++) {
-          array[i*nv+j] = arrays[j][i];
-        }
+      std::array<int, 3> dims = {1, 1, 1};
+      for (int i = 0; i < j["dimensions"].size(); i ++)
+        dims[i] = j["dimensions"][i];
+      resample->SetSamplingDimensions(dims[0], dims[1], dims[2]);
+
+      if (j.contains("image_bounds") && j["image_bounds"].is_array()) {
+        auto jb = j["image_bounds"];
+        std::array<double, 6> b{0};
+        for (int i = 0; i < jb.size(); i ++)
+          b[i] = jb[i];
+
+        resample->SetUseInputBounds(false);
+        resample->SetSamplingBounds(b[0], b[1], b[2], b[3], b[4], b[5]);
+      } else {
+        resample->SetUseInputBounds(true);
       }
+      resample->SetInputDataObject(grid);
+      resample->Update();
 
-      array.set_multicomponents();
+      vtkSmartPointer<vtkImageData> vti = resample->GetOutput();
+
+      // TODO: read arrays from vti
+
+    } else { // no resample
+      const int nv = n_variables();
+      if (nv == 1) { //  (is_single_component()) {
+        array.from_vtu(grid, j["variables"][0]);
+      } else {
+        std::vector<ftk::ndarray<T>> arrays(nv);
+        for (int i = 0; i < nv; i ++)
+          arrays[i].from_vtu(grid, j["variables"][i]);
+
+        array.reshape(shape());
+        for (int i = 0; i < arrays[0].nelem(); i ++) {
+          for (int j = 0; j <nv; j ++) {
+            array[i*nv+j] = arrays[j][i];
+          }
+        }
+
+        array.set_multicomponents();
+      }
     }
   }
   
