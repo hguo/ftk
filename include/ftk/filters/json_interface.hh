@@ -611,8 +611,8 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
 
   // image bounds, if configured (usually from vti files);
   std::vector<double> bounds;
-  if (js.contains("image_bounds")) {
-    bounds = js["image_bounds"].get<std::vector<double>>();
+  if (js.contains("bounds")) {
+    bounds = js["bounds"].get<std::vector<double>>();
     rtracker->set_coords_bounds(bounds);
   }
 
