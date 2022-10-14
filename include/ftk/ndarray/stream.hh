@@ -216,6 +216,20 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
   } else 
     missing_dimensions = true;
 
+  // check bounds; 
+  if (j.contains("bounds")) { // TODO: check if inputs are an array or a string
+    auto jb = j["bounds"];
+    std::vector<double> mybounds;
+    if (jb.is_string()) { // parse comma separated bounds
+      auto strs = ftk::split(jb.template get<std::string>(), ",");
+      for (const auto str : strs) {
+        mybounds.push_back(std::stod(str));
+        // fprintf(stderr, "%f\n", std::stod(str));
+      }
+    }
+    j["bounds"] = mybounds;
+  }
+
   // check if missing variables
   bool missing_variables = false;
   if (j.contains("variables")) { 
@@ -509,7 +523,10 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1]};
           else 
             j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1], image->GetDimensions()[2]};
-        
+       
+          if (j.contains("bounds"))
+            warn("input bounds will be overridden");
+
           std::vector<double> bounds(6, 0);
           image->GetBounds(&bounds[0]);
           j["bounds"] = bounds;
@@ -561,20 +578,7 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             if (missing_dimensions)
               fatal("missing dimensions.");
 
-            // check resample bounds; if resample bounds are missing, will use auto bounds
-            if (j.contains("bounds")) {
-              auto jb = j["bounds"];
-              std::vector<double> mybounds;
-              if (jb.is_string()) { // parse comma separated bounds
-                auto strs = ftk::split(jb.template get<std::string>(), ",");
-                for (const auto str : strs) {
-                  mybounds.push_back(std::stod(str));
-                  // fprintf(stderr, "%f\n", std::stod(str));
-                }
-              }
-              j["bounds"] = mybounds;
-            }
-
+            // if resample bounds are missing, will use auto bounds
           } else {
             if (j.contains("dimensions")) 
               warn("ignoring dimensions");
