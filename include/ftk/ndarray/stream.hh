@@ -1577,29 +1577,84 @@ void ndarray_stream<T>::start()
     temporal_filter.set_callback(callback);
   }
 
-  for (size_t i = 0; i < j["n_timesteps"]; i ++) {
-    auto t0 = std::chrono::high_resolution_clock::now();
+  const int nt = j["n_timesteps"];
+  const bool async = j.contains("async");
+
+  if (async) {
+    std::condition_variable cond;
+    std::mutex mtx;
+    bool all_done = false;
+    int current_timestep;
     ndarray<T> array;
-    if (j["type"] == "synthetic") {
-      array = request_timestep_synthetic(i);
-      // fprintf(stderr, "requested data ncd=%zu, ncd1=%zu\n", array.multicomponents(), array1.multicomponents());
-    }
-    else if (j["type"] == "file") {
-      array = request_timestep_file(i);
-      if (array.empty()) {
-        fprintf(stderr, "got empty array; all files are read.\n"); 
-        break;
+
+    std::thread producer([&]() {
+      for (int i = 0; i < nt; i ++) {
+        // fprintf(stderr, "reading timestep %d\n", i);
+        ndarray<T> array1;
+
+        auto t1 = std::chrono::high_resolution_clock::now();
+        if (j["type"] == "synthetic") {
+          array1 = request_timestep_synthetic(i);
+        } else if (j["type"] == "file") {
+          array1 = request_timestep_file(i);
+        }
+        auto t2 = std::chrono::high_resolution_clock::now();
+        float t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count() * 1e-9;
+        fprintf(stderr, "timestep=%d, t_io=%f\n", i, t);
+
+        {
+          std::unique_lock<std::mutex> lock(mtx);
+
+          array = array1;
+          current_timestep = i;
+          if (i == nt-1 || array1.empty()) {
+            all_done = true;
+          }
+          cond.notify_one();
+        }
+      }
+      // fprintf(stderr, "exiting reader thread..\n");
+    });
+
+    { // consumer
+      std::unique_lock<std::mutex> lock(mtx);
+      while (!all_done) {
+        cond.wait(lock); // , [&](){return all_done;});
+      
+        auto t1 = std::chrono::high_resolution_clock::now();
+        modified_callback(current_timestep, array);
+        auto t2 = std::chrono::high_resolution_clock::now();
+        float t = std::chrono::duration_cast<std::chrono::nanoseconds>(t2-t1).count() * 1e-9;
+        fprintf(stderr, "timestep=%d, t_compute=%f\n", current_timestep, t);
       }
     }
-    auto t1 = std::chrono::high_resolution_clock::now();
 
-    modified_callback(i, array);
-    auto t2 = std::chrono::high_resolution_clock::now();
+    producer.join();
+  } else {
+    for (size_t i = 0; i < nt; i ++) {
+      auto t0 = std::chrono::high_resolution_clock::now();
+      ndarray<T> array;
+      if (j["type"] == "synthetic") {
+        array = request_timestep_synthetic(i);
+        // fprintf(stderr, "requested data ncd=%zu, ncd1=%zu\n", array.multicomponents(), array1.multicomponents());
+      }
+      else if (j["type"] == "file") {
+        array = request_timestep_file(i);
+        if (array.empty()) {
+          fprintf(stderr, "got empty array; all files are read.\n"); 
+          break;
+        }
+      }
+      auto t1 = std::chrono::high_resolution_clock::now();
 
-    float t_io = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
-          t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9;
-    
-    fprintf(stderr, "timestep=%zu, t_io=%f, t_compute=%f\n", i, t_io, t_compute);
+      modified_callback(i, array);
+      auto t2 = std::chrono::high_resolution_clock::now();
+
+      float t_io = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9,
+            t_compute = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9;
+      
+      fprintf(stderr, "timestep=%zu, t_io=%f, t_compute=%f\n", i, t_io, t_compute);
+    }
   }
 }
  

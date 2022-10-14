@@ -39,7 +39,7 @@ std::string archived_intersections_filename, // archived_discrete_critical_point
 std::string thread_backend, accelerator;
 std::string type_filter_str;
 int nthreads = std::thread::hardware_concurrency();
-bool affinity = false;
+bool affinity = false, async = false;
 bool verbose = false, timing = false, help = false;
 int nblocks; 
 bool enable_streaming_trajectories = false,
@@ -712,6 +712,9 @@ static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& res
       j["filenames"] = results["input"].as<std::string>();
   }
 
+  if (results.count("async"))
+    j["async"] = true;
+
   if (results.count("synthetic")) {
     j["type"] = "synthetic";
     j["name"] = results["synthetic"].as<std::string>();
@@ -833,6 +836,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<std::string>(post_processing_options)->default_value(""))
     ("no-robust-detection", "Disable robust detection (faster than robust detection)",
      cxxopts::value<bool>(disable_robust_detection))
+    ("async", "Asynchronous I/O", 
+     cxxopts::value<bool>(async))
     ("v,verbose", "Verbose outputs", cxxopts::value<bool>(verbose))
     ("help", "Print usage", cxxopts::value<bool>(help));
   auto results = options.parse(argc, argv);
