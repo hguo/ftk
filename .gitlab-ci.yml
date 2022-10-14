@@ -68,6 +68,8 @@ python3-setup-build-only:
     - module load anaconda3/2021.05
   script:
     - python setup.py build
+  tags:
+    - "20.04"
 
 python3:
   extends: .basic_job
