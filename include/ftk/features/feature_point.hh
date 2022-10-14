@@ -17,7 +17,7 @@ struct feature_point_t {
   feature_point_t(const feature_point_t& p) {
     x = p.x;
     t = p.t;
-    cond = p.cond;
+    // cond = p.cond;
     timestep = p.timestep;
     scalar = p.scalar;
     v = p.v;
@@ -29,7 +29,7 @@ struct feature_point_t {
   feature_point_t& operator=(const feature_point_t& p) {
     x = p.x;
     t = p.t;
-    cond = p.cond;
+    // cond = p.cond;
     timestep = p.timestep;
     scalar = p.scalar;
     v = p.v;
@@ -62,7 +62,7 @@ struct feature_point_t {
     os << "x=(" << x[0] << ", " << x[1] << ", " << x[2] << "), ";
     os << "t=" << t << ", ";
 
-    os << "cond=" << cond << ", ";
+    // os << "cond=" << cond << ", ";
 
     for (int k = 0; k < scalar_components.size(); k ++)
       os << scalar_components[k] << "=" << scalar[k] << ", ";
@@ -88,7 +88,7 @@ struct feature_point_t {
 public:
   std::array<double, 3> x = {0}; // double x[3] = {0}; // coordinates 
   double t = 0.0; // time
-  double cond = 0.0; // condition number
+  // double cond = 0.0; // condition number
   int timestep = 0; 
   // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
   std::array<double, FTK_CP_MAX_NUM_VARS> scalar = {0}; // double scalar[FTK_CP_MAX_NUM_VARS] = {0};
@@ -110,7 +110,7 @@ namespace nlohmann
     static void to_json(json &j, const feature_point_t& cp) {
       j["x"] = cp.x; 
       j["t"] = cp.t;
-      j["cond"] = cp.cond;
+      // j["cond"] = cp.cond;
       j["timestep"] = cp.timestep;
       j["scalar"] = cp.scalar; 
       j["v"] = cp.v;
@@ -123,7 +123,7 @@ namespace nlohmann
     static void from_json(const json& j,feature_point_t& cp) {
       cp.x = j["x"];  
       cp.t = j["t"];
-      cp.cond = j["cond"];
+      // cp.cond = j["cond"];
       cp.timestep = j["timestep"];
       cp.scalar = j["scalar"];  
       cp.v = j["v"];
@@ -141,7 +141,7 @@ namespace diy {
     static void save(diy::BinaryBuffer& bb, const ftk::feature_point_t &cp) {
       diy::save(bb, cp.x); 
       diy::save(bb, cp.t);
-      diy::save(bb, cp.cond);
+      // diy::save(bb, cp.cond);
       diy::save(bb, cp.timestep);
       diy::save(bb, cp.scalar); 
       diy::save(bb, cp.v);
@@ -154,7 +154,7 @@ namespace diy {
     static void load(diy::BinaryBuffer& bb, ftk::feature_point_t &cp) {
       diy::load(bb, cp.x); 
       diy::load(bb, cp.t);  
-      diy::load(bb, cp.cond);
+      // diy::load(bb, cp.cond);
       diy::load(bb, cp.timestep);
       diy::load(bb, cp.scalar); 
       diy::load(bb, cp.v);

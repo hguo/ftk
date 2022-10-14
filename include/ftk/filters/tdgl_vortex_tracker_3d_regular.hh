@@ -213,7 +213,7 @@ inline bool tdgl_vortex_tracker_3d_regular::check_simplex(
   p.x[1] = x[1];
   p.x[2] = x[2];
   p.t = x[3];
-  p.cond = cond;
+  // p.cond = cond;
   p.tag = e.to_integer(m);
   p.ordinal = e.is_ordinal(m);
   p.timestep = current_timestep;

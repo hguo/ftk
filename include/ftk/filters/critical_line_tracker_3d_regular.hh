@@ -263,7 +263,7 @@ inline bool critical_line_tracker_3d_regular::check_simplex(
   p.v[1] = mu[1];
   p.v[2] = mu[2];
   // p.scalar[0] = mu[0] * UV[0][2] + mu[1] * UV[1][2] + mu[2] * UV[2][2];
-  p.cond = cond;
+  // p.cond = cond;
   p.tag = e.to_integer(m);
   p.ordinal = e.is_ordinal(m);
   p.timestep = current_timestep;

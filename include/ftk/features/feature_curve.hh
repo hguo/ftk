@@ -27,7 +27,7 @@ struct feature_curve_t : public std::vector<feature_point_t>
   void smooth_interval_types(); //! make types in intervals consistent
 
   void discard(std::function<bool(const feature_point_t&)> f);
-  void discard_high_cond(double threshold = 1e8); //! prune points with very high condition numbers, unless the point is ordinal
+  // void discard_high_cond(double threshold = 1e8); //! prune points with very high condition numbers, unless the point is ordinal
   void discard_interval_points();
   void discard_degenerate_points();
   
@@ -131,13 +131,13 @@ inline void feature_curve_t::discard_degenerate_points() {
   });
 }
 
-inline void feature_curve_t::discard_high_cond(double threshold)
-{
-  discard([&](const feature_point_t& cp) {
-    if (std::isinf(cp.cond) || std::isnan(cp.cond) || cp.cond > threshold) return true;
-    else return false;
-  });
-}
+// inline void feature_curve_t::discard_high_cond(double threshold)
+// {
+//   discard([&](const feature_point_t& cp) {
+//     if (std::isinf(cp.cond) || std::isnan(cp.cond) || cp.cond > threshold) return true;
+//     else return false;
+//   });
+// }
   
 inline void feature_curve_t::update_statistics() {
   if (empty()) return; // nothing to do

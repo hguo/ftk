@@ -81,7 +81,7 @@ bool check_simplex_3dclt(
     p.x[1] = x[1];
     p.x[2] = x[2];
     p.t = x[3];
-    p.cond = cond;
+    // p.cond = cond;
 
     // printf("%f, %f, %f, %f\n", x[0], x[1], x[2], x[3]);
 

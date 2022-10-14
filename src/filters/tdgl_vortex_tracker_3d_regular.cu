@@ -126,7 +126,7 @@ bool check_simplex_tdgl_vortex_3dt(
   p.x[1] = x[1];
   p.x[2] = x[2];
   p.t = x[3];
-  p.cond = cond;
+  // p.cond = cond;
 
   return true;
 }

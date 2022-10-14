@@ -745,7 +745,7 @@ void json_interface::post_process()  // FIXME: legacy post processing code, to b
   auto &trajs = tracker->get_traced_critical_points();
 
   trajs.foreach([](ftk::feature_curve_t& t) {
-    t.discard_high_cond();
+    // t.discard_high_cond();
     t.smooth_ordinal_types();
     t.smooth_interval_types();
     t.rotate();

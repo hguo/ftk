@@ -120,7 +120,7 @@ bool check_simplex_cp2t(
     cp.x[0] = x[0];
     cp.x[1] = x[1];
     cp.t = x[2];
-    cp.cond = cond;
+    // cp.cond = cond;
     
     return true;
   } else 

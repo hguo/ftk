@@ -276,7 +276,7 @@ inline void feature_curve_set_t::from_vtp(vtkSmartPointer<vtkPolyData> poly, con
       p.type = arr_type->GetValue(i);
       p.id = arr_id->GetValue(i);
       p.tag = arr_tag->GetValue(i);
-      p.cond = arr_cond->GetValue(i);
+      // p.cond = arr_cond->GetValue(i);
 
       const double *v = arr_vel->GetTuple(i);
       p.v[0] = v[0];
@@ -408,6 +408,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
     polyData->GetPointData()->AddArray(time);
   }
   
+#if 0
   if (1) { // condition numbers
     vtkSmartPointer<vtkFloatArray> conds = vtkSmartPointer<vtkFloatArray>::New();
     conds->SetNumberOfValues(nv);
@@ -420,6 +421,7 @@ inline vtkSmartPointer<vtkPolyData> feature_curve_set_t::to_vtp(const std::vecto
     conds->SetName("cond");
     polyData->GetPointData()->AddArray(conds);
   }
+#endif
   
   // point data for scalars
   // if (has_scalar_field) {

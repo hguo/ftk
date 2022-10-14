@@ -22,12 +22,13 @@ protected:
 inline void feature_curve_set_post_processor_t::filter(feature_curve_set_t &trajs) const
 {
   for (const auto op : ops) {
-    if (op == "discard_high_cond") {
-      trajs.foreach([](ftk::feature_curve_t& t) {
-        t.discard_high_cond();
-        t.update_statistics();
-      });
-    } else if (op == "smooth_types") {
+    // if (op == "discard_high_cond") {
+    //   trajs.foreach([](ftk::feature_curve_t& t) {
+    //     t.discard_high_cond();
+    //     t.update_statistics();
+    //   });
+    // } else 
+    if (op == "smooth_types") {
       trajs.foreach([](ftk::feature_curve_t& t) {
         t.smooth_ordinal_types();
         t.smooth_interval_types();

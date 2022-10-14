@@ -476,7 +476,7 @@ inline bool critical_point_tracker_3d_regular::check_simplex(
   cp.x[1] = x[1];
   cp.x[2] = x[2];
   cp.t = x[3];
-  cp.cond = cond;
+  // cp.cond = cond;
 
   if (scalar_field_source != SOURCE_NONE) {
     double values[4];
