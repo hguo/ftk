@@ -4,6 +4,7 @@
 #include <ftk/object.hh>
 #include <fstream>
 #include <chrono>
+#include <condition_variable>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/filters/streaming_filter.hh>
