@@ -219,15 +219,25 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
   // check bounds; 
   if (j.contains("bounds")) { // TODO: check if inputs are an array or a string
     auto jb = j["bounds"];
-    std::vector<double> mybounds;
-    if (jb.is_string()) { // parse comma separated bounds
-      auto strs = ftk::split(jb.template get<std::string>(), ",");
-      for (const auto str : strs) {
-        mybounds.push_back(std::stod(str));
-        // fprintf(stderr, "%f\n", std::stod(str));
+    if (jb.is_string()) { // convert a comma-separeted string to an array
+      std::vector<double> mybounds;
+      if (jb.is_string()) { // parse comma separated bounds
+        auto strs = ftk::split(jb.template get<std::string>(), ",");
+        for (const auto str : strs) {
+          mybounds.push_back(std::stod(str));
+          // fprintf(stderr, "%f\n", std::stod(str));
+        }
       }
-    }
-    j["bounds"] = mybounds;
+      j["bounds"] = mybounds;
+    } else if (jb.is_array()) { // check if each element is a number; the maximum length of the array should be 6
+      if (jb.size() > 6)
+        warn("bounds cannot exceed 6 numbers");
+
+      for (int i = 0; i < jb.size(); i ++)
+        if (!jb[i].is_number())
+          fatal("bounds must be numbers");
+    } else 
+      fatal("bounds must be an array or a comma-seprated string");
   }
 
   // check if missing variables
@@ -1449,10 +1459,16 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_woven(int k)
 {
   const int nt = j["n_timesteps"];
   const T t = nt == 1 ? 0.0 : double(k)/(nt-1);
-  auto arr = ftk::synthetic_woven_2D<T>(j["dimensions"][0], j["dimensions"][1], t);
+  const size_t DW = j["dimensions"][0], DH = j["dimensions"][1];
 
-  if (part) return arr.subarray(ext);
-  else return arr;
+  if (part) {
+    lattice domain({0, 0}, {DW, DH});
+    return ftk::synthetic_woven_2D_part<T>(domain, ext, t);
+  } else {
+    return ftk::synthetic_woven_2D<T>(DW, DH, t);
+  }
+  // if (part) return arr.subarray(ext);
+  // else return arr;
 }
 
 template <typename T>

@@ -47,13 +47,15 @@ inline void write_polydata(
     comm.barrier();
     const auto prefix = remove_file_extension(filename);
     const auto f = prefix + "_" + std::to_string(comm.rank()) + ".vtp";
-    write_polydata(f, poly, "vtp", comm);
+    write_polydata(f, poly, "vtp", MPI_COMM_SELF);
   } else if (format == "vtp") {
-    fprintf(stderr, "writing vtp to %s\n", filename.c_str());
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
-    writer->SetFileName(filename.c_str());
-    writer->SetInputData(poly);
-    writer->Write();
+    if (comm.rank() == 0) {
+      fprintf(stderr, "writing vtp to %s\n", filename.c_str());
+      vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
+      writer->SetFileName(filename.c_str());
+      writer->SetInputData(poly);
+      writer->Write();
+    }
   } else if (format == "ply") {
 #ifndef FTK_HAVE_PARAVIEW
     vtkSmartPointer<vtkPLYWriter> writer = vtkPLYWriter::New();

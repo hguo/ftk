@@ -738,6 +738,7 @@ std::vector<feature_curve_t> critical_point_tracker::trace_critical_points_offli
 
   fprintf(stderr, "rank=%d, #curves=%zu\n", comm.rank(), traced_critical_points.size());
 
+  // FIXME: need to know earlier if the output trajectories will be written (into pvtp) later.  In this case, no gathering is needed
   diy::mpi::gather<std::vector<feature_curve_t>>(comm, traced_critical_points, traced_critical_points, get_root_proc(), 
       [](const std::vector<feature_curve_t>& in, std::vector<feature_curve_t>& out) {
         for (const auto& v : in)
