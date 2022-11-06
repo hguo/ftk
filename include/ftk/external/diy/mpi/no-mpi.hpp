@@ -11,6 +11,7 @@ static const int MPI_ANY_TAG = -1;
 /* define communicator type and constants */
 using MPI_Comm = int;
 static const MPI_Comm MPI_COMM_NULL = 0;
+static const MPI_Comm MPI_COMM_SELF = 1;
 static const MPI_Comm MPI_COMM_WORLD = 1;
 
 /* MPI threading modes */
