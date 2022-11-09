@@ -96,6 +96,10 @@ if (FTK_HAVE_TBB)
   target_link_libraries (libftk ${TBB_LIBRARIES})
 endif ()
 
+if (FTK_HAVE_METIS)
+  target_link_libraries (libftk ${METIS_LIBRARIES})
+endif ()
+
 if (FTK_HAVE_MPI)
   add_subdirectory (bil)
   target_link_libraries (libftk bil ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
