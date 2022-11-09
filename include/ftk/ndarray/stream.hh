@@ -565,14 +565,14 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
-        } else if (j["format"] == "vtu" || j["format"] == "pvtu" || j["format"] == "pvtu_resample") {
+        } else if (j["format"] == "vtu" || j["format"] == "pvtu" || j["format"] == "vtu_resample" || j["format"] == "pvtu_resample") {
 #if FTK_HAVE_VTK
           bool resample = false;
-          if (j["format"] == "pvtu_resample") 
+          if (j["format"] == "vtu_resample" || j["format"] == "pvtu_resample") 
             resample = true;
 
           vtkSmartPointer<vtkUnstructuredGrid> grid;
-          if (j["format" ] == "vtu") {
+          if (j["format" ] == "vtu" || j["format"] == "vtu_resample") {
             vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
             reader->SetFileName(filename0.c_str());
             reader->Update();
@@ -981,7 +981,7 @@ ndarray<T> ndarray_stream<T>::request_timestep_file(int k)
     return request_timestep_file_binary<double>(k);
   else if (fmt == "vti")
     return request_timestep_file_vti(k);
-  else if (fmt == "vtu" || fmt == "pvtu" || fmt == "pvtu_resample")
+  else if (fmt == "vtu" || fmt == "vtu_resample" || fmt == "pvtu" || fmt == "pvtu_resample")
     return request_timestep_file_vtu(k);
   else if (fmt == "nc")
     return request_timestep_file_nc(k);
@@ -1074,7 +1074,9 @@ ndarray<T> ndarray_stream<T>::request_timestep_file_vtu(int k)
 #if FTK_HAVE_VTK
   if (comm.rank() == 0) {
     vtkSmartPointer<vtkUnstructuredGrid> grid;
-    if (j["format" ] == "vtu") {
+    if (j["format" ] == "vtu" || j["format"] == "vtu_resample") {
+      if (j["format"] == "vtu_resample")
+        resample = true;
       vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
       reader->SetFileName(filename.c_str());
       reader->Update();
