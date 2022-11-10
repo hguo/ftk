@@ -7,6 +7,11 @@
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/gradient.hh>
 #include <ftk/numeric/sign_det.hh>
+#include <ftk/utils/bcast.hh>
+
+#if FTK_HAVE_METIS
+#include <metis.h>
+#endif
 
 namespace ftk {
 
@@ -54,7 +59,7 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   simplicial_unstructured_2d_mesh(
       const ndarray<F>& coords_, // 2 * n_vertices
       const ndarray<I>& triangles_) // 3 * n_triangles
-    : vertex_coords(coords_), triangles(triangles_) {build_triangles(); build_edges();}
+    : vertex_coords(coords_), triangles(triangles_) {build_triangles(); build_edges(); build_partition();}
 
   // dimensionality of the mesh
   int nd() const {return 2;}
@@ -86,6 +91,10 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   void scalar_gradient_jacobian(const ndarray<F>& f, ndarray<F>& g, ndarray<F>& j) const;
 
   template <typename T> bool eval(const ndarray<T>& f, const F x[], T val[]) const; // will not work for 2.5d meshes
+
+public: // distributed parallel
+  void build_partition();
+  const std::vector<I>& get_current_part() const { return current_part; }
 
 public: // io
   void from_vtu(const std::string filename);
@@ -159,6 +168,8 @@ protected: // mesh connectivities
   ndarray<I> triangles; // 3 * n_triangles
   ndarray<I> triangle_sides; // 3 * n_triangles
   std::vector<bool> triangles_chi; // chiralities of triangles, 1 means +1; 0 means -1
+  
+  std::vector<std::set<I>> triangle_edge_triangles;
 
 public: // additional mesh info
 #if FTK_HAVE_TBB
@@ -168,6 +179,9 @@ public: // additional mesh info
   std::map<std::tuple<I, I>, int> edge_id_map;
   std::map<std::tuple<I, I, I>, int> triangle_id_map;
 #endif
+
+protected: // parallel partition
+  std::vector<I> current_part;
 
 private:
   F sigma; // smoothing kernel size
@@ -445,6 +459,17 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
   
     vertex_edge_vertex[v0].insert(v1);
     vertex_edge_vertex[v1].insert(v0);
+  }
+
+  // triangle_edge_triangles
+  triangle_edge_triangles.resize(n(2));
+  for (int i = 0; i < n(2); i ++) {
+    const I t0 = edges_side_of(0, i), 
+            t1 = edges_side_of(1, i);
+    if (t0 >= 0 && t1 >= 0) {
+      triangle_edge_triangles[t0].insert(t1);
+      triangle_edge_triangles[t1].insert(t0);
+    }
   }
 }
 
@@ -760,6 +785,7 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
 
   build_triangles();
   build_edges();
+  build_partition();
 }
 
 template <typename I, typename F>
@@ -915,6 +941,58 @@ I simplicial_unstructured_2d_mesh<I, F>::nearest(F x[]) const
     }
   }
   return imindist;
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_2d_mesh<I, F>::build_partition()
+{
+  // TODO: use parmetis
+#if FTK_HAVE_METIS
+  if (this->comm.size() == 1) return;
+    
+  idx_t nverts = n(2), ncon = 1, nparts = 2; // this->comm.size();
+  std::vector<idx_t> xadj, adj, part; // (nverts, 0);
+  idx_t objval;
+
+  if (this->comm.rank() == 0) {
+    fprintf(stderr, "building partitions...\n");
+
+    for (int i = 0; i < n(2); i ++) {
+      xadj.push_back(adj.size());
+      for (const auto t : triangle_edge_triangles[i])
+        adj.push_back(t);
+    }
+    xadj.push_back(adj.size());
+    part.resize(nverts, 0);
+
+    int rtn = METIS_PartGraphKway(
+        &nverts, 
+        &ncon, 
+        &xadj[0],
+        &adj[0],
+        NULL, 
+        NULL, 
+        NULL, 
+        &nparts,
+        NULL,
+        NULL,
+        NULL,
+        &objval,
+        &part[0]);
+
+    fprintf(stderr, "partition succ.\n");
+  }
+  diy::mpi::bcastv(this->comm, part);
+
+  current_part.clear();
+  for (int i = 0; i < n(2); i ++)
+    if (part[i] == this->comm.rank())
+      current_part.push_back(i);
+
+  // fprintf(stderr, "rank=%d, #tri=%d\n", this->comm.rank(), current_part.size());
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_METIS);
+#endif
 }
 
 #if 0

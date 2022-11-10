@@ -123,6 +123,7 @@ elseif (FTK_USE_METIS)
   find_package (METIS REQUIRED)
 endif ()
 if (METIS_FOUND)
+  include_directories (${METIS_INCLUDES})
   set (FTK_HAVE_METIS TRUE)
 endif ()
 

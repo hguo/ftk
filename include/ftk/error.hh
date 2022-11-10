@@ -26,6 +26,7 @@ enum {
   FTK_ERR_NOT_BUILT_WITH_SYCL,
   FTK_ERR_NOT_BUILT_WITH_KOKKOS,
   FTK_ERR_NOT_BUILT_WITH_LEVELDB,
+  FTK_ERR_NOT_BUILT_WITH_METIS,
   FTK_ERR_NOT_BUILT_WITH_MPI,
   FTK_ERR_NOT_BUILT_WITH_MPSOLVE,
   FTK_ERR_NOT_BUILT_WITH_NETCDF,
@@ -76,6 +77,7 @@ inline std::string err2str(int e)
   case FTK_ERR_NOT_BUILT_WITH_HIPSYCL: return "FTK not compiled with hipSYCL";
   case FTK_ERR_NOT_BUILT_WITH_KOKKOS: return "FTK not compiled with Kokkos";
   case FTK_ERR_NOT_BUILT_WITH_LEVELDB: return "FTK not compiled with LevelDB";
+  case FTK_ERR_NOT_BUILT_WITH_METIS: return "FTK not compiled with Metis";
   case FTK_ERR_NOT_BUILT_WITH_MPI: return "FTK not compiled with MPI";
   case FTK_ERR_NOT_BUILT_WITH_MPSOLVE: return "FTK not compiled with MPSolve";
   case FTK_ERR_NOT_BUILT_WITH_NETCDF: return "FTK not compiled with NetCDF";
