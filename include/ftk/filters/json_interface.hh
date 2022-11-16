@@ -352,7 +352,7 @@ void json_interface::consume(ndarray_stream<> &stream, diy::mpi::communicator co
     configure(j); // make default options
   // std::cerr << stream.get_json() << std::endl;
 
-  if (stream.get_json()["format"] == "vtu")
+  if (stream.get_json().contains("format") && stream.get_json()["format"] == "vtu")
     j["mesh_filename"] = stream.get_json()["filenames"][0];
 
   if (j.contains("xgc"))
