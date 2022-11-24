@@ -19,7 +19,7 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
       const std::vector<I>& tetrahedra);
 
   int nd() const {return 3;}
-  virtual size_t n(int d) const;
+  virtual size_t n(int d, bool part = false) const;
   
   void build_smoothing_kernel(F sigma);
   void smooth_scalar_gradient_jacobian(
@@ -209,7 +209,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
 }
 
 template <typename I, typename F>
-size_t simplicial_unstructured_3d_mesh<I, F>::n(int d) const
+size_t simplicial_unstructured_3d_mesh<I, F>::n(int d, bool part /* TODO */) const
 {
   if (d == 0) 
     return vertex_coords.dim(1);

@@ -41,7 +41,7 @@ struct simplicial_unstructured_mesh : public object {
   virtual int nd() const = 0;
 
   // numer of d-dimensional elements
-  virtual size_t n(int d) const = 0;
+  virtual size_t n(int d, bool part = false) const = 0;
 
 public: // io
   void from_legacy_vtk_file(const std::string& filename);

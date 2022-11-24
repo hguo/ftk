@@ -65,7 +65,7 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   int nd() const {return 2;}
 
   // numer of d-dimensional elements
-  size_t n(int d) const;
+  size_t n(int d, bool part=false) const;
 
   void build_edges();
   void build_triangles();
@@ -94,7 +94,9 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
 
 public: // distributed parallel
   void build_partition();
-  const std::vector<I>& get_current_part() const { return current_part; }
+  const std::vector<I>& get_part_triangles() const { return part_triangles; }
+
+  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> generate_submesh() const;
 
 public: // io
   void from_vtu(const std::string filename);
@@ -166,7 +168,7 @@ protected: // mesh connectivities
   // std::map<std::tuple<I, I>, std::set<I>> edges_side_of;
 
   ndarray<I> triangles; // 3 * n_triangles
-  ndarray<I> triangle_sides; // 3 * n_triangles
+  ndarray<I> triangle_edges; // 3 * n_triangles
   std::vector<bool> triangles_chi; // chiralities of triangles, 1 means +1; 0 means -1
   
   std::vector<std::set<I>> triangle_edge_triangles;
@@ -180,8 +182,13 @@ public: // additional mesh info
   std::map<std::tuple<I, I, I>, int> triangle_id_map;
 #endif
 
+public: // partition
+  I lid2gid(int d, I) const; // translate ID in the local partition to global ID
+  I gid2lid(int d, I) const; // translate global ID to local ID
+
 protected: // parallel partition
-  std::vector<I> current_part;
+  std::vector<I> part_triangles, part_edges, part_vertices;
+  std::map<I/*gid*/, I/*lid*/> part_triangles_gid, part_edges_gid, part_vertices_gid;
 
 private:
   F sigma; // smoothing kernel size
@@ -262,7 +269,7 @@ simplicial_unstructured_2d_mesh<I, F>::simplicial_unstructured_2d_mesh(const std
 }
 
 template <typename I, typename F>
-size_t simplicial_unstructured_2d_mesh<I, F>::n(int d) const
+size_t simplicial_unstructured_2d_mesh<I, F>::n(int d, bool part /* TODO */) const
 {
   if (d == 0) return vertex_coords.dim(1);
   else if (d == 1) {
@@ -383,7 +390,7 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
   std::map<I, std::set<I>> map_edges_side_of;
 
   int edge_count = 0;
-  auto add_edge = [&](I tid, I v0, I v1) {
+  auto add_edge = [&](I tid, I k, I v0, I v1) {
     if (v0 > v1) std::swap(v0, v1);
     const auto edge = std::make_tuple(v0, v1);
     I id;
@@ -404,7 +411,8 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
 #endif
 
     map_edges_side_of[id].insert(tid);
-      
+    triangle_edges(k, tid) = id;
+
     // fprintf(stderr, "adding edge #%d (%d, %d) from triangle %d\n", id, v0, v1, tid);
     // if (v0 == 0 && v1 == 1) {
     //   fprintf(stderr, "{0, 1}, tid=%d\n", tid);
@@ -413,10 +421,11 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
   };
 
   // fprintf(stderr, "triangles_88078=%d, %d, %d\n", triangles(0, 88078), triangles(1, 88078), triangles(2, 88078)); 
+  triangle_edges.reshape(3, n(2));
   for (auto i = 0; i < n(2); i ++) {
-    add_edge(i, triangles(0, i), triangles(1, i));
-    add_edge(i, triangles(1, i), triangles(2, i));
-    add_edge(i, triangles(2, i), triangles(0, i));
+    add_edge(i, 0, triangles(0, i), triangles(1, i));
+    add_edge(i, 1, triangles(1, i), triangles(2, i));
+    add_edge(i, 2, triangles(2, i), triangles(0, i));
   }
 
   edges.reshape(2, edge_id_map.size());
@@ -711,9 +720,9 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::sides(int d, I i) const
     results.insert( edges(0, i) );
     results.insert( edges(1, i) );
   } else if (d == 2) {
-    results.insert( triangle_sides(0, i) );
-    results.insert( triangle_sides(1, i) );
-    results.insert( triangle_sides(2, i) );
+    results.insert( triangle_edges(0, i) );
+    results.insert( triangle_edges(1, i) );
+    results.insert( triangle_edges(2, i) );
   }
   return results;
 }
@@ -944,6 +953,32 @@ I simplicial_unstructured_2d_mesh<I, F>::nearest(F x[]) const
 }
 
 template <typename I, typename F>
+I simplicial_unstructured_2d_mesh<I, F>::lid2gid(int d, I lid) const 
+{
+  if (d == 2) { // triangles
+    return part_triangles[lid];
+  } else if (d == 1) { // edges
+    return part_edges[lid];
+  } else if (d == 0) { // vertices
+    return part_vertices[lid];
+  }
+  return -1;
+}
+
+template <typename I, typename F>
+I simplicial_unstructured_2d_mesh<I, F>::gid2lid(int d, I gid) const 
+{
+  if (d == 2) { // triangles
+    return part_triangles[gid];
+  } else if (d == 1) { // edges
+    return part_edges[gid];
+  } else if (d == 0) { // vertices
+    return part_vertices[gid];
+  }
+  return -1;
+}
+
+template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::build_partition()
 {
   // TODO: use parmetis
@@ -984,12 +1019,48 @@ void simplicial_unstructured_2d_mesh<I, F>::build_partition()
   }
   diy::mpi::bcastv(this->comm, part);
 
-  current_part.clear();
-  for (int i = 0; i < n(2); i ++)
-    if (part[i] == this->comm.rank())
-      current_part.push_back(i);
+  // part_triangles
+  part_triangles.clear();
+  part_triangles_gid.clear();
+  std::set<I> set_part_edges, set_part_verts;
+  
+  for (I i = 0; i < n(2); i ++) {
+    if (part[i] == this->comm.rank()) {
+      // fprintf(stderr, "rank=%d, tri=%d\n", this->comm.rank(), i);
+      const I lid = part_triangles.size();
+      part_triangles.push_back(i);
+      part_triangles_gid[lid] = i;
 
-  // fprintf(stderr, "rank=%d, #tri=%d\n", this->comm.rank(), current_part.size());
+      for (const auto eid : sides(2, i))
+        set_part_edges.insert(eid);
+
+      I tri[3];
+      get_triangle(i, tri);
+      for (int k = 0; k < 3; k ++)
+        set_part_verts.insert(tri[k]);
+    }
+  }
+
+  // fprintf(stderr, "stage1\n");
+
+  int n_local_edges = 0;
+  for (const I eid : set_part_edges) {
+    const I local_eid = n_local_edges ++;
+    part_edges.push_back(eid);
+    part_edges_gid[local_eid] = eid;
+  }
+
+  int n_local_verts = 0;
+  for (const I vid : set_part_edges) {
+    const I local_vid = n_local_verts ++;
+    part_vertices.push_back(vid);
+    part_vertices_gid[local_vid] = vid;
+  }
+
+  fprintf(stderr, "partition: rank=%d, #tri=%zu, #edge=%zu, #verts=%zu\n", this->comm.rank(), 
+      part_triangles.size(), 
+      part_edges.size(), 
+      part_vertices.size());
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_METIS);
 #endif
@@ -1019,7 +1090,7 @@ namespace diy {
       diy::save(bb, m.edges);
       diy::save(bb, m.edges_side_of);
       diy::save(bb, m.triangles);
-      diy::save(bb, m.triangle_sides);
+      diy::save(bb, m.triangle_edges);
       diy::save(bb, m.edge_id_map);
       diy::save(bb, m.triangle_id_map);
     }
@@ -1031,7 +1102,7 @@ namespace diy {
       diy::load(bb, m.edges);
       diy::load(bb, m.edges_side_of);
       diy::load(bb, m.triangles);
-      diy::load(bb, m.triangle_sides);
+      diy::load(bb, m.triangle_edges);
       diy::load(bb, m.edge_id_map);
       diy::load(bb, m.triangle_id_map);
     }
