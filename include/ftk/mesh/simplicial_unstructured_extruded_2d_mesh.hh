@@ -283,7 +283,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
   } else if (d == 1) {
     if (type < 2) {
       I edge[2];
-      m.get_simplex(1, i % m.n(1), edge, part);
+      m.get_simplex(1, i % m.n(1, part), edge, part);
 
       switch (type) {
         case 0: // 0 1
@@ -302,7 +302,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
   } else if (d == 2) {
     if (type < 3) {
       I tri[3];
-      m.get_simplex(2, i % m.n(2), tri, part);
+      m.get_simplex(2, i % m.n(2, part), tri, part);
       switch (type) {
         case 0: // 0 1 2
           verts[0] = tri[0];
@@ -326,7 +326,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
       }
     } else {
       I edge[2];
-      m.get_simplex(1, (i - 3*m.n(2)) % m.n(1), edge, part);
+      m.get_simplex(1, (i - 3*m.n(2, part)) % m.n(1, part), edge, part);
       switch (type) {
         case 3: 
           verts[0] = edge[0];
@@ -345,7 +345,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
     }
   } else if (d == 3) {
     I tri[3];
-    m.get_simplex(2, i % m.n(2), tri, part);
+    m.get_simplex(2, i % m.n(2, part), tri, part);
 
     switch (type) {
       case 0: // type I: 0 1 2 2'

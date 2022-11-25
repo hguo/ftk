@@ -271,14 +271,21 @@ simplicial_unstructured_2d_mesh<I, F>::simplicial_unstructured_2d_mesh(const std
 }
 
 template <typename I, typename F>
-size_t simplicial_unstructured_2d_mesh<I, F>::n(int d, bool part /* TODO */) const
+size_t simplicial_unstructured_2d_mesh<I, F>::n(int d, bool part) const
 {
-  if (d == 0) return vertex_coords.dim(1);
-  else if (d == 1) {
-    return edges.dim(1);
-  } else if (d == 2)
-    return triangles.dim(1);
-  else return 0;
+  if (part) {
+    if (d == 0) return part_vertices.size(); 
+    else if (d == 1) return part_edges.size(); 
+    else if (d == 2) return part_triangles.size();
+    else return 0;
+  } else {
+    if (d == 0) return vertex_coords.dim(1);
+    else if (d == 1) {
+      return edges.dim(1);
+    } else if (d == 2)
+      return triangles.dim(1);
+    else return 0;
+  }
 }
 
 template <typename I, typename F>
