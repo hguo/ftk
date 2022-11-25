@@ -100,8 +100,8 @@ namespace diy {
 
 #if FTK_HAVE_TBB
   template <typename Key, typename T, typename HashCompare, typename A>
-  struct Serialization<tbb::interface5::concurrent_hash_map<Key, T, HashCompare, A>> {
-    typedef tbb::interface5::concurrent_hash_map<Key, T, HashCompare, A> hash_map;
+  struct Serialization<tbb::concurrent_hash_map<Key, T, HashCompare, A>> {
+    typedef tbb::concurrent_hash_map<Key, T, HashCompare, A> hash_map;
     
     static void save(BinaryBuffer& bb, const hash_map& m) {
       size_t s = m.size();
@@ -127,8 +127,8 @@ namespace diy {
           typename Hasher, // = tbb::tbb_hash<Key>,
           typename Equality, //  = std::equal_to<Key>,
           typename Allocator> //  = tbb::tbb_allocator<Key>
-  struct Serialization<tbb::interface5::concurrent_unordered_set<Key, Hasher, Equality, Allocator>> {
-    typedef tbb::interface5::concurrent_unordered_set<Key, Hasher, Equality, Allocator> unordered_set;
+  struct Serialization<tbb::concurrent_unordered_set<Key, Hasher, Equality, Allocator>> {
+    typedef tbb::concurrent_unordered_set<Key, Hasher, Equality, Allocator> unordered_set;
     
     static void save(BinaryBuffer& bb, const unordered_set& m) {
       size_t s = m.size();
