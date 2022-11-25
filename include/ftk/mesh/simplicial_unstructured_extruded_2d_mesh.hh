@@ -62,7 +62,7 @@ public: // mesh access
   std::set<I> sides(int d, I i) const;
   std::set<I> side_of(int d, I i) const;
 
-  void get_simplex(int d, I i, I verts[], bool part = false) const;
+  I get_simplex(int d, I i, I verts[], bool part = false) const;
   void get_coords(I i, F coords[]) const;
 
   bool find_simplex(int d, I v[], I &i) const;
@@ -271,73 +271,84 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d,
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I verts[], bool part) const
+I simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I verts[], bool part) const
 {
   const I i = mod(k, n(d, part)), t = std::floor(double(k) / n(d, part));
   const I offset = t * n(0); // 0d gid offset for verts
   const int type = simplex_type(d, i, part);
+  I gid;
 
   if (d == 0) {
     if (part) verts[0] = m.lid2gid(0, i);
     else verts[0] = i; // + offset;
+    gid = verts[0];
   } else if (d == 1) {
     if (type < 2) {
       I edge[2];
-      m.get_simplex(1, i % m.n(1, part), edge, part);
+      I eid = m.get_simplex(1, i % m.n(1, part), edge, part);
 
       switch (type) {
         case 0: // 0 1
           verts[0] = edge[0];
           verts[1] = edge[1];
+          gid = eid;
           break;
 
         case 1: // 0 1'
           verts[0] = edge[0];
           verts[1] = edge[1] + m.n(0);
+          gid = eid + m.n(1);
       }
     } else {
-      verts[0] = i - 2*m.n(1);
-      verts[1] = i - 2*m.n(1) + m.n(0);
+      const I vid = part ? m.lid2gid(0, i) : i;
+      verts[0] = vid - 2*m.n(1);
+      verts[1] = vid - 2*m.n(1) + m.n(0);
+      gid = vid; // + 2 * m.n(1);
     }
   } else if (d == 2) {
     if (type < 3) {
       I tri[3];
-      m.get_simplex(2, i % m.n(2, part), tri, part);
+      I tid = m.get_simplex(2, i % m.n(2, part), tri, part);
       switch (type) {
         case 0: // 0 1 2
           verts[0] = tri[0];
           verts[1] = tri[1];
           verts[2] = tri[2];
+          gid = tid;
           break;
 
         case 1: // 0 1 2'
           verts[0] = tri[0];
           verts[1] = tri[1];
           verts[2] = tri[2] + m.n(0);
+          gid = tid + m.n(2);
           break;
 
         case 2: // 0 1'2'
           verts[0] = tri[0];
           verts[1] = tri[1] + m.n(0);
           verts[2] = tri[2] + m.n(0);
+          gid = tid + 2*m.n(2);
           break;
 
         default: assert(false);
       }
     } else {
       I edge[2];
-      m.get_simplex(1, (i - 3*m.n(2, part)) % m.n(1, part), edge, part);
+      I eid = m.get_simplex(1, (i - 3*m.n(2, part)) % m.n(1, part), edge, part);
       switch (type) {
         case 3: 
           verts[0] = edge[0];
           verts[1] = edge[1];
           verts[2] = edge[1] + m.n(0);
+          gid = eid + 3*m.n(2);
           break;
 
         case 4:
           verts[0] = edge[0];
           verts[1] = edge[0] + m.n(0);
           verts[2] = edge[1] + m.n(0);
+          gid = eid + 3*m.n(2) + m.n(1);
           break;
 
         default: assert(false);
@@ -345,7 +356,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
     }
   } else if (d == 3) {
     I tri[3];
-    m.get_simplex(2, i % m.n(2, part), tri, part);
+    I tid = m.get_simplex(2, i % m.n(2, part), tri, part);
 
     switch (type) {
       case 0: // type I: 0 1 2 2'
@@ -353,6 +364,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
         verts[1] = tri[1];
         verts[2] = tri[2];
         verts[3] = tri[2] + m.n(0);
+        gid = tid;
         break;
 
       case 1: // type II: 0 1 1'2'
@@ -360,6 +372,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
         verts[1] = tri[1];
         verts[2] = tri[1] + m.n(0);
         verts[3] = tri[2] + m.n(0);
+        gid = tid + m.n(2);
         break;
       
       case 2: // type III: 0 0'1'2'
@@ -367,6 +380,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
         verts[1] = tri[0] + m.n(0);
         verts[2] = tri[1] + m.n(0);
         verts[3] = tri[2] + m.n(0);
+        gid = tid + 2*m.n(2);
         break;
 
       default:
@@ -376,6 +390,9 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
   
   for (int i = 0; i < d+1; i ++)
     verts[i] += offset;
+
+  gid = gid + t * n(d);
+  return gid;
 
 #if 0
   const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));

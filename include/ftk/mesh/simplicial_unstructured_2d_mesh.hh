@@ -126,9 +126,9 @@ public: // mesh access
 
   // std::set<I> side_of2(const I v[2]) const;
 
-  void get_simplex(int d, I i, I v[], bool part=false) const; // note that the output verts are always in gid
-  void get_triangle(I i, I tri[], bool part=false) const;
-  void get_edge(I i, I edge[], bool part=false) const;
+  I get_simplex(int d, I i, I v[], bool part=false) const; // note that the output verts are always in gid; always return gid
+  I get_triangle(I i, I tri[], bool part=false) const; // always return gid
+  I get_edge(I i, I edge[], bool part=false) const; // always return gid
   void get_coords(I i, F coords[], bool part=false) const;
 
   bool find_simplex(int d, const I v[], I& i) const;
@@ -289,10 +289,14 @@ size_t simplicial_unstructured_2d_mesh<I, F>::n(int d, bool part) const
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::get_simplex(int d, I i, I v[], bool part) const
+I simplicial_unstructured_2d_mesh<I, F>::get_simplex(int d, I i, I v[], bool part) const
 {
-  if (d == 1) get_edge(i, v, part);
-  else if (d == 2) get_triangle(i, v, part);
+  if (d == 1) 
+    return get_edge(i, v, part);
+  else if (d == 2) 
+    return get_triangle(i, v, part);
+  else 
+    return -1; // assert false;
 }
 
 template <typename I, typename F>
@@ -911,14 +915,15 @@ void simplicial_unstructured_2d_mesh<I, F>::element_for(int d, std::function<voi
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[], bool part) const
+I simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[], bool part) const
 {
   if (part) 
-    get_triangle(lid2gid(2, i), tri, false);
+    return get_triangle(lid2gid(2, i), tri, false);
   else {
     tri[0] = triangles[i*3];
     tri[1] = triangles[i*3+1];
     tri[2] = triangles[i*3+2];
+    return i;
   }
 #if 0
   tri[0] = triangles(0, i);
@@ -928,13 +933,14 @@ void simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[], bool part
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[], bool part) const
+I simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[], bool part) const
 {
   if (part)
-    get_edge(lid2gid(1, i), v, false);
+    return get_edge(lid2gid(1, i), v, false);
   else {
     v[0] = edges(i*2);
     v[1] = edges(i*2+1);
+    return i;
   }
   // v[0] = edges(0, i);
   // v[1] = edges(1, i);

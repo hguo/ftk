@@ -106,7 +106,7 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
 inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3];
-  m.get_simplex(2, i, tri, m.is_partial()); 
+  const auto tid = m.get_simplex(2, i, tri, m.is_partial()); 
 
   double X[3][4], f[3][FTK_CP_MAX_NUM_VARS], V[3][2], Js[3][2][2];
   simplex_values<double>(tri, X, f, V, Js);
@@ -155,7 +155,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
   }
 #endif
   
-  cp.tag = i;
+  cp.tag = tid; // i;
   cp.ordinal = m.is_ordinal(2, i);
   cp.timestep = current_timestep;
 
@@ -244,7 +244,8 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
       if (filter_critical_point_type(cp)) {
         // if (discrete_critical_points.find(i) != discrete_critical_points.end())
         //   fprintf(stderr, "FATAL: overwritting cp!!\n");
-        discrete_critical_points[i] = cp;
+        // discrete_critical_points[i] = cp;
+        discrete_critical_points[cp.tag] = cp;
       }
     }
   };
