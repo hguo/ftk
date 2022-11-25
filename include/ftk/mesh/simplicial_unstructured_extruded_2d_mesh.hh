@@ -9,41 +9,60 @@ template <typename I=int, typename F=double>
 struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded from 
   simplicial_unstructured_extruded_2d_mesh(const simplicial_unstructured_2d_mesh<I, F>& m_) : m(m_) {extrude();}
 
-  size_t n(int d) const;
-  size_t n_ordinal(int d) const { return m.n(d); }
-  size_t n_interval(int d) const;
+  size_t n(int d, bool part=false) const;
+  size_t n_ordinal(int d, bool part=false) const { return m.n(d, part); }
+  size_t n_interval(int d, bool part=false) const;
 
-  bool is_ordinal(int d, I i) const {
-    I k = mod(i, n(d));
-    return k < n_ordinal(d);
+  bool is_ordinal(int d, I i, bool part=false) const {
+    I k = mod(i, n(d, part));
+    return k < n_ordinal(d, part);
   }
 
-  I flat_vertex_id(I i) const { return mod(i, m.n(0)); }
-  I flat_vertex_time(I i) const { return i / m.n(0); }
-  I extruded_vertex_id(I i, bool t=true) { return t ? i + m.n(0) : i; }
+  I flat_vertex_id(I i, bool part=false) const { return mod(i, m.n(0, part)); }
+  I flat_vertex_time(I i, bool part=false) const { return i / m.n(0, part); }
+  I extruded_vertex_id(I i, bool t=true, bool part=false) { return t ? i + m.n(0, part) : i; }
+
+#if 0
+  I flat_id(int d, I i, bool part=false) const { return mod(i, m.n(d, part)); } // note the d is dimension in the base mesh
+  I flat_time(int d, I i, bool part=false) const { return i / m.n(d, part); }
+  I extruded_id(int d, I i, bool t=true, bool part=false) { return t ? i + m.n(i, part) : i; }
+  
+  I flat_vertex_id(I i, bool part=false) const { return flat_id(0, i, part); }
+  I flat_vertex_time(I i, bool part=false) const { return flat_time(0, i, part); }
+  I extruded_vertex_id(I i, bool t=true, bool part=false) { return extruded_id(0, i, t, part); }
+#endif
 
   int face_type(I i) const; // legacy
-  int simplex_type(int d, I i) const;
+  int simplex_type(int d, I i, bool part=false) const;
 
   int get_triangle_chi(I i) const;
 
   // int ncoords() const { return m.ncoords() + 1; }
 
+  bool is_partial() const { return m.is_partial(); }
+
 public: // element iteration
   void element_for(int d, std::function<void(I)> f, 
+      // bool part = false,
       int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
 
   void element_for_ordinal(int d, int t, std::function<void(I)> f,
+      bool part = false,
       int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
   
   void element_for_interval(int d, int t, std::function<void(I)> f,
+      bool part = false,
       int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
+
+public: // partial base mesh
+  I lid2gid(int d, I i) const;
+  I gid2lid(int d, I i) const;
 
 public: // mesh access
   std::set<I> sides(int d, I i) const;
   std::set<I> side_of(int d, I i) const;
 
-  void get_simplex(int d, I i, I verts[]) const;
+  void get_simplex(int d, I i, I verts[], bool part = false) const;
   void get_coords(I i, F coords[]) const;
 
   bool find_simplex(int d, I v[], I &i) const;
@@ -71,6 +90,11 @@ I simplicial_unstructured_extruded_2d_mesh<I, F>::mod(I v, I m)
   if (v < 0) mod += m;
   return mod;
 }
+
+// template <typename I, typename F>
+// I simplicial_unstructured_extruded_2d_mesh<I, F>::flat_id(int d, I i, bool part) const
+// {
+// }
 
 template <typename I, typename F>
 void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude() 
@@ -158,29 +182,52 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::extrude()
 }
 
 template <typename I, typename F>
-size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n(int d) const
+size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n(int d, bool part) const
 {
   if (d == 0) {
-    return m.n(0); // unique vertices in each interval
+    return m.n(0, part); // unique vertices in each interval
   } else if (d == 1) {
-    return m.n(1) * 2 + m.n(0); // unique edges in each interval
+    return m.n(1, part) * 2 + m.n(0, part); // unique edges in each interval
   } else if (d == 2) {
-    return m.n(2) // the bottom triangle of the prism
-      + m.n(2) * 2 // two triangles inside prisms
-      + m.n(1) * 2;// unique triangles extruded from each edge
+    return m.n(2, part) // the bottom triangle of the prism
+      + m.n(2, part) * 2 // two triangles inside prisms
+      + m.n(1, part) * 2;// unique triangles extruded from each edge
   } else if (d == 3) { 
-    return 3 * m.n(2); // 3 tets per prism
+    return 3 * m.n(2, part); // 3 tets per prism
   } else return 0;
 }
 
 template <typename I, typename F>
-size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n_interval(int d) const
+size_t simplicial_unstructured_extruded_2d_mesh<I, F>::n_interval(int d, bool part) const
 {
-  if (d == 1) return m.n(1) + m.n(0); // return m.n(1)*2;
-  else if (d == 2) return m.n(2)*2 + m.n(1)*2;
-  else if (d == 3) return m.n(2)*3;
+  if (d == 1) return m.n(1, part) + m.n(0, part); // return m.n(1)*2;
+  else if (d == 2) return m.n(2, part)*2 + m.n(1, part)*2;
+  else if (d == 3) return m.n(2, part)*3;
   else return 0;
 }
+
+#if 0
+template <typename I, typename F>
+I simplicial_unstructured_extruded_2d_mesh<I, F>::lid2gid(int d, I lid) const
+{
+  const bool part = true;
+  const I i = mod(k, n(d, part)), t = std::floor(double(k) / n(d, part));
+  // const I offset = t * n(0, part);
+  const int type = simplex_type(d, i, part);
+
+  if (d == 0) {
+    return m.lid2gid(d, i) + t * n(d);
+  } else if (d == 1) { // derive flat vert/edge lid and translate to gid
+    if (i < m.n(1, part)) { // transloate local vertex id
+
+  } else if (d == 2) { // derive flat edge/tri lid and translate to gid
+
+  } else if (d == 3) { // derive flat tet lid and translate to gid
+
+  } else 
+    return -1; // assert false
+}
+#endif
 
 template <typename I, typename F>
 void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f, 
@@ -192,22 +239,27 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for(int d, std::fun
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(int d, int t, std::function<void(I)> f, 
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_ordinal(
+    int d, int t, std::function<void(I)> f,
+    bool part,
     int xl, int nthreads, bool affinity) const
 {
-  parallel_for(n_ordinal(d), [&](int i) {
-      f(i + t * n(d));}, xl, nthreads, affinity);
+  parallel_for(n_ordinal(d, part), [&](int i) {
+        const auto id = i + t * n(d, part);
+        f(id);
+      }, xl, nthreads, affinity);
 
   // for (auto i = 0; i < n_ordinal(d); i ++)
   //   f(i + t * n(d));
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f, 
+void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d, int t, std::function<void(I)> f,
+    bool part,
     int xl, int nthreads, bool affinity) const
 {
-  parallel_for(n_interval(d), [&](int i) {
-    const auto id = i + n_ordinal(d) + t * n(d);
+  parallel_for(n_interval(d, part), [&](int i) {
+    const auto id = i + n_ordinal(d, part) + t * n(d, part);
     f(id);
   }, xl, nthreads, affinity);
 
@@ -219,18 +271,19 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::element_for_interval(int d,
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I verts[]) const
+void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I verts[], bool part) const
 {
-  const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));
-  const I offset = t * n(0);
-  const int type = simplex_type(d, i);
+  const I i = mod(k, n(d, part)), t = std::floor(double(k) / n(d, part));
+  const I offset = t * n(0); // 0d gid offset for verts
+  const int type = simplex_type(d, i, part);
 
   if (d == 0) {
-    verts[0] = i; // + offset;
+    if (part) verts[0] = m.lid2gid(0, i);
+    else verts[0] = i; // + offset;
   } else if (d == 1) {
     if (type < 2) {
       I edge[2];
-      m.get_simplex(1, i % m.n(1), edge);
+      m.get_simplex(1, i % m.n(1), edge, part);
 
       switch (type) {
         case 0: // 0 1
@@ -249,7 +302,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
   } else if (d == 2) {
     if (type < 3) {
       I tri[3];
-      m.get_simplex(2, i % m.n(2), tri);
+      m.get_simplex(2, i % m.n(2), tri, part);
       switch (type) {
         case 0: // 0 1 2
           verts[0] = tri[0];
@@ -273,7 +326,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
       }
     } else {
       I edge[2];
-      m.get_simplex(1, (i - 3*m.n(2)) % m.n(1), edge);
+      m.get_simplex(1, (i - 3*m.n(2)) % m.n(1), edge, part);
       switch (type) {
         case 3: 
           verts[0] = edge[0];
@@ -292,7 +345,7 @@ void simplicial_unstructured_extruded_2d_mesh<I, F>::get_simplex(int d, I k, I v
     }
   } else if (d == 3) {
     I tri[3];
-    m.get_simplex(2, i % m.n(2), tri);
+    m.get_simplex(2, i % m.n(2), tri, part);
 
     switch (type) {
       case 0: // type I: 0 1 2 2'
@@ -619,28 +672,28 @@ int simplicial_unstructured_extruded_2d_mesh<I, F>::face_type(I k) const
 }
 
 template <typename I, typename F>
-int simplicial_unstructured_extruded_2d_mesh<I, F>::simplex_type(int d, I k) const
+int simplicial_unstructured_extruded_2d_mesh<I, F>::simplex_type(int d, I k, bool part) const
 {
-  const I i = mod(k, n(d)), t = std::floor((double)k / n(d));
+  const I i = mod(k, n(d, part)), t = std::floor((double)k / n(d, part));
 
   switch (d) {
     case 0:
       return 0;
 
     case 1: 
-      if (i < m.n(1)) return 0;
-      else if (i < 2*m.n(1)) return 1;
+      if (i < m.n(1, part)) return 0;
+      else if (i < 2*m.n(1, part)) return 1;
       else return 2;
 
     case 2: 
-      if (i < m.n(2)) return 0;
-      else if (i < 2*m.n(2)) return 1;
-      else if (i < 3*m.n(2)) return 2;
-      else if (i < 3*m.n(2) + m.n(1)) return 3;
+      if (i < m.n(2, part)) return 0;
+      else if (i < 2*m.n(2, part)) return 1;
+      else if (i < 3*m.n(2, part)) return 2;
+      else if (i < 3*m.n(2, part) + m.n(1, part)) return 3;
       else return 4;
 
     case 3:
-      return i / m.n(2);
+      return i / m.n(2, part);
 
     default: 
       assert(false);

@@ -126,10 +126,10 @@ public: // mesh access
 
   // std::set<I> side_of2(const I v[2]) const;
 
-  void get_simplex(int d, I i, I v[]) const;
-  void get_triangle(I i, I tri[]) const;
-  void get_edge(I i, I edge[]) const;
-  void get_coords(I i, F coords[]) const;
+  void get_simplex(int d, I i, I v[], bool part=false) const; // note that the output verts are always in gid
+  void get_triangle(I i, I tri[], bool part=false) const;
+  void get_edge(I i, I edge[], bool part=false) const;
+  void get_coords(I i, F coords[], bool part=false) const;
 
   bool find_simplex(int d, const I v[], I& i) const;
   bool find_edge(const I v[2], I& i) const;
@@ -183,10 +183,12 @@ public: // additional mesh info
 #endif
 
 public: // partition
+  bool is_partial() const { return partial; }
   I lid2gid(int d, I) const; // translate ID in the local partition to global ID
   I gid2lid(int d, I) const; // translate global ID to local ID
 
 protected: // parallel partition
+  bool partial = false;
   std::vector<I> part_triangles, part_edges, part_vertices;
   std::map<I/*gid*/, I/*lid*/> part_triangles_gid, part_edges_gid, part_vertices_gid;
 
@@ -280,10 +282,10 @@ size_t simplicial_unstructured_2d_mesh<I, F>::n(int d, bool part /* TODO */) con
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::get_simplex(int d, I i, I v[]) const
+void simplicial_unstructured_2d_mesh<I, F>::get_simplex(int d, I i, I v[], bool part) const
 {
-  if (d == 1) get_edge(i, v);
-  else if (d == 2) get_triangle(i, v);
+  if (d == 1) get_edge(i, v, part);
+  else if (d == 2) get_triangle(i, v, part);
 }
 
 template <typename I, typename F>
@@ -902,11 +904,15 @@ void simplicial_unstructured_2d_mesh<I, F>::element_for(int d, std::function<voi
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
+void simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[], bool part) const
 {
-  tri[0] = triangles[i*3];
-  tri[1] = triangles[i*3+1];
-  tri[2] = triangles[i*3+2];
+  if (part) 
+    get_triangle(lid2gid(2, i), tri, false);
+  else {
+    tri[0] = triangles[i*3];
+    tri[1] = triangles[i*3+1];
+    tri[2] = triangles[i*3+2];
+  }
 #if 0
   tri[0] = triangles(0, i);
   tri[1] = triangles(1, i);
@@ -915,23 +921,31 @@ void simplicial_unstructured_2d_mesh<I, F>::get_triangle(I i, I tri[]) const
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[]) const
+void simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[], bool part) const
 {
-  v[0] = edges(i*2);
-  v[1] = edges(i*2+1);
+  if (part)
+    get_edge(lid2gid(1, i), v, false);
+  else {
+    v[0] = edges(i*2);
+    v[1] = edges(i*2+1);
+  }
   // v[0] = edges(0, i);
   // v[1] = edges(1, i);
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[]) const
+void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[], bool part) const
 {
-  coords[0] = vertex_coords(0, i);
-  coords[1] = vertex_coords(1, i);
-  if (vertex_coords.dim(0) > 2)
-    coords[2] = vertex_coords(2, i);
-  else 
-    coords[2] = F(0);
+  if (part)
+    get_coords(lid2gid(0, i), coords, false);
+  else {
+    coords[0] = vertex_coords(0, i);
+    coords[1] = vertex_coords(1, i);
+    if (vertex_coords.dim(0) > 2)
+      coords[2] = vertex_coords(2, i);
+    else 
+      coords[2] = F(0);
+  }
 }
 
 template <typename I, typename F>
@@ -969,11 +983,11 @@ template <typename I, typename F>
 I simplicial_unstructured_2d_mesh<I, F>::gid2lid(int d, I gid) const 
 {
   if (d == 2) { // triangles
-    return part_triangles[gid];
+    return part_triangles_gid.at(gid);
   } else if (d == 1) { // edges
-    return part_edges[gid];
+    return part_edges_gid.at(gid);
   } else if (d == 0) { // vertices
-    return part_vertices[gid];
+    return part_vertices_gid.at(gid);
   }
   return -1;
 }
@@ -985,7 +999,7 @@ void simplicial_unstructured_2d_mesh<I, F>::build_partition()
 #if FTK_HAVE_METIS
   if (this->comm.size() == 1) return;
     
-  idx_t nverts = n(2), ncon = 1, nparts = 2; // this->comm.size();
+  idx_t nverts = n(2), ncon = 1, nparts = this->comm.size();
   std::vector<idx_t> xadj, adj, part; // (nverts, 0);
   idx_t objval;
 
@@ -1056,6 +1070,8 @@ void simplicial_unstructured_2d_mesh<I, F>::build_partition()
     part_vertices.push_back(vid);
     part_vertices_gid[local_vid] = vid;
   }
+
+  partial = true;
 
   fprintf(stderr, "partition: rank=%d, #tri=%zu, #edge=%zu, #verts=%zu\n", this->comm.rank(), 
       part_triangles.size(), 

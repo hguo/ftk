@@ -106,7 +106,7 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
 inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3];
-  m.get_simplex(2, i, tri); 
+  m.get_simplex(2, i, tri, m.is_partial()); 
 
   double X[3][4], f[3][FTK_CP_MAX_NUM_VARS], V[3][2], Js[3][2][2];
   simplex_values<double>(tri, X, f, V, Js);
@@ -249,10 +249,10 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
     }
   };
 
-  m.element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+  m.element_for_ordinal(2, current_timestep, func, m.is_partial(), xl, nthreads, enable_set_affinity);
   // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
   if (field_data_snapshots.size() >= 2)
-    m.element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+    m.element_for_interval(2, current_timestep, func, m.is_partial(), xl, nthreads, enable_set_affinity);
   // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
 
   if (enable_streaming_trajectories) {
