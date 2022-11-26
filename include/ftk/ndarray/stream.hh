@@ -567,55 +567,59 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
 #endif
         } else if (j["format"] == "vtu" || j["format"] == "pvtu" || j["format"] == "vtu_resample" || j["format"] == "pvtu_resample") {
 #if FTK_HAVE_VTK
-          bool resample = false;
-          if (j["format"] == "vtu_resample" || j["format"] == "pvtu_resample") 
-            resample = true;
+          if (is_root_proc()) {
+            bool resample = false;
+            if (j["format"] == "vtu_resample" || j["format"] == "pvtu_resample") 
+              resample = true;
 
-          vtkSmartPointer<vtkUnstructuredGrid> grid;
-          if (j["format" ] == "vtu" || j["format"] == "vtu_resample") {
-            vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
-            reader->SetFileName(filename0.c_str());
-            reader->Update();
-            grid = reader->GetOutput();
-          } else if (j["format"] == "pvtu" || j["format"] == "pvtu_resample") {
-            vtkSmartPointer<vtkXMLPUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLPUnstructuredGridReader>::New();
-            reader->SetFileName(filename0.c_str());
-            reader->Update();
-            grid = reader->GetOutput();
-          }
-         
-          if (resample) {
-            if (missing_dimensions)
-              fatal("missing dimensions.");
+            vtkSmartPointer<vtkUnstructuredGrid> grid;
+            if (j["format" ] == "vtu" || j["format"] == "vtu_resample") {
+              vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLUnstructuredGridReader>::New();
+              reader->SetFileName(filename0.c_str());
+              reader->Update();
+              grid = reader->GetOutput();
+            } else if (j["format"] == "pvtu" || j["format"] == "pvtu_resample") {
+              vtkSmartPointer<vtkXMLPUnstructuredGridReader> reader = vtkSmartPointer<vtkXMLPUnstructuredGridReader>::New();
+              reader->SetFileName(filename0.c_str());
+              reader->Update();
+              grid = reader->GetOutput();
+            }
+           
+            if (resample) {
+              if (missing_dimensions)
+                fatal("missing dimensions.");
 
-            // if resample bounds are missing, will use auto bounds
-          } else {
-            if (j.contains("dimensions")) 
-              warn("ignoring dimensions");
-            j["dimensions"] = {0}; // workaround
+              // if resample bounds are missing, will use auto bounds
+            } else {
+              if (j.contains("dimensions")) 
+                warn("ignoring dimensions");
+              j["dimensions"] = {0}; // workaround
+            }
+            
+            if (missing_variables) {
+              const std::string var = grid->GetPointData()->GetArrayName(0);
+              j["variables"] = {var};
+            }
+            
+            // determine number of components per var
+            std::vector<int> components;
+            for (int i = 0; i < j["variables"].size(); i ++) {
+              const std::string var = j["variables"][i];
+              vtkSmartPointer<vtkDataArray> da = grid->GetPointData()->GetArray( var.c_str() );
+              if (!da) fatal(FTK_ERR_VTK_VARIABLE_NOT_FOUND);
+              const int nc = da->GetNumberOfComponents();
+              components.push_back(nc);
+            }
+            j["components"] = components;
+            
+            // determine number timesteps
+            if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+              j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+            else 
+              j["n_timesteps"] = j["filenames"].size();
           }
-          
-          if (missing_variables) {
-            const std::string var = grid->GetPointData()->GetArrayName(0);
-            j["variables"] = {var};
-          }
-          
-          // determine number of components per var
-          std::vector<int> components;
-          for (int i = 0; i < j["variables"].size(); i ++) {
-            const std::string var = j["variables"][i];
-            vtkSmartPointer<vtkDataArray> da = grid->GetPointData()->GetArray( var.c_str() );
-            if (!da) fatal(FTK_ERR_VTK_VARIABLE_NOT_FOUND);
-            const int nc = da->GetNumberOfComponents();
-            components.push_back(nc);
-          }
-          j["components"] = components;
-          
-          // determine number timesteps
-          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
-            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
-          else 
-            j["n_timesteps"] = j["filenames"].size();
+
+          diy::mpi::bcastj(comm, j, get_root_proc());
 #else 
           fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
