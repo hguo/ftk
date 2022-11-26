@@ -2,10 +2,28 @@
 #define _DIYEXT_BCAST_HH
 
 #include <ftk/external/diy/mpi.hpp>
+#include <ftk/external/json.hh>
 #include <ftk/utils/serialization.hh>
 #include <numeric>
 
 namespace diy { namespace mpi {
+
+using nlohmann::json;
+
+inline void bcastj(const communicator& comm, json& j, int root = 0)
+{
+  if (comm.size() == 1) return;
+
+  std::vector<std::uint8_t> bson;
+
+  if (comm.rank() == root)
+    bson = json::to_bson(j);
+
+  diy::mpi::broadcast(comm, bson, root);
+
+  if (comm.rank() != root)
+    j = json::from_bson(bson);
+}
 
 template <typename Obj>
 inline void bcastv(const communicator& comm, Obj& inout, int root = 0)
