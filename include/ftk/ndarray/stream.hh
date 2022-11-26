@@ -520,48 +520,52 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
             j["n_timesteps"] = j["filenames"].size();
         } else if (j["format"] == "vti") {
 #if FTK_HAVE_VTK
-          vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
-          reader->SetFileName(filename0.c_str());
-          reader->Update();
+          if (is_root_proc()) {
+            vtkSmartPointer<vtkXMLImageDataReader> reader = vtkSmartPointer<vtkXMLImageDataReader>::New();
+            reader->SetFileName(filename0.c_str());
+            reader->Update();
 
-          vtkSmartPointer<vtkImageData> image = reader->GetOutput();
+            vtkSmartPointer<vtkImageData> image = reader->GetOutput();
 
-          if (j.contains("dimensions")) 
-            warn("ignoring dimensions");
-          int imageNd = image->GetDataDimension();
-          if (imageNd == 2)
-            j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1]};
-          else 
-            j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1], image->GetDimensions()[2]};
-       
-          if (j.contains("bounds"))
-            warn("input bounds will be overridden");
+            if (j.contains("dimensions")) 
+              warn("ignoring dimensions");
+            int imageNd = image->GetDataDimension();
+            if (imageNd == 2)
+              j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1]};
+            else 
+              j["dimensions"] = {image->GetDimensions()[0], image->GetDimensions()[1], image->GetDimensions()[2]};
+         
+            if (j.contains("bounds"))
+              warn("input bounds will be overridden");
 
-          std::vector<double> bounds(6, 0);
-          image->GetBounds(&bounds[0]);
-          j["bounds"] = bounds;
+            std::vector<double> bounds(6, 0);
+            image->GetBounds(&bounds[0]);
+            j["bounds"] = bounds;
 
-          if (missing_variables) {
-            const std::string var = image->GetPointData()->GetArrayName(0);
-            j["variables"] = {var};
+            if (missing_variables) {
+              const std::string var = image->GetPointData()->GetArrayName(0);
+              j["variables"] = {var};
+            }
+
+            // determine number of components per var
+            std::vector<int> components;
+            for (int i = 0; i < j["variables"].size(); i ++) {
+              const std::string var = j["variables"][i];
+              vtkSmartPointer<vtkDataArray> da = image->GetPointData()->GetArray( var.c_str() );
+              if (!da) fatal(FTK_ERR_VTK_VARIABLE_NOT_FOUND);
+              const int nc = da->GetNumberOfComponents();
+              components.push_back(nc);
+            }
+            j["components"] = components;
+            
+            // determine number timesteps
+            if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
+              j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
+            else 
+              j["n_timesteps"] = j["filenames"].size();
           }
-
-          // determine number of components per var
-          std::vector<int> components;
-          for (int i = 0; i < j["variables"].size(); i ++) {
-            const std::string var = j["variables"][i];
-            vtkSmartPointer<vtkDataArray> da = image->GetPointData()->GetArray( var.c_str() );
-            if (!da) fatal(FTK_ERR_VTK_VARIABLE_NOT_FOUND);
-            const int nc = da->GetNumberOfComponents();
-            components.push_back(nc);
-          }
-          j["components"] = components;
           
-          // determine number timesteps
-          if (j.contains("n_timesteps") && j["n_timesteps"].is_number())
-            j["n_timesteps"] = std::min(j["n_timesteps"].template get<size_t>(), j["filenames"].size());
-          else 
-            j["n_timesteps"] = j["filenames"].size();
+          diy::mpi::bcastj(comm, j, get_root_proc());
 #else
           fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
