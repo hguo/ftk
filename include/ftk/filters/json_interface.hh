@@ -421,12 +421,11 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
       grid = reader->GetOutput();
       // return new_from_vtu(grid);
 
-      vtkSmartPointer<vtkCellTypes> types = vtkSmartPointer<vtkCellTypes>::New();
-      grid->GetCellTypes(types);
-      
-      const int ntypes = types->GetNumberOfTypes();
+      vtkSmartPointer<vtkUnsignedCharArray> types = grid->GetDistinctCellTypesArray();
+      const int ntypes = types->GetNumberOfValues();
+
       if (ntypes == 1) {
-        const unsigned char type = types->GetCellType(0);
+        unsigned char type = types->GetValue(0);
         if (type == VTK_TRIANGLE) {
           nd = 2;
           // m.reset(new simplicial_unstructured_2d_mesh<>());
