@@ -151,7 +151,7 @@ vtkSmartPointer<vtkUnstructuredGrid> xgc_blob_threshold_tracker::sliced_to_vtu_s
   std::mutex mutex;
   for (int tid = 0; tid < m3->n(3); tid ++) {
   // parallel_for(m3->n(3), [&](int tid) {
-    int tet[4];
+    int128_t tet[4];
     m3->get_simplex(3, tid, tet);
 
     std::vector<vtkIdType> ids;

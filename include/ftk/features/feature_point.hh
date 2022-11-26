@@ -2,6 +2,7 @@
 #define _FTK_CRITICAL_POINT_T_HH
 
 #include <ftk/config.hh>
+#include <ftk/int128.hh>
 #include <ftk/features/feature_point_lite.hh>
 // #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/external/diy/serialization.hpp>
@@ -95,7 +96,8 @@ public:
   std::array<double, 3> v = {0};
   unsigned int type = 0;
   bool ordinal = false;
-  unsigned long long tag = 0, id = 0;
+  // unsigned long long tag = 0, id = 0;
+  int128_t tag = 0, id = 0;
 };
 
 }

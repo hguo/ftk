@@ -5,7 +5,7 @@
 
 namespace ftk {
 
-template <typename I=int, typename F=double>
+template <typename I=int128_t, typename F=double>
 struct simplicial_unstructured_extruded_3d_mesh : public object { // extruded from 
   simplicial_unstructured_extruded_3d_mesh(const simplicial_unstructured_3d_mesh<I, F>& m_) : m(m_) {extrude();}
 
@@ -1025,7 +1025,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           results.insert(otetid + t*n(3));
           // 0 2 3 3' (0 1 2 2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[2], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1036,7 +1036,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           results.insert(otetid + t*n(3));
           // 0 1 3 3' (0 1 2 2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1047,7 +1047,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           results.insert(otetid + t*n(3));
           // 0 1 2 2' (0 1 2 2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[2]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1057,7 +1057,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           results.insert(otetid + t*n(3) + m.n(3));
           // 0 0'1'2' (t-1, 0 0'1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[2]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1080,7 +1080,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           results.insert(otetid + t*n(3) + m.n(3));
           // 1 2 2'3' (0 1 1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[1], tet[2], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1091,7 +1091,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           results.insert(otetid + t*n(3) + m.n(3));
           // 0 2 2'3' (0 1 1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[2], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1100,7 +1100,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         } else if (pos == 2) { // 0 1 a 2, equiv to finding 013' in 0123-0'1'2'3'
           // 0 1 1'3' (0 1 1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1108,7 +1108,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           }
           // 0 1 3 3' (0 1 2 2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1117,7 +1117,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         } else if (pos == 3) { // 0 1 2 a, equiv to finding 012' in 0123-0'1'2'3'
           // 0 1 2 2' (0 1 2 2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[2]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1125,7 +1125,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           }
           // 0 1 1'2' (0 1 1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[2]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1147,7 +1147,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           results.insert(otetid + t*n(3) + 2*m.n(3));
           // 1 1'2'3' (0 0'1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[1], tet[2], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1155,7 +1155,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           }
           // 1 2 2'3' (0 1 1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[1], tet[2], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1168,7 +1168,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           results.insert(otetid + t*n(3) + 3*m.n(3));
           // 0 2 2'3' (0 1 1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[2], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1177,7 +1177,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         } else if (pos == 2) { // 0 1'3' in tet-prism
           // 0 1 1'3' (0 1 1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1185,7 +1185,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           }
           // 0 0'1'3' (0 0'1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[3]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1196,7 +1196,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
         } else if (pos == 3) { // 0 1'2' in tet-prism
           // 0 0'1'2' (0 0'1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[2]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);
@@ -1204,7 +1204,7 @@ std::set<I> simplicial_unstructured_extruded_3d_mesh<I, F>::side_of(int d, I k) 
           }
           // 0 1 1'2' (0 1 1'2' type)
           {
-            int otriid;
+            I otriid;
             I otri[3] = {tet[0], tet[1], tet[2]};
             bool succ = m.find_simplex(2, otri, otriid);
             assert(succ);

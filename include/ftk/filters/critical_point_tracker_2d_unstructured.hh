@@ -65,7 +65,7 @@ protected:
   bool check_simplex(int, feature_point_t& cp);
 
   template <typename T> void simplex_values(
-      const int verts[3], // vertices
+      const int128_t verts[3], // vertices
       T X[3][4], // coordinates; using 4D coordinates because some mesh (e.g. MPAS) may have 3D coordinates
       T f[3][FTK_CP_MAX_NUM_VARS], // scalars
       T v[3][2], // vectors
@@ -81,7 +81,7 @@ protected:
 
 template <typename T>
 inline void critical_point_tracker_2d_unstructured::simplex_values(
-    const int verts[3], T X[3][4], T f[3][FTK_CP_MAX_NUM_VARS], T v[3][2], T J[3][2][2]) const
+    const int128_t verts[3], T X[3][4], T f[3][FTK_CP_MAX_NUM_VARS], T v[3][2], T J[3][2][2]) const
 {
   for (int i = 0; i < 3; i ++) {
     const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
@@ -105,7 +105,7 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
 
 inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature_point_t& cp)
 {
-  int tri[3];
+  int128_t tri[3];
   const auto tid = m.get_simplex(2, i, tri, m.is_partial()); 
 
   double X[3][4], f[3][FTK_CP_MAX_NUM_VARS], V[3][2], Js[3][2][2];

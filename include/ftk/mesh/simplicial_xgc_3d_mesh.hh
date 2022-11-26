@@ -8,7 +8,7 @@
 
 namespace ftk {
 
-template <typename I=int, typename F=double>
+template <typename I=int128_t, typename F=double>
 struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_); // nphi and iphi must be specified before using
   simplicial_xgc_3d_mesh(std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, int nphi, int iphi=1, int vphi=1);
@@ -357,11 +357,9 @@ to_vtu_slices() const
   for (int p = 0; p < np(); p ++) {
     const vtkIdType offset = p * m2n0;
     for (int i=0; i<m2->n(2); i ++) {
-      vtkIdType ids[3] = {
-        offset + triangles[i*3], 
-        offset + triangles[i*3+1], 
-        offset + triangles[i*3+2]
-      };
+      vtkIdType ids[3]; 
+      for (int k = 0; k < 3; k ++)
+        ids[k] = static_cast<vtkIdType>(offset + triangles[i*3+k]);
       grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
     }
   }

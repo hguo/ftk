@@ -59,10 +59,10 @@ public:
   void put_critical_points(const std::vector<feature_point_t>&);
 
 protected:
-  bool check_simplex(int, feature_point_t& cp);
+  bool check_simplex(int128_t, feature_point_t& cp);
 
   template <int n, typename T> void simplex_values(
-      const int verts[n], // vertices
+      const int128_t verts[n], // vertices
       T X[n][4], // coordinates
       T f[n][FTK_CP_MAX_NUM_VARS], // scalars
       T v[n][3], // vectors
@@ -70,7 +70,7 @@ protected:
   ) const;
 
 protected:
-  std::map<int, feature_point_t> discrete_critical_points;
+  std::map<int128_t, feature_point_t> discrete_critical_points;
   // std::vector<std::vector<critical_point_t>> traced_critical_points;
 };
 
@@ -78,11 +78,11 @@ protected:
 
 template <int n, typename T>
 inline void critical_point_tracker_3d_unstructured::simplex_values(
-    const int verts[n], T X[n][4], T f[n][FTK_CP_MAX_NUM_VARS], T v[n][3], T J[n][3][3]) const
+    const int128_t verts[n], T X[n][4], T f[n][FTK_CP_MAX_NUM_VARS], T v[n][3], T J[n][3][3]) const
 {
   for (int i = 0; i < n; i ++) {
-    const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
-    const int k = m.flat_vertex_id(verts[i]);
+    const int128_t iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
+    const int128_t k = m.flat_vertex_id(verts[i]);
     const auto &data = field_data_snapshots[iv];
     m.get_coords(verts[i], X[i]);
 
@@ -100,9 +100,9 @@ inline void critical_point_tracker_3d_unstructured::simplex_values(
   }
 }
 
-inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature_point_t& cp)
+inline bool critical_point_tracker_3d_unstructured::check_simplex(int128_t i, feature_point_t& cp)
 {
-  int tet[4];
+  int128_t tet[4];
   m.get_simplex(3, i, tet); 
 
   double X[4][4], f[4][FTK_CP_MAX_NUM_VARS], V[4][3], Js[4][3][3];
@@ -201,19 +201,19 @@ inline void critical_point_tracker_3d_unstructured::update_timestep()
 
   if (enable_streaming_trajectories) {
     // grow trajectories
-    trace_critical_points_online<int>(
+    trace_critical_points_online<int128_t>(
         traced_critical_points, 
         discrete_critical_points,
-        [&](int f) {
-          std::set<int> neighbors;
+        [&](int128_t f) {
+          std::set<int128_t> neighbors;
           const auto cells = m.side_of(3, f);
           for (const auto c : cells)
             for (const auto f1 : m.sides(4, c))
               neighbors.insert(f1);
           return neighbors;
         },
-        [](unsigned long long i) {return  i;},
-        [](unsigned long long i) {return  i;}
+        [](int128_t i) {return  i;},
+        [](int128_t i) {return  i;}
     );
   }
 }
@@ -227,7 +227,7 @@ inline void critical_point_tracker_3d_unstructured::finalize()
   } else {
     // Convert connected components to geometries
     auto neighbors = [&](int f) {
-      std::set<int> neighbors;
+      std::set<int128_t> neighbors;
       const auto cells = m.side_of(3, f);
 #if 0
       fprintf(stderr, "tet=%d\n", f);
@@ -260,7 +260,7 @@ inline void critical_point_tracker_3d_unstructured::finalize()
 
     fprintf(stderr, "##dcp=%zu\n", discrete_critical_points.size());
 
-    traced_critical_points.add(trace_critical_points_offline<int>(
+    traced_critical_points.add(trace_critical_points_offline<int128_t>(
         discrete_critical_points, neighbors));
     
     fprintf(stderr, "np=%zu, nc=%zu\n", discrete_critical_points.size(), traced_critical_points.size());

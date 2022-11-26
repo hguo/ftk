@@ -62,7 +62,7 @@ protected:
   std::shared_ptr<simplicial_xgc_2d_mesh<>> mr2; 
   std::shared_ptr<simplicial_xgc_3d_mesh<>> mr3; 
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> mr4;
-  std::vector<int> roi_node_map, roi_inverse_node_map;
+  std::vector<int128_t> roi_node_map, roi_inverse_node_map;
 
   std::shared_ptr<simplicial_xgc_3dff_mesh<>> mf3; // field following 3d mesh
 };
@@ -193,7 +193,7 @@ inline bool xgc_tracker::advance_timestep()
 
 inline double xgc_tracker::derive_threshold(const ndarray<double>& scalar, double sigma_threshold) const
 {
-  const std::vector<int> roi_nodes = m2->get_roi_nodes();
+  const auto roi_nodes = m2->get_roi_nodes();
   double sum = 0.0, sigma = 0.0;
   const int nphi = m3->get_nphi(), m2n0 = m2->n(0), nroi0 = roi_nodes.size();
 

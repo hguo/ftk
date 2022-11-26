@@ -13,7 +13,7 @@ TEST_CASE("mesh_extruded_3d_unstructured_pent_sides") {
   srand(0);
   for (int k = 0; k < 1000; k ++) {
     const int i = rand(); // 434318;
-    int tet[4];
+    ftk::int128_t tet[4];
     m1.get_simplex(3, i, tet);
     fprintf(stderr, "tet=%d, type=%d, tet=%d, %d, %d, %d\n", i, m1.tet_type(i), tet[0], tet[1], tet[2], tet[3]);
 
@@ -44,7 +44,7 @@ TEST_CASE("mesh_extruded_3d_unstructured_tet_sides") {
   srand(0);
   for (int k = 0; k < 1000; k ++) {
     const int i = rand() % 100000000; // have to limit to prevent integer overflow
-    int tri[4];
+    ftk::int128_t tri[4];
     m1.get_simplex(2, i, tri);
     fprintf(stderr, "tri=%d: %d, %d, %d, type=%d\n", 
         i, 
@@ -53,12 +53,12 @@ TEST_CASE("mesh_extruded_3d_unstructured_tet_sides") {
 
     const auto tets = m1.side_of(2, i);
     for (const auto &tet : tets) {
-      int tetverts[4];
+      ftk::int128_t tetverts[4];
       m1.get_simplex(3, tet, tetverts);
       fprintf(stderr, "--tet=%d: %d, %d, %d, %d, type=%d\n", tet, tetverts[0], tetverts[1], tetverts[2], tetverts[3], m1.simplex_type(3, tet));
       const auto sides = m1.sides(3, tet);
       for (const auto &side : sides) {
-        int triverts[3];
+        ftk::int128_t triverts[3];
         m1.get_simplex(2, side, triverts);
         fprintf(stderr, "----side=%d: %d, %d, %d, type=%d\n", side, triverts[0], triverts[1], triverts[2], m1.simplex_type(2, side));
       }
@@ -78,7 +78,7 @@ TEST_CASE("mesh_extruded_2d_unstructured") {
   srand(0);
   for (int k = 0; k < 1000; k ++) {
     const int i = rand();
-    int tri[4];
+    ftk::int128_t tri[4];
     m1.get_simplex(2, i, tri);
     fprintf(stderr, "tri=%d, type=%d, tri=%d, %d, %d\n", 
         i, m1.face_type(i),
@@ -112,13 +112,13 @@ TEST_CASE("mesh_extruded_2d_unstructured_find") {
     const int d = 1 + rand() % 3;
     const int i = rand() % m1.n(d);
 
-    int verts[4] = {0};
+    ftk::int128_t verts[4] = {0};
     m1.get_simplex(d, i, verts);
 
     fprintf(stderr, "get %d-simplex %d: %d, %d, %d, %d\n", 
         d, i, verts[0], verts[1], verts[2], verts[3]);
 
-    int i1;
+    ftk::int128_t i1;
     bool succ = m1.find_simplex(d, verts, i1);
     fprintf(stderr, "find %d-simplex %d: %d, %d, %d, %d, succ=%d\n",
         d, i1, verts[0], verts[1], verts[2], verts[3], succ);
@@ -137,13 +137,13 @@ TEST_CASE("mesh_2d_unstructured_find") {
     const int d = 1 + rand() % 2;
     const int i = rand() % m.n(d);
 
-    int verts[3] = {0};
+    ftk::int128_t verts[3] = {0};
     m.get_simplex(d, i, verts);
 
     fprintf(stderr, "get %d-simplex %d: %d, %d, %d\n", 
         d, i, verts[0], verts[1], verts[2]);
 
-    int i1;
+    ftk::int128_t i1;
     bool succ = m.find_simplex(d, verts, i1);
     fprintf(stderr, "find %d-simplex %d: %d, %d, %d, succ=%d\n",
         d, i1, verts[0], verts[1], verts[2], succ);

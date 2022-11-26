@@ -17,7 +17,7 @@ inline bool robust_critical_point_in_simplex1(const FixedPointType V[2], const W
   return robust_point_in_simplex1(V, indices, zero, WeightType(-1));
 }
 
-template <typename FixedPointType=long long, typename WeightType=int>
+template <typename FixedPointType=long long, typename WeightType=int128_t>
 __device__ __host__
 inline bool robust_critical_point_in_simplex2(const FixedPointType V[3][2], const WeightType indices[3])
 {
@@ -25,7 +25,7 @@ inline bool robust_critical_point_in_simplex2(const FixedPointType V[3][2], cons
   return robust_point_in_simplex2(V, indices, zero, WeightType(-1)); // -1 is the index of zero point 
 }
 
-template <typename FixedPointType=long long, typename WeightType=int>
+template <typename FixedPointType=long long, typename WeightType=int128_t>
 __device__ __host__
 inline bool robust_critical_point_in_simplex3(const FixedPointType V[4][3], const WeightType indices[4])
 {

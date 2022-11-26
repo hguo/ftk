@@ -8,7 +8,7 @@
 
 namespace ftk {
 
-template <typename I=int, typename F=double>
+template <typename I=int128_t, typename F=double>
 struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, F> {
   friend class diy::Serialization<simplicial_unstructured_3d_mesh<I, F>>;
   
@@ -53,7 +53,7 @@ private: // use get_simplex() and find_simplex instead
   bool find_edge(const I v[2], I& i) const;
 
 public:
-  virtual std::set<I> sides(int d, I i) const { return std::set<int>(); } // TODO
+  virtual std::set<I> sides(int d, I i) const { return std::set<I>(); } // TODO
   virtual std::set<I> side_of(int d, I i) const;
 
   virtual void get_simplex(int d, I i, I simplex[]) const;
@@ -254,7 +254,7 @@ template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid)
 {
   vtkIdType ncells = grid->GetNumberOfCells();
-  std::vector<int> tets;
+  std::vector<I> tets;
   for (vtkIdType i = 0; i < ncells; i ++) {
     vtkSmartPointer<vtkCell> cell = grid->GetCell(i);
     if (cell->GetCellType() == VTK_TETRA) {
@@ -305,7 +305,10 @@ to_vtu() const
     // vtkIdType ids[4] = {tetrahedra[i*4], tetrahedra[i*4+1], tetrahedra[i*4+2], tetrahedra[i*4+3]};
     I tet[4];
     get_simplex(3, i, tet);
-    vtkIdType ids[4] = {tet[0], tet[1], tet[2], tet[3]};
+    vtkIdType ids[4]; // = {tet[0], tet[1], tet[2], tet[3]};
+    for (int k = 0; k < 4; k ++)
+      ids[k] = static_cast<vtkIdType>(tet[k]);
+
     // fprintf(stderr, "adding tet %d: %d, %d, %d, %d\n", i, tet[0], tet[1], tet[2], tet[3]);
     grid->InsertNextCell(VTK_TETRA, 4, ids);
   }

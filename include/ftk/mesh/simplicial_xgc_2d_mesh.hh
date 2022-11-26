@@ -12,7 +12,7 @@
 
 namespace ftk {
 
-template <typename I=int, typename F=double>
+template <typename I=int128_t, typename F=double>
 struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   simplicial_xgc_2d_mesh(
       const ndarray<F>& coords, 

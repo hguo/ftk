@@ -2,6 +2,7 @@
 #define _FTK_UNSTRUCTURED_MESH_2D_HH
 
 #include <ftk/config.hh>
+#include <ftk/int128.hh>
 #include <ftk/algorithms/bfs.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
 #include <ftk/numeric/linear_interpolation.hh>
@@ -17,7 +18,7 @@ namespace ftk {
 
 template <typename I, typename F> struct point_locator_2d;
 
-template <typename I=int>
+template <typename I=int128_t>
 struct hash_compare_tuple_i2 {
   hash_compare_tuple_i2() {}
   hash_compare_tuple_i2(const hash_compare_tuple_i2&) {}
@@ -30,7 +31,7 @@ struct hash_compare_tuple_i2 {
   };
 };
 
-template <typename I=int>
+template <typename I=int128_t>
 struct hash_compare_tuple_i3 {
   hash_compare_tuple_i3() {}
   hash_compare_tuple_i3(const hash_compare_tuple_i3&) {}
@@ -43,7 +44,7 @@ struct hash_compare_tuple_i3 {
   };
 };
 
-template <typename I=int, typename F=double>
+template <typename I=int128_t, typename F=double>
 struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
   public simplicial_unstructured_mesh<I, F>
 { 
@@ -340,7 +341,7 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v_[2], I &i) const
 template <typename I, typename F>
 bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v_[3], I &i) const
 {
-  int v[3] = {v_[0], v_[1], v_[2]};
+  I v[3] = {v_[0], v_[1], v_[2]};
   std::sort(v, v+3);
 
 #if FTK_HAVE_TBB
@@ -783,7 +784,7 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
 {
   if (this->is_root_proc()) {
     vtkIdType ncells = grid->GetNumberOfCells();
-    std::vector<int> m_triangles;
+    std::vector<int128_t> m_triangles;
     for (vtkIdType i = 0; i < ncells; i ++) {
       vtkSmartPointer<vtkCell> cell = grid->GetCell(i);
       if (cell->GetCellType() == VTK_TRIANGLE) {
@@ -830,7 +831,9 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_2d_mesh<I, F>::to_v
   }
 
   for (int i=0; i<n(2); i ++) {
-    vtkIdType ids[3] = {triangles[i*3], triangles[i*3+1], triangles[i*3+2]};
+    vtkIdType ids[3]; //  = {triangles[i*3], triangles[i*3+1], triangles[i*3+2]};
+    for (int k = 0; k < 3; k ++)
+      ids[k] = static_cast<vtkIdType>(triangles[i*3+k]);
     grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
   }
 

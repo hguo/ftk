@@ -2,6 +2,7 @@
 #define _FTK_REGULAR_TRACKER_HH
 
 #include <ftk/config.hh>
+#include <ftk/int128.hh>
 #include <ftk/mesh/lattice_partitioner.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/external/diy/master.hpp>
@@ -68,7 +69,7 @@ protected:
   ndarray<double> coords; // legacy
 
 protected: // internal use
-  template <typename I=int> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
+  template <typename I=int128_t> void simplex_indices(const std::vector<std::vector<int>>& vertices, I indices[]) const;
 
   void element_for_ordinal(int k, std::function<void(element_t)> f) { element_for(true, k, f); }
   void element_for_interval(int k, std::function<void(element_t)> f) { element_for(false, k, f); }

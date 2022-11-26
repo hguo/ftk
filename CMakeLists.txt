@@ -339,6 +339,10 @@ if (Boost_SYSTEM_FOUND)
   include_directories (${Boost_INCLUDE_DIRS})
 endif ()
 
+
+include (FindInt128)
+find_int128_types()
+
 ### 
 
 set (FTK_INCLUDE_DIR 

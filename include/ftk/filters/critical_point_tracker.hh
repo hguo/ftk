@@ -137,7 +137,7 @@ protected:
   void update_vector_field_scaling_factor(int minbits=8, int maxbits=21);
 
 protected:
-  template <typename I> // mesh element type
+  template <typename I=int128_t> // mesh element type
   void trace_critical_points_online(
       feature_curve_set_t &trajectories,
       std::map<I, feature_point_t> &discrete_critical_poionts, // critical point tag needs to index mesh element ID.  Discrete critical points will be cleared after tracing
@@ -146,7 +146,7 @@ protected:
       std::function<unsigned long long(I)> elementt_to_tag
   );
 
-	template <typename I> // mesh element type
+	template <typename I=int128_t> // mesh element type
 	std::vector<feature_curve_t> trace_critical_points_offline(
 		std::map<I, feature_point_t> &discrete_critical_points, // id of each cp will be updated
 		std::function<std::set<I>(I)> neighbors);

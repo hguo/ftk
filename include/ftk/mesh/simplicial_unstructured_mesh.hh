@@ -33,7 +33,7 @@
 
 namespace ftk {
 
-template <typename I=int, typename F=double>
+template <typename I=int128_t, typename F=double>
 struct simplicial_unstructured_mesh : public object { 
   simplicial_unstructured_mesh() {}
 

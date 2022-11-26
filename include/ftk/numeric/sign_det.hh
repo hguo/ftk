@@ -2,6 +2,7 @@
 #define _FTK_SIGN_DET_HH
 
 #include <ftk/config.hh>
+#include <ftk/int128.hh>
 #include <ftk/numeric/sign.hh>
 #include <ftk/numeric/det.hh>
 #include <ftk/numeric/swap.hh>
@@ -11,16 +12,16 @@
 
 namespace ftk {
 
-template <typename T>
+template <typename I, typename T>
 __device__ __host__
-inline bool robust_smaller(int i, int j, int k, int l, T pij, T pkl)
+inline bool robust_smaller(I i, I j, I k, I l, T pij, T pkl)
 {
   if (pij != pkl) return pij < pkl;
   else if (i != k) return i > k;
   else return j < l;
 }
 
-template <typename T=long long>
+template <typename T=int128_t>
 __device__ __host__
 inline int robust_sign_det2(const T X[2])
 {
@@ -41,7 +42,7 @@ inline int robust_sign_det2(const T X[2])
   return 0;
 }
 
-template <typename T=long long>
+template <typename T=int128_t>
 __device__ __host__
 inline int robust_sign_det3(const T X[3][2])
 {
@@ -89,7 +90,7 @@ inline int robust_sign_det3(const T X[3][2])
   return 0; // useless
 }
 
-template <typename T=long long>
+template <typename T=int128_t>
 __device__ __host__
 inline int robust_sign_det4(const T X[4][3])
 {
@@ -200,7 +201,7 @@ inline int robust_sign_det4(const T X[4][3])
 }
 
 // returns number of swaps for bubble sort
-template <int n, typename T>
+template <int n, typename T=int128_t>
 __device__ __host__
 inline int nswaps_bubble_sort(T arr[n], T order[n])
 {
@@ -219,20 +220,20 @@ inline int nswaps_bubble_sort(T arr[n], T order[n])
   return nswaps;
 }
 
-template <typename T=long long>
+template <typename T=int128_t, typename I=int128_t>
 __device__ __host__
-inline int positive1(const T X1[2], const int indices1[2])
+inline I positive1(const T X1[2], const I indices1[2])
 {
-  int indices[2], orders[2];
+  I indices[2], orders[2];
   for (int i = 0; i < 2; i ++)
     indices[i] = indices1[i];
-  int s = nswaps_bubble_sort<2, int>(indices, orders);
+  int s = nswaps_bubble_sort<2, I>(indices, orders);
 
   T X[2];
   for (int i = 0; i < 2; i ++)
     X[i] = X1[orders[i]];
 
-  int d = robust_sign_det2(X);
+  I d = robust_sign_det2(X);
 
   if (s % 2 != 0) 
     d = -d;
@@ -240,14 +241,14 @@ inline int positive1(const T X1[2], const int indices1[2])
   return d;
 }
 
-template <typename T=long long>
+template <typename T=int128_t, typename I=int128_t>
 __device__ __host__
-inline int positive2(const T X1[3][2], const int indices1[3])
+inline I positive2(const T X1[3][2], const I indices1[3])
 {
-  int indices[3], orders[3];
+  I indices[3], orders[3];
   for (int i = 0; i < 3; i ++)
     indices[i] = indices1[i];
-  int s = nswaps_bubble_sort<3, int>(indices, orders); // number of swaps to get sorted indices
+  int s = nswaps_bubble_sort<3, I>(indices, orders); // number of swaps to get sorted indices
   // fprintf(stderr, "nswaps=%d\n", s);
 
   T X[3][2];
@@ -266,21 +267,21 @@ inline int positive2(const T X1[3][2], const int indices1[3])
   return d;
 }
 
-template <typename T=long long>
+template <typename T=int128_t, typename I=int128_t>
 __device__ __host__
-inline int positive3(const T X1[4][3], const int indices1[4])
+inline I positive3(const T X1[4][3], const I indices1[4])
 {
-  int indices[4], orders[4];
+  I indices[4], orders[4];
   for (int i = 0; i < 4; i ++)
     indices[i] = indices1[i];
-  int s = nswaps_bubble_sort<4, int>(indices, orders);
+  I s = nswaps_bubble_sort<4, I>(indices, orders);
 
   T X[4][3];
   for (int i = 0; i < 4; i ++)
     for (int j = 0; j < 3; j ++)
       X[i][j] = X1[orders[i]][j];
 
-  int d = robust_sign_det4(X);
+  I d = robust_sign_det4(X);
 
   if (s % 2 != 0) // odd
     d = -d;
@@ -357,16 +358,16 @@ inline bool robust_point_in_simplex1(const T X[2], const int indices[2], const T
 }
 
 // check if a point is in a 2-simplex
-template <typename T=long long>
+template <typename T=int128_t, typename I=int128_t>
 __device__ __host__
-inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], const T x[2], const int ix) //, const int sign=1)
+inline bool robust_point_in_simplex2(const T X[3][2], const I indices[3], const T x[2], const I ix) //, const int sign=1)
 {
   // print3x2("X", X);
-  const int s = positive2(X, indices); // orientation of the simplex
+  const I s = positive2(X, indices); // orientation of the simplex
   // fprintf(stderr, "orientation s=%d\n", s);
   for (int i = 0; i < 3; i ++) {
     T Y[3][2];
-    int my_indices[3];
+    I my_indices[3];
     for (int j = 0; j < 3; j ++)
       if (i == j) {
         my_indices[j] = ix;
@@ -380,7 +381,7 @@ inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], cons
   
     // print3x2("Y", Y);
 
-    int si = positive2(Y, my_indices);
+    I si = positive2(Y, my_indices);
     // fprintf(stderr, "s=%d, s[%d]=%d\n", s, i, si);
     if (s != si)
       return false;
@@ -388,14 +389,14 @@ inline bool robust_point_in_simplex2(const T X[3][2], const int indices[3], cons
   return true;
 }
 
-template <typename T=long long>
+template <typename T=int128_t, typename I=int128_t>
 __device__ __host__
-inline bool robust_point_in_simplex3(const T X[4][3], const int indices[3], const T x[3], int ix)
+inline bool robust_point_in_simplex3(const T X[4][3], const I indices[3], const T x[3], I ix)
 {
-  int s = positive3(X, indices);
+  I s = positive3(X, indices);
   for (int i = 0; i < 4; i ++) {
     T Y[4][3];
-    int my_indices[4];
+    I my_indices[4];
     for (int j = 0; j < 4; j ++)
       if (i == j) {
         my_indices[j] = ix;
@@ -407,7 +408,7 @@ inline bool robust_point_in_simplex3(const T X[4][3], const int indices[3], cons
           Y[j][k] = X[j][k];
       }
 
-    int si = positive3(Y, my_indices);
+    I si = positive3(Y, my_indices);
     if (s != si) return false;
   }
   return true;

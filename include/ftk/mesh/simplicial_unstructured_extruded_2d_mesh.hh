@@ -5,7 +5,7 @@
 
 namespace ftk {
 
-template <typename I=int, typename F=double>
+template <typename I=int128_t, typename F=double>
 struct simplicial_unstructured_extruded_2d_mesh : public object { // extruded from 
   simplicial_unstructured_extruded_2d_mesh(const simplicial_unstructured_2d_mesh<I, F>& m_) : m(m_) {extrude();}
 
@@ -537,7 +537,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
   std::set<I> results;
 
   if (d == 2) { // currently only support d==2
-    int v[3];
+    I v[3];
     get_simplex(2, k, v);
 
     // fprintf(stderr, "k=%d, i=%d, t=%d, v=%d, %d, %d\n", k, i, t, v[0], v[1], v[2]);
@@ -656,7 +656,7 @@ std::set<I> simplicial_unstructured_extruded_2d_mesh<I, F>::side_of(int d, I k) 
       fprintf(stderr, "face=%d(%d): %d(%d), %d(%d), %d(%d)\n", 
           k, tm(k, 2), v[0], tm(v[0]), v[1], tm(v[1]), v[2], tm(v[2]));
       for (const auto tet : results) {
-        int v[4];
+        I v[4];
         get_simplex(3, tet, v);
         fprintf(stderr, "--tet=%d(%d): %d(%d), %d(%d), %d(%d), %d(%d)\n",
           tet, tm(tet, 3), v[0], tm(v[0]), v[1], tm(v[1]), v[2], tm(v[2]), v[3], tm(v[3]));
@@ -755,7 +755,7 @@ bool simplicial_unstructured_extruded_2d_mesh<I, F>::find_simplex(int d, I v[], 
   for (int i = 0; i < d+1; i ++)
     t0[i] = t[i] - mint;
     
-  int w[4];
+  I w[4];
   int k = 0;
   for (auto v : vset) 
     w[k++] = v;

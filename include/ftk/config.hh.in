@@ -30,6 +30,21 @@
 #cmakedefine FTK_HAVE_TBB 1
 #cmakedefine FTK_HAVE_VTK 1
 
+#cmakedefine HAVE_int128_t_HAVE__int128_t 1
+#cmakedefine HAVE_int128_t_HAVEint128_as_long_long 1
+#cmakedefine HAVE_int128_t_HAVEint128_t 1
+#cmakedefine HAVE_int128_t_HAVE__int128 1
+#cmakedefine HAVE_int128_t_HAVEint128 1
+
+#cmakedefine HAVE_uint128_t_HAVE__uint128_t 1
+#cmakedefine HAVE_uint128_t_HAVEuint128_t 1
+#cmakedefine HAVE_uint128_t_HAVE__uint128 1
+#cmakedefine HAVE_uint128_t_HAVEuint128 1
+#cmakedefine HAVE_uint128_t_HAVEunsigned__int128_t 1
+#cmakedefine HAVE_uint128_t_HAVEunsignedint128_t 1
+#cmakedefine HAVE_uint128_t_HAVEunsigned__int128 1
+#cmakedefine HAVE_uint128_t_HAVEunsignedint128 1
+
 #define FTK_FP_PRECISION ${FTK_FP_PRECISION}
 #define FTK_CP_MAX_NUM_VARS ${FTK_CP_MAX_NUM_VARS}
 

@@ -2,6 +2,7 @@
 #define _FTK_NDARRAY_HH
 
 #include <ftk/config.hh>
+#include <ftk/int128.hh>
 #include <ftk/ndarray/ndarray_base.hh>
 #include <ftk/numeric/clamp.hh>
 #include <ftk/basic/murmurhash2.hh>
@@ -802,6 +803,12 @@ inline void ndarray<double>::read_netcdf(int ncid, int varid, int ndims, const s
 }
 
 template <>
+inline void ndarray<int128_t>::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
+{
+  fatal("Reading int128 from netcdf not supported yet.");
+}
+
+template <>
 inline void ndarray<double>::to_netcdf(int ncid, int varid, const size_t st[], const size_t sz[]) const
 {
 #ifdef FTK_HAVE_NETCDF
@@ -1287,6 +1294,7 @@ template <> inline hid_t ndarray<int>::h5_mem_type_id() { return H5T_NATIVE_INT;
 template <> inline hid_t ndarray<unsigned long>::h5_mem_type_id() { return H5T_NATIVE_ULONG; }
 template <> inline hid_t ndarray<unsigned int>::h5_mem_type_id() { return H5T_NATIVE_UINT; }
 template <> inline hid_t ndarray<unsigned char>::h5_mem_type_id() { return H5T_NATIVE_UCHAR; }
+template <> inline hid_t ndarray<int128_t>::h5_mem_type_id() { return H5T_STD_I64LE; }
 #endif
 
 template <typename T>

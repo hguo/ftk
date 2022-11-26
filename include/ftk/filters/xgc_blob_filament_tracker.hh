@@ -57,8 +57,8 @@ protected:
 
   template <int n, typename T>
   void simplex_values(
-      const int i,
-      int verts[n],
+      const int128_t i,
+      int128_t verts[n],
       int t[n],
       int p[n],
       T rzpt[n][4], 
@@ -368,7 +368,8 @@ inline void xgc_blob_filament_tracker::update_timestep()
 
 inline bool xgc_blob_filament_tracker::check_simplex(int i, feature_point_t& cp)
 {
-  int tri[3], t[3], p[3];
+  int128_t tri[3];
+  int t[3], p[3];
   double rzpt[3][4], psin[3], f[3], v[3][2], j[3][2][2], er[3];
   __int128 vf[3][2];
   const long long factor = 1 << 15; // WIP
@@ -444,7 +445,7 @@ void xgc_blob_filament_tracker::check_penta(int e)
   std::shared_ptr<simplicial_unstructured_extruded_3d_mesh<>> m4 = 
     use_roi ? this->mr4 : this->m4;
   
-  int penta[5], t[5];
+  int128_t penta[5], t[5];
   m4->get_simplex(4, e, penta);
   for (int i = 0; i < 5; i ++) {
     t[i] = m4->flat_vertex_time(penta[i]);
@@ -534,8 +535,8 @@ void xgc_blob_filament_tracker::finalize()
 
 template<int n, typename T>
 void xgc_blob_filament_tracker::simplex_values(
-    const int i, 
-    int verts[n],
+    const int128_t i, 
+    int128_t verts[n],
     int t[n], // time
     int p[n], // poloidal
     T rzpt[n][4], 
