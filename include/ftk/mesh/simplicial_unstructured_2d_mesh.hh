@@ -781,29 +781,34 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(const std::string filename)
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid)
 {
-  vtkIdType ncells = grid->GetNumberOfCells();
-  std::vector<int> m_triangles;
-  for (vtkIdType i = 0; i < ncells; i ++) {
-    vtkSmartPointer<vtkCell> cell = grid->GetCell(i);
-    if (cell->GetCellType() == VTK_TRIANGLE) {
-      vtkIdType v[3] = {cell->GetPointId(0), cell->GetPointId(1), cell->GetPointId(2)};
-      // std::sort(v, v+3);
-      for (int j = 0; j < 3; j ++)
-        m_triangles.push_back(v[j]);
+  if (this->is_root_proc()) {
+    vtkIdType ncells = grid->GetNumberOfCells();
+    std::vector<int> m_triangles;
+    for (vtkIdType i = 0; i < ncells; i ++) {
+      vtkSmartPointer<vtkCell> cell = grid->GetCell(i);
+      if (cell->GetCellType() == VTK_TRIANGLE) {
+        vtkIdType v[3] = {cell->GetPointId(0), cell->GetPointId(1), cell->GetPointId(2)};
+        // std::sort(v, v+3);
+        for (int j = 0; j < 3; j ++)
+          m_triangles.push_back(v[j]);
+      }
+    }
+    triangles.reshape({3, m_triangles.size()/3});
+    triangles.from_vector(m_triangles);
+
+    vtkIdType npts = grid->GetNumberOfPoints();
+    vertex_coords.reshape({3, size_t(npts)});
+    for (vtkIdType i = 0; i < npts; i ++) {
+      double x[3] = {0};
+      grid->GetPoint(i, x);
+      vertex_coords(0, i) = x[0];
+      vertex_coords(1, i) = x[1];
+      vertex_coords(2, i) = x[2];
     }
   }
-  triangles.reshape({3, m_triangles.size()/3});
-  triangles.from_vector(m_triangles);
 
-  vtkIdType npts = grid->GetNumberOfPoints();
-  vertex_coords.reshape({3, size_t(npts)});
-  for (vtkIdType i = 0; i < npts; i ++) {
-    double x[3] = {0};
-    grid->GetPoint(i, x);
-    vertex_coords(0, i) = x[0];
-    vertex_coords(1, i) = x[1];
-    vertex_coords(2, i) = x[2];
-  }
+  diy::mpi::bcastv(this->comm, triangles, this->get_root_proc());
+  diy::mpi::bcastv(this->comm, vertex_coords, this->get_root_proc());
 
   build_triangles();
   build_edges();

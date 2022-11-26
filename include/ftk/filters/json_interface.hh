@@ -410,26 +410,40 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
   
   if (file_extension(filename) == FILE_EXT_VTU) {
 #if FTK_HAVE_VTK // currently only support vtu meshes
-    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
-    reader->SetFileName(filename.c_str());
-    reader->Update();
-    vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
-    // return new_from_vtu(grid);
-
-    vtkSmartPointer<vtkCellTypes> types = vtkSmartPointer<vtkCellTypes>::New();
-    grid->GetCellTypes(types);
+    vtkSmartPointer<vtkUnstructuredGrid> grid; 
+    int nd = 0;
     
-    const int ntypes = types->GetNumberOfTypes();
-    if (ntypes == 1) {
-      const unsigned char type = types->GetCellType(0);
-      if (type == VTK_TRIANGLE)
-        m.reset(new simplicial_unstructured_2d_mesh<>());
-      else if (type == VTK_TETRA)
-        m.reset(new simplicial_unstructured_3d_mesh<>());
-      else
+    if (is_root_proc()) {
+      vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
+      reader->SetFileName(filename.c_str());
+      reader->Update();
+      // vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
+      grid = reader->GetOutput();
+      // return new_from_vtu(grid);
+
+      vtkSmartPointer<vtkCellTypes> types = vtkSmartPointer<vtkCellTypes>::New();
+      grid->GetCellTypes(types);
+      
+      const int ntypes = types->GetNumberOfTypes();
+      if (ntypes == 1) {
+        const unsigned char type = types->GetCellType(0);
+        if (type == VTK_TRIANGLE) {
+          nd = 2;
+          // m.reset(new simplicial_unstructured_2d_mesh<>());
+        } else if (type == VTK_TETRA) { 
+          nd = 3;
+          // m.reset(new simplicial_unstructured_3d_mesh<>());
+        } else
+          fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+      } else
         fatal(FTK_ERR_MESH_NONSIMPLICIAL);
-    } else
-      fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+    }
+
+    diy::mpi::broadcast(comm, nd, get_root_proc());
+    if (nd == 2) 
+      m.reset(new simplicial_unstructured_2d_mesh<>());
+    else if (nd == 3) 
+      m.reset(new simplicial_unstructured_3d_mesh<>());
 
     m->from_vtu(grid);
 #else
