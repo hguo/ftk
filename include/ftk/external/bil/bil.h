@@ -31,7 +31,9 @@
 
 #include <ftk/config.hh>
 #if (!FTK_HAVE_PNETCDF)
-#define DISABLE_PNETCDF
+  #ifndef DISABLE_PNETCDF
+    #define DISABLE_PNETCDF
+  #endif 
 #endif
 
 #include <mpi.h>
