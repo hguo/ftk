@@ -54,7 +54,7 @@ struct simplicial_regular_mesh_element {
   // simplicial_regular_mesh_element(const simplicial_regular_mesh &m, int d, size_t index);
   simplicial_regular_mesh_element(const simplicial_regular_mesh &m, int d, size_t work_index, 
       const lattice& l, int scope = ELEMENT_SCOPE_ALL);
-  template <typename uint=uint64_t> simplicial_regular_mesh_element(const simplicial_regular_mesh& m, int d, uint i);
+  template <typename uint=int128_t> simplicial_regular_mesh_element(const simplicial_regular_mesh& m, int d, uint i);
   simplicial_regular_mesh_element(const std::string &i);
 
   simplicial_regular_mesh_element& operator=(const simplicial_regular_mesh_element& e);
@@ -77,8 +77,8 @@ struct simplicial_regular_mesh_element {
   size_t to_work_index(const simplicial_regular_mesh& m, const lattice& l, int scope = ELEMENT_SCOPE_ALL) const;
   void from_work_index(const simplicial_regular_mesh& m, size_t, const lattice& l, int scope = ELEMENT_SCOPE_ALL);
 
-  template <typename uint = uint64_t> uint to_integer(const simplicial_regular_mesh& m) const;
-  template <typename uint = uint64_t> void from_integer(const simplicial_regular_mesh& m, uint i);
+  template <typename uint = int128_t> uint to_integer(const simplicial_regular_mesh& m) const;
+  template <typename uint = int128_t> void from_integer(const simplicial_regular_mesh& m, uint i);
 
   // std::string to_string() const;
   // void from_string(const std::string& index);
