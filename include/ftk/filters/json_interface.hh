@@ -417,25 +417,8 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
       vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
       reader->SetFileName(filename.c_str());
       reader->Update();
-      // vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
       grid = reader->GetOutput();
-      // return new_from_vtu(grid);
-
-      vtkSmartPointer<vtkUnsignedCharArray> types = grid->GetDistinctCellTypesArray();
-      const int ntypes = types->GetNumberOfValues();
-
-      if (ntypes == 1) {
-        unsigned char type = types->GetValue(0);
-        if (type == VTK_TRIANGLE) {
-          nd = 2;
-          // m.reset(new simplicial_unstructured_2d_mesh<>());
-        } else if (type == VTK_TETRA) { 
-          nd = 3;
-          // m.reset(new simplicial_unstructured_3d_mesh<>());
-        } else
-          fatal(FTK_ERR_MESH_NONSIMPLICIAL);
-      } else
-        fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+      nd = simplicial_unstructured_mesh<>::check_simplicial_mesh_dims(grid);
     }
 
     diy::mpi::broadcast(comm, nd, get_root_proc());
@@ -443,6 +426,8 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
       m.reset(new simplicial_unstructured_2d_mesh<>());
     else if (nd == 3) 
       m.reset(new simplicial_unstructured_3d_mesh<>());
+    else 
+      fatal(FTK_ERR_MESH_NONSIMPLICIAL);
 
     m->from_vtu(grid);
 #else

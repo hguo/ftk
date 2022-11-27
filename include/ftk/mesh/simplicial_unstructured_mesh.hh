@@ -58,6 +58,8 @@ public: // io
 
   virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const = 0;
   virtual void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid) = 0;
+
+  static int check_simplicial_mesh_dims(vtkSmartPointer<vtkUnstructuredGrid> grid); // 0: nonsimplicial, 2 or 3: 2D or 3D
 #endif
 };
 
@@ -176,6 +178,37 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_mesh<I, F>::vector_
   grid->GetPointData()->SetActiveScalars(varname.c_str());
 
   return grid;
+}
+
+template <typename I, typename F>
+int simplicial_unstructured_mesh<I, F>::check_simplicial_mesh_dims(vtkSmartPointer<vtkUnstructuredGrid> grid)
+{
+  int nd = 0;
+#if (VTK_VERSION_NUMBER >= VTK_VERSION_CHECK(9, 2, 0))
+  vtkSmartPointer<vtkUnsignedCharArray> types = grid->GetDistinctCellTypesArray();
+  const int ntypes = types->GetNumberOfValues();
+
+  if (ntypes == 1) {
+    unsigned char type = types->GetValue(0);
+    if (type == VTK_TRIANGLE) nd = 2;
+    else if (type == VTK_TETRA) nd = 3;
+    else nd = 0; // nonsimplicial
+  } else 
+    nd = 0; // nonsimplicial
+#else 
+  vtkSmartPointer<vtkCellTypes> types = vtkSmartPointer<vtkCellTypes>::New();
+  grid->GetCellTypes(types);
+  const int ntypes = types->GetNumberOfTypes();
+
+  if (ntypes == 1) {
+    unsigned char type = types->GetCellType(0);
+    if (type == VTK_TRIANGLE) nd = 2;
+    else if (type == VTK_TETRA) nd = 3;
+    else nd = 0; // nonsimplicial
+  } else 
+    nd = 0; // nonsimplicial
+#endif
+  return nd;
 }
 #endif
 
