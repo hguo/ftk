@@ -5,11 +5,11 @@
 # compiler flags.
 
 include(CheckTypeSize)
+include(CheckCXXSourceCompiles)
 
 MACRO(CHECK_128_BIT_HASH_FUNCTION VAR_NAME DEF_NAME)
 
   message("Testing for presence of 128 bit unsigned integer hash function for ${VAR_NAME}.")
-
 
   CHECK_CXX_SOURCE_COMPILES("
   #include <functional>
