@@ -40,7 +40,9 @@ struct lattice {
   const std::vector<size_t>& sizes() const {return sizes_;}
 
   std::vector<size_t> lower_bounds() const;
-  std::vector<size_t> upper_bounds() const; 
+  std::vector<size_t> upper_bounds() const;
+
+  bool contains(const std::vector<size_t> &x) const; // check if x is inside
 
   void reshape(const std::vector<size_t> &sizes);
   void reshape(const std::vector<int> &sizes);
@@ -141,6 +143,14 @@ inline std::vector<size_t> lattice::upper_bounds() const {
   }
 
   return ub; 
+}
+
+inline bool lattice::contains(const std::vector<size_t>& x) const {
+  for (auto i = 0; i < nd(); i ++)
+    if (x[i] < starts_[i] || x[i] >= starts_[i] + sizes_[i])
+      return false;
+
+  return true;
 }
 
 inline void lattice::reshape(const std::vector<size_t> &starts, const std::vector<size_t> &sizes)

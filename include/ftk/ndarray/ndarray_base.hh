@@ -98,6 +98,7 @@ public:
 public:  
   void set_multicomponents(size_t c=1) {ncd = c;}
   size_t multicomponents() const {return ncd;}
+  size_t ncomponents() const;
 
   void set_has_time(bool b) { tv = b; }
   bool has_time() const { return tv; }
@@ -151,6 +152,13 @@ protected:
 inline lattice ndarray_base::get_lattice() const {
   std::vector<size_t> st(nd(), 0), sz(dims);
   return lattice(st, sz);
+}
+
+inline size_t ndarray_base::ncomponents() const {
+  size_t rtn = 1;
+  for (size_t i = 0; i < multicomponents(); i ++)
+    rtn *= dims[i];
+  return rtn;
 }
 
 inline void ndarray_base::reshape(const std::vector<int>& dims)

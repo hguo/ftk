@@ -165,13 +165,7 @@ struct ndarray : public ndarray_base {
   const T& operator[](size_t i) const {return p[i];}
 
   template <typename F=float> // scalar multilinear interpolation
-  T lerp(F x[]) const;
-
-  template <int N, typename F=float> // vector multilinear interpolation
-  T lerpv(F x[]) const;
-
-  template <int N, typename F=float> // NxN tensor multilinear interpolation
-  T lerpt(F x[]) const; 
+  bool mlerp(const F x[], T v[]) const;
 
   ndarray<T>& transpose(); // returns the ref to this
   ndarray<T> get_transpose() const; // only works for 2D arrays
@@ -1619,6 +1613,46 @@ ndarray<T>& ndarray<T>::clamp(T min, T max)
     p[i] = ftk::clamp(p[i], min, max);
 
   return *this;
+}
+
+template <typename T>
+template <typename F>
+bool ndarray<T>::mlerp(const F x[], T v[]) const 
+{
+  static const size_t maxn = 12; // some arbitrary large number for nd
+  const size_t n = nd() - multicomponents(),
+               nc = ncomponents();
+
+  size_t x0[maxn]; // corner
+  F mu[maxn]; // unit coordinates
+  for (size_t i = 0; i < n; i ++) {
+    x0[i] = static_cast<size_t>(x[i]); 
+    mu[i] = x[i] - x0[i];
+    v[i] = F(0);
+  }
+
+  for (size_t cur = 0; cur < (1 << n); cur ++) {
+    bool b[maxn];
+    for (size_t i = 0; i < n; i ++)
+      b[i] = (cur >> i) & 1; // check if ith bit is set
+
+    F coef(1);
+    size_t verts[maxn];
+    for (size_t i = 0; i < n; i ++) {
+      verts[nc+i] = x0[i] + b[i];
+      if (!this->contains(verts)) return false;
+
+      if (b[i])
+        coef *= (F(1) - mu[i]);
+      else 
+        coef *= mu[i];
+    }
+
+    for (size_t k = 0; k < nc; k ++) // variable
+      v[k] += coef * at(verts);
+  }
+
+  return true;
 }
 
 } // namespace ftk
