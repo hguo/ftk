@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <ftk/numeric/rand.hh>
 #include <ftk/numeric/polynomial.hh>
 #include <ftk/numeric/linear_inequality_solver.hh>

@@ -394,6 +394,8 @@ if (FTK_BUILD_TESTS)
     # set (TEST_EXECUTOR ${MPIEXEC_EXECUTABLE})
   endif()
 
+  find_package (Catch2 REQUIRED)
+
   enable_testing ()
   include (Catch)
   add_subdirectory (tests)

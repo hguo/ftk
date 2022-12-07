@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <vector>
 #include <cmath>
 #include <ftk/ndarray/conv.hh>

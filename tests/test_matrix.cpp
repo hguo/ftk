@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <ftk/numeric/matrix_inverse.hh>
 #include <ftk/numeric/matrix_multiplication.hh>
 #include <ftk/numeric/eigen_solver2.hh>
@@ -10,6 +10,8 @@
 
 const int nruns = 1000;
 const double epsilon = 1e-3;
+
+using Catch::Approx;
 
 TEST_CASE("matrix_inverse2") {
   double A[2][2], invA[2][2], I[2][2];

@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include "constants.hh"
 
 #if FTK_HAVE_VTK
@@ -9,6 +9,7 @@
 #endif
 
 using nlohmann::json;
+using Catch::Approx;
 
 // #if FTK_HAVE_VTK
 #if 0 // FTK_HAVE_VTK

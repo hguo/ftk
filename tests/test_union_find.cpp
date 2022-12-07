@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <ftk/basic/union_find.hh>
 #include <ftk/basic/simple_union_find.hh>
 #include <string>

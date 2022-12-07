@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <ftk/numeric/parallel_vector_solver2.hh>
 #include <ftk/numeric/parallel_vector_solver3.hh>
 #include <ftk/numeric/rational_function.hh>

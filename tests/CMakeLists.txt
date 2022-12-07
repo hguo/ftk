@@ -22,57 +22,57 @@ add_custom_target(copy_test_data ALL
 )
 
 add_executable (test_quadratic_interpolation test_quadratic_interpolation.cpp)
-target_link_libraries (test_quadratic_interpolation libftk)
+target_link_libraries (test_quadratic_interpolation libftk Catch2::Catch2)
 catch_discover_tests (test_quadratic_interpolation)
 
 add_executable (test_regular_simplex_mesh test_regular_simplex_mesh.cpp)
-target_link_libraries (test_regular_simplex_mesh libftk)
+target_link_libraries (test_regular_simplex_mesh libftk Catch2::Catch2)
 # catch_discover_tests (test_regular_simplex_mesh)
 
 add_executable (test_array_group_stream test_array_group_stream.cpp)
-target_link_libraries (test_array_group_stream libftk)
+target_link_libraries (test_array_group_stream libftk Catch2::Catch2)
 
 add_executable (test_array_stream test_array_stream.cpp)
 target_link_libraries (test_array_stream libftk)
 
 add_executable (test_union_find test_union_find.cpp)
-target_link_libraries (test_union_find libftk)
+target_link_libraries (test_union_find libftk Catch2::Catch2)
 catch_discover_tests (test_union_find)
 
 add_executable (test_parallel_vectors test_parallel_vectors.cpp)
-target_link_libraries (test_parallel_vectors libftk)
+target_link_libraries (test_parallel_vectors libftk Catch2::Catch2)
 catch_discover_tests (test_parallel_vectors)
 
 add_executable (test_polynomial test_polynomial.cpp)
-target_link_libraries (test_polynomial libftk)
+target_link_libraries (test_polynomial libftk Catch2::Catch2)
 catch_discover_tests (test_polynomial)
 
 add_executable (test_hoshen_kopelman test_hoshen_kopelman.cpp)
-target_link_libraries (test_hoshen_kopelman libftk)
+target_link_libraries (test_hoshen_kopelman libftk Catch2::Catch2)
 catch_discover_tests (test_hoshen_kopelman)
 
 add_executable (test_conv test_conv.cpp)
-target_link_libraries (test_conv libftk)
+target_link_libraries (test_conv libftk Catch2::Catch2)
 catch_discover_tests (test_conv)
 
 add_executable (test_inequality_solvers test_inequality_solvers.cpp)
-target_link_libraries (test_inequality_solvers libftk)
+target_link_libraries (test_inequality_solvers libftk Catch2::Catch2)
 catch_discover_tests (test_inequality_solvers)
 
 add_executable (test_matrix test_matrix.cpp)
-target_link_libraries (test_matrix libftk)
+target_link_libraries (test_matrix libftk Catch2::Catch2)
 catch_discover_tests (test_matrix)
 
 add_executable (test_inverse_interpolation test_inverse_interpolation.cpp)
-target_link_libraries (test_inverse_interpolation libftk)
+target_link_libraries (test_inverse_interpolation libftk Catch2::Catch2)
 catch_discover_tests (test_inverse_interpolation)
 
 add_executable (test_io test_io)
-target_link_libraries (test_io libftk)
+target_link_libraries (test_io libftk Catch2::Catch2)
 catch_discover_tests (test_io)
 
 add_executable (test_mesh test_mesh.cpp)
-target_link_libraries (test_mesh libftk)
+target_link_libraries (test_mesh libftk Catch2::Catch2)
 catch_discover_tests (test_mesh)
 
 if (FTK_TEST_XGC)
@@ -87,12 +87,12 @@ if (FTK_TEST_XGC)
     ${CMAKE_CURRENT_SOURCE_DIR}/synthesize_xgc_data.py)
 
   add_executable (test_xgc_mesh test_xgc_mesh.cpp)
-  target_link_libraries (test_xgc_mesh libftk)
+  target_link_libraries (test_xgc_mesh libftk Catch2::Catch2)
   catch_discover_tests (test_xgc_mesh)
   # PROPERTIES ENVIRONMENT FTK_XGC_TEST_DATA_PATH=${FTK_XGC_TEST_DATA_PATH})
   
   add_executable (test_xgc_filament_tracking test_xgc_filament_tracking.cpp)
-  target_link_libraries (test_xgc_filament_tracking libftk)
+  target_link_libraries (test_xgc_filament_tracking libftk Catch2::Catch2)
   catch_discover_tests (test_xgc_filament_tracking)
 endif ()
 
@@ -100,29 +100,29 @@ endif ()
 #target_link_libraries (test_critical_point_tracking_woven libftk)
 
 add_executable (test_critical_point_tracking_woven_unstructured test_critical_point_tracking_woven_unstructured.cpp)
-target_link_libraries (test_critical_point_tracking_woven_unstructured libftk)
+target_link_libraries (test_critical_point_tracking_woven_unstructured libftk Catch2::Catch2)
 
 add_executable (test_critical_point_tracking_moving_extremum_2d_unstructured test_critical_point_tracking_moving_extremum_2d_unstructured.cpp)
-target_link_libraries (test_critical_point_tracking_moving_extremum_2d_unstructured libftk)
+target_link_libraries (test_critical_point_tracking_moving_extremum_2d_unstructured libftk Catch2::Catch2)
 
 add_executable (test_critical_point_tracking_moving_extremum_3d_unstructured test_critical_point_tracking_moving_extremum_3d_unstructured.cpp)
-target_link_libraries (test_critical_point_tracking_moving_extremum_3d_unstructured libftk)
+target_link_libraries (test_critical_point_tracking_moving_extremum_3d_unstructured libftk Catch2::Catch2)
 
 add_executable (test_critical_point_tracking_moving_extremum_2d test_critical_point_tracking_moving_extremum_2d)
-target_link_libraries (test_critical_point_tracking_moving_extremum_2d libftk)
+target_link_libraries (test_critical_point_tracking_moving_extremum_2d libftk Catch2::Catch2)
 
 add_executable (test_critical_point_tracking_moving_extremum_3d test_critical_point_tracking_moving_extremum_3d)
-target_link_libraries (test_critical_point_tracking_moving_extremum_3d libftk)
+target_link_libraries (test_critical_point_tracking_moving_extremum_3d libftk Catch2::Catch2)
 
 add_executable(test_adios2 test_adios2.cpp)
-target_link_libraries (test_adios2 libftk)
+target_link_libraries (test_adios2 libftk Catch2::Catch2)
 
 add_executable (test_critical_point_tracking_merger_2d test_critical_point_tracking_merger_2d)
-target_link_libraries (test_critical_point_tracking_merger_2d libftk)
+target_link_libraries (test_critical_point_tracking_merger_2d libftk Catch2::Catch2)
 catch_discover_tests (test_critical_point_tracking_merger_2d)
 
 add_executable (test_critical_point_tracking_double_gyre test_critical_point_tracking_double_gyre)
-target_link_libraries (test_critical_point_tracking_double_gyre libftk)
+target_link_libraries (test_critical_point_tracking_double_gyre libftk Catch2::Catch2)
 catch_discover_tests (test_critical_point_tracking_double_gyre)
 
 # in situ adios2 test
@@ -132,14 +132,14 @@ if (FTK_HAVE_ADIOS2)
     heat2d/IO_adios2.cpp
     heat2d/Settings.cpp
     heat2d/heatSimulation.cpp)
-  target_link_libraries (heat2d libftk)
+  target_link_libraries (heat2d libftk Catch2::Catch2)
   add_test (NAME test_adios2_heat2d_insitu
     COMMAND ${MPIEXEC} -n 12 $<TARGET_FILE:heat2d> sim.bp 4 3 5 10 200 1 : -n 2 $<TARGET_FILE:ftk> --adios-config heat2d_adios2.xml --adios-name SimulationOutput -f cp --input sim.bp --var T --output-type traced --output heat.txt --stream)
 endif ()
 
 function (add_mpi_test target maxp args)
   add_executable (${target} ${target}.cpp)
-  target_link_libraries (${target} libftk)
+  target_link_libraries (${target} libftk Catch2::Catch2)
   if (FTK_HAVE_MPI)
     foreach (p RANGE 1 ${maxp})
       add_test (NAME ${target}_p${p}

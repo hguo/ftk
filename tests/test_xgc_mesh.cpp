@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/ndarray.hh>

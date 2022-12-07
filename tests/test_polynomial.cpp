@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <ftk/numeric/polynomial.hh>
 #include <ftk/numeric/quadratic_solver.hh>
 #include <ftk/numeric/cubic_solver.hh>
@@ -22,7 +22,7 @@ TEST_CASE("solve_quadratic_real")
     int nroots = ftk::solve_quadratic_real(P, x);
     for (int i = 0; i < nroots; i ++) {
       double val = ftk::polynomial_evaluate(P, 2, x[i]);
-      REQUIRE(val == Approx(0.0).margin(epsilon));
+      REQUIRE(val == Catch::Approx(0.0).margin(epsilon));
     }
   }
 }
@@ -37,7 +37,7 @@ TEST_CASE("solve_cubic_real")
     int nroots = ftk::solve_cubic_real(P, x);
     for (int i = 0; i < nroots; i ++) {
       double val = ftk::polynomial_evaluate(P, 3, x[i]);
-      REQUIRE(val == Approx(0.0).margin(epsilon));
+      REQUIRE(val == Catch::Approx(0.0).margin(epsilon));
     }
   }
 }

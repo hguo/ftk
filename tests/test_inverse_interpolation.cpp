@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/numeric/rand.hh>
@@ -9,6 +9,8 @@
 
 const int nruns = 1; // 00000;
 const double epsilon = 1e-9;
+
+using Catch::Approx;
 
 TEST_CASE("inverse_linear_interpolation_2simplex_vector2") {
   double V[3][2], mu[3], v[2];

@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include <ftk/numeric/quadratic_interpolation.hh>
 #include <ftk/numeric/rand.hh>
 #include <ftk/external/diy/mpi.hpp>
@@ -23,7 +23,7 @@ TEST_CASE("quadratic_interpolation") {
           tmp_f += Q[i][j] * x_i * x_j;
         }
       } 
-      REQUIRE(f[n] == Approx(tmp_f).margin(epsilon));
+      REQUIRE(f[n] == Catch::Approx(tmp_f).margin(epsilon));
     }
   }
 }

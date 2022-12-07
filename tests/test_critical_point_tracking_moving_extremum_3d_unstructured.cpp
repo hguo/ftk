@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include "catch.hh"
+#include <catch2/catch_all.hpp>
 #include "constants.hh"
 #include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
 
