@@ -99,6 +99,8 @@ public: // distributed parallel
   std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> generate_submesh() const;
 
 public: // io
+  static std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> from_file(const std::string& filename);
+  
   void from_vtu(const std::string filename);
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
@@ -1013,10 +1015,10 @@ I simplicial_unstructured_2d_mesh<I, F>::gid2lid(int d, I gid) const
 template <typename I, typename F>
 void simplicial_unstructured_2d_mesh<I, F>::build_partition()
 {
-  // TODO: use parmetis
-#if FTK_HAVE_METIS
   if (this->comm.size() == 1) return;
     
+  // TODO: use parmetis
+#if FTK_HAVE_METIS
   idx_t nverts = n(2), ncon = 1, nparts = this->comm.size();
   std::vector<idx_t> xadj, adj, part; // (nverts, 0);
   idx_t objval;
@@ -1096,7 +1098,7 @@ void simplicial_unstructured_2d_mesh<I, F>::build_partition()
       part_edges.size(), 
       part_vertices.size());
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_METIS);
+  warn("The mesh won't be partitioned because FTK is not built with METIS.");
 #endif
 }
 
@@ -1110,6 +1112,25 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of2(const I v[2]) const
   else return it->second;
 }
 #endif
+
+template <typename I, typename F>
+std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> simplicial_unstructured_2d_mesh<I, F>::from_file(const std::string& filename)
+{
+  std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m(new simplicial_unstructured_2d_mesh<>);
+  if (ends_with_lower(filename, "vtu")) {
+#if FTK_HAVE_VTK
+    vtkSmartPointer<vtkXMLUnstructuredGridReader> reader = vtkXMLUnstructuredGridReader::New();
+    reader->SetFileName( filename.c_str() );
+    reader->Update();
+    m->from_vtu( reader->GetOutput() );
+#else
+    fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+  } else {
+    diy::unserializeFromFile(filename, *m);
+  }
+  return m;
+}
 
 } // namespace ftk
 
