@@ -5,6 +5,7 @@
 #include <ftk/filters/critical_point_tracker_3d_regular.hh>
 #include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
 #include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
+#include <ftk/filters/particle_tracer_mpas_o.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/mesh/simplicial_mpas_2d_mesh.hh>
@@ -373,6 +374,7 @@ void json_interface::consume_mpas(ndarray_stream<> &stream, diy::mpi::communicat
   const std::string filename0 = js["filenames"][0];
 
   auto m = simplicial_mpas_2d_mesh<>::from_file(filename0);
+
   tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
   
   configure_tracker_general(comm);

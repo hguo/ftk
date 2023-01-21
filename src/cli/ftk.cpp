@@ -262,6 +262,16 @@ void initialize_contour_tracker(diy::mpi::communicator comm)
 
 }
 
+void initialize_mpas_particles(diy::mpi::communicator comm)
+{
+  fprintf(stderr, "initializing maps particles..\n");
+}
+
+void execute_mpas_particles(diy::mpi::communicator comm)
+{
+  fprintf(stderr, "mpas particles..\n");
+}
+
 void execute_contour_tracker(diy::mpi::communicator comm)
 {
   tracker_contour->initialize();
@@ -881,6 +891,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     initialize_xgc_blob_filament_tracker(comm);
   else if (ttype == TRACKER_XGC_BLOB_THRESHOLD)
     initialize_xgc_blob_threshold_tracker(comm);
+  else if (ttype == TRACKER_MPAS_O_PARTICLES) 
+    initialize_mpas_particles(comm);
   else 
     fatal(options, "missing or invalid '--feature'");
 
@@ -903,6 +915,8 @@ int main(int argc, char **argv)
     execute_contour_tracker(comm);
   else if (ttype == TRACKER_TDGL_VORTEX)
     execute_tdgl_tracker(comm);
+  else if (ttype == TRACKER_MPAS_O_PARTICLES)
+    execute_mpas_particles(comm);
 
   return 0;
 }
