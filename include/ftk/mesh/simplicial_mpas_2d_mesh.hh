@@ -15,6 +15,9 @@ struct simplicial_mpas_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   // int ncoords() const { return 3; }
 
   static std::shared_ptr<simplicial_mpas_2d_mesh<I, F>> from_file(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
+
+public:
+  I locate_cell_xyz(const F xyz[]) const;
 };
 
 // inline simplicial_mpas_2d_mesh::simplicial_mpas_2d_mesh(const mpas_mesh& mm) :

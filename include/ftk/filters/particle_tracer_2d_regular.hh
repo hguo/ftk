@@ -36,11 +36,11 @@ struct particle_tracer_2d_regular : public particle_tracer_regular
   void update_timestep();
 
 protected:
-  bool eval_v(const double* x, double *v);
+  bool eval_v(const double* x, double *v) const;
 };
 
 inline bool particle_tracer_2d_regular::eval_v(
-    const double *x, double *v)
+    const double *x, double *v) const
 {
   const double t = (x[3] - current_t) / current_delta_t;
   return false;

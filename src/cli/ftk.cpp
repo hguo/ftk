@@ -20,6 +20,7 @@
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/filters/feature_curve_set_post_processor.hh"
+#include "ftk/filters/particle_tracer_mpas_o.hh"
 #include "ftk/mesh/simplicial_mpas_2d_mesh.hh"
 #include "ftk/io/util.hh"
 #include "ftk/io/xgc_stream.hh"
@@ -92,6 +93,7 @@ std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
 std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
 std::shared_ptr<particle_tracer> tracker_particle;
+std::shared_ptr<particle_tracer_mpas_o> tracker_mpas_particles;
 std::shared_ptr<threshold_tracker<>> tracker_threshold;
 std::shared_ptr<ndarray_stream<>> stream;
 
@@ -234,6 +236,36 @@ static void execute_critical_point_tracker(diy::mpi::communicator comm)
   wrapper->write();
 }
 
+void initialize_mpas_particles(diy::mpi::communicator comm)
+{
+  fprintf(stderr, "initializing maps particle tracer..\n");
+  
+  const auto js = stream->get_json();
+  const std::string filename0 = js["filenames"][0];
+  const int nt = js["n_timesteps"];
+
+  auto m = simplicial_mpas_2d_mesh<>::from_file(filename0);
+  tracker_mpas_particles.reset(new particle_tracer_mpas_o(comm, m)); 
+  tracker_mpas_particles->set_end_timestep(nt - 1);
+  tracker_mpas_particles->initialize();
+}
+
+void execute_mpas_particles(diy::mpi::communicator comm)
+{
+  fprintf(stderr, "tracing mpas particles..\n");
+  
+  stream->set_callback([&](int k, const ndarray<double> &field_data) {
+    tracker_mpas_particles->push_field_data_snapshot(field_data);
+    
+    if (k != 0) tracker_mpas_particles->advance_timestep();
+    if (k == stream->n_timesteps() - 1) tracker_mpas_particles->update_timestep();
+  });
+  stream->start();
+  stream->finish();
+  tracker_mpas_particles->finalize();
+}
+
+
 void initialize_contour_tracker(diy::mpi::communicator comm)
 {
   const auto js = stream->get_json();
@@ -260,16 +292,6 @@ void initialize_contour_tracker(diy::mpi::communicator comm)
   if (accelerator == "cuda")
     tracker_contour->use_accelerator(FTK_XL_CUDA);
 
-}
-
-void initialize_mpas_particles(diy::mpi::communicator comm)
-{
-  fprintf(stderr, "initializing maps particles..\n");
-}
-
-void execute_mpas_particles(diy::mpi::communicator comm)
-{
-  fprintf(stderr, "mpas particles..\n");
 }
 
 void execute_contour_tracker(diy::mpi::communicator comm)
