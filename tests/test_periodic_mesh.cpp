@@ -16,6 +16,7 @@ int main(int argc, char **argv)
   
   const int nphi = 3;
 
+#if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
   pts->SetNumberOfPoints(m2->n(0) * (nphi + 1));
@@ -47,6 +48,7 @@ int main(int argc, char **argv)
   writer->SetFileName("out.vtu");
   writer->SetInputData( grid );
   writer->Write();
+#endif
 
   return 0;
 }
