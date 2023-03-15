@@ -77,7 +77,7 @@ catch_discover_tests (test_mesh)
 
 add_executable (test_periodic_mesh test_periodic_mesh.cpp)
 target_link_libraries (test_periodic_mesh libftk)
-catch_discover_tests (test_periodic_mesh)
+# catch_discover_tests (test_periodic_mesh) # no unit test for periodic mesh yet
 
 if (FTK_TEST_XGC)
   message("Adding XGC-specific tests, data_path = ${FTK_XGC_TEST_DATA_PATH}")
