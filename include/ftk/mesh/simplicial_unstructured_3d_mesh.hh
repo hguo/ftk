@@ -74,7 +74,8 @@ private: // mesh conn
   std::vector<std::set<I>> vertex_side_of;
   std::vector<std::set<I>> vertex_edge_vertex;
 
-  ndarray<I> edges;
+  // ndarray<I> edges;
+  std::vector<std::tuple<I, I>> edges;
   std::vector<std::set<I>> edges_side_of;
 
   // ndarray<I> triangles;
@@ -186,7 +187,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
   }
   
   // tri id map
-  for (auto i = 0; i < n(3); i ++) {
+  for (auto i = 0; i < n(2); i ++) {
     triangle_id_map[ triangles[i] ] = i;
   }
 
@@ -207,11 +208,14 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::build_edges()
 {
-  std::map<I, std::set<I>> map_edges_side_of;
+  // std::map<I, std::set<I>> map_edges_side_of;
+  std::map<std::tuple<I, I>, std::set<I>> map_edge_side_of;
 
-  int edge_count = 0;
-  auto add_edge = [&](I tid, I v0, I v1) {
+  // int edge_count = 0;
+  auto add_edge = [&](I tid, I v0, I v1) { // v0 < v1
     const auto edge = std::make_tuple(v0, v1);
+    map_edge_side_of[edge].insert(tid);
+#if 0
     I id;
     if (edge_id_map.find(edge) == edge_id_map.end()) {
       id = edge_count ++;
@@ -220,6 +224,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
       id = edge_id_map[edge];
 
     map_edges_side_of[id].insert(tid);
+#endif
   };
 
   // fprintf(stderr, "triangles_88078=%d, %d, %d\n", triangles(0, 88078), triangles(1, 88078), triangles(2, 88078)); 
@@ -233,6 +238,22 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
     add_edge(i, std::get<1>(t), std::get<2>(t));
   }
 
+  int count = 0;
+  edges.resize(map_edge_side_of.size());
+  edges_side_of.resize(map_edge_side_of.size());
+
+  for (const auto &kv : map_edge_side_of) {
+    edges[count] = kv.first;
+    edges_side_of[count] = kv.second;
+    count ++;
+  }
+
+  // edge id map
+  for (auto i = 0; i < n(1); i ++) {
+    edge_id_map[ edges[i] ] = i;
+  }
+
+#if 0
   edges.reshape(2, edge_id_map.size());
   edges_side_of.resize(edge_id_map.size());
   for (const auto &kv : edge_id_map) {
@@ -242,6 +263,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
     for (const auto tid : map_edges_side_of[kv.second])
       edges_side_of[kv.second].insert(tid);
   }
+#endif
 
   /////// 
   vertex_side_of.resize(vertex_coords.dim(1));
@@ -265,7 +287,8 @@ size_t simplicial_unstructured_3d_mesh<I, F>::n(int d, bool part /* TODO */) con
   if (d == 0) 
     return vertex_coords.dim(1);
   else if (d == 1)
-    return edges.dim(1);
+    // return edges.dim(1);
+    return edges.size();
   else if (d == 2)
     // return triangles.dim(1);
     return triangles.size();
@@ -444,8 +467,9 @@ void simplicial_unstructured_3d_mesh<I, F>::get_triangle(I i, I tri[]) const
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::get_edge(I i, I v[]) const
 {
-  v[0] = edges(0, i);
-  v[1] = edges(1, i);
+  const auto e = edges[i];
+  v[0] = std::get<0>(e); // edges(0, i);
+  v[1] = std::get<1>(e); // edges(1, i);
 }
 
 template <typename I, typename F>
@@ -463,8 +487,8 @@ bool simplicial_unstructured_3d_mesh<I, F>::find_edge(const I v[2], I &i) const
   if (it == edge_id_map.end()) return false;
   else {
     i = it->second;
-    assert(edges(0, i) == v[0]);
-    assert(edges(1, i) == v[1]);
+    // assert(edges(0, i) == v[0]);
+    // assert(edges(1, i) == v[1]);
     return true;
   }
 }
