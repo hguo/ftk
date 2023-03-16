@@ -113,6 +113,11 @@ I simplicial_unstructured_periodic_2d_mesh<I, F>::get_simplex(int d, I k, I vert
   const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));
   const I offset = t * n(0); // 0d gid offset for verts
 
+  // FIXME: this may be fine for tets; 
+  // however, we need special handling of triangles and edges.
+  // if we could sort edges and triangles in m3, it is possible 
+  // to retrieve ordinal and interval 1- and 2- simplices eligently
+
   m3->get_simplex(d, i, verts);
   for (int i = 0; i < d+1; i ++)
     verts[i] += offset;

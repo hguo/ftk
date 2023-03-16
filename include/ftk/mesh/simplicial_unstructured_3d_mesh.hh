@@ -85,7 +85,7 @@ private: // mesh conn
 
   std::vector<std::tuple<I, I, I, I>> tetrahedra;
   // ndarray<I> tetrahedra;
-  ndarray<I> tetrahedra_sides;
+  // ndarray<I> tetrahedra_sides;
 
 public:
   std::map<std::tuple<I, I>, int> edge_id_map;
@@ -183,6 +183,11 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
     triangles[count] = kv.first;
     triangle_side_of[count] = kv.second;
     count ++;
+  }
+  
+  // tri id map
+  for (auto i = 0; i < n(3); i ++) {
+    triangle_id_map[ triangles[i] ] = i;
   }
 
 #if 0
@@ -621,10 +626,10 @@ namespace diy {
       diy::save(bb, m.edges);
       diy::save(bb, m.edges_side_of);
       diy::save(bb, m.triangles);
-      diy::save(bb, m.triangle_sides);
+      // diy::save(bb, m.triangle_sides);
       diy::save(bb, m.triangle_side_of);
       diy::save(bb, m.tetrahedra);
-      diy::save(bb, m.tetrahedra_sides);
+      // diy::save(bb, m.tetrahedra_sides);
       diy::save(bb, m.edge_id_map);
       diy::save(bb, m.triangle_id_map);
       diy::save(bb, m.tetrahedron_id_map);
@@ -637,10 +642,10 @@ namespace diy {
       diy::load(bb, m.edges);
       diy::load(bb, m.edges_side_of);
       diy::load(bb, m.triangles);
-      diy::load(bb, m.triangle_sides);
+      // diy::load(bb, m.triangle_sides);
       diy::load(bb, m.triangle_side_of);
       diy::load(bb, m.tetrahedra);
-      diy::load(bb, m.tetrahedra_sides);
+      // diy::load(bb, m.tetrahedra_sides);
       diy::load(bb, m.edge_id_map);
       diy::load(bb, m.triangle_id_map);
       diy::load(bb, m.tetrahedron_id_map);
