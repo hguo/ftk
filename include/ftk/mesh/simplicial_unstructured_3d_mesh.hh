@@ -77,7 +77,8 @@ private: // mesh conn
   ndarray<I> edges;
   std::vector<std::set<I>> edges_side_of;
 
-  ndarray<I> triangles;
+  // ndarray<I> triangles;
+  std::vector<std::tuple<I, I, I>> triangles;
   ndarray<I> triangle_sides;
   // ndarray<I> triangle_side_of;
   std::vector<std::set<I>> triangle_side_of;
@@ -143,11 +144,14 @@ void simplicial_unstructured_3d_mesh<I, F>::build_tetrahedra()
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
 {
-  std::map<I, std::set<I>> map_triangle_side_of;
+  // std::map<I, std::set<I>> map_triangle_side_of;
+  std::map<std::tuple<I, I, I>, std::set<I>> map_triangle_side_of;
 
-  int triangle_count = 0;
-  auto add_triangle = [&](I tid, I v0, I v1, I v2) {
+  // int triangle_count = 0;
+  auto add_triangle = [&](I tid, I v0, I v1, I v2) { // vertices are already sorted
     const auto tri = std::make_tuple(v0, v1, v2);
+    map_triangle_side_of[tri].insert(tid);
+#if 0
     I id;
     if (triangle_id_map.find(tri) == triangle_id_map.end()) {
       id = triangle_count ++;
@@ -156,6 +160,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
       id = triangle_id_map[tri];
 
     map_triangle_side_of[id].insert(tid);
+#endif
   };
 
   for (auto i = 0; i < n(3); i ++) {
@@ -170,6 +175,17 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
     add_triangle(i, std::get<1>(t), std::get<2>(t), std::get<3>(t));
   }
 
+  int count = 0;
+  triangles.resize(map_triangle_side_of.size());
+  triangle_side_of.resize(map_triangle_side_of.size());
+
+  for (const auto &kv : map_triangle_side_of) {
+    triangles[count] = kv.first;
+    triangle_side_of[count] = kv.second;
+    count ++;
+  }
+
+#if 0
   triangles.reshape(3, triangle_id_map.size());
   triangle_side_of.resize(triangle_id_map.size());
   for (const auto &kv : triangle_id_map) {
@@ -180,6 +196,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
     for (const auto tid : map_triangle_side_of[kv.second])
       triangle_side_of[kv.second].insert(tid);
   }
+#endif
 }
 
 template <typename I, typename F>
@@ -202,9 +219,13 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
 
   // fprintf(stderr, "triangles_88078=%d, %d, %d\n", triangles(0, 88078), triangles(1, 88078), triangles(2, 88078)); 
   for (auto i = 0; i < n(2); i ++) {
-    add_edge(i, triangles(0, i), triangles(1, i));
-    add_edge(i, triangles(0, i), triangles(2, i));
-    add_edge(i, triangles(1, i), triangles(2, i));
+    const auto t = triangles[i];
+    // add_edge(i, triangles(0, i), triangles(1, i));
+    // add_edge(i, triangles(0, i), triangles(2, i));
+    // add_edge(i, triangles(1, i), triangles(2, i));
+    add_edge(i, std::get<0>(t), std::get<1>(t));
+    add_edge(i, std::get<0>(t), std::get<2>(t));
+    add_edge(i, std::get<1>(t), std::get<2>(t));
   }
 
   edges.reshape(2, edge_id_map.size());
@@ -241,7 +262,8 @@ size_t simplicial_unstructured_3d_mesh<I, F>::n(int d, bool part /* TODO */) con
   else if (d == 1)
     return edges.dim(1);
   else if (d == 2)
-    return triangles.dim(1);
+    // return triangles.dim(1);
+    return triangles.size();
   else if (d == 3)
     // return tetrahedra.dim(1);
     return tetrahedra.size();
@@ -408,9 +430,10 @@ void simplicial_unstructured_3d_mesh<I, F>::get_tetrahedron(I i, I tet[]) const
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::get_triangle(I i, I tri[]) const
 {
-  tri[0] = triangles(0, i);
-  tri[1] = triangles(1, i);
-  tri[2] = triangles(2, i);
+  const auto t = triangles[i];
+  tri[0] = std::get<0>(t); // triangles(0, i);
+  tri[1] = std::get<1>(t); // triangles(1, i);
+  tri[2] = std::get<2>(t); // triangles(2, i);
 }
 
 template <typename I, typename F>
@@ -450,9 +473,9 @@ bool simplicial_unstructured_3d_mesh<I, F>::find_triangle(const I v[3], I &i) co
   else {
     i = it->second;
     // fprintf(stderr, "found triangle!!! %d\n", i);
-    assert(triangles(0, i) == v[0]);
-    assert(triangles(1, i) == v[1]);
-    assert(triangles(2, i) == v[2]);
+    // assert(triangles(0, i) == v[0]);
+    // assert(triangles(1, i) == v[1]);
+    // assert(triangles(2, i) == v[2]);
     return true;
   }
 }
