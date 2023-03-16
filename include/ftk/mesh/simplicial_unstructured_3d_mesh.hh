@@ -4,6 +4,7 @@
 #include <ftk/config.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
 #include <ftk/utils/string.hh>
+#include <ftk/numeric/sign_det.hh>
 
 namespace ftk {
 
@@ -81,7 +82,8 @@ private: // mesh conn
   // ndarray<I> triangle_side_of;
   std::vector<std::set<I>> triangle_side_of;
 
-  ndarray<I> tetrahedra;
+  std::vector<std::tuple<I, I, I, I>> tetrahedra;
+  // ndarray<I> tetrahedra;
   ndarray<I> tetrahedra_sides;
 
 public:
@@ -100,22 +102,41 @@ simplicial_unstructured_3d_mesh<I, F>::simplicial_unstructured_3d_mesh(
 {
   vertex_coords.copy_vector(coords_);
   vertex_coords.reshape({3, coords_.size()/3});
-  
-  tetrahedra.copy_vector(tetrahedra_);
-  tetrahedra.reshape({4, tetrahedra_.size()/4});
+
+  for (auto i = 0; i < tetrahedra_.size() / 4; i ++)
+    tetrahedra.push_back(std::make_tuple(
+          tetrahedra_[i*4], tetrahedra_[i*4+1], tetrahedra_[i*4+2], tetrahedra_[i*4+3]));
+
+  // tetrahedra.copy_vector(tetrahedra_);
+  // tetrahedra.reshape({4, tetrahedra_.size()/4});
 }
 
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::build_tetrahedra()
 {
   for (auto i = 0; i < n(3); i ++) {
-    I v[4];
+    I v[4], order[4];
     get_tetrahedron(i, v);
-    std::sort(v, v+4);
-    for (auto j = 0; j < 4; j ++)
-      tetrahedra(j, i) = v[j];
+    
+    // std::sort(v, v+4);
+    const int nswaps = nswaps_bubble_sort<4, I>(v, order);
 
-    tetrahedron_id_map[ std::make_tuple(v[0], v[1], v[2], v[3]) ] = i;
+    auto &t = tetrahedra[i];
+    std::get<0>(t) = v[0];
+    std::get<1>(t) = v[1];
+    std::get<2>(t) = v[2];
+    std::get<3>(t) = v[3];
+    // for (auto j = 0; j < 4; j ++)
+    //   tetrahedra(j, i) = v[j];
+  }
+
+  // sort tets based on ids
+  std::sort(tetrahedra.begin(), tetrahedra.end());
+
+  // tet id map
+  for (auto i = 0; i < n(3); i ++) {
+    // tetrahedron_id_map[ std::make_tuple(v[0], v[1], v[2], v[3]) ] = i;
+    tetrahedron_id_map[ tetrahedra[i] ] = i;
   }
 }
 
@@ -138,10 +159,15 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
   };
 
   for (auto i = 0; i < n(3); i ++) {
-    add_triangle(i, tetrahedra(0, i), tetrahedra(1, i), tetrahedra(2, i));
-    add_triangle(i, tetrahedra(0, i), tetrahedra(1, i), tetrahedra(3, i));
-    add_triangle(i, tetrahedra(0, i), tetrahedra(2, i), tetrahedra(3, i));
-    add_triangle(i, tetrahedra(1, i), tetrahedra(2, i), tetrahedra(3, i));
+    // add_triangle(i, tetrahedra(0, i), tetrahedra(1, i), tetrahedra(2, i));
+    // add_triangle(i, tetrahedra(0, i), tetrahedra(1, i), tetrahedra(3, i));
+    // add_triangle(i, tetrahedra(0, i), tetrahedra(2, i), tetrahedra(3, i));
+    // add_triangle(i, tetrahedra(1, i), tetrahedra(2, i), tetrahedra(3, i));
+    const auto t = tetrahedra[i];
+    add_triangle(i, std::get<0>(t), std::get<1>(t), std::get<2>(t));
+    add_triangle(i, std::get<0>(t), std::get<1>(t), std::get<3>(t));
+    add_triangle(i, std::get<0>(t), std::get<2>(t), std::get<2>(t));
+    add_triangle(i, std::get<1>(t), std::get<2>(t), std::get<3>(t));
   }
 
   triangles.reshape(3, triangle_id_map.size());
@@ -217,7 +243,8 @@ size_t simplicial_unstructured_3d_mesh<I, F>::n(int d, bool part /* TODO */) con
   else if (d == 2)
     return triangles.dim(1);
   else if (d == 3)
-    return tetrahedra.dim(1);
+    // return tetrahedra.dim(1);
+    return tetrahedra.size();
   else return 0;
 }
 
@@ -253,7 +280,8 @@ template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid)
 {
   vtkIdType ncells = grid->GetNumberOfCells();
-  std::vector<int> tets;
+  // std::vector<int> tets;
+  tetrahedra.clear();
   for (vtkIdType i = 0; i < ncells; i ++) {
     vtkSmartPointer<vtkCell> cell = grid->GetCell(i);
     if (cell->GetCellType() == VTK_TETRA) {
@@ -263,13 +291,15 @@ void simplicial_unstructured_3d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
         cell->GetPointId(2),
         cell->GetPointId(3)
       };
-      std::sort(v, v+4);
-      for (int j = 0; j < 4; j ++)
-        tets.push_back(v[j]);
+      tetrahedra.push_back(
+          std::make_tuple<I, I, I, I>(v[0], v[1], v[2], v[3]));
+      // std::sort(v, v+4);
+      // for (int j = 0; j < 4; j ++)
+      //   tets.push_back(v[j]);
     }
   }
-  tetrahedra.reshape({4, tets.size()/4});
-  tetrahedra.from_vector(tets);
+  // tetrahedra.reshape({4, tets.size()/4});
+  // tetrahedra.from_vector(tets);
 
   vtkIdType npts = grid->GetNumberOfPoints();
   vertex_coords.reshape({3, size_t(npts)});
@@ -365,8 +395,14 @@ bool simplicial_unstructured_3d_mesh<I, F>::find_simplex(int d, const I v[], I &
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::get_tetrahedron(I i, I tet[]) const
 {
-  for (int j = 0; j < 4; j ++)
-    tet[j] = tetrahedra(j, i);
+  auto t = tetrahedra[i];
+  tet[0] = std::get<0>(t);
+  tet[1] = std::get<1>(t);
+  tet[2] = std::get<2>(t);
+  tet[3] = std::get<3>(t);
+
+  // for (int j = 0; j < 4; j ++)
+  //   tet[j] = tetrahedra(j, i);
 }
 
 template <typename I, typename F>
@@ -428,10 +464,15 @@ bool simplicial_unstructured_3d_mesh<I, F>::find_tetrahedron(const I v[4], I &i)
   if (it == tetrahedron_id_map.end()) return false;
   else {
     i = it->second;
-    assert(tetrahedra(0, i) == v[0]);
-    assert(tetrahedra(1, i) == v[1]);
-    assert(tetrahedra(2, i) == v[2]);
-    assert(tetrahedra(3, i) == v[3]);
+    // assert(tetrahedra(0, i) == v[0]);
+    // assert(tetrahedra(1, i) == v[1]);
+    // assert(tetrahedra(2, i) == v[2]);
+    // assert(tetrahedra(3, i) == v[3]);
+    const auto t = tetrahedra[i];
+    assert(std::get<0>(t) == v[0]);
+    assert(std::get<1>(t) == v[1]);
+    assert(std::get<2>(t) == v[2]);
+    assert(std::get<3>(t) == v[3]);
     return true;
   }
 }
