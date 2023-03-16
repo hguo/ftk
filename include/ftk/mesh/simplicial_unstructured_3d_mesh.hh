@@ -63,11 +63,11 @@ public:
   virtual const ndarray<F>& get_coords() const {return vertex_coords;}
 
 private:
-  void initialize();
+  void initialize(bool reorder = false);
 
   void build_edges();
   void build_triangles();
-  void build_tetrahedra();
+  void build_tetrahedra(bool reorder = false);
 
 private: // mesh conn
   ndarray<F> vertex_coords; // 3*n_vert
@@ -114,7 +114,7 @@ simplicial_unstructured_3d_mesh<I, F>::simplicial_unstructured_3d_mesh(
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_3d_mesh<I, F>::build_tetrahedra()
+void simplicial_unstructured_3d_mesh<I, F>::build_tetrahedra(bool reorder)
 {
   for (auto i = 0; i < n(3); i ++) {
     I v[4], order[4];
@@ -133,7 +133,8 @@ void simplicial_unstructured_3d_mesh<I, F>::build_tetrahedra()
   }
 
   // sort tets based on ids
-  std::sort(tetrahedra.begin(), tetrahedra.end());
+  if (reorder)
+    std::sort(tetrahedra.begin(), tetrahedra.end());
 
   // tet id map
   for (auto i = 0; i < n(3); i ++) {
@@ -299,9 +300,9 @@ size_t simplicial_unstructured_3d_mesh<I, F>::n(int d, bool part /* TODO */) con
 }
 
 template <typename I, typename F>
-void simplicial_unstructured_3d_mesh<I, F>::initialize()
+void simplicial_unstructured_3d_mesh<I, F>::initialize(bool reorder)
 {
-  build_tetrahedra();
+  build_tetrahedra(reorder);
   build_triangles();
   build_edges();
   
