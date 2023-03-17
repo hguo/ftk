@@ -59,7 +59,9 @@ template <typename I, typename F>
 size_t simplicial_unstructured_periodic_2d_mesh<I, F>::n(int d) const // number of elements per unit period
 {
   if (d == 2)
-    return m3_ordinal_triangles.size() + m3_interval_triangles.size(); 
+    return m3_ordinal_triangles.size() + m3_interval_triangles.size();
+  else if (d == 1) 
+    return m3_ordinal_edges.size() + m3_interval_edges.size();
   else // TODO
     return m3->n(d) - m2->n(d);
 }
@@ -69,6 +71,7 @@ size_t simplicial_unstructured_periodic_2d_mesh<I, F>::n_ordinal(int d) const
 {
   if (d == 3) return m3->n(d);
   else if (d == 2) return m3_ordinal_triangles.size();
+  else if (d == 1) return m3_ordinal_edges.size();
   else return m2->n(d);
 }
 
@@ -130,6 +133,11 @@ void simplicial_unstructured_periodic_2d_mesh<I, F>::get_simplex(int d, I k, I v
       m3->get_simplex(d, m3_ordinal_triangles[i], verts);
     else 
       m3->get_simplex(d, m3_interval_triangles[i - n_ordinal(d)], verts);
+  } else if (d == 1) {
+    if (i < n_ordinal(d)) 
+      m3->get_simplex(d, m3_ordinal_edges[i], verts);
+    else 
+      m3->get_simplex(d, m3_interval_edges[i - n_ordinal(d)], verts);
   } else 
     assert(false); // not implemented yet
     
@@ -242,6 +250,23 @@ void simplicial_unstructured_periodic_2d_mesh<I, F>::initialize()
     }
     else if (!all_upper)
       m3_interval_triangles.push_back(i);
+  }
+
+  // interval edges
+  for (auto i = 0; i < m3->n(1); i ++) {
+    I verts[2];
+    m3->get_simplex(1, i, verts);
+    
+    bool all_lower = true, all_upper = true;
+    for (auto j = 0; j < 2; j ++) {
+      if (verts[j] < n0) all_upper = false;
+      else /* if (verts[j] >= n0) */ all_lower = false;
+    }
+
+    if (all_lower) 
+      m3_ordinal_edges.push_back(i);
+    else if (!all_upper)
+      m3_interval_edges.push_back(i);
   }
 
   // fprintf(stderr, "%zu, %zu\n",

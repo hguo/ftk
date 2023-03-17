@@ -38,9 +38,16 @@ int main(int argc, char **argv)
   auto f2 = [&](int k) {
     int verts[3];
     m->get_simplex(2, k, verts);
-    vtkIdType ids[4] = {verts[0], verts[1], verts[2]};
+    vtkIdType ids[3] = {verts[0], verts[1], verts[2]};
     // fprintf(stderr, "%d: %d, %d, %d, %d\n", k, verts[0], verts[1], verts[2], verts[3]);
     grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
+  };
+  
+  auto f1 = [&](int k) {
+    int verts[2];
+    m->get_simplex(1, k, verts);
+    vtkIdType ids[2] = {verts[0], verts[1]};
+    grid->InsertNextCell(VTK_LINE, 2, ids);
   };
 
 #if 1
