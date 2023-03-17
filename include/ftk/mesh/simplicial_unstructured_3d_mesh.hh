@@ -173,7 +173,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
     const auto t = tetrahedra[i];
     add_triangle(i, std::get<0>(t), std::get<1>(t), std::get<2>(t));
     add_triangle(i, std::get<0>(t), std::get<1>(t), std::get<3>(t));
-    add_triangle(i, std::get<0>(t), std::get<2>(t), std::get<2>(t));
+    add_triangle(i, std::get<0>(t), std::get<2>(t), std::get<3>(t));
     add_triangle(i, std::get<1>(t), std::get<2>(t), std::get<3>(t));
   }
 
