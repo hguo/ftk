@@ -13,7 +13,9 @@ template <typename I=int, typename F=double>
 struct simplicial_unstructured_periodic_2d_mesh : public object {
   simplicial_unstructured_periodic_2d_mesh(
       std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2_, 
-      std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> m3_) : m2(m2_), m3(m3_) {}
+      std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> m3_) : m2(m2_), m3(m3_) { initialize(); }
+
+  void initialize();
 
   size_t n(int d) const;
   size_t n_ordinal(int d) const;
@@ -22,7 +24,7 @@ struct simplicial_unstructured_periodic_2d_mesh : public object {
   I flat_vertex_id(I i) const { return mod(i, m2->n(0)); }
   I flat_vertex_time(I i) const { return i / m2->n(0); }
   
-  I get_simplex(int d, I i, I v[]) const;
+  void get_simplex(int d, I i, I v[]) const;
   void get_coords(I i, F coords[]) const;
   
   std::set<I> sides(int d, I i) const;
@@ -46,26 +48,35 @@ protected:
   // the base mesh with identical lower and upper 2D meshes
   std::shared_ptr<simplicial_unstructured_3d_mesh<I, F>> m3; 
   std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2;
+
+  // std::vector<I> m3_triangles, m3_edges;
+  std::vector<I> m3_ordinal_triangles, m3_ordinal_edges;
+  std::vector<I> m3_interval_triangles, m3_interval_edges;
 };
 
 /////////
 template <typename I, typename F> 
 size_t simplicial_unstructured_periodic_2d_mesh<I, F>::n(int d) const // number of elements per unit period
 {
-  return m3->n(d) - m2->n(d);
+  if (d == 2)
+    return m3_ordinal_triangles.size() + m3_interval_triangles.size(); 
+  else // TODO
+    return m3->n(d) - m2->n(d);
 }
 
 template <typename I, typename F> 
 size_t simplicial_unstructured_periodic_2d_mesh<I, F>::n_ordinal(int d) const
 {
-  if (d == 3) return m3->n(d); // TODO
-  return m2->n(d);
+  if (d == 3) return m3->n(d);
+  else if (d == 2) return m3_ordinal_triangles.size();
+  else return m2->n(d);
 }
 
 template <typename I, typename F> 
 size_t simplicial_unstructured_periodic_2d_mesh<I, F>::n_interval(int d) const
 {
-  return m3->n(d) - 2 * m2->n(d);
+  if (d == 2) return m3_interval_triangles.size();
+  else return m3->n(d) - 2 * m2->n(d);
 }
 
 template <typename I, typename F>
@@ -75,7 +86,6 @@ I simplicial_unstructured_periodic_2d_mesh<I, F>::mod(I v, I m)
   if (v < 0) mod += m;
   return mod;
 }
-
 
 template <typename I, typename F>
 void simplicial_unstructured_periodic_2d_mesh<I, F>::element_for(int d, std::function<void(I)> f, 
@@ -108,22 +118,23 @@ void simplicial_unstructured_periodic_2d_mesh<I, F>::element_for_interval(int d,
 }
 
 template <typename I, typename F>
-I simplicial_unstructured_periodic_2d_mesh<I, F>::get_simplex(int d, I k, I verts[]) const
+void simplicial_unstructured_periodic_2d_mesh<I, F>::get_simplex(int d, I k, I verts[]) const
 {
   const I i = mod(k, n(d)), t = std::floor(double(k) / n(d));
   const I offset = t * n(0); // 0d gid offset for verts
 
-  // FIXME: this may be fine for tets; 
-  // however, we need special handling of triangles and edges.
-  // if we could sort edges and triangles in m3, it is possible 
-  // to retrieve ordinal and interval 1- and 2- simplices eligently
-
-  m3->get_simplex(d, i, verts);
+  if (d == 3) {
+    m3->get_simplex(d, i, verts);
+  } else if (d == 2) {
+    if (i < n_ordinal(d)) 
+      m3->get_simplex(d, m3_ordinal_triangles[i], verts);
+    else 
+      m3->get_simplex(d, m3_interval_triangles[i - n_ordinal(d)], verts);
+  } else 
+    assert(false); // not implemented yet
+    
   for (int i = 0; i < d+1; i ++)
     verts[i] += offset;
-
-  I gid = gid + t * n(d);
-  return gid;
 }
 
 template <typename I, typename F>
@@ -206,6 +217,35 @@ I simplicial_unstructured_periodic_2d_mesh<I, F>::normalize(int d, I k) const
       return k;
   }
 
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_periodic_2d_mesh<I, F>::initialize()
+{
+  const I n0 = m2->n(0);
+  const I m2n2 = m2->n(2);
+
+  // extract all interval triangles and edges in m3
+  for (auto i = 0; i < m3->n(2); i ++) {
+    I verts[3];
+    m3->get_simplex(2, i, verts);
+
+    bool all_lower = true, all_upper = true;
+    for (auto j = 0; j < 3; j ++) {
+      if (verts[j] < n0) all_upper = false;
+      else /* if (verts[j] >= n0) */ all_lower = false;
+    }
+
+    if (all_lower) {
+      // fprintf(stderr, "adding lower, %zu, %zu, %zu\n", verts[0], verts[1], verts[2]);
+      m3_ordinal_triangles.push_back(i);
+    }
+    else if (!all_upper)
+      m3_interval_triangles.push_back(i);
+  }
+
+  // fprintf(stderr, "%zu, %zu\n",
+  //     m3_ordinal_triangles.size(), m3_interval_triangles.size());
 }
 
 }

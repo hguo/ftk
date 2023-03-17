@@ -27,19 +27,31 @@ int main(int argc, char **argv)
     pts->SetPoint(i, coords[0], coords[1], coords[3]);
   }
 
-  auto f = [&](int k) {
+  auto f3 = [&](int k) {
     int verts[4];
     m->get_simplex(3, k, verts);
     vtkIdType ids[4] = {verts[0], verts[1], verts[2], verts[3]};
     // fprintf(stderr, "%d: %d, %d, %d, %d\n", k, verts[0], verts[1], verts[2], verts[3]);
     grid->InsertNextCell(VTK_TETRA, 4, ids);
   };
+  
+  auto f2 = [&](int k) {
+    int verts[3];
+    m->get_simplex(2, k, verts);
+    vtkIdType ids[4] = {verts[0], verts[1], verts[2]};
+    // fprintf(stderr, "%d: %d, %d, %d, %d\n", k, verts[0], verts[1], verts[2], verts[3]);
+    grid->InsertNextCell(VTK_TRIANGLE, 3, ids);
+  };
 
+#if 1
   for (int p = 0; p < nphi; p ++) {
-    m->element_for_ordinal(3, p, f, FTK_XL_NONE, 1);
-    // m->element_for_interval(2, p, f);
+    // m->element_for_ordinal(3, p, f3, FTK_XL_NONE, 1);
+    m->element_for_ordinal(2, p, f2, FTK_XL_NONE, 1);
+    m->element_for_interval(2, p, f2, FTK_XL_NONE, 1);
   }
-  // m->element_for_ordinal(2, nphi, f);
+  m->element_for_ordinal(2, nphi, f2, FTK_XL_NONE, 1);
+#endif
+  // m->element_for_ordinal(2, 0, f2, FTK_XL_NONE, 1);
   
   grid->SetPoints(pts);
   // grid->PrintSelf(std::cerr, vtkIndent(2));
