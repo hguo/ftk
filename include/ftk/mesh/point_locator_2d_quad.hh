@@ -23,8 +23,8 @@ protected:
   struct quad_node {
     quad_node *parent = NULL;
     quad_node *children[4] = {NULL};
-    AABB<F> aabb;
-    std::vector<AABB<F>> elements; // valid only for leaf nodes
+    AABB<2, F> aabb;
+    std::vector<AABB<2, F>> elements; // valid only for leaf nodes
 
     ~quad_node();
     bool is_leaf() const { return elements.size() > 0; }
@@ -234,7 +234,7 @@ void point_locator_2d_quad<I, F>::initialize()
   root = new quad_node;
 
   // global bounds
-  AABB<F> &aabb = root->aabb;
+  AABB<2, F> &aabb = root->aabb;
   for (int i = 0; i < m2.n(0); i ++) {
     aabb.A[0] = std::min(aabb.A[0], coords[2*i]);
     aabb.A[1] = std::min(aabb.A[1], coords[2*i+1]);
@@ -244,7 +244,7 @@ void point_locator_2d_quad<I, F>::initialize()
   aabb.update_centroid();
   // aabb.print();
 
-  std::vector<AABB<F>> triangles(m2.n(2));
+  std::vector<AABB<2, F>> triangles(m2.n(2));
   for (int i=0; i<m2.n(2); i++) {
     const int i0 = conn[i*3], i1 = conn[i*3+1], i2 = conn[i*3+2];
     double x0 = coords[i0*2], x1 = coords[i1*2], x2 = coords[i2*2], 
