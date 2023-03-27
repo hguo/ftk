@@ -49,6 +49,8 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
   ndarray<F> get_psinfield() const { return psifield * (1.0 / units.psi_x); }
   const std::vector<I>& get_roi_nodes() const { return roi_nodes; }
 
+  I derive_nextnode(I i, F phi) const;
+
   bool eval_b(const F x[], F b[]) const; // get magnetic field value at x
   bool eval_total_B(const ndarray<F>& totalB, const F rzp[3], F b[3]) const;
   // bool eval_f(const F rzp[3], F f[2]) const;
@@ -185,6 +187,33 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_total_B(const ndarray<F>& totalB, const 
     //     mu[0], mu[1], mu[2], b[0], b[1], b[2]);
     return true;
   }
+}
+
+template <typename I, typename F>
+I simplicial_xgc_2d_mesh<I, F>::derive_nextnode(I i, F phi) const
+{
+  F rzp[3] = {
+    this->vertex_coords(0, i),
+    this->vertex_coords(1, i),
+    F(0)};
+
+  bool succ = magnetic_map(rzp, phi, 1024);
+  if (succ) {
+    F mu[3];
+    I tid = this->locator->locate(rzp, mu);
+
+    if (tid >= 0) { // return the one with max mu
+      I tri[3];
+      this->get_triangle(tid, tri);
+      
+      if (mu[0] >= mu[1] && mu[0] >= mu[2]) return tri[0];
+      else if (mu[1] >= mu[0] && mu[1] >= mu[2]) return tri[1];
+      else if (mu[2] >= mu[0] && mu[2] >= mu[1]) return tri[2];
+      else return -1;
+    } else 
+      return -1;
+  } else 
+    return -1;
 }
 
 template <typename I, typename F>
