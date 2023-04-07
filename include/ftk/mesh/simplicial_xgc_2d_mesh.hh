@@ -213,7 +213,7 @@ I simplicial_xgc_2d_mesh<I, F>::derive_nextnode(I i, F phi) const
     } else 
       return -1;
   } else 
-    return -1;
+    return this->nearest(rzp); // return -1;
 }
 
 template <typename I, typename F>
