@@ -127,6 +127,126 @@ inline void xgc_eq_t::print() const
       x_psi, x_r, x_z);
 }
 
+#if FTK_HAVE_HDF5
+inline void xgc_eq_t::to_h5(const std::string f) const
+{
+  auto fid = H5Fcreate(f.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+  auto sid_scalar = H5Screate(H5S_SCALAR);
+
+  { // psi grid
+    auto sid_psi_grid = H5Screate(H5S_SIMPLE);
+    hsize_t psi_grid_dims[] = {this->psigrid.size()};
+    H5Sset_extent_simple(sid_psi_grid, 1, psi_grid_dims, psi_grid_dims);
+
+    auto did_psi_grid = H5Dcreate1(fid, "eq_psi_grid", H5T_NATIVE_DOUBLE, sid_psi_grid, H5P_DEFAULT);
+    H5Dwrite(did_psi_grid, H5T_NATIVE_DOUBLE, H5S_ALL, sid_psi_grid, H5P_DEFAULT, this->psigrid.data());
+    H5Dclose(did_psi_grid);
+
+    auto did_I = H5Dcreate1(fid, "eq_I", H5T_NATIVE_DOUBLE, sid_psi_grid, H5P_DEFAULT);
+    H5Dwrite(did_I, H5T_NATIVE_DOUBLE, H5S_ALL, sid_psi_grid, H5P_DEFAULT, this->I.data());
+    H5Dclose(did_I);
+    
+    H5Sclose(sid_psi_grid);
+  }
+
+  { // rz grid
+    auto sid_rz_grid = H5Screate(H5S_SIMPLE);
+    hsize_t rz_grid_dims[] = {this->psi_rz.dim(1), this->psi_rz.dim(0)};
+    H5Sset_extent_simple(sid_rz_grid, 2, rz_grid_dims, rz_grid_dims);
+
+    auto did_psi_rz = H5Dcreate1(fid, "eq_psi_rz", H5T_NATIVE_DOUBLE, sid_rz_grid, H5P_DEFAULT);
+    H5Dwrite(did_psi_rz, H5T_NATIVE_DOUBLE, H5S_ALL, sid_rz_grid, H5P_DEFAULT, this->psi_rz.data());
+    H5Dclose(did_psi_rz);
+
+    H5Sclose(sid_rz_grid);
+  }
+
+  {
+    auto did = H5Dcreate1(fid, "eq_mr", H5T_NATIVE_INT, sid_scalar, H5P_DEFAULT);
+    int mr = this->rgrid.size();
+    H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &mr);
+    H5Dclose(did);
+  }
+ 
+  {
+    auto did = H5Dcreate1(fid, "eq_mz", H5T_NATIVE_INT, sid_scalar, H5P_DEFAULT);
+    int mz = this->zgrid.size();
+    H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &mz);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_mpsi", H5T_NATIVE_INT, sid_scalar, H5P_DEFAULT);
+    int mpsi = this->zgrid.size();
+    H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &mpsi);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_axis_r", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->axis_r);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_axis_z", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->axis_z);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_axis_b", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->axis_b);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_min_r", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->min_r);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_max_r", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->max_r);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_min_z", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->min_z);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_max_z", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->max_z);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_x_psi", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->x_psi);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_x_r", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->x_r);
+    H5Dclose(did);
+  }
+  
+  {
+    auto did = H5Dcreate1(fid, "eq_x_z", H5T_NATIVE_DOUBLE, sid_scalar, H5P_DEFAULT);
+    H5Dwrite(did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &this->x_z);
+    H5Dclose(did);
+  }
+
+  H5Sclose(sid_scalar);
+  H5Fclose(fid);
+}
+#endif
+
 } // namespace
 
 #endif
