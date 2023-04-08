@@ -7,11 +7,28 @@
 #include <string>
 #include <ftk/external/json.hh>
 
+#if FTK_HAVE_VTK
+#include <vtkRectilinearGrid.h>
+#include <vtkXMLRectilinearGridWriter.h>
+#include <vtkSmartPointer.h>
+#endif
+
 namespace ftk {
 
 struct xgc_eq_t {
   void parse(const std::string& filename);
   void print() const;
+
+  void eval_b(const double rz[], double b[]) const;
+
+#if FTK_HAVE_HDF5
+  void to_h5(const std::string filename) const;
+#endif
+
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkRectilinearGrid> to_vtr() const;
+  void to_vtr_file(const std::string filename) const;
+#endif
 
   size_t mr, mz, mpsi;
   double min_r, max_r, min_z, max_z; 
@@ -21,9 +38,38 @@ struct xgc_eq_t {
   ndarray<double> psigrid, rgrid, zgrid;
   ndarray<double> I;
   ndarray<double> psi_rz; // 2D array
+  ndarray<double> grad_psi_rz;
 };
 
-void xgc_eq_t::parse(const std::string& filename)
+#if FTK_HAVE_VTK
+inline vtkSmartPointer<vtkRectilinearGrid> xgc_eq_t::to_vtr() const
+{
+  vtkSmartPointer<vtkRectilinearGrid> grid = vtkRectilinearGrid::New();
+  
+  vtkSmartPointer<vtkDataArray> psi_rz = this->psi_rz.to_vtk_data_array("psi_rz");
+  vtkSmartPointer<vtkDataArray> rgrid = this->rgrid.to_vtk_data_array("rgrid");
+  vtkSmartPointer<vtkDataArray> zgrid = this->zgrid.to_vtk_data_array("zgrid");
+
+  grid->SetDimensions(this->rgrid.dim(0), this->zgrid.dim(0), 1);
+  grid->GetPointData()->SetScalars(psi_rz);
+  grid->SetXCoordinates(rgrid);
+  grid->SetYCoordinates(zgrid);
+
+  return grid;
+}
+
+inline void xgc_eq_t::to_vtr_file(const std::string f) const
+{
+  vtkSmartPointer<vtkRectilinearGrid> grid = this->to_vtr();
+
+  vtkSmartPointer<vtkXMLRectilinearGridWriter> writer = vtkXMLRectilinearGridWriter::New();
+  writer->SetFileName(f.c_str());
+  writer->SetInputData(grid);
+  writer->Write();
+}
+#endif
+
+inline void xgc_eq_t::parse(const std::string& filename)
 {
   std::ifstream ifs(filename, std::ifstream::in);
   
@@ -70,7 +116,7 @@ void xgc_eq_t::parse(const std::string& filename)
   // print();
 }
 
-void xgc_eq_t::print() const 
+inline void xgc_eq_t::print() const 
 {
   fprintf(stderr, "mr=%zu, mz=%zu, mpsi=%zu\n", mr, mz, mpsi);
   fprintf(stderr, "min_r=%f, max_r=%f, min_z=%f, max_z=%f\n", 
