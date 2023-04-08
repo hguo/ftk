@@ -44,13 +44,14 @@ void xgc_eq_t::parse(const std::string& filename)
     ifs >> I[i];
 
   psi_rz.reshape(mr, mz); // column major order, the dim of mr changes faster
-  ndarray<double> psi_rz_column_major; 
-  psi_rz_column_major.reshape(mz, mr);
+  // ndarray<double> psi_rz_column_major; 
+  // psi_rz_column_major.reshape(mz, mr);
   for (int i=0; i<mr*mz; i++) 
-    ifs >> psi_rz_column_major[i];
-  for (int i=0; i<mr; i++) // transpose
-    for (int j=0; j<mz; j++) 
-      psi_rz[i*mz+j] = psi_rz_column_major[j*mr+i]; 
+    // ifs >> psi_rz_column_major[i];
+    ifs >> psi_rz[i]; // _column_major[i];
+  // for (int i=0; i<mr; i++) // transpose
+  //   for (int j=0; j<mz; j++) 
+  //     psi_rz[i*mz+j] = psi_rz_column_major[j*mr+i]; 
 
   int end_flag;
   ifs >> end_flag;
