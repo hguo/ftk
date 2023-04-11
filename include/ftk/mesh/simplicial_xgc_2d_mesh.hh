@@ -9,6 +9,7 @@
 #include <ftk/numeric/rk4.hh>
 #include <ftk/numeric/print.hh>
 #include <ftk/io/xgc_units.hh>
+#include <ftk/io/xgc_eq.hh>
 
 namespace ftk {
 
@@ -38,6 +39,9 @@ struct simplicial_xgc_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
 
   I nextnode(I i) const { return nextnodes[i]; }
   F psin(I i) const { return psifield[i] / units.psi_x; } // get normalized psi
+
+  void set_eq(const xgc_eq_t& e) { eq = e; }
+  const xgc_eq_t& get_eq() const { return eq; }
 
   void set_units(const xgc_units_t& u) { units = u; }
   const xgc_units_t& get_units() const { return units; }
@@ -75,6 +79,8 @@ public:
   ) const; 
 
 protected:
+  xgc_eq_t eq;
+
   xgc_units_t units;
   ndarray<F> psifield, bfield, bfield0; // b0 = B/|B|
   ndarray<F> curl_bfield0;
