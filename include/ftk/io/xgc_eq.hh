@@ -33,6 +33,9 @@ struct xgc_eq_t {
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkRectilinearGrid> to_vtr() const;
   void to_vtr_file(const std::string filename) const;
+  
+  vtkSmartPointer<vtkImageData> to_vti() const;
+  void to_vti_file(const std::string filename) const;
 #endif
 
   int mr, mz, mpsi;
@@ -47,6 +50,32 @@ struct xgc_eq_t {
 };
 
 #if FTK_HAVE_VTK
+inline vtkSmartPointer<vtkImageData> xgc_eq_t::to_vti() const
+{
+  vtkSmartPointer<vtkImageData> d = vtkImageData::New();
+  vtkSmartPointer<vtkDataArray> psi_rz = this->psi_rz.to_vtk_data_array("psi_rz");
+
+  d->SetDimensions(this->rgrid.dim(0), this->zgrid.dim(0), 1);
+  d->GetPointData()->SetScalars(psi_rz);
+  d->SetOrigin(this->min_r, this->min_z, 0.0);
+  d->SetSpacing(
+      (this->max_r - this->min_r) / (mr - 1), 
+      (this->max_z - this->min_z) / (mz - 1),
+      1.0);
+
+  return d;
+}
+
+inline void xgc_eq_t::to_vti_file(const std::string f) const
+{
+  auto grid = this->to_vti();
+
+  vtkSmartPointer<vtkXMLImageDataWriter> writer = vtkXMLImageDataWriter::New();
+  writer->SetFileName(f.c_str());
+  writer->SetInputData(grid);
+  writer->Write();
+}
+
 inline vtkSmartPointer<vtkRectilinearGrid> xgc_eq_t::to_vtr() const
 {
   vtkSmartPointer<vtkRectilinearGrid> grid = vtkRectilinearGrid::New();
@@ -174,6 +203,14 @@ inline void xgc_eq_t::read_bp(adios2::IO &io, adios2::Engine& reader)
   read_double("eq_x_psi", this->x_psi);
   read_double("eq_x_r", this->x_r);
   read_double("eq_x_z", this->x_z);
+  
+  rgrid.reshape(mr);
+  for (int i=0; i<mr; i++)
+    rgrid[i] = min_r + (max_r - min_r) / (mr - 1) * i;
+
+  zgrid.reshape(mz);
+  for (int i=0; i<mz; i++) 
+    zgrid[i] = min_z + (max_z - min_z) / (mz - 1) * i;
 }
 #endif
 
