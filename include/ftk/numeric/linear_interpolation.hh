@@ -149,6 +149,7 @@ inline void lerp_s2m3x3(const T V[3][3][3], const T mu[3], T v[3][3])
 }
   
 // see http://visit.ilight.com/svn/visit/trunk/src/databases/ADIOS/avtXGCFileFormat.C
+#if 0
 template <typename F>
 inline F lerp1Di(const ndarray<F>& x, const ndarray<F>& y, const ndarray<F>& xi) {
   const int n = x.size(), ni = xi.size();
@@ -172,6 +173,7 @@ inline F lerp1Di(const ndarray<F>& x, const ndarray<F>& y, const ndarray<F>& xi)
   }
   return yi;
 }
+#endif
 
 }
 
