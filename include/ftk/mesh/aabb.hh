@@ -1,5 +1,5 @@
 #ifndef _FTK_AABB_H
-#define _FTK_AABB_H
+#define _FTK_AABB_H // axis-aligned bounding box
 
 #include <ftk/config.hh>
 
@@ -18,7 +18,9 @@ inline T max3(T x, T y, T z) {
 template <int N, typename T>
 struct AABB {
   int id = 0;
-  std::array<T, N> A, B, C;
+  std::array<T, N> A, // lower-left  (rmin, zmin)
+                   B, // upper-right (rmax, zmax)
+                   C; // centroid
 
   // T A[2] = {std::numeric_limits<T>::max(), std::numeric_limits<T>::max()}, 
   //   B[2] = {-std::numeric_limits<T>::max(), -std::numeric_limits<T>::max()};

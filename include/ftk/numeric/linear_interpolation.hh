@@ -147,6 +147,31 @@ inline void lerp_s2m3x3(const T V[3][3][3], const T mu[3], T v[3][3])
         v[j][k] += V[i][j][k] * mu[i];
     }
 }
+  
+// see http://visit.ilight.com/svn/visit/trunk/src/databases/ADIOS/avtXGCFileFormat.C
+template <typename F>
+inline F lerp1Di(const ndarray<F>& x, const ndarray<F>& y, const ndarray<F>& xi) {
+  const int n = x.size(), ni = xi.size();
+  ndarray<F> yi(xi.shape());
+  for (int i = 0; i < ni; i ++) {
+    F val = xi[i];
+    if (val < x[0])
+      yi[i] = y[0];
+    else if (val >= x[n-1])
+      yi[i] = y[n-1];
+    else {
+      for (int j = 0; j < n-1; j ++) {
+        if (val >= x[j] && val <= x[j+1]) {
+          F dy = y[j+1] - y[j];
+          F t = (xi[i] - x[j]) / (x[j+1] - x[j]);
+          yi[i] = y[j] + t * dy;
+          break;
+        }
+      }
+    }
+  }
+  return yi;
+}
 
 }
 

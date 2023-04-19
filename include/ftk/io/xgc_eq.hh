@@ -8,8 +8,11 @@
 #include <ftk/external/json.hh>
 
 #if FTK_HAVE_VTK
+#include <vtkLagrangeQuadrilateral.h>
+#include <vtkUnstructuredGrid.h>
 #include <vtkRectilinearGrid.h>
 #include <vtkXMLRectilinearGridWriter.h>
+#include <vtkXMLUnstructuredGridWriter.h>
 #include <vtkSmartPointer.h>
 #endif
 
@@ -36,6 +39,9 @@ struct xgc_eq_t {
   
   vtkSmartPointer<vtkImageData> to_vti() const;
   void to_vti_file(const std::string filename) const;
+  
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
+  void to_vtu_file(const std::string filename) const;
 #endif
 
   int mr, mz, mpsi;
@@ -97,6 +103,61 @@ inline void xgc_eq_t::to_vtr_file(const std::string f) const
   vtkSmartPointer<vtkRectilinearGrid> grid = this->to_vtr();
 
   vtkSmartPointer<vtkXMLRectilinearGridWriter> writer = vtkXMLRectilinearGridWriter::New();
+  writer->SetFileName(f.c_str());
+  writer->SetInputData(grid);
+  writer->Write();
+}
+
+inline vtkSmartPointer<vtkUnstructuredGrid> xgc_eq_t::to_vtu() const 
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
+  vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
+
+  pts->SetNumberOfPoints(this->mr * this->mz);
+
+  for (int i = 0; i < this->mr; i ++) {
+    for (int j = 0; j < this->mz; j ++) {
+      pts->SetPoint(j * this->mr + i, 
+          this->rgrid[i], this->zgrid[j], 0.0);
+    }
+  }
+  grid->SetPoints(pts);
+
+  for (int i = 0; i < this->mr / 3; i ++) {
+    for (int j = 0; j < this->mz / 3; j ++) {
+      vtkSmartPointer<vtkLagrangeQuadrilateral> quad = vtkLagrangeQuadrilateral::New();
+
+      const int npts = 16;
+      quad->GetPointIds()->SetNumberOfIds(npts);
+      // quad->GetPoints()->SetNumberOfPoints(npts);
+      quad->SetOrder(3, 3);
+      quad->Initialize();
+
+      for (int k = 0; k < 4; k ++) {
+        for (int l = 0; l < 4; l ++) {
+          int idx = quad->PointIndexFromIJK(k, l, 0);
+          // fprintf(stderr, "order=%d\n", idx);
+          quad->GetPointIds()->SetId(idx, (i*3+k)*this->mz + (j*3+l));
+          // quad->GetPointIds()->SetId(k*4+l, (i+k)*this->mz + (j+l));
+          // quad->GetPoints().SetPoint(k*4+l, (double)k, (double)l, 0.0);
+        }
+      }
+
+      grid->InsertNextCell(quad->GetCellType(), quad->GetPointIds());
+    }
+  }
+  
+  vtkSmartPointer<vtkDataArray> psi_rz = this->psi_rz.to_vtk_data_array("psi_rz");
+  grid->GetPointData()->SetScalars(psi_rz);
+
+  return grid;
+}
+
+inline void xgc_eq_t::to_vtu_file(const std::string f) const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = this->to_vtu();
+
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName(f.c_str());
   writer->SetInputData(grid);
   writer->Write();
