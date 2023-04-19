@@ -203,7 +203,8 @@ I simplicial_xgc_2d_mesh<I, F>::derive_nextnode(I i, F phi) const
     this->vertex_coords(1, i),
     F(0)};
 
-  bool succ = magnetic_map(rzp, phi, 1024);
+  bool succ = this->eq.magnetic_map(rzp, phi, 1024);
+  // bool succ = magnetic_map(rzp, phi, 1024);
   if (succ) {
     F mu[3];
     I tid = this->locator->locate(rzp, mu);
@@ -217,7 +218,7 @@ I simplicial_xgc_2d_mesh<I, F>::derive_nextnode(I i, F phi) const
       else if (mu[2] >= mu[0] && mu[2] >= mu[1]) return tri[2];
       else return -1;
     } else 
-      return -1;
+      return this->nearest(rzp); // return -1;
   } else 
     return this->nearest(rzp); // return -1;
 }

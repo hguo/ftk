@@ -28,7 +28,10 @@ struct xgc_eq_t {
   void eval_b(const double rz[], double b[]) const;
   void eval_psi(const double rz[], double &psi, double &dpsi_dR, double &dpsi_dZ) const;
   double eval_I(double psi) const;
-  
+  void eval_L(const double rz[], double L[]) const;
+ 
+  bool magnetic_map(double rzp[3], double phi_end, int nsteps=1024) const;
+
 #if FTK_HAVE_ADIOS2
   void read_bp(const std::string filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
   void read_bp(adios2::IO &io, adios2::Engine& reader);
@@ -94,7 +97,21 @@ inline double xgc_eq_t::eval_I(double psi) const
 #endif
   return I[0];
 }
+
+inline bool xgc_eq_t::magnetic_map(double rzp[], double phi_end, int nsteps) const
+{
+  const double delta = (phi_end - rzp[2]) / nsteps;
   
+  for (int k = 0; k < nsteps; k ++) {
+    if (!rk4<3, double>(rzp, [&](const double* rzp, double* v) {
+          eval_L(rzp, v);
+          return true;
+        }, delta))
+      return false;
+  }
+  return true;
+}
+
 inline void xgc_eq_t::eval_b(const double rz[], double b[]) const
 {
   double psi, dpsi_dR, dpsi_dZ;
@@ -105,7 +122,17 @@ inline void xgc_eq_t::eval_b(const double rz[], double b[]) const
 
   b[0] = -dpsi_dZ / R;
   b[1] =  dpsi_dR / R;
-  b[2] =  I / R;
+  b[2] = -I / R;
+}
+  
+inline void xgc_eq_t::eval_L(const double rz[], double L[]) const
+{
+  double B[3];
+  this->eval_b(rz, B);
+
+  const double R = rz[0];
+  L[0] = R * B[0] / B[2];
+  L[1] = R * B[1] / B[2];
 }
 
 inline void xgc_eq_t::eval_psi(const double rz[], double &psi, double &dpsi_dR, double &dpsi_dZ) const
@@ -115,7 +142,7 @@ inline void xgc_eq_t::eval_psi(const double rz[], double &psi, double &dpsi_dR, 
   int subId;
   double weights[16], values[16], derivs[2];
 
-  double rz_[2] = {rz[0], rz[1]}; // make findcell() happy
+  double rz_[3] = {rz[0], rz[1], 0.0}; // make findcell() happy
   auto cid = this->locator->FindCell(rz_);
   auto cell = this->vtu->GetCell(cid);
   cell->EvaluatePosition(rz, closestPoint, subId, pcoords, dist2, weights);
