@@ -8,6 +8,8 @@
 #include <ftk/external/json.hh>
 
 #if FTK_HAVE_VTK
+#include <vtkCellLocator.h>
+#include <vtkTupleInterpolator.h>
 #include <vtkLagrangeQuadrilateral.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkRectilinearGrid.h>
@@ -22,7 +24,10 @@ struct xgc_eq_t {
   void parse(const std::string& filename);
   void print() const;
 
+  void initialize(); // initialize shebangs for the interpolator
   void eval_b(const double rz[], double b[]) const;
+  void eval_psi(const double rz[], double &psi, double &dpsi_dR, double &dpsi_dZ) const;
+  double eval_I(double psi) const;
   
 #if FTK_HAVE_ADIOS2
   void read_bp(const std::string filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
@@ -53,7 +58,82 @@ struct xgc_eq_t {
   ndarray<double> I;
   ndarray<double> psi_rz; // 2D array
   ndarray<double> grad_psi_rz;
+
+protected: // for the interpolator
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkUnstructuredGrid> vtu; // Lagrange quad grid
+  vtkSmartPointer<vtkCellLocator> locator;
+  vtkSmartPointer<vtkTupleInterpolator> interp; // 1D interpolator for I
+#endif
 };
+
+inline void xgc_eq_t::initialize()
+{
+#if FTK_HAVE_VTK
+  // 1D interpolation function for I(psi)
+  this->interp = vtkTupleInterpolator::New();
+  interp->SetNumberOfComponents(1);
+  for (int i = 0; i < this->mpsi; i ++) {
+    double tuple[1] = {this->I[i]};
+    interp->AddTuple(this->psigrid[i], tuple);
+  }
+
+  // 2D interpolation grid for psi and its partial derivatives
+  this->vtu = this->to_vtu();
+  this->locator = vtkCellLocator::New();
+  locator->SetDataSet(this->vtu);
+  locator->BuildLocator();
+#endif
+}
+
+inline double xgc_eq_t::eval_I(double psi) const
+{
+  double I[1] = {0.0};
+#if FTK_HAVE_VTK
+  interp->InterpolateTuple(psi, I);
+#endif
+  return I[0];
+}
+  
+inline void xgc_eq_t::eval_b(const double rz[], double b[]) const
+{
+  double psi, dpsi_dR, dpsi_dZ;
+  
+  eval_psi(rz, psi, dpsi_dR, dpsi_dZ);
+  const double I = eval_I(psi);
+  const double R = rz[0];
+
+  b[0] = -dpsi_dZ / R;
+  b[1] =  dpsi_dR / R;
+  b[2] =  I / R;
+}
+
+inline void xgc_eq_t::eval_psi(const double rz[], double &psi, double &dpsi_dR, double &dpsi_dZ) const
+{
+#if FTK_HAVE_VTK
+  double closestPoint[3], pcoords[3], dist2;
+  int subId;
+  double weights[16], values[16], derivs[2];
+
+  double rz_[2] = {rz[0], rz[1]}; // make findcell() happy
+  auto cid = this->locator->FindCell(rz_);
+  auto cell = this->vtu->GetCell(cid);
+  cell->EvaluatePosition(rz, closestPoint, subId, pcoords, dist2, weights);
+
+  psi = 0.0;
+  for (int i = 0; i < 16; i ++) {
+    auto id = cell->GetPointId(i);
+    values[i] = this->psi_rz[id];
+    psi += weights[i] * values[i];
+  }
+  cell->Derivatives(subId, pcoords, values, 1, derivs);
+  
+  dpsi_dR = derivs[0];
+  dpsi_dZ = derivs[1];
+#else
+  assert(false); // not compiled with VTK
+#endif
+}
 
 #if FTK_HAVE_VTK
 inline vtkSmartPointer<vtkImageData> xgc_eq_t::to_vti() const
