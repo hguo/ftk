@@ -16,6 +16,7 @@
 // Reference 
   // Paper: "Worst-case Analysis of Set Union Algorithms"
   // Online slides: https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf
+  // new URL: https://sedgewick.io/wp-content/uploads/2022/04/Algs01-UnionFind.pdf
 
 // Add the sparse representation by using Hash map/table 
 
