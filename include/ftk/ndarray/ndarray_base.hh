@@ -80,6 +80,7 @@ struct ndarray_base {
   
   size_t index(const std::vector<size_t>& idx) const;
   size_t index(const std::vector<int>& idx) const;
+  size_t index(const size_t idx[]) const;
   
   template <typename uint=size_t>
   std::vector<uint> from_index(uint i) const {return lattice().from_integer(i);}
@@ -178,6 +179,13 @@ inline void ndarray_base::reshape(size_t ndims, const size_t dims[])
 inline void ndarray_base::reshape(const ndarray_base& array)
 {
   reshape(array.shape());
+}
+
+inline size_t ndarray_base::index(const size_t idx[]) const {
+  size_t i(idx[0]);
+  for (size_t j = 1; j < nd(); j ++)
+    i += idx[j] * s[j];
+  return i;
 }
 
 inline size_t ndarray_base::index(const std::vector<size_t>& idx) const {

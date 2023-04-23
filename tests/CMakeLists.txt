@@ -55,6 +55,10 @@ add_executable (test_conv test_conv.cpp)
 target_link_libraries (test_conv libftk)
 catch_discover_tests (test_conv)
 
+add_executable (test_mlerp test_mlerp.cpp)
+target_link_libraries (test_mlerp libftk)
+catch_discover_tests (test_mlerp)
+
 add_executable (test_inequality_solvers test_inequality_solvers.cpp)
 target_link_libraries (test_inequality_solvers libftk)
 catch_discover_tests (test_inequality_solvers)

@@ -97,6 +97,9 @@ struct ndarray : public ndarray_base {
   T& at(const std::vector<size_t>& idx) {return p[index(idx)];}
   const T& at(const std::vector<size_t>& idx) const {return p[index(idx)];}
   
+  T& at(const size_t idx[]) {return p[index(idx)];}
+  const T& at(const size_t idx[]) const {return p[index(idx)];}
+  
   T& at(const std::vector<int>& idx) {return p[index(idx)];}
   const T& at(const std::vector<int>& idx) const {return p[index(idx)];}
 
@@ -1621,8 +1624,9 @@ bool ndarray<T>::mlerp(const F x[], T v[]) const
 {
   static const size_t maxn = 12; // some arbitrary large number for nd
   const size_t n = nd() - multicomponents(),
-               nc = ncomponents();
+               nc = multicomponents();
 
+  // fprintf(stderr, "n=%zu, nc=%zu\n", n, nc);
   size_t x0[maxn]; // corner
   F mu[maxn]; // unit coordinates
   for (size_t i = 0; i < n; i ++) {
@@ -1640,7 +1644,8 @@ bool ndarray<T>::mlerp(const F x[], T v[]) const
     size_t verts[maxn];
     for (size_t i = 0; i < n; i ++) {
       verts[nc+i] = x0[i] + b[i];
-      if (!this->contains(verts)) return false;
+      if (verts[nc+i] >= dims[nc+i]) // out of bound
+        return false;
 
       if (b[i])
         coef *= (F(1) - mu[i]);
@@ -1648,8 +1653,15 @@ bool ndarray<T>::mlerp(const F x[], T v[]) const
         coef *= mu[i];
     }
 
-    for (size_t k = 0; k < nc; k ++) // variable
-      v[k] += coef * at(verts);
+    if (nc == 0) // univariate
+      v[0] += coef * this->at(verts);
+    else if (nc == 1) { // multiple channels
+      for (int k = 0; k < dim(0); k ++) {
+        verts[0] = k;
+        v[k] += coef * this->at(verts);
+      }
+    } else 
+      fatal(FTK_ERR_NOT_IMPLEMENTED);
   }
 
   return true;
