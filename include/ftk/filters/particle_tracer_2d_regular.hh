@@ -43,6 +43,15 @@ inline bool particle_tracer_2d_regular::eval_v(
     const double *x, double *v)
 {
   const double t = (x[3] - current_t) / current_delta_t;
+  const double w0 = (1.0 - t), w1 = t;
+  double v0[2], v1[2];
+
+  field_data_snapshots[0].vector.mlerp(x, v0); // current
+  field_data_snapshots[1].vector.mlerp(x, v1);
+
+  v[0] = w0 * v0[0] + w1 * v1[0];
+  v[1] = w0 * v0[1] + w1 * v1[1];
+
   return false;
 }
 

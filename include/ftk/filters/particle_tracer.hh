@@ -19,6 +19,13 @@ struct particle_tracer : public virtual tracker
   bool advance_timestep();
 
 protected:
+  struct field_data_snapshot_t {
+    ndarray<double> vector; // vector field
+  };
+
+  std::deque<field_data_snapshot_t> field_data_snapshots;
+
+protected:
   virtual bool eval_v(const double *x, double *v) = 0;
 
 protected:
