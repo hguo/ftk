@@ -134,7 +134,7 @@ target_link_libraries (test_critical_point_tracking_double_gyre libftk)
 catch_discover_tests (test_critical_point_tracking_double_gyre)
 
 # in situ adios2 test
-if (FTK_HAVE_ADIOS2)
+if (FTK_HAVE_ADIOS2 AND ADIOS2_USE_MPI)
   add_executable (heat2d
     heat2d/HeatTransfer.cpp
     heat2d/IO_adios2.cpp

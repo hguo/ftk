@@ -10,7 +10,12 @@ int main(int argc, char **argv)
 
 #if FTK_HAVE_ADIOS2
   // adios2::ADIOS adios("adios2.xml", MPI_COMM_WORLD);
+  
+#if ADIOS2_USE_MPI
   adios2::ADIOS adios(MPI_COMM_WORLD);
+#else
+  adios2::ADIOS adios;
+#endif
   adios2::IO io = adios.DeclareIO("BPReader");
   adios2::Engine reader = io.Open(argv[1], adios2::Mode::Read); // , MPI_COMM_SELF);
 
