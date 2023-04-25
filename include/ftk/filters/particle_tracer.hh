@@ -43,8 +43,10 @@ inline bool particle_tracer::advance_timestep()
 inline void particle_tracer::write_trajectories(const std::string& filename)
 {
   // if (comm.rank() == 0)
+#if FTK_HAVE_VTK
   auto poly = trajectories.to_vtp();
   write_polydata(filename, poly);
+#endif
 }
 
 }
