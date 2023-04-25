@@ -117,8 +117,10 @@ inline void particle_tracer_2d_regular::update_timestep()
   const double delta = 1.0 / nsteps;
 
   // fprintf(stderr, "#particles=%zu\n", this->particles.size());
-  for (auto &kv : trajectories) {
-    auto &traj = kv.second;
+  // for (auto &kv : trajectories) {
+  //   auto &traj = kv.second;
+  this->parallel_for_container(trajectories, [&](feature_curve_set_t::iterator it) {
+    auto &traj = it->second;
     const auto last_point = traj.back();
 
     // auto &p = particles[i];
@@ -152,7 +154,7 @@ inline void particle_tracer_2d_regular::update_timestep()
     traj.push_back(p);
 
     // fprintf(stderr, "%f, %f, %f\n", p.x[0], p.x[1], p.t);
-  }
+  }, FTK_THREAD_PTHREAD, 1);
 }
 
 }
