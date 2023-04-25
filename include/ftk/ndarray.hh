@@ -1627,13 +1627,25 @@ bool ndarray<T>::mlerp(const F x[], T v[]) const
                nc = multicomponents();
 
   // fprintf(stderr, "n=%zu, nc=%zu\n", n, nc);
-  size_t x0[maxn]; // corner
+  int x0[maxn]; // corner
   F mu[maxn]; // unit coordinates
   for (size_t i = 0; i < n; i ++) {
-    x0[i] = static_cast<size_t>(x[i]); 
+    if (x[i] < 0 || x[i] >= dims[nc+i] - 1) return false; // out of bound
+
+    x0[i] = std::floor(x[i]); 
     mu[i] = x[i] - x0[i];
-    v[i] = F(0);
   }
+
+  if (nc == 0)
+    v[0] = F(0);
+  else if (nc == 1)
+    for (size_t i = 0; i < dims[0]; i ++)
+      v[i] = 0;
+  else 
+    fatal(FTK_ERR_NOT_IMPLEMENTED);
+  
+  // fprintf(stderr, "w=%f, %f\n", v[0], v[1]);
+  // fprintf(stderr, "mu=%f, %f\n", mu[0], mu[1]);
 
   for (size_t cur = 0; cur < (1 << n); cur ++) {
     bool b[maxn];
@@ -1644,26 +1656,28 @@ bool ndarray<T>::mlerp(const F x[], T v[]) const
     size_t verts[maxn];
     for (size_t i = 0; i < n; i ++) {
       verts[nc+i] = x0[i] + b[i];
-      if (verts[nc+i] >= dims[nc+i]) // out of bound
-        return false;
 
       if (b[i])
-        coef *= (F(1) - mu[i]);
-      else 
         coef *= mu[i];
+      else 
+        coef *= (F(1) - mu[i]);
     }
+    // fprintf(stderr, "coef=%f\n", coef);
 
     if (nc == 0) // univariate
       v[0] += coef * this->at(verts);
     else if (nc == 1) { // multiple channels
       for (int k = 0; k < dim(0); k ++) {
         verts[0] = k;
-        v[k] += coef * this->at(verts);
+        F val = this->at(verts);
+        v[k] += coef * val;
+        // fprintf(stderr, "k=%d, verts=%zu, %zu, %zu, coef=%f, val=%f\n", k, verts[0], verts[1], verts[2], coef, val);
       }
     } else 
       fatal(FTK_ERR_NOT_IMPLEMENTED);
   }
 
+  // fprintf(stderr, "v=%f, %f\n", v[0], v[1]);
   return true;
 }
 

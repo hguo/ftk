@@ -570,6 +570,9 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
   });
   stream->start();
   stream->finish();
+
+  tracker_particle->finalize();
+  tracker_particle->write_trajectories(output_pattern);
 }
 
 void initialize_critical_line_tracker(diy::mpi::communicator comm)

@@ -416,8 +416,8 @@ void ndarray_stream<T>::set_input_source_json(const json& j_)
           default_dims[0] = 64; 
           default_dims[1] = 32;
           default_n_timesteps = 50;
-          j["variables"] = {"u", "v", "w"};
-          j["components"] = {1, 1, 1};
+          j["variables"] = {"u", "v"};
+          j["components"] = {1, 1};
           if (j.contains("time_scale")) {
             if (j["time_scale"].is_number()) { // ok
             } else fatal("invalid time_scale");
@@ -1545,7 +1545,8 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_double_gyre(int k)
   const size_t DW = j["dimensions"][0], 
                DH = j["dimensions"][1];
  
-  auto result = synthetic_double_gyre<T>(DW, DH, time, A, Omega, Eps);
+  // auto result = synthetic_double_gyre<T>(DW, DH, time, false, A, Omega, Eps);
+  auto result = synthetic_double_gyre<T>(DW, DH, time, false, A, Omega, Eps);
   // std::cerr << result.multicomponents() << std::endl;
   return result;
 }

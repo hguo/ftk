@@ -18,18 +18,14 @@ struct particle_tracer : public virtual tracker
   void finalize() {}
   bool advance_timestep();
 
-protected:
-  struct field_data_snapshot_t {
-    ndarray<double> vector; // vector field
-  };
-
-  std::deque<field_data_snapshot_t> field_data_snapshots;
+  void write_trajectories(const std::string& filename);
 
 protected:
-  virtual bool eval_v(const double *x, double *v) = 0;
+  // virtual bool eval_v(const double *x, double *v) = 0;
 
 protected:
   std::vector<feature_point_lite_t> particles;
+  feature_curve_set_t trajectories;
 
   double current_t = 0.0, current_delta_t = 1.0;
 };
@@ -42,6 +38,13 @@ inline bool particle_tracer::advance_timestep()
 
   current_timestep ++;
   return snapshots.size() > 0;
+}
+
+inline void particle_tracer::write_trajectories(const std::string& filename)
+{
+  // if (comm.rank() == 0)
+  auto poly = trajectories.to_vtp();
+  write_polydata(filename, poly);
 }
 
 }
