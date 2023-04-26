@@ -542,6 +542,8 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
 {
+  mpas_mesh = ftk::simplicial_mpas_2d_mesh<>::from_file(input_pattern);
+
   const auto js = stream->get_json();
   tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_mesh) );
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);

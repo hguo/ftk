@@ -22,10 +22,12 @@ struct particle_tracer : public virtual tracker
   void write_trajectories(const std::string& filename);
 
 protected:
-  // virtual bool eval_v(const double *x, double *v) = 0;
   virtual bool eval_v(std::shared_ptr<ndarray<double>> V0,
       std::shared_ptr<ndarray<double>> V1,
-      const double* x, double *v) { return false; }
+      const double *x, double *v); 
+
+  virtual bool eval_v(std::shared_ptr<ndarray<double>> V, // single timestep vector field
+      const double *x, double *v) { return false; }
 
   int nd() const { return nd_; }
   double delta() const { return current_delta_t / nsteps_per_interval; }
@@ -133,6 +135,38 @@ inline void particle_tracer::update_timestep()
     // fprintf(stderr, "%f, %f, %f\n", p.x[0], p.x[1], p.t);
   }, FTK_THREAD_PTHREAD, get_number_of_threads());
 }
+
+
+inline bool particle_tracer::eval_v(
+    std::shared_ptr<ndarray<double>> V0,
+    std::shared_ptr<ndarray<double>> V1,
+    const double *x, double *v)
+{
+  if (V0 && V1) { // double time step
+    const double t = (x[nd_] - current_t) / current_delta_t;
+    if (t < 0.0 || t > 1.0) return false; // out of temporal bound
+
+    const double w0 = (1.0 - t), w1 = t;
+    double v0[4], v1[4]; // up to 4d for now
+
+    const bool b0 = eval_v(V0, x, v0);
+    const bool b1 = eval_v(V1, x, v1);
+
+    if (b0 && b1) {
+      for (auto k = 0; k < nd(); k ++)
+        v[k] = w0 * v0[k] + w1 * v1[k];
+      v[nd()] = 1.0; // time
+      
+      // fprintf(stderr, "x=%f, %f, %f, t=%f, v=%f, %f, %f\n", x[0], x[1], x[2], t, v[0], v[1], v[2]);
+      return true;
+    } else 
+      return false;
+  } else if (V0) { // single time step
+    return eval_v(V0, x, v);
+  } else // no timestep available
+    return false;
+}
+
 
 
 } // namespace ftk
