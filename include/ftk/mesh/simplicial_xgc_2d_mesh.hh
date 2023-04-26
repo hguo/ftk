@@ -229,7 +229,7 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map_2pi_total_B(const ndarray<F>& to
   const F delta = 2 * M_PI / nsteps;
 
   for (int k = 0; k < nsteps; k ++) {
-    if (!rk4<3, F>(rzp, [&](const F* rzp, F* v) {
+    if (!rk4<F>(3, rzp, [&](const F* rzp, F* v) {
           F B[3];
           if (eval_total_B(totalB, rzp, B)) {
             v[0] = rzp[0] * B[0] / B[2];
@@ -371,7 +371,7 @@ bool simplicial_xgc_2d_mesh<I, F>::magnetic_map(F rzp[3], F phi_end, int nsteps)
   const F delta = (phi_end - rzp[2]) / nsteps;
 
   for (int k = 0; k < nsteps; k ++) {
-    if (!rk4<3, F>(rzp, [&](const F* rzp, F* v) {
+    if (!rk4<F>(3, rzp, [&](const F* rzp, F* v) {
           F B[3];
           if (eval_b(rzp, B)) {
             v[0] = rzp[0] * B[0] / B[2];

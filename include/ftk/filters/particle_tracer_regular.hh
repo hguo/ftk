@@ -52,7 +52,7 @@ inline bool particle_tracer_regular::eval_v(
     const double *x, double *v)
 {
   if (V0 && V1) { // double time step
-    const double t = (x[2] - current_t) / current_delta_t;
+    const double t = (x[nd_] - current_t) / current_delta_t;
     if (t < 0.0 || t > 1.0) return false; // out of temporal bound
 
     const double w0 = (1.0 - t), w1 = t;
@@ -62,9 +62,9 @@ inline bool particle_tracer_regular::eval_v(
     const bool b1 = V1->mlerp(x, v1);
 
     if (b0 && b1) {
-      v[0] = w0 * v0[0] + w1 * v1[0];
-      v[1] = w0 * v0[1] + w1 * v1[1];
-      v[2] = 1.0;
+      for (auto k = 0; k < nd(); k ++)
+        v[k] = w0 * v0[k] + w1 * v1[k];
+      v[nd()] = 1.0; // time
       
       // fprintf(stderr, "x=%f, %f, %f, t=%f, v=%f, %f, %f\n", x[0], x[1], x[2], t, v[0], v[1], v[2]);
       return true;
@@ -97,31 +97,32 @@ inline void particle_tracer_regular::update_timestep()
 
     // auto &p = particles[i];
     // double x[3] = {p.x[0], p.x[1], p.t};
-    double x[3] = {last_point.x[0], last_point.x[1], last_point.t};
-    double v[3];
+   
+    double x[nd_+1], v[nd_+1];
+    for (auto k = 0; k < nd_; k ++)
+      x[k] = last_point.x[k];
+    x[nd_] = last_point.t;
 
     for (auto k = 0; k < nsteps_per_interval; k ++) {
       if (k % nsteps_per_checkpoint == 0) {
         feature_point_t p;
-        p.x[0] = x[0];
-        p.x[1] = x[1];
-        p.t = x[2];
-        p.v[0] = v[0];
-        p.v[1] = v[1];
-        p.v[2] = v[2];
+        for (auto k = 0; k < nd_; k ++) {
+          p.x[k] = x[k];
+          p.v[k] = v[k];
+        }
+        p.t = x[nd_];
         traj.push_back(p);
       }
-      bool succ = rk4<3, double>(x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
+      bool succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
       if (!succ) 
         break;
     }
-
+        
     feature_point_t p;
-    p.x[0] = x[0];
-    p.x[1] = x[1];
-    p.v[0] = v[0];
-    p.v[1] = v[1];
-    p.v[2] = v[2];
+    for (auto k = 0; k < nd_; k ++) {
+      p.x[k] = x[k];
+      p.v[k] = v[k];
+    }
     p.t = current_t + current_delta_t; // x[2];
     traj.push_back(p);
 

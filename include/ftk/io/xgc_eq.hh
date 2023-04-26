@@ -103,7 +103,7 @@ inline bool xgc_eq_t::magnetic_map(double rzp[], double phi_end, int nsteps) con
   const double delta = (phi_end - rzp[2]) / nsteps;
   
   for (int k = 0; k < nsteps; k ++) {
-    if (!rk4<3, double>(rzp, [&](const double* rzp, double* v) {
+    if (!rk4<double>(3, rzp, [&](const double* rzp, double* v) {
           eval_L(rzp, v);
           return true;
         }, delta))

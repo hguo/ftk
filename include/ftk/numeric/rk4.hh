@@ -5,8 +5,8 @@
 
 namespace ftk {
 
-template <int nd, typename T=double>
-bool rk4(T *pt, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr) // optional output of v at v0
+template <typename T=double>
+bool rk4(int nd, T *pt, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr) // optional output of v at v0
 {
   T p0[nd]; 
   memcpy(p0, pt, sizeof(T)*nd); 
