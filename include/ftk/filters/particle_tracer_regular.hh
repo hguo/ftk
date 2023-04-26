@@ -56,7 +56,7 @@ inline bool particle_tracer_regular::eval_v(
     if (t < 0.0 || t > 1.0) return false; // out of temporal bound
 
     const double w0 = (1.0 - t), w1 = t;
-    double v0[2], v1[2];
+    double v0[4], v1[4]; // up to 4d for now
 
     const bool b0 = V0->mlerp(x, v0); // current
     const bool b1 = V1->mlerp(x, v1);
@@ -89,10 +89,10 @@ inline void particle_tracer_regular::update_timestep()
                                    V1 = snapshots[1]->get_ptr<double>("vector");
 
   // fprintf(stderr, "#particles=%zu\n", this->particles.size());
-  // for (auto &kv : trajectories) {
-  //   auto &traj = kv.second;
-  this->parallel_for_container(trajectories, [&](feature_curve_set_t::iterator it) {
-    auto &traj = it->second;
+  // this->parallel_for_container(trajectories, [&](feature_curve_set_t::iterator it) {
+  for (auto &kv : trajectories) {
+    auto &traj = kv.second;
+    // auto &traj = it->second;
     const auto last_point = traj.back();
 
     // auto &p = particles[i];
@@ -127,7 +127,7 @@ inline void particle_tracer_regular::update_timestep()
     traj.push_back(p);
 
     // fprintf(stderr, "%f, %f, %f\n", p.x[0], p.x[1], p.t);
-  }, FTK_THREAD_PTHREAD, 1);
+  } // , FTK_THREAD_PTHREAD, 1);
 }
 
 

@@ -543,17 +543,18 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
   const auto js = stream->get_json();
   const size_t nd = stream->n_dimensions(),
                DW = js["dimensions"][0], 
-               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0; 
-               // DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
   const int nt = js["n_timesteps"];
+  // const int nd = DD == 0 ? 2 : 3;
 
-  std::shared_ptr<particle_tracer_2d_regular> t2dr(new particle_tracer_2d_regular(comm));
-  tracker_particle = t2dr;
+  std::shared_ptr<particle_tracer_regular> tr(new particle_tracer_regular(comm, nd));
+  tracker_particle = tr;
   
-  t2dr->set_domain(lattice({0, 0}, {DW-1, DH-1}));
-  t2dr->set_array_domain(lattice({0, 0}, {DW, DH}));
-  t2dr->set_end_timestep(nt - 1);
-  t2dr->set_number_of_threads(nthreads);
+  tr->set_domain(lattice({0, 0}, {DW-1, DH-1}));
+  tr->set_array_domain(lattice({0, 0}, {DW, DH}));
+  tr->set_end_timestep(nt - 1);
+  tr->set_number_of_threads(nthreads);
 
   if (comm.rank() == 0) {
     std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
