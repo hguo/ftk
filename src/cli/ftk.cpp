@@ -17,6 +17,7 @@
 #include "ftk/filters/xgc_blob_filament_tracker.hh"
 #include "ftk/filters/xgc_blob_threshold_tracker.hh"
 #include "ftk/filters/particle_tracer_regular.hh"
+#include "ftk/filters/particle_tracer_mpas_ocean.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/filters/feature_curve_set_post_processor.hh"
@@ -92,6 +93,7 @@ std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
 std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
 std::shared_ptr<particle_tracer> tracker_particle;
+std::shared_ptr<particle_tracer_mpas_ocean> tracker_particle_mpas_ocean;
 std::shared_ptr<threshold_tracker<>> tracker_threshold;
 std::shared_ptr<ndarray_stream<>> stream;
 
@@ -200,7 +202,7 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
     j_tracker["xgc"] = jx;
   }
 
-  if (ttype == TRACKER_MPAS_O_CRITICAL_POINT)
+  if (ttype == TRACKER_MPAS_O_CRITICAL_POINT || ttype == TRACKER_MPAS_O_PARTICLES)
     j_tracker["mpas"] = "";
 
   wrapper.reset(new json_interface);
@@ -536,6 +538,28 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
   stream->finish();
 
   tracker->finalize();
+}
+
+void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
+{
+  const auto js = stream->get_json();
+  tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_mesh) );
+  tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
+
+  tracker_particle_mpas_ocean->initialize();
+  tracker_particle_mpas_ocean->initialize_particles_at_grid_points();
+
+  stream->set_callback([&](int k, const ndarray<double>& field_data) {
+    tracker_particle_mpas_ocean->push_field_data_snapshot("vector", field_data);
+
+    if (k != 0) tracker_particle_mpas_ocean->advance_timestep();
+    if (k == stream->n_timesteps() - 1) tracker_particle_mpas_ocean->update_timestep();
+  });
+  stream->start();
+  stream->finish();
+
+  tracker_particle_mpas_ocean->finalize();
+  tracker_particle_mpas_ocean->write_trajectories(output_pattern);
 }
 
 void initialize_particle_tracer(diy::mpi::communicator comm)
@@ -874,6 +898,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
 
   if (ttype == TRACKER_CRITICAL_POINT || ttype == TRACKER_MPAS_O_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);
+  else if (ttype == TRACKER_MPAS_O_PARTICLES)
+    initialize_particle_tracer_mpas_ocean(comm);
   else if (ttype == TRACKER_CRITICAL_LINE)
     initialize_critical_line_tracker(comm);
   else if (ttype == TRACKER_CONTOUR)
