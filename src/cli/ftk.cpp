@@ -16,7 +16,7 @@
 #include "ftk/filters/tdgl_vortex_tracker_3d_regular.hh"
 #include "ftk/filters/xgc_blob_filament_tracker.hh"
 #include "ftk/filters/xgc_blob_threshold_tracker.hh"
-#include "ftk/filters/particle_tracer_2d_regular.hh"
+#include "ftk/filters/particle_tracer_regular.hh"
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/filters/feature_curve_set_post_processor.hh"
