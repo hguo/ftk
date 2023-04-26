@@ -38,6 +38,7 @@ inline void particle_tracer_regular::initialize_particles_at_grid_points()
         for (auto k = 0; k < std::min(size_t(3), e.corner.size()-1); k ++) { // m is (n+1)-d mesh
           p.x[k] = e.corner[k];  
         }
+        // fprintf(stderr, "%f, %f, %f\n", p.x[0], p.x[1], p.x[2]);
         curve.push_back(p);
         trajectories.add(curve);
       }, 

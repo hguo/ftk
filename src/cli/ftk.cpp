@@ -550,8 +550,9 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
 
   std::shared_ptr<particle_tracer_regular> tr(new particle_tracer_regular(comm, nd));
   tracker_particle = tr;
-  
-  tr->set_domain(lattice({0, 0}, {DW-1, DH-1}));
+ 
+  if (nd == 2) tr->set_domain(lattice({0, 0}, {DW-1, DH-1}));
+  else tr->set_domain(lattice({0, 0, 0}, {DW-1, DH-1, DD-1}));
   tr->set_array_domain(lattice({0, 0}, {DW, DH}));
   tr->set_end_timestep(nt - 1);
   tr->set_number_of_threads(nthreads);
