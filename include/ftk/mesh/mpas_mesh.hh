@@ -39,7 +39,7 @@ template <typename I, typename F>
 void mpas_mesh<I, F>::initialize()
 {
   kdCells.reset(new kd_t<F, 3>);
-  kdCells->set_inputs(this->xyzVertices);
+  kdCells->set_inputs(this->xyzCells);
   kdCells->build();
 }
 

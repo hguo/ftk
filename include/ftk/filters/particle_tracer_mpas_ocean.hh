@@ -48,10 +48,10 @@ inline bool particle_tracer_mpas_ocean::eval_v(
     const double *x, double *v)
 {
   size_t cellId = m->kdCells->find_nearest(x);
+  assert(cellId < m->nCells());
 
-  // std::cerr << V->shape() << std::endl;
   for (size_t k = 0; k < 3; k ++)
-    v[k] = V->at(k, 0, cellId) * 1e5;
+    v[k] = V->get(k, 0, cellId) * 1e5;
   
   fprintf(stderr, "x=%f, %f, %f, %f, cellId=%zu, v=%f, %f, %f\n", 
       x[0], x[1], x[2], x[3], cellId, v[0], v[1], v[2]);

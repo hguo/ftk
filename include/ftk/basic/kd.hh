@@ -173,6 +173,7 @@ size_t kd_t<F, n>::find_nearest(
     const std::array<F, n> &x) const 
 {
   auto node = find_nearest_recursive(root, x, 0);
+  assert(node->id < pts.size());
   return node->id;
 }
 
