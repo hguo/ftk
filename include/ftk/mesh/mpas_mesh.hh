@@ -111,7 +111,6 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   //     new mpas_mesh<I, F>(xyz, conn));
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
-  return NULL;
 #endif
 }
 
