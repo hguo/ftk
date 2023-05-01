@@ -30,7 +30,7 @@ protected:
 ////
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points()
 {
-  for (auto i = 0; i < m->nCells(); i ++) {
+  for (auto i = 0; i < m->nCells(); i += 1000000) {
         feature_curve_t curve;
         feature_point_t p;
         for (auto k = 0; k < 3; k ++)
@@ -47,7 +47,17 @@ inline bool particle_tracer_mpas_ocean::eval_v(
     std::shared_ptr<ndarray<double>> V,
     const double *x, double *v)
 {
-  return false;
+  size_t cellId = m->kdCells->find_nearest(x);
+
+  // std::cerr << V->shape() << std::endl;
+  for (size_t k = 0; k < 3; k ++)
+    v[k] = V->at(k, 0, cellId) * 1e5;
+  
+  fprintf(stderr, "x=%f, %f, %f, %f, cellId=%zu, v=%f, %f, %f\n", 
+      x[0], x[1], x[2], x[3], cellId, v[0], v[1], v[2]);
+
+  return true;
+  // return false;
   
   // 1. find the nearest vertex
   // 2. barycentric interpolation

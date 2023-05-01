@@ -34,7 +34,7 @@ struct kd_t {
       std::shared_ptr<kd_node_t<F, n>> node, 
       size_t depth) const;
 
-  // size_t find_nearest(const F*) const;
+  size_t find_nearest(const F*) const;
   size_t find_nearest(const std::array<F, n> &x) const;
   size_t find_nearest_naive(const std::array<F, n> &x) const; // brute force
   std::shared_ptr<kd_node_t<F, n>> find_nearest_recursive(
@@ -158,6 +158,14 @@ void kd_t<F, n>::print_recursive(std::shared_ptr<kd_node_t<F, n>> node, size_t d
 
   if (node->left) print_recursive(node->left, depth + 1);
   if (node->right) print_recursive(node->right, depth + 1);
+}
+
+template <typename F, size_t n>
+size_t kd_t<F, n>::find_nearest(const F* x) const
+{
+  std::array<F, n> X;
+  std::memcpy(X.data(), x, sizeof(F) * n);
+  return find_nearest(X);
 }
 
 template <typename F, size_t n>

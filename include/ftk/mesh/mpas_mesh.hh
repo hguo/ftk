@@ -18,6 +18,8 @@ public:
 
   size_t locateCell(const std::array<F, 3> x) const { return kdCells->find_nearest(x); }
 
+  bool point_in_cell(const F x[]) const;
+
 public:
   std::shared_ptr<kd_t<F, 3>> kdCells, kdVertices;
   
