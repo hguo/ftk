@@ -21,7 +21,7 @@
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/filters/feature_curve_set_post_processor.hh"
-#include "ftk/mesh/simplicial_mpas_2d_mesh.hh"
+#include "ftk/mesh/mpas_mesh.hh"
 #include "ftk/io/util.hh"
 #include "ftk/io/xgc_stream.hh"
 #include "ftk/ndarray.hh"
@@ -80,7 +80,7 @@ double xgc_smoothing_kernel_size = 0.03;
 int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
 
 // mpas-o specific
-std::shared_ptr<simplicial_mpas_2d_mesh<>> mpas_mesh;
+std::shared_ptr<mpas_mesh<>> mpas_mesh_;
 
 // devices
 std::string device_ids;
@@ -542,10 +542,11 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
 {
-  mpas_mesh = ftk::simplicial_mpas_2d_mesh<>::from_file(input_pattern);
+  // mpas_mesh_; // = ftk::mpas_mesh<>::from_file(input_pattern);
+  mpas_mesh_->read_netcdf(input_pattern);
 
   const auto js = stream->get_json();
-  tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_mesh) );
+  tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_mesh_) );
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
 
   tracker_particle_mpas_ocean->initialize();

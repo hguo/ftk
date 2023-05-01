@@ -2,6 +2,7 @@
 #define _FTK_KD_HH
 
 #include <ftk/config.hh>
+#include <ftk/ndarray.hh>
 #include <vector>
 #include <list>
 
@@ -17,7 +18,8 @@ struct kd_node_t {
 };
 
 template <typename F /*coordinate type, e.g., double*/, size_t n>
-struct kd {
+struct kd_t {
+  void set_inputs(const ndarray<F>& coords);
   void set_inputs(size_t npts, const F* p, size_t stride = n);
   void build(size_t max_level = std::numeric_limits<size_t>::max()); // no limit on max level
   std::shared_ptr<kd_node_t<F, n>> build_recursive(
@@ -64,7 +66,7 @@ struct kd {
 
 ////
 template <typename F, size_t n>
-void kd<F, n>::build(size_t max_level)
+void kd_t<F, n>::build(size_t max_level)
 {
   ids.resize(pts.size());
   for (size_t i = 0; i < ids.size(); i ++) 
@@ -74,7 +76,7 @@ void kd<F, n>::build(size_t max_level)
 }
   
 template <typename F, size_t n>
-F kd<F, n>::dist2(const std::array<F, n>& x, const std::array<F, n>& y)
+F kd_t<F, n>::dist2(const std::array<F, n>& x, const std::array<F, n>& y)
 {
   F dist(0);
   for (size_t k = 0; k < n; k ++) {
@@ -85,7 +87,16 @@ F kd<F, n>::dist2(const std::array<F, n>& x, const std::array<F, n>& y)
 }
 
 template <typename F, size_t n>
-void kd<F, n>::set_inputs(size_t npts, const F* p, size_t stride)
+void kd_t<F, n>::set_inputs(const ndarray<F>& arr)
+{
+  pts.resize(arr.dim(1));
+  for (size_t i = 0; i < arr.dim(1); i ++)
+    for (size_t k = 0; k < n; k ++)
+      pts[i][k] = arr.at(k, i);
+}
+
+template <typename F, size_t n>
+void kd_t<F, n>::set_inputs(size_t npts, const F* p, size_t stride)
 {
   pts.resize(npts);
   for (size_t i = 0; i < npts; i ++)
@@ -94,7 +105,7 @@ void kd<F, n>::set_inputs(size_t npts, const F* p, size_t stride)
 }
 
 template <typename F, size_t n>
-std::shared_ptr<kd_node_t<F, n>> kd<F, n>::build_recursive(
+std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::build_recursive(
     size_t max_level,
     size_t level,
     size_t offset, // 0 for the root
@@ -130,13 +141,13 @@ std::shared_ptr<kd_node_t<F, n>> kd<F, n>::build_recursive(
 }
 
 template <typename F, size_t n>
-void kd<F, n>::print() const
+void kd_t<F, n>::print() const
 {
   print_recursive(root, 0);
 }
 
 template <typename F, size_t n>
-void kd<F, n>::print_recursive(std::shared_ptr<kd_node_t<F, n>> node, size_t depth) const
+void kd_t<F, n>::print_recursive(std::shared_ptr<kd_node_t<F, n>> node, size_t depth) const
 {
   for (size_t i = 0; i < depth; i ++)
     printf("-");
@@ -150,7 +161,7 @@ void kd<F, n>::print_recursive(std::shared_ptr<kd_node_t<F, n>> node, size_t dep
 }
 
 template <typename F, size_t n>
-size_t kd<F, n>::find_nearest(
+size_t kd_t<F, n>::find_nearest(
     const std::array<F, n> &x) const 
 {
   auto node = find_nearest_recursive(root, x, 0);
@@ -158,7 +169,7 @@ size_t kd<F, n>::find_nearest(
 }
 
 template <typename F, size_t n>
-size_t kd<F, n>::find_nearest_naive(
+size_t kd_t<F, n>::find_nearest_naive(
     const std::array<F, n> &x) const 
 {
   size_t mi = 0;
@@ -174,7 +185,7 @@ size_t kd<F, n>::find_nearest_naive(
 }
   
 template <typename F, size_t n>
-std::shared_ptr<kd_node_t<F, n>> kd<F, n>::closest(const std::array<F, n>& x, 
+std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::closest(const std::array<F, n>& x, 
     std::shared_ptr<kd_node_t<F, n>> node1,
     std::shared_ptr<kd_node_t<F, n>> node2) const
 {
@@ -190,7 +201,7 @@ std::shared_ptr<kd_node_t<F, n>> kd<F, n>::closest(const std::array<F, n>& x,
 }
   
 template <typename F, size_t n>
-std::shared_ptr<kd_node_t<F, n>> kd<F, n>::find_nearest_recursive(
+std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::find_nearest_recursive(
     std::shared_ptr<kd_node_t<F, n>> node, 
     const std::array<F, n> &x, 
     size_t depth) const
@@ -229,7 +240,7 @@ std::shared_ptr<kd_node_t<F, n>> kd<F, n>::find_nearest_recursive(
 }
 
 template <typename F, size_t n>
-std::shared_ptr<kd_node_t<F, n>> kd<F, n>::find_leaf_recursive(
+std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::find_leaf_recursive(
     std::shared_ptr<kd_node_t<F, n>> node,
     const std::array<F, n> &x, 
     size_t depth) const

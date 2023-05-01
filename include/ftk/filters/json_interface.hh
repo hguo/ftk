@@ -7,7 +7,7 @@
 #include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
-#include <ftk/mesh/simplicial_mpas_2d_mesh.hh>
+#include <ftk/mesh/mpas_mesh.hh>
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
 #include <ftk/io/util.hh>
@@ -367,12 +367,16 @@ void json_interface::consume(ndarray_stream<> &stream, diy::mpi::communicator co
 
 void json_interface::consume_mpas(ndarray_stream<> &stream, diy::mpi::communicator comm)
 {
+  assert(false);
+#if 0 // temporarily removed
   fprintf(stderr, "consuming mpas..\n");
   
   js = stream.get_json();
   const std::string filename0 = js["filenames"][0];
 
-  auto m = simplicial_mpas_2d_mesh<>::from_file(filename0);
+  std::shared_ptr<mpas_mesh<>> m(new mpas_mesh<>);
+  m->read_netcdf(filename0);
+  // auto m = simplicial_mpas_2d_mesh<>::from_file(filename0);
   tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
   
   configure_tracker_general(comm);
@@ -400,6 +404,7 @@ void json_interface::consume_mpas(ndarray_stream<> &stream, diy::mpi::communicat
   stream.start();
   stream.finish();
   tracker->finalize();
+#endif
 }
 
 void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::communicator comm)

@@ -12,7 +12,7 @@ namespace ftk {
 struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tracker
 {
   particle_tracer_mpas_ocean(diy::mpi::communicator comm, 
-      std::shared_ptr<simplicial_mpas_2d_mesh<>> m) : 
+      std::shared_ptr<mpas_mesh<>> m) : 
     particle_tracer(comm, 3), 
     mpas_ocean_tracker(comm, m), 
     tracker(comm) 
@@ -30,6 +30,7 @@ protected:
 ////
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points()
 {
+#if 0 // later
   m->element_for(0, [&](int i) {
         double x[3];
         m->get_coords(i, x);
@@ -43,6 +44,7 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points()
         trajectories.add(curve);
   });  // FTK_XL_NONE, 1);
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
+#endif
 }
 
 inline bool particle_tracer_mpas_ocean::eval_v(

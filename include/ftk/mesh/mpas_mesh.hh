@@ -2,33 +2,53 @@
 #define _FTK_MPAS_2D_MESH_HH
 
 #include <ftk/config.hh>
+#include <ftk/basic/kd.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 
 namespace ftk {
 
 template <typename I=int, typename F=double>
-struct simplicial_mpas_2d_mesh : public simplicial_unstructured_2d_mesh<I, F> {
-  simplicial_mpas_2d_mesh(
-      const ndarray<F>& coords, 
-      const ndarray<I>& triangles) : simplicial_unstructured_2d_mesh<I, F>(coords, triangles) {}
+struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
+  // mpas_mesh(
+  //     const ndarray<F>& coords, 
+  //     const ndarray<I>& triangles) : simplicial_unstructured_2d_mesh<I, F>(coords, triangles) {}
 
   // int ncoords() const { return 3; }
 
-  static std::shared_ptr<simplicial_mpas_2d_mesh<I, F>> from_file(const std::string& filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
+  void read_netcdf(const std::string filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
+
+  void initialize();
+
+protected:
+  std::shared_ptr<kd_t<F, 3>> kd;
+  
+  ndarray<I> cellsOnVertex, indexToCellID;
+
+#if 0
+  ndarray<I> voronoi_c2v, // (6, nc)
+             voronoi_v2c; // (3, nv)
+  ndarray<F> voronoi_vcoords; // (3, nv)
+#endif
 };
 
-// inline simplicial_mpas_2d_mesh::simplicial_mpas_2d_mesh(const mpas_mesh& mm) :
+//////
+template <typename I, typename F>
+void mpas_mesh<I, F>::initialize()
+{
+  kd.reset(new kd_t<F, 3>);
+  kd->set_inputs(this->vertex_coords);
+  kd->build();
+}
+
+// inline mpas_mesh::mpas_mesh(const mpas_mesh& mm) :
 
 template <typename I, typename F>
-std::shared_ptr<simplicial_mpas_2d_mesh<I, F>> simplicial_mpas_2d_mesh<I, F>::from_file(
-    const std::string& filename, 
-    diy::mpi::communicator comm)
+void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communicator comm)
 {
 #if FTK_HAVE_NETCDF
   int ncid;
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 
-  ndarray<I> cellsOnVertex, indexToCellID;
   cellsOnVertex.read_netcdf(ncid, "cellsOnVertex"); // "conn"
   indexToCellID.read_netcdf(ncid, "indexToCellID");
 
@@ -71,8 +91,8 @@ std::shared_ptr<simplicial_mpas_2d_mesh<I, F>> simplicial_mpas_2d_mesh<I, F>::fr
   fprintf(stderr, "mpas mesh: #vert=%zu, #tri=%zu\n", 
       xyz.dim(1), conn.dim(1));
 
-  return std::shared_ptr<simplicial_mpas_2d_mesh<I, F>>(
-      new simplicial_mpas_2d_mesh<I, F>(xyz, conn));
+  // return std::shared_ptr<mpas_mesh<I, F>>(
+  //     new mpas_mesh<I, F>(xyz, conn));
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
   return NULL;
