@@ -6,7 +6,7 @@ const int npts = 10000;
 const int ntargets = 1000;
 
 TEST_CASE("kd_nearest_neighbor2") {
-  ftk::kd<double, 2> mykd;
+  ftk::kd_t<double, 2> mykd;
 
   std::vector<double> pts(npts * 2);
   for (size_t i = 0; i < npts * 2; i ++)
@@ -30,7 +30,7 @@ TEST_CASE("kd_nearest_neighbor2") {
 }
 
 TEST_CASE("kd_nearest_neighbor3") {
-  ftk::kd<double, 3> mykd;
+  ftk::kd_t<double, 3> mykd;
 
   std::vector<double> pts(npts * 3);
   for (size_t i = 0; i < npts * 3; i ++)
