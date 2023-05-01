@@ -30,21 +30,17 @@ protected:
 ////
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points()
 {
-#if 0 // later
-  m->element_for(0, [&](int i) {
-        double x[3];
-        m->get_coords(i, x);
-
+  for (auto i = 0; i < m->nCells(); i ++) {
         feature_curve_t curve;
         feature_point_t p;
         for (auto k = 0; k < 3; k ++)
-          p.x[k] = x[k]; 
+          p.x[k] = m->xyzCells(i, k); 
         
         curve.push_back(p);
         trajectories.add(curve);
-  });  // FTK_XL_NONE, 1);
+  }
+  
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
-#endif
 }
 
 inline bool particle_tracer_mpas_ocean::eval_v(
