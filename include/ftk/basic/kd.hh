@@ -1,6 +1,7 @@
 #ifndef _FTK_KD_HH
 #define _FTK_KD_HH
 
+#include <ftk/config.hh>
 #include <vector>
 #include <list>
 
