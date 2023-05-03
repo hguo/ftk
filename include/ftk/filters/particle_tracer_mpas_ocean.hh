@@ -55,25 +55,39 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   assert(cell_i < m->n_cells());
 
   static const int max_nverts = 10;
-  int verts_i[max_nverts];
+  int verts_i[max_nverts]; //  = {-1};
   const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
+
+  // fprintf (stderr, "nverts=%d, verts=%d, %d, %d, %d, %d, %d, %d\n", 
+  //     nverts, verts_i[0], verts_i[1], verts_i[2], verts_i[3], verts_i[4], verts_i[5], verts_i[6]);
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
 
+  // for (int i = 0; i < nverts; i ++) 
+  //   fprintf(stderr, "x%d=%f, %f, %f\n", i, Xv[i][0], Xv[i][1], Xv[i][2]);
+
   double Vv[max_nverts][3]; // velocities on vertices
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++)
-      Vv[i][k] = V->at(k, i);
+      Vv[i][k] = V->at(k, 0, verts_i[i]);
+  
+  // for (int i = 0; i < nverts; i ++) 
+  //   fprintf(stderr, "v%d=%f, %f, %f\n", i, Vv[i][0], Vv[i][1], Vv[i][2]);
 
   double omega[max_nverts] = {0};
   wachspress_weights(nverts, Xv, x, omega);
 
   // fprintf(stderr, "omega=%f, %f, %f, %f, %f, %f, %f\n", 
   //     omega[0], omega[1], omega[2], omega[3], omega[4], omega[5], omega[6]);
- 
+
+  v[0] = v[1] = v[2] = 0.0;
   for (int i = 0; i < nverts; i ++)
-    v[i] = omega[i] * V->at(i, verts_i[i]);
+    for (int k = 0; k < 3; k ++)
+      v[k] += omega[i] * Vv[i][k] * 1e5;
+
+  // fprintf(stderr, "x=%f, %f, %f, %f, v=%f, %f, %f\n", 
+  //     x[0], x[1], x[2], x[3], v[0], v[1], v[2]);
 
   return true;
 
