@@ -12,20 +12,39 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
   void read_netcdf(const std::string filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
   void initialize();
 
-public:
-  size_t nCells() const { return xyzCells.dim(1); }
-  size_t nVertices() const { return xyzVertices.dim(1); }
-
-  size_t locateCell(const std::array<F, 3> x) const { return kdCells->find_nearest(x); }
-
-  bool point_in_cell(const F x[]) const;
+  void initialize_c2v_interpolants();
+  ndarray<F> interpolate_velocity_c2v(const ndarray<F>& Vc) const;
 
 public:
-  std::shared_ptr<kd_t<F, 3>> kdCells, kdVertices;
+  size_t n_cells() const { return xyzCells.dim(1); }
+  size_t n_vertices() const { return xyzVertices.dim(1); }
+
+  size_t locate_cell(const F x[]) const { return kd_cells->find_nearest(x); }
+  bool point_in_cell(const F x[]) const; // WIP
+  
+  // void interpolate_c2v(const I vid, const F cvals[3][], F vvals[]) const;
+
+  I cell_id_to_index(I cid) const { auto it = cellIdToIndex.find(cid); if (it != cellIdToIndex.end()) return it->second; else return -1;  }
+  I vertex_id_to_index(I vid) const { auto it = vertexIdToIndex.find(vid); if (it != vertexIdToIndex.end()) return it->second; else return -1; }
+
+  I index_to_cell_id(I i) const { return indexToCellID[i]; }
+  I index_to_vertex_id(I i) const { return indexToVertexID[i]; }
+
+  bool is_vertex_on_boundary(I vid) const { return vertex_on_boundary[vertex_id_to_index(vid)]; }
+
+public:
+  std::shared_ptr<kd_t<F, 3>> kd_cells, kd_vertices;
   
   ndarray<I> cellsOnVertex, verticesOnCell;
   ndarray<I> indexToVertexID, indexToEdgeID, indexToCellID;
   ndarray<F> xyzCells, xyzVertices;
+
+  ndarray<F> c2v_interpolants;
+  std::vector<bool> vertex_on_boundary;
+
+  std::map<I, I> cellIdToIndex, // cellID->index
+                 edgeIdToIndex,              
+                 vertexIdToIndex; // vertexID->index
 
 #if 0
   ndarray<I> voronoi_c2v, // (6, nc)
@@ -38,9 +57,82 @@ public:
 template <typename I, typename F>
 void mpas_mesh<I, F>::initialize()
 {
-  kdCells.reset(new kd_t<F, 3>);
-  kdCells->set_inputs(this->xyzCells);
-  kdCells->build();
+  kd_cells.reset(new kd_t<F, 3>);
+  kd_cells->set_inputs(this->xyzCells);
+  kd_cells->build();
+}
+
+template <typename I, typename F>
+void mpas_mesh<I, F>::initialize_c2v_interpolants()
+{
+  c2v_interpolants.reshape(3, n_vertices());
+  vertex_on_boundary.resize(n_vertices());
+
+  for (I i = 0; i < n_vertices(); i ++) {
+    F Xc[3][3], Xv[3];
+   
+    bool boundary = false;
+    for (I j = 0; j < 3; j ++) {
+      const I c = cell_id_to_index( cellsOnVertex(j, i) );
+      if (c < 0) {
+        boundary = true;
+        break;
+      }
+      // fprintf(stderr, "cell=%d\n", c);
+      Xv[j] = xyzVertices(j, i);
+      for (I k = 0; k < 3; k ++)
+        Xc[j][k] = xyzCells(k, c);
+    }
+
+    if (boundary) {
+      vertex_on_boundary[i] = true;
+      continue;
+    }
+
+    // print3x3("Xc", Xc);
+    // print3("Xv", Xv);
+      
+    F mu[3];
+    bool succ = inverse_lerp_s2v3_0(Xc, Xv, mu);
+    for (I k = 0; k < 3; k ++)
+      c2v_interpolants(k, i) = mu[k];
+
+    // fprintf(stderr, "mu=%f, %f, %f\n", 
+    //     mu[0], mu[1], mu[2]);
+  }
+}
+
+template <typename I, typename F>
+ndarray<F> mpas_mesh<I, F>::interpolate_velocity_c2v(const ndarray<F>& Vc) const
+{
+  ndarray<F> V; // velocities on vertices
+  V.reshape({3, Vc.dim(1), n_vertices()});
+
+  for (auto i = 0; i < n_vertices(); i ++) {
+    const auto vid = index_to_vertex_id(i);
+    // bool boundary = is_vertex_on_boundary(vid);
+    const bool boundary = vertex_on_boundary[i];
+
+    F lambda[3] = {0};
+    I c[3] = {0};
+    if (!boundary) {
+      for (auto k = 0; k < 3; k ++) {
+        lambda[k] = c2v_interpolants(k, i);
+        c[k] = cell_id_to_index( cellsOnVertex(k, i) );
+      }
+    }
+
+    for (auto layer = 0; layer < Vc.dim(1); layer ++) {
+      for (auto k = 0; k < 3; k ++) {
+        if (boundary) {
+          V(k, layer, i) = F(0);
+        } else {
+          for (auto l = 0; l < 3; l ++) 
+            V(k, layer, i) += lambda[l] * Vc(k, layer, c[l]);
+        }
+      }
+    }
+  }
 }
 
 // inline mpas_mesh::mpas_mesh(const mpas_mesh& mm) :
@@ -54,11 +146,19 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
   cellsOnVertex.read_netcdf(ncid, "cellsOnVertex"); // "conn"
   verticesOnCell.read_netcdf(ncid, "verticesOnCell");
+  
   indexToCellID.read_netcdf(ncid, "indexToCellID");
+  for (auto i = 0; i < indexToCellID.size(); i ++)
+    cellIdToIndex[indexToCellID[i]] = i;
 
-  std::map<I, I> cellIndex;
-  for (int i = 0; i < indexToCellID.size(); i ++)
-    cellIndex[indexToCellID[i]] = i;
+  indexToEdgeID.read_netcdf(ncid, "indexToEdgeID");
+  for (auto i = 0; i < indexToEdgeID.size(); i ++)
+    edgeIdToIndex[indexToEdgeID[i]] = i;
+  
+  indexToVertexID.read_netcdf(ncid, "indexToVertexID");
+  for (auto i = 0; i < indexToVertexID.size(); i ++) 
+    vertexIdToIndex[indexToVertexID[i]] = i;
+  
 
   std::vector<I> vconn;
   for (int i = 0; i < cellsOnVertex.dim(1); i ++) {
@@ -68,7 +168,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
       continue;
     else {
       for (int j = 0; j < 3; j ++) 
-        vconn.push_back(cellIndex[cellsOnVertex(j, i)]);
+        vconn.push_back(cellIdToIndex[cellsOnVertex(j, i)]);
     }
   }
 

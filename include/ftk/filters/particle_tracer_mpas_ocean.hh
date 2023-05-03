@@ -30,7 +30,7 @@ protected:
 ////
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points()
 {
-  for (auto i = 0; i < m->nCells(); i += 1000000) {
+  for (auto i = 0; i < m->n_cells(); i += 1000000) {
         feature_curve_t curve;
         feature_point_t p;
         for (auto k = 0; k < 3; k ++)
@@ -47,8 +47,8 @@ inline bool particle_tracer_mpas_ocean::eval_v(
     std::shared_ptr<ndarray<double>> V,
     const double *x, double *v)
 {
-  size_t cellId = m->kdCells->find_nearest(x);
-  assert(cellId < m->nCells());
+  size_t cellId = m->locate_cell(x);
+  assert(cellId < m->n_cells());
 
   for (size_t k = 0; k < 3; k ++)
     v[k] = V->get(k, 0, cellId) * 1e5;
