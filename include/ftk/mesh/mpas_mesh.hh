@@ -24,16 +24,20 @@ public:
   size_t n_cells() const { return xyzCells.dim(1); }
   size_t n_vertices() const { return xyzVertices.dim(1); }
 
-  size_t locate_cell(const F x[]) const { return kd_cells->find_nearest(x); }
+  size_t locate_cell_i(const F x[]) const { return kd_cells->find_nearest(x); }
   bool point_in_cell(const F x[]) const; // WIP
   
   // void interpolate_c2v(const I vid, const F cvals[3][], F vvals[]) const;
 
-  I cell_id_to_index(I cid) const { auto it = cellIdToIndex.find(cid); if (it != cellIdToIndex.end()) return it->second; else return -1;  }
-  I vertex_id_to_index(I vid) const { auto it = vertexIdToIndex.find(vid); if (it != vertexIdToIndex.end()) return it->second; else return -1; }
+  I cid2i(I cid) const { auto it = cellIdToIndex.find(cid); if (it != cellIdToIndex.end()) return it->second; else return -1;  }
+  I vid2i(I vid) const { auto it = vertexIdToIndex.find(vid); if (it != vertexIdToIndex.end()) return it->second; else return -1; }
 
-  I index_to_cell_id(I i) const { return indexToCellID[i]; }
-  I index_to_vertex_id(I i) const { return indexToVertexID[i]; }
+  I i2cid(I i) const { return indexToCellID[i]; }
+  I i2vid(I i) const { return indexToVertexID[i]; }
+
+  I verts_i_on_cell_i(const I i, I vi[]) const; // returns number of verts
+  void vert_i_coords(const I i, F X[3]) const;
+  void verts_i_coords(const I n, const I i[], F X[][3]) const;
 
   bool is_vertex_on_boundary(I vid) const { return vertex_on_boundary[vertex_id_to_index(vid)]; }
 
@@ -79,7 +83,7 @@ void mpas_mesh<I, F>::initialize_c2v_interpolants()
    
     bool boundary = false;
     for (I j = 0; j < 3; j ++) {
-      const I c = cell_id_to_index( cellsOnVertex(j, i) );
+      const I c = cid2i( cellsOnVertex(j, i) );
       if (c < 0) {
         boundary = true;
         break;
@@ -115,7 +119,7 @@ ndarray<F> mpas_mesh<I, F>::interpolate_velocity_c2v(const ndarray<F>& Vc) const
   V.reshape({3, Vc.dim(1), n_vertices()});
 
   for (auto i = 0; i < n_vertices(); i ++) {
-    const auto vid = index_to_vertex_id(i);
+    const auto vid = i2vid(i);
     // bool boundary = is_vertex_on_boundary(vid);
     const bool boundary = vertex_on_boundary[i];
 
@@ -124,7 +128,7 @@ ndarray<F> mpas_mesh<I, F>::interpolate_velocity_c2v(const ndarray<F>& Vc) const
     if (!boundary) {
       for (auto k = 0; k < 3; k ++) {
         lambda[k] = c2v_interpolants(k, i);
-        c[k] = cell_id_to_index( cellsOnVertex(k, i) );
+        c[k] = cid2i( cellsOnVertex(k, i) );
       }
     }
 
@@ -139,9 +143,34 @@ ndarray<F> mpas_mesh<I, F>::interpolate_velocity_c2v(const ndarray<F>& Vc) const
       }
     }
   }
+
+  return V;
 }
 
 // inline mpas_mesh::mpas_mesh(const mpas_mesh& mm) :
+
+template <typename I, typename F>
+void mpas_mesh<I, F>::vert_i_coords(const I i, F X[3]) const
+{
+  for (int k = 0; k < 3; k ++)
+    X[k] = xyzVertices(k, i);
+}
+
+template <typename I, typename F>
+void mpas_mesh<I, F>::verts_i_coords(const I n, const I i[], F X[][3]) const
+{
+  for (auto j = 0; j < n; j ++)
+    vert_i_coords(i[j], X[j]);
+}
+
+template <typename I, typename F>
+I mpas_mesh<I, F>::verts_i_on_cell_i(const I i, I vi[]) const
+{
+  I n = nEdgesOnCell[i];
+  for (auto j = 0; j < n; j ++)
+    vi[j] = verticesOnCell(j, i);
+  return n;
+}
 
 template <typename I, typename F>
 void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communicator comm)
@@ -235,7 +264,7 @@ vtkSmartPointer<vtkUnstructuredGrid> mpas_mesh<I, F>::surface_cells_to_vtu() con
   for (auto i = 0; i < n_cells(); i ++) {
     vtkIdType ids[7];
     for (auto j = 0; j < 7; j ++) {
-      auto id = vertex_id_to_index( verticesOnCell(j, i) );
+      auto id = vid2i( verticesOnCell(j, i) );
       ids[j] = id;
     }
 

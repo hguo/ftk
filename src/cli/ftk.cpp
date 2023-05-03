@@ -548,7 +548,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   mpas_mesh_->initialize();
   mpas_mesh_->initialize_c2v_interpolants();
   // mpas_mesh_->surface_cells_to_vtu("mpas-surface.vtu");
-  exit(1);
+  // exit(1);
 
   const auto js = stream->get_json();
   tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_mesh_) );
@@ -558,6 +558,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   tracker_particle_mpas_ocean->initialize_particles_at_grid_points();
 
   stream->set_callback([&](int k, const ndarray<double>& field_data) {
+    ndarray<double> V = mpas_mesh_->interpolate_velocity_c2v(field_data); // vertexwise velocity
     tracker_particle_mpas_ocean->push_field_data_snapshot("vector", field_data);
 
     if (k != 0) tracker_particle_mpas_ocean->advance_timestep();
