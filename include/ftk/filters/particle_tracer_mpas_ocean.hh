@@ -66,8 +66,16 @@ inline bool particle_tracer_mpas_ocean::eval_v(
     for (int k = 0; k < 3; k ++)
       Vv[i][k] = V->at(k, i);
 
-  bool succ = wachpress_interpolation(nverts, Xv, Vv, x, v);
-  return succ;
+  double omega[max_nverts] = {0};
+  wachspress_weights(nverts, Xv, x, omega);
+
+  // fprintf(stderr, "omega=%f, %f, %f, %f, %f, %f, %f\n", 
+  //     omega[0], omega[1], omega[2], omega[3], omega[4], omega[5], omega[6]);
+ 
+  for (int i = 0; i < nverts; i ++)
+    v[i] = omega[i] * V->at(i, verts_i[i]);
+
+  return true;
 
 #if 0
   for (size_t k = 0; k < 3; k ++)
@@ -76,9 +84,6 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   fprintf(stderr, "x=%f, %f, %f, %f, cellId=%zu, v=%f, %f, %f\n", 
       x[0], x[1], x[2], x[3], cellId, v[0], v[1], v[2]);
 #endif
-
-  return true;
-  // return false;
 }
 
 }
