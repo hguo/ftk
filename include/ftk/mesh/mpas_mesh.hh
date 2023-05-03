@@ -168,7 +168,7 @@ I mpas_mesh<I, F>::verts_i_on_cell_i(const I i, I vi[]) const
 {
   I n = nEdgesOnCell[i];
   for (auto j = 0; j < n; j ++)
-    vi[j] = verticesOnCell(j, i);
+    vi[j] = vid2i( verticesOnCell(j, i) );
   return n;
 }
 
