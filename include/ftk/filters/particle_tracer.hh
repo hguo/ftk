@@ -21,6 +21,10 @@ struct particle_tracer : public virtual tracker
 
   void write_trajectories(const std::string& filename);
 
+  void set_delta_t(double d) { current_delta_t = d; } // overriding delta t
+  void set_nsteps_per_interval(int n) { nsteps_per_interval = n; }
+  void set_nsteps_per_checkpoint(int n) { nsteps_per_checkpoint = 16; }
+
 protected:
   virtual bool eval_v(std::shared_ptr<ndarray<double>> V0,
       std::shared_ptr<ndarray<double>> V1,
@@ -87,12 +91,16 @@ inline void particle_tracer::update_timestep()
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
   current_t = current_timestep;
 
+  bool streamlines = false;
+  if (this->ntimesteps == 1)
+    streamlines = true;
+
   // fprintf(stderr, "#snapshots=%zu\n", this->snapshots.size());
-  if (this->snapshots.size() < 2) 
+  if (!streamlines && this->snapshots.size() < 2) 
     return; // nothing can be done
 
   std::shared_ptr<ndarray<double>> V0 = snapshots[0]->get_ptr<double>("vector"),
-                                   V1 = snapshots[1]->get_ptr<double>("vector");
+                                   V1 = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("vector") : nullptr;
 
   // fprintf(stderr, "#particles=%zu\n", this->particles.size());
   this->parallel_for_container(trajectories, [&](feature_curve_set_t::iterator it) {

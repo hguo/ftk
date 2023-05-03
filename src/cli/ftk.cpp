@@ -551,8 +551,17 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   // exit(1);
 
   const auto js = stream->get_json();
+  const int nt = js["n_timesteps"];
+  
   tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_mesh_) );
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
+  
+  tracker_particle_mpas_ocean->set_ntimesteps(nt);
+  if (nt == 1) {
+    tracker_particle_mpas_ocean->set_delta_t( 31536000.0 ); // trace for a year for strealines
+    tracker_particle_mpas_ocean->set_nsteps_per_interval(32768);
+    tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(16);
+  }
 
   tracker_particle_mpas_ocean->initialize();
   tracker_particle_mpas_ocean->initialize_particles_at_grid_points();
@@ -583,7 +592,8 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
 
   std::shared_ptr<particle_tracer_regular> tr(new particle_tracer_regular(comm, nd));
   tracker_particle = tr;
- 
+
+  tr->set_ntimesteps(nt);
   if (nd == 2) tr->set_domain(lattice({0, 0}, {DW-1, DH-1}));
   else tr->set_domain(lattice({0, 0, 0}, {DW-1, DH-1, DD-1}));
   tr->set_array_domain(lattice({0, 0}, {DW, DH}));

@@ -35,6 +35,7 @@ struct tracker : public filter
   
   void set_start_timestep(int t) { start_timestep = t;}
   void set_end_timestep(int t) { end_timestep = t; }
+  void set_ntimesteps(int n) { ntimesteps = n; }
   
   virtual void set_current_timestep(int t) {current_timestep = t;}
   int get_current_timestep() const {return current_timestep;}
@@ -62,6 +63,7 @@ public:
 
 protected:
   std::deque<std::shared_ptr<ndarray_group>> snapshots;
+  int ntimesteps = 0; // unlimited
 
 protected:
   // diy::Master master;

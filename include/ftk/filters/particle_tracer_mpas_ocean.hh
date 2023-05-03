@@ -31,11 +31,11 @@ protected:
 ////
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points()
 {
-  for (auto i = 0; i < m->n_cells(); i += 1000000) {
+  for (auto i = 86081; i < m->n_cells(); i += 1000000) {
         feature_curve_t curve;
         feature_point_t p;
         for (auto k = 0; k < 3; k ++)
-          p.x[k] = m->xyzCells(i, k); 
+          p.x[k] = m->xyzCells(k, i); 
         
         curve.push_back(p);
         trajectories.add(curve);
@@ -84,10 +84,10 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   v[0] = v[1] = v[2] = 0.0;
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++)
-      v[k] += omega[i] * Vv[i][k] * 1e5;
+      v[k] += omega[i] * Vv[i][k]; // meters per second
 
-  // fprintf(stderr, "x=%f, %f, %f, %f, v=%f, %f, %f\n", 
-  //     x[0], x[1], x[2], x[3], v[0], v[1], v[2]);
+  fprintf(stderr, "x=%f, %f, %f, %f, v=%f, %f, %f\n", 
+      x[0], x[1], x[2], x[3], v[0], v[1], v[2]);
 
   return true;
 
