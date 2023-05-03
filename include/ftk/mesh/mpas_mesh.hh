@@ -15,6 +15,11 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
   void initialize_c2v_interpolants();
   ndarray<F> interpolate_velocity_c2v(const ndarray<F>& Vc) const;
 
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkUnstructuredGrid> surface_cells_to_vtu() const;
+#endif
+  void surface_cells_to_vtu(const std::string filename) const;
+
 public:
   size_t n_cells() const { return xyzCells.dim(1); }
   size_t n_vertices() const { return xyzVertices.dim(1); }
@@ -38,6 +43,7 @@ public:
   ndarray<I> cellsOnVertex, verticesOnCell;
   ndarray<I> indexToVertexID, indexToEdgeID, indexToCellID;
   ndarray<F> xyzCells, xyzVertices;
+  ndarray<I> nEdgesOnCell;
 
   ndarray<F> c2v_interpolants;
   std::vector<bool> vertex_on_boundary;
@@ -146,7 +152,8 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
   cellsOnVertex.read_netcdf(ncid, "cellsOnVertex"); // "conn"
   verticesOnCell.read_netcdf(ncid, "verticesOnCell");
-  
+  nEdgesOnCell.read_netcdf(ncid, "nEdgesOnCell");
+
   indexToCellID.read_netcdf(ncid, "indexToCellID");
   for (auto i = 0; i < indexToCellID.size(); i ++)
     cellIdToIndex[indexToCellID[i]] = i;
@@ -158,7 +165,6 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   indexToVertexID.read_netcdf(ncid, "indexToVertexID");
   for (auto i = 0; i < indexToVertexID.size(); i ++) 
     vertexIdToIndex[indexToVertexID[i]] = i;
-  
 
   std::vector<I> vconn;
   for (int i = 0; i < cellsOnVertex.dim(1); i ++) {
@@ -211,6 +217,58 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   //     new mpas_mesh<I, F>(xyz, conn));
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+#if FTK_HAVE_VTK
+template <typename I, typename F>
+vtkSmartPointer<vtkUnstructuredGrid> mpas_mesh<I, F>::surface_cells_to_vtu() const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
+  vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
+  pts->SetNumberOfPoints(n_vertices());
+
+  for (auto i = 0; i < n_vertices(); i ++)
+    pts->SetPoint(i, xyzVertices(0, i), xyzVertices(1, i), xyzVertices(2, i));
+  grid->SetPoints(pts);
+
+  for (auto i = 0; i < n_cells(); i ++) {
+    vtkIdType ids[7];
+    for (auto j = 0; j < 7; j ++) {
+      auto id = vertex_id_to_index( verticesOnCell(j, i) );
+      ids[j] = id;
+    }
+
+    const int n = nEdgesOnCell[i];
+    // fprintf(stderr, "%zu, %d\n", i, n);
+      
+    grid->InsertNextCell( VTK_POLYGON, n, ids );
+
+#if 0
+    if (n == 6)
+      grid->InsertNextCell( VTK_HEXAHEDRON, n, ids );
+    else if (n == 7 || n == 5) 
+      grid->InsertNextCell( VTK_POLYGON, n, ids );
+    else if (n == 4)
+      grid->InsertNextCell( VTK_QUAD, n, ids );
+#endif
+  }
+
+  return grid;
+}
+#endif
+  
+template <typename I, typename F>
+void mpas_mesh<I, F>::surface_cells_to_vtu(const std::string filename) const
+{
+#if FTK_HAVE_VTK
+  auto grid = surface_cells_to_vtu();
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName( filename.c_str() );
+  writer->SetInputData( grid );
+  writer->Write();
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 

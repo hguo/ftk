@@ -547,6 +547,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   mpas_mesh_->read_netcdf(input_pattern);
   mpas_mesh_->initialize();
   mpas_mesh_->initialize_c2v_interpolants();
+  // mpas_mesh_->surface_cells_to_vtu("mpas-surface.vtu");
   exit(1);
 
   const auto js = stream->get_json();
