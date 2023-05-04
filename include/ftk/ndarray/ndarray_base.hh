@@ -71,7 +71,11 @@ struct ndarray_base {
   size_t shape(size_t i) const {return dim(i);}
   const std::vector<size_t> &shape() const {return dims;}
   size_t nelem() const { if (empty()) return 0; else return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>()); }
-  
+  virtual size_t elem_size() const = 0;
+ 
+  virtual const void* pdata() const = 0;
+  virtual void* pdata() = 0;
+
   virtual void reshape(const std::vector<size_t> &dims_) = 0;
   void reshape(const std::vector<int>& dims);
   void reshape(size_t ndims, const size_t sizes[]);
@@ -141,6 +145,12 @@ public: // vti i/o
 #if FTK_HAVE_VTK
   virtual void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string()) = 0;
   virtual void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> d, const std::string array_name=std::string()) = 0;
+#endif
+
+public: // vtk data array
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
+  virtual int vtk_data_type() const = 0;
 #endif
 
 protected:
@@ -282,6 +292,30 @@ inline void ndarray_base::read_bp(const std::string& filename, const std::string
   read_bp_legacy(filename, varname, comm);
 #endif
 }
+
+#if FTK_HAVE_VTK
+inline vtkSmartPointer<vtkDataArray> ndarray_base::to_vtk_data_array(std::string varname) const
+{
+  vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(this->vtk_data_type());
+  if (varname.length() > 0)
+    d->SetName( varname.c_str() );
+
+  // fprintf(stderr, "to_vtk_data_array, ncd=%zu\n", ncd);
+
+  if (ncd == 1) {
+    d->SetNumberOfComponents(shape(0));
+    d->SetNumberOfTuples( std::accumulate(dims.begin()+1, dims.end(), 1, std::multiplies<size_t>()) );
+  }
+  else if (ncd == 0) {
+    d->SetNumberOfComponents(1);
+    d->SetNumberOfTuples(nelem());
+  } else {
+    fatal(FTK_ERR_NDARRAY_MULTIDIMENSIONAL_COMPONENTS);
+  }
+  memcpy(d->GetVoidPointer(0), this->pdata(), elem_size() * nelem()); // nelem());
+  return d;
+}
+#endif
 
 } // namespace ftk
 

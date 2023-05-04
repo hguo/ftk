@@ -59,6 +59,7 @@ struct ndarray : public ndarray_base {
 
   size_t size() const {return p.size();}
   bool empty() const  {return p.empty();}
+  size_t elem_size() const { return sizeof(T); }
 
   void fill(T value); //! fill with a constant value
   void fill(const std::vector<T>& values); //! fill values with std::vector
@@ -68,6 +69,9 @@ struct ndarray : public ndarray_base {
 
   const T* data() const {return p.data();}
   T* data() {return p.data();}
+  
+  const void* pdata() const {return p.data();}
+  void* pdata() {return p.data();}
 
   void swap(ndarray& x);
 
@@ -212,13 +216,13 @@ public: // i/o for vtk image data
   void to_vtk_image_data_file(const std::string& filename, const std::string varname=std::string()) const;
   void read_vtk_image_data_file_sequence(const std::string& pattern);
 #if FTK_HAVE_VTK
-  static int vtk_data_type();
+  int vtk_data_type() const;
   void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> d, const std::string array_name=std::string());
   void from_vtk_image_data(vtkSmartPointer<vtkImageData> d, const std::string array_name=std::string()) { from_vtk_regular_data<>(d, array_name); }
   void from_vtk_array(vtkSmartPointer<vtkAbstractArray> d);
   void from_vtk_data_array(vtkSmartPointer<vtkDataArray> d);
   vtkSmartPointer<vtkImageData> to_vtk_image_data(std::string varname=std::string()) const; 
-  vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const; 
+  // vtkSmartPointer<vtkDataArray> to_vtk_data_array(std::string varname=std::string()) const;  // moved to base
   
   template <typename VTK_REGULAR_DATA=vtkImageData> /*vtkImageData, vtkRectilinearGrid, or vtkStructuredGrid*/
   void from_vtk_regular_data(vtkSmartPointer<VTK_REGULAR_DATA> d, const std::string array_name=std::string());
@@ -554,16 +558,16 @@ void ndarray<T>::read_binary_file_sequence(const std::string& pattern)
 }
 
 #ifdef FTK_HAVE_VTK
-template<> inline int ndarray<char>::vtk_data_type() {return VTK_CHAR;}
-template<> inline int ndarray<unsigned char>::vtk_data_type() {return VTK_UNSIGNED_CHAR;}
-template<> inline int ndarray<short>::vtk_data_type() {return VTK_SHORT;}
-template<> inline int ndarray<unsigned short>::vtk_data_type() {return VTK_UNSIGNED_SHORT;}
-template<> inline int ndarray<int>::vtk_data_type() {return VTK_INT;}
-template<> inline int ndarray<unsigned int>::vtk_data_type() {return VTK_UNSIGNED_INT;}
-template<> inline int ndarray<long>::vtk_data_type() {return VTK_LONG;}
-template<> inline int ndarray<unsigned long>::vtk_data_type() {return VTK_UNSIGNED_LONG;}
-template<> inline int ndarray<float>::vtk_data_type() {return VTK_FLOAT;}
-template<> inline int ndarray<double>::vtk_data_type() {return VTK_DOUBLE;}
+template<> inline int ndarray<char>::vtk_data_type() const {return VTK_CHAR;}
+template<> inline int ndarray<unsigned char>::vtk_data_type() const {return VTK_UNSIGNED_CHAR;}
+template<> inline int ndarray<short>::vtk_data_type() const {return VTK_SHORT;}
+template<> inline int ndarray<unsigned short>::vtk_data_type() const {return VTK_UNSIGNED_SHORT;}
+template<> inline int ndarray<int>::vtk_data_type() const {return VTK_INT;}
+template<> inline int ndarray<unsigned int>::vtk_data_type() const {return VTK_UNSIGNED_INT;}
+template<> inline int ndarray<long>::vtk_data_type() const {return VTK_LONG;}
+template<> inline int ndarray<unsigned long>::vtk_data_type() const {return VTK_UNSIGNED_LONG;}
+template<> inline int ndarray<float>::vtk_data_type() const {return VTK_FLOAT;}
+template<> inline int ndarray<double>::vtk_data_type() const {return VTK_DOUBLE;}
 
 template <typename T>
 inline void ndarray<T>::from_vtk_array(vtkSmartPointer<vtkAbstractArray> d)
@@ -648,29 +652,6 @@ inline void ndarray<T>::to_vtk_image_data_file(const std::string& filename, cons
   writer->SetFileName(filename.c_str());
   writer->SetInputData( to_vtk_image_data(varname) );
   writer->Write();
-}
-
-template <typename T>
-inline vtkSmartPointer<vtkDataArray> ndarray<T>::to_vtk_data_array(const std::string varname) const
-{
-  vtkSmartPointer<vtkDataArray> d = vtkDataArray::CreateDataArray(vtk_data_type());
-  if (varname.length() > 0)
-    d->SetName( varname.c_str() );
-
-  // fprintf(stderr, "to_vtk_data_array, ncd=%zu\n", ncd);
-
-  if (ncd == 1) {
-    d->SetNumberOfComponents(shape(0));
-    d->SetNumberOfTuples( std::accumulate(dims.begin()+1, dims.end(), 1, std::multiplies<size_t>()) );
-  }
-  else if (ncd == 0) {
-    d->SetNumberOfComponents(1);
-    d->SetNumberOfTuples(nelem());
-  } else {
-    fatal(FTK_ERR_NDARRAY_MULTIDIMENSIONAL_COMPONENTS);
-  }
-  memcpy(d->GetVoidPointer(0), p.data(), sizeof(T) * p.size()); // nelem());
-  return d;
 }
 
 template<typename T>
