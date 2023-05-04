@@ -568,7 +568,19 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
 
   stream->set_callback([&](int k, const ndarray<double>& field_data) {
     ndarray<double> V = mpas_mesh_->interpolate_velocity_c2v(field_data); // vertexwise velocity
-    tracker_particle_mpas_ocean->push_field_data_snapshot("vector", field_data);
+   
+#if 0
+    ndarray<double> surfV;
+    surfV.reshape(3, V.dim(2));
+    surfV.set_multicomponents();
+    for (size_t i = 0; i < V.dim(2); i ++)
+      for (size_t k = 0; k < 3; k ++) 
+        surfV(k, i) = V(k, 0, i);
+    mpas_mesh_->surface_cells_to_vtu("mpas-surface.vtu", {&surfV});
+    exit(1);
+#endif
+
+    tracker_particle_mpas_ocean->push_field_data_snapshot("vector", V); // field_data);
 
     if (k != 0) tracker_particle_mpas_ocean->advance_timestep();
     if (k == stream->n_timesteps() - 1) tracker_particle_mpas_ocean->update_timestep();

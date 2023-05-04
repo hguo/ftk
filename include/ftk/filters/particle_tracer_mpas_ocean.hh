@@ -64,16 +64,18 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
 
-  // for (int i = 0; i < nverts; i ++) 
-  //   fprintf(stderr, "x%d=%f, %f, %f\n", i, Xv[i][0], Xv[i][1], Xv[i][2]);
+  for (int i = 0; i < nverts; i ++) 
+    fprintf(stderr, "x%d=%f, %f, %f\n", i, Xv[i][0], Xv[i][1], Xv[i][2]);
+
+  std::cerr << V->shape() << std::endl;
 
   double Vv[max_nverts][3]; // velocities on vertices
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++)
       Vv[i][k] = V->at(k, 0, verts_i[i]);
   
-  // for (int i = 0; i < nverts; i ++) 
-  //   fprintf(stderr, "v%d=%f, %f, %f\n", i, Vv[i][0], Vv[i][1], Vv[i][2]);
+  for (int i = 0; i < nverts; i ++) 
+    fprintf(stderr, "v%d=%f, %f, %f\n", i, Vv[i][0], Vv[i][1], Vv[i][2]);
 
   double omega[max_nverts] = {0};
   wachspress_weights(nverts, Xv, x, omega);
@@ -86,8 +88,10 @@ inline bool particle_tracer_mpas_ocean::eval_v(
     for (int k = 0; k < 3; k ++)
       v[k] += omega[i] * Vv[i][k]; // meters per second
 
-  fprintf(stderr, "x=%f, %f, %f, %f, v=%f, %f, %f\n", 
-      x[0], x[1], x[2], x[3], v[0], v[1], v[2]);
+  // v[3] = 1.0;
+
+  fprintf(stderr, "x=%f, %f, %f, %f, cell_i=%d, v=%f, %f, %f\n", 
+      x[0], x[1], x[2], x[3], cell_i, v[0], v[1], v[2]);
 
   return true;
 

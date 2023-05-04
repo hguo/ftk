@@ -124,10 +124,11 @@ inline void particle_tracer::update_timestep()
           p.x[k] = x[k];
           p.v[k] = v[k];
         }
-        p.t = x[nd_];
+        p.t = x[nd_]; //  + delta() * k;
         traj.push_back(p);
       }
-      bool succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
+      // bool succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
+      bool succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
       if (!succ) 
         break;
     }

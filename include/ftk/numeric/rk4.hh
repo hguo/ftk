@@ -1,9 +1,38 @@
 #ifndef _FTK_RK4_HH
 #define _FTK_RK4_HH
 
+#include <ftk/config.hh>
+#include <ftk/numeric/vector_norm.hh>
 #include <functional>
 
 namespace ftk {
+
+template <typename T=double>
+void spherical_stepping(const T *x, const T *v, const T h, T *xn)
+{
+  const T R = vector_2norm<3, T>(x); // radius
+  for (int k = 0; k < 3; k ++)
+    xn[k] = x[k] + h * v[k];
+  
+  const T Rn = vector_2norm<3, T>(xn); // new radius
+  for (int k = 0; k < 3; k ++)
+    xn[k] = xn[k] / Rn * R;
+}
+
+template <typename T=double> 
+bool spherical_rk1(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr)
+{
+  T v[3]; // velocity
+  if (!f(x, v)) return false;
+
+  if (v0) 
+    for (int k = 0; k < 3; k ++)
+      v0[k] = v[k];
+
+  spherical_stepping(x, v, h, x);
+
+  return true;
+}
 
 template <typename T=double>
 bool rk4(int nd, T *pt, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr) // optional output of v at v0

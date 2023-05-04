@@ -16,9 +16,9 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
   ndarray<F> interpolate_velocity_c2v(const ndarray<F>& Vc) const;
 
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> surface_cells_to_vtu() const;
+  vtkSmartPointer<vtkUnstructuredGrid> surface_cells_to_vtu(std::vector<ndarray_base*> attrs = {}) const;
 #endif
-  void surface_cells_to_vtu(const std::string filename) const;
+  void surface_cells_to_vtu(const std::string filename, std::vector<ndarray_base*> attrs = {}) const;
 
 public:
   size_t n_cells() const { return xyzCells.dim(1); }
@@ -251,7 +251,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
 #if FTK_HAVE_VTK
 template <typename I, typename F>
-vtkSmartPointer<vtkUnstructuredGrid> mpas_mesh<I, F>::surface_cells_to_vtu() const
+vtkSmartPointer<vtkUnstructuredGrid> mpas_mesh<I, F>::surface_cells_to_vtu(const std::vector<ndarray_base*> attrs) const
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
   vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
@@ -283,15 +283,20 @@ vtkSmartPointer<vtkUnstructuredGrid> mpas_mesh<I, F>::surface_cells_to_vtu() con
 #endif
   }
 
+  for (const auto& arr : attrs) {
+    auto data = arr->to_vtk_data_array("att");
+    grid->GetPointData()->AddArray(data);
+  }
+
   return grid;
 }
 #endif
   
 template <typename I, typename F>
-void mpas_mesh<I, F>::surface_cells_to_vtu(const std::string filename) const
+void mpas_mesh<I, F>::surface_cells_to_vtu(const std::string filename, const std::vector<ndarray_base*> attrs) const
 {
 #if FTK_HAVE_VTK
-  auto grid = surface_cells_to_vtu();
+  auto grid = surface_cells_to_vtu(attrs);
   vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
   writer->SetFileName( filename.c_str() );
   writer->SetInputData( grid );

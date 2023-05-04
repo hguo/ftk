@@ -31,26 +31,40 @@ inline bool wachspress_weights( // return true if x is inside the cell
   T A[nverts]; // areas of triangles that connect x
   for (int i = 0; i < nverts; i ++)
   A[i] = triangle_area3(X[i], x, X[(i+1)%nverts]);
-    
+   
+  // fprintf(stderr, "A=%f, %f, %f, %f, %f, %f\n",
+  //     A[0], A[1], A[2], A[3], A[4], A[5]);
+
   for (int i = 0; i < nverts; i ++) {
     const T B = triangle_area3(X[i], X[(i-1+nverts)%nverts], X[(i+1)%nverts]);
 
-    T sumA(0); // summation of areas on the opposite side
+    T prodA(1); // summation of areas on the opposite side
     for (int j = 0; j < nverts; j ++) {
-      if (i == j || i == (j-1+nverts)%nverts)
-        sumA += A[i];
+      // if (i == j || i == (j-1+nverts)%nverts)
+      if (j == i || j == (i-1+nverts)%nverts)
+        continue;
+      else
+        prodA *= A[j];
     }
 
-    omega[i] = B * sumA;
+    omega[i] = B * prodA;
+    
+    // fprintf(stderr, "--B%d=%f, prodA=%f\n", i, B, prodA);
   }
 
   T sum_omega(0);
   for (int i = 0; i < nverts; i ++)
     sum_omega += omega[i];
   
+  // fprintf(stderr, "omega=%f, %f, %f, %f, %f, %f, sum=%f\n", 
+  //     omega[0], omega[1], omega[2], omega[3], omega[4], omega[5], sum_omega);
+  
   for (int i = 0; i < nverts; i ++)
     omega[i] = omega[i] / sum_omega;
-
+  
+  // fprintf(stderr, "omega=%f, %f, %f, %f, %f, %f\n", 
+  //     omega[0], omega[1], omega[2], omega[3], omega[4], omega[5]);
+    
   return true;
 }
 
