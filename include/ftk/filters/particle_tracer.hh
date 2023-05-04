@@ -6,6 +6,12 @@
 
 namespace ftk {
 
+enum {
+  PARTICLE_TRACER_INTEGRATOR_RK1 = 0,
+  PARTICLE_TRACER_INTEGRATOR_RK4 = 1,
+  PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1 = 1,
+};
+
 struct particle_tracer : public virtual tracker
 {
   particle_tracer(diy::mpi::communicator comm, int nd /*spatial dim*/) : tracker(comm), nd_(nd) {}
@@ -46,6 +52,7 @@ protected:
   int nsteps_per_checkpoint = 16;
 
   const int nd_;
+  int integrator = PARTICLE_TRACER_INTEGRATOR_RK4;
 };
 
 //// 
@@ -127,8 +134,14 @@ inline void particle_tracer::update_timestep()
         p.t = x[nd_]; //  + delta() * k;
         traj.push_back(p);
       }
-      // bool succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
-      bool succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
+      bool succ = false;
+
+      // fprintf(stderr, "x=%f, %f, t=%f\n", x[0], x[1], x[2]);
+      if (integrator == PARTICLE_TRACER_INTEGRATOR_RK4)
+        succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
+      else if (integrator == PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1)
+        succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
+
       if (!succ) 
         break;
     }
@@ -138,7 +151,8 @@ inline void particle_tracer::update_timestep()
       p.x[k] = x[k];
       p.v[k] = v[k];
     }
-    p.t = current_t + current_delta_t; // x[2];
+    // p.t = current_t + current_delta_t; // x[2];
+    p.t = x[nd_];
     traj.push_back(p);
 
     // fprintf(stderr, "%f, %f, %f\n", p.x[0], p.x[1], p.t);
@@ -166,12 +180,14 @@ inline bool particle_tracer::eval_v(
         v[k] = w0 * v0[k] + w1 * v1[k];
       v[nd()] = 1.0; // time
       
-      // fprintf(stderr, "x=%f, %f, %f, t=%f, v=%f, %f, %f\n", x[0], x[1], x[2], t, v[0], v[1], v[2]);
+      // fprintf(stderr, "x=%f, %f, t=%f, v=%f, %f, %f\n", x[0], x[1], t, v[0], v[1], v[2]);
       return true;
     } else 
       return false;
   } else if (V0) { // single time step
-    return eval_v(V0, x, v);
+    bool succ = eval_v(V0, x, v);
+    v[nd()] = 1.0; // time
+    return succ;
   } else // no timestep available
     return false;
 }

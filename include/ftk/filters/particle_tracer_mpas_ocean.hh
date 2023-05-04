@@ -17,7 +17,9 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
     particle_tracer(comm, 3), 
     mpas_ocean_tracker(comm, m), 
     tracker(comm) 
-  {} 
+  {
+    this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1;
+  }
 
   virtual ~particle_tracer_mpas_ocean() {}
 
@@ -31,7 +33,7 @@ protected:
 ////
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points()
 {
-  for (auto i = 86081; i < m->n_cells(); i += 1000000) {
+  for (auto i = 0; i < m->n_cells(); i += 10) {
         feature_curve_t curve;
         feature_point_t p;
         for (auto k = 0; k < 3; k ++)
@@ -64,18 +66,18 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
 
-  for (int i = 0; i < nverts; i ++) 
-    fprintf(stderr, "x%d=%f, %f, %f\n", i, Xv[i][0], Xv[i][1], Xv[i][2]);
+  // for (int i = 0; i < nverts; i ++) 
+  //   fprintf(stderr, "x%d=%f, %f, %f\n", i, Xv[i][0], Xv[i][1], Xv[i][2]);
 
-  std::cerr << V->shape() << std::endl;
+  // std::cerr << V->shape() << std::endl;
 
   double Vv[max_nverts][3]; // velocities on vertices
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++)
       Vv[i][k] = V->at(k, 0, verts_i[i]);
   
-  for (int i = 0; i < nverts; i ++) 
-    fprintf(stderr, "v%d=%f, %f, %f\n", i, Vv[i][0], Vv[i][1], Vv[i][2]);
+  // for (int i = 0; i < nverts; i ++) 
+  //   fprintf(stderr, "v%d=%f, %f, %f\n", i, Vv[i][0], Vv[i][1], Vv[i][2]);
 
   double omega[max_nverts] = {0};
   wachspress_weights(nverts, Xv, x, omega);
@@ -90,18 +92,18 @@ inline bool particle_tracer_mpas_ocean::eval_v(
 
   // v[3] = 1.0;
 
-  fprintf(stderr, "x=%f, %f, %f, %f, cell_i=%d, v=%f, %f, %f\n", 
-      x[0], x[1], x[2], x[3], cell_i, v[0], v[1], v[2]);
-
-  return true;
+  // fprintf(stderr, "x=%f, %f, %f, %f, cell_i=%d, v=%f, %f, %f\n", 
+  //     x[0], x[1], x[2], x[3], cell_i, v[0], v[1], v[2]);
 
 #if 0
   for (size_t k = 0; k < 3; k ++)
     v[k] = V->get(k, 0, cellId) * 1e5;
-  
-  fprintf(stderr, "x=%f, %f, %f, %f, cellId=%zu, v=%f, %f, %f\n", 
-      x[0], x[1], x[2], x[3], cellId, v[0], v[1], v[2]);
 #endif
+  
+  // fprintf(stderr, "x=%f, %f, %f, %f, cell_i=%zu, v=%f, %f, %f\n", 
+  //     x[0], x[1], x[2], x[3], cell_i, v[0], v[1], v[2]);
+
+  return true;
 }
 
 }

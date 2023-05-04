@@ -561,7 +561,8 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
     tracker_particle_mpas_ocean->set_delta_t( 31536000.0 ); // trace for a year for strealines
     tracker_particle_mpas_ocean->set_nsteps_per_interval(32768);
     tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(16);
-  }
+  } else 
+    tracker_particle_mpas_ocean->set_delta_t( 86400.0 ); // TODO: for now, a day per timestep
 
   tracker_particle_mpas_ocean->initialize();
   tracker_particle_mpas_ocean->initialize_particles_at_grid_points();
@@ -606,6 +607,12 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
   tracker_particle = tr;
 
   tr->set_ntimesteps(nt);
+  if (nt == 1) {
+    tr->set_delta_t( 1024.0 );
+    tr->set_nsteps_per_interval(1024);
+    tr->set_nsteps_per_checkpoint(16);
+  }
+
   if (nd == 2) tr->set_domain(lattice({0, 0}, {DW-1, DH-1}));
   else tr->set_domain(lattice({0, 0, 0}, {DW-1, DH-1, DD-1}));
   tr->set_array_domain(lattice({0, 0}, {DW, DH}));
