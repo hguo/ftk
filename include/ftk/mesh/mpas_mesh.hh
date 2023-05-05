@@ -22,6 +22,7 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
 
 public:
   size_t n_cells() const { return xyzCells.dim(1); }
+  size_t n_layers() const { return restingThickness.dim(0); }
   size_t n_vertices() const { return xyzVertices.dim(1); }
 
   size_t locate_cell_i(const F x[]) const { return kd_cells->find_nearest(x); }
@@ -55,6 +56,9 @@ public:
   std::map<I, I> cellIdToIndex, // cellID->index
                  edgeIdToIndex,              
                  vertexIdToIndex; // vertexID->index
+
+  ndarray<F> restingThickness, // Layer thickness when the ocean is at rest, i.e. without SSH or internal perturbations
+             accRestingThickness;
 
 #if 0
   ndarray<I> voronoi_c2v, // (6, nc)
@@ -235,6 +239,16 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
     xyzVertices(0, i) = xVertex[i];
     xyzVertices(1, i) = yVertex[i];
     xyzVertices(2, i) = zVertex[i];
+  }
+
+  restingThickness.read_netcdf(ncid, "restingThickness");
+  accRestingThickness.reshape(restingThickness);
+
+  for (auto i = 0; i < restingThickness.dim(1); i ++) { // cells
+    for (auto j = 0; j < restingThickness.dim(0); j ++) { // vertical layers
+      if (j == 0) accRestingThickness(j, i) = 0;
+      else accRestingThickness(j, i) = accRestingThickness(j-1, i) + restingThickness(j, i);
+    }
   }
 
   NC_SAFE_CALL( nc_close(ncid) );

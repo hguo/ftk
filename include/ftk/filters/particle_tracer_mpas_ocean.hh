@@ -7,6 +7,7 @@
 #include <ftk/filters/mpas_ocean_tracker.hh>
 #include <ftk/utils/gather.hh>
 #include <ftk/numeric/wachspress_interpolation.hh>
+#include <ftk/numeric/vector_norm.hh>
 
 namespace ftk {
 
@@ -25,6 +26,8 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 
   void initialize_particles_at_grid_points(std::vector<int> strides);
 
+  // static double earth_radius = 6371229.0;
+
 protected:
   bool eval_v(std::shared_ptr<ndarray<double>> V,
       const double* x, double *v);
@@ -33,17 +36,39 @@ protected:
 ////
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std::vector<int> strides)
 {
-  const int stride = strides.empty() ? 1 : strides[0];
-  // fprintf(stderr, "stride=%d\n", stride);
+  int stride_horizontal = 1, stride_vertical = 1;
 
-  for (auto i = 0; i < m->n_cells(); i += stride) {
-        feature_curve_t curve;
-        feature_point_t p;
-        for (auto k = 0; k < 3; k ++)
-          p.x[k] = m->xyzCells(k, i); 
-        
-        curve.push_back(p);
-        trajectories.add(curve);
+  if (strides.size() >= 1)
+    stride_horizontal = strides[0];
+
+  if (strides.size() >= 2)
+    stride_vertical = strides[1];
+
+  // fprintf(stderr, "strides=%d, %d\n", stride_horizontal, stride_vertical);
+  // fprintf(stderr, "ncells=%zu, nlayers=%zu\n", m->n_cells(), m->n_layers());
+
+  for (auto i = 0; i < m->n_cells(); i += stride_horizontal) {
+    double x0[3];
+    for (auto k = 0; k < 3; k ++)
+      x0[k] = m->xyzCells(k, i);
+    const double R = vector_2norm<3>(x0);
+
+    for (auto j = 0; j < m->n_layers(); j += stride_vertical) {
+      const double thickness = m->accRestingThickness(j, i);
+      const double r = R - thickness;
+      for (auto k = 0; k < 3; k ++)
+        x0[k] = x0[k] * r / R;
+
+      feature_curve_t curve;
+      feature_point_t p;
+      for (auto k = 0; k < 3; k ++)
+        p.x[k] = x0[k]; // m->xyzCells(k, i); 
+     
+      fprintf(stderr, "cell=%zu, layer=%zu, thickness=%f, x0=%f, %f, %f\n", 
+          i, j, thickness, x0[0], x0[1], x0[2]);
+      curve.push_back(p);
+      trajectories.add(curve);
+    }
   }
   
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
