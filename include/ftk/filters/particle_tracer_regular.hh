@@ -19,7 +19,7 @@ struct particle_tracer_regular : public particle_tracer, public regular_tracker
 
   virtual ~particle_tracer_regular() {}
 
-  void initialize_particles_at_grid_points();
+  void initialize_particles_at_grid_points(std::vector<int> strides);
 
 protected:
   virtual bool eval_v(std::shared_ptr<ndarray<double>> V, // single timestep vector field
@@ -27,8 +27,13 @@ protected:
 };
 
 ////
-inline void particle_tracer_regular::initialize_particles_at_grid_points()
+inline void particle_tracer_regular::initialize_particles_at_grid_points(std::vector<int> strides)
 {
+  for (auto i = strides.size(); i < nd(); i ++)
+    strides.push_back(1);
+
+  // TODO: strides
+
   this->m.element_for_ordinal(0, 0,
       [&](simplicial_regular_mesh_element e) {
         feature_curve_t curve;

@@ -79,6 +79,12 @@ bool xgc_post_process = false,
 double xgc_smoothing_kernel_size = 0.03;
 int xgc_nphi = 1, xgc_iphi = 1, xgc_vphi = 1;
 
+// particle tracer
+int pt_nsteps_per_interval = 128;
+int pt_nsteps_per_checkpoint = 16;
+double pt_delta_t = 1.0;
+std::vector<int> pt_seed_strides;
+
 // mpas-o specific
 std::shared_ptr<mpas_mesh<>> mpas_mesh_;
 
@@ -557,15 +563,12 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
   
   tracker_particle_mpas_ocean->set_ntimesteps(nt);
-  if (nt == 1) {
-    tracker_particle_mpas_ocean->set_delta_t( 31536000.0 ); // trace for a year for strealines
-    tracker_particle_mpas_ocean->set_nsteps_per_interval(32768);
-    tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(16);
-  } else 
-    tracker_particle_mpas_ocean->set_delta_t( 86400.0 ); // TODO: for now, a day per timestep
+  tracker_particle_mpas_ocean->set_nsteps_per_interval(pt_nsteps_per_interval);
+  tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(pt_nsteps_per_checkpoint);
+  tracker_particle_mpas_ocean->set_delta_t( pt_delta_t );
 
   tracker_particle_mpas_ocean->initialize();
-  tracker_particle_mpas_ocean->initialize_particles_at_grid_points();
+  tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
 
   stream->set_callback([&](int k, const ndarray<double>& field_data) {
     ndarray<double> V = mpas_mesh_->interpolate_velocity_c2v(field_data); // vertexwise velocity
@@ -605,13 +608,11 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
 
   std::shared_ptr<particle_tracer_regular> tr(new particle_tracer_regular(comm, nd));
   tracker_particle = tr;
-
+  
   tr->set_ntimesteps(nt);
-  if (nt == 1) {
-    tr->set_delta_t( 1024.0 );
-    tr->set_nsteps_per_interval(1024);
-    tr->set_nsteps_per_checkpoint(16);
-  }
+  tr->set_nsteps_per_interval(pt_nsteps_per_interval);
+  tr->set_nsteps_per_checkpoint(pt_nsteps_per_checkpoint);
+  tr->set_delta_t( pt_delta_t ); // TODO: for now, a day per timestep
 
   if (nd == 2) tr->set_domain(lattice({0, 0}, {DW-1, DH-1}));
   else tr->set_domain(lattice({0, 0, 0}, {DW-1, DH-1, DD-1}));
@@ -815,6 +816,13 @@ static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& res
     j["variables"] = vars;
   }
 
+  if (results.count("pt-seed-strides")) {
+    const auto str = results["pt-seed-strides"].as<std::string>();
+    const auto strs = split(str, ",");
+    for (const auto s : strs)
+      pt_seed_strides.push_back( std::atoi(s.c_str()) );
+  }
+
   if (results.count("temporal-smoothing-kernel")) j["temporal-smoothing-kernel"] = results["temporal-smoothing-kernel"].as<double>();
   if (results.count("temporal-smoothing-kernel-size")) j["temporal-smoothing-kernel-size"] = results["temporal-smoothing-kernel-size"].as<size_t>();
   if (results.count("spatial-smoothing-kernel")) j["spatial-smoothing-kernel"] = results["spatial-smoothing-kernel"].as<double>();
@@ -869,6 +877,10 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     // ("xgc-torus", "XGC: track over poloidal planes (deprecated)", cxxopts::value<bool>(xgc_torus))
     ("xgc-write-back", "XGC: write original data back into vtu files", cxxopts::value<std::string>(xgc_write_back_filename))
     ("xgc-post-process", "XGC: enable post-processing", cxxopts::value<bool>(xgc_post_process))
+    ("pt-nsteps-per-interval", "Particle tracing: Number of steps per interval", cxxopts::value<int>(pt_nsteps_per_interval))
+    ("pt-nsteps-per-checkpoint", "Particle tracing: Number of steps per checkpoint", cxxopts::value<int>(pt_nsteps_per_checkpoint))
+    ("pt-delta-t", "Particle tracing: Delta t per timestep", cxxopts::value<double>(pt_delta_t))
+    ("pt-seed-strides", "Particle tracing: Seed strides, e.g., '4', '1,4', or '1,4,4'", cxxopts::value<std::string>())
     // ("xgc-augmented-mesh", "XGC: read/write augmented mesh", cxxopts::value<std::string>(xgc_augmented_mesh_filename))
     // ("mpas-data-path", "MPAS: data path", cxxopts::value<std::string>(mpas_data_path))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 

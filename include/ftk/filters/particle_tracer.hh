@@ -18,7 +18,7 @@ struct particle_tracer : public virtual tracker
   virtual ~particle_tracer() {}
 
   virtual void initialize_particles(size_t n, const double *p, size_t stride=3, bool has_time=false);
-  virtual void initialize_particles_at_grid_points() {};
+  virtual void initialize_particles_at_grid_points(std::vector<int> strides = {}) {};
 
   void update() {}
   void finalize() {}

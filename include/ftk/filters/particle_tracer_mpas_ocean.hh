@@ -23,7 +23,7 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 
   virtual ~particle_tracer_mpas_ocean() {}
 
-  void initialize_particles_at_grid_points();
+  void initialize_particles_at_grid_points(std::vector<int> strides);
 
 protected:
   bool eval_v(std::shared_ptr<ndarray<double>> V,
@@ -31,9 +31,12 @@ protected:
 };
 
 ////
-inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points()
+inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std::vector<int> strides)
 {
-  for (auto i = 0; i < m->n_cells(); i += 10) {
+  const int stride = strides.empty() ? 1 : strides[0];
+  // fprintf(stderr, "stride=%d\n", stride);
+
+  for (auto i = 0; i < m->n_cells(); i += stride) {
         feature_curve_t curve;
         feature_point_t p;
         for (auto k = 0; k < 3; k ++)
