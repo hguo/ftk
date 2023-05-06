@@ -25,14 +25,35 @@ void angular_stepping(
   
   // fprintf(stderr, "x=%f, %f, %f, axis=%f, %f, %f, w=%f\n", 
   //     x[0], x[1], x[2], axis[0], axis[1], axis[2], w);
+  // std::cerr << w << ", " << x[0] << ", " << x[1] << ", " << x[2] << std::endl;
 
   const T dw = h * w; // angular step
-
-  for (int k = 0; k < 3; k ++)
-    xn[k] = x[k];
-
   axis_rotate_vector(axis, dw, x, xn);
 }
+
+template <typename T=double>
+void angular_and_vertical_stepping( // composition of angular and vertical velocities
+    const T *x, 
+    const T* v, // assuming v is tangential to the sphere
+    const T vn, // normal velocity
+    const T h, T *x1)
+{
+  const T R = vector_2norm<3, T>(x); // radius
+  
+  T axis[3]; // rotation axis
+  cross_product(x, v, axis);
+
+  const T vm = vector_2norm<3>(v); // velocity magnitude
+  const T w = vm / R; // angular velocity
+  const T dw = h * w; // angular step
+
+  axis_rotate_vector(axis, dw, x, x1);
+
+  const T R1 = R + vn * h; // new radius
+  for (int i = 0; i < 3; i ++)
+    x1[i] = x1[i] * R1 / R;
+}
+
 
 template <typename T=double>
 void spherical_stepping(const T *x, const T *v, const T h, T *xn)
