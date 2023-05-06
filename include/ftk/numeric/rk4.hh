@@ -3,9 +3,36 @@
 
 #include <ftk/config.hh>
 #include <ftk/numeric/vector_norm.hh>
+#include <ftk/numeric/cross_product.hh>
+#include <ftk/numeric/quaternion.hh>
 #include <functional>
 
 namespace ftk {
+
+template <typename T=double>
+void angular_stepping(
+    const T *x, 
+    const T* v, // assuming v is tangential to the sphere
+    const T h, T *xn)
+{
+  const T R = vector_2norm<3, T>(x); // radius
+  
+  T axis[3]; // rotation axis
+  cross_product(x, v, axis);
+
+  const T vm = vector_2norm<3>(v); // velocity magnitude
+  const T w = vm / R; // angular velocity
+  
+  // fprintf(stderr, "x=%f, %f, %f, axis=%f, %f, %f, w=%f\n", 
+  //     x[0], x[1], x[2], axis[0], axis[1], axis[2], w);
+
+  const T dw = h * w; // angular step
+
+  for (int k = 0; k < 3; k ++)
+    xn[k] = x[k];
+
+  axis_rotate_vector(axis, dw, x, xn);
+}
 
 template <typename T=double>
 void spherical_stepping(const T *x, const T *v, const T h, T *xn)
@@ -22,14 +49,15 @@ void spherical_stepping(const T *x, const T *v, const T h, T *xn)
 template <typename T=double> 
 bool spherical_rk1(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr)
 {
-  T v[3]; // velocity
+  T v[4]; // velocity
   if (!f(x, v)) return false;
 
   if (v0) 
     for (int k = 0; k < 3; k ++)
       v0[k] = v[k];
 
-  spherical_stepping(x, v, h, x);
+  // spherical_stepping(x, v, h, x);
+  angular_stepping(x, v, h, x);
 
   return true;
 }

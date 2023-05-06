@@ -1,6 +1,8 @@
 #ifndef _FTK_CROSS_PRODUCT_H
 #define _FTK_CROSS_PRODUCT_H
 
+#include <ftk/config.hh>
+
 namespace ftk {
 
 template <typename T>

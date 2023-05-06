@@ -9,7 +9,7 @@ namespace ftk {
 enum {
   PARTICLE_TRACER_INTEGRATOR_RK1 = 0,
   PARTICLE_TRACER_INTEGRATOR_RK4 = 1,
-  PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1 = 1,
+  PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1 = 5,
 };
 
 struct particle_tracer : public virtual tracker

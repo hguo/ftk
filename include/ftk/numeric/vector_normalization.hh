@@ -14,6 +14,15 @@ inline T vector_normalization2(T v[])
   return norm;
 }
 
+template <int n, typename T>
+inline T vector_normalization2(const T v[], T w[])
+{
+  T norm = vector_2norm<n, T>(v);
+  for (int i=0; i<n; i++) 
+    w[i] = v[i] / norm;
+  return norm;
+}
+
 template <typename T>
 inline T vector_normalization2_2(T v[2])
 {
