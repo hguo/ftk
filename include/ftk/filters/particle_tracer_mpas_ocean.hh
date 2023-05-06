@@ -64,8 +64,8 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
       for (auto k = 0; k < 3; k ++)
         p.x[k] = x0[k]; // m->xyzCells(k, i); 
      
-      fprintf(stderr, "cell=%zu, layer=%zu, thickness=%f, x0=%f, %f, %f\n", 
-          i, j, thickness, x0[0], x0[1], x0[2]);
+      // fprintf(stderr, "cell=%zu, layer=%zu, thickness=%f, x0=%f, %f, %f\n", 
+      //     i, j, thickness, x0[0], x0[1], x0[2]);
       curve.push_back(p);
       trajectories.add(curve);
     }

@@ -571,7 +571,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
 
   stream->set_callback([&](int k, const ndarray<double>& field_data) {
-    ndarray<double> V = mpas_mesh_->interpolate_velocity_c2v(field_data); // vertexwise velocity
+    ndarray<double> V = mpas_mesh_->interpolate_c2v(field_data); // vertexwise velocity, layerThickness, and more
    
 #if 0
     ndarray<double> surfV;

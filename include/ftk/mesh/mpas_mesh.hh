@@ -13,7 +13,7 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
   void initialize();
 
   void initialize_c2v_interpolants();
-  ndarray<F> interpolate_velocity_c2v(const ndarray<F>& Vc) const;
+  ndarray<F> interpolate_c2v(const ndarray<F>& Vc) const; // velocites or whatever variables
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> surface_cells_to_vtu(std::vector<ndarray_base*> attrs = {}) const;
@@ -27,7 +27,9 @@ public:
 
   size_t locate_cell_i(const F x[]) const { return kd_cells->find_nearest(x); }
   bool point_in_cell(const F x[]) const; // WIP
-  
+ 
+  size_t locate_layer(const I c_i, const F x[]) const;
+
   // void interpolate_c2v(const I vid, const F cvals[3][], F vvals[]) const;
 
   I cid2i(I cid) const { auto it = cellIdToIndex.find(cid); if (it != cellIdToIndex.end()) return it->second; else return -1;  }
@@ -117,10 +119,12 @@ void mpas_mesh<I, F>::initialize_c2v_interpolants()
 }
 
 template <typename I, typename F>
-ndarray<F> mpas_mesh<I, F>::interpolate_velocity_c2v(const ndarray<F>& Vc) const
+ndarray<F> mpas_mesh<I, F>::interpolate_c2v(const ndarray<F>& Vc) const
 {
-  ndarray<F> V; // velocities on vertices
-  V.reshape({3, Vc.dim(1), n_vertices()});
+  const I nvars = Vc.dim(0);
+
+  ndarray<F> V; // variables on vertices
+  V.reshape(nvars, Vc.dim(1), n_vertices());
 
   for (auto i = 0; i < n_vertices(); i ++) {
     const auto vid = i2vid(i);
@@ -137,7 +141,7 @@ ndarray<F> mpas_mesh<I, F>::interpolate_velocity_c2v(const ndarray<F>& Vc) const
     }
 
     for (auto layer = 0; layer < Vc.dim(1); layer ++) {
-      for (auto k = 0; k < 3; k ++) {
+      for (auto k = 0; k < nvars; k ++) {
         if (boundary) {
           V(k, layer, i) = F(0);
         } else {
