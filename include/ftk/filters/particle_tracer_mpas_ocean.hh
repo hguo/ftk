@@ -26,10 +26,13 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 
   void initialize_particles_at_grid_points(std::vector<int> strides);
 
-  // static double earth_radius = 6371229.0;
+  static constexpr double earth_radius = 6371229.0;
 
 protected:
   bool eval_v(std::shared_ptr<ndarray<double>> V,
+      const double* x, double *v);
+  
+  bool eval_v_vertical(std::shared_ptr<ndarray<double>> V,
       const double* x, double *v);
 };
 
@@ -73,6 +76,69 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
   
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
 }
+
+inline bool particle_tracer_mpas_ocean::eval_v_vertical(
+    std::shared_ptr<ndarray<double>> V,
+    const double *x, double *v)
+{
+  static const int max_nverts = 10, max_nlayers = 100;
+ 
+  int cell_i = m->locate_cell_i(x);
+  assert(cell_i < m->n_cells());
+
+  int verts_i[max_nverts]; //  = {-1};
+  const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
+  const int nlayers = m->n_layers();
+
+  double Xv[max_nverts][3]; // coordinates of vertices
+  m->verts_i_coords(nverts, verts_i, Xv);
+
+  double omega[max_nverts] = {0};
+  wachspress_weights(nverts, Xv, x, omega);
+  // with the wachpress weights, first interpolate the thickness
+  // of each layer, and then find the proper layer
+
+  double tops[max_nlayers] = {0};
+  for (int l = 0; l < nlayers; l ++)
+    for (int i = 0; i < nverts; i ++)
+      tops[l] += V->at(3, l, verts_i[i]); // assuming channel 4 is zTop
+
+  // locate depth layer
+  const double z = vector_2norm<3>(x) - earth_radius;
+  int i_layer = -1;
+  for (int l = 0; l < nlayers; l ++)
+    if (z < tops[l] && z > tops[l+1]) {
+      i_layer = l;
+      break;
+    }
+
+  if (i_layer < 0 || i_layer == nlayers - 1)
+    return false; // vertical layer not found
+
+  fprintf(stderr, "ilayer=%d\n", i_layer);
+
+  double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
+  for (int i = 0; i < nverts; i ++)
+    for (int k = 0; k < 3; k ++) {
+      Vu[i][k] = V->at(k, i_layer, verts_i[i]);
+      Vl[i][k] = V->at(k, i_layer+1, verts_i[i]);
+    }
+  
+  double vu[3] = {0}, vl[3] = {0};
+  for (int i = 0; i < nverts; i ++)
+    for (int k = 0; k < 3; k ++) {
+      vu[k] += omega[i] * Vu[i][k];
+      vl[k] += omega[i] * Vl[i][k];
+    }
+
+  const double alpha = (z - tops[i_layer+1]) / (tops[i_layer] - tops[i_layer+1]);
+
+  for (int k = 0; k < 3; k ++)
+    v[k] = alpha * vu[k] + (1.0 - alpha) * vl[k];
+
+  return true;
+}
+
 
 inline bool particle_tracer_mpas_ocean::eval_v(
     std::shared_ptr<ndarray<double>> V,
