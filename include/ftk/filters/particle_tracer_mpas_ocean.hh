@@ -36,6 +36,8 @@ protected:
   bool eval_v_vertical(int t, const double* x, double *v);
   bool eval_v_with_vertical_velocity(int t, const double* x, double *v);
 
+  int nch() const { return 5; }
+
 protected:
   // std::shared_ptr<ndarray<double>> V[2]; // inherited from particle_tracer
   std::shared_ptr<ndarray<double>> zTop[2];
@@ -222,6 +224,9 @@ inline bool particle_tracer_mpas_ocean::eval_v(
 inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, const double *x, double *v)
 {
   static const int max_nverts = 10, max_nlayers = 100;
+  
+  // fprintf(stderr, "t%d, x=%f, %f, %f\n", 
+  //     t, x[0], x[1], x[2]);
  
   int cell_i = m->locate_cell_i(x);
   assert(cell_i < m->n_cells());
@@ -246,7 +251,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   // locate depth layer
   const double z = vector_2norm<3>(x) - earth_radius;
   int i_layer = -1;
-  for (int l = 0; l < nlayers; l ++)
+  for (int l = 0; l < nlayers-1; l ++)
     if (z < tops[l] && z > tops[l+1]) {
       i_layer = l;
       break;
@@ -290,8 +295,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   for (int k = 0; k < 3; k ++)
     v[4] = alpha * vvu + (1.0 - alpha) * vvl;
 
-  // fprintf(stderr, "x=%f, %f, %f, vx=%f, vy=%f, vz=%f, vv=%f\n", 
-  //     x[0], x[1], x[2], v[0], v[1], v[2], v[4]);
+  // fprintf(stderr, "t%d, x=%f, %f, %f, vx=%f, vy=%f, vz=%f, vv=%f\n", 
+  //     t, x[0], x[1], x[2], v[0], v[1], v[2], v[4]);
 
   return true;
 }

@@ -41,6 +41,8 @@ protected:
   int nd() const { return nd_; }
   double delta() const { return current_delta_t / nsteps_per_interval; }
 
+  virtual int nch() const {return nd_ + 1;} // number of channels, e.g., 2D vel w/ time will be 3
+
 protected:
   std::shared_ptr<ndarray<double>> V[2];
 
@@ -175,13 +177,13 @@ inline bool particle_tracer::eval_vt(
     if (t < 0.0 || t > 1.0) return false; // out of temporal bound
 
     const double w0 = (1.0 - t), w1 = t;
-    double v0[4], v1[4]; // up to 4d for now
+    double v0[10], v1[10]; // some large number
 
     const bool b0 = eval_v(0, x, v0);
     const bool b1 = eval_v(1, x, v1);
 
     if (b0 && b1) {
-      for (auto k = 0; k < nd(); k ++)
+      for (auto k = 0; k < nch(); k ++)
         v[k] = w0 * v0[k] + w1 * v1[k];
       v[nd()] = 1.0; // time
       
