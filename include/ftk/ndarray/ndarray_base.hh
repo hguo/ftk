@@ -29,6 +29,14 @@
 #include <vtkNew.h>
 #endif
 
+#if FTK_HAVE_NETCDF
+#include <netcdf.h>
+#include <netcdf_meta.h>
+#if NC_HAS_PARALLEL
+#include <netcdf_par.h>
+#endif
+#endif
+
 #if FTK_HAVE_HDF5
 #include <hdf5.h>
 #endif
@@ -113,6 +121,25 @@ public: // binary i/o
   virtual void read_binary_file(FILE *fp) = 0;
   void to_binary_file(const std::string& filename);
   virtual void to_binary_file(FILE *fp) = 0;
+
+public: // netcdf
+  void read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(const std::string& filename, const std::string& varname, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, const std::string& varname, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf(int ncid, int varid, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  void read_netcdf_slice(const std::string& filename, const std::string& varname, int k, diy::mpi::communicator comm=MPI_COMM_WORLD);
+  // void to_netcdf(int ncid, const std::string& varname);
+  // void to_netcdf(int ncid, int varid);
+  void to_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[]) const;
+  void to_netcdf(int ncid, int varid) const;
+  void to_netcdf_multivariate(int ncid, int varids[]) const;
+  void to_netcdf_unlimited_time(int ncid, int varid) const;
+  void to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const;
+  
+  virtual int nc_datatype() const = 0;
 
 public: // h5 i/o
   bool read_h5(const std::string& filename, const std::string& name);
@@ -316,6 +343,185 @@ inline vtkSmartPointer<vtkDataArray> ndarray_base::to_vtk_data_array(std::string
   return d;
 }
 #endif
+
+inline void ndarray_base::read_netcdf(const std::string& filename, const std::string& varname, diy::mpi::communicator comm)
+{
+#if FTK_HAVE_NETCDF
+  int ncid, varid;
+#if NC_HAS_PARALLEL
+  int rtn = nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
+  if (rtn != NC_NOERR)
+    NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#else
+  NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#endif
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  read_netcdf(ncid, varid, comm);
+  NC_SAFE_CALL( nc_close(ncid) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+inline void ndarray_base::read_netcdf(int ncid, int varid, int ndims, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
+{
+#if FTK_HAVE_NETCDF
+  std::vector<size_t> mysizes(sizes, sizes+ndims);
+  std::reverse(mysizes.begin(), mysizes.end());
+  reshape(mysizes);
+
+  if (nc_datatype() == NC_INT) {
+    NC_SAFE_CALL( nc_get_vara_int(ncid, varid, starts, sizes, (int*)pdata()) );
+  } else if (nc_datatype() == NC_FLOAT) {
+    NC_SAFE_CALL( nc_get_vara_float(ncid, varid, starts, sizes, (float*)pdata()) );
+  } else if (nc_datatype() == NC_DOUBLE) {
+    NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, (double*)pdata()) );
+  } else if (nc_datatype() == NC_UINT) {
+    NC_SAFE_CALL( nc_get_vara_uint(ncid, varid, starts, sizes, (unsigned int*)pdata()) );
+  } else 
+    fatal(FTK_ERR_NOT_IMPLEMENTED);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+inline void ndarray_base::to_netcdf(int ncid, int varid, const size_t st[], const size_t sz[]) const
+{
+#ifdef FTK_HAVE_NETCDF
+  fprintf(stderr, "st=%zu, %zu, %zu, %zu, sz=%zu, %zu, %zu, %zu\n", 
+      st[0], st[1], st[2], st[3], sz[0], sz[1], sz[2], sz[3]);
+  
+  if (nc_datatype() == NC_DOUBLE) {
+    NC_SAFE_CALL( nc_put_vara_double(ncid, varid, st, sz, (double*)pdata()) );
+  } else if (nc_datatype() == NC_FLOAT) {
+    NC_SAFE_CALL( nc_put_vara_float(ncid, varid, st, sz, (float*)pdata()) );
+  } else if (nc_datatype() == NC_INT) {
+    NC_SAFE_CALL( nc_put_vara_int(ncid, varid, st, sz, (int*)pdata()) );
+  } else 
+    fatal(FTK_ERR_NOT_IMPLEMENTED);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+#if 0
+inline void ndarray_base::to_netcdf_multivariate(int ncid, int varids[]) const
+{
+  const size_t nv = dims[0], ndims = nd()-1;
+  std::vector<size_t> d(dims.begin()+1, dims.end());
+
+  for (int i = 0; i < nv; i ++) {
+    ndarray<T> subarray(d);
+    for (size_t j = 0; j < subarray.nelem(); j ++) 
+      subarray[j] = p[j*nv + i];
+    subarray.to_netcdf(ncid, varids[i]);
+  }
+}
+#endif
+
+inline void ndarray_base::to_netcdf_unlimited_time(int ncid, int varid) const
+{
+  std::vector<size_t> starts(dims.size()+1, 0), sizes(dims);
+  sizes.push_back(1);
+  std::reverse(sizes.begin(), sizes.end());
+ 
+  // fprintf(stderr, "starts={%zu, %zu, %zu}, sizes={%zu, %zu, %zu}\n", 
+  //     starts[0], starts[1], starts[2], sizes[0], sizes[1], sizes[2]);
+
+  to_netcdf(ncid, varid, &starts[0], &sizes[0]);
+}
+
+#if 0
+inline void ndarray_base::to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const
+{
+  const size_t nv = dims[0], ndims = nd()-1;
+  std::vector<size_t> d(dims.begin()+1, dims.end());
+
+  for (int i = 0; i < nv; i ++) {
+    ndarray<T> subarray(d);
+    for (size_t j = 0; j < subarray.nelem(); j ++) 
+      subarray[j] = p[j*nv + i];
+    subarray.to_netcdf_unlimited_time(ncid, varids[i]);
+  }
+}
+#endif
+
+inline void ndarray_base::read_netcdf(int ncid, int varid, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
+{
+#ifdef FTK_HAVE_NETCDF
+  int ndims;
+  NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
+
+  std::vector<size_t> mysizes(sizes, sizes+ndims);
+  std::reverse(mysizes.begin(), mysizes.end());
+  reshape(mysizes);
+
+  read_netcdf(ncid, varid, ndims, starts, sizes, comm);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+inline void ndarray_base::read_netcdf(int ncid, int varid, diy::mpi::communicator comm)
+{
+#ifdef FTK_HAVE_NETCDF
+  int ndims;
+  int dimids[4];
+  size_t starts[4] = {0}, sizes[4] = {0};
+
+  NC_SAFE_CALL( nc_inq_varndims(ncid, varid, &ndims) );
+  NC_SAFE_CALL( nc_inq_vardimid(ncid, varid, dimids) );
+
+  for (int i = 0; i < ndims; i ++)
+    NC_SAFE_CALL( nc_inq_dimlen(ncid, dimids[i], &sizes[i]) );
+  
+  read_netcdf(ncid, varid, starts, sizes, comm);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+inline void ndarray_base::read_netcdf(int ncid, const std::string& varname, diy::mpi::communicator comm)
+{
+#ifdef FTK_HAVE_NETCDF
+  int varid;
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  read_netcdf(ncid, varid, comm);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+inline void ndarray_base::read_netcdf(int ncid, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
+{
+#ifdef FTK_HAVE_NETCDF
+  int varid;
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  read_netcdf(ncid, varid, starts, sizes, comm);
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+inline void ndarray_base::read_netcdf(const std::string& filename, const std::string& varname, const size_t starts[], const size_t sizes[], diy::mpi::communicator comm)
+{
+#ifdef FTK_HAVE_NETCDF
+  int ncid, varid;
+#if NC_HAS_PARALLEL
+  int rtn = nc_open_par(filename.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);
+  if (rtn != NC_NOERR)
+    NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#else
+  NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
+#endif
+
+  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  read_netcdf(ncid, varid, starts, sizes, comm);
+  NC_SAFE_CALL( nc_close(ncid) );
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
 
 } // namespace ftk
 
