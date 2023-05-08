@@ -22,8 +22,7 @@ struct particle_tracer_regular : public particle_tracer, public regular_tracker
   void initialize_particles_at_grid_points(std::vector<int> strides);
 
 protected:
-  virtual bool eval_v(std::shared_ptr<ndarray<double>> V, // single timestep vector field
-      const double *x, double *v);
+  virtual bool eval_v(int t, const double *x, double *v);
 };
 
 ////
@@ -50,10 +49,10 @@ inline void particle_tracer_regular::initialize_particles_at_grid_points(std::ve
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
 }
   
-bool particle_tracer_regular::eval_v(std::shared_ptr<ndarray<double>> V, // single timestep vector field
-    const double *x, double *v)
+bool particle_tracer_regular::eval_v(
+    int t, const double *x, double *v)
 {
-  return V->mlerp(x, v);
+  return V[t]->mlerp(x, v);
 }
 
 }

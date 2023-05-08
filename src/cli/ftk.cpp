@@ -550,15 +550,15 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
 {
   mpas_data_stream.reset(new mpas_stream(input_pattern, comm));
   mpas_data_stream->initialize();
+  if (ntimesteps != 0)
+    mpas_data_stream->set_ntimesteps(ntimesteps);
   // mpas_mesh_->surface_cells_to_vtu("mpas-surface.vtu");
   // exit(1);
-
-  const int nt = mpas_data_stream->ntimesteps;
   
   tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_data_stream->mesh()) );
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
   
-  tracker_particle_mpas_ocean->set_ntimesteps(nt);
+  tracker_particle_mpas_ocean->set_ntimesteps(mpas_data_stream->ntimesteps);
   tracker_particle_mpas_ocean->set_nsteps_per_interval(pt_nsteps_per_interval);
   tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(pt_nsteps_per_checkpoint);
   tracker_particle_mpas_ocean->set_delta_t( pt_delta_t );

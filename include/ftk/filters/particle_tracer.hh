@@ -25,6 +25,8 @@ struct particle_tracer : public virtual tracker
   void update_timestep();
   bool advance_timestep();
 
+  virtual void prepare_timestep();
+
   void write_trajectories(const std::string& filename);
 
   void set_delta_t(double d) { current_delta_t = d; } // overriding delta t
@@ -32,15 +34,14 @@ struct particle_tracer : public virtual tracker
   void set_nsteps_per_checkpoint(int n) { nsteps_per_checkpoint = 16; }
 
 protected:
-  virtual bool eval_v(std::shared_ptr<ndarray<double>> V0,
-      std::shared_ptr<ndarray<double>> V1,
-      const double *x, double *v); 
-
-  virtual bool eval_v(std::shared_ptr<ndarray<double>> V, // single timestep vector field
-      const double *x, double *v) { return false; }
+  virtual bool eval_vt(const double *x, double *v);  // w/ temporal interpolation
+  virtual bool eval_v(int t, const double *x, double *v) { return false; } // single timestep
 
   int nd() const { return nd_; }
   double delta() const { return current_delta_t / nsteps_per_interval; }
+
+protected:
+  std::shared_ptr<ndarray<double>> V[2];
 
 protected:
   std::vector<feature_point_lite_t> particles;
@@ -93,10 +94,17 @@ inline void particle_tracer::initialize_particles(size_t n, const double *buf, s
   }
 }
 
+inline void particle_tracer::prepare_timestep()
+{
+  V[0] = snapshots[0]->get_ptr<double>("vector");
+  V[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("vector") : nullptr;
+}
+
 inline void particle_tracer::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
   current_t = current_timestep;
+  prepare_timestep();
 
   bool streamlines = false;
   if (this->ntimesteps == 1)
@@ -105,9 +113,6 @@ inline void particle_tracer::update_timestep()
   // fprintf(stderr, "#snapshots=%zu\n", this->snapshots.size());
   if (!streamlines && this->snapshots.size() < 2) 
     return; // nothing can be done
-
-  std::shared_ptr<ndarray<double>> V0 = snapshots[0]->get_ptr<double>("vector"),
-                                   V1 = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("vector") : nullptr;
 
   // fprintf(stderr, "#particles=%zu\n", this->particles.size());
   this->parallel_for_container(trajectories, [&](feature_curve_set_t::iterator it) {
@@ -138,9 +143,9 @@ inline void particle_tracer::update_timestep()
 
       // fprintf(stderr, "x=%f, %f, t=%f\n", x[0], x[1], x[2]);
       if (integrator == PARTICLE_TRACER_INTEGRATOR_RK4)
-        succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
+        succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_vt(x, v); }, delta(), v);
       else if (integrator == PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1)
-        succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_v(V0, V1, x, v); }, delta(), v);
+        succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_vt(x, v); }, delta(), v);
 
       if (!succ) 
         break;
@@ -159,21 +164,18 @@ inline void particle_tracer::update_timestep()
   }, FTK_THREAD_PTHREAD, get_number_of_threads());
 }
 
-
-inline bool particle_tracer::eval_v(
-    std::shared_ptr<ndarray<double>> V0,
-    std::shared_ptr<ndarray<double>> V1,
+inline bool particle_tracer::eval_vt(
     const double *x, double *v)
 {
-  if (V0 && V1) { // double time step
+  if (V[0] && V[1]) { // double time step
     const double t = (x[nd_] - current_t) / current_delta_t;
     if (t < 0.0 || t > 1.0) return false; // out of temporal bound
 
     const double w0 = (1.0 - t), w1 = t;
     double v0[4], v1[4]; // up to 4d for now
 
-    const bool b0 = eval_v(V0, x, v0);
-    const bool b1 = eval_v(V1, x, v1);
+    const bool b0 = eval_v(0, x, v0);
+    const bool b1 = eval_v(1, x, v1);
 
     if (b0 && b1) {
       for (auto k = 0; k < nd(); k ++)
@@ -184,15 +186,13 @@ inline bool particle_tracer::eval_v(
       return true;
     } else 
       return false;
-  } else if (V0) { // single time step
-    bool succ = eval_v(V0, x, v);
+  } else if (V[0]) { // single time step
+    bool succ = eval_v(0, x, v);
     v[nd()] = 1.0; // time
     return succ;
   } else // no timestep available
     return false;
 }
-
-
 
 } // namespace ftk
 

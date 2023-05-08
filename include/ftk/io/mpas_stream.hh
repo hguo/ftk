@@ -18,6 +18,7 @@ struct mpas_stream : public object {
 
   std::shared_ptr<mpas_mesh<>> mesh() { return m; }
 
+  void set_ntimesteps(int n) { ntimesteps = n; }
   bool advance_timestep();
 
 public:
@@ -78,7 +79,7 @@ bool mpas_stream::advance_timestep()
     // fprintf(stderr, "vectors read.\n");
   
     ndarray<double> velocity = ndarray<double>::concat({velocityX, velocityY, velocityZ});
-    g->set("vector", m->interpolate_c2v(velocity)); // vertexwise velocity
+    g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
     // fprintf(stderr, "vectors interpolated.\n");
   
     ndarray<double> salinity; 
@@ -102,6 +103,11 @@ bool mpas_stream::advance_timestep()
   {
     const size_t st[3] = {current_timestep, 0, 0}, 
                  sz[3] = {1, m->n_cells(), m->n_layers()+1};
+    
+    ndarray<double> vertVelocityTop;
+    vertVelocityTop.read_netcdf(ncid, "vertVelocityTop", st, sz);
+    vertVelocityTop.make_multicomponents();
+    g->set("vertVelocityTop", m->interpolate_c2v(vertVelocityTop));
   }
   
   // fprintf(stderr, "callback..\n");

@@ -28,12 +28,16 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 
   static constexpr double earth_radius = 6371229.0;
 
+  void prepare_timestep();
+
 protected:
-  bool eval_v(std::shared_ptr<ndarray<double>> V,
-      const double* x, double *v);
-  
-  bool eval_v_vertical(std::shared_ptr<ndarray<double>> V,
-      const double* x, double *v);
+  bool eval_v(int t, const double* x, double *v);
+  bool eval_v_vertical(int t, const double* x, double *v);
+
+protected:
+  // std::shared_ptr<ndarray<double>> V[2]; // inherited from particle_tracer
+  std::shared_ptr<ndarray<double>> zTop[2];
+  std::shared_ptr<ndarray<double>> vertVelocityTop[2];
 };
 
 ////
@@ -77,9 +81,19 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
 }
 
-inline bool particle_tracer_mpas_ocean::eval_v_vertical(
-    std::shared_ptr<ndarray<double>> V,
-    const double *x, double *v)
+inline void particle_tracer_mpas_ocean::prepare_timestep()
+{
+  V[0] = snapshots[0]->get_ptr<double>("velocity");
+  V[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("velocity") : nullptr;
+  
+  zTop[0] = snapshots[0]->get_ptr<double>("zTop");
+  zTop[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("zTop") : nullptr;
+  
+  vertVelocityTop[0] = snapshots[0]->get_ptr<double>("vertVelocityTop");
+  vertVelocityTop[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("vertVelocityTop") : nullptr;
+}
+
+inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, double *v)
 {
   static const int max_nverts = 10, max_nlayers = 100;
  
@@ -101,7 +115,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(
   double tops[max_nlayers] = {0};
   for (int l = 0; l < nlayers; l ++)
     for (int i = 0; i < nverts; i ++)
-      tops[l] += V->at(3, l, verts_i[i]); // assuming channel 4 is zTop
+      tops[l] += zTop[t]->at(0, l, verts_i[i]);
 
   // locate depth layer
   const double z = vector_2norm<3>(x) - earth_radius;
@@ -112,16 +126,18 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(
       break;
     }
 
-  if (i_layer < 0 || i_layer == nlayers - 1)
-    return false; // vertical layer not found
-
-  fprintf(stderr, "ilayer=%d\n", i_layer);
+  if (i_layer < 0 || i_layer == nlayers - 1) {
+    // fprintf(stderr, "vertical layer not found, %f, %f, %f\n", x[0], x[1], x[2]);
+    return false; 
+  } else {
+    // fprintf(stderr, "ilayer=%d\n", i_layer);
+  }
 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++) {
-      Vu[i][k] = V->at(k, i_layer, verts_i[i]);
-      Vl[i][k] = V->at(k, i_layer+1, verts_i[i]);
+      Vu[i][k] = V[t]->at(k, i_layer, verts_i[i]);
+      Vl[i][k] = V[t]->at(k, i_layer+1, verts_i[i]);
     }
   
   double vu[3] = {0}, vl[3] = {0};
@@ -139,11 +155,11 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(
   return true;
 }
 
-
 inline bool particle_tracer_mpas_ocean::eval_v(
-    std::shared_ptr<ndarray<double>> V,
-    const double *x, double *v)
+    int t, const double *x, double *v)
 {
+  return eval_v_vertical(t, x, v);
+
   // 1. find the cell and number of vertices
   // 2. apply wachpress interpolation
   
@@ -168,7 +184,7 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   double Vv[max_nverts][3]; // velocities on vertices
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++)
-      Vv[i][k] = V->at(k, 0, verts_i[i]);
+      Vv[i][k] = V[t]->at(k, 0, verts_i[i]);
   
   // for (int i = 0; i < nverts; i ++) 
   //   fprintf(stderr, "v%d=%f, %f, %f\n", i, Vv[i][0], Vv[i][1], Vv[i][2]);
