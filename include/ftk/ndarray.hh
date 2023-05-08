@@ -784,6 +784,9 @@ template <> inline int ndarray<double>::nc_datatype() const { return NC_DOUBLE; 
 template <> inline int ndarray<float>::nc_datatype() const { return NC_FLOAT; }
 template <> inline int ndarray<int>::nc_datatype() const { return NC_INT; }
 template <> inline int ndarray<unsigned long>::nc_datatype() const { return NC_UINT; }
+#else 
+template <typename T>
+inline int ndarray<T>::nc_datatype() const { return -1; } // linking without netcdf
 #endif
 
 #if FTK_HAVE_ADIOS2
