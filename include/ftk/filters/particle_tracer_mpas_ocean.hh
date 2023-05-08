@@ -19,7 +19,8 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
     mpas_ocean_tracker(comm, m), 
     tracker(comm) 
   {
-    this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1;
+    // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1;
+    this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY;
   }
 
   virtual ~particle_tracer_mpas_ocean() {}
@@ -33,6 +34,7 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 protected:
   bool eval_v(int t, const double* x, double *v);
   bool eval_v_vertical(int t, const double* x, double *v);
+  bool eval_v_with_vertical_velocity(int t, const double* x, double *v);
 
 protected:
   // std::shared_ptr<ndarray<double>> V[2]; // inherited from particle_tracer
@@ -158,7 +160,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
 inline bool particle_tracer_mpas_ocean::eval_v(
     int t, const double *x, double *v)
 {
-  return eval_v_vertical(t, x, v);
+  return eval_v_with_vertical_velocity(t, x, v);
+  // return eval_v_vertical(t, x, v);
 
   // 1. find the cell and number of vertices
   // 2. apply wachpress interpolation
@@ -212,6 +215,83 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   
   // fprintf(stderr, "x=%f, %f, %f, %f, cell_i=%zu, v=%f, %f, %f\n", 
   //     x[0], x[1], x[2], x[3], cell_i, v[0], v[1], v[2]);
+
+  return true;
+}
+
+inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, const double *x, double *v)
+{
+  static const int max_nverts = 10, max_nlayers = 100;
+ 
+  int cell_i = m->locate_cell_i(x);
+  assert(cell_i < m->n_cells());
+
+  int verts_i[max_nverts]; //  = {-1};
+  const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
+  const int nlayers = m->n_layers();
+
+  double Xv[max_nverts][3]; // coordinates of vertices
+  m->verts_i_coords(nverts, verts_i, Xv);
+
+  double omega[max_nverts] = {0};
+  wachspress_weights(nverts, Xv, x, omega);
+  // with the wachpress weights, first interpolate the thickness
+  // of each layer, and then find the proper layer
+
+  double tops[max_nlayers] = {0};
+  for (int l = 0; l < nlayers; l ++)
+    for (int i = 0; i < nverts; i ++)
+      tops[l] += zTop[t]->at(0, l, verts_i[i]);
+
+  // locate depth layer
+  const double z = vector_2norm<3>(x) - earth_radius;
+  int i_layer = -1;
+  for (int l = 0; l < nlayers; l ++)
+    if (z < tops[l] && z > tops[l+1]) {
+      i_layer = l;
+      break;
+    }
+
+  if (i_layer < 0 || i_layer == nlayers - 1) {
+    // fprintf(stderr, "vertical layer not found, %f, %f, %f\n", x[0], x[1], x[2]);
+    return false; 
+  } else {
+    // fprintf(stderr, "ilayer=%d\n", i_layer);
+  }
+
+  double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
+  double VVu[max_nverts], VVl[max_nverts]; // upper/lower vertical velocities on vertices
+  for (int i = 0; i < nverts; i ++) {
+    for (int k = 0; k < 3; k ++) {
+      Vu[i][k]  = V[t]->at(k, i_layer, verts_i[i]);
+      Vl[i][k]  = V[t]->at(k, i_layer+1, verts_i[i]);
+    }
+    VVu[i] = vertVelocityTop[t]->at(0, i_layer, verts_i[i]);
+    VVl[i] = vertVelocityTop[t]->at(0, i_layer+1, verts_i[i]);
+  }
+
+  double vu[3] = {0}, vl[3] = {0};
+  double vvu = 0.0, vvl = 0.0;
+  for (int i = 0; i < nverts; i ++) {
+    for (int k = 0; k < 3; k ++) {
+      vu[k]  += omega[i] * Vu[i][k];
+      vl[k]  += omega[i] * Vl[i][k];
+    }
+    vvu += omega[i] * VVu[i];
+    vvl += omega[i] * VVl[i];
+  }
+
+  const double alpha = (z - tops[i_layer+1]) / (tops[i_layer] - tops[i_layer+1]);
+
+  for (int k = 0; k < 3; k ++)
+    v[k] = alpha * vu[k] + (1.0 - alpha) * vl[k];
+
+  // assuming the 4th component is vertical
+  for (int k = 0; k < 3; k ++)
+    v[4] = alpha * vvu + (1.0 - alpha) * vvl;
+
+  // fprintf(stderr, "x=%f, %f, %f, vx=%f, vy=%f, vz=%f, vv=%f\n", 
+  //     x[0], x[1], x[2], v[0], v[1], v[2], v[4]);
 
   return true;
 }

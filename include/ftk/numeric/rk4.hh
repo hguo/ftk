@@ -29,6 +29,8 @@ void angular_stepping(
 
   const T dw = h * w; // angular step
   axis_rotate_vector(axis, dw, x, xn);
+
+  xn[3] = xn[3] + h;
 }
 
 template <typename T=double>
@@ -80,6 +82,23 @@ bool spherical_rk1(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullp
   // spherical_stepping(x, v, h, x);
   angular_stepping(x, v, h, x);
 
+  return true;
+}
+
+template <typename T=double> 
+bool spherical_rk1_with_vertical_velocity(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr)
+{
+  T v[5]; // velocity with the 4th component vertical
+  if (!f(x, v)) return false;
+
+  if (v0) 
+    for (int k = 0; k < 5; k ++)
+      v0[k] = v[k];
+
+  // spherical_stepping(x, v, h, x);
+  angular_stepping(x, v, h, x);
+  
+  x[4] += v[4] * h; // the vertical component
   return true;
 }
 
