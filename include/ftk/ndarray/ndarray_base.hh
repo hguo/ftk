@@ -110,6 +110,7 @@ public:
 
 public:  
   void set_multicomponents(size_t c=1) {ncd = c;}
+  void make_multicomponents(); // make a non-multicomponent array to an array with 1 component
   size_t multicomponents() const {return ncd;}
   size_t ncomponents() const;
 
@@ -235,6 +236,14 @@ inline size_t ndarray_base::index(const std::vector<size_t>& idx) const {
 inline size_t ndarray_base::index(const std::vector<int>& idx) const {
   std::vector<size_t> myidx(idx.begin(), idx.end());
   return index(myidx);
+}
+
+inline void ndarray_base::make_multicomponents()
+{
+  std::vector<size_t> s = shape();
+  s.insert(s.begin(), 1);
+  reshape(s);
+  set_multicomponents();
 }
 
 inline void ndarray_base::read_binary_file(const std::string& filename)

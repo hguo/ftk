@@ -14,7 +14,13 @@ struct kd_node_t {
   size_t offset, size; // for building kd tree
   std::shared_ptr<kd_node_t> left, right;
 
-  bool leaf() const { return left == nullptr && right == nullptr; }
+  bool is_leaf() const { return left == nullptr && right == nullptr; }
+};
+
+template <typename F, size_t n>
+struct kd_node_lite_t {
+  size_t id; // median point id
+  int parent, left, right; // -1 will be null
 };
 
 template <typename F /*coordinate type, e.g., double*/, size_t n>
@@ -41,6 +47,8 @@ struct kd_t {
       std::shared_ptr<kd_node_t<F, n>> node, 
       const std::array<F, n> &x, 
       size_t depth) const;
+  std::shared_ptr<kd_node_t<F, n>> find_nearest_nonrecursive(
+      const std::array<F, n> &x) const;
 
   std::shared_ptr<kd_node_t<F, n>> find_leaf_recursive(
       std::shared_ptr<kd_node_t<F, n>> node, 
@@ -55,6 +63,9 @@ struct kd_t {
       std::shared_ptr<kd_node_t<F, n>> node2) const;
 
   static F dist2(const std::array<F, n>& x, const std::array<F, n>& y);
+  F dist2(const std::array<F, n>& x, std::shared_ptr<std::array<F, n>> node) const {
+    return dist2(x, pts[node->id]);
+  }
 
   std::vector<std::array<F, n>> pts; // input points
   std::vector<size_t> ids;
@@ -154,7 +165,7 @@ void kd_t<F, n>::print_recursive(std::shared_ptr<kd_node_t<F, n>> node, size_t d
 
   printf("id=%zu, pt=%f, %f, offset=%zu, size=%zu, leaf=%d, depth=%zu, axis=%zu\n", 
       node->id, pts[node->id][0], pts[node->id][1], 
-      node->offset, node->size, node->leaf(), depth, depth % n);
+      node->offset, node->size, node->is_leaf(), depth, depth % n);
 
   if (node->left) print_recursive(node->left, depth + 1);
   if (node->right) print_recursive(node->right, depth + 1);
@@ -208,7 +219,60 @@ std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::closest(const std::array<F, n>& x,
     else return node2;
   }
 }
-  
+
+template <typename F, size_t n>
+std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::find_nearest_nonrecursive(const std::array<F, n> &x) const
+{
+  typedef kd_node_t<F, n> node_t;
+  typedef std::shared_ptr<node_t> ptr_node_t;
+
+  std::queue<std::tuple<ptr_node_t, size_t/*depth*/>> Q;
+  Q.push(std::make_tuple(root, 0));
+
+  ptr_node_t best = nullptr;
+  F best_d2 = std::numeric_limits<F>::max();
+  // std::set<ptr_node_t> visited;
+
+  while (!Q.empty()) {
+    auto current = Q.front();
+    Q.pop();
+
+    ptr_node_t node = std::get<0>(current);
+    size_t depth = std::get<1>(current);
+
+    const size_t axis = depth % n;
+    ptr_node_t next, other;
+
+    if (x[axis] < pts[node->id][axis]) {
+      next = node->left;
+      other = node->right;
+    } else {
+      next = node->right;
+      other = node->left;
+    }
+
+    const F d2 = dist2(x, node);
+    if (d2 < best_d2) { // FIXME: this is actually not right.  need to go to a leaf node to get the min dist
+      best = node;
+      best_d2 = d2;
+    }
+
+    if (next)
+      Q.push(std::make_tuple(next, depth + 1));
+
+    // distance to the other side
+    if (other) {
+      const F dp = x[axis] - pts[node->id][axis];
+      const F dp2 = dp * dp;
+
+      if (d2 >= dp2)
+        Q.push(std::make_tuple(other, depth + 1));
+    }
+  }
+
+  return best;
+}
+
 template <typename F, size_t n>
 std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::find_nearest_recursive(
     std::shared_ptr<kd_node_t<F, n>> node, 
@@ -254,7 +318,7 @@ std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::find_leaf_recursive(
     const std::array<F, n> &x, 
     size_t depth) const
 {
-  if (node->leaf) 
+  if (node->is_leaf()) 
     return node;
   else {
     if (x[depth % n] < pts[node->id][depth % n])

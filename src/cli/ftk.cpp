@@ -21,9 +21,9 @@
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/filters/feature_curve_set_post_processor.hh"
-#include "ftk/mesh/mpas_mesh.hh"
 #include "ftk/io/util.hh"
 #include "ftk/io/xgc_stream.hh"
+#include "ftk/io/mpas_stream.hh"
 #include "ftk/ndarray.hh"
 #include "ftk/ndarray/conv.hh"
 
@@ -86,7 +86,7 @@ double pt_delta_t = 1.0;
 std::vector<int> pt_seed_strides;
 
 // mpas-o specific
-std::shared_ptr<mpas_mesh<>> mpas_mesh_;
+std::shared_ptr<mpas_stream> mpas_data_stream;
 
 // devices
 std::string device_ids;
@@ -548,18 +548,14 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
 {
-  // mpas_mesh_; // = ftk::mpas_mesh<>::from_file(input_pattern);
-  mpas_mesh_.reset(new ftk::mpas_mesh<>);
-  mpas_mesh_->read_netcdf(input_pattern);
-  mpas_mesh_->initialize();
-  mpas_mesh_->initialize_c2v_interpolants();
+  mpas_data_stream.reset(new mpas_stream(input_pattern, comm));
+  mpas_data_stream->initialize();
   // mpas_mesh_->surface_cells_to_vtu("mpas-surface.vtu");
   // exit(1);
 
-  const auto js = stream->get_json();
-  const int nt = js["n_timesteps"];
+  const int nt = mpas_data_stream->ntimesteps;
   
-  tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_mesh_) );
+  tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_data_stream->mesh()) );
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
   
   tracker_particle_mpas_ocean->set_ntimesteps(nt);
@@ -570,9 +566,6 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   tracker_particle_mpas_ocean->initialize();
   tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
 
-  stream->set_callback([&](int k, const ndarray<double>& field_data) {
-    ndarray<double> V = mpas_mesh_->interpolate_c2v(field_data); // vertexwise velocity, layerThickness, and more
-   
 #if 0
     ndarray<double> surfV;
     surfV.reshape(3, V.dim(2));
@@ -584,13 +577,14 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
     exit(1);
 #endif
 
-    tracker_particle_mpas_ocean->push_field_data_snapshot("vector", V); // field_data);
+  mpas_data_stream->set_callback([&](int k, std::shared_ptr<ndarray_group> g) {
+    tracker_particle_mpas_ocean->push_field_data_snapshot(g); // field_data);
 
     if (k != 0) tracker_particle_mpas_ocean->advance_timestep();
     if (k == stream->n_timesteps() - 1) tracker_particle_mpas_ocean->update_timestep();
   });
-  stream->start();
-  stream->finish();
+
+  while (mpas_data_stream->advance_timestep()) { }
 
   tracker_particle_mpas_ocean->finalize();
   tracker_particle_mpas_ocean->write_trajectories(output_pattern);
