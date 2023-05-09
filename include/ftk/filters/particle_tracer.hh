@@ -42,6 +42,7 @@ protected:
   double delta() const { return current_delta_t / nsteps_per_interval; }
 
   virtual int nch() const {return nd_ + 1;} // number of channels, e.g., 2D vel w/ time will be 3
+  virtual std::vector<std::string> scalar_names() const { return {}; }
 
 protected:
   std::shared_ptr<ndarray<double>> V[2];
@@ -73,7 +74,7 @@ inline void particle_tracer::write_trajectories(const std::string& filename)
 {
   // if (comm.rank() == 0)
 #if FTK_HAVE_VTK
-  auto poly = trajectories.to_vtp();
+  auto poly = trajectories.to_vtp( scalar_names() );
   write_polydata(filename, poly);
 #endif
 }
@@ -140,6 +141,8 @@ inline void particle_tracer::update_timestep()
           p.v[k] = v[k];
         }
         p.t = x[nd_]; //  + delta() * k;
+        for (auto k = 0; k < nch() - nd() - 1; k ++)
+          p.scalar[k] = v[k + nd() + 1];
         traj.push_back(p);
       }
       bool succ = false;
@@ -163,6 +166,8 @@ inline void particle_tracer::update_timestep()
     }
     // p.t = current_t + current_delta_t; // x[2];
     p.t = x[nd_];
+    for (auto k = 0; k < nch() - nd() - 1; k ++)
+      p.scalar[k] = v[k + nd() + 1];
     traj.push_back(p);
 
     // fprintf(stderr, "%f, %f, %f\n", p.x[0], p.x[1], p.t);

@@ -37,6 +37,7 @@ protected:
   bool eval_v_with_vertical_velocity(int t, const double* x, double *v);
 
   int nch() const { return 5; }
+  std::vector<std::string> scalar_names() const { return {"vertVelocity"}; }
 
 protected:
   // std::shared_ptr<ndarray<double>> V[2]; // inherited from particle_tracer
@@ -266,6 +267,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   double VVu[max_nverts], VVl[max_nverts]; // upper/lower vertical velocities on vertices
+  // double Su[max_nverts], Sl[max_nverts]; // salinity
   for (int i = 0; i < nverts; i ++) {
     for (int k = 0; k < 3; k ++) {
       Vu[i][k]  = V[t]->at(k, i_layer, verts_i[i]);
