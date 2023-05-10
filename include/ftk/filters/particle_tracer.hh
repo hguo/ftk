@@ -133,7 +133,7 @@ inline void particle_tracer::update_timestep()
       x[k] = last_point.x[k];
     x[nd_] = last_point.t;
 
-    thread_local int hint = -1;
+    thread_local int hint[2] = {-1, -1};
 
     for (auto k = 0; k < nsteps_per_interval; k ++) {
       if (k % nsteps_per_checkpoint == 0) {
@@ -151,11 +151,11 @@ inline void particle_tracer::update_timestep()
 
       // fprintf(stderr, "x=%f, %f, t=%f\n", x[0], x[1], x[2]);
       if (integrator == PARTICLE_TRACER_INTEGRATOR_RK4)
-        succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_vt(x, v, &hint); }, delta(), v);
+        succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_vt(x, v, hint); }, delta(), v);
       else if (integrator == PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1)
-        succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, &hint); }, delta(), v);
+        succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, hint); }, delta(), v);
       else if (integrator == PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY) 
-        succ = spherical_rk1_with_vertical_velocity<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, &hint); }, delta(), v);
+        succ = spherical_rk1_with_vertical_velocity<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, hint); }, delta(), v);
 
       if (!succ) 
         break;

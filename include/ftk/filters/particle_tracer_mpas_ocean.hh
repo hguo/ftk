@@ -231,8 +231,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
   int cell_i;
   if (hint) {
-    cell_i = m->locate_cell_i(x, *hint);
-    *hint = cell_i;
+    cell_i = m->locate_cell_i(x, hint[0]);
+    hint[0]= cell_i;
   }
   else 
     cell_i = m->locate_cell_i(x);
@@ -260,25 +260,46 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   // of each layer, and then find the proper layer
 
   double tops[max_nlayers] = {0};
-  for (int l = 0; l < nlayers; l ++)
-    for (int i = 0; i < nverts; i ++)
-      tops[l] += zTop[t]->at(0, l, verts_i[i]);
-
-  // locate depth layer
+  bool succ_layer_hint = false;
   const double z = vector_2norm<3>(x) - earth_radius;
-  int i_layer = -1;
-  for (int l = 0; l < nlayers-1; l ++)
-    if (z < tops[l] && z > tops[l+1]) {
-      i_layer = l;
-      break;
+  
+  int i_layer = hint[1];
+  if (i_layer >= 0) { // try if the point is still in the layer
+    for (int i = 0; i < nverts; i ++) {
+      tops[i_layer] += omega[i] * zTop[t]->at(0, i_layer, verts_i[i]);
+      tops[i_layer+1] += omega[i] * zTop[t]->at(0, i_layer+1, verts_i[i]);
     }
 
-  if (i_layer < 0 || i_layer == nlayers - 1) {
-    // fprintf(stderr, "vertical layer not found, %f, %f, %f\n", x[0], x[1], x[2]);
-    return false; 
-  } else {
-    // fprintf(stderr, "ilayer=%d\n", i_layer);
+    if (z <= tops[i_layer] && z > tops[i_layer+1]) {
+      // fprintf(stderr, "layer hint succ, %f, %f, %f, ilayer=%d\n", x[0], x[1], x[2], i_layer);
+      succ_layer_hint = true;
+    }
   }
+
+  if (!succ_layer_hint) {
+    // interpolate all depth layers
+    for (int l = 0; l < nlayers; l ++)
+      for (int i = 0; i < nverts; i ++)
+        tops[l] += omega[i] * zTop[t]->at(0, l, verts_i[i]);
+
+    // locate depth layer
+    i_layer = -1;
+    for (int l = 0; l < nlayers-1; l ++)
+      if (z <= tops[l] && z > tops[l+1]) {
+        i_layer = l;
+        break;
+      }
+
+    if (i_layer < 0 || i_layer == nlayers - 1) {
+      // fprintf(stderr, "vertical layer not found, %f, %f, %f\n", x[0], x[1], x[2]);
+      return false; 
+    } else {
+      // fprintf(stderr, "ilayer=%d\n", i_layer);
+    }
+  }
+
+  hint[1] = i_layer;
+  // fprintf(stderr, "x=%f, %f, %f, ilayer=%d\n", x[0], x[1], x[2], i_layer);
 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   double VVu[max_nverts], VVl[max_nverts]; // upper/lower vertical velocities on vertices
