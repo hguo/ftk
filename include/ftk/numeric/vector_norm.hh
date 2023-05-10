@@ -48,6 +48,22 @@ inline T vector_dist_2norm_3(const T v[], const T w[])
   return vector_2norm_3(u);
 }
 
+template <int n, typename T>
+inline T vector_2norm2(const T v[])
+{
+  T d2(0);
+  for (int i=0; i<n; i++) 
+    d2 += v[i] * v[i];
+  return d2;
+}
+
+template <int n, typename T>
+inline T vector_dist_2norm2(const T v[], const T w[])
+{
+  T u[3] = {v[0] - w[0], v[1] - w[1], v[2] - w[2]};
+  return vector_2norm2<n, T>(u);
+}
+
 }
 
 #endif

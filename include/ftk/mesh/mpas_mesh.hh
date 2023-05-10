@@ -25,9 +25,14 @@ public:
   size_t n_layers() const { return restingThickness.dim(0); }
   size_t n_vertices() const { return xyzVertices.dim(1); }
 
-  size_t locate_cell_i(const F x[]) const { return kd_cells->find_nearest(x); }
-  bool point_in_cell(const F x[]) const; // WIP
- 
+  I locate_cell_i(const F x[]) const { return kd_cells->find_nearest(x); }
+  I locate_cell_i(const F x[], const I prev_cell_i) const;
+
+  void cell_i_coords(const I cell_i, F x[3]) const { x[0] = xyzCells(0, cell_i); x[1] = xyzCells(1, cell_i); x[2] = xyzCells(2, cell_i); }
+
+  bool point_in_cell_i(const I cell_i, const F x[]) const;
+  bool point_in_cell(const int nverts, const F Xv[][3], const F x[3]) const;
+
   size_t locate_layer(const I c_i, const F x[]) const;
 
   // void interpolate_c2v(const I vid, const F cvals[3][], F vvals[]) const;
@@ -47,7 +52,7 @@ public:
 public:
   std::shared_ptr<kd_t<F, 3>> kd_cells, kd_vertices;
   
-  ndarray<I> cellsOnVertex, verticesOnCell;
+  ndarray<I> cellsOnVertex, cellsOnCell, verticesOnCell;
   ndarray<I> indexToVertexID, indexToEdgeID, indexToCellID;
   ndarray<F> xyzCells, xyzVertices;
   ndarray<I> nEdgesOnCell;
@@ -188,6 +193,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 
   cellsOnVertex.read_netcdf(ncid, "cellsOnVertex"); // "conn"
+  cellsOnCell.read_netcdf(ncid, "cellsOnCell");
   verticesOnCell.read_netcdf(ncid, "verticesOnCell");
   nEdgesOnCell.read_netcdf(ncid, "nEdgesOnCell");
 
@@ -322,6 +328,64 @@ void mpas_mesh<I, F>::surface_cells_to_vtu(const std::string filename, const std
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
+}
+
+template <typename I, typename F>
+bool mpas_mesh<I, F>::point_in_cell_i(const I cell_i, const F x[]) const
+{
+  constexpr int max_nverts = 10;
+  int verts_i[max_nverts];
+
+  const int nverts = verts_i_on_cell_i(cell_i, verts_i);
+  double Xv[max_nverts][3];
+
+  return point_in_cell(nverts, Xv, x);
+}
+
+template <typename I, typename F>
+bool mpas_mesh<I, F>::point_in_cell(const int nverts, const F Xv[][3], const F x[3]) const
+{
+  F n[3];
+  for (int i = 0; i < nverts; i ++) {
+    const F *x0 = Xv[i], *x1 = Xv[(i+1)%nverts];
+    cross_product(x0, x1, n);
+
+    if (vector_dot_product3(n, x) < 0) // on the negative side
+      return false;
+  }
+
+  return true;
+}
+
+template <typename I, typename F>
+I mpas_mesh<I, F>::locate_cell_i(const F x[], const I prev_cell_i) const
+{
+  if (prev_cell_i < 0) 
+    return locate_cell_i(x);
+  else {
+    // among the neighbors, find the cell center with min dist to x
+ 
+    F cx[3];
+    cell_i_coords(prev_cell_i, cx);
+
+    I mindist2_cell_i = prev_cell_i;
+    F mindist2 = vector_dist_2norm2<3>(cx, x);
+
+    const int n = nEdgesOnCell[prev_cell_i];
+    for (int i = 0; i < n; i ++) {
+      const I cell_i = cid2i( cellsOnCell(i, prev_cell_i) );
+      cell_i_coords(cell_i, cx);
+
+      const F dist2 = vector_dist_2norm2<3>(cx, x);
+
+      if (dist2 < mindist2) {
+        mindist2_cell_i = cell_i;
+        mindist2 = dist2;
+      }
+    }
+
+    return mindist2_cell_i;
+  }
 }
 
 } // namespace ftk

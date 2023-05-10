@@ -112,6 +112,11 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
 
+  if (!m->point_in_cell(nverts, Xv, x)) {
+    fprintf(stderr, "point x=%f, %f, %f not in cell %d\n", x[0], x[1], x[2], cell_i);
+    return false;
+  }
+
   double omega[max_nverts] = {0};
   wachspress_weights(nverts, Xv, x, omega);
   // with the wachpress weights, first interpolate the thickness
