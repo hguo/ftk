@@ -25,7 +25,7 @@ public:
   size_t n_layers() const { return restingThickness.dim(0); }
   size_t n_vertices() const { return xyzVertices.dim(1); }
 
-  I locate_cell_i(const F x[]) const { return kd_cells->find_nearest(x); }
+  I locate_cell_i(const F x[]) const;
   I locate_cell_i(const F x[], const I prev_cell_i) const;
 
   void cell_i_coords(const I cell_i, F x[3]) const { x[0] = xyzCells(0, cell_i); x[1] = xyzCells(1, cell_i); x[2] = xyzCells(2, cell_i); }
@@ -338,7 +338,9 @@ bool mpas_mesh<I, F>::point_in_cell_i(const I cell_i, const F x[]) const
 
   const int nverts = verts_i_on_cell_i(cell_i, verts_i);
   double Xv[max_nverts][3];
-
+  
+  verts_i_coords(nverts, verts_i, Xv);
+  
   return point_in_cell(nverts, Xv, x);
 }
 
@@ -358,6 +360,17 @@ bool mpas_mesh<I, F>::point_in_cell(const int nverts, const F Xv[][3], const F x
 }
 
 template <typename I, typename F>
+I mpas_mesh<I, F>::locate_cell_i(const F x[]) const
+{
+  I cell_i = kd_cells->find_nearest(x);
+  if (point_in_cell_i(cell_i, x))
+    return cell_i;
+  else
+    return -1;
+}
+
+
+template <typename I, typename F>
 I mpas_mesh<I, F>::locate_cell_i(const F x[], const I prev_cell_i) const
 {
   if (prev_cell_i < 0) 
@@ -374,6 +387,9 @@ I mpas_mesh<I, F>::locate_cell_i(const F x[], const I prev_cell_i) const
     const int n = nEdgesOnCell[prev_cell_i];
     for (int i = 0; i < n; i ++) {
       const I cell_i = cid2i( cellsOnCell(i, prev_cell_i) );
+      if (cell_i < 0)
+        continue;
+
       cell_i_coords(cell_i, cx);
 
       const F dist2 = vector_dist_2norm2<3>(cx, x);
@@ -384,7 +400,17 @@ I mpas_mesh<I, F>::locate_cell_i(const F x[], const I prev_cell_i) const
       }
     }
 
-    return mindist2_cell_i;
+#if 0
+    if (prev_cell_i == mindist2_cell_i)
+      fprintf(stderr, "same cell %d\n", prev_cell_i);
+    else 
+      fprintf(stderr, "different cell, prev=%d, current=%d\n", prev_cell_i, mindist2_cell_i);
+#endif
+
+    if (point_in_cell_i(mindist2_cell_i, x))
+      return mindist2_cell_i;
+    else 
+      return locate_cell_i(x);
   }
 }
 

@@ -22,7 +22,7 @@ struct particle_tracer_regular : public particle_tracer, public regular_tracker
   void initialize_particles_at_grid_points(std::vector<int> strides);
 
 protected:
-  virtual bool eval_v(int t, const double *x, double *v);
+  virtual bool eval_v(int t, const double *x, double *v, int *hint);
 };
 
 ////
@@ -50,7 +50,7 @@ inline void particle_tracer_regular::initialize_particles_at_grid_points(std::ve
 }
   
 bool particle_tracer_regular::eval_v(
-    int t, const double *x, double *v)
+    int t, const double *x, double *v, int *hint)
 {
   return V[t]->mlerp(x, v);
 }

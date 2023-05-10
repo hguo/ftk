@@ -32,9 +32,9 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
   void prepare_timestep();
 
 protected:
-  bool eval_v(int t, const double* x, double *v);
-  bool eval_v_vertical(int t, const double* x, double *v);
-  bool eval_v_with_vertical_velocity(int t, const double* x, double *v);
+  bool eval_v(int t, const double* x, double *v, int *hint);
+  bool eval_v_vertical(int t, const double* x, double *v, int *hint);
+  bool eval_v_with_vertical_velocity(int t, const double* x, double *v, int *hint);
 
   int nch() const { return 5; }
   std::vector<std::string> scalar_names() const { return {"vertVelocity"}; }
@@ -98,7 +98,7 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
   vertVelocityTop[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("vertVelocityTop") : nullptr;
 }
 
-inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, double *v)
+inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, double *v, int *hint)
 {
   static const int max_nverts = 10, max_nlayers = 100;
  
@@ -111,11 +111,6 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
-
-  if (!m->point_in_cell(nverts, Xv, x)) {
-    fprintf(stderr, "point x=%f, %f, %f not in cell %d\n", x[0], x[1], x[2], cell_i);
-    return false;
-  }
 
   double omega[max_nverts] = {0};
   wachspress_weights(nverts, Xv, x, omega);
@@ -166,9 +161,9 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
 }
 
 inline bool particle_tracer_mpas_ocean::eval_v(
-    int t, const double *x, double *v)
+    int t, const double *x, double *v, int *hint)
 {
-  return eval_v_with_vertical_velocity(t, x, v);
+  return eval_v_with_vertical_velocity(t, x, v, hint);
   // return eval_v_vertical(t, x, v);
 
   // 1. find the cell and number of vertices
@@ -227,15 +222,23 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   return true;
 }
 
-inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, const double *x, double *v)
+inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, const double *x, double *v, int *hint)
 {
   static const int max_nverts = 10, max_nlayers = 100;
   
   // fprintf(stderr, "t%d, x=%f, %f, %f\n", 
   //     t, x[0], x[1], x[2]);
- 
-  int cell_i = m->locate_cell_i(x);
-  assert(cell_i < m->n_cells());
+
+  int cell_i;
+  if (hint) {
+    cell_i = m->locate_cell_i(x, *hint);
+    *hint = cell_i;
+  }
+  else 
+    cell_i = m->locate_cell_i(x);
+
+  if (cell_i < 0) // not found
+    return false;
 
   int verts_i[max_nverts]; //  = {-1};
   const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
@@ -243,6 +246,13 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
+ 
+#if 0 // no need to check point-in-cell anymore.  the locate_cell function will check it
+  if (!m->point_in_cell(nverts, Xv, x)) {
+    fprintf(stderr, "point x=%f, %f, %f not in cell %d\n", x[0], x[1], x[2], cell_i);
+    return false;
+  }
+#endif
 
   double omega[max_nverts] = {0};
   wachspress_weights(nverts, Xv, x, omega);

@@ -35,8 +35,8 @@ struct particle_tracer : public virtual tracker
   void set_nsteps_per_checkpoint(int n) { nsteps_per_checkpoint = 16; }
 
 protected:
-  virtual bool eval_vt(const double *x, double *v);  // w/ temporal interpolation
-  virtual bool eval_v(int t, const double *x, double *v) { return false; } // single timestep
+  virtual bool eval_vt(const double *x, double *v, int *hint = NULL);  // w/ temporal interpolation
+  virtual bool eval_v(int t, const double *x, double *v, int *hint = NULL) { return false; } // single timestep
 
   int nd() const { return nd_; }
   double delta() const { return current_delta_t / nsteps_per_interval; }
@@ -133,6 +133,8 @@ inline void particle_tracer::update_timestep()
       x[k] = last_point.x[k];
     x[nd_] = last_point.t;
 
+    thread_local int hint = -1;
+
     for (auto k = 0; k < nsteps_per_interval; k ++) {
       if (k % nsteps_per_checkpoint == 0) {
         feature_point_t p;
@@ -149,11 +151,11 @@ inline void particle_tracer::update_timestep()
 
       // fprintf(stderr, "x=%f, %f, t=%f\n", x[0], x[1], x[2]);
       if (integrator == PARTICLE_TRACER_INTEGRATOR_RK4)
-        succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_vt(x, v); }, delta(), v);
+        succ = rk4<double>(nd_+1, x, [&](const double *x, double *v) { return eval_vt(x, v, &hint); }, delta(), v);
       else if (integrator == PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1)
-        succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_vt(x, v); }, delta(), v);
+        succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, &hint); }, delta(), v);
       else if (integrator == PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY) 
-        succ = spherical_rk1_with_vertical_velocity<double>(x, [&](const double *x, double *v) { return eval_vt(x, v); }, delta(), v);
+        succ = spherical_rk1_with_vertical_velocity<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, &hint); }, delta(), v);
 
       if (!succ) 
         break;
@@ -175,7 +177,7 @@ inline void particle_tracer::update_timestep()
 }
 
 inline bool particle_tracer::eval_vt(
-    const double *x, double *v)
+    const double *x, double *v, int *hint)
 {
   if (V[0] && V[1]) { // double time step
     const double t = (x[nd_] - current_t) / current_delta_t;
@@ -184,8 +186,8 @@ inline bool particle_tracer::eval_vt(
     const double w0 = (1.0 - t), w1 = t;
     double v0[10], v1[10]; // some large number
 
-    const bool b0 = eval_v(0, x, v0);
-    const bool b1 = eval_v(1, x, v1);
+    const bool b0 = eval_v(0, x, v0, hint);
+    const bool b1 = eval_v(1, x, v1, hint);
 
     if (b0 && b1) {
       for (auto k = 0; k < nch(); k ++)
@@ -197,7 +199,7 @@ inline bool particle_tracer::eval_vt(
     } else 
       return false;
   } else if (V[0]) { // single time step
-    bool succ = eval_v(0, x, v);
+    bool succ = eval_v(0, x, v, hint);
     v[nd()] = 1.0; // time
     return succ;
   } else // no timestep available
