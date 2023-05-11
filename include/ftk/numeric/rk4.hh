@@ -36,8 +36,8 @@ void angular_stepping(
 template <typename T=double>
 void angular_and_vertical_stepping( // composition of angular and vertical velocities
     const T *x, 
-    const T* v, // assuming v is tangential to the sphere
-    const T vn, // normal velocity
+    const T* v, // assuming v[0], v[1], v[2] is tangential to the sphere
+                // 5 channels: x[3] time, x[4] vertical vel
     const T h, T *x1)
 {
   const T R = vector_2norm<3, T>(x); // radius
@@ -51,9 +51,11 @@ void angular_and_vertical_stepping( // composition of angular and vertical veloc
 
   axis_rotate_vector(axis, dw, x, x1);
 
-  const T R1 = R + vn * h; // new radius
+  const T R1 = R + v[4] * h; // new radius
   for (int i = 0; i < 3; i ++)
     x1[i] = x1[i] * R1 / R;
+
+  x1[3] = x[3] + h * v[3]; // new time
 }
 
 
@@ -99,6 +101,58 @@ bool spherical_rk1_with_vertical_velocity(T *x, std::function<bool(const T*, T*)
   angular_stepping(x, v, h, x);
   
   x[4] += v[4] * h; // the vertical component
+  return true;
+}
+
+template <typename T=double>
+bool spherical_rk4_with_vertical_velocity(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr)
+{
+  constexpr int nch = 5;
+  T v[nch]; // velocity with the 4th component vertical
+  T k1[nch], k2[nch], k3[nch], k4[nch];
+
+  const T x0[4] = {x[0], x[1], x[2], x[3]};
+
+  if (!f(x, v)) return false;
+  if (v0) 
+    for (int k = 0; k < nch; k ++)
+      v0[k] = v[k];
+
+  // fprintf(stderr, "x0=%f, %f, %f, %f, v=%f, %f, %f, %f, %f\n", 
+  //     x[0], x[1], x[2], x[3], 
+  //     v[0], v[1], v[2], v[3], v[4]);
+
+  // k1 = f(x);
+  for (int k = 0; k < nch; k ++)
+    k1[k] = v[k];
+
+  // k2 = f(x + 0.5*h*k1);
+  T x2[nch];
+  angular_and_vertical_stepping<T>(x0, k1, h/2, x2);
+  if (!f(x2, k2)) return false;
+
+  // k3 = f(x + 0.5*h*k2);
+  T x3[nch];
+  angular_and_vertical_stepping<T>(x0, k2, h/2, x3);
+  if (!f(x3, k3)) return false;
+
+  // k4 = f(x + k3);
+  T x4[nch];
+  angular_and_vertical_stepping<T>(x0, k3, h, x4);
+  if (!f(x4, k4)) return false;
+
+  T w[nch];
+  for (int i = 0; i < nch; i ++)
+    w[i] = (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]) / 6.0;
+
+  angular_and_vertical_stepping<T>(x0, w, h, x);
+ 
+#if 0
+  fprintf(stderr, "x0=%f, %f, %f, %f, v=%f, %f, %f, %f, %f, x=%f, %f, %f, %f\n", 
+      x0[0], x0[1], x0[2], x0[3], 
+      v[0], v[1], v[2], v[3], v[4], 
+      x[0], x[1], x[2], x[3]);
+#endif
   return true;
 }
 

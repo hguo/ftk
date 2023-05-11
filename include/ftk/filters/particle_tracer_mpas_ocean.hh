@@ -20,7 +20,8 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
     tracker(comm) 
   {
     // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1;
-    this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY;
+    // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY;
+    this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK4_WITH_VERTICAL_VELOCITY;
   }
 
   virtual ~particle_tracer_mpas_ocean() {}

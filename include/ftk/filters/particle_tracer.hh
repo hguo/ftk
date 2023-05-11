@@ -11,6 +11,7 @@ enum {
   PARTICLE_TRACER_INTEGRATOR_RK4 = 1,
   PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1 = 5,
   PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY = 6,
+  PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK4_WITH_VERTICAL_VELOCITY = 6,
 };
 
 struct particle_tracer : public virtual tracker
@@ -156,6 +157,8 @@ inline void particle_tracer::update_timestep()
         succ = spherical_rk1<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, hint); }, delta(), v);
       else if (integrator == PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY) 
         succ = spherical_rk1_with_vertical_velocity<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, hint); }, delta(), v);
+      else if (integrator == PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK4_WITH_VERTICAL_VELOCITY) 
+        succ = spherical_rk4_with_vertical_velocity<double>(x, [&](const double *x, double *v) { return eval_vt(x, v, hint); }, delta(), v);
 
       if (!succ) 
         break;
