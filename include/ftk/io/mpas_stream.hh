@@ -86,11 +86,18 @@ bool mpas_stream::advance_timestep()
     salinity.read_netcdf(ncid, "salinity", st, sz);
     salinity.make_multicomponents();
     g->set("salinity", m->interpolate_c2v(salinity));
+    
+    ndarray<double> temperature;
+    temperature.read_netcdf(ncid, "temperature", st, sz);
+    temperature.make_multicomponents();
+    g->set("temperature", m->interpolate_c2v(temperature));
 
+#if 0
     ndarray<double> layerThickness;
     layerThickness.read_netcdf(ncid, "layerThickness", st, sz);
     layerThickness.make_multicomponents();
     g->set("layerThickness", m->interpolate_c2v(layerThickness));
+#endif
 
     ndarray<double> zTop;
     zTop.read_netcdf(ncid, "zTop", st, sz);

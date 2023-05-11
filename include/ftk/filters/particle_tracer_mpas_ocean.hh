@@ -20,8 +20,8 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
     tracker(comm) 
   {
     // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1;
-    // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY;
-    this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK4_WITH_VERTICAL_VELOCITY;
+    this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY;
+    // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK4_WITH_VERTICAL_VELOCITY;
   }
 
   virtual ~particle_tracer_mpas_ocean() {}
@@ -37,13 +37,15 @@ protected:
   bool eval_v_vertical(int t, const double* x, double *v, int *hint);
   bool eval_v_with_vertical_velocity(int t, const double* x, double *v, int *hint);
 
-  int nch() const { return 5; }
-  std::vector<std::string> scalar_names() const { return {"vertVelocity"}; }
+  int nch() const { return 7; }
+  std::vector<std::string> scalar_names() const { return {"vertVelocity", "salinity", "temperature"}; }
 
 protected:
   // std::shared_ptr<ndarray<double>> V[2]; // inherited from particle_tracer
   std::shared_ptr<ndarray<double>> zTop[2];
   std::shared_ptr<ndarray<double>> vertVelocityTop[2];
+  std::shared_ptr<ndarray<double>> salinity[2];
+  std::shared_ptr<ndarray<double>> temperature[2];
 };
 
 ////
@@ -97,6 +99,12 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
   
   vertVelocityTop[0] = snapshots[0]->get_ptr<double>("vertVelocityTop");
   vertVelocityTop[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("vertVelocityTop") : nullptr;
+
+  salinity[0] = snapshots[0]->get_ptr<double>("salinity");
+  salinity[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("salinity") : nullptr;
+  
+  temperature[0] = snapshots[0]->get_ptr<double>("temperature");
+  temperature[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("temperature") : nullptr;
 }
 
 inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, double *v, int *hint)
@@ -304,6 +312,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   double VVu[max_nverts], VVl[max_nverts]; // upper/lower vertical velocities on vertices
+  double Su[max_nverts], Sl[max_nverts]; // salinity
+  double Tu[max_nverts], Tl[max_nverts]; // temperature
   // double Su[max_nverts], Sl[max_nverts]; // salinity
   for (int i = 0; i < nverts; i ++) {
     for (int k = 0; k < 3; k ++) {
@@ -312,10 +322,16 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
     }
     VVu[i] = vertVelocityTop[t]->at(0, i_layer, verts_i[i]);
     VVl[i] = vertVelocityTop[t]->at(0, i_layer+1, verts_i[i]);
+    Su[i] = salinity[t]->at(0, i_layer, verts_i[i]);
+    Sl[i] = salinity[t]->at(0, i_layer+1, verts_i[i]);
+    Tu[i] = temperature[t]->at(0, i_layer, verts_i[i]);
+    Tl[i] = temperature[t]->at(0, i_layer+1, verts_i[i]);
   }
 
   double vu[3] = {0}, vl[3] = {0};
   double vvu = 0.0, vvl = 0.0;
+  double su = 0.0, sl = 0.0;
+  double tu = 0.0, tl = 0.0;
   for (int i = 0; i < nverts; i ++) {
     for (int k = 0; k < 3; k ++) {
       vu[k]  += omega[i] * Vu[i][k];
@@ -323,19 +339,29 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
     }
     vvu += omega[i] * VVu[i];
     vvl += omega[i] * VVl[i];
+    su += omega[i] * Su[i];
+    sl += omega[i] * Sl[i];
+    tu += omega[i] * Tu[i];
+    tl += omega[i] * Tl[i];
   }
 
   const double alpha = (z - tops[i_layer+1]) / (tops[i_layer] - tops[i_layer+1]);
+  const double beta = 1.0 - alpha;
 
   for (int k = 0; k < 3; k ++)
-    v[k] = alpha * vu[k] + (1.0 - alpha) * vl[k];
+    v[k] = alpha * vu[k] + beta * vl[k];
 
   // assuming the 4th component is vertical
-  for (int k = 0; k < 3; k ++)
-    v[4] = alpha * vvu + (1.0 - alpha) * vvl;
+  for (int k = 0; k < 3; k ++) {
+    v[4] = alpha * vvu + beta * vvl;
+    v[5] = alpha * su  + beta * sl;
+    v[6] = alpha * tu  + beta * tl;
+  }
 
-  // fprintf(stderr, "t%d, x=%f, %f, %f, vx=%f, vy=%f, vz=%f, vv=%f\n", 
-  //     t, x[0], x[1], x[2], v[0], v[1], v[2], v[4]);
+#if 0
+  fprintf(stderr, "t%d, x=%f, %f, %f, vx=%f, vy=%f, vz=%f, vv=%f, salinity=%f, temperature=%f\n", 
+      t, x[0], x[1], x[2], v[0], v[1], v[2], v[4], v[5], v[6]);
+#endif
 
   return true;
 }

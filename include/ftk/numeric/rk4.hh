@@ -90,7 +90,7 @@ bool spherical_rk1(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullp
 template <typename T=double> 
 bool spherical_rk1_with_vertical_velocity(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr)
 {
-  T v[5]; // velocity with the 4th component vertical
+  T v[10]; // velocity with the 4th component vertical
   if (!f(x, v)) return false;
 
   if (v0) 
@@ -108,14 +108,14 @@ template <typename T=double>
 bool spherical_rk4_with_vertical_velocity(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr)
 {
   constexpr int nch = 5;
-  T v[nch]; // velocity with the 4th component vertical
+  T v[10]; // velocity with the 4th component vertical
   T k1[nch], k2[nch], k3[nch], k4[nch];
 
   const T x0[4] = {x[0], x[1], x[2], x[3]};
 
   if (!f(x, v)) return false;
   if (v0) 
-    for (int k = 0; k < nch; k ++)
+    for (int k = 0; k < 10; k ++)
       v0[k] = v[k];
 
   // fprintf(stderr, "x0=%f, %f, %f, %f, v=%f, %f, %f, %f, %f\n", 
@@ -127,17 +127,17 @@ bool spherical_rk4_with_vertical_velocity(T *x, std::function<bool(const T*, T*)
     k1[k] = v[k];
 
   // k2 = f(x + 0.5*h*k1);
-  T x2[nch];
+  T x2[4];
   angular_and_vertical_stepping<T>(x0, k1, h/2, x2);
   if (!f(x2, k2)) return false;
 
   // k3 = f(x + 0.5*h*k2);
-  T x3[nch];
+  T x3[4];
   angular_and_vertical_stepping<T>(x0, k2, h/2, x3);
   if (!f(x3, k3)) return false;
 
   // k4 = f(x + k3);
-  T x4[nch];
+  T x4[4];
   angular_and_vertical_stepping<T>(x0, k3, h, x4);
   if (!f(x4, k4)) return false;
 
