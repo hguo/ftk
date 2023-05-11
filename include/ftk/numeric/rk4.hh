@@ -90,11 +90,12 @@ bool spherical_rk1(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullp
 template <typename T=double> 
 bool spherical_rk1_with_vertical_velocity(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr)
 {
+  constexpr int nch = 7;
   T v[10]; // velocity with the 4th component vertical
   if (!f(x, v)) return false;
 
   if (v0) 
-    for (int k = 0; k < 5; k ++)
+    for (int k = 0; k < nch; k ++)
       v0[k] = v[k];
 
   // spherical_stepping(x, v, h, x);

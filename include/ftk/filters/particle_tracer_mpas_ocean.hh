@@ -359,8 +359,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   }
 
 #if 0
-  fprintf(stderr, "t%d, x=%f, %f, %f, vx=%f, vy=%f, vz=%f, vv=%f, salinity=%f, temperature=%f\n", 
-      t, x[0], x[1], x[2], v[0], v[1], v[2], v[4], v[5], v[6]);
+  fprintf(stderr, "t%d, cell_i=%d, ilayer=%d x=%f, %f, %f, vx=%f, vy=%f, vz=%f, vv=%f, salinity=%f, temperature=%f\n", 
+      t, cell_i, i_layer, x[0], x[1], x[2], v[0], v[1], v[2], v[4], v[5], v[6]);
 #endif
 
   return true;

@@ -150,8 +150,18 @@ ndarray<F> mpas_mesh<I, F>::interpolate_c2v(const ndarray<F>& Vc) const
         if (boundary) {
           V(k, layer, i) = F(0);
         } else {
-          for (auto l = 0; l < 3; l ++) 
+          bool invalid = false;
+          for (auto l = 0; l < 3; l ++) {
+            F val = Vc(k, layer, c[l]);
+            if (val < -1e33) {
+              invalid = true;
+              break;
+            }
             V(k, layer, i) += lambda[l] * Vc(k, layer, c[l]);
+          }
+
+          if (invalid)
+            V(k, layer, i) = std::nan("1");
         }
       }
     }

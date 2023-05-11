@@ -146,6 +146,8 @@ inline void particle_tracer::update_timestep()
         p.t = x[nd_]; //  + delta() * k;
         for (auto k = 0; k < nch() - nd() - 1; k ++)
           p.scalar[k] = v[k + nd() + 1];
+        // fprintf(stderr, "v=%f, %f, %f, %f, %f, %f, %f\n", v[0], v[1], v[2], v[3], v[4], v[5], v[6]);
+        // p.print(std::cerr, scalar_names()) << std::endl;
         traj.push_back(p);
       }
       bool succ = false;
