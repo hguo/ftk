@@ -108,7 +108,7 @@ bool spherical_rk1_with_vertical_velocity(T *x, std::function<bool(const T*, T*)
 template <typename T=double>
 bool spherical_rk4_with_vertical_velocity(T *x, std::function<bool(const T*, T*)> f, T h, T *v0 = nullptr)
 {
-  constexpr int nch = 5;
+  constexpr int nch = 7;
   T v[10]; // velocity with the 4th component vertical
   T k1[nch], k2[nch], k3[nch], k4[nch];
 
@@ -119,34 +119,58 @@ bool spherical_rk4_with_vertical_velocity(T *x, std::function<bool(const T*, T*)
     for (int k = 0; k < 10; k ++)
       v0[k] = v[k];
 
-  // fprintf(stderr, "x0=%f, %f, %f, %f, v=%f, %f, %f, %f, %f\n", 
-  //     x[0], x[1], x[2], x[3], 
-  //     v[0], v[1], v[2], v[3], v[4]);
+#if 0
+  fprintf(stderr, "x0=%f, %f, %f, %f, v=%f, %f, %f, %f, %f\n", 
+     x[0], x[1], x[2], x[3], 
+     v[0], v[1], v[2], v[3], v[4]);
+#endif
 
   // k1 = f(x);
-  for (int k = 0; k < nch; k ++)
+  for (int k = 0; k < 5; k ++)
     k1[k] = v[k];
 
   // k2 = f(x + 0.5*h*k1);
   T x2[4];
   angular_and_vertical_stepping<T>(x0, k1, h/2, x2);
   if (!f(x2, k2)) return false;
+ 
+#if 0
+  fprintf(stderr, "x2=%f, %f, %f, %f, k2=%f, %f, %f, %f, %f\n", 
+     x2[0], x2[1], x2[2], x2[3], 
+     k2[0], k2[1], k2[2], k2[3], k2[4]);
+#endif
 
   // k3 = f(x + 0.5*h*k2);
   T x3[4];
   angular_and_vertical_stepping<T>(x0, k2, h/2, x3);
   if (!f(x3, k3)) return false;
+ 
+#if 0
+  fprintf(stderr, "x3=%f, %f, %f, %f, k3=%f, %f, %f, %f, %f\n", 
+     x3[0], x3[1], x3[2], x3[3], 
+     k3[0], k3[1], k3[2], k3[3], k3[4]);
+#endif
 
   // k4 = f(x + k3);
   T x4[4];
   angular_and_vertical_stepping<T>(x0, k3, h, x4);
   if (!f(x4, k4)) return false;
+ 
+#if 0
+  fprintf(stderr, "x4=%f, %f, %f, %f, k4=%f, %f, %f, %f, %f\n", 
+     x4[0], x4[1], x4[2], x4[3], 
+     k4[0], k4[1], k4[2], k4[3], k4[4]);
+#endif
 
-  T w[nch];
-  for (int i = 0; i < nch; i ++)
+  T w[5];
+  for (int i = 0; i < 5; i ++)
     w[i] = (k1[i] + 2*k2[i] + 2*k3[i] + k4[i]) / 6.0;
 
+  // fprintf(stderr, "w=%f, %f, %f, %f, %f\n", w[0], w[1], w[2], w[3], w[4]);
+
   angular_and_vertical_stepping<T>(x0, w, h, x);
+
+  // fprintf(stderr, "x=%f, %f, %f, %f\n", x[0], x[1], x[2], x[3]);
  
 #if 0
   fprintf(stderr, "x0=%f, %f, %f, %f, v=%f, %f, %f, %f, %f, x=%f, %f, %f, %f\n", 
