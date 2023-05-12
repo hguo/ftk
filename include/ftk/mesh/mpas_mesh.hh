@@ -419,8 +419,15 @@ I mpas_mesh<I, F>::locate_cell_i(const F x[], const I prev_cell_i) const
 
     if (point_in_cell_i(mindist2_cell_i, x))
       return mindist2_cell_i;
-    else 
-      return locate_cell_i(x);
+    else {
+      I cell_i = locate_cell_i(x);
+      return cell_i;
+#if 0
+      fprintf(stderr, "x=%f, %f, %f is not in cell %d (neighor of %d), but is in %d\n", 
+          x[0], x[1], x[2], 
+          mindist2_cell_i, prev_cell_i, cell_i);
+#endif
+    }
   }
 }
 
