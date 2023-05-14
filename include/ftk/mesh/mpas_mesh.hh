@@ -33,7 +33,8 @@ public:
   bool point_in_cell_i(const I cell_i, const F x[]) const;
   bool point_in_cell(const int nverts, const F Xv[][3], const F x[3]) const;
 
-  size_t locate_layer(const I c_i, const F x[]) const;
+  static I locate_layer_brute_force(const I nlayers, const F zTop[], const F z);
+  static I locate_layer_bisection(const I nlayers, const F zTop[], const F z);
 
   // void interpolate_c2v(const I vid, const F cvals[3][], F vvals[]) const;
 
@@ -379,6 +380,55 @@ I mpas_mesh<I, F>::locate_cell_i(const F x[]) const
     return -1;
 }
 
+template <typename I, typename F>
+I mpas_mesh<I, F>::locate_layer_brute_force(const I nlayers, const F zTop[], const F z)
+{
+  I i0 = 0, i1 = nlayers;
+ 
+  I ib = locate_layer_bisection(nlayers, zTop, z);
+
+  fprintf(stderr, "z=%f, ib=%d\n", z, ib);
+  for (int i = 0; i < nlayers; i ++)
+    fprintf(stderr, "i=%d, ztop=%f\n", i, zTop[i]);
+
+  for (int i = 0; i < nlayers; i ++)
+    if (z <= zTop[i] && z > zTop[i+1])
+      return i;
+
+  return -1;
+}
+
+template <typename I, typename F>
+I mpas_mesh<I, F>::locate_layer_bisection(const I nlayers, const F zTop[], const F z)
+{
+  I i0 = 0, i1 = nlayers-1;
+
+  fprintf(stderr, "z=%f, zTop_i0=%f, zTop_i1=%f\n", z, zTop[i0], zTop[i1]);
+
+  if (z > zTop[i0] || z <= zTop[i1])
+    return -1;
+
+#if 0
+  fprintf(stderr, "--z=%f\n", z);
+  for (int i = 0; i < nlayers; i ++)
+    fprintf(stderr, "--i=%d, ztop=%f\n", i, zTop[i]);
+  // exit(1);
+#endif
+
+  while (1) {
+    if (z <= zTop[i0] && z > zTop[i0+1])
+      return i0;
+    
+    I ic = (i0 + i1) / 2;
+    fprintf(stderr, "ic=%d\n", ic);
+    if (z - zTop[ic] <= 0)
+      i0 = ic;
+    else 
+      i1 = ic;
+  }
+
+  return -1;
+}
 
 template <typename I, typename F>
 I mpas_mesh<I, F>::locate_cell_i(const F x[], const I prev_cell_i) const

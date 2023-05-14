@@ -135,7 +135,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
   const double z = vector_2norm<3>(x) - earth_radius;
   int i_layer = -1;
   for (int l = 0; l < nlayers; l ++)
-    if (z < tops[l] && z > tops[l+1]) {
+    if (z <= tops[l] && z > tops[l+1]) {
       i_layer = l;
       break;
     }
@@ -286,18 +286,37 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   }
 
   if (!succ_layer_hint) {
+#if 0
     // interpolate all depth layers
     for (int l = 0; l < nlayers; l ++)
       for (int i = 0; i < nverts; i ++)
         tops[l] += omega[i] * zTop[t]->at(0, l, verts_i[i]);
+#endif
 
     // locate depth layer
+#if 0
     i_layer = -1;
     for (int l = 0; l < nlayers-1; l ++)
       if (z <= tops[l] && z > tops[l+1]) {
         i_layer = l;
         break;
       }
+#endif
+    
+    // interpolate and search depth layers
+    i_layer = -1;
+    for (int l = 0; l < nlayers; l ++) {
+      tops[l] = 0.0;
+      for (int i = 0; i < nverts; i ++)
+        tops[l] += omega[i] * zTop[t]->at(0, l, verts_i[i]);
+      if (l > 0 && z <= tops[l-1] && z > tops[l]) {
+        i_layer = l-1;
+        break;
+      } 
+    }
+
+    // i_layer = mpas_mesh<>::locate_layer_bisection(nlayers, tops, z);
+    // i_layer = mpas_mesh<>::locate_layer_brute_force(nlayers, tops, z);
 
     if (i_layer < 0 || i_layer == nlayers - 1) {
       // fprintf(stderr, "vertical layer not found, %f, %f, %f\n", x[0], x[1], x[2]);
