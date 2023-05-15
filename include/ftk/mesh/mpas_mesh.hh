@@ -4,6 +4,7 @@
 #include <ftk/config.hh>
 #include <ftk/basic/kd.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
+#include <ftk/numeric/mpas.hh>
 
 namespace ftk {
 
@@ -352,22 +353,7 @@ bool mpas_mesh<I, F>::point_in_cell_i(const I cell_i, const F x[]) const
   
   verts_i_coords(nverts, verts_i, Xv);
   
-  return point_in_cell(nverts, Xv, x);
-}
-
-template <typename I, typename F>
-bool mpas_mesh<I, F>::point_in_cell(const int nverts, const F Xv[][3], const F x[3]) const
-{
-  F n[3];
-  for (int i = 0; i < nverts; i ++) {
-    const F *x0 = Xv[i], *x1 = Xv[(i+1)%nverts];
-    cross_product(x0, x1, n);
-
-    if (vector_dot_product3(n, x) < 0) // on the negative side
-      return false;
-  }
-
-  return true;
+  return point_in_mpas_cell<F>(nverts, Xv, x);
 }
 
 template <typename I, typename F>
