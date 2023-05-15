@@ -58,6 +58,11 @@ struct feature_point_t {
     return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
   }
 
+  std::pair<double, double> lonlat() const {
+    const double R = std::sqrt(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]);
+    return std::make_pair<double, double>(std::acos(x[2] / R), std::atan2(x[1], x[0]));
+  }
+
   std::ostream& print(std::ostream& os, const std::vector<std::string>& scalar_components) const {
     os << "x=(" << x[0] << ", " << x[1] << ", " << x[2] << "), ";
     os << "t=" << t << ", ";

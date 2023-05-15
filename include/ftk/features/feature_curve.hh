@@ -15,6 +15,8 @@ struct feature_curve_t : public std::vector<feature_point_t>
   void update_statistics();
   void derive_velocity(); // (const std::vector<double> &dog_kernel); // assuming the traj contains only ordinal points (dt=1)
 
+  std::vector<feature_curve_t> split_geo() const;
+
   std::vector<feature_curve_t> split() const; // split to consistent subtrajs
   std::vector<int/*idx in original traj*/> to_ordinals() const;
   std::vector<int/*idx in original traj*/> select(std::function<bool(const feature_point_t&)> f);
@@ -176,7 +178,29 @@ inline void feature_curve_t::update_statistics() {
       break;
     }
 }
+
+inline std::vector<feature_curve_t> feature_curve_t::split_geo() const
+{
+  std::vector<feature_curve_t> results;
   
+  feature_curve_t subtraj;
+  subtraj.id = this->id;
+
+  for (size_t i = 0; i < size() - 1; i ++) {
+    subtraj.push_back(at(i));
+
+    const auto lonlat = at(i).lonlat();
+    const auto lonlat1 = at(i+1).lonlat();
+
+    if (std::abs(std::get<0>(lonlat1) - std::get<0>(lonlat)) > M_PI) {
+      results.push_back(subtraj);
+      subtraj.clear();
+    }
+  }
+
+  return results;
+}
+
 inline std::vector<feature_curve_t> feature_curve_t::split() const 
 {
   std::vector<feature_curve_t> results;
