@@ -550,14 +550,19 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
 {
   mpas_data_stream.reset(new mpas_stream(input_pattern, comm));
   mpas_data_stream->initialize();
-  if (ntimesteps != 0)
+  if (ntimesteps != 0) {
     mpas_data_stream->set_ntimesteps(ntimesteps);
+    fprintf(stderr, "overriding ntimesteps to %zu\n", ntimesteps);
+  }
   // mpas_mesh_->surface_cells_to_vtu("mpas-surface.vtu");
   // exit(1);
   
   tracker_particle_mpas_ocean.reset(new particle_tracer_mpas_ocean(comm, mpas_data_stream->mesh()) );
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
-  
+ 
+  fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 
+      pt_nsteps_per_interval, pt_nsteps_per_checkpoint, pt_delta_t);
+
   tracker_particle_mpas_ocean->set_ntimesteps(mpas_data_stream->ntimesteps);
   tracker_particle_mpas_ocean->set_nsteps_per_interval(pt_nsteps_per_interval);
   tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(pt_nsteps_per_checkpoint);
@@ -581,7 +586,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
     tracker_particle_mpas_ocean->push_field_data_snapshot(g); // field_data);
 
     if (k != 0) tracker_particle_mpas_ocean->advance_timestep();
-    if (k == stream->n_timesteps() - 1) tracker_particle_mpas_ocean->update_timestep();
+    if (k == ntimesteps - 1) tracker_particle_mpas_ocean->update_timestep();
   });
 
   while (mpas_data_stream->advance_timestep()) { }
@@ -810,13 +815,6 @@ static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& res
     j["variables"] = vars;
   }
 
-  if (results.count("pt-seed-strides")) {
-    const auto str = results["pt-seed-strides"].as<std::string>();
-    const auto strs = split(str, ",");
-    for (const auto s : strs)
-      pt_seed_strides.push_back( std::atoi(s.c_str()) );
-  }
-
   if (results.count("temporal-smoothing-kernel")) j["temporal-smoothing-kernel"] = results["temporal-smoothing-kernel"].as<double>();
   if (results.count("temporal-smoothing-kernel-size")) j["temporal-smoothing-kernel-size"] = results["temporal-smoothing-kernel-size"].as<size_t>();
   if (results.count("spatial-smoothing-kernel")) j["spatial-smoothing-kernel"] = results["spatial-smoothing-kernel"].as<double>();
@@ -930,9 +928,12 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   }
   
   ttype = tracker::str2tracker(feature);
-  if (ttype == TRACKER_TDGL_VORTEX) { // TDGL uses a different reader for now
-  } else if (ttype == TRACKER_XGC_BLOB_FILAMENT || ttype == TRACKER_XGC_BLOB_THRESHOLD) { // xgc using a different reader for xgc filaments
-  // } else if (ttype == TRACKER_MPAS_O_CRITICAL_POINT) {
+  if (ttype == TRACKER_TDGL_VORTEX) { 
+    // TDGL uses a different reader for now
+  } else if (ttype == TRACKER_XGC_BLOB_FILAMENT || ttype == TRACKER_XGC_BLOB_THRESHOLD) {
+    // xgc using a different reader for xgc filaments
+  } else if (ttype == TRACKER_MPAS_O_PARTICLES) {
+    // use mpas_data_stream
   } else {
     j_input = args_to_input_stream_json(results);
     stream->set_input_source_json(j_input);
@@ -940,7 +941,14 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
   if (results.count("xgc-smoothing-kernel-size") || results.count("xgc-smoothing-kernel-file"))
     xgc_use_smoothing_kernel = true;
 
-  if (ttype == TRACKER_CRITICAL_POINT || ttype == TRACKER_MPAS_O_CRITICAL_POINT)
+  if (results.count("pt-seed-strides")) {
+    const auto str = results["pt-seed-strides"].as<std::string>();
+    const auto strs = split(str, ",");
+    for (const auto s : strs)
+      pt_seed_strides.push_back( std::atoi(s.c_str()) );
+  }
+
+  if (ttype == TRACKER_CRITICAL_POINT)
     initialize_critical_point_tracker(comm);
   else if (ttype == TRACKER_MPAS_O_PARTICLES)
     initialize_particle_tracer_mpas_ocean(comm);
