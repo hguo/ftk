@@ -87,6 +87,7 @@ std::vector<int> pt_seed_strides;
 
 // mpas-o specific
 std::shared_ptr<mpas_stream> mpas_data_stream;
+bool geo_output = false;
 
 // devices
 std::string device_ids;
@@ -592,7 +593,11 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   while (mpas_data_stream->advance_timestep()) { }
 
   tracker_particle_mpas_ocean->finalize();
-  tracker_particle_mpas_ocean->write_geo_trajectories(output_pattern);
+  
+  if (geo_output)
+    tracker_particle_mpas_ocean->write_geo_trajectories(output_pattern);
+  else 
+    tracker_particle_mpas_ocean->write_trajectories(output_pattern);
 }
 
 void initialize_particle_tracer(diy::mpi::communicator comm)
@@ -881,6 +886,8 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
      cxxopts::value<std::string>(output_type)->default_value("traced"))
     ("output-format", "Output format {text|vtp|vtu|ply}.  The default behavior is to automatically determine format by filename", 
      cxxopts::value<std::string>(output_format)->default_value(str_auto))
+    ("geo", "Output with lonlatz coordinates.", 
+     cxxopts::value<bool>(geo_output))
     ("intercept-length", "Length of intercepted outputs", 
      cxxopts::value<int>(intercept_length)->default_value("2"))
     ("type-filter", "Type filter: ane single or a combination of critical point types, e.g. `min', `max', `saddle', `min|max'",
