@@ -30,6 +30,7 @@ struct particle_tracer : public virtual tracker
   virtual void prepare_timestep();
 
   void write_trajectories(const std::string& filename);
+  void write_geo_trajectories(const std::string& filename);
 
   void set_delta_t(double d) { current_delta_t = d; } // overriding delta t
   void set_nsteps_per_interval(int n) { nsteps_per_interval = n; }
@@ -71,12 +72,23 @@ inline bool particle_tracer::advance_timestep()
   return snapshots.size() > 0;
 }
 
+inline void particle_tracer::write_geo_trajectories(const std::string& filename)
+{
+#if FTK_HAVE_VTK
+  if (comm.rank() == 0) {
+    auto poly = trajectories.to_geo().to_vtp( scalar_names() );
+    write_polydata(filename, poly);
+  }
+#endif
+}
+
 inline void particle_tracer::write_trajectories(const std::string& filename)
 {
-  // if (comm.rank() == 0)
 #if FTK_HAVE_VTK
-  auto poly = trajectories.to_vtp( scalar_names() );
-  write_polydata(filename, poly);
+  if (comm.rank() == 0) {
+    auto poly = trajectories.to_vtp( scalar_names() );
+    write_polydata(filename, poly);
+  }
 #endif
 }
 

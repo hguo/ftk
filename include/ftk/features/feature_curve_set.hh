@@ -28,6 +28,8 @@ struct feature_curve_set_t : public std::multimap<int, feature_curve_t>
   std::list<feature_curve_t> to_list() const;
   void from_list(const std::list<feature_curve_t>&);
 
+  feature_curve_set_t to_geo() const;
+
   // std::vector<int> split(int);
   void split_all();
   
@@ -488,6 +490,26 @@ inline std::vector<int> feature_curve_set_t::split(int i)
   return result;
 }
 #endif
+
+inline feature_curve_set_t feature_curve_set_t::to_geo() const
+{
+  feature_curve_set_t set;
+
+  for (feature_curve_set_t::const_iterator it = this->cbegin(); it != this->cend(); it ++) {
+    feature_curve_t curve = it->second;
+    curve.convert_to_geo();
+      
+#if 1
+    std::vector<feature_curve_t> curves = curve.split_geo();
+    for (const feature_curve_t& subcurve : curves)
+      set.insert({it->first, subcurve});
+#else
+    set.insert({it->first, curve});
+#endif
+  }
+
+  return set;
+}
 
 inline void feature_curve_set_t::split_all()
 {

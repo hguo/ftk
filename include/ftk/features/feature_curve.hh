@@ -15,7 +15,8 @@ struct feature_curve_t : public std::vector<feature_point_t>
   void update_statistics();
   void derive_velocity(); // (const std::vector<double> &dog_kernel); // assuming the traj contains only ordinal points (dt=1)
 
-  std::vector<feature_curve_t> split_geo() const;
+  void convert_to_geo();
+  std::vector<feature_curve_t> split_geo() const; // assume coordinates are already converted to geo coordinates
 
   std::vector<feature_curve_t> split() const; // split to consistent subtrajs
   std::vector<int/*idx in original traj*/> to_ordinals() const;
@@ -179,25 +180,40 @@ inline void feature_curve_t::update_statistics() {
     }
 }
 
+inline void feature_curve_t::convert_to_geo()
+{
+  for (size_t i = 0; i < size(); i ++) {
+    auto &p = at(i);
+    auto lonlatz = p.lonlatz();
+
+    p.x[0] = std::get<0>(lonlatz);
+    p.x[1] = std::get<1>(lonlatz);
+    p.x[2] = std::get<2>(lonlatz);
+  }
+}
+
 inline std::vector<feature_curve_t> feature_curve_t::split_geo() const
 {
   std::vector<feature_curve_t> results;
-  
+ 
   feature_curve_t subtraj;
   subtraj.id = this->id;
 
-  for (size_t i = 0; i < size() - 1; i ++) {
+  for (size_t i = 0; i < size(); i ++) {
     subtraj.push_back(at(i));
 
-    const auto lonlat = at(i).lonlat();
-    const auto lonlat1 = at(i+1).lonlat();
-
-    if (std::abs(std::get<0>(lonlat1) - std::get<0>(lonlat)) > M_PI) {
-      results.push_back(subtraj);
-      subtraj.clear();
+    if (i < size() - 1) {
+      if (std::abs(at(i+1).x[0] - at(i).x[0]) > 180.0) {
+        results.push_back(subtraj);
+        subtraj.clear();
+      }
+    } else { // the last one
+      if (subtraj.size())
+        results.push_back(subtraj);
     }
   }
-
+  
+  // fprintf(stderr, "split from %zu to %zu\n", this->size(), results.size());
   return results;
 }
 

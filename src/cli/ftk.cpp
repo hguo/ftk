@@ -592,7 +592,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   while (mpas_data_stream->advance_timestep()) { }
 
   tracker_particle_mpas_ocean->finalize();
-  tracker_particle_mpas_ocean->write_trajectories(output_pattern);
+  tracker_particle_mpas_ocean->write_geo_trajectories(output_pattern);
 }
 
 void initialize_particle_tracer(diy::mpi::communicator comm)
