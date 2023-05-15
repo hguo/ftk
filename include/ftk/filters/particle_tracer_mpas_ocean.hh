@@ -62,6 +62,8 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
   // fprintf(stderr, "strides=%d, %d\n", stride_horizontal, stride_vertical);
   // fprintf(stderr, "ncells=%zu, nlayers=%zu\n", m->n_cells(), m->n_layers());
 
+  int nparticles = 0;
+
   for (auto i = 0; i < m->n_cells(); i += stride_horizontal) {
     double x0[3];
     for (auto k = 0; k < 3; k ++)
@@ -75,14 +77,19 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
         x0[k] = x0[k] * r / R;
 
       feature_curve_t curve;
+      curve.id = nparticles;
+      
       feature_point_t p;
       for (auto k = 0; k < 3; k ++)
         p.x[k] = x0[k]; // m->xyzCells(k, i); 
-     
+      p.id = nparticles;
+
       // fprintf(stderr, "cell=%zu, layer=%zu, thickness=%f, x0=%f, %f, %f\n", 
       //     i, j, thickness, x0[0], x0[1], x0[2]);
       curve.push_back(p);
       trajectories.add(curve);
+
+      nparticles ++;
     }
   }
   
