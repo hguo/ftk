@@ -106,45 +106,64 @@ static bool mpas_eval(
   wachspress_weights(nverts, xv, x, omega); 
 
   // locate layer
-  int layer;
+  int layer = hint_l;
   double upper = 0.0, lower = 0.0;
   const double R = vector_2norm<3>(x);
   const double z = R - R0;
+  int dir; // 0=up, 1=down
  
   bool succ = false;
-  if (hint_l < 0) 
-    need_locate_layer_brute_force = true;
-  else { // interpolate upper/lower tops and check if x remains in the layer
+  if (layer >= 0) { // interpolate upper/lower tops and check if x remains in the layer
     layer = hint_l;
     for (int i = 0; i < nverts; i ++) {
       upper += omega[i] * zTop[ iv[i] * nlayers + layer ];
       lower += omega[i] * zTop[ iv[i] * nlayers + layer+1 ];
 
-      if (z <= upper && z > lower)
+      if (z > upper)
+        dir = 0; // up
+      else if (z <= lower) 
+        dir = 1; // down
+      else 
         succ = true;
     }
-  }
+  } else {
+    layer = 0;
+    dir = 1;
 
-  if (need_locate_layer_brute_force) {
-    bool found = false;
-    for (layer = 0; layer < nlayers; layer ++) {
-      lower = 0.0;
-      for (int i = 0; i < nverts; i ++)
-        lower += omega[i] * zTop[ iv[i] * nlayers + layer ];
-
-      if (layer > 0)
-        if (z <= upper && z > lower) {
-          layer = layer - 1;
-          found = true;
-          break;
-        }
-
+  if (!succ) {
+    if (dir == 1) { // downward
       upper = lower;
-    }
+      for (layer = layer + 1 ; layer < nlayers-1; layer ++) {
+        lower = 0.0;
+        for (int k = 0; k < nverts; k ++)
+          lower += omega[k] * zTop[ iv[i] * nlayers + layer + 1];
 
-    if (!found)
-      return false;
+        if (z <= upper && z > lower) {
+          succ = true;
+          break;
+        } else 
+          upper = lower;
+      }
+    } else { // upward
+      lower = upper;
+      for (layer = layer - 1; layer >= 0; layer --) {
+        upper = 0.0;
+        for (int k = 0; k < nverts; k ++)
+          upper += omega[k] * zTop[ iv[i] * nlayers + layer];
+
+        if (z <= upper && z > lower) {
+          succ = true;
+          break;
+        } else 
+          lower = upper;
+      }
+    }
   }
+
+  if (!succ) 
+    return false;
+
+  hint_l = layer;
 
   const double alpha = (z - lower) / (upper - lower), 
                beta = 1.0 = alpha;

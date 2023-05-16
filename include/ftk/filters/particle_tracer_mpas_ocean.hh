@@ -281,7 +281,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   
   int layer = hint[1];
   double upper = 0.0, lower = 0.0;
-  int direction; // search direction: 0=up, 1=down
+  int dir; // search dir: 0=up, 1=down
 
   if (layer >= 0) { // try if the point is still in the layer
     for (int i = 0; i < nverts; i ++) {
@@ -290,18 +290,18 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
     }
 
     if (z > upper)
-      direction = 0; // upward
+      dir = 0; // upward
     else if (z <= lower)
-      direction = 1; // downward
+      dir = 1; // downward
     else 
       succ = true;
   } else {
     layer = 0;
-    direction = 1; // downward
+    dir = 1; // downward
   }
 
-  if (!succ) { // search along the direction
-    if (direction == 1) { // downward
+  if (!succ) { // search along the dir
+    if (dir == 1) { // downward
       upper = lower;
       for (layer = layer + 1 ; layer < nlayers-1; layer ++) {
         lower = 0.0;
@@ -334,7 +334,6 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
     return false;
 
   hint[1] = layer;
-  // fprintf(stderr, "x=%f, %f, %f, ilayer=%d\n", x[0], x[1], x[2], layer);
 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   double VVu[max_nverts], VVl[max_nverts]; // upper/lower vertical velocities on vertices
@@ -373,6 +372,11 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
   const double alpha = (z - lower) / (upper - lower);
   const double beta = 1.0 - alpha;
+  assert(alpha >= 0.0 && alpha <= 1.0);
+  
+  // fprintf(stderr, "x=%f, %f, %f, cell=%d, layer=%d, alpha=%f, beta=%f\n", 
+  //     x[0], x[1], x[2], cell_i, layer, 
+  //     alpha, beta);
 
   for (int k = 0; k < 3; k ++)
     v[k] = alpha * vu[k] + beta * vl[k];
