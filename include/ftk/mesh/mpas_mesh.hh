@@ -62,6 +62,8 @@ public:
   std::map<I, I> cellIdToIndex, // cellID->index
                  edgeIdToIndex,              
                  vertexIdToIndex; // vertexID->index
+  
+  // ndarray<I> cells_i_on_cell_i, verts_i_on_cell_i;
 
   ndarray<F> restingThickness, // Layer thickness when the ocean is at rest, i.e. without SSH or internal perturbations
              accRestingThickness;
