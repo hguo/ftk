@@ -12,9 +12,8 @@ static const double R0 = 6371229.0;
 // - zTop field
 // - scalar attribute fields
 
-template <typename F=double>
 __device__ __host__
-inline bool point_in_mpas_cell(
+inline bool point_in_cell(
     const int cell,
     const double *x,
     int iv[],
@@ -25,25 +24,25 @@ inline bool point_in_mpas_cell(
     const int *verts_on_cell)
 {
   // if (cell < 0) return false;
-  const nverts = n_edges_on_cell[cell];
+  const int nverts = n_edges_on_cell[cell];
   // double xv[MAX_VERTS][3];
 
   for (int i = 0; i < nverts; i ++) {
     for (int k = 0; k < 3; k ++) {
       const int vertex = verts_on_cell[cell * nverts + i];
-      iv[i][k] = vertex;
+      iv[k] = vertex;
       xv[i][k] = Xv[vertex*3+k];
     }
   }
 
-  return point_in_mpas_cell(nverts, xv, x);
+  return ftk::point_in_mpas_cell<double>(nverts, xv, x);
 }
 
 __device__ __host__
 static int locate_cell_local( // local search among neighbors
     const int curr, // current cell
     const double *x,
-    double iv[], // returns vertex ids
+    int iv[], // returns vertex ids
     double xv[][3], // returns vertex coordinates
     const double *Xv,
     const int max_edges,
@@ -53,14 +52,14 @@ static int locate_cell_local( // local search among neighbors
 {
   if (curr < 0)
     return -1; // not found
-  else if (point_in_mpas_cell(
+  else if (point_in_cell(
         curr, x, iv, xv, 
         max_edges, Xv, n_edges_on_cell, verts_on_cell))
     return curr;
   else {
     for (int i = 0; i < n_edges_on_cell[curr]; i ++) {
       const int cell = cells_on_cell[i + max_edges * curr];
-      if (point_in_mpas_cell(
+      if (point_in_cell(
             cell, x, iv, xv,
             max_edges, Xv, n_edges_on_cell, verts_on_cell))
         return cell;
@@ -103,12 +102,12 @@ static bool mpas_eval(
 
   // compute weights based on xyzVerts
   double omega[MAX_VERTS]; 
-  wachspress_weights(nverts, xv, x, omega); 
+  ftk::wachspress_weights(nverts, xv, x, omega); 
 
   // locate layer
   int layer = hint_l;
   double upper = 0.0, lower = 0.0;
-  const double R = vector_2norm<3>(x);
+  const double R = ftk::vector_2norm<3>(x);
   const double z = R - R0;
   int dir; // 0=up, 1=down
  
@@ -129,6 +128,7 @@ static bool mpas_eval(
   } else {
     layer = 0;
     dir = 1;
+  }
 
   if (!succ) {
     if (dir == 1) { // downward
@@ -136,7 +136,7 @@ static bool mpas_eval(
       for (layer = layer + 1 ; layer < nlayers-1; layer ++) {
         lower = 0.0;
         for (int k = 0; k < nverts; k ++)
-          lower += omega[k] * zTop[ iv[i] * nlayers + layer + 1];
+          lower += omega[k] * zTop[ iv[k] * nlayers + layer + 1];
 
         if (z <= upper && z > lower) {
           succ = true;
@@ -149,7 +149,7 @@ static bool mpas_eval(
       for (layer = layer - 1; layer >= 0; layer --) {
         upper = 0.0;
         for (int k = 0; k < nverts; k ++)
-          upper += omega[k] * zTop[ iv[i] * nlayers + layer];
+          upper += omega[k] * zTop[ iv[k] * nlayers + layer];
 
         if (z <= upper && z > lower) {
           succ = true;
@@ -166,7 +166,7 @@ static bool mpas_eval(
   hint_l = layer;
 
   const double alpha = (z - lower) / (upper - lower), 
-               beta = 1.0 = alpha;
+               beta = 1.0 - alpha;
 
   // reset values before interpolation
   memset(v, 0, sizeof(double)*3);

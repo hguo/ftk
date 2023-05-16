@@ -7,6 +7,7 @@
 namespace ftk {
 
 template <int n, typename T>
+__device__ __host__
 inline T vector_2norm(const T v[])
 {
   T norm(0);
@@ -16,12 +17,14 @@ inline T vector_2norm(const T v[])
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_2norm_2(const T v[])
 {
   return std::sqrt(v[0]*v[0] + v[1]*v[1]);
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_2norm_3(const T v[])
 {
   return std::sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
@@ -29,12 +32,14 @@ inline T vector_2norm_3(const T v[])
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_2norm_4(const T v[])
 {
   return vector_2norm<4,T>(v);
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_dist_2norm_2(const T v[], const T w[])
 {
   T u[2] = {v[0] - w[0], v[1] - w[1]};
@@ -42,6 +47,7 @@ inline T vector_dist_2norm_2(const T v[], const T w[])
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_dist_2norm_3(const T v[], const T w[])
 {
   T u[3] = {v[0] - w[0], v[1] - w[1], v[2] - w[2]};
@@ -49,6 +55,7 @@ inline T vector_dist_2norm_3(const T v[], const T w[])
 }
 
 template <int n, typename T>
+__device__ __host__
 inline T vector_2norm2(const T v[])
 {
   T d2(0);
@@ -58,6 +65,7 @@ inline T vector_2norm2(const T v[])
 }
 
 template <int n, typename T>
+__device__ __host__
 inline T vector_dist_2norm2(const T v[], const T w[])
 {
   T u[3] = {v[0] - w[0], v[1] - w[1], v[2] - w[2]};

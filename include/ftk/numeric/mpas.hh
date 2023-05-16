@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/numeric/cross_product.hh>
+#include <ftk/numeric/vector_dot_product.hh>
 
 namespace ftk {
 

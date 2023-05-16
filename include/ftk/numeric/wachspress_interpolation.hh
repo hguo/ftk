@@ -28,7 +28,7 @@ inline bool wachspress_weights( // return true if x is inside the cell
     const T x[3], // cartisian coordinates
     T omega[]) // wachspress coordinates
 {
-  T A[nverts]; // areas of triangles that connect x
+  T A[10/*nverts*/]; // areas of triangles that connect x
   for (int i = 0; i < nverts; i ++)
   A[i] = triangle_area3(X[i], x, X[(i+1)%nverts]);
    
