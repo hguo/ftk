@@ -140,25 +140,25 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
 
   // locate depth layer
   const double z = vector_2norm<3>(x) - earth_radius;
-  int i_layer = -1;
+  int layer = -1;
   for (int l = 0; l < nlayers; l ++)
     if (z <= tops[l] && z > tops[l+1]) {
-      i_layer = l;
+      layer = l;
       break;
     }
 
-  if (i_layer < 0 || i_layer == nlayers - 1) {
+  if (layer < 0 || layer == nlayers - 1) {
     // fprintf(stderr, "vertical layer not found, %f, %f, %f\n", x[0], x[1], x[2]);
     return false; 
   } else {
-    // fprintf(stderr, "ilayer=%d\n", i_layer);
+    // fprintf(stderr, "ilayer=%d\n", layer);
   }
 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++) {
-      Vu[i][k] = V[t]->at(k, i_layer, verts_i[i]);
-      Vl[i][k] = V[t]->at(k, i_layer+1, verts_i[i]);
+      Vu[i][k] = V[t]->at(k, layer, verts_i[i]);
+      Vl[i][k] = V[t]->at(k, layer+1, verts_i[i]);
     }
   
   double vu[3] = {0}, vl[3] = {0};
@@ -168,7 +168,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
       vl[k] += omega[i] * Vl[i][k];
     }
 
-  const double alpha = (z - tops[i_layer+1]) / (tops[i_layer] - tops[i_layer+1]);
+  const double alpha = (z - tops[layer+1]) / (tops[layer] - tops[layer+1]);
 
   for (int k = 0; k < 3; k ++)
     v[k] = alpha * vu[k] + (1.0 - alpha) * vl[k];
@@ -275,66 +275,66 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   // with the wachpress weights, first interpolate the thickness
   // of each layer, and then find the proper layer
 
-  double tops[max_nlayers] = {0};
-  bool succ_layer_hint = false;
+  // double tops[max_nlayers] = {0};
+  bool succ = false;
   const double z = vector_2norm<3>(x) - earth_radius;
   
-  int i_layer = hint[1];
-  if (i_layer >= 0) { // try if the point is still in the layer
+  int layer = hint[1];
+  double upper = 0.0, lower = 0.0;
+  int direction; // search direction: 0=up, 1=down
+
+  if (layer >= 0) { // try if the point is still in the layer
     for (int i = 0; i < nverts; i ++) {
-      tops[i_layer] += omega[i] * zTop[t]->at(0, i_layer, verts_i[i]);
-      tops[i_layer+1] += omega[i] * zTop[t]->at(0, i_layer+1, verts_i[i]);
+      upper += omega[i] * zTop[t]->at(0, layer, verts_i[i]);
+      lower += omega[i] * zTop[t]->at(0, layer+1, verts_i[i]);
     }
 
-    if (z <= tops[i_layer] && z > tops[i_layer+1]) {
-      // fprintf(stderr, "layer hint succ, %f, %f, %f, ilayer=%d\n", x[0], x[1], x[2], i_layer);
-      succ_layer_hint = true;
-    }
+    if (z > upper)
+      direction = 0; // upward
+    else if (z <= lower)
+      direction = 1; // downward
+    else 
+      succ = true;
+  } else {
+    layer = 0;
+    direction = 1; // downward
   }
 
-  if (!succ_layer_hint) {
-#if 0
-    // interpolate all depth layers
-    for (int l = 0; l < nlayers; l ++)
-      for (int i = 0; i < nverts; i ++)
-        tops[l] += omega[i] * zTop[t]->at(0, l, verts_i[i]);
-#endif
+  if (!succ) { // search along the direction
+    if (direction == 1) { // downward
+      upper = lower;
+      for (layer = layer + 1 ; layer < nlayers-1; layer ++) {
+        lower = 0.0;
+        for (int k = 0; k < nverts; k ++)
+          lower += omega[k] * zTop[t]->at(0, layer+1, verts_i[k]);
 
-    // locate depth layer
-#if 0
-    i_layer = -1;
-    for (int l = 0; l < nlayers-1; l ++)
-      if (z <= tops[l] && z > tops[l+1]) {
-        i_layer = l;
-        break;
+        if (z <= upper && z > lower) {
+          succ = true;
+          break;
+        } else 
+          upper = lower;
       }
-#endif
-    
-    // interpolate and search depth layers
-    i_layer = -1;
-    for (int l = 0; l < nlayers; l ++) {
-      tops[l] = 0.0;
-      for (int i = 0; i < nverts; i ++)
-        tops[l] += omega[i] * zTop[t]->at(0, l, verts_i[i]);
-      if (l > 0 && z <= tops[l-1] && z > tops[l]) {
-        i_layer = l-1;
-        break;
-      } 
-    }
+    } else { // upward
+      lower = upper;
+      for (layer = layer - 1; layer >= 0; layer --) {
+        upper = 0.0;
+        for (int k = 0; k < nverts; k ++)
+          upper += omega[k] * zTop[t]->at(0, layer, verts_i[k]);
 
-    // i_layer = mpas_mesh<>::locate_layer_bisection(nlayers, tops, z);
-    // i_layer = mpas_mesh<>::locate_layer_brute_force(nlayers, tops, z);
-
-    if (i_layer < 0 || i_layer == nlayers - 1) {
-      // fprintf(stderr, "vertical layer not found, %f, %f, %f\n", x[0], x[1], x[2]);
-      return false; 
-    } else {
-      // fprintf(stderr, "ilayer=%d\n", i_layer);
+        if (z <= upper && z > lower) {
+          succ = true;
+          break;
+        } else 
+          lower = upper;
+      }
     }
   }
 
-  hint[1] = i_layer;
-  // fprintf(stderr, "x=%f, %f, %f, ilayer=%d\n", x[0], x[1], x[2], i_layer);
+  if (!succ) 
+    return false;
+
+  hint[1] = layer;
+  // fprintf(stderr, "x=%f, %f, %f, ilayer=%d\n", x[0], x[1], x[2], layer);
 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   double VVu[max_nverts], VVl[max_nverts]; // upper/lower vertical velocities on vertices
@@ -343,15 +343,15 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   // double Su[max_nverts], Sl[max_nverts]; // salinity
   for (int i = 0; i < nverts; i ++) {
     for (int k = 0; k < 3; k ++) {
-      Vu[i][k]  = V[t]->at(k, i_layer, verts_i[i]);
-      Vl[i][k]  = V[t]->at(k, i_layer+1, verts_i[i]);
+      Vu[i][k]  = V[t]->at(k, layer, verts_i[i]);
+      Vl[i][k]  = V[t]->at(k, layer+1, verts_i[i]);
     }
-    VVu[i] = vertVelocityTop[t]->at(0, i_layer, verts_i[i]);
-    VVl[i] = vertVelocityTop[t]->at(0, i_layer+1, verts_i[i]);
-    Su[i] = salinity[t]->at(0, i_layer, verts_i[i]);
-    Sl[i] = salinity[t]->at(0, i_layer+1, verts_i[i]);
-    Tu[i] = temperature[t]->at(0, i_layer, verts_i[i]);
-    Tl[i] = temperature[t]->at(0, i_layer+1, verts_i[i]);
+    VVu[i] = vertVelocityTop[t]->at(0, layer, verts_i[i]);
+    VVl[i] = vertVelocityTop[t]->at(0, layer+1, verts_i[i]);
+    Su[i] = salinity[t]->at(0, layer, verts_i[i]);
+    Sl[i] = salinity[t]->at(0, layer+1, verts_i[i]);
+    Tu[i] = temperature[t]->at(0, layer, verts_i[i]);
+    Tl[i] = temperature[t]->at(0, layer+1, verts_i[i]);
   }
 
   double vu[3] = {0}, vl[3] = {0};
@@ -371,7 +371,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
     tl += omega[i] * Tl[i];
   }
 
-  const double alpha = (z - tops[i_layer+1]) / (tops[i_layer] - tops[i_layer+1]);
+  const double alpha = (z - lower) / (upper - lower);
   const double beta = 1.0 - alpha;
 
   for (int k = 0; k < 3; k ++)
@@ -386,7 +386,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
 #if 0
   fprintf(stderr, "t%d, cell_i=%d, ilayer=%d x=%f, %f, %f, vx=%f, vy=%f, vz=%f, vv=%f, salinity=%f, temperature=%f\n", 
-      t, cell_i, i_layer, x[0], x[1], x[2], v[0], v[1], v[2], v[4], v[5], v[6]);
+      t, cell_i, layer, x[0], x[1], x[2], v[0], v[1], v[2], v[4], v[5], v[6]);
 #endif
 
   return true;

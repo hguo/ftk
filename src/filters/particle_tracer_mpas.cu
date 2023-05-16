@@ -108,7 +108,7 @@ static bool mpas_eval(
   // locate layer
   int layer;
   double upper = 0.0, lower = 0.0;
-  const double R = vector_2norm(x);
+  const double R = vector_2norm<3>(x);
   const double z = R - R0;
  
   bool need_locate_layer_brute_force = false;
