@@ -79,6 +79,7 @@ struct ndarray : public ndarray_base {
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4) {reshape({n0, n1, n2, n3, n4});}
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5) {reshape({n0, n1, n2, n3, n4, n5});}
   void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshape({n0, n1, n2, n3, n4, n5, n6});}
+  void reset() { p.clear(); dims.clear(); s.clear(); set_multicomponents(0); set_has_time(false); }
 
   ndarray<T> slice(const lattice&) const;
   ndarray<T> slice(const std::vector<size_t>& starts, const std::vector<size_t> &sizes) const;

@@ -111,7 +111,7 @@ static bool mpas_eval(
   const double R = vector_2norm<3>(x);
   const double z = R - R0;
  
-  bool need_locate_layer_brute_force = false;
+  bool succ = false;
   if (hint_l < 0) 
     need_locate_layer_brute_force = true;
   else { // interpolate upper/lower tops and check if x remains in the layer
@@ -120,8 +120,8 @@ static bool mpas_eval(
       upper += omega[i] * zTop[ iv[i] * nlayers + layer ];
       lower += omega[i] * zTop[ iv[i] * nlayers + layer+1 ];
 
-      if (!(z <= upper && z > lower))
-        need_locate_layer_brute_force = true;
+      if (z <= upper && z > lower)
+        succ = true;
     }
   }
 

@@ -36,11 +36,26 @@ public:
 
   // void interpolate_c2v(const I vid, const F cvals[3][], F vvals[]) const;
 
-  I cid2i(I cid) const { auto it = cellIdToIndex.find(cid); if (it != cellIdToIndex.end()) return it->second; else return -1;  }
-  I vid2i(I vid) const { auto it = vertexIdToIndex.find(vid); if (it != vertexIdToIndex.end()) return it->second; else return -1; }
+  I cid2i(I cid) const { 
+    if (simple_idmap) return cid - 1;
+    else {
+      auto it = cellIdToIndex.find(cid); 
+      if (it != cellIdToIndex.end()) return it->second; 
+      else return -1;  
+    }
+  }
+  
+  I vid2i(I vid) const {
+    if (simple_idmap) return vid - 1; 
+    else {
+      auto it = vertexIdToIndex.find(vid); 
+      if (it != vertexIdToIndex.end()) return it->second; 
+      else return -1; 
+    }
+  }
 
-  I i2cid(I i) const { return indexToCellID[i]; }
-  I i2vid(I i) const { return indexToVertexID[i]; }
+  I i2cid(I i) const { if (simple_idmap) return i+1; else return indexToCellID[i]; }
+  I i2vid(I i) const { if (simple_idmap) return i+1; return indexToVertexID[i]; }
 
   I verts_i_on_cell_i(const I i, I vi[]) const; // returns number of verts
   void vert_i_coords(const I i, F X[3]) const;
@@ -67,6 +82,8 @@ public:
 
   ndarray<F> restingThickness, // Layer thickness when the ocean is at rest, i.e. without SSH or internal perturbations
              accRestingThickness;
+
+  bool simple_idmap = false;
 
 #if 0
   ndarray<I> voronoi_c2v, // (6, nc)
@@ -208,18 +225,41 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   verticesOnCell.read_netcdf(ncid, "verticesOnCell");
   nEdgesOnCell.read_netcdf(ncid, "nEdgesOnCell");
 
+  simple_idmap = true;
+
   indexToCellID.read_netcdf(ncid, "indexToCellID");
-  for (auto i = 0; i < indexToCellID.size(); i ++)
+  for (auto i = 0; i < indexToCellID.size(); i ++) {
     cellIdToIndex[indexToCellID[i]] = i;
+    if (indexToCellID[i] != i + 1)
+      simple_idmap = false;
+  }
 
   indexToEdgeID.read_netcdf(ncid, "indexToEdgeID");
-  for (auto i = 0; i < indexToEdgeID.size(); i ++)
+  for (auto i = 0; i < indexToEdgeID.size(); i ++) {
     edgeIdToIndex[indexToEdgeID[i]] = i;
+    if (indexToEdgeID[i] != i + 1) 
+      simple_idmap = false;
+  }
   
   indexToVertexID.read_netcdf(ncid, "indexToVertexID");
-  for (auto i = 0; i < indexToVertexID.size(); i ++) 
+  for (auto i = 0; i < indexToVertexID.size(); i ++) {
     vertexIdToIndex[indexToVertexID[i]] = i;
+    if (indexToVertexID[i] != i + 1)
+      simple_idmap = false;
+  }
+  
+  // fprintf(stderr, "simple_idmap=%d\n", simple_idmap);
+  if (simple_idmap) {
+    indexToVertexID.reset();
+    indexToEdgeID.reset();
+    indexToCellID.reset();
 
+    cellIdToIndex.clear();
+    edgeIdToIndex.clear();
+    vertexIdToIndex.clear();
+  }
+
+#if 0
   std::vector<I> vconn;
   for (int i = 0; i < cellsOnVertex.dim(1); i ++) {
     if (cellsOnVertex(0, i) == 0 || 
@@ -235,6 +275,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   ndarray<I> conn;
   conn.copy_vector(vconn);
   conn.reshape(3, vconn.size()/3);
+#endif
  
   ndarray<F> xCell, yCell, zCell;
   xCell.read_netcdf(ncid, "xCell");
@@ -274,8 +315,8 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
   NC_SAFE_CALL( nc_close(ncid) );
 
-  fprintf(stderr, "mpas mesh: #vert=%zu, #tri=%zu\n", 
-      xyzCells.dim(1), conn.dim(1));
+  // fprintf(stderr, "mpas mesh: #vert=%zu, #tri=%zu\n", 
+  //     xyzCells.dim(1), conn.dim(1));
 
   // return std::shared_ptr<mpas_mesh<I, F>>(
   //     new mpas_mesh<I, F>(xyz, conn));
