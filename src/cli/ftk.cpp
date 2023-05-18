@@ -99,7 +99,8 @@ std::shared_ptr<tracker> mtracker;
 std::shared_ptr<json_interface> wrapper;
 std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
-std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
+std::shared_ptr<critical_line_tracker> tracker_critical_line;
+std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line_regular;
 std::shared_ptr<critical_line_tracker_3d_unstructured> tracker_critical_line_unstructured;
 std::shared_ptr<particle_tracer> tracker_particle;
 std::shared_ptr<particle_tracer_mpas_ocean> tracker_particle_mpas_ocean;
@@ -649,34 +650,43 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
 void initialize_critical_line_tracker(diy::mpi::communicator comm)
 {
   const auto js = stream->get_json();
-  const size_t nd = stream->n_dimensions(),
-               DW = js["dimensions"][0], 
-               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
-               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
-  const int nt = js["n_timesteps"];
+  if (js["format"] == "vtu") {
+    auto m3 = simplicial_unstructured_3d_mesh<>::from_file(
+        js["filenames"][0]);
+    tracker_critical_line_unstructured.reset(new critical_line_tracker_3d_unstructured(comm, *m3) );
+    tracker_critical_line = tracker_critical_line_unstructured;
+  } else { // regular
+    const size_t nd = stream->n_dimensions(),
+                 DW = js["dimensions"][0], 
+                 DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
+                 DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+    const int nt = js["n_timesteps"];
 
-  if (feature == "sujudi_haimes")
-    tracker_critical_line.reset(new sujudi_haimes_tracker_3d_regular(comm) );
-  else if (feature == "levy_degani_seginer")
-    tracker_critical_line.reset(new levy_degani_seginer_tracker_3d_regular(comm) );
-  else if (feature == "ridge_valley")
-    tracker_critical_line.reset(new ridge_valley_tracker_3d_regular(comm) );
-  else
-    tracker_critical_line.reset(new critical_line_tracker_3d_regular(comm) );
-  
-  tracker_critical_line->set_domain(lattice({2, 2, 2}, {DW-2, DH-2, DD-2}));
-  tracker_critical_line->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
-  tracker_critical_line->set_end_timestep(nt - 1);
-  tracker_critical_line->set_number_of_threads(nthreads);
-  
-  if (comm.rank() == 0) {
-    // fprintf(stderr, "SUMMARY\n=============\n");
-    std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
-    // fprintf(stderr, "=============\n");
+    if (feature == "sujudi_haimes")
+      tracker_critical_line_regular.reset(new sujudi_haimes_tracker_3d_regular(comm) );
+    else if (feature == "levy_degani_seginer")
+      tracker_critical_line_regular.reset(new levy_degani_seginer_tracker_3d_regular(comm) );
+    else if (feature == "ridge_valley")
+      tracker_critical_line_regular.reset(new ridge_valley_tracker_3d_regular(comm) );
+    else
+      tracker_critical_line_regular.reset(new critical_line_tracker_3d_regular(comm) );
+    
+    tracker_critical_line_regular->set_domain(lattice({2, 2, 2}, {DW-2, DH-2, DD-2}));
+    tracker_critical_line_regular->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
+    tracker_critical_line_regular->set_end_timestep(nt - 1);
+    tracker_critical_line_regular->set_number_of_threads(nthreads);
+    
+    if (comm.rank() == 0) {
+      // fprintf(stderr, "SUMMARY\n=============\n");
+      std::cerr << "input=" << std::setw(2) << stream->get_json() << std::endl;
+      // fprintf(stderr, "=============\n");
+    }
+    
+    if (accelerator == "cuda")
+      tracker_critical_line_regular->use_accelerator(FTK_XL_CUDA);
+
+    tracker_critical_line = tracker_critical_line_regular;
   }
-  
-  if (accelerator == "cuda")
-    tracker_critical_line->use_accelerator(FTK_XL_CUDA);
 }
 
 void execute_critical_line_tracker(diy::mpi::communicator comm)

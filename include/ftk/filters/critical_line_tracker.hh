@@ -31,6 +31,13 @@ public:
 public:
   bool pop_field_data_snapshot();
   virtual void push_field_data_snapshot(const ndarray<float> &uv);
+
+  virtual void write_intersections(const std::string& filename) const;
+  virtual void write_sliced(const std::string& pattern) const {};
+  virtual void write_surfaces(const std::string& filename, std::string format="auto") const {};
+#if FTK_HAVE_VTK
+  virtual vtkSmartPointer<vtkPolyData> get_intersections_vtp() const {return nullptr;}
+#endif
   
 protected:
   struct field_data_snapshot_t {
@@ -80,6 +87,17 @@ inline void critical_line_tracker::push_field_data_snapshot(const ndarray<float>
 
   field_data_snapshots.emplace_back(snapshot);
 }
+
+inline void critical_line_tracker::write_intersections(const std::string& filename) const
+{
+#if FTK_HAVE_VTK
+  if (comm.rank() == get_root_proc())
+    write_polydata(filename, get_intersections_vtp());
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+}
+
 
 }
 

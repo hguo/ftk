@@ -37,7 +37,6 @@ public:
 
   void read_surfaces(const std::string& filename, std::string format="auto");
 
-  void write_intersections(const std::string& filename) const;
   void write_sliced(const std::string& pattern) const;
   void write_surfaces(const std::string& filename, std::string format="auto") const;
 #if FTK_HAVE_VTK
@@ -449,16 +448,6 @@ inline void critical_line_tracker_3d_regular::read_surfaces(const std::string& f
     surfaces.load(filename, format);
     fprintf(stderr, "readed surfaces #pts=%zu, #tris=%zu\n", surfaces.pts.size(), surfaces.tris.size());
   }
-}
-
-inline void critical_line_tracker_3d_regular::write_intersections(const std::string& filename) const
-{
-#if FTK_HAVE_VTK
-  if (comm.rank() == get_root_proc())
-    write_polydata(filename, get_intersections_vtp());
-#else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
-#endif
 }
 
 inline void critical_line_tracker_3d_regular::write_sliced(const std::string& pattern) const

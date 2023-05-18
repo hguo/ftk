@@ -29,9 +29,10 @@ struct critical_line_tracker_3d_unstructured :
 {
   critical_line_tracker_3d_unstructured(diy::mpi::communicator comm, const simplicial_unstructured_3d_mesh<>& m) : 
     critical_line_tracker(comm), unstructured_3d_tracker(comm, m), tracker(comm) {}
+  ~critical_line_tracker_3d_unstructured() {}
   
   void initialize() {}
-  void finalize();
+  void finalize() {};
   void reset() {}
 
   void update_timestep();
@@ -71,7 +72,7 @@ inline void critical_line_tracker_3d_unstructured::simplex_values(
   }
 }
 
-bool critical_line_tracker_3d_unstructured::check_simplex(int i, feature_point_t& p)
+inline bool critical_line_tracker_3d_unstructured::check_simplex(int i, feature_point_t& p)
 {
   int tri[3];
   m.get_simplex(2, i, tri);
@@ -122,7 +123,7 @@ bool critical_line_tracker_3d_unstructured::check_simplex(int i, feature_point_t
   return true;
 }
 
-void critical_line_tracker_3d_unstructured::update_timestep()
+inline void critical_line_tracker_3d_unstructured::update_timestep()
 {
   if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
   
