@@ -14,6 +14,7 @@
 #include "ftk/filters/levy_degani_seginer_tracker_3d_regular.hh"
 #include "ftk/filters/ridge_valley_tracker_3d_regular.hh"
 #include "ftk/filters/tdgl_vortex_tracker_3d_regular.hh"
+#include "ftk/filters/critical_line_tracker_3d_unstructured.hh"
 #include "ftk/filters/xgc_blob_filament_tracker.hh"
 #include "ftk/filters/xgc_blob_threshold_tracker.hh"
 #include "ftk/filters/particle_tracer_regular.hh"
@@ -99,6 +100,7 @@ std::shared_ptr<json_interface> wrapper;
 std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
 std::shared_ptr<critical_line_tracker_3d_regular> tracker_critical_line;
+std::shared_ptr<critical_line_tracker_3d_unstructured> tracker_critical_line_unstructured;
 std::shared_ptr<particle_tracer> tracker_particle;
 std::shared_ptr<particle_tracer_mpas_ocean> tracker_particle_mpas_ocean;
 std::shared_ptr<threshold_tracker<>> tracker_threshold;

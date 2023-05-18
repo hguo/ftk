@@ -23,7 +23,8 @@ namespace ftk {
 
 struct critical_line_tracker_3d_regular : public virtual critical_line_tracker, public virtual regular_tracker
 {
-  critical_line_tracker_3d_regular(diy::mpi::communicator comm) : critical_line_tracker(comm), regular_tracker(comm, 3), tracker(comm) {}
+  critical_line_tracker_3d_regular(diy::mpi::communicator comm) : 
+    critical_line_tracker(comm), regular_tracker(comm, 3), tracker(comm) {}
   virtual ~critical_line_tracker_3d_regular() {}
 
   void finalize();
