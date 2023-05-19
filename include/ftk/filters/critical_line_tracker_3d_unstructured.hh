@@ -27,12 +27,12 @@ namespace ftk {
 struct critical_line_tracker_3d_unstructured :
   public virtual critical_line_tracker, public virtual unstructured_3d_tracker
 {
-  critical_line_tracker_3d_unstructured(diy::mpi::communicator comm, const simplicial_unstructured_3d_mesh<>& m) : 
+  critical_line_tracker_3d_unstructured(diy::mpi::communicator comm, std::shared_ptr<simplicial_unstructured_3d_mesh<>> m) : 
     critical_line_tracker(comm), unstructured_3d_tracker(comm, m), tracker(comm) {}
   ~critical_line_tracker_3d_unstructured() {}
   
   void initialize() {}
-  void finalize() {};
+  void finalize();
   void reset() {}
 
   void update_timestep();
@@ -45,8 +45,14 @@ public:
       T x[n][4], 
       T UV[][2]) const;
 
+public:
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
+#endif
+
 protected:
   std::map<int, feature_point_t> intersections;
+  std::set<int> related_cells;
 };
 
 ////////////
@@ -56,10 +62,10 @@ inline void critical_line_tracker_3d_unstructured::simplex_values(
     const int verts[n], T X[n][4], T uv[n][2]) const
 {
   for (int i = 0; i < n; i ++) {
-    const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
-    const int k = m.flat_vertex_id(verts[i]);
+    const int iv = m->flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
+    const int k = m->flat_vertex_id(verts[i]);
     const auto &data = field_data_snapshots[iv];
-    m.get_coords(verts[i], X[i]);
+    m->get_coords(verts[i], X[i]);
 
 #if 0
     if (!data.scalar.empty())
@@ -75,10 +81,12 @@ inline void critical_line_tracker_3d_unstructured::simplex_values(
 inline bool critical_line_tracker_3d_unstructured::check_simplex(int i, feature_point_t& p)
 {
   int tri[3];
-  m.get_simplex(2, i, tri);
+  m->get_simplex(2, i, tri);
 
   double X[3][4], UV[3][2], uv[3][2];
-  simplex_values<2, double>(tri, X, UV);
+  simplex_values<3, double>(tri, X, UV);
+
+  // print3x2("UV", UV);
 
   // locate zero
   double mu[3], // barycentric coordinates
@@ -116,10 +124,10 @@ inline bool critical_line_tracker_3d_unstructured::check_simplex(int i, feature_
   // p.cond = cond;
 #endif
   p.tag = i;
-  p.ordinal = m.is_ordinal(2, i);
+  p.ordinal = m->is_ordinal(2, i);
   p.timestep = current_timestep;
 
-  fprintf(stderr, "%f, %f, %f, %f\n", p[0], p[1], p[2], p[3]);
+  // fprintf(stderr, "%f, %f, %f, %f\n", p[0], p[1], p[2], p[3]);
   return true;
 }
 
@@ -135,9 +143,47 @@ inline void critical_line_tracker_3d_unstructured::update_timestep()
     }
   };
 
-  m.element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+  m->element_for_ordinal(2, current_timestep, func, xl, nthreads, enable_set_affinity);
   if (field_data_snapshots.size() >= 2)
-    m.element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+    m->element_for_interval(2, current_timestep, func, xl, nthreads, enable_set_affinity);
+}
+
+#if FTK_HAVE_VTK
+inline vtkSmartPointer<vtkPolyData> critical_line_tracker_3d_unstructured::get_intersections_vtp() const
+{
+  vtkSmartPointer<vtkPolyData> poly = vtkPolyData::New();
+  vtkSmartPointer<vtkPoints> points = vtkPoints::New();
+  vtkSmartPointer<vtkCellArray> vertices = vtkCellArray::New();
+ 
+  vtkIdType pid[1];
+  for (const auto &kv : intersections) {
+    const auto &cp = kv.second;
+    double p[3] = {cp.x[0], cp.x[1], cp.x[2]}; 
+    // if (cpdims() == 2) p[2] = cp.t;
+    pid[0] = points->InsertNextPoint(p);
+    vertices->InsertNextCell(1, pid);
+  }
+
+  poly->SetPoints(points);
+  poly->SetVerts(vertices);
+  
+  return poly;
+}
+#endif
+
+inline void critical_line_tracker_3d_unstructured::finalize()
+{
+  if (comm.rank() == get_root_proc()) {
+    fprintf(stderr, "#intersections=%zu, #related_cells=%zu\n", 
+        intersections.size(), related_cells.size());
+
+#if 0
+    if (start_timestep == current_timestep) // single timestep
+      build_vortex_lines();
+    else // multi timesteps
+      build_vortex_surfaces();
+#endif
+  }
 }
 
 }

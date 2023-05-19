@@ -445,7 +445,7 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
   if (m->nd() == 2)
     tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
   else 
-    tracker.reset(new critical_point_tracker_3d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_3d_mesh<>>(m)));
+    tracker.reset(new critical_point_tracker_3d_unstructured(comm, std::dynamic_pointer_cast<simplicial_unstructured_3d_mesh<>>(m)));
   
   configure_tracker_general(comm);
   tracker->initialize();

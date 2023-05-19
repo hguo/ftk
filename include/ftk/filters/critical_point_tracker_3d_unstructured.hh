@@ -39,7 +39,7 @@ struct critical_point_tracker_3d_unstructured :
 {
   // critical_point_tracker_3d_unstructured(const simplicial_unstructured_extruded_3d_mesh<>& m) : m(m) {}
   // critical_point_tracker_3d_unstructured() {}
-  critical_point_tracker_3d_unstructured(diy::mpi::communicator comm, const simplicial_unstructured_3d_mesh<>& m) : 
+  critical_point_tracker_3d_unstructured(diy::mpi::communicator comm, std::shared_ptr<simplicial_unstructured_3d_mesh<>> m) : 
     critical_point_tracker(comm), unstructured_3d_tracker(comm, m), tracker(comm) {}
   virtual ~critical_point_tracker_3d_unstructured() {};
   
@@ -81,10 +81,10 @@ inline void critical_point_tracker_3d_unstructured::simplex_values(
     const int verts[n], T X[n][4], T f[n][FTK_CP_MAX_NUM_VARS], T v[n][3], T J[n][3][3]) const
 {
   for (int i = 0; i < n; i ++) {
-    const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
-    const int k = m.flat_vertex_id(verts[i]);
+    const int iv = m->flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
+    const int k = m->flat_vertex_id(verts[i]);
     const auto &data = field_data_snapshots[iv];
-    m.get_coords(verts[i], X[i]);
+    m->get_coords(verts[i], X[i]);
 
     if (!data.scalar.empty())
       for (int j = 0; j < get_num_scalar_components(); j ++)
@@ -103,7 +103,7 @@ inline void critical_point_tracker_3d_unstructured::simplex_values(
 inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature_point_t& cp)
 {
   int tet[4];
-  m.get_simplex(3, i, tet); 
+  m->get_simplex(3, i, tet); 
 
   double X[4][4], f[4][FTK_CP_MAX_NUM_VARS], V[4][3], Js[4][3][3];
   simplex_values<4, double>(tet, X, f, V, Js);
@@ -149,7 +149,7 @@ inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature
   cp.x[2] = x[2];
   cp.t = x[3];
 
-  fprintf(stderr, "X=%f, %f, %f, %f, tet=%d, tettype=%d\n", x[0], x[1], x[2], x[3], i, m.tet_type(i));
+  fprintf(stderr, "X=%f, %f, %f, %f, tet=%d, tettype=%d\n", x[0], x[1], x[2], x[3], i, m->tet_type(i));
 
   if (!field_data_snapshots[0].scalar.empty())
     for (int k = 0; k < get_num_scalar_components(); k ++)
@@ -162,7 +162,7 @@ inline bool critical_point_tracker_3d_unstructured::check_simplex(int i, feature
   }
   
   cp.tag = i;
-  cp.ordinal = m.is_ordinal(3, i);
+  cp.ordinal = m->is_ordinal(3, i);
   cp.timestep = current_timestep;
 
   return true;
@@ -193,10 +193,10 @@ inline void critical_point_tracker_3d_unstructured::update_timestep()
     }
   };
 
-  m.element_for_ordinal(3, current_timestep, func, xl, nthreads, enable_set_affinity);
+  m->element_for_ordinal(3, current_timestep, func, xl, nthreads, enable_set_affinity);
   // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
   if (field_data_snapshots.size() >= 2)
-    m.element_for_interval(3, current_timestep, func, xl, nthreads, enable_set_affinity);
+    m->element_for_interval(3, current_timestep, func, xl, nthreads, enable_set_affinity);
   // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
 
   if (enable_streaming_trajectories) {
@@ -206,9 +206,9 @@ inline void critical_point_tracker_3d_unstructured::update_timestep()
         discrete_critical_points,
         [&](int f) {
           std::set<int> neighbors;
-          const auto cells = m.side_of(3, f);
+          const auto cells = m->side_of(3, f);
           for (const auto c : cells)
-            for (const auto f1 : m.sides(4, c))
+            for (const auto f1 : m->sides(4, c))
               neighbors.insert(f1);
           return neighbors;
         },
@@ -228,7 +228,7 @@ inline void critical_point_tracker_3d_unstructured::finalize()
     // Convert connected components to geometries
     auto neighbors = [&](int f) {
       std::set<int> neighbors;
-      const auto cells = m.side_of(3, f);
+      const auto cells = m->side_of(3, f);
 #if 0
       fprintf(stderr, "tet=%d\n", f);
       int vf[4];
@@ -245,7 +245,7 @@ inline void critical_point_tracker_3d_unstructured::finalize()
         m.get_simplex(4, c, vc);
         fprintf(stderr, "--pent.simplex=%d, %d, %d, %d, %d\n", vc[0], vc[1], vc[2], vc[3], vc[4]);
 #endif
-        const auto elements = m.sides(4, c);
+        const auto elements = m->sides(4, c);
         for (const auto f1 : elements) {
           neighbors.insert(f1);
           // fprintf(stderr, "----tet=%d\n", f1);

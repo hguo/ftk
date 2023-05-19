@@ -653,7 +653,7 @@ void initialize_critical_line_tracker(diy::mpi::communicator comm)
   if (js["format"] == "vtu") {
     auto m3 = simplicial_unstructured_3d_mesh<>::from_file(
         js["filenames"][0]);
-    tracker_critical_line_unstructured.reset(new critical_line_tracker_3d_unstructured(comm, *m3) );
+    tracker_critical_line_unstructured.reset(new critical_line_tracker_3d_unstructured(comm, m3) );
     tracker_critical_line = tracker_critical_line_unstructured;
   } else { // regular
     const size_t nd = stream->n_dimensions(),
@@ -674,7 +674,6 @@ void initialize_critical_line_tracker(diy::mpi::communicator comm)
     tracker_critical_line_regular->set_domain(lattice({2, 2, 2}, {DW-2, DH-2, DD-2}));
     tracker_critical_line_regular->set_array_domain(lattice({0, 0, 0}, {DW, DH, DD}));
     tracker_critical_line_regular->set_end_timestep(nt - 1);
-    tracker_critical_line_regular->set_number_of_threads(nthreads);
     
     if (comm.rank() == 0) {
       // fprintf(stderr, "SUMMARY\n=============\n");
@@ -687,6 +686,8 @@ void initialize_critical_line_tracker(diy::mpi::communicator comm)
 
     tracker_critical_line = tracker_critical_line_regular;
   }
+    
+  tracker_critical_line->set_number_of_threads(nthreads);
 }
 
 void execute_critical_line_tracker(diy::mpi::communicator comm)
