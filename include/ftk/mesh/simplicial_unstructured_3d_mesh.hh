@@ -41,7 +41,7 @@ public: // io
 #endif
 
 public: 
-  virtual void element_for(int d, std::function<void(I)> f) {} // TODO
+  virtual void element_for(int d, std::function<void(I)> f); // TODO
 
 private: // use get_simplex() and find_simplex instead
   void get_tetrahedron(I i, I tet[]) const;
@@ -528,6 +528,16 @@ bool simplicial_unstructured_3d_mesh<I, F>::find_tetrahedron(const I v[4], I &i)
     assert(std::get<3>(t) == v[3]);
     return true;
   }
+}
+
+template <typename I, typename F>
+void simplicial_unstructured_3d_mesh<I, F>::element_for(int d, std::function<void(I)> f)
+{
+  if (d == 2) {
+    for (I i = 0; i < n(2); i ++)
+      f(i);
+  } else
+    assert(false); // not implemented yet
 }
 
 template <typename I, typename F>

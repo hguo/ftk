@@ -49,6 +49,12 @@ public:
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
 #endif
+  void write_surfaces(const std::string& filename, std::string format="auto") const;
+
+protected:
+  void build_vortex_lines();
+  
+  feature_curve_set_t traced_curves;
 
 protected:
   std::map<int, feature_point_t> intersections;
@@ -176,12 +182,66 @@ inline void critical_line_tracker_3d_unstructured::finalize()
   if (comm.rank() == get_root_proc()) {
     fprintf(stderr, "#intersections=%zu, #related_cells=%zu\n", 
         intersections.size(), related_cells.size());
+  
+    // FIXME: single step only
+    build_vortex_lines();
+  }
 
 #if 0
     if (start_timestep == current_timestep) // single timestep
       build_vortex_lines();
     else // multi timesteps
       build_vortex_surfaces();
+#endif
+}
+
+inline void critical_line_tracker_3d_unstructured::build_vortex_lines()
+{
+  fprintf(stderr, "building vortex lines...\n");
+  
+  auto neighbors = [&](int f) {
+    std::set<int> neighbors;
+    const auto cells = m->side_of(2, f);
+    for (const auto c : cells) {
+      const auto elements = m->sides(3, c);
+      for (const auto f1 : elements)
+        neighbors.insert(f1);
+    }
+    return neighbors;
+  };
+
+  std::set<int> elements;
+  for (const auto &kv : intersections)
+    elements.insert(kv.first);
+  auto connected_components = extract_connected_components<int, std::set<int>>(
+      neighbors, elements);
+
+  for (const auto &component : connected_components) {
+    // std::vector<std::vector<double>> mycurves;
+    auto linear_graphs = ftk::connected_component_to_linear_components<int>(component, neighbors);
+    for (int j = 0; j < linear_graphs.size(); j ++) {
+      feature_curve_t traj; 
+      for (int k = 0; k < linear_graphs[j].size(); k ++)
+        traj.push_back(intersections[linear_graphs[j][k]]);
+      traced_curves.add(traj);
+    }
+  }
+  fprintf(stderr, "done, #curves=%zu\n", traced_curves.size());
+}
+
+inline void critical_line_tracker_3d_unstructured::write_surfaces(const std::string& filename, std::string format) const 
+{
+  if (comm.rank() == get_root_proc()) {
+    fprintf(stderr, "#curves=%zu\n", traced_curves.size());
+    traced_curves.write(filename, format);
+#if 0
+    if (current_timestep == start_timestep) { // single timestep
+      fprintf(stderr, "writing single-timestep results..\n");
+      fprintf(stderr, "#curves=%zu\n", traced_curves.size());
+      traced_curves.write(filename, format);
+    }
+    else 
+      surfaces.save(filename, format);
 #endif
   }
 }
