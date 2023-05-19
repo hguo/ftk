@@ -117,6 +117,33 @@ inline bool critical_line_tracker_3d_unstructured::check_simplex(int i, feature_
   double x[4];
   lerp_s2v4(X, mu, x);
 
+  // gradients; ignore time for now
+  {
+    const double Xs[3][2] = {
+      {X[0][0], X[0][1]},
+      {X[1][0], X[1][1]},
+      {X[2][0], X[2][1]}
+    };
+    const double u[3] = {uv[0][0], uv[1][0], uv[2][0]};
+    const double v[3] = {uv[0][1], uv[1][1], uv[2][1]};
+    double gradu[2], gradv[2];
+
+    gradient_2dsimplex2(Xs, u, gradu);
+    gradient_2dsimplex2(Xs, v, gradv);
+    // print3x2("Xs", Xs);
+    // print2("gradu", gradu);
+    // print2("gradv", gradv);
+
+    double J[2][2] = {
+      {gradu[0], gradu[1]},
+      {gradv[0], gradv[1]},
+    };
+    J[1][0] = J[0][1] = 0.5 * (J[1][0] + J[0][1]);
+
+    p.type = critical_point_type_2d<double>(J, true);
+    // print2x2("J", J);
+  }
+
   // result
   p.x[0] = x[0];
   p.x[1] = x[1];

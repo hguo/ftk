@@ -650,6 +650,8 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
 void initialize_critical_line_tracker(diy::mpi::communicator comm)
 {
   const auto js = stream->get_json();
+  std::cerr << js << std::endl;
+
   if (js["format"] == "vtu") {
     auto m3 = simplicial_unstructured_3d_mesh<>::from_file(
         js["filenames"][0]);
