@@ -39,6 +39,12 @@ struct simplicial_unstructured_periodic_2d_mesh : public object {
   void element_for_interval(int d, int t, std::function<void(I)> f,
       int xl = FTK_XL_NONE, int nthreads=std::thread::hardware_concurrency(), bool affinity = false) const;
 
+public:
+  void to_vtu_file(const std::string& filename, int np) const;
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu(int np) const;
+#endif
+
 protected:
   I normalize(int d, I k) const;
   
@@ -272,6 +278,65 @@ void simplicial_unstructured_periodic_2d_mesh<I, F>::initialize()
   // fprintf(stderr, "%zu, %zu\n",
   //     m3_ordinal_triangles.size(), m3_interval_triangles.size());
 }
+
+template <typename I, typename F>
+void simplicial_unstructured_periodic_2d_mesh<I, F>::to_vtu_file(const std::string& filename, int np) const
+{
+#if FTK_HAVE_VTK
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName(filename.c_str());
+  writer->SetInputData( to_vtu(np) );
+  writer->Write();
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+}
+
+#if FTK_HAVE_VTK
+template <typename I, typename F>
+vtkSmartPointer<vtkUnstructuredGrid> simplicial_unstructured_periodic_2d_mesh<I, F>::
+to_vtu(int np) const
+{
+  vtkSmartPointer<vtkUnstructuredGrid> grid = vtkUnstructuredGrid::New();
+  vtkSmartPointer<vtkPoints> pts = vtkPoints::New();
+  pts->SetNumberOfPoints(n(0) * np);
+
+  fprintf(stderr, "converting to vtu, n0=%zu, n3=%zu\n", n(0), n(3));
+
+  for (int p = 0; p < np; p ++) {
+    for (I i=0; i < n(0); i++) {
+      // pts->SetPoint(i, vertex_coords[i*3], vertex_coords[i*3+1], vertex_coords[i*3+2]); 
+      F coords[3];
+      get_coords(i + n(0) * p, coords);
+      pts->SetPoint(i, coords[0], coords[1], coords[2]);
+      fprintf(stderr, "%f, %f, %f\n", coords[0], coords[1], coords[2]);
+    }
+  }
+  grid->SetPoints(pts);
+
+  for (int p = 0; p < np-1; p ++) {
+    const I offset = p * n(3);
+    for (int i=0; i < n(3); i ++) {
+      // vtkIdType ids[4] = {tetrahedra[i*4], tetrahedra[i*4+1], tetrahedra[i*4+2], tetrahedra[i*4+3]};
+      I tet[4];
+      m3->get_simplex(3, i, tet);
+      vtkIdType ids[4] = {
+        tet[0] + offset, 
+        tet[1] + offset, 
+        tet[2] + offset, 
+        tet[3] + offset};
+      fprintf(stderr, "%d, %d, %d, %d\n", ids[0], ids[1], ids[2], ids[3]);
+      // fprintf(stderr, "adding tet %d: %d, %d, %d, %d\n", i, tet[0], tet[1], tet[2], tet[3]);
+      grid->InsertNextCell(VTK_TETRA, 4, ids);
+    }
+  }
+
+  grid->PrintSelf(std::cerr, vtkIndent(2));
+
+  return grid;
+}
+
+#endif
 
 }
 
