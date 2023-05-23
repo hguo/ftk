@@ -375,9 +375,17 @@ vtkSmartPointer<vtkUnstructuredGrid> simplicial_xgc_3d_mesh<I, F>::
 scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& scalar) const 
 {
   vtkSmartPointer<vtkUnstructuredGrid> grid = to_vtu_slices();
-  vtkSmartPointer<vtkDataArray> array = vphi == 1 ? 
-    scalar.to_vtk_data_array(varname) : 
-    interpolate(scalar).to_vtk_data_array(varname);
+
+  bool need_interpolation;
+  if (vphi == 1) 
+    need_interpolation = false;
+  else if (scalar.dim(1) == nphi)
+    need_interpolation = true;
+  else need_interpolation = false;
+
+  vtkSmartPointer<vtkDataArray> array = need_interpolation ? 
+    interpolate(scalar).to_vtk_data_array(varname) :
+    scalar.to_vtk_data_array(varname);
   
   grid->GetPointData()->AddArray(array);
   grid->GetPointData()->SetActiveScalars(varname.c_str());
@@ -606,7 +614,7 @@ void simplicial_xgc_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
   J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
   J.set_multicomponents(2);
   
-  for (size_t i = 0; i < nphi; i ++) {
+  for (size_t i = 0; i < scalar.dim(1) /* nphi */; i ++) {
     ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
     m2->smooth_scalar_gradient_jacobian(slice, f, grad, j);

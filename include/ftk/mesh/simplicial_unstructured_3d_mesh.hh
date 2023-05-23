@@ -52,6 +52,8 @@ private: // use get_simplex() and find_simplex instead
   bool find_triangle(const I v[3], I& i) const;
   bool find_edge(const I v[2], I& i) const;
 
+  const std::vector<std::tuple<I, I, I, I>>& get_tets() const {return tetrahedra;}
+
 public:
   virtual std::set<I> sides(int d, I i) const { return std::set<int>(); } // TODO
   virtual std::set<I> side_of(int d, I i) const;
