@@ -44,6 +44,11 @@ public:
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu(int np) const;
 #endif
+  
+  template <typename T>
+  void array_to_vtu(const std::string& filename, 
+      const std::vector<std::string>& varnames, 
+      const std::vector<ndarray<T>>& arrays) const;
 
 protected:
   I normalize(int d, I k) const;
@@ -338,8 +343,31 @@ to_vtu(int np) const
 
   return grid;
 }
-
 #endif
+
+template <typename I, typename F>
+template <typename T>
+void simplicial_unstructured_periodic_2d_mesh<I, F>::array_to_vtu(
+    const std::string& filename, 
+    const std::vector<std::string>& varnames, 
+    const std::vector<ndarray<T>>& arrays) const
+{
+#if FTK_HAVE_VTK
+  auto grid = to_vtu(arrays[0].dim(1));
+
+  for (int i = 0; i < varnames.size(); i ++) {
+    auto data = arrays[i].to_vtk_data_array(varnames[i]);
+    grid->GetPointData()->AddArray(data);
+  }
+
+  vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer = vtkXMLUnstructuredGridWriter::New();
+  writer->SetFileName( filename.c_str() );
+  writer->SetInputData( grid );
+  writer->Write();
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+#endif
+}
 
 }
 
