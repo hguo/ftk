@@ -13,21 +13,24 @@ const double kernel_size = 0.045;
 TEST_CASE("critical_point_tracking_woven_unstructured") {
   diy::mpi::communicator world;
  
-  ftk::simplicial_unstructured_2d_mesh<> m;
-  m.from_vtk_unstructured_grid_file(mesh_filename);
-  m.build_smoothing_kernel(kernel_size);
+  std::shared_ptr<ftk::simplicial_unstructured_2d_mesh<>> m(new ftk::simplicial_unstructured_2d_mesh<>());
+  m->from_vtk_unstructured_grid_file(mesh_filename);
+  m->build_smoothing_kernel(kernel_size);
 
-  ftk::critical_point_tracker_2d_unstructured tracker(world, m);
+  std::shared_ptr<ftk::simplicial_unstructured_extruded_2d_mesh<>> m3(
+      new ftk::simplicial_unstructured_extruded_2d_mesh_implicit<>(m));
+
+  ftk::critical_point_tracker_2d_unstructured tracker(world, m3);
   tracker.initialize();
 
   for (int i = 0; i < nt; i ++) {
-    auto data = ftk::synthetic_woven_2D_unstructured<double>(m.get_coords(), i*0.1, 
+    auto data = ftk::synthetic_woven_2D_unstructured<double>(m->get_coords(), i*0.1, 
         {0.5, 0.5}, // center
         10.0 // scaling factor
     );
 
     ftk::ndarray<double> scalar, grad, J;
-    m.smooth_scalar_gradient_jacobian(data, scalar, grad, J);
+    m->smooth_scalar_gradient_jacobian(data, scalar, grad, J);
     scalar.reshape({1, scalar.dim(0)});
 
     tracker.push_field_data_snapshot(scalar, grad, J);

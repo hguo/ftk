@@ -394,6 +394,14 @@ inline void ndarray_base::read_netcdf(int ncid, int varid, int ndims, const size
 #endif
 }
 
+inline void ndarray_base::to_netcdf(int ncid, int varid) const
+{
+  std::vector<size_t> starts(dims.size(), 0), sizes(dims);
+  std::reverse(sizes.begin(), sizes.end());
+
+  to_netcdf(ncid, varid, &starts[0], &sizes[0]);
+}
+
 inline void ndarray_base::to_netcdf(int ncid, int varid, const size_t st[], const size_t sz[]) const
 {
 #ifdef FTK_HAVE_NETCDF

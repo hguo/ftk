@@ -1,4 +1,4 @@
-#include <ftk/mesh/simplicial_unstructured_periodic_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh_explicit.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/ndarray.hh>
 
@@ -10,8 +10,8 @@ int main(int argc, char **argv)
   auto m2 = simplicial_xgc_2d_mesh<>::from_xgc_mesh_file(argv[1]);
   auto m3 = simplicial_unstructured_3d_mesh<>::from_file(argv[2]);
 
-  std::shared_ptr<simplicial_unstructured_periodic_2d_mesh<>> m;
-  m.reset(new simplicial_unstructured_periodic_2d_mesh<>(
+  std::shared_ptr<simplicial_unstructured_extruded_2d_mesh_explicit<>> m;
+  m.reset(new simplicial_unstructured_extruded_2d_mesh_explicit<>(
         std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m2), m3));
   
   const int nphi = 3;

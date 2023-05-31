@@ -4,6 +4,8 @@
 #include <ftk/config.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_3d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh_implicit.hh>
 #include <ftk/numeric/xgc_interpolant.hh>
 
 namespace ftk {
@@ -136,7 +138,7 @@ template <typename I, typename F>
 simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
     std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_) :
   m2(m2_),
-  m3(new simplicial_unstructured_extruded_2d_mesh<I, F>(*m2_))
+  m3(new simplicial_unstructured_extruded_2d_mesh_implicit<I, F>(m2_))
 {
 }
 
@@ -145,7 +147,7 @@ simplicial_xgc_3d_mesh<I, F>::simplicial_xgc_3d_mesh(
     std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> m2_, 
     int nphi_, int iphi_, int vphi_) :
   m2(m2_),
-  m3(new simplicial_unstructured_extruded_2d_mesh<I, F>(*m2_)),
+  m3(new simplicial_unstructured_extruded_2d_mesh_implicit<I, F>(m2_)),
   nphi(nphi_), iphi(iphi_), vphi(vphi_)
 {
 

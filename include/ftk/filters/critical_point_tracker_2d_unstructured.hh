@@ -44,7 +44,9 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker, p
 {
   // critical_point_tracker_2d_unstructured(const simplicial_unstructured_extruded_2d_mesh<>& m) : m(m) {}
   // critical_point_tracker_2d_unstructured() {}
-  critical_point_tracker_2d_unstructured(diy::mpi::communicator comm, const simplicial_unstructured_2d_mesh<>& m) : 
+  critical_point_tracker_2d_unstructured(
+      diy::mpi::communicator comm, 
+      std::shared_ptr<simplicial_unstructured_extruded_2d_mesh<>> m) : 
     critical_point_tracker(comm), unstructured_2d_tracker(comm, m), tracker(comm) {}
   virtual ~critical_point_tracker_2d_unstructured() {};
   
@@ -84,10 +86,10 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
     const int verts[3], T X[3][4], T f[3][FTK_CP_MAX_NUM_VARS], T v[3][2], T J[3][2][2]) const
 {
   for (int i = 0; i < 3; i ++) {
-    const int iv = m.flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
-    const int k = m.flat_vertex_id(verts[i]);
+    const int iv = m->flat_vertex_time(verts[i]) == current_timestep ? 0 : 1;
+    const int k = m->flat_vertex_id(verts[i]);
     const auto &data = field_data_snapshots[iv];
-    m.get_coords(verts[i], X[i]);
+    m->get_coords(verts[i], X[i]);
 
     if (!data.scalar.empty())
       for (int j = 0; j < get_num_scalar_components(); j ++)
@@ -106,7 +108,7 @@ inline void critical_point_tracker_2d_unstructured::simplex_values(
 inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature_point_t& cp)
 {
   int tri[3];
-  const auto tid = m.get_simplex(2, i, tri, m.is_partial()); 
+  const auto tid = m->get_simplex(2, i, tri, m->is_partial()); 
 
   double X[3][4], f[3][FTK_CP_MAX_NUM_VARS], V[3][2], Js[3][2][2];
   simplex_values<double>(tri, X, f, V, Js);
@@ -147,7 +149,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
   cp.x[2] = x[2];
   cp.t = x[3];
 #if 0
-  if (m.ncoords() == 3) {
+  if (m->ncoords() == 3) {
     cp.t = x[2];
   } else { // ncoords == 4
     cp.x[2] = x[2];
@@ -156,7 +158,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
 #endif
   
   cp.tag = tid; // i;
-  cp.ordinal = m.is_ordinal(2, i);
+  cp.ordinal = m->is_ordinal(2, i);
   cp.timestep = current_timestep;
 
   // deriving types
@@ -164,7 +166,7 @@ inline bool critical_point_tracker_2d_unstructured::check_simplex(int i, feature
     if (cp.ordinal){
       // auto deg = ftk::critical_point_degree_simplex2(V, X);
       auto deg = positive2(Vf, tri);
-      auto chi = m.get_triangle_chi(i);
+      auto chi = m->get_triangle_chi(i);
       deg *= chi;
       // fprintf(stderr, "deg=%d, chi=%d\n", deg, chi);
       if (deg == 1) cp.type = 1; 
@@ -250,10 +252,10 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
     }
   };
 
-  m.element_for_ordinal(2, current_timestep, func, m.is_partial(), xl, nthreads, enable_set_affinity);
+  m->element_for_ordinal(2, current_timestep, func, m->is_partial(), xl, nthreads, enable_set_affinity);
   // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
   if (field_data_snapshots.size() >= 2)
-    m.element_for_interval(2, current_timestep, func, m.is_partial(), xl, nthreads, enable_set_affinity);
+    m->element_for_interval(2, current_timestep, func, m->is_partial(), xl, nthreads, enable_set_affinity);
   // fprintf(stderr, "#dcp=%zu\n", discrete_critical_points.size());
 
   if (enable_streaming_trajectories) {
@@ -263,9 +265,9 @@ inline void critical_point_tracker_2d_unstructured::update_timestep()
         discrete_critical_points,
         [&](int f) {
           std::set<int> neighbors;
-          const auto cells = m.side_of(2, f);
+          const auto cells = m->side_of(2, f);
           for (const auto c : cells)
-            for (const auto f1 : m.sides(3, c))
+            for (const auto f1 : m->sides(3, c))
               neighbors.insert(f1);
           return neighbors;
         },
@@ -285,7 +287,7 @@ inline void critical_point_tracker_2d_unstructured::finalize()
     // Convert connected components to geometries
     auto neighbors = [&](int f) {
       std::set<int> neighbors;
-      const auto cells = m.side_of(2, f);
+      const auto cells = m->side_of(2, f);
       // fprintf(stderr, "face=%d\n", f);
       // int vf[3];
       // m.get_simplex(2, f, vf);
@@ -297,7 +299,7 @@ inline void critical_point_tracker_2d_unstructured::finalize()
         // m.get_simplex(3, c, vc);
         // fprintf(stderr, "--cell.simplex=%d, %d, %d, %d\n", vc[0], vc[1], vc[2], vc[3]);
 
-        const auto elements = m.sides(3, c);
+        const auto elements = m->sides(3, c);
         for (const auto f1 : elements) {
           // fprintf(stderr, "----face=%d\n", f1);
           neighbors.insert(f1);

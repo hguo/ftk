@@ -2,6 +2,7 @@
 #include "catch.hh"
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh_implicit.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_3d_mesh.hh>
 #include <ftk/ndarray.hh>
 
@@ -72,10 +73,10 @@ TEST_CASE("mesh_extruded_3d_unstructured_tet_sides") {
 #endif
 
 TEST_CASE("mesh_extruded_2d_unstructured") {
-  ftk::simplicial_unstructured_2d_mesh<> m;
-  m.from_vtk_unstructured_grid_file("1x1.vtu");
+  std::shared_ptr<ftk::simplicial_unstructured_2d_mesh<>> m(new ftk::simplicial_unstructured_2d_mesh<>());
+  m->from_vtk_unstructured_grid_file("1x1.vtu");
 
-  ftk::simplicial_unstructured_extruded_2d_mesh<> m1(m);
+  ftk::simplicial_unstructured_extruded_2d_mesh_implicit<> m1(m);
 
   srand(0);
   for (int k = 0; k < 1000; k ++) {
@@ -104,10 +105,10 @@ TEST_CASE("mesh_extruded_2d_unstructured") {
 }
 
 TEST_CASE("mesh_extruded_2d_unstructured_find") {
-  ftk::simplicial_unstructured_2d_mesh<> m;
-  m.from_vtk_unstructured_grid_file("1x1.vtu");
+  std::shared_ptr<ftk::simplicial_unstructured_2d_mesh<>> m(new ftk::simplicial_unstructured_2d_mesh<>());
+  m->from_vtk_unstructured_grid_file("1x1.vtu");
 
-  ftk::simplicial_unstructured_extruded_2d_mesh<> m1(m);
+  ftk::simplicial_unstructured_extruded_2d_mesh_implicit<> m1(m);
 
   srand(0);
   for (int k = 0; k < 1000; k ++) {

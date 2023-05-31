@@ -12,15 +12,20 @@ const int nt = 32;
 TEST_CASE("critical_point_tracking_double_gyre_unstructured") {
   diy::mpi::communicator world;
  
-  ftk::simplicial_unstructured_2d_mesh<> m;
-  m.from_vtk_unstructured_grid_file(mesh_filename);
+  // ftk::simplicial_unstructured_2d_mesh<> m;
+  // m.from_vtk_unstructured_grid_file(mesh_filename);
+  std::shared_ptr<ftk::simplicial_unstructured_2d_mesh<>> m(new ftk::simplicial_unstructured_2d_mesh<>());
+  m->from_vtk_unstructured_grid_file(mesh_filename);
 
-  ftk::critical_point_tracker_2d_unstructured tracker(world, m);
+  std::shared_ptr<ftk::simplicial_unstructured_extruded_2d_mesh<>> m3(
+      new ftk::simplicial_unstructured_extruded_2d_mesh_implicit<>(m));
+
+  ftk::critical_point_tracker_2d_unstructured tracker(world, m3);
   tracker.initialize();
 
   for (int i = 0; i < nt; i ++) {
     auto data = ftk::synthetic_double_gyre_unstructured<double>(
-        m.get_coords(), static_cast<double>(i));
+        m->get_coords(), static_cast<double>(i));
    
 #if 0 // write back
     char filename[1024];

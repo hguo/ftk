@@ -7,6 +7,8 @@
 #include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh_implicit.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh_explicit.hh>
 #include <ftk/mesh/mpas_mesh.hh>
 #include <ftk/ndarray/stream.hh>
 #include <ftk/ndarray/writer.hh>
@@ -442,9 +444,13 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
     fatal(FTK_ERR_MESH_UNSUPPORTED_FORMAT);
   }
 
-  if (m->nd() == 2)
-    tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
-  else 
+  if (m->nd() == 2) {
+    auto m2 = std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m);
+    std::shared_ptr<simplicial_unstructured_extruded_2d_mesh_implicit<>> m3i(new simplicial_unstructured_extruded_2d_mesh_implicit<>(m2));
+    auto m3 = std::dynamic_pointer_cast<simplicial_unstructured_extruded_2d_mesh<>>(m3i);
+
+    tracker.reset(new critical_point_tracker_2d_unstructured(comm, m3));
+  } else 
     tracker.reset(new critical_point_tracker_3d_unstructured(comm, std::dynamic_pointer_cast<simplicial_unstructured_3d_mesh<>>(m)));
   
   configure_tracker_general(comm);
@@ -485,12 +491,15 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
   psi.read_h5(mesh_filename, "psi");
   
   // build mesh
-  ftk::simplicial_unstructured_2d_mesh<> m(coords, triangles);
-  m.build_edges();
+  std::shared_ptr<ftk::simplicial_unstructured_2d_mesh<>> m2(new simplicial_unstructured_2d_mesh<>(coords, triangles));
+  m2->build_edges();
 
   // tracker set up
+  std::shared_ptr<simplicial_unstructured_extruded_2d_mesh_implicit<>> m3i(new simplicial_unstructured_extruded_2d_mesh_implicit<>(m2));
+  auto m3 = std::dynamic_pointer_cast<simplicial_unstructured_extruded_2d_mesh<>>(m3i);
   tracker = std::shared_ptr<critical_point_tracker_2d_unstructured>(
-      new critical_point_tracker_2d_unstructured(comm, m));
+      new critical_point_tracker_2d_unstructured(comm, m3));
+ 
   configure_tracker_general(comm);
 
   tracker->set_scalar_components({"dneOverne0", "psi"});
@@ -511,10 +520,10 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
   }
 
   // load smoothing kernel
-  bool succ = m.read_smoothing_kernel(smoothing_kernel_filename);
+  bool succ = m2->read_smoothing_kernel(smoothing_kernel_filename);
   if (!succ) {
-    m.build_smoothing_kernel(smoothing_kernel_size);
-    m.write_smoothing_kernel(smoothing_kernel_filename);
+    m2->build_smoothing_kernel(smoothing_kernel_size);
+    m2->write_smoothing_kernel(smoothing_kernel_filename);
   }
   // fprintf(stderr, "mesh loaded., %zu, %zu, %zu\n", m.n(0), m.n(1), m.n(2));
 
@@ -523,7 +532,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
     dpot.reshape(dpot.dim(0));
 
     ftk::ndarray<double> scalar, grad, J;
-    m.smooth_scalar_gradient_jacobian(dpot, /*smoothing_kernel_size,*/ scalar, grad, J);
+    m2->smooth_scalar_gradient_jacobian(dpot, /*smoothing_kernel_size,*/ scalar, grad, J);
   
     ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
 
@@ -533,7 +542,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
       const std::string pattern = j["xgc"]["write_back_filename"];
       const std::string filename = series_filename(pattern, k);
       // m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
-      m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", scalar);
+      m2->scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", scalar);
     }
   };
   
@@ -542,7 +551,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
       auto dpot = field_data.get_transpose();
       for (int k = 0; k < dpot.dim(1); k ++) {
         ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
-        m.smooth_scalar_gradient_jacobian(dpot_slice, /*smoothing_kernel_size,*/ scalar, grad, J);
+        m2->smooth_scalar_gradient_jacobian(dpot_slice, /*smoothing_kernel_size,*/ scalar, grad, J);
 
         ftk::ndarray<double> scalars = ftk::ndarray<double>::concat({scalar, psi});
         tracker->push_field_data_snapshot(scalars, grad, J);
@@ -554,7 +563,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
           const std::string pattern = j["xgc"]["write_back_filename"];
           const std::string filename = series_filename(pattern, k);
           // m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
-          m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", scalar);
+          m2->scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", scalar);
         }
       }
     } else { // tracking over time
