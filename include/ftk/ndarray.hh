@@ -596,16 +596,19 @@ inline void ndarray<T>::from_vtk_regular_data(
   const int nd = d->GetDataDimension(), 
             nc = da->GetNumberOfComponents();
 
+  int vdims[3];
+  d->GetDimensions(vdims);
+
   if (nd == 2) {
-    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1]); // scalar field
+    if (nc == 1) reshape(vdims[0], vdims[1]); //scalar field
     else {
-      reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1]); // vector field
+      reshape(nc, vdims[0], vdims[1]); // vector field
       ncd = 1; // multicomponent array
     };
   } else if (nd == 3) {
-    if (nc == 1) reshape(d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]); // scalar field
+    if (nc == 1) reshape(vdims[0], vdims[1], vdims[2]); // scalar field
     else {
-      reshape(nc, d->GetDimensions()[0], d->GetDimensions()[1], d->GetDimensions()[2]);
+      reshape(nc, vdims[0], vdims[1], vdims[2]);
       ncd = 1; // multicomponent array
     }
   } else {

@@ -243,7 +243,8 @@ inline void regular_tracker::set_coords_rectilinear(vtkSmartPointer<vtkRectiline
 inline void regular_tracker::set_coords_explicit(vtkSmartPointer<vtkStructuredGrid> grid)
 {
   const int nd = grid->GetDataDimension();
-  const int *dims = grid->GetDimensions();
+  int dims[3];
+  grid->GetDimensions(dims);
 
   // std::shared_ptr<simplicial_regular_mesh> m(
   //   new simplicial_regular_mesh(lattice(nd, dims)));
