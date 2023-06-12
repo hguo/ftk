@@ -1473,12 +1473,17 @@ ndarray<T> ndarray_stream<T>::request_timestep_synthetic_woven(int k)
 
   if (part) {
     lattice domain({0, 0}, {DW, DH});
+    // std::cerr << "partial: " << domain << "; " << ext << "; " << t << std::endl;
     return ftk::synthetic_woven_2D_part<T>(domain, ext, t);
   } else {
     return ftk::synthetic_woven_2D<T>(DW, DH, t);
   }
-  // if (part) return arr.subarray(ext);
-  // else return arr;
+   
+#if 0
+  auto arr = synthetic_woven_2D<T>(DW, DH, t);
+  if (part) return arr.subarray(ext);
+  else return arr;
+#endif
 }
 
 template <typename T>
@@ -1701,8 +1706,9 @@ template <typename T>
 bool ndarray_stream<T>::is_partial_read_supported() const
 {
   if (j["type"] == "synthetic") {
-    if (j["name"] == "woven") return true;
-    else return false;
+    // if (j["name"] == "woven") return true;
+    // else return false;
+    return false;
   } else { // file
     const std::string fmt = j["format"];
     if (fmt == "float32" || fmt == "float64") 
