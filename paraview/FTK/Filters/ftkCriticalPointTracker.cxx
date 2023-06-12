@@ -15,6 +15,7 @@
 #include <ftk/ndarray/synthetic.hh>
 #include <ftk/ndarray/grad.hh>
 #include <ftk/ndarray/conv.hh>
+#include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh_implicit.hh>
 
 vtkStandardNewMacro(ftkCriticalPointTracker);
 
@@ -88,9 +89,11 @@ int ftkCriticalPointTracker::RequestData_vti(
     field_data.from_vtk_regular_data<vtkRectilinearGrid>(vtr, InputVariable);
   } else if (itype == VTK_STRUCTURED_GRID) {
     nd = vts->GetDataDimension();
-    DW = vts->GetDimensions()[0];
-    DH = vts->GetDimensions()[1];
-    DD = vts->GetDimensions()[2];
+    int dims[3];
+    vts->GetDimensions(dims);
+    DW = dims[0];
+    DH = dims[1]; 
+    DD = dims[2];
     field_data.from_vtk_regular_data<vtkStructuredGrid>(vts, InputVariable);
   } else 
     assert(false);
@@ -205,6 +208,7 @@ int ftkCriticalPointTracker::RequestData_vtu(
     vtkInformationVector** inputVector, 
     vtkInformationVector* outputVector)
 {
+  using namespace ftk;
   fprintf(stderr, "requesting vtu data.\n");
   
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
@@ -231,8 +235,14 @@ int ftkCriticalPointTracker::RequestData_vtu(
       // TODO
     } else if (cellTypesSet.find( VTK_TRIANGLE) != cellTypesSet.end()) { // the input is regarded as a simplicial 2D mesh
       fprintf(stderr, "treating the input as a 2D grid..\n");
-      m2u.from_vtu(input);
-      tcp.reset(new ftk::critical_point_tracker_2d_unstructured(MPI_COMM_WORLD, m2u));
+
+      std::shared_ptr<simplicial_unstructured_2d_mesh<>> m2(new simplicial_unstructured_2d_mesh<>);
+      m2->from_vtu(input);
+
+      std::shared_ptr<simplicial_unstructured_extruded_2d_mesh_implicit<>> m3i(new simplicial_unstructured_extruded_2d_mesh_implicit<>(m2));
+      auto m3 = std::dynamic_pointer_cast<simplicial_unstructured_extruded_2d_mesh<>>(m3i);
+
+      tcp.reset(new critical_point_tracker_2d_unstructured(MPI_COMM_WORLD, m3));
       tcp->set_enable_computing_degrees( ComputeDegrees );
     } else {
       fprintf(stderr, "treating the input as a 3D grid..\n");

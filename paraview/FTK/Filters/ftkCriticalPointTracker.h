@@ -63,8 +63,6 @@ private:
   
   std::shared_ptr<ftk::critical_point_tracker_regular> tcpr;
   std::shared_ptr<ftk::critical_point_tracker> tcp;
-  
-  ftk::simplicial_unstructured_2d_mesh<> m2u;
 };
 
 #endif
