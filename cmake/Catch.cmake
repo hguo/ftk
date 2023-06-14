@@ -122,10 +122,6 @@ function(catch_discover_tests TARGET)
   #  PROPERTY CROSSCOMPILING_EMULATOR
   #)
 
-  if (FTK_HAVE_MPI)
-    set (crosscompiling_emulator ${MPIEXEC_EXECUTABLE})
-  endif ()
-
   add_custom_command(
     TARGET ${TARGET} POST_BUILD
     BYPRODUCTS "${ctest_tests_file}"
