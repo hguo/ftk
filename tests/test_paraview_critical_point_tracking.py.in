@@ -5,27 +5,27 @@ LoadPlugin("$<TARGET_FILE:FTK>", ns=globals())
 class MainTest(unittest.TestCase):
     def test_paraview_critical_point_tracking_woven(self):
         myWoven = SpiralWoven2DSource()
-        myCriticalPointTracker = CriticalPointTracker2D(Input=myWoven)
+        myCriticalPointTracker = CriticalPointTracker(Input=myWoven)
         myCriticalPointTracker.UpdatePipeline()
 
-        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 51)
-        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 1846)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 49)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 337)
     
     def test_paraview_critical_point_tracking_moving_extremum_2d(self):
         data = MovingExtremum2DSource()
-        myCriticalPointTracker = CriticalPointTracker2D(Input=data)
+        myCriticalPointTracker = CriticalPointTracker(Input=data)
         myCriticalPointTracker.UpdatePipeline()
 
         self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 1)
-        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 269)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 90)
     
     def test_paraview_critical_point_tracking_moving_extremum_3d(self):
         data = MovingExtremum3DSource()
-        myCriticalPointTracker = CriticalPointTracker3D(Input=data)
+        myCriticalPointTracker = CriticalPointTracker(Input=data)
         myCriticalPointTracker.UpdatePipeline()
 
         self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfCells(), 1)
-        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 131)
+        self.assertEqual(myCriticalPointTracker.GetDataInformation().GetNumberOfPoints(), 31)
 
 if __name__ == '__main__':
     unittest.main()
