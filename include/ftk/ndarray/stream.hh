@@ -162,7 +162,7 @@ ndarray_stream<T>::ndarray_stream(
     diy::mpi::communicator comm)
 // #if FTK_HAVE_ADIOS2
 #if ADIOS2_USE_MPI
-  : adios(adios2_config_filename, comm, adios2::DebugON)
+  : adios(adios2_config_filename, comm) // , adios2::DebugON)
 #endif
 {
   fprintf(stderr, "creating stream...\n");
