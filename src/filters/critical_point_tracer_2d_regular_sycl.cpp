@@ -37,9 +37,16 @@ static std::vector<cp_t> extract_cp2dt(
     auto dcounter = cl::sycl::buffer<unsigned int>( &counter, 1 );
     auto dbuf = cl::sycl::buffer<cp_t>( buf, maxcps );
 
-    sycl::gpu_selector selector;
+    sycl::device d;
+    try {
+      d = sycl::device(sycl::gpu_selector_v);
+    } catch (sycl::exception const &e) {
+      d = sycl::device(sycl::cpu_selector_v);
+    }
+
+    // sycl::gpu_selector selector;
     // sycl::host_selector selector;
-    cl::sycl::queue q(selector);
+    cl::sycl::queue q(d); // selector);
 
     std::cerr << "Running on "
               << q.get_device().get_info<sycl::info::device::name>()

@@ -224,7 +224,7 @@ endif()
 
 # Based on Compiler ID, add support for DPCPP
 if( "x${CMAKE_CXX_COMPILER_ID}" STREQUAL "xIntelLLVM")
-  set(SYCL_FLAGS "--dpcpp ${SYCL_FLAGS}")
+  set(SYCL_FLAGS "${SYCL_FLAGS}")
 endif()
 
 # TODO veirfy if this is needed

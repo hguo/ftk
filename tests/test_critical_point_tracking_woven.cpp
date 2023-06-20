@@ -18,6 +18,17 @@ TEST_CASE("critical_point_tracking_cuda_woven_synthetic") {
 }
 #endif
 
+#if FTK_HAVE_SYCL
+TEST_CASE("critical_point_tracking_sycl_woven_synthetic") {
+  auto result = track_cp2d(js_woven_synthetic, {
+    {"accelerator", "sycl"}
+  });
+  diy::mpi::communicator world;
+  if (world.rank() == 0)
+    REQUIRE(std::get<0>(result) == 48); // the domain is slightly different from the CPU version.  will fix it in the future.
+}
+#endif
+
 TEST_CASE("critical_point_tracking_woven_synthetic") {
   auto result = track_cp2d(js_woven_synthetic);
   diy::mpi::communicator world;

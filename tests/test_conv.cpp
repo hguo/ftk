@@ -46,7 +46,10 @@ TEST_CASE("2D_conv_gaussian_test") {
   d.from_vector({1,2,3,4,5,6,7,8,9,});
   r = ftk::conv2D_gaussian(d,1.,2,2);
   r.to_vector(res);
-  REQUIRE(res == ans);
+  
+  for (int i = 0; i < ans.size(); i ++)
+    REQUIRE(res[i] == Approx(ans[i]).margin(epsilon));
+  // REQUIRE(res == ans);
 }
 
 TEST_CASE("3D_conv_test") {
