@@ -84,7 +84,7 @@ static std::vector<cp_t> extract_cp2dt(
             local_indices[i] = ext.to_index(vertices[i]);
           }
          
-          printf("local_indices=%d, %d, %d\n", local_indices[0], local_indices[1], local_indices[2]);
+          // printf("local_indices=%d, %d, %d\n", local_indices[0], local_indices[1], local_indices[2]);
           // out << "local_indices=" << local_indices[0] << "," << local_indices[1] << "," << local_indices[2] << cl::sycl::endl;
           // out << "vf[0]=" << vf[0][0] << "," << vf[0][1] << cl::sycl::endl;
           // return;
@@ -124,7 +124,7 @@ static std::vector<cp_t> extract_cp2dt(
             cp.x[0] = x[0];
             cp.x[1] = x[1];
             cp.t = x[2];
-            cp.cond = cond;
+            // cp.cond = cond;
             cp.tag = tid;
           }
         });
