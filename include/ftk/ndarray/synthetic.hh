@@ -150,6 +150,25 @@ std::array<T, 2> double_gyre(
 }
 
 template <typename T>
+std::array<T, 2> modified_double_gyre(
+    const T x, const T y, const T t,
+    const T A,
+    const T omega,
+    const T epsilon,
+    const T c = -0.2040811331,
+    const T d = 9.964223388)
+{
+  const auto r = [&](T t) { return omega * t + d; };
+  const auto q = [&](T t) { 
+    const T sinrt = sin(r(t)), sinrt2 = sinrt * sinrt;
+    return (-M_PI * c * sinrt + asin(c * omega * cos(r) / (A * M_PI))) / 
+                              (M_PI * epsilon * (c * c * sinrt2 - 1)); };
+  const auto p = [&](T t) { return asin(q) / omega - t; };
+
+  return double_gyre(x, y, t + p(t), A, omega, epsilon);
+}
+
+template <typename T>
 ndarray<T> synthetic_double_gyre_unstructured(
     const ndarray<T> coords, /* 2*n_vert */
     const T time,
