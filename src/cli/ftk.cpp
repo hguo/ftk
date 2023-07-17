@@ -49,6 +49,9 @@ bool enable_streaming_trajectories = false,
      disable_robust_detection = false;
 int intercept_length = 2;
 
+bool fixed_quantization_factor = false;
+double quantization_factor = 0.0;
+
 std::string post_processing_options;
 
 size_t ntimesteps = 0, start_timestep = 0;
@@ -199,6 +202,9 @@ static void initialize_critical_point_tracker(diy::mpi::communicator comm)
     j_tracker["enable_robust_detection"] = false;
 
   j_tracker["type_filter"] = type_filter_str;
+
+  if (fixed_quantization_factor)
+    j_tracker["fixed_quantization_factor"] = quantization_factor;
 
   if (xgc_mesh_filename.size() > 0) {
     nlohmann::json jx;
@@ -864,6 +870,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>(ntimesteps))
     ("start-timestep", "Start timestep", cxxopts::value<size_t>(start_timestep))
     ("var", "Variable name(s), e.g. `scalar', `u,v,w'.  Valid only for NetCDF, HDF5, and VTK.", cxxopts::value<std::string>())
+    ("q,quantization", "Quantization factor for SoS", cxxopts::value<double>())
     ("adios-config", "ADIOS2 config file", cxxopts::value<std::string>(adios_config_file))
     ("adios-name", "ADIOS2 I/O name", cxxopts::value<std::string>(adios_name))
     ("temporal-smoothing-kernel", "Temporal smoothing kernel bandwidth", cxxopts::value<double>())
@@ -968,6 +975,11 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     const auto strs = split(str, ",");
     for (const auto s : strs)
       pt_seed_strides.push_back( std::atoi(s.c_str()) );
+  }
+
+  if (results.count("quantization")) {
+    fixed_quantization_factor = true;
+    quantization_factor = results["quantization"].as<double>();
   }
 
   if (ttype == TRACKER_CRITICAL_POINT)

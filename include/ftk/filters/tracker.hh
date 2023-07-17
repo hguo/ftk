@@ -61,6 +61,9 @@ public:
   }
   virtual bool pop_field_data_snapshot();
 
+public:
+  void set_fixed_quantization_factor(bool, double); // use 
+
 protected:
   std::deque<std::shared_ptr<ndarray_group>> snapshots;
   int ntimesteps = 0; // unlimited
