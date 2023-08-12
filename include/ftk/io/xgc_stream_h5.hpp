@@ -23,7 +23,7 @@ inline bool xgc_stream_h5::read_oneddiag()
   const auto f = oneddiag_filename();
   ndarray<double> etemp_par, etemp_per;
   
-  steps.read_h5(f, "steps");
+  steps.read_h5(f, "step");
   time.read_h5(f, "time");
   etemp_par.read_h5(f, "e_parallel_mean_en_avg");
   etemp_per.read_h5(f, "e_perp_temperature_avg");

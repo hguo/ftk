@@ -66,7 +66,7 @@ std::string adios_name = "BPReader";
 
 // xgc specific
 std::shared_ptr<xgc_stream> xgc_data_stream;
-std::string xgc_data_path, 
+std::string xgc_path,
   xgc_mesh_filename, 
   xgc_ff_mesh_filename,
   xgc_bfield_filename,
@@ -327,7 +327,7 @@ void execute_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_xgc(diy::mpi::communicator comm)
 {
-  xgc_data_stream = xgc_stream::new_xgc_stream( xgc_data_path, comm );
+  xgc_data_stream = xgc_stream::new_xgc_stream( xgc_path, comm );
   if (start_timestep == 0) start_timestep = 1;
 
   xgc_data_stream->set_start_timestep(start_timestep);
@@ -355,24 +355,24 @@ void initialize_xgc(diy::mpi::communicator comm)
   xgc_nphi = array_nphi[0];
   xgc_iphi = std::max(1, array_iphi[0]);
 
-  if (xgc_data_path.length() > 0) {
+  if (xgc_path.length() > 0) {
     std::string postfix = ext == FILE_EXT_BP ? "bp" : "h5"; // TODO: check if format is bp
-    xgc_mesh_filename = xgc_data_path + "/xgc.mesh." + postfix;
+    xgc_mesh_filename = xgc_path + "/xgc.mesh." + postfix;
     if (!file_exists(xgc_mesh_filename)) {
       postfix = "bp";
-      xgc_mesh_filename = xgc_data_path + "/xgc.mesh." + postfix;
+      xgc_mesh_filename = xgc_path + "/xgc.mesh." + postfix;
     }
     if (!file_exists(xgc_mesh_filename)) {
       fatal("xgc mesh file not found.");
     }
-    xgc_bfield_filename = xgc_data_path + "/xgc.bfield." + postfix;
-    xgc_oneddiag_filename = xgc_data_path + "/xgc.oneddiag." + postfix;
-    xgc_units_filename = xgc_data_path + "/units.m";
+    xgc_bfield_filename = xgc_path + "/xgc.bfield." + postfix;
+    xgc_oneddiag_filename = xgc_path + "/xgc.oneddiag." + postfix;
+    xgc_units_filename = xgc_path + "/units.m";
   }
 
   if (comm.rank() == 0) {
     fprintf(stderr, "SUMMARY\n=============\n");
-    fprintf(stderr, "xgc_data_path=%s\n", xgc_data_path.c_str());
+    fprintf(stderr, "xgc_path=%s\n", xgc_path.c_str());
     fprintf(stderr, "xgc_mesh_filename=%s\n", xgc_mesh_filename.c_str());
     fprintf(stderr, "xgc_bfield_filename=%s\n", xgc_bfield_filename.c_str());
     fprintf(stderr, "xgc_oneddiag_filename=%s\n", xgc_oneddiag_filename.c_str());
@@ -440,6 +440,11 @@ void initialize_xgc_blob_filament_tracker(diy::mpi::communicator comm)
   initialize_xgc(comm);
 
   std::shared_ptr<xgc_blob_filament_tracker> tracker;
+
+  auto mx3 = xgc_data_stream->get_mx3();
+  fprintf(stderr, "mx3@, n0=%zu, n1=%zu, n2=%zu, n3=%zu\n", 
+      mx3->n(0), mx3->n(1), mx3->n(2), mx3->n(3));
+
   tracker.reset(new xgc_blob_filament_tracker(comm, xgc_data_stream->get_mx3()));
   tracker->set_device_ids(device_ids);
   tracker->set_device_buffer_size( device_buffer_size );
@@ -884,7 +889,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     // ("archived-discrete-critical-points", "Archived discrete critical points", cxxopts::value<std::string>(archived_discrete_critical_points_filename))
     ("archived-intersections", "Archived discrete intersections", cxxopts::value<std::string>(archived_intersections_filename))
     ("archived-traced", "Archived traced results", cxxopts::value<std::string>(archived_traced_filename))
-    ("xgc-data-path", "XGC data path; will automatically read mesh, bfield, and units.m files", cxxopts::value<std::string>(xgc_data_path))
+    ("xgc-path", "XGC data path; will automatically read mesh, bfield, and units.m files", cxxopts::value<std::string>(xgc_path))
     ("xgc-mesh", "XGC mesh file", cxxopts::value<std::string>(xgc_mesh_filename))
     ("xgc-bfield", "XGC bfield file", cxxopts::value<std::string>(xgc_bfield_filename))
     ("xgc-ff-mesh", "XGC field following mesh file", cxxopts::value<std::string>(xgc_ff_mesh_filename))
