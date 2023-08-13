@@ -140,8 +140,8 @@ inline void xgc_stream::initialize()
 
   probe_nphi_iphi();
   fprintf(stderr, "nphi=%d, iphi=%d, vphi=%d\n", nphi, iphi, vphi);
-  fprintf(stderr, "m2: n0=%zu, n1=%zu, n2=%zu\n", 
-      m2->n(0), m2->n(1), m2->n(2));
+  // fprintf(stderr, "m2: n0=%zu, n1=%zu, n2=%zu\n", 
+  //     m2->n(0), m2->n(1), m2->n(2));
   m3.reset( new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi) );
 
   if (vphi == 1) 
@@ -149,8 +149,8 @@ inline void xgc_stream::initialize()
   else 
     mx3.reset( new ftk::simplicial_xgc_3d_mesh<>(m2, nphi, iphi, vphi) );
   
-  fprintf(stderr, "m3: n0=%zu, n1=%zu, n2=%zu, n3=%zu\n", 
-      m3->n(0), m3->n(1), m3->n(2), m3->n(3));
+  // fprintf(stderr, "m3: n0=%zu, n1=%zu, n2=%zu, n3=%zu\n", 
+  //     m3->n(0), m3->n(1), m3->n(2), m3->n(3));
   
   // smoothing kernels
   if (enable_initialize_smoothing_kernel) {
@@ -176,8 +176,8 @@ inline void xgc_stream::initialize()
   
   current_timestep = start_timestep;
   
-  fprintf(stderr, "mx3: n0=%zu, n1=%zu, n2=%zu, n3=%zu\n", 
-      mx3->n(0), mx3->n(1), mx3->n(2), mx3->n(3));
+  // fprintf(stderr, "mx3: n0=%zu, n1=%zu, n2=%zu, n3=%zu\n", 
+  //     mx3->n(0), mx3->n(1), mx3->n(2), mx3->n(3));
 }
 
 inline void xgc_stream::probe_nphi_iphi()

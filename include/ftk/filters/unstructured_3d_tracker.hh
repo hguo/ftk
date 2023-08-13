@@ -11,7 +11,7 @@ namespace ftk {
 struct unstructured_3d_tracker : public virtual tracker {
   unstructured_3d_tracker(diy::mpi::communicator comm, std::shared_ptr<simplicial_unstructured_3d_mesh<>> m3_) : 
     m3(m3_),
-    m(new simplicial_unstructured_extruded_3d_mesh<>(*m3_)), tracker(comm) {}
+    m(new simplicial_unstructured_extruded_3d_mesh<>(m3_)), tracker(comm) {}
   virtual ~unstructured_3d_tracker() {}
 
 public:

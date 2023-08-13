@@ -74,7 +74,7 @@ xgc_tracker::xgc_tracker(
   tracker(comm),
   m2(mx->get_m2()),
   m3(mx),
-  m4(new simplicial_unstructured_extruded_3d_mesh<>(*m3))
+  m4(new simplicial_unstructured_extruded_3d_mesh<>(m3))
 {
   // initialize roi meshes
   m2->initialize_roi();
@@ -83,7 +83,7 @@ xgc_tracker::xgc_tracker(
         m3->get_nphi(), m3->get_iphi(), m3->get_vphi()));
   m30.reset(new simplicial_xgc_3d_mesh<>(m2, 
         m3->get_nphi(), m3->get_iphi()));
-  mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*mr3));
+  mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(mr3));
 }
 
 inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group> g) 

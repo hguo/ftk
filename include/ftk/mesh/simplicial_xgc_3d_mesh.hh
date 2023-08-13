@@ -18,7 +18,7 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
 
   std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> get_m2() const {return m2;}
 
-  virtual size_t n(int d) const;
+  size_t n(int d, bool part = false) const;
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
 
   bool probe_nphi_iphi(const std::string& filename);
@@ -196,9 +196,10 @@ bool simplicial_xgc_3d_mesh<I, F>::probe_nphi_iphi(const std::string& filename)
 }
 
 template <typename I, typename F>
-size_t simplicial_xgc_3d_mesh<I, F>::n(int d) const
+size_t simplicial_xgc_3d_mesh<I, F>::n(int d, bool part) const
 {
-  return m3->n(d) * np();
+  // fprintf(stderr, "retrieving xgc3d n%d\n", d);
+  return m3->n(d, part) * np();
 }
 
 template <typename I, typename F>
