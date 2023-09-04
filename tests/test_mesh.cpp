@@ -8,8 +8,11 @@
 
 #if FTK_HAVE_VTK
 TEST_CASE("mesh_extruded_3d_unstructured_pent_sides") {
-  ftk::simplicial_unstructured_3d_mesh<> m;
-  m.from_vtk_unstructured_grid_file("3d.vtu");
+  // ftk::simplicial_unstructured_3d_mesh<> m;
+  // m.from_vtk_unstructured_grid_file("3d.vtu");
+  
+  std::shared_ptr<ftk::simplicial_unstructured_3d_mesh<>> m(new ftk::simplicial_unstructured_3d_mesh<>());
+  m->from_vtk_unstructured_grid_file("3d.vtu");
 
   ftk::simplicial_unstructured_extruded_3d_mesh<> m1(m);
 
@@ -39,8 +42,10 @@ TEST_CASE("mesh_extruded_3d_unstructured_pent_sides") {
 
 #if 1
 TEST_CASE("mesh_extruded_3d_unstructured_tet_sides") {
-  ftk::simplicial_unstructured_3d_mesh<> m;
-  m.from_vtk_unstructured_grid_file("3d.vtu");
+  // ftk::simplicial_unstructured_3d_mesh<> m;
+  
+  std::shared_ptr<ftk::simplicial_unstructured_3d_mesh<>> m(new ftk::simplicial_unstructured_3d_mesh<>());
+  m->from_vtk_unstructured_grid_file("3d.vtu");
 
   ftk::simplicial_unstructured_extruded_3d_mesh<> m1(m);
 
