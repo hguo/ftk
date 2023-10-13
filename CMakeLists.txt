@@ -59,11 +59,13 @@ ftk_option (SYCL "Use SYCL" FALSE) # experimental
 ftk_option (TBB "Use TBB (Intel Thread Building Blocks)" FALSE) # experimental
 ftk_option (VTK "Use VTK" FALSE)
 
-if (FTK_USE_SYCL)
-  set (CMAKE_CXX_STANDARD 17)
-else ()
-  set (CMAKE_CXX_STANDARD 11)
-endif ()
+#if (FTK_USE_SYCL)
+#  set (CMAKE_CXX_STANDARD 17)
+#else ()
+#  set (CMAKE_CXX_STANDARD 11)
+#endif ()
+
+set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
