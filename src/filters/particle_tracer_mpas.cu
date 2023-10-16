@@ -2,6 +2,7 @@
 #include <ftk/numeric/mpas.hh>
 #include <ftk/numeric/wachspress_interpolation.hh>
 #include <ftk/filters/mpas_ocean_particle_tracker.cuh>
+#include "common.cuh"
 
 typedef mop_ctx_t ctx_t;
 
@@ -265,86 +266,46 @@ void mop_load_mesh(mop_ctx_t *c,
   cudaMalloc((void**)&c->d_verts_on_cell, size_t(nverts) * 3 * sizeof(int));
   cudaMemcpy(c->d_verts_on_cell, verts_on_cell, size_t(nverts) * 3 * sizeof(int), cudaMemcpyHostToDevice);
 
-  // checkLastCudaError("[FTK-CUDA] loading mpas mesh");
+  checkLastCudaError("[FTK-CUDA] loading mpas mesh");
 }
 
-#if 0
+template <typename T=double>
+static void load_data(
+    T** dbuf,
+    const T *buf,
+    const size_t n, 
+    const char *name)
+{
+  T *d;
+  if (dbuf[0] == NULL) {
+    cudaMalloc((void**)&dbuf[0], sizeof(T) * n);
+    checkLastCudaError("[FTK-CUDA] loading data 0");
+    d = dbuf[0];
+  } else if (dbuf[1] == NULL) {
+    cudaMalloc((void**)&dbuf[1], sizeof(T) * n);
+    checkLastCudaError("[FTK-CUDA] loading data 1");
+    d = dbuf[1];
+  } else {
+    std::swap(dbuf[0], dbuf[1]);
+    d = dbuf[1];
+  }
+  cudaMemcpy(d, buf, sizeof(T) * n, cudaMemcpyHostToDevice);
+  checkLastCudaError("[FTK-CUDA] cudaMemcpy");
+}
+
 void mop_load_data(mop_ctx_t *c,
     const double *V, 
     const double *Vv, 
     const double *zTop, 
     const double *A)
 {
-  double *dd_V;
-  if (c->d_V[0] == NULL) {
-    cudaMalloc((void**)&c->d_V[0], sizeof(double) * size_t(c->m2n0) * size_t(c->nphi));
-    checkLastCudaError("[FTK-CUDA] loading scalar field data, malloc 0");
-    dd_V = c->d_V[0];
-  } else if (c->d_V[1] == NULL) {
-    cudaMalloc((void**)&c->d_V[1], sizeof(double) * size_t(c->m2n0) * size_t(c->nphi));
-    checkLastCudaError("[FTK-CUDA] loading scalar field data, malloc 0.1");
-    dd_V = c->d_V[1];
-  } else {
-    std::swap(c->d_V[0], c->d_V[1]);
-    dd_V = c->d_V[1];
-  }
-  // fprintf(stderr, "dd=%p, d0=%p, d1=%p, src=%p\n", dd_V, c->d_V[0], c->d_V[1], scalar);
-  cudaMemcpy(dd_V, scalar, sizeof(double) * size_t(c->m2n0 * c->nphi), 
-      cudaMemcpyHostToDevice);
-  checkLastCudaError("[FTK-CUDA] loading scalar field data, memcpy 0");
- 
-  /// 
-  double *dd_Vv;
-  if (c->d_vector[0] == NULL) {
-    cudaMalloc((void**)&c->d_vector[0], sizeof(double) * size_t(c->m2n0) * size_t(c->nphi) * 2);
-    dd_Vv = c->d_vector[0];
-  } else if (c->d_vector[1] == NULL) {
-    cudaMalloc((void**)&c->d_vector[1], sizeof(double) * size_t(c->m2n0) * size_t(c->nphi)* 2);
-    dd_Vv = c->d_vector[1];
-  } else {
-    std::swap(c->d_vector[0], c->d_vector[1]);
-    dd_Vv = c->d_vector[1];
-  }
-  cudaMemcpy(dd_Vv, vector, sizeof(double) * size_t(c->m2n0 * c->nphi * 2), 
-      cudaMemcpyHostToDevice);
-  checkLastCudaError("[FTK-CUDA] loading vector field data");
-
-  /// 
-  double *dd_zTop;
-  if (c->d_jacobian[0] == NULL) {
-    cudaMalloc((void**)&c->d_jacobian[0], sizeof(double) * size_t(c->m2n0) * size_t(c->nphi) * 4);
-    dd_zTop = c->d_jacobian[0];
-  } else if (c->d_jacobian[1] == NULL) {
-    cudaMalloc((void**)&c->d_jacobian[1], sizeof(double) * size_t(c->m2n0) * size_t(c->nphi) * 4);
-    dd_zTop = c->d_jacobian[1];
-  } else {
-    std::swap(c->d_jacobian[0], c->d_jacobian[1]);
-    dd_zTop = c->d_jacobian[1];
-  }
-  cudaMemcpy(dd_zTop, jacobian, sizeof(double) * size_t(c->m2n0 * c->nphi) * 4, 
-      cudaMemcpyHostToDevice);
-  checkLastCudaError("[FTK-CUDA] loading jacobian field data");
-
-
-  /// 
-  double *dd_A;
-  if (c->d_V[0] == NULL) {
-    cudaMalloc((void**)&c->d_V[0], sizeof(double) * size_t(c->m2n0) * size_t(c->nphi));
-    checkLastCudaError("[FTK-CUDA] loading scalar field data, malloc 0");
-    dd_A = c->d_V[0];
-  } else if (c->d_V[1] == NULL) {
-    cudaMalloc((void**)&c->d_V[1], sizeof(double) * size_t(c->m2n0) * size_t(c->nphi));
-    checkLastCudaError("[FTK-CUDA] loading scalar field data, malloc 0.1");
-    dd_A = c->d_V[1];
-  } else {
-    std::swap(c->d_V[0], c->d_V[1]);
-    dd_A = c->d_V[1];
-  }
-  cudaMemcpy(dd_A, scalar, sizeof(double) * size_t(c->m2n0 * c->nphi), 
-      cudaMemcpyHostToDevice);
-  checkLastCudaError("[FTK-CUDA] loading scalar field data, memcpy 0");
+  load_data<double>(c->d_V, V, c->ncells * c->nlayers, "V");
+  load_data<double>(c->d_Vv, Vv, c->ncells * c->nlayers, "Vv");
+  load_data<double>(c->d_zTop, zTop, c->ncells * c->nlayers, "zTop");
+  load_data<double>(c->d_A, A, c->ncells * c->nlayers, "A");
 }
 
+#if 0
 void mop_execute(mop_ctx_t *c, int scope, int current_timestep)
 {
   const int np = c->nphi * c->iphi * c->vphi;
