@@ -305,17 +305,9 @@ void mop_load_data(mop_ctx_t *c,
   load_data<double>(c->d_A, A, c->ncells * c->nlayers, "A");
 }
 
-#if 0
+
 void mop_execute(mop_ctx_t *c, int scope, int current_timestep)
 {
-  const int np = c->nphi * c->iphi * c->vphi;
-  const int mx3n1 = (2 * c->m2n1 + c->m2n0) * np;
-  const int mx3n2 = (3 * c->m2n2 + 2 * c->m2n1) * np;
-  // const int mx4n2 = 3 * mx3n2 + 2 * mx3n1;
-  const int mx4n2_ordinal  = mx3n2, 
-            mx4n2_interval = 2 * mx3n2 + 2 * mx3n1;
-  // fprintf(stderr, "executing timestep %d\n", current_timestep);
-
   size_t ntasks;
   if (scope == scope_ordinal) ntasks = mx4n2_ordinal;
   else ntasks = mx4n2_interval;

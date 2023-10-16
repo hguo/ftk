@@ -49,6 +49,8 @@ void mop_load_data(mop_ctx_t *c,
     const double *zTop, 
     const double *A);
 
+void mop_load_particles(mop_ctx_t *c,
+
 void mop_execute(mop_ctx_t *c, int scope, int current_timestep);
 void mop_swap(mop_ctx_t *c);
 
