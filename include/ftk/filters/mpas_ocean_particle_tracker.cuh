@@ -27,12 +27,13 @@ typedef struct {
 
   // particle data
   int nparticles;
-  ftk::feature_point_lite_t *hcps = NULL, *dcps = NULL;
+  ftk::feature_point_lite_t *htrajs = NULL, *dtrajs = NULL;
 
 } mop_ctx_t;
 
 void mop_create_ctx(mop_ctx_t **c_, int device=0);
 void mop_destroy_ctx(mop_ctx_t **c_);
+
 void mop_load_mesh(mop_ctx_t *c,
     const int ncells, 
     const int nlayers, 
@@ -49,9 +50,11 @@ void mop_load_data(mop_ctx_t *c,
     const double *zTop, 
     const double *A);
 
-void mop_load_particles(mop_ctx_t *c,
+void mop_load_particles(mop_ctx_t *c, 
+    const int n,
+    ftk::feature_point_lite_t *);
 
-void mop_execute(mop_ctx_t *c, int scope, int current_timestep);
+void mop_execute(mop_ctx_t *c, int current_timestep);
 void mop_swap(mop_ctx_t *c);
 
 #endif

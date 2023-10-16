@@ -227,10 +227,48 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   ctx_t *c = *c_;
 
   if (c->d_Xc != NULL) cudaFree(c->d_Xc);
-  // TODO
+  if (c->d_Xv != NULL) cudaFree(c->d_Xv);
+  if (c->d_nedges_on_cell != NULL) cudaFree(c->d_nedges_on_cell);
+  if (c->d_cells_on_cell != NULL) cudaFree(c->d_cells_on_cell);
+  if (c->d_verts_on_cell != NULL) cudaFree(c->d_verts_on_cell);
+
+  if (c->d_V[0] != NULL) cudaFree(c->d_V[0]);
+  if (c->d_V[1] != NULL) cudaFree(c->d_V[1]);
+  if (c->d_Vv[0] != NULL) cudaFree(c->d_Vv[0]);
+  if (c->d_Vv[1] != NULL) cudaFree(c->d_Vv[1]);
+  if (c->d_zTop[0] != NULL) cudaFree(c->d_zTop[0]);
+  if (c->d_zTop[1] != NULL) cudaFree(c->d_zTop[1]);
+  if (c->d_A[0] != NULL) cudaFree(c->d_A[0]);
+  if (c->d_A[1] != NULL) cudaFree(c->d_A[1]);
 
   free(*c_);
   *c_ = NULL;
+}
+
+void mop_load_particles(mop_ctx_t *c, 
+    const int n, 
+    ftk::feature_point_lite_t *data)
+{
+  if (c->htrajs == NULL) {
+    c->htrajs = (ftk::feature_point_lite_t*)
+      malloc(n * sizeof(ftk::feature_point_lite_t));
+  } else {
+    c->htrajs = (ftk::feature_point_lite_t*)
+      realloc(c->htrajs, n * sizeof(ftk::feature_point_lite_t));
+  }
+
+  if (c->dtrajs == NULL) {
+    cudaMalloc((void**)&c->dtrajs, 
+        n * sizeof(ftk::feature_point_lite_t));
+  } else {
+    if (n != c->nparticles) {
+      cudaFree(c->dtrajs);
+      cudaMalloc((void**)&c->dtrajs, 
+          n * sizeof(ftk::feature_point_lite_t));
+    }
+  }
+  
+  c->nparticles = n;
 }
 
 void mop_load_mesh(mop_ctx_t *c,
@@ -306,12 +344,9 @@ void mop_load_data(mop_ctx_t *c,
 }
 
 
-void mop_execute(mop_ctx_t *c, int scope, int current_timestep)
+void mop_execute(mop_ctx_t *c, int current_timestep)
 {
-  size_t ntasks;
-  if (scope == scope_ordinal) ntasks = mx4n2_ordinal;
-  else ntasks = mx4n2_interval;
-  
+  size_t ntasks = c->nparticles;
   fprintf(stderr, "ntasks=%zu\n", ntasks);
   
   const int maxGridDim = 1024;
@@ -322,6 +357,8 @@ void mop_execute(mop_ctx_t *c, int scope, int current_timestep)
   if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else gridSize = dim3(nBlocks);
 
+  // TODO
+#if 0
   sweep_simplices<int, double><<<gridSize, blockSize>>>(
       scope, current_timestep, 
       c->factor,
@@ -344,12 +381,13 @@ void mop_execute(mop_ctx_t *c, int scope, int current_timestep)
   cudaMemcpy(c->hcps, c->dcps, sizeof(cp_t) * c->hncps, cudaMemcpyDeviceToHost);
   
   checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 2");
+#endif
 }
 
 void mop_swap(mop_ctx_t *c)
 {
   std::swap(c->d_V[0], c->d_V[1]);
-  std::swap(c->d_vector[0], c->d_vector[1]);
-  std::swap(c->d_jacobian[0], c->d_jacobian[1]);
+  std::swap(c->d_Vv[0], c->d_Vv[1]);
+  std::swap(c->d_zTop[0], c->d_zTop[1]);
+  std::swap(c->d_A[0], c->d_A[1]);
 }
-#endif
