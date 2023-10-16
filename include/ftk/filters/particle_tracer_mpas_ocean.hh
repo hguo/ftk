@@ -9,6 +9,10 @@
 #include <ftk/numeric/wachspress_interpolation.hh>
 #include <ftk/numeric/vector_norm.hh>
 
+#if FTK_HAVE_CUDA
+#include "mpas_ocean_particle_tracker.cuh"
+#endif
+
 namespace ftk {
 
 struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tracker
@@ -22,9 +26,27 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
     // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1;
     // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY;
     this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK4_WITH_VERTICAL_VELOCITY;
+  
+    if (xl == FTK_XL_CUDA) {
+      mop_create_ctx(&ctx);
+      mop_load_mesh(ctx, 
+          m->n_cells(),
+          m->n_layers(),
+          m->n_vertices(),
+          m->max_edges_on_cell(),
+          nch(),
+          m->xyzCells.data(),
+          m->xyzVertices.data(),
+          m->nEdgesOnCell.data(),
+          m->cellsOnCell.data(),
+          m->verticesOnCell.data());
+    }
   }
 
-  virtual ~particle_tracer_mpas_ocean() {}
+  virtual ~particle_tracer_mpas_ocean() {
+    if (xl == FTK_XL_CUDA)
+      mop_destroy_ctx(&ctx);
+  }
 
   void initialize_particles_at_grid_points(std::vector<int> strides);
 
@@ -46,6 +68,8 @@ protected:
   std::shared_ptr<ndarray<double>> vertVelocityTop[2];
   std::shared_ptr<ndarray<double>> salinity[2];
   std::shared_ptr<ndarray<double>> temperature[2];
+
+  mop_ctx_t *ctx;
 };
 
 ////

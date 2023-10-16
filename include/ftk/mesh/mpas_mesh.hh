@@ -25,6 +25,7 @@ public:
   size_t n_cells() const { return xyzCells.dim(1); }
   size_t n_layers() const { return restingThickness.dim(0); }
   size_t n_vertices() const { return xyzVertices.dim(1); }
+  size_t max_edges_on_cell() const { return verticesOnCell.dim(0); }
 
   I locate_cell_i(const F x[]) const;
   I locate_cell_i(const F x[], const I prev_cell_i) const;

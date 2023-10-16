@@ -81,7 +81,7 @@ static bool mpas_eval(
     const double *V,    // velocity field
     const double *Vv,   // vertical velocities
     const double *zTop, // top layer depth
-    const int nattrs,   // number of scalar attributes
+    const int nch,   // number of scalar attributes
     const double *A,    // scalar attributes
     const double *Xv,   // vertex locations
     const int max_edges,
@@ -184,10 +184,10 @@ static bool mpas_eval(
                 alpha * V[ k + 3 * (iv[i] * nlayers + layer) ]
               + beta  * V[ k + 3 * (iv[i] * nlayers + layer + 1) ]);
 
-    for (int k = 0; k < nattrs; k ++)
+    for (int k = 0; k < nch; k ++)
       f[k] += omega[i] * (
-                alpha * A[ k + nattrs * (iv[i] * nlayers + layer) ]
-              + beta  * A[ k + nattrs * (iv[i] * nlayers + layer + 1) ]);
+                alpha * A[ k + nch * (iv[i] * nlayers + layer) ]
+              + beta  * A[ k + nch * (iv[i] * nlayers + layer + 1) ]);
 
     *vv +=   alpha * Vv[ iv[i] * (nlayers + 1) + layer ]
            + beta  * Vv[ iv[i] * (nlayers + 1) + layer + 1];
@@ -214,12 +214,6 @@ void mop_create_ctx(mop_ctx_t **c_, int device)
  
   c->d_V[0] = NULL;
   c->d_V[1] = NULL;
-  c->d_Vv[0] = NULL;
-  c->d_Vv[1] = NULL;
-  c->d_zTop[0] = NULL;
-  c->d_zTop[1] = NULL;
-  c->d_A[0] = NULL;
-  c->d_A[1] = NULL;
 }
 
 void mop_destroy_ctx(mop_ctx_t **c_)
@@ -234,12 +228,6 @@ void mop_destroy_ctx(mop_ctx_t **c_)
 
   if (c->d_V[0] != NULL) cudaFree(c->d_V[0]);
   if (c->d_V[1] != NULL) cudaFree(c->d_V[1]);
-  if (c->d_Vv[0] != NULL) cudaFree(c->d_Vv[0]);
-  if (c->d_Vv[1] != NULL) cudaFree(c->d_Vv[1]);
-  if (c->d_zTop[0] != NULL) cudaFree(c->d_zTop[0]);
-  if (c->d_zTop[1] != NULL) cudaFree(c->d_zTop[1]);
-  if (c->d_A[0] != NULL) cudaFree(c->d_A[0]);
-  if (c->d_A[1] != NULL) cudaFree(c->d_A[1]);
 
   free(*c_);
   *c_ = NULL;
@@ -276,7 +264,7 @@ void mop_load_mesh(mop_ctx_t *c,
     const int nlayers, 
     const int nverts, 
     const int max_edges,
-    const int nattrs,
+    const int nch,
     const double *Xc,
     const double *Xv,
     const int *nedges_on_cell, 
@@ -287,7 +275,7 @@ void mop_load_mesh(mop_ctx_t *c,
   c->nlayers = nlayers;
   c->nverts = nverts;
   c->max_edges = max_edges;
-  c->nattrs = nattrs;
+  c->nch = nch;
 
   cudaMalloc((void**)&c->d_Xc, size_t(ncells) * sizeof(double) * 3);
   cudaMemcpy(c->d_Xc, Xc, size_t(ncells) * sizeof(double) * 3, cudaMemcpyHostToDevice);
@@ -331,16 +319,9 @@ static void load_data(
   checkLastCudaError("[FTK-CUDA] cudaMemcpy");
 }
 
-void mop_load_data(mop_ctx_t *c,
-    const double *V, 
-    const double *Vv, 
-    const double *zTop, 
-    const double *A)
+void mop_load_data(mop_ctx_t *c, const double *V) 
 {
   load_data<double>(c->d_V, V, c->ncells * c->nlayers, "V");
-  load_data<double>(c->d_Vv, Vv, c->ncells * c->nlayers, "Vv");
-  load_data<double>(c->d_zTop, zTop, c->ncells * c->nlayers, "zTop");
-  load_data<double>(c->d_A, A, c->ncells * c->nlayers, "A");
 }
 
 
@@ -387,7 +368,4 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
 void mop_swap(mop_ctx_t *c)
 {
   std::swap(c->d_V[0], c->d_V[1]);
-  std::swap(c->d_Vv[0], c->d_Vv[1]);
-  std::swap(c->d_zTop[0], c->d_zTop[1]);
-  std::swap(c->d_A[0], c->d_A[1]);
 }
