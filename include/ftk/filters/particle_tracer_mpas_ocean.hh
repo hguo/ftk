@@ -26,21 +26,6 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
     // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1;
     // this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK1_WITH_VERTICAL_VELOCITY;
     this->integrator = PARTICLE_TRACER_INTEGRATOR_SPHERICAL_RK4_WITH_VERTICAL_VELOCITY;
-  
-    if (xl == FTK_XL_CUDA) {
-      mop_create_ctx(&ctx);
-      mop_load_mesh(ctx, 
-          m->n_cells(),
-          m->n_layers(),
-          m->n_vertices(),
-          m->max_edges_on_cell(),
-          nch(),
-          m->xyzCells.data(),
-          m->xyzVertices.data(),
-          m->nEdgesOnCell.data(),
-          m->cellsOnCell.data(),
-          m->verticesOnCell.data());
-    }
   }
 
   virtual ~particle_tracer_mpas_ocean() {
@@ -48,6 +33,7 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
       mop_destroy_ctx(&ctx);
   }
 
+  void initialize();
   void initialize_particles_at_grid_points(std::vector<int> strides);
 
   static constexpr double earth_radius = 6371229.0;
@@ -73,6 +59,25 @@ protected:
 };
 
 ////
+inline void particle_tracer_mpas_ocean::initialize()
+{
+  if (xl == FTK_XL_CUDA) {
+    fprintf(stderr, "loading mesh to gpu...\n");
+    mop_create_ctx(&ctx);
+    mop_load_mesh(ctx, 
+        m->n_cells(),
+        m->n_layers(),
+        m->n_vertices(),
+        m->max_edges_on_cell(),
+        nch(),
+        m->xyzCells.data(),
+        m->xyzVertices.data(),
+        m->nEdgesOnCell.data(),
+        m->cellsOnCell.data(),
+        m->verticesOnCell.data());
+  }
+}
+
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std::vector<int> strides)
 {
   int stride_horizontal = 1, stride_vertical = 1;
