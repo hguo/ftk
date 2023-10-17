@@ -233,30 +233,35 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   *c_ = NULL;
 }
 
+template <typename T=double>
+static void realloc_both(
+    T** hbuf,
+    T** dbuf,
+    const size_t n, 
+    const size_t m)
+{
+  if (*hbuf == NULL)
+    *hbuf = (T*)malloc(m * sizeof(T));
+  else if (m != n)
+    *hbuf = (T*)realloc(hbuf, m * sizeof(T));
+
+  if (*dbuf == NULL)
+    cudaMalloc((void**)hbuf, m * sizeof(T));
+  else if (m != n) {
+    cudaFree(hbuf);
+    cudaMalloc((void**)hbuf, m * sizeof(T));
+  }
+}
+
 void mop_load_particles(mop_ctx_t *c, 
     const int n, 
-    ftk::feature_point_lite_t *data)
+    ftk::feature_point_lite_t *buf)
 {
-  if (c->htrajs == NULL) {
-    c->htrajs = (ftk::feature_point_lite_t*)
-      malloc(n * sizeof(ftk::feature_point_lite_t));
-  } else {
-    c->htrajs = (ftk::feature_point_lite_t*)
-      realloc(c->htrajs, n * sizeof(ftk::feature_point_lite_t));
-  }
-
-  if (c->dtrajs == NULL) {
-    cudaMalloc((void**)&c->dtrajs, 
-        n * sizeof(ftk::feature_point_lite_t));
-  } else {
-    if (n != c->nparticles) {
-      cudaFree(c->dtrajs);
-      cudaMalloc((void**)&c->dtrajs, 
-          n * sizeof(ftk::feature_point_lite_t));
-    }
-  }
-  
+  realloc_both(&c->hparts, &c->dparts, c->nparticles, n);
   c->nparticles = n;
+
+  cudaMemcpy(c->dparts, buf, n * sizeof(ftk::feature_point_lite_t), 
+      cudaMemcpyHostToDevice);
 }
 
 void mop_load_mesh(mop_ctx_t *c,

@@ -62,7 +62,7 @@ protected:
 inline void particle_tracer_mpas_ocean::initialize()
 {
   if (xl == FTK_XL_CUDA) {
-    fprintf(stderr, "loading mesh to gpu...\n");
+    // fprintf(stderr, "loading mesh to gpu...\n");
     mop_create_ctx(&ctx);
     mop_load_mesh(ctx, 
         m->n_cells(),
@@ -121,7 +121,17 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
       nparticles ++;
     }
   }
-  
+ 
+  if (xl == FTK_XL_CUDA) {
+    // fprintf(stderr, "loading particles to gpu...\n");
+    std::vector<feature_point_lite_t> particles;
+    particles.reserve(trajectories.size());
+    for (const auto &traj : trajectories)
+      particles.push_back(traj.second[0].to_lite());
+
+    mop_load_particles(ctx, particles.size(), particles.data());
+  }
+
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
 }
 

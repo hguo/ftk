@@ -49,6 +49,18 @@ struct feature_point_t {
     tag = cp.tag;
   }
 
+  feature_point_lite_t to_lite() const {
+    feature_point_lite_t l;
+    for (int i = 0; i < 3; i ++)
+      l.x[i] = x[i];
+    l.t = t;
+    for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
+      l.scalar[i] = scalar[i];
+    l.type = type;
+    l.tag = tag;
+    return l;
+  }
+
   double operator[](size_t i) const {return x[i];}
   double &operator[](size_t i) {return x[i];}
 

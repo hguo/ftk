@@ -24,6 +24,7 @@ typedef struct {
 
   // particle data
   int nparticles;
+  ftk::feature_point_lite_t *hparts = NULL, *dparts = NULL;
   ftk::feature_point_lite_t *htrajs = NULL, *dtrajs = NULL;
 
 } mop_ctx_t;
