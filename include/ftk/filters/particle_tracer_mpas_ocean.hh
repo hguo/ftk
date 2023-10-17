@@ -151,6 +151,25 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
   
   temperature[0] = snapshots[0]->get_ptr<double>("temperature");
   temperature[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("temperature") : nullptr;
+
+  if (xl == FTK_XL_CUDA) {
+    fprintf(stderr, "loading data to gpu..\n");
+    ndarray<double> data;
+    data.reshape(nch(), m->n_cells(), m->n_layers());
+    for (auto i = 0; i < m->n_layers(); i ++) {
+      for (auto j = 0; j < m->n_cells(); j ++) {
+        data(0, j, i) = V[0]->at(0, j, i);
+        data(1, j, i) = V[0]->at(1, j, i);
+        data(2, j, i) = V[0]->at(2, j, i);
+        data(3, j, i) = zTop[0]->at(0, j, i);
+        data(4, j, i) = vertVelocityTop[0]->at(0, j, i);
+        data(5, j, i) = salinity[0]->at(0, j, i);
+        data(6, j, i) = temperature[0]->at(0, j, i);
+      }
+    }
+    mop_load_data(ctx, data.data());
+    fprintf(stderr, "data loaded to gpu\n");
+  }
 }
 
 inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, double *v, int *hint)
