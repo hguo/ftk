@@ -39,6 +39,7 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
   static constexpr double earth_radius = 6371229.0;
 
   void prepare_timestep();
+  void update_timestep();
 
 protected:
   bool eval_v(int t, const double* x, double *v, int *hint);
@@ -135,6 +136,27 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
 }
 
+inline void particle_tracer_mpas_ocean::update_timestep()
+{
+  if (xl == FTK_XL_CUDA) {
+    if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+    current_t = current_timestep;
+    prepare_timestep();
+
+    bool streamlines = false;
+    if (this->ntimesteps == 1)
+      streamlines = true;
+
+    // fprintf(stderr, "#snapshots=%zu\n", this->snapshots.size());
+    if (!streamlines && this->snapshots.size() < 2) 
+      return; // nothing can be done
+  
+    // TODO
+  
+  } else 
+    particle_tracer::update_timestep();
+}
+
 inline void particle_tracer_mpas_ocean::prepare_timestep()
 {
   V[0] = snapshots[0]->get_ptr<double>("velocity");
@@ -153,7 +175,6 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
   temperature[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("temperature") : nullptr;
 
   if (xl == FTK_XL_CUDA) {
-    fprintf(stderr, "loading data to gpu..\n");
     ndarray<double> data;
     data.reshape(nch(), m->n_cells(), m->n_layers());
     for (auto i = 0; i < m->n_layers(); i ++) {
@@ -167,6 +188,7 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
         data(6, j, i) = temperature[0]->at(0, j, i);
       }
     }
+    fprintf(stderr, "loading data to gpu..\n");
     mop_load_data(ctx, data.data());
     fprintf(stderr, "data loaded to gpu\n");
   }
