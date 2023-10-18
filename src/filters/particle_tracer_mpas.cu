@@ -246,10 +246,10 @@ static void realloc_both(
     *hbuf = (T*)realloc(hbuf, m * sizeof(T));
 
   if (*dbuf == NULL)
-    cudaMalloc((void**)hbuf, m * sizeof(T));
+    cudaMalloc((void**)dbuf, m * sizeof(T));
   else if (m != n) {
-    cudaFree(hbuf);
-    cudaMalloc((void**)hbuf, m * sizeof(T));
+    cudaFree(dbuf);
+    cudaMalloc((void**)dbuf, m * sizeof(T));
   }
 }
 
@@ -262,6 +262,8 @@ void mop_load_particles(mop_ctx_t *c,
 
   cudaMemcpy(c->dparts, buf, n * sizeof(ftk::feature_point_lite_t), 
       cudaMemcpyHostToDevice);
+  
+  checkLastCudaError("[FTK-CUDA] load particles");
 }
 
 void mop_load_mesh(mop_ctx_t *c,
@@ -326,7 +328,8 @@ static void load_data(
 
 void mop_load_data(mop_ctx_t *c, const double *V) 
 {
-  load_data<double>(c->d_V, V, c->ncells * c->nlayers, "V");
+  fprintf(stderr, "nch=%d, ncells=%d, nlayers=%d\n", c->nch, c->ncells, c->nlayers);
+  load_data<double>(c->d_V, V, size_t(c->nch) * c->ncells * c->nlayers, "V");
 }
 
 
