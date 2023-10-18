@@ -29,8 +29,10 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
   }
 
   virtual ~particle_tracer_mpas_ocean() {
+#if FTK_HAVE_CUDA
     if (xl == FTK_XL_CUDA)
       mop_destroy_ctx(&ctx);
+#endif
   }
 
   void initialize();
@@ -56,13 +58,16 @@ protected:
   std::shared_ptr<ndarray<double>> salinity[2];
   std::shared_ptr<ndarray<double>> temperature[2];
 
+#if FTK_HAVE_CUDA
   mop_ctx_t *ctx;
+#endif
 };
 
 ////
 inline void particle_tracer_mpas_ocean::initialize()
 {
   if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
     // fprintf(stderr, "loading mesh to gpu...\n");
     mop_create_ctx(&ctx);
     mop_load_mesh(ctx, 
@@ -76,6 +81,7 @@ inline void particle_tracer_mpas_ocean::initialize()
         m->nEdgesOnCell.data(),
         m->cellsOnCell.data(),
         m->verticesOnCell.data());
+#endif
   }
 }
 
@@ -125,12 +131,14 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
  
   if (xl == FTK_XL_CUDA) {
     // fprintf(stderr, "loading particles to gpu...\n");
+#if FTK_HAVE_CUDA
     std::vector<feature_point_lite_t> particles;
     particles.reserve(trajectories.size());
     for (const auto &traj : trajectories)
       particles.push_back(traj.second[0].to_lite());
 
     mop_load_particles(ctx, particles.size(), particles.data());
+#endif
   }
 
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
@@ -175,6 +183,7 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
   temperature[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("temperature") : nullptr;
 
   if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
     ndarray<double> data;
     data.reshape(nch(), m->n_cells(), m->n_layers());
     for (auto i = 0; i < m->n_layers(); i ++) {
@@ -191,6 +200,7 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
     fprintf(stderr, "loading data to gpu..\n");
     mop_load_data(ctx, data.data());
     fprintf(stderr, "data loaded to gpu\n");
+#endif
   }
 }
 
