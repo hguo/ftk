@@ -429,31 +429,30 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
   if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else gridSize = dim3(nBlocks);
 
-  // TODO
-#if 0
-  sweep_simplices<int, double><<<gridSize, blockSize>>>(
-      scope, current_timestep, 
-      c->factor,
-      c->nphi, c->iphi, c->vphi, 
-      c->m2n0, c->m2n1, c->m2n2, 
-      c->d_m2coords, c->d_m2edges, c->d_m2tris, 
-      c->d_psin,
-      c->d_interpolants, 
-      c->d_V[0], c->d_V[1],
-      c->d_vector[0], c->d_vector[1],
-      c->d_jacobian[0], c->d_jacobian[1], 
-      *c->dncps, c->dcps);
+  mpas_trace<<<gridSize, blockSize>>>(
+      1024, 0.0001, 
+      c->nparticles, 
+      c->dparts, 
+      c->d_V[0], 
+      c->d_Vv[0],
+      c->d_zTop[0], 
+      c->nattrs, 
+      c->d_A[0],
+      c->d_Xv,
+      c->max_edges, 
+      c->d_nedges_on_cell, 
+      c->d_cells_on_cell,
+      c->d_verts_on_cell, 
+      c->nlayers);
   cudaDeviceSynchronize();
-  checkLastCudaError("[FTK-CUDA] sweep_simplicies");
+  checkLastCudaError("[FTK-CUDA] mop_execute");
 
-  cudaMemcpy(&c->hncps, c->dncps, sizeof(unsigned long long), cudaMemcpyDeviceToHost);
-  cudaMemset(c->dncps, 0, sizeof(unsigned long long)); // clear the counter
-  checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 1");
-  fprintf(stderr, "ncps=%llu\n", c->hncps);
-  cudaMemcpy(c->hcps, c->dcps, sizeof(cp_t) * c->hncps, cudaMemcpyDeviceToHost);
-  
-  checkLastCudaError("[FTK-CUDA] cuda memcpy device to host, 2");
-#endif
+  cudaMemcpy(c->hparts, c->dparts, 
+      c->nparticles * sizeof(ftk::feature_point_lite_t), 
+      cudaMemcpyDeviceToHost);
+  checkLastCudaError("[FTK-CUDA] mop_execute: memcpy");
+
+  fprintf(stderr, "exiting kernel\n");
 }
 
 void mop_swap(mop_ctx_t *c)

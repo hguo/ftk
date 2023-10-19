@@ -150,6 +150,7 @@ inline void particle_tracer_mpas_ocean::update_timestep()
   typedef std::chrono::high_resolution_clock clock_type;
   
   if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
     if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
     current_t = current_timestep;
   
@@ -169,10 +170,13 @@ inline void particle_tracer_mpas_ocean::update_timestep()
       return; // nothing can be done
   
     // TODO
-  
+ 
+    mop_execute(ctx, current_timestep);
+
     auto t2 = clock_type::now();
     fprintf(stderr, "t_comp=%f\n", 
         std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9);
+#endif
   } else 
     particle_tracer::update_timestep();
 }
