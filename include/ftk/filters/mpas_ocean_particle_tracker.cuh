@@ -11,7 +11,7 @@ typedef struct {
   int device;
 
   // mesh info
-  int ncells, nlayers, nverts, nch, max_edges;
+  int ncells, nlayers, nverts, nattrs, max_edges;
 
   // mesh
   double *d_Xc, *d_Xv; // cell/vertex coordinates
@@ -20,7 +20,7 @@ typedef struct {
       *d_verts_on_cell;
 
   // time-varying data
-  double *d_V[2]; // velocity, verticalVelocity, zTop, and more
+  double *d_V[2], *d_Vv[2], *d_zTop[2], *d_A[2]; // velocity, verticalVelocity, zTop, and more
 
   // particle data
   int nparticles;
@@ -44,7 +44,11 @@ void mop_load_mesh(mop_ctx_t *c,
     const int *cells_on_cell,
     const int *verts_on_cell);
 
-void mop_load_data(mop_ctx_t *c, const double *V);
+void mop_load_data(mop_ctx_t *c, 
+    const double *V, 
+    const double *Vv, 
+    const double *zTop,
+    const double *A);
 
 void mop_load_particles(mop_ctx_t *c, 
     const int n,

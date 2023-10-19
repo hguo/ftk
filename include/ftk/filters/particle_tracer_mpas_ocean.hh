@@ -184,22 +184,23 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
 
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
-    ndarray<double> data;
-    data.reshape(nch(), m->n_cells(), m->n_layers());
+    ndarray<double> attrs;
+    attrs.reshape(3, m->n_cells(), m->n_layers());
     for (auto i = 0; i < m->n_layers(); i ++) {
       for (auto j = 0; j < m->n_cells(); j ++) {
-        data(0, j, i) = V[0]->at(0, j, i);
-        data(1, j, i) = V[0]->at(1, j, i);
-        data(2, j, i) = V[0]->at(2, j, i);
-        data(3, j, i) = zTop[0]->at(0, j, i);
-        data(4, j, i) = vertVelocityTop[0]->at(0, j, i);
-        data(5, j, i) = salinity[0]->at(0, j, i);
-        data(6, j, i) = temperature[0]->at(0, j, i);
+        // data(0, j, i) = V[0]->at(0, j, i);
+        // data(1, j, i) = V[0]->at(1, j, i);
+        // data(2, j, i) = V[0]->at(2, j, i);
+        // data(3, j, i) = zTop[0]->at(0, j, i);
+        // data(4, j, i) = vertVelocityTop[0]->at(0, j, i);
+        attrs(0, j, i) = salinity[0]->at(0, j, i);
+        attrs(1, j, i) = temperature[0]->at(0, j, i);
       }
     }
-    fprintf(stderr, "loading data to gpu..\n");
-    mop_load_data(ctx, data.data());
-    fprintf(stderr, "data loaded to gpu\n");
+    mop_load_data(ctx, V[0]->data(), 
+        vertVelocityTop[0]->data(),
+        zTop[0]->data(),
+        attrs.data());
 #endif
   }
 }

@@ -18,7 +18,7 @@ static const double R0 = 6371229.0;
 // - scalar attribute fields
 
 __device__ __host__
-inline bool point_in_cell(
+inline static bool point_in_cell(
     const int cell,
     const double *x,
     int iv[],
@@ -44,7 +44,7 @@ inline bool point_in_cell(
 }
 
 __device__ __host__
-static int locate_cell_local( // local search among neighbors
+inline static int locate_cell_local( // local search among neighbors
     const int curr, // current cell
     const double *x,
     int iv[], // returns vertex ids
@@ -74,7 +74,7 @@ static int locate_cell_local( // local search among neighbors
 }
 
 __device__ __host__ 
-static bool mpas_eval(
+inline static bool mpas_eval(
     const double *x,    // location
     double *v,          // return velocity
     double *vv,         // vertical velocity
@@ -82,7 +82,7 @@ static bool mpas_eval(
     const double *V,    // velocity field
     const double *Vv,   // vertical velocities
     const double *zTop, // top layer depth
-    const int nch,   // number of scalar attributes
+    const int attrs,    // number of scalar attributes
     const double *A,    // scalar attributes
     const double *Xv,   // vertex locations
     const int max_edges,
@@ -185,10 +185,10 @@ static bool mpas_eval(
                 alpha * V[ k + 3 * (iv[i] * nlayers + layer) ]
               + beta  * V[ k + 3 * (iv[i] * nlayers + layer + 1) ]);
 
-    for (int k = 0; k < nch; k ++)
+    for (int k = 0; k < attrs; k ++)
       f[k] += omega[i] * (
-                alpha * A[ k + nch * (iv[i] * nlayers + layer) ]
-              + beta  * A[ k + nch * (iv[i] * nlayers + layer + 1) ]);
+                alpha * A[ k + attrs * (iv[i] * nlayers + layer) ]
+              + beta  * A[ k + attrs * (iv[i] * nlayers + layer + 1) ]);
 
     *vv +=   alpha * Vv[ iv[i] * (nlayers + 1) + layer ]
            + beta  * Vv[ iv[i] * (nlayers + 1) + layer + 1];
@@ -315,7 +315,7 @@ void mop_load_mesh(mop_ctx_t *c,
     const int nlayers, 
     const int nverts, 
     const int max_edges,
-    const int nch,
+    const int nattrs,
     const double *Xc,
     const double *Xv,
     const int *nedges_on_cell, 
@@ -326,7 +326,7 @@ void mop_load_mesh(mop_ctx_t *c,
   c->nlayers = nlayers;
   c->nverts = nverts;
   c->max_edges = max_edges;
-  c->nch = nch;
+  c->nattrs = nattrs;
 
   cudaMalloc((void**)&c->d_Xc, size_t(ncells) * sizeof(double) * 3);
   cudaMemcpy(c->d_Xc, Xc, size_t(ncells) * sizeof(double) * 3, cudaMemcpyHostToDevice);
@@ -370,10 +370,16 @@ static void load_data(
   checkLastCudaError("[FTK-CUDA] cudaMemcpy");
 }
 
-void mop_load_data(mop_ctx_t *c, const double *V) 
+void mop_load_data(mop_ctx_t *c, 
+    const double *V,
+    const double *Vv,
+    const double *zTop,
+    const double *A)
 {
-  fprintf(stderr, "nch=%d, ncells=%d, nlayers=%d\n", c->nch, c->ncells, c->nlayers);
-  load_data<double>(c->d_V, V, size_t(c->nch) * c->ncells * c->nlayers, "V");
+  load_data<double>(c->d_V, V, 3 * c->ncells * c->nlayers, "V");
+  load_data<double>(c->d_Vv, Vv, c->ncells * (c->nlayers+1), "Vv");
+  load_data<double>(c->d_zTop, zTop, c->ncells * c->nlayers, "zTop");
+  load_data<double>(c->d_A, A, c->nattrs * c->ncells * c->nlayers, "f");
 }
 
 
