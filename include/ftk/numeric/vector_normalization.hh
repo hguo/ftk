@@ -6,6 +6,7 @@
 namespace ftk {
 
 template <int n, typename T>
+__device__ __host__
 inline T vector_normalization2(T v[])
 {
   T norm = vector_2norm<n, T>(v);
@@ -15,6 +16,7 @@ inline T vector_normalization2(T v[])
 }
 
 template <int n, typename T>
+__device__ __host__
 inline T vector_normalization2(const T v[], T w[])
 {
   T norm = vector_2norm<n, T>(v);
@@ -24,12 +26,14 @@ inline T vector_normalization2(const T v[], T w[])
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_normalization2_2(T v[2])
 {
   return vector_normalization2<2,T>(v);
 }
 
 template <typename T>
+__device__ __host__
 inline void vector_normalization2_2(const T v[2], T w[2])
 {
   w[0] = v[0]; w[1] = v[1];
@@ -37,12 +41,14 @@ inline void vector_normalization2_2(const T v[2], T w[2])
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_normalization2_3(T v[])
 {
   return vector_normalization2<3,T>(v);
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_normalization2_3(const T v[3], T w[3])
 {
   w[0] = v[0]; w[1] = v[1]; w[2] = v[2];
@@ -50,6 +56,7 @@ inline T vector_normalization2_3(const T v[3], T w[3])
 }
 
 template <typename T>
+__device__ __host__
 inline T vector_normalization2_4(T v[])
 {
   return vector_normalization2<4,T>(v);

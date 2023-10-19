@@ -10,6 +10,7 @@
 namespace ftk {
 
 template <typename T=double>
+__device__ __host__
 void angular_stepping(
     const T *x, 
     const T* v, // assuming v is tangential to the sphere
@@ -34,6 +35,7 @@ void angular_stepping(
 }
 
 template <typename T=double>
+__device__ __host__
 void angular_and_vertical_stepping( // composition of angular and vertical velocities
     const T *x, 
     const T* v, // assuming v[0], v[1], v[2] is tangential to the sphere
@@ -60,6 +62,7 @@ void angular_and_vertical_stepping( // composition of angular and vertical veloc
 
 
 template <typename T=double>
+__device__ __host__
 void spherical_stepping(const T *x, const T *v, const T h, T *xn)
 {
   const T R = vector_2norm<3, T>(x); // radius

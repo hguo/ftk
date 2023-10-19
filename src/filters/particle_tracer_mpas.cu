@@ -2,6 +2,7 @@
 #include <ftk/numeric/mpas.hh>
 #include <ftk/numeric/wachspress_interpolation.hh>
 #include <ftk/filters/mpas_ocean_particle_tracker.cuh>
+#include <ftk/numeric/rk4.hh>
 #include "common.cuh"
 
 typedef mop_ctx_t ctx_t;
@@ -194,6 +195,49 @@ static bool mpas_eval(
   }
 
   return true;
+}
+
+__device__
+inline static bool spherical_rk1_with_vertical_velocity(
+    const double h,
+    double *x,          // location
+    double *v0,         // return velocity
+    double *vv,         // vertical velocity
+    double *f,          // scalar attributs
+    const double *V,    // velocity field
+    const double *Vv,   // vertical velocities
+    const double *zTop, // top layer depth
+    const int nattrs,   // number of scalar attributes
+    const double *A,    // scalar attributes
+    const double *Xv,   // vertex locations
+    const int max_edges,
+    const int *nedges_on_cell, 
+    const int *cells_on_cell,
+    const int *verts_on_cell,
+    const int nlayers,
+    int &hint_c, 
+    int &hint_l)        // hint for searching cell and layer
+{
+  double v[4];
+  if (!mpas_eval(x, v, vv, f,
+        V, Vv, zTop, nattrs, A, Xv, 
+        max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+        nlayers, hint_c, hint_l))
+    return false;
+
+  for (int k = 0; k < 4; k ++)
+    v0[k] = v[k];
+
+  ftk::angular_stepping(x, v, h, x);
+  
+  x[4] += v[4] * h; // the vertical component
+  return true;
+}
+
+__global__
+static void mpas_trace()
+{
+  // WIP
 }
 
 ///////////////////////////

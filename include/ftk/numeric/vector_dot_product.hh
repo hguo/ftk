@@ -4,6 +4,7 @@
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 inline T vector_dot_product3(const T A[3], const T B[3])
 {
   return A[0]*B[0] + A[1]*B[1] + A[2]*B[2];

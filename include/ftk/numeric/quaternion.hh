@@ -4,11 +4,13 @@
 #include <ftk/config.hh>
 #include <ftk/numeric/cross_product.hh>
 #include <ftk/numeric/vector_dot_product.hh>
+#include <ftk/numeric/vector_normalization.hh>
 #include <cmath>
 
 namespace ftk {
 
 template <typename T>
+__device__ __host__
 void quatmul(const T x[], const T y[], T z[]) {
 	const T ix[3] = {x[1], x[2], x[3]}, 
 					iy[3] = {y[1], y[2], y[3]};
@@ -23,6 +25,7 @@ void quatmul(const T x[], const T y[], T z[]) {
 }
 
 template <typename T>
+__device__ __host__
 void axis_rotate_vector(
     const T axis_[3], 
     const T theta, 
