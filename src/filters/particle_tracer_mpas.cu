@@ -90,8 +90,8 @@ inline static bool mpas_eval(
     const int *cells_on_cell,
     const int *verts_on_cell,
     const int nlayers,
-    int &hint_c, 
-    int &hint_l)        // hint for searching cell and layer
+    unsigned long long &hint_c, 
+    unsigned int &hint_l)        // hint for searching cell and layer
 {
   int iv[MAX_VERTS];
   double xv[MAX_VERTS][3];
@@ -200,7 +200,7 @@ inline static bool mpas_eval(
 __device__
 inline static bool spherical_rk1_with_vertical_velocity(
     const double h,
-    double *x,          // location
+    ftk::feature_point_lite_t& p, 
     double *v0,         // return velocity
     double *vv,         // vertical velocity
     double *f,          // scalar attributs
@@ -215,11 +215,11 @@ inline static bool spherical_rk1_with_vertical_velocity(
     const int *cells_on_cell,
     const int *verts_on_cell,
     const int nlayers,
-    int &hint_c, 
-    int &hint_l)        // hint for searching cell and layer
+    unsigned long long &hint_c, 
+    unsigned int &hint_l)        // hint for searching cell and layer
 {
   double v[4];
-  if (!mpas_eval(x, v, vv, f,
+  if (!mpas_eval(p.x, v, vv, f,
         V, Vv, zTop, nattrs, A, Xv, 
         max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
         nlayers, hint_c, hint_l))
@@ -228,16 +228,49 @@ inline static bool spherical_rk1_with_vertical_velocity(
   for (int k = 0; k < 4; k ++)
     v0[k] = v[k];
 
-  ftk::angular_stepping(x, v, h, x);
+  ftk::angular_stepping(p.x, v, h, p.x);
   
-  x[4] += v[4] * h; // the vertical component
+  p.x[4] += v[4] * h; // the vertical component
   return true;
 }
 
 __global__
-static void mpas_trace()
+static void mpas_trace(
+    const int nsteps,
+    const double h,
+    const int nparticles,
+    ftk::feature_point_lite_t* particles,
+    const double *V,    // velocity field
+    const double *Vv,   // vertical velocities
+    const double *zTop, // top layer depth
+    const int nattrs,   // number of scalar attributes
+    const double *A,    // scalar attributes
+    const double *Xv,   // vertex locations
+    const int max_edges,
+    const int *nedges_on_cell, 
+    const int *cells_on_cell,
+    const int *verts_on_cell,
+    const int nlayers)
 {
-  // WIP
+  unsigned long long i = getGlobalIdx_3D_1D();
+  if (i >= nparticles) return;
+
+  ftk::feature_point_lite_t &p = particles[i];
+  double v0[3], vv[3], f[10];
+
+  unsigned long long &hint_c = p.tag;
+  unsigned int &hint_l = p.type;
+
+  for (int j = 0; j < nsteps; j ++) {
+    bool succ = spherical_rk1_with_vertical_velocity(
+        h, p, v0, vv, f, 
+        V, Vv, zTop, nattrs, A, Xv, 
+        max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+        nlayers, hint_c, hint_l);
+
+    if (!succ) 
+      break;
+  }
 }
 
 ///////////////////////////

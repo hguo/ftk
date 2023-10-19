@@ -75,7 +75,7 @@ inline void particle_tracer_mpas_ocean::initialize()
         m->n_layers(),
         m->n_vertices(),
         m->max_edges_on_cell(),
-        nch(),
+        2, // just temperature and salinity for now
         m->xyzCells.data(),
         m->xyzVertices.data(),
         m->nEdgesOnCell.data(),
@@ -119,6 +119,7 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
       for (auto k = 0; k < 3; k ++)
         p.x[k] = x0[k]; // m->xyzCells(k, i); 
       p.id = nparticles;
+      p.tag = p.id;
 
       // fprintf(stderr, "cell=%zu, layer=%zu, thickness=%f, x0=%f, %f, %f\n", 
       //     i, j, thickness, x0[0], x0[1], x0[2]);
@@ -146,10 +147,18 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
 
 inline void particle_tracer_mpas_ocean::update_timestep()
 {
+  typedef std::chrono::high_resolution_clock clock_type;
+  
   if (xl == FTK_XL_CUDA) {
     if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
     current_t = current_timestep;
+  
+    auto t0 = clock_type::now();
     prepare_timestep();
+    auto t1 = clock_type::now();
+    fprintf(stderr, "t_pre=%f\n", 
+        std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9);
+
 
     bool streamlines = false;
     if (this->ntimesteps == 1)
@@ -161,6 +170,9 @@ inline void particle_tracer_mpas_ocean::update_timestep()
   
     // TODO
   
+    auto t2 = clock_type::now();
+    fprintf(stderr, "t_comp=%f\n", 
+        std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9);
   } else 
     particle_tracer::update_timestep();
 }
