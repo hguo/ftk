@@ -11,6 +11,9 @@ template <typename F=double>
 __device__ __host__ 
 inline bool point_in_mpas_cell(const int nverts, const F Xv[][3], const F x[3])
 {
+  if (isnan(x[0]) || isnan(x[1]) || isnan(x[2])) return false;
+  if (nverts <= 0) return false;
+  
   F n[3];
   for (int i = 0; i < nverts; i ++) {
     const F *x0 = Xv[i], *x1 = Xv[(i+1)%nverts];

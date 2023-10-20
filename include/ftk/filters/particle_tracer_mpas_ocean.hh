@@ -119,7 +119,7 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
       for (auto k = 0; k < 3; k ++)
         p.x[k] = x0[k]; // m->xyzCells(k, i); 
       p.id = nparticles;
-      p.tag = p.id;
+      p.tag = i + 1;
 
       // fprintf(stderr, "cell=%zu, layer=%zu, thickness=%f, x0=%f, %f, %f\n", 
       //     i, j, thickness, x0[0], x0[1], x0[2]);
@@ -201,9 +201,9 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     ndarray<double> attrs;
-    attrs.reshape(3, m->n_cells(), m->n_layers());
+    attrs.reshape(2, m->n_vertices(), m->n_layers());
     for (auto i = 0; i < m->n_layers(); i ++) {
-      for (auto j = 0; j < m->n_cells(); j ++) {
+      for (auto j = 0; j < m->n_vertices(); j ++) {
         // data(0, j, i) = V[0]->at(0, j, i);
         // data(1, j, i) = V[0]->at(1, j, i);
         // data(2, j, i) = V[0]->at(2, j, i);

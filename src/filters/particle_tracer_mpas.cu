@@ -29,18 +29,21 @@ inline static bool point_in_cell(
     const int *verts_on_cell)
 {
   // if (cell < 0) return false;
-  const int nverts = nedges_on_cell[cell];
+  const int nverts = nedges_on_cell[cell-1];
   // double xv[MAX_VERTS][3];
 
   for (int i = 0; i < nverts; i ++) {
     for (int k = 0; k < 3; k ++) {
-      const int vertex = verts_on_cell[cell * nverts + i];
-      iv[k] = vertex;
-      xv[i][k] = Xv[vertex*3+k];
+      const int vertex = verts_on_cell[(cell-1) * nverts + i];
+      iv[k] = vertex-1;
+      xv[i][k] = Xv[(vertex-1)*3+k];
     }
   }
 
-  return ftk::point_in_mpas_cell<double>(nverts, xv, x);
+  bool succ = ftk::point_in_mpas_cell<double>(nverts, xv, x);
+  // printf("x=%f, %f, %f, cell=%d, succ=%d\n", 
+  //     x[0], x[1], x[2], cell, succ);
+  return succ;
 }
 
 __device__ __host__
@@ -62,12 +65,14 @@ inline static int locate_cell_local( // local search among neighbors
         max_edges, Xv, nedges_on_cell, verts_on_cell))
     return curr;
   else {
-    for (int i = 0; i < nedges_on_cell[curr]; i ++) {
-      const int cell = cells_on_cell[i + max_edges * curr];
+    for (int i = 0; i < nedges_on_cell[curr-1]; i ++) {
+      const int cell = cells_on_cell[i + max_edges * (curr-1)];
       if (point_in_cell(
             cell, x, iv, xv,
-            max_edges, Xv, nedges_on_cell, verts_on_cell))
+            max_edges, Xv, nedges_on_cell, verts_on_cell)) {
+        // printf("curr=%d, cell=%d\n", curr, cell);
         return cell;
+      }
     }
     return -1; // not found among neighbors
   }
@@ -96,6 +101,15 @@ inline static bool mpas_eval(
   int iv[MAX_VERTS];
   double xv[MAX_VERTS][3];
 
+#if 0
+  printf("hc=%llu, hl=%lu, x=%f, %f, %f\n", 
+      hint_c, hint_l, x[0], x[1], x[2]);
+  printf("c=%llu, l=%lu, x=%f, %f, %f, v=%f, %f, %f, %f\n", 
+      hint_c, hint_l, 
+      p.x[0], p.x[1], p.x[2], 
+      v[0], v[1], v[2], v[3]);
+#endif
+
   const int cell = locate_cell_local(hint_c, 
       x, iv, xv, 
       Xv, max_edges, nedges_on_cell, 
@@ -103,11 +117,16 @@ inline static bool mpas_eval(
   if (cell < 0) return false;
   else hint_c = cell;
 
-  const int nverts = nedges_on_cell[cell];
+  const int nverts = nedges_on_cell[cell-1];
 
   // compute weights based on xyzVerts
   double omega[MAX_VERTS]; 
   ftk::wachspress_weights(nverts, xv, x, omega); 
+
+  // printf("cell=%d, nverts=%d, x=%f, %f, %f, weights=%f, %f, %f, %f, %f, %f, %f\n", 
+  //     cell, nverts,
+  //     x[0], x[1], x[2],
+  //     omega[0], omega[1], omega[2], omega[3], omega[4], omega[5], omega[6]);
 
   // locate layer
   int layer = hint_l;
@@ -115,21 +134,27 @@ inline static bool mpas_eval(
   const double R = ftk::vector_2norm<3>(x);
   const double z = R - R0;
   int dir; // 0=up, 1=down
- 
+
+  // printf("hint_l=%d\n", hint_l);
+
   bool succ = false;
   if (layer >= 0) { // interpolate upper/lower tops and check if x remains in the layer
     layer = hint_l;
     for (int i = 0; i < nverts; i ++) {
+      // printf("%d, %d, %d\n", iv[i], nlayers, layer);
       upper += omega[i] * zTop[ iv[i] * nlayers + layer ];
       lower += omega[i] * zTop[ iv[i] * nlayers + layer+1 ];
-
-      if (z > upper)
-        dir = 0; // up
-      else if (z <= lower) 
-        dir = 1; // down
-      else 
-        succ = true;
     }
+
+    // printf("z=%f, lower=%f, upper=%f\n", z, lower, upper);
+
+    if (z > upper)
+      dir = 0; // up
+    else if (z <= lower) 
+      dir = 1; // down
+    else 
+      succ = true;
+
   } else {
     layer = 0;
     dir = 1;
@@ -230,7 +255,9 @@ inline static bool spherical_rk1_with_vertical_velocity(
 
   ftk::angular_stepping(p.x, v, h, p.x);
   
-  p.x[4] += v[4] * h; // the vertical component
+  // printf("x=%f, %f, %f, v=%f, %f, %f, %f\n", 
+  //     p.x[0], p.x[1], p.x[2], v[0], v[1], v[2], v[3]);
+
   return true;
 }
 
@@ -409,10 +436,10 @@ void mop_load_data(mop_ctx_t *c,
     const double *zTop,
     const double *A)
 {
-  load_data<double>(c->d_V, V, 3 * c->ncells * c->nlayers, "V");
-  load_data<double>(c->d_Vv, Vv, c->ncells * (c->nlayers+1), "Vv");
-  load_data<double>(c->d_zTop, zTop, c->ncells * c->nlayers, "zTop");
-  load_data<double>(c->d_A, A, c->nattrs * c->ncells * c->nlayers, "f");
+  load_data<double>(c->d_V, V, 3 * c->nverts * c->nlayers, "V");
+  load_data<double>(c->d_Vv, Vv, c->nverts * (c->nlayers+1), "Vv");
+  load_data<double>(c->d_zTop, zTop, c->nverts * c->nlayers, "zTop");
+  load_data<double>(c->d_A, A, c->nattrs * c->nverts * c->nlayers, "f");
 }
 
 
@@ -430,9 +457,9 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
   else gridSize = dim3(nBlocks);
 
   mpas_trace<<<gridSize, blockSize>>>(
-      1024, 0.0001, 
-      c->nparticles, 
-      c->dparts, 
+      32768, 0.0001, 
+      ntasks, 
+      c->dparts + 228, 
       c->d_V[0], 
       c->d_Vv[0],
       c->d_zTop[0], 
