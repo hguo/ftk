@@ -20,7 +20,7 @@ typedef struct {
       *d_verts_on_cell;
 
   // c2v interpolants
-  double *d_interpolants;
+  double *d_c2v_interpolants;
 
   // time-varying data
   double *d_V[2], *d_Vv[2], *d_zTop[2], *d_A[2]; // velocity, verticalVelocity, zTop, and more

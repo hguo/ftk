@@ -267,6 +267,53 @@ inline static bool spherical_rk1_with_vertical_velocity(
 }
 
 __global__
+static void mpas_c2v(
+    double *V, // vertexwise data
+    const double *C, // cellwise data
+    const int nch,
+    const int ncells,
+    const int nverts,
+    const int nlayers,
+    const double *interpolants,
+    const int *cells_on_vert,
+    const unsigned char *cell_on_boundary)
+{
+  unsigned long long i = getGlobalIdx_3D_1D();
+  if (i >= nverts) return;
+
+  const bool boundary = cell_on_boundary[i];
+  double lambda[3];
+  int ci[3];
+
+  for (int l = 0; l < 3; l ++) {
+    lambda[l] = interpolants[l + i * 3];
+    ci[l] = cells_on_vert[l + i * 3];
+  }
+
+  for (int layer = 0; layer < nlayers; layer ++) {
+    for (int k = 0; k < nch; k ++) {
+      double &v = V[k + nch * (layer + i * nlayers)];
+      if (boundary) {
+        v = 0;
+      } else {
+        bool invalid = false;
+        for (int l = 0; l < 3; l ++) {
+          double val = C[k * nch * (layer + ci[l] * nlayers)];
+          if (val < -1e33) {
+            invalid = true;
+            break;
+          }
+          v += lambda[l] * val;
+        }
+        
+        if (invalid)
+          v = nan("1");
+      }
+    }
+  }
+}
+
+__global__
 static void mpas_trace(
     const int nsteps,
     const double h,
@@ -335,8 +382,14 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   if (c->d_cells_on_cell != NULL) cudaFree(c->d_cells_on_cell);
   if (c->d_verts_on_cell != NULL) cudaFree(c->d_verts_on_cell);
 
-  if (c->d_V[0] != NULL) cudaFree(c->d_V[0]);
-  if (c->d_V[1] != NULL) cudaFree(c->d_V[1]);
+  for (int i = 0; i < 2; i ++) {
+    if (c->d_V[i] != NULL) cudaFree(c->d_V[i]);
+    if (c->d_Vv[i] != NULL) cudaFree(c->d_Vv[i]);
+    if (c->d_zTop[i] != NULL) cudaFree(c->d_zTop[i]);
+    if (c->d_A[i] != NULL) cudaFree(c->d_A[i]);
+  }
+
+  if (c->d_c2v_interpolants != NULL) cudaFree(c->d_c2v_interpolants);
 
   free(*c_);
   *c_ = NULL;
@@ -409,6 +462,17 @@ void mop_load_mesh(mop_ctx_t *c,
   cudaMemcpy(c->d_verts_on_cell, verts_on_cell, size_t(nverts) * max_edges * sizeof(int), cudaMemcpyHostToDevice);
 
   checkLastCudaError("[FTK-CUDA] loading mpas mesh");
+}
+
+void mop_load_c2v_interpolants(mop_ctx_t *c,
+    const double *interpolants)
+{
+  cudaMalloc((void**)&c->d_c2v_interpolants, size_t(c->nverts) * 3 * sizeof(double));
+  cudaMemcpy(c->d_c2v_interpolants, interpolants,
+      size_t(c->nverts) * 3 * sizeof(double), 
+      cudaMemcpyHostToDevice);
+
+  checkLastCudaError("[FTK-CUDA] loading mpas c2v interpolants");
 }
 
 template <typename T=double>
