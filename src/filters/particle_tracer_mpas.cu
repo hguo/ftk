@@ -33,16 +33,18 @@ inline static bool point_in_cell(
   // double xv[MAX_VERTS][3];
 
   for (int i = 0; i < nverts; i ++) {
-    for (int k = 0; k < 3; k ++) {
-      const int vertex = verts_on_cell[(cell-1) * nverts + i];
-      iv[k] = vertex-1;
+    const int vertex = verts_on_cell[(cell-1) * max_edges + i];
+    iv[i] = vertex-1;
+    for (int k = 0; k < 3; k ++)
       xv[i][k] = Xv[(vertex-1)*3+k];
-    }
   }
 
   bool succ = ftk::point_in_mpas_cell<double>(nverts, xv, x);
-  // printf("x=%f, %f, %f, cell=%d, succ=%d\n", 
-  //     x[0], x[1], x[2], cell, succ);
+#if 0
+  printf("x=%f, %f, %f, cell=%d, nverts=%d, max_edges=%d, iv=%d, %d, %d, %d, %d, %d, %d, succ=%d\n", 
+      x[0], x[1], x[2], cell, nverts, max_edges,
+      iv[0], iv[1], iv[2], iv[3], iv[4], iv[5], iv[6], succ);
+#endif
   return succ;
 }
 
@@ -106,7 +108,7 @@ inline static bool mpas_eval(
       hint_c, hint_l, x[0], x[1], x[2]);
   printf("c=%llu, l=%lu, x=%f, %f, %f, v=%f, %f, %f, %f\n", 
       hint_c, hint_l, 
-      p.x[0], p.x[1], p.x[2], 
+      x[0], x[1], x[2], 
       v[0], v[1], v[2], v[3]);
 #endif
 
@@ -123,10 +125,13 @@ inline static bool mpas_eval(
   double omega[MAX_VERTS]; 
   ftk::wachspress_weights(nverts, xv, x, omega); 
 
-  // printf("cell=%d, nverts=%d, x=%f, %f, %f, weights=%f, %f, %f, %f, %f, %f, %f\n", 
-  //     cell, nverts,
-  //     x[0], x[1], x[2],
-  //     omega[0], omega[1], omega[2], omega[3], omega[4], omega[5], omega[6]);
+#if 0
+  printf("cell=%d, nverts=%d, x=%f, %f, %f, iv=%d, %d, %d, %d, %d, %d, %d, weights=%f, %f, %f, %f, %f, %f, %f\n", 
+      cell, nverts,
+      x[0], x[1], x[2],
+      iv[0], iv[1], iv[2], iv[3], iv[4], iv[5], iv[6],
+      omega[0], omega[1], omega[2], omega[3], omega[4], omega[5], omega[6]);
+#endif
 
   // locate layer
   int layer = hint_l;
@@ -400,8 +405,8 @@ void mop_load_mesh(mop_ctx_t *c,
   cudaMalloc((void**)&c->d_cells_on_cell, size_t(ncells) * max_edges * sizeof(int));
   cudaMemcpy(c->d_cells_on_cell, cells_on_cell, size_t(ncells) * max_edges * sizeof(int), cudaMemcpyHostToDevice);
 
-  cudaMalloc((void**)&c->d_verts_on_cell, size_t(nverts) * 3 * sizeof(int));
-  cudaMemcpy(c->d_verts_on_cell, verts_on_cell, size_t(nverts) * 3 * sizeof(int), cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&c->d_verts_on_cell, size_t(nverts) * max_edges * sizeof(int));
+  cudaMemcpy(c->d_verts_on_cell, verts_on_cell, size_t(nverts) * max_edges * sizeof(int), cudaMemcpyHostToDevice);
 
   checkLastCudaError("[FTK-CUDA] loading mpas mesh");
 }
@@ -456,10 +461,12 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
   if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else gridSize = dim3(nBlocks);
 
+  // fprintf(stderr, "gridSize=%d, %d, %d, blockSize=%d\n", gridSize.x, gridSize.y, gridSize.z, blockSize);
+  
   mpas_trace<<<gridSize, blockSize>>>(
       32768, 0.0001, 
       ntasks, 
-      c->dparts + 228, 
+      c->dparts,
       c->d_V[0], 
       c->d_Vv[0],
       c->d_zTop[0], 

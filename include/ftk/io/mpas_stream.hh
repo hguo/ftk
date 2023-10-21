@@ -21,6 +21,8 @@ struct mpas_stream : public object {
   void set_ntimesteps(int n) { ntimesteps = n; }
   bool advance_timestep();
 
+  void set_c2v(bool b) { c2v = b; }
+
 public:
   diy::mpi::communicator comm;
   std::string path;
@@ -30,6 +32,7 @@ public:
   
   int ncid;
   size_t start_timestep = 0, current_timestep = 0, ntimesteps = 0;
+  bool c2v = true;
 };
 
 //////
@@ -38,7 +41,9 @@ void mpas_stream::initialize()
   m.reset(new mpas_mesh<>);
   m->read_netcdf(path);
   m->initialize();
-  m->initialize_c2v_interpolants();
+  
+  if (c2v)
+    m->initialize_c2v_interpolants();
 
 #if FTK_HAVE_NETCDF
 #if NC_HAS_PARALLEL
@@ -79,18 +84,20 @@ bool mpas_stream::advance_timestep()
     // fprintf(stderr, "vectors read.\n");
   
     ndarray<double> velocity = ndarray<double>::concat({velocityX, velocityY, velocityZ});
-    g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
-    // fprintf(stderr, "vectors interpolated.\n");
-  
+    if (c2v) g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
+    else g->set("velocity", velocity);
+
     ndarray<double> salinity; 
     salinity.read_netcdf(ncid, "salinity", st, sz);
     salinity.make_multicomponents();
-    g->set("salinity", m->interpolate_c2v(salinity));
+    if (c2v) g->set("salinity", m->interpolate_c2v(salinity));
+    else g->set("salinity", salinity);
     
     ndarray<double> temperature;
     temperature.read_netcdf(ncid, "temperature", st, sz);
     temperature.make_multicomponents();
-    g->set("temperature", m->interpolate_c2v(temperature));
+    if (c2v) g->set("temperature", m->interpolate_c2v(temperature));
+    else g->set("temperature", temperature);
 
 #if 0
     ndarray<double> layerThickness;
@@ -102,7 +109,8 @@ bool mpas_stream::advance_timestep()
     ndarray<double> zTop;
     zTop.read_netcdf(ncid, "zTop", st, sz);
     zTop.make_multicomponents();
-    g->set("zTop", m->interpolate_c2v(zTop));
+    if (c2v) g->set("zTop", m->interpolate_c2v(zTop));
+    else g->set("zTop", zTop);
     
     // fprintf(stderr, "scalars read.\n");
   }
@@ -114,7 +122,8 @@ bool mpas_stream::advance_timestep()
     ndarray<double> vertVelocityTop;
     vertVelocityTop.read_netcdf(ncid, "vertVelocityTop", st, sz);
     vertVelocityTop.make_multicomponents();
-    g->set("vertVelocityTop", m->interpolate_c2v(vertVelocityTop));
+    if (c2v) g->set("vertVelocityTop", m->interpolate_c2v(vertVelocityTop));
+    else g->set("vertVelocityTop", vertVelocityTop);
   }
   
   // fprintf(stderr, "callback..\n");
