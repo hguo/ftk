@@ -1,6 +1,7 @@
 #include <nvfunctional>
 #include <ftk/numeric/mpas.hh>
 #include <ftk/numeric/wachspress_interpolation.hh>
+#include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/filters/mpas_ocean_particle_tracker.cuh>
 #include <ftk/numeric/rk4.hh>
 #include "common.cuh"
@@ -10,12 +11,21 @@ typedef mop_ctx_t ctx_t;
 static const int MAX_VERTS = 10;
 static const int MAX_LAYERS = 100;
 static const double R0 = 6371229.0;
+  
+static const int maxGridDim = 1024;
+static const int blockSize = 256;
 
 // what we need:
 // - velocity field
 // - vertical velocity field
 // - zTop field
 // - scalar attribute fields
+
+__device__ __host__
+inline static int c2ci(int c) { return c - 1; }
+
+__device__ __host__
+inline static int v2vi(int v) { return v - 1; }
 
 __device__ __host__
 inline static bool point_in_cell(
@@ -29,14 +39,14 @@ inline static bool point_in_cell(
     const int *verts_on_cell)
 {
   // if (cell < 0) return false;
-  const int nverts = nedges_on_cell[cell-1];
+  const int nverts = nedges_on_cell[c2ci(cell)];
   // double xv[MAX_VERTS][3];
 
   for (int i = 0; i < nverts; i ++) {
-    const int vertex = verts_on_cell[(cell-1) * max_edges + i];
-    iv[i] = vertex-1;
+    const int vertex = verts_on_cell[c2ci(cell) * max_edges + i];
+    iv[i] = v2vi(vertex);
     for (int k = 0; k < 3; k ++)
-      xv[i][k] = Xv[(vertex-1)*3+k];
+      xv[i][k] = Xv[iv[i]*3+k];
   }
 
   bool succ = ftk::point_in_mpas_cell<double>(nverts, xv, x);
@@ -67,8 +77,8 @@ inline static int locate_cell_local( // local search among neighbors
         max_edges, Xv, nedges_on_cell, verts_on_cell))
     return curr;
   else {
-    for (int i = 0; i < nedges_on_cell[curr-1]; i ++) {
-      const int cell = cells_on_cell[i + max_edges * (curr-1)];
+    for (int i = 0; i < nedges_on_cell[c2ci(curr)]; i ++) {
+      const int cell = cells_on_cell[i + max_edges * c2ci(curr)];
       if (point_in_cell(
             cell, x, iv, xv,
             max_edges, Xv, nedges_on_cell, verts_on_cell)) {
@@ -119,7 +129,7 @@ inline static bool mpas_eval(
   if (cell < 0) return false;
   else hint_c = cell;
 
-  const int nverts = nedges_on_cell[cell-1];
+  const int nverts = nedges_on_cell[c2ci(cell)];
 
   // compute weights based on xyzVerts
   double omega[MAX_VERTS]; 
@@ -267,7 +277,59 @@ inline static bool spherical_rk1_with_vertical_velocity(
 }
 
 __global__
-static void mpas_c2v(
+static void initialize_c2v(
+    const int ncells,
+    const int nverts,
+    const double *Xc, // cell x
+    const double *Xv, // vertex x
+    const int *cells_on_vert,
+    double *interpolants,
+    bool *cell_on_boundary)
+{
+  unsigned long long i = getGlobalIdx_3D_1D();
+  if (i >= nverts) return;
+
+  bool boundary = false;
+  double xc[3][3], xv[3];
+
+  const int vi = i;
+#if 0
+  printf("%d, %d, %d, %d, %d, %d, %d\n",
+      vi, 
+      cells_on_vert[vi*3],
+      cells_on_vert[vi*3+1],
+      cells_on_vert[vi*3+2], 
+      vi*3, vi*3+1, vi*3+2);
+#endif
+
+  for (int j = 0; j < 3; j ++) {
+    const int ci = c2ci( cells_on_vert[j + vi*3] );
+    // const int ci = cells_on_vert[j + i*3];
+    // printf("%d, %d\n", vi, ci);
+    if (ci < 0) {
+      boundary = true;
+      break;
+    }
+    xv[j] = Xv[j + vi*3];
+    for (int k = 0; k < 3; k ++)
+      xc[j][k] = Xc[k + ci*3];
+  }
+
+  if (boundary) {
+    cell_on_boundary[vi] = true;
+  } else {
+    cell_on_boundary[vi] = false;
+    
+    double mu[3];
+    bool succ = ftk::inverse_lerp_s2v3_0(xc, xv, mu);
+    for (int k = 0; k < 3; k ++)
+      interpolants[k + vi*3] = mu[k];
+  }
+}
+
+
+__global__
+static void mop_c2v(
     double *V, // vertexwise data
     const double *C, // cellwise data
     const int nch,
@@ -276,7 +338,7 @@ static void mpas_c2v(
     const int nlayers,
     const double *interpolants,
     const int *cells_on_vert,
-    const unsigned char *cell_on_boundary)
+    const bool *cell_on_boundary)
 {
   unsigned long long i = getGlobalIdx_3D_1D();
   if (i >= nverts) return;
@@ -361,20 +423,12 @@ void mop_create_ctx(mop_ctx_t **c_, int device)
 
   c->device = device;
   cudaSetDevice(device);
-
-  c->d_Xc = NULL;
-  c->d_Xv = NULL;
-  c->d_nedges_on_cell = NULL;
-  c->d_cells_on_cell = NULL;
-  c->d_verts_on_cell = NULL;
- 
-  c->d_V[0] = NULL;
-  c->d_V[1] = NULL;
 }
 
 void mop_destroy_ctx(mop_ctx_t **c_)
 {
   ctx_t *c = *c_;
+  if (c == NULL) return;
 
   if (c->d_Xc != NULL) cudaFree(c->d_Xc);
   if (c->d_Xv != NULL) cudaFree(c->d_Xv);
@@ -390,6 +444,7 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   }
 
   if (c->d_c2v_interpolants != NULL) cudaFree(c->d_c2v_interpolants);
+  if (c->d_cell_on_boundary != NULL) cudaFree(c->d_cell_on_boundary);
 
   free(*c_);
   *c_ = NULL;
@@ -438,7 +493,8 @@ void mop_load_mesh(mop_ctx_t *c,
     const double *Xv,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
-    const int *verts_on_cell)
+    const int *verts_on_cell,
+    const int *cells_on_vert)
 {
   c->ncells = ncells;
   c->nlayers = nlayers;
@@ -446,33 +502,75 @@ void mop_load_mesh(mop_ctx_t *c,
   c->max_edges = max_edges;
   c->nattrs = nattrs;
 
-  cudaMalloc((void**)&c->d_Xc, size_t(ncells) * sizeof(double) * 3);
-  cudaMemcpy(c->d_Xc, Xc, size_t(ncells) * sizeof(double) * 3, cudaMemcpyHostToDevice);
-
-  cudaMalloc((void**)&c->d_Xv, size_t(nverts) * sizeof(double) * 3);
-  cudaMemcpy(c->d_Xv, Xv, size_t(nverts) * sizeof(double) * 3, cudaMemcpyHostToDevice);
-
-  cudaMalloc((void**)&c->d_nedges_on_cell, size_t(ncells) * sizeof(int));
-  cudaMemcpy(c->d_nedges_on_cell, nedges_on_cell, size_t(ncells) * sizeof(int), cudaMemcpyHostToDevice);
-
-  cudaMalloc((void**)&c->d_cells_on_cell, size_t(ncells) * max_edges * sizeof(int));
-  cudaMemcpy(c->d_cells_on_cell, cells_on_cell, size_t(ncells) * max_edges * sizeof(int), cudaMemcpyHostToDevice);
-
-  cudaMalloc((void**)&c->d_verts_on_cell, size_t(nverts) * max_edges * sizeof(int));
-  cudaMemcpy(c->d_verts_on_cell, verts_on_cell, size_t(nverts) * max_edges * sizeof(int), cudaMemcpyHostToDevice);
-
-  checkLastCudaError("[FTK-CUDA] loading mpas mesh");
-}
-
-void mop_load_c2v_interpolants(mop_ctx_t *c,
-    const double *interpolants)
-{
-  cudaMalloc((void**)&c->d_c2v_interpolants, size_t(c->nverts) * 3 * sizeof(double));
-  cudaMemcpy(c->d_c2v_interpolants, interpolants,
-      size_t(c->nverts) * 3 * sizeof(double), 
+  cudaMalloc((void**)&c->d_Xc, 
+      size_t(ncells) * sizeof(double) * 3);
+  cudaMemcpy(c->d_Xc, Xc, 
+      size_t(ncells) * sizeof(double) * 3, 
       cudaMemcpyHostToDevice);
 
-  checkLastCudaError("[FTK-CUDA] loading mpas c2v interpolants");
+  cudaMalloc((void**)&c->d_Xv, 
+      size_t(nverts) * sizeof(double) * 3);
+  cudaMemcpy(c->d_Xv, Xv, 
+      size_t(nverts) * sizeof(double) * 3, 
+      cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_nedges_on_cell, 
+      size_t(ncells) * sizeof(int));
+  cudaMemcpy(c->d_nedges_on_cell, nedges_on_cell, 
+      size_t(ncells) * sizeof(int), 
+      cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_cells_on_cell, 
+      size_t(ncells) * max_edges * sizeof(int));
+  cudaMemcpy(c->d_cells_on_cell, cells_on_cell, 
+      size_t(ncells) * max_edges * sizeof(int), 
+      cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_verts_on_cell, 
+      size_t(nverts) * max_edges * sizeof(int));
+  cudaMemcpy(c->d_verts_on_cell, verts_on_cell, 
+      size_t(nverts) * max_edges * sizeof(int), 
+      cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_cells_on_vert, 
+      size_t(nverts) * 3 * sizeof(int));
+  cudaMemcpy(c->d_cells_on_vert, cells_on_vert, 
+      size_t(nverts) * 3 * sizeof(int),
+      cudaMemcpyHostToDevice);
+
+  checkLastCudaError("[FTK-CUDA] loading mpas mesh");
+
+  // initialize interpolants
+  {
+    cudaMalloc((void**)&c->d_c2v_interpolants, 
+        size_t(c->nverts) * 3 * sizeof(double));
+
+    cudaMalloc((void**)&c->d_cell_on_boundary,
+        size_t(c->ncells) * sizeof(bool));
+    
+    cudaDeviceSynchronize();
+    checkLastCudaError("[FTK-CUDA] initializing mpas c2v interpolants: malloc");
+
+    size_t ntasks = c->nverts;
+    const int nBlocks = idivup(ntasks, blockSize);
+    dim3 gridSize;
+  
+    if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+    else gridSize = dim3(nBlocks);
+
+    initialize_c2v<<<gridSize, blockSize>>>(
+        c->ncells, 
+        c->nverts, 
+        c->d_Xc,
+        c->d_Xv,
+        c->d_cells_on_vert, 
+        c->d_c2v_interpolants,
+        c->d_cell_on_boundary);
+ 
+    fprintf(stderr, "c2v initialization done.\n");
+    cudaDeviceSynchronize();
+    checkLastCudaError("[FTK-CUDA] initializing mpas c2v interpolants");
+  }
 }
 
 template <typename T=double>
@@ -517,8 +615,6 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
   size_t ntasks = c->nparticles;
   fprintf(stderr, "ntasks=%zu\n", ntasks);
   
-  const int maxGridDim = 1024;
-  const int blockSize = 256;
   const int nBlocks = idivup(ntasks, blockSize);
   dim3 gridSize;
 

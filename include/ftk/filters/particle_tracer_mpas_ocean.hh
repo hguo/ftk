@@ -80,7 +80,8 @@ inline void particle_tracer_mpas_ocean::initialize()
         m->xyzVertices.data(),
         m->nEdgesOnCell.data(),
         m->cellsOnCell.data(),
-        m->verticesOnCell.data());
+        m->verticesOnCell.data(),
+        m->cellsOnVertex.data());
 #endif
   }
 }

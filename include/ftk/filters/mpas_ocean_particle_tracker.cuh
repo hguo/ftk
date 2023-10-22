@@ -17,10 +17,12 @@ typedef struct {
   double *d_Xc, *d_Xv; // cell/vertex coordinates
   int *d_nedges_on_cell, 
       *d_cells_on_cell,
-      *d_verts_on_cell;
+      *d_verts_on_cell,
+      *d_cells_on_vert;
 
   // c2v interpolants
   double *d_c2v_interpolants;
+  bool *d_cell_on_boundary;
 
   // time-varying data
   double *d_V[2], *d_Vv[2], *d_zTop[2], *d_A[2]; // velocity, verticalVelocity, zTop, and more
@@ -45,10 +47,8 @@ void mop_load_mesh(mop_ctx_t *c,
     const double *Xv,
     const int *n_edges_on_cell, 
     const int *cells_on_cell,
-    const int *verts_on_cell);
-
-void mop_load_c2v_interpolants(mop_ctx_t *c,
-    const double *interpolants);
+    const int *verts_on_cell,
+    const int *cells_on_vert);
 
 void mop_load_data(mop_ctx_t *c, 
     const double *V, 

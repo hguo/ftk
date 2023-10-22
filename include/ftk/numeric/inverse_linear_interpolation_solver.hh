@@ -99,6 +99,7 @@ inline bool inverse_lerp_s2v3_0(const T V[3][3], const T V0[3], // target value
 }
 
 template <typename T>
+__device__ __host__
 T cond_inverse_lerp_s2v2(const T V[3][2])
 {
   const T A[2][2] = {
