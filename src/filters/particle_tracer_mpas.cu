@@ -9,7 +9,7 @@
 typedef mop_ctx_t ctx_t;
 
 static const int MAX_VERTS = 10;
-static const int MAX_LAYERS = 100;
+// static const int MAX_LAYERS = 100;
 static const double R0 = 6371229.0;
   
 static const int maxGridDim = 1024;
@@ -329,13 +329,13 @@ static void initialize_c2v(
 
 
 __global__
-static void mop_c2v(
+static void interpolate_c2v(
     double *V, // vertexwise data
     const double *C, // cellwise data
     const int nch,
+    const int nlayers,
     const int ncells,
     const int nverts,
-    const int nlayers,
     const double *interpolants,
     const int *cells_on_vert,
     const bool *cell_on_boundary)
@@ -343,18 +343,20 @@ static void mop_c2v(
   unsigned long long i = getGlobalIdx_3D_1D();
   if (i >= nverts) return;
 
-  const bool boundary = cell_on_boundary[i];
+  const int vi = i;
+
+  const bool boundary = cell_on_boundary[vi];
   double lambda[3];
   int ci[3];
 
   for (int l = 0; l < 3; l ++) {
     lambda[l] = interpolants[l + i * 3];
-    ci[l] = cells_on_vert[l + i * 3];
+    ci[l] = c2ci(cells_on_vert[l + vi * 3]);
   }
 
   for (int layer = 0; layer < nlayers; layer ++) {
     for (int k = 0; k < nch; k ++) {
-      double &v = V[k + nch * (layer + i * nlayers)];
+      double &v = V[k + nch * (layer + vi * nlayers)];
       if (boundary) {
         v = 0;
       } else {
@@ -435,6 +437,7 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   if (c->d_nedges_on_cell != NULL) cudaFree(c->d_nedges_on_cell);
   if (c->d_cells_on_cell != NULL) cudaFree(c->d_cells_on_cell);
   if (c->d_verts_on_cell != NULL) cudaFree(c->d_verts_on_cell);
+  if (c->d_cells_on_vert != NULL) cudaFree(c->d_cells_on_vert);
 
   for (int i = 0; i < 2; i ++) {
     if (c->d_V[i] != NULL) cudaFree(c->d_V[i]);
@@ -445,6 +448,10 @@ void mop_destroy_ctx(mop_ctx_t **c_)
 
   if (c->d_c2v_interpolants != NULL) cudaFree(c->d_c2v_interpolants);
   if (c->d_cell_on_boundary != NULL) cudaFree(c->d_cell_on_boundary);
+  if (c->dcw != NULL) cudaFree(c->dcw);
+
+  if (c->dparts != NULL) cudaFree(c->dparts);
+  if (c->hparts != NULL) free(c->hparts);
 
   free(*c_);
   *c_ = NULL;
@@ -597,6 +604,53 @@ static void load_data(
   checkLastCudaError("[FTK-CUDA] cudaMemcpy");
 }
 
+static void load_cw_data(
+    mop_ctx_t *c,
+    double **dbuf, // an array with two device pointers
+    const double *cw,
+    const int nch,
+    const int nlayers) // host pointer with cw data
+{
+  // initialize buffers for vertexwise data in two adjacent timesteps
+  double *d;
+  if (dbuf[0] == NULL) {
+    cudaMalloc((void**)&dbuf[0], 
+        sizeof(double) * c->nverts * nch * nlayers);
+    d = dbuf[0];
+  } else if (dbuf[1] == NULL) {
+    cudaMalloc((void**)&dbuf[1], 
+        sizeof(double) * c->nverts * nch * nlayers);
+    d = dbuf[1];
+  } else {
+    std::swap(dbuf[0], dbuf[1]);
+    d = dbuf[1];
+  }
+  
+  // copy data to c2w buffer
+  assert(c->dcw != NULL);
+  cudaMemcpy(c->dcw, cw, 
+      sizeof(double) * c->ncells * nch * nlayers, 
+      cudaMemcpyHostToDevice);
+
+  // c2w interpolation
+  {
+    size_t ntasks = c->nverts;
+    const int nBlocks = idivup(ntasks, blockSize);
+    dim3 gridSize;
+  
+    if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+    else gridSize = dim3(nBlocks);
+
+    interpolate_c2v<<<gridSize, blockSize>>>(
+        d, c->dcw, nch, nlayers,
+        c->ncells,
+        c->nverts,
+        c->d_c2v_interpolants,
+        c->d_cells_on_vert,
+        c->d_cell_on_boundary);
+  }
+}
+
 void mop_load_data(mop_ctx_t *c, 
     const double *V,
     const double *Vv,
@@ -609,6 +663,21 @@ void mop_load_data(mop_ctx_t *c,
   load_data<double>(c->d_A, A, c->nattrs * c->nverts * c->nlayers, "f");
 }
 
+void mop_load_data_cw(mop_ctx_t *c,
+    const double *Vc,
+    const double *Vvc,
+    const double *zTopc,
+    const double *Ac)
+{
+  if (c->dcw == NULL)
+    cudaMalloc((void**)&c->dcw, 
+        sizeof(double) * c->ncells * c->nattrs * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
+
+  load_cw_data(c, c->d_V, Vc, 3, c->ncells* c->nlayers); // V
+  load_cw_data(c, c->d_Vv, Vvc, 1, c->ncells * (c->nlayers+1)); // Vv
+  load_cw_data(c, c->d_zTop, zTopc, 1, c->ncells * c->nlayers); // zTop
+  load_cw_data(c, c->d_A, Ac, c->nattrs, c->ncells * c->nlayers); // f
+}
 
 void mop_execute(mop_ctx_t *c, int current_timestep)
 {
