@@ -340,6 +340,8 @@ static void interpolate_c2v(
     const int *cells_on_vert,
     const bool *cell_on_boundary)
 {
+  // unsigned long long i = 192;
+  // if (threadIdx.x > 0) return;
   unsigned long long i = getGlobalIdx_3D_1D();
   if (i >= nverts) return;
 
@@ -350,9 +352,13 @@ static void interpolate_c2v(
   int ci[3];
 
   for (int l = 0; l < 3; l ++) {
-    lambda[l] = interpolants[l + i * 3];
+    lambda[l] = interpolants[l + vi * 3];
     ci[l] = c2ci(cells_on_vert[l + vi * 3]);
   }
+
+  // printf("ci=%d, %d, %d, boundary=%d, lambda=%f, %f, %f\n", 
+  //     ci[0], ci[1], ci[2], boundary, 
+  //     lambda[0], lambda[1], lambda[2]);
 
   for (int layer = 0; layer < nlayers; layer ++) {
     for (int k = 0; k < nch; k ++) {
@@ -362,7 +368,7 @@ static void interpolate_c2v(
       } else {
         bool invalid = false;
         for (int l = 0; l < 3; l ++) {
-          double val = C[k * nch * (layer + ci[l] * nlayers)];
+          double val = C[k + nch * (layer + ci[l] * nlayers)];
           if (val < -1e33) {
             invalid = true;
             break;
@@ -555,7 +561,7 @@ void mop_load_mesh(mop_ctx_t *c,
     cudaMalloc((void**)&c->d_cell_on_boundary,
         size_t(c->ncells) * sizeof(bool));
     
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("[FTK-CUDA] initializing mpas c2v interpolants: malloc");
 
     size_t ntasks = c->nverts;
@@ -575,7 +581,7 @@ void mop_load_mesh(mop_ctx_t *c,
         c->d_cell_on_boundary);
  
     fprintf(stderr, "c2v initialization done.\n");
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("[FTK-CUDA] initializing mpas c2v interpolants");
   }
 }
@@ -611,16 +617,19 @@ static void load_cw_data(
     const int nch,
     const int nlayers) // host pointer with cw data
 {
+  // cudaDeviceSynchronize();
   // initialize buffers for vertexwise data in two adjacent timesteps
   double *d;
   if (dbuf[0] == NULL) {
     cudaMalloc((void**)&dbuf[0], 
         sizeof(double) * c->nverts * nch * nlayers);
     d = dbuf[0];
+    checkLastCudaError("malloc vw buffers 0");
   } else if (dbuf[1] == NULL) {
     cudaMalloc((void**)&dbuf[1], 
         sizeof(double) * c->nverts * nch * nlayers);
     d = dbuf[1];
+    checkLastCudaError("malloc vw buffers 1");
   } else {
     std::swap(dbuf[0], dbuf[1]);
     d = dbuf[1];
@@ -631,6 +640,9 @@ static void load_cw_data(
   cudaMemcpy(c->dcw, cw, 
       sizeof(double) * c->ncells * nch * nlayers, 
       cudaMemcpyHostToDevice);
+  // cudaDeviceSynchronize();
+  // fprintf(stderr, "dcw=%p\n", c->dcw);
+  checkLastCudaError("memcpy to c2w buffer");
 
   // c2w interpolation
   {
@@ -648,6 +660,9 @@ static void load_cw_data(
         c->d_c2v_interpolants,
         c->d_cells_on_vert,
         c->d_cell_on_boundary);
+ 
+    // cudaDeviceSynchronize();
+    checkLastCudaError("c2w interpolation");
   }
 }
 
@@ -671,18 +686,20 @@ void mop_load_data_cw(mop_ctx_t *c,
 {
   if (c->dcw == NULL)
     cudaMalloc((void**)&c->dcw, 
-        sizeof(double) * c->ncells * c->nattrs * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
+        sizeof(double) * c->ncells * 3 * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
+  // cudaDeviceSynchronize();
+  checkLastCudaError("malloc dcw");
 
-  load_cw_data(c, c->d_V, Vc, 3, c->ncells* c->nlayers); // V
-  load_cw_data(c, c->d_Vv, Vvc, 1, c->ncells * (c->nlayers+1)); // Vv
-  load_cw_data(c, c->d_zTop, zTopc, 1, c->ncells * c->nlayers); // zTop
-  load_cw_data(c, c->d_A, Ac, c->nattrs, c->ncells * c->nlayers); // f
+  load_cw_data(c, c->d_V, Vc, 3, c->nlayers); // V
+  load_cw_data(c, c->d_Vv, Vvc, 1, c->nlayers+1); // Vv
+  load_cw_data(c, c->d_zTop, zTopc, 1, c->nlayers); // zTop
+  load_cw_data(c, c->d_A, Ac, c->nattrs, c->nlayers); // f
 }
 
 void mop_execute(mop_ctx_t *c, int current_timestep)
 {
   size_t ntasks = c->nparticles;
-  fprintf(stderr, "ntasks=%zu\n", ntasks);
+  // fprintf(stderr, "ntasks=%zu\n", ntasks);
   
   const int nBlocks = idivup(ntasks, blockSize);
   dim3 gridSize;
@@ -707,7 +724,7 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
       c->d_cells_on_cell,
       c->d_verts_on_cell, 
       c->nlayers);
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] mop_execute");
 
   cudaMemcpy(c->hparts, c->dparts, 

@@ -214,7 +214,7 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
         attrs(1, j, i) = temperature[0]->at(0, j, i);
       }
     }
-    mop_load_data(ctx, V[0]->data(), 
+    mop_load_data_cw(ctx, V[0]->data(), 
         vertVelocityTop[0]->data(),
         zTop[0]->data(),
         attrs.data());

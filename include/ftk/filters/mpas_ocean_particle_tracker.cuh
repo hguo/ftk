@@ -57,6 +57,12 @@ void mop_load_data(mop_ctx_t *c,
     const double *zTop,
     const double *A);
 
+void mop_load_data_cw(mop_ctx_t *c, 
+    const double *V, 
+    const double *Vv, 
+    const double *zTop,
+    const double *A);
+
 void mop_load_particles(mop_ctx_t *c, 
     const int n,
     ftk::feature_point_lite_t *);
