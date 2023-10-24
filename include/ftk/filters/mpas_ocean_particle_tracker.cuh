@@ -27,6 +27,7 @@ typedef struct {
 
   // time-varying data
   double *d_V[2], *d_Vv[2], *d_zTop[2], *d_A[2]; // velocity, verticalVelocity, zTop, and more
+  double **dd_V, **dd_Vv, **dd_zTop, **dd_A; // device pointers to pointers
 
   // particle data
   int nparticles;

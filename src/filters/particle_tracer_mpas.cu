@@ -237,8 +237,9 @@ inline static bool mpas_eval(
   return true;
 }
 
+template <int ORDER=1>
 __device__
-inline static bool spherical_rk1_with_vertical_velocity(
+inline static bool spherical_rk_with_vertical_velocity(
     const double h,
     ftk::feature_point_lite_t& p, 
     double *v0,         // return velocity
@@ -258,22 +259,27 @@ inline static bool spherical_rk1_with_vertical_velocity(
     unsigned long long &hint_c, 
     unsigned int &hint_l)        // hint for searching cell and layer
 {
-  double v[4];
-  if (!mpas_eval(p.x, v, vv, f,
-        V, Vv, zTop, nattrs, A, Xv, 
-        max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
-        nlayers, hint_c, hint_l))
+
+  if (ORDER == 1) {
+    double v[4];
+    if (!mpas_eval(p.x, v, vv, f,
+          V, Vv, zTop, nattrs, A, Xv, 
+          max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+          nlayers, hint_c, hint_l))
+      return false;
+
+    for (int k = 0; k < 4; k ++)
+      v0[k] = v[k];
+
+    ftk::angular_stepping(p.x, v, h, p.x);
+    return true;
+  } else if (ORDER == 4) {
+    return true;
+  } else
     return false;
-
-  for (int k = 0; k < 4; k ++)
-    v0[k] = v[k];
-
-  ftk::angular_stepping(p.x, v, h, p.x);
   
   // printf("x=%f, %f, %f, v=%f, %f, %f, %f\n", 
   //     p.x[0], p.x[1], p.x[2], v[0], v[1], v[2], v[3]);
-
-  return true;
 }
 
 __global__
@@ -389,11 +395,11 @@ static void mpas_trace(
     const double h,
     const int nparticles,
     ftk::feature_point_lite_t* particles,
-    const double *V,    // velocity field
-    const double *Vv,   // vertical velocities
-    const double *zTop, // top layer depth
+    const double *const V[2],    // velocity field
+    const double *const Vv[2],   // vertical velocities
+    const double *const zTop[2], // top layer depth
     const int nattrs,   // number of scalar attributes
-    const double *A,    // scalar attributes
+    const double *const A[2],    // scalar attributes
     const double *Xv,   // vertex locations
     const int max_edges,
     const int *nedges_on_cell, 
@@ -411,9 +417,9 @@ static void mpas_trace(
   unsigned int &hint_l = p.type;
 
   for (int j = 0; j < nsteps; j ++) {
-    bool succ = spherical_rk1_with_vertical_velocity(
+    bool succ = spherical_rk_with_vertical_velocity<1>(
         h, p, v0, vv, f, 
-        V, Vv, zTop, nattrs, A, Xv, 
+        V[0], Vv[0], zTop[0], nattrs, A[0], Xv, 
         max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
         nlayers, hint_c, hint_l);
 
@@ -451,6 +457,11 @@ void mop_destroy_ctx(mop_ctx_t **c_)
     if (c->d_zTop[i] != NULL) cudaFree(c->d_zTop[i]);
     if (c->d_A[i] != NULL) cudaFree(c->d_A[i]);
   }
+
+  if (c->dd_V) cudaFree(c->dd_V);
+  if (c->dd_Vv) cudaFree(c->dd_Vv);
+  if (c->dd_zTop) cudaFree(c->dd_zTop);
+  if (c->dd_A) cudaFree(c->dd_A);
 
   if (c->d_c2v_interpolants != NULL) cudaFree(c->d_c2v_interpolants);
   if (c->d_cell_on_boundary != NULL) cudaFree(c->d_cell_on_boundary);
@@ -613,11 +624,11 @@ static void load_data(
 static void load_cw_data(
     mop_ctx_t *c,
     double **dbuf, // an array with two device pointers
+    double ***ddbuf, // device array of pointers
     const double *cw,
     const int nch,
     const int nlayers) // host pointer with cw data
 {
-  // cudaDeviceSynchronize();
   // initialize buffers for vertexwise data in two adjacent timesteps
   double *d;
   if (dbuf[0] == NULL) {
@@ -634,6 +645,17 @@ static void load_cw_data(
     std::swap(dbuf[0], dbuf[1]);
     d = dbuf[1];
   }
+ 
+  // cudaDeviceSynchronize();
+  // checkLastCudaError("memcpy to c2w buffer: dev ptrs0");
+  if (*ddbuf == NULL) {
+    cudaMalloc((void**)ddbuf, sizeof(double*) * 2);
+    checkLastCudaError("memcpy to c2w buffer: allocating ddbuf");
+  }
+  // fprintf(stderr, "%p\n", ddbuf);
+  cudaMemcpy(*ddbuf, dbuf, sizeof(double*) * 2, 
+      cudaMemcpyHostToDevice);
+  checkLastCudaError("memcpy to c2w buffer: dev ptrs");
   
   // copy data to c2w buffer
   assert(c->dcw != NULL);
@@ -690,10 +712,10 @@ void mop_load_data_cw(mop_ctx_t *c,
   // cudaDeviceSynchronize();
   checkLastCudaError("malloc dcw");
 
-  load_cw_data(c, c->d_V, Vc, 3, c->nlayers); // V
-  load_cw_data(c, c->d_Vv, Vvc, 1, c->nlayers+1); // Vv
-  load_cw_data(c, c->d_zTop, zTopc, 1, c->nlayers); // zTop
-  load_cw_data(c, c->d_A, Ac, c->nattrs, c->nlayers); // f
+  load_cw_data(c, c->d_V, &c->dd_V, Vc, 3, c->nlayers); // V
+  load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, 1, c->nlayers+1); // Vv
+  load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, 1, c->nlayers); // zTop
+  load_cw_data(c, c->d_A, &c->dd_A, Ac, c->nattrs, c->nlayers); // f
 }
 
 void mop_execute(mop_ctx_t *c, int current_timestep)
@@ -708,23 +730,25 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
   else gridSize = dim3(nBlocks);
 
   // fprintf(stderr, "gridSize=%d, %d, %d, blockSize=%d\n", gridSize.x, gridSize.y, gridSize.z, blockSize);
-  
+  // cudaDeviceSynchronize();
+  // checkLastCudaError("[FTK-CUDA] mop_execute, pre");
+
   mpas_trace<<<gridSize, blockSize>>>(
       32768, 0.0001, 
       ntasks, 
       c->dparts,
-      c->d_V[0], 
-      c->d_Vv[0],
-      c->d_zTop[0], 
+      c->dd_V,
+      c->dd_Vv,
+      c->dd_zTop, 
       c->nattrs, 
-      c->d_A[0],
+      c->dd_A,
       c->d_Xv,
       c->max_edges, 
       c->d_nedges_on_cell, 
       c->d_cells_on_cell,
       c->d_verts_on_cell, 
       c->nlayers);
-  // cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] mop_execute");
 
   cudaMemcpy(c->hparts, c->dparts, 
