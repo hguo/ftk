@@ -40,6 +40,7 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 
   static constexpr double earth_radius = 6371229.0;
 
+  void push_field_data_snapshot(std::shared_ptr<ndarray_group> g);
   void prepare_timestep();
   void update_timestep();
 
@@ -155,31 +156,85 @@ inline void particle_tracer_mpas_ocean::update_timestep()
     if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
     current_t = current_timestep;
   
-    auto t0 = clock_type::now();
     prepare_timestep();
-    auto t1 = clock_type::now();
-    fprintf(stderr, "t_pre=%f\n", 
-        std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9);
-
 
     bool streamlines = false;
-    if (this->ntimesteps == 1)
+    if (this->ntimesteps == 1) {
       streamlines = true;
+      fprintf(stderr, "tracing mpas streamlines...\n");
+    }
 
-    // fprintf(stderr, "#snapshots=%zu\n", this->snapshots.size());
-    if (!streamlines && this->snapshots.size() < 2) 
-      return; // nothing can be done
-  
-    // TODO
- 
+    // if ((!streamlines) && this->snapshots.size() < 2)
+    //   return; // nothing can be done
+    
+    auto t1 = clock_type::now();
     mop_execute(ctx, current_timestep);
 
     auto t2 = clock_type::now();
     fprintf(stderr, "t_comp=%f\n", 
         std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9);
+
+    // push resulting particles to the trajectory
+    for (int i = 0; i < ctx->nparticles; i ++) {
+      feature_point_lite_t &p = ctx->hparts[i];
+      feature_point_t pt(p);
+
+      pt.v[0] = p.scalar[0];
+      pt.v[1] = p.scalar[1];
+      pt.v[2] = p.scalar[2];
+      p.scalar[0] = p.scalar[3]; // vertVel
+      p.scalar[1] = p.scalar[4]; // salinity
+      p.scalar[2] = p.scalar[5]; // temperature
+      pt.id = i;
+
+      auto &traj = trajectories.find(i)->second;
+      traj.push_back(pt);
+    }
 #endif
   } else 
     particle_tracer::update_timestep();
+}
+
+inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr<ndarray_group> g)
+{
+  if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    auto t0 = clock_type::now();
+    
+    const auto V = g->get_ptr<double>("velocity");
+    const auto zTop = g->get_ptr<double>("zTop");
+    const auto vertVelocityTop = g->get_ptr<double>("vertVelocityTop");
+    const auto salinity = g->get_ptr<double>("salinity");
+    const auto temperature = g->get_ptr<double>("temperature");
+
+    ndarray<double> attrs;
+    attrs.reshape(2, m->n_vertices(), m->n_layers());
+    for (auto i = 0; i < m->n_layers(); i ++) {
+      for (auto j = 0; j < m->n_vertices(); j ++) {
+        // data(0, j, i) = V[0]->at(0, j, i);
+        // data(1, j, i) = V[0]->at(1, j, i);
+        // data(2, j, i) = V[0]->at(2, j, i);
+        // data(3, j, i) = zTop[0]->at(0, j, i);
+        // data(4, j, i) = vertVelocityTop[0]->at(0, j, i);
+        attrs(0, j, i) = salinity->at(0, j, i);
+        attrs(1, j, i) = temperature->at(0, j, i);
+      }
+    }
+    mop_load_data_cw(ctx,
+        (double)current_timestep,
+        V->data(), 
+        vertVelocityTop->data(),
+        zTop->data(),
+        attrs.data());
+    
+    auto t1 = clock_type::now();
+    fprintf(stderr, "t_load=%f\n", 
+        std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9);
+
+#endif
+  } 
+    
+  particle_tracer::push_field_data_snapshot(g);
 }
 
 inline void particle_tracer_mpas_ocean::prepare_timestep()
@@ -198,28 +253,6 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
   
   temperature[0] = snapshots[0]->get_ptr<double>("temperature");
   temperature[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("temperature") : nullptr;
-
-  if (xl == FTK_XL_CUDA) {
-#if FTK_HAVE_CUDA
-    ndarray<double> attrs;
-    attrs.reshape(2, m->n_vertices(), m->n_layers());
-    for (auto i = 0; i < m->n_layers(); i ++) {
-      for (auto j = 0; j < m->n_vertices(); j ++) {
-        // data(0, j, i) = V[0]->at(0, j, i);
-        // data(1, j, i) = V[0]->at(1, j, i);
-        // data(2, j, i) = V[0]->at(2, j, i);
-        // data(3, j, i) = zTop[0]->at(0, j, i);
-        // data(4, j, i) = vertVelocityTop[0]->at(0, j, i);
-        attrs(0, j, i) = salinity[0]->at(0, j, i);
-        attrs(1, j, i) = temperature[0]->at(0, j, i);
-      }
-    }
-    mop_load_data_cw(ctx, V[0]->data(), 
-        vertVelocityTop[0]->data(),
-        zTop[0]->data(),
-        attrs.data());
-#endif
-  }
 }
 
 inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, double *v, int *hint)

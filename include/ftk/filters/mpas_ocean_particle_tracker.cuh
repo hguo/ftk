@@ -28,6 +28,7 @@ typedef struct {
   // time-varying data
   double *d_V[2], *d_Vv[2], *d_zTop[2], *d_A[2]; // velocity, verticalVelocity, zTop, and more
   double **dd_V, **dd_Vv, **dd_zTop, **dd_A; // device pointers to pointers
+  double T[2];
 
   // particle data
   int nparticles;
@@ -58,7 +59,8 @@ void mop_load_data(mop_ctx_t *c,
     const double *zTop,
     const double *A);
 
-void mop_load_data_cw(mop_ctx_t *c, 
+void mop_load_data_cw(mop_ctx_t *c,
+    const double t, // time
     const double *V, 
     const double *Vv, 
     const double *zTop,

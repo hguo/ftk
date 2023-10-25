@@ -244,10 +244,11 @@ inline static bool mpas_eval(
     double *v,                   // return velocity
     double *vv,                  // vertical velocity
     double *f,                   // scalar attributs
+    const double alpha,          // temporal interpolation coef
     const double *const V[2],    // velocity field
     const double *const Vv[2],   // vertical velocities
     const double *const zTop[2], // top layer depth
-    const int attrs,             // number of scalar attributes
+    const int nattrs,             // number of scalar attributes
     const double *const A[2],    // scalar attributes
     const double *Xv,            // vertex locations
     const int max_edges,
@@ -264,14 +265,23 @@ inline static bool mpas_eval(
     for (int i = 0; i < 2; i ++) 
       if (!mpas_eval_static(x, 
           _v[i], &_vv[i], _f[i], 
-          V[i], Vv[i], zTop[i], attrs, A[i], 
+          V[i], Vv[i], zTop[i], nattrs, A[i], 
           Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
           nlayers, hint_c, hint_l))
         return false;
 
+    // temporal interpolation
+    const double beta = 1.0 - alpha;
+    for (int j = 0; j < 3; j ++)
+      v[j] = alpha * _v[0][j] + beta * _v[1][j];
+    *vv = alpha * _vv[0] + beta * _vv[1];
+    for (int j = 0; j < nattrs; j ++)
+      f[j] = alpha * _f[0][j] + beta * _f[1][j];
+
+    return true;
   } else
     return mpas_eval_static(
-        x, v, vv, f, V[0], Vv[0], zTop[0], attrs, A[0], 
+        x, v, vv, f, V[0], Vv[0], zTop[0], nattrs, A[0], 
         Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
         nlayers, hint_c, hint_l);
 }
@@ -280,6 +290,8 @@ template <int ORDER=1>
 __device__
 inline static bool spherical_rk_with_vertical_velocity(
     const double h,
+    const int nsteps,
+    const int istep,
     ftk::feature_point_lite_t& p, 
     double *v0,                  // return velocity
     double *vv,                  // vertical velocity
@@ -298,12 +310,13 @@ inline static bool spherical_rk_with_vertical_velocity(
     unsigned long long &hint_c, 
     unsigned int &hint_l)        // hint for searching cell and layer
 {
-
   if (ORDER == 1) {
+    const double alpha = (double)istep / nsteps;
+
     double v[4];
-    if (!mpas_eval(p.x, v, vv, f,
-          V, Vv, zTop, nattrs, A, Xv, 
-          max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+    if (!mpas_eval(p.x, v, vv, f, alpha,
+          V, Vv, zTop, nattrs, A, 
+          Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
           nlayers, hint_c, hint_l))
       return false;
 
@@ -311,6 +324,7 @@ inline static bool spherical_rk_with_vertical_velocity(
       v0[k] = v[k];
 
     ftk::angular_stepping(p.x, v, h, p.x);
+
     return true;
   } else if (ORDER == 4) {
     return true;
@@ -414,7 +428,7 @@ static void interpolate_c2v(
         bool invalid = false;
         for (int l = 0; l < 3; l ++) {
           double val = C[k + nch * (layer + ci[l] * nlayers)];
-          if (val < -1e33) {
+          if (val < -1e32) {
             invalid = true;
             break;
           }
@@ -430,8 +444,10 @@ static void interpolate_c2v(
 
 __global__
 static void mpas_trace(
-    const int nsteps,
     const double h,
+    const int nsteps,
+    const int nsubsteps,
+    const int isubstart,
     const int nparticles,
     ftk::feature_point_lite_t* particles,
     const double *const V[2],    // velocity field
@@ -451,18 +467,28 @@ static void mpas_trace(
 
   ftk::feature_point_lite_t &p = particles[i];
   double v0[3], vv[3], f[MAX_ATTRS];
+  // const double h = 1.0 / nsteps;
 
   unsigned long long &hint_c = p.tag;
   unsigned int &hint_l = p.type;
 
-  for (int j = 0; j < nsteps; j ++) {
+  for (int j = isubstart; j < nsubsteps; j ++) {
     bool succ = spherical_rk_with_vertical_velocity<1>(
-        h, p, v0, vv, f, 
+        h, nsteps, j, 
+        p, v0, vv, f, 
         V, Vv, zTop, nattrs, A, Xv, 
         max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
         nlayers, hint_c, hint_l);
 
-    if (!succ) 
+    if (succ) {
+      for (int k = 0; k < 3; k ++) {
+        p.scalar[k] = v0[k];
+      }
+      p.scalar[3] = vv[0];
+      for (int k = 0; k < nattrs; k ++) {
+        p.scalar[k+4] = f[k];
+      }
+    } else
       break;
   }
 }
@@ -740,6 +766,7 @@ void mop_load_data(mop_ctx_t *c,
 }
 
 void mop_load_data_cw(mop_ctx_t *c,
+    const double t,
     const double *Vc,
     const double *Vvc,
     const double *zTopc,
@@ -750,6 +777,9 @@ void mop_load_data_cw(mop_ctx_t *c,
         sizeof(double) * c->ncells * 3 * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
   // cudaDeviceSynchronize();
   checkLastCudaError("malloc dcw");
+
+  std::swap(c->T[0], c->T[1]);
+  c->T[0] = t;
 
   load_cw_data(c, c->d_V, &c->dd_V, Vc, 3, c->nlayers); // V
   load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, 1, c->nlayers+1); // Vv
@@ -771,15 +801,22 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
   // fprintf(stderr, "gridSize=%d, %d, %d, blockSize=%d\n", gridSize.x, gridSize.y, gridSize.z, blockSize);
   // cudaDeviceSynchronize();
   // checkLastCudaError("[FTK-CUDA] mop_execute, pre");
+  // fprintf(stderr, "%p, %p\n", c->d_V[0], c->d_V[1]);
+
+  const int nsteps = 32768;
+  const int nsubsteps = nsteps;
+
+  const double h = 2592000.0 / nsteps;
 
   mpas_trace<<<gridSize, blockSize>>>(
-      32768, 0.0001, 
+      h,
+      nsteps, nsubsteps, 0,
       ntasks, 
       c->dparts,
       c->dd_V,
       c->dd_Vv,
       c->dd_zTop, 
-      c->nattrs, 
+      2, // c->nattrs, 
       c->dd_A,
       c->d_Xv,
       c->max_edges, 
@@ -795,10 +832,10 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
       cudaMemcpyDeviceToHost);
   checkLastCudaError("[FTK-CUDA] mop_execute: memcpy");
 
-  fprintf(stderr, "exiting kernel\n");
+  // fprintf(stderr, "exiting kernel\n");
 }
 
 void mop_swap(mop_ctx_t *c)
 {
-  std::swap(c->d_V[0], c->d_V[1]);
+  // std::swap(c->d_V[0], c->d_V[1]); // make no sense for now
 }
