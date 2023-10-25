@@ -9,6 +9,7 @@
 typedef mop_ctx_t ctx_t;
 
 static const int MAX_VERTS = 10;
+static const int MAX_ATTRS = 10;
 // static const int MAX_LAYERS = 100;
 static const double R0 = 6371229.0;
   
@@ -91,7 +92,7 @@ inline static int locate_cell_local( // local search among neighbors
 }
 
 __device__ __host__ 
-inline static bool mpas_eval(
+inline static bool mpas_eval_static(
     const double *x,    // location
     double *v,          // return velocity
     double *vv,         // vertical velocity
@@ -237,20 +238,58 @@ inline static bool mpas_eval(
   return true;
 }
 
+__device__ __host__ 
+inline static bool mpas_eval(
+    const double *x,             // location
+    double *v,                   // return velocity
+    double *vv,                  // vertical velocity
+    double *f,                   // scalar attributs
+    const double *const V[2],    // velocity field
+    const double *const Vv[2],   // vertical velocities
+    const double *const zTop[2], // top layer depth
+    const int attrs,             // number of scalar attributes
+    const double *const A[2],    // scalar attributes
+    const double *Xv,            // vertex locations
+    const int max_edges,
+    const int *nedges_on_cell, 
+    const int *cells_on_cell,
+    const int *verts_on_cell,
+    const int nlayers,
+    unsigned long long &hint_c, 
+    unsigned int &hint_l)        // hint for searching cell and layer
+{
+  if (V[1]) { // two timesteps
+    double _v[2][3], _vv[2], _f[2][MAX_ATTRS];
+
+    for (int i = 0; i < 2; i ++) 
+      if (!mpas_eval_static(x, 
+          _v[i], &_vv[i], _f[i], 
+          V[i], Vv[i], zTop[i], attrs, A[i], 
+          Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+          nlayers, hint_c, hint_l))
+        return false;
+
+  } else
+    return mpas_eval_static(
+        x, v, vv, f, V[0], Vv[0], zTop[0], attrs, A[0], 
+        Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+        nlayers, hint_c, hint_l);
+}
+
 template <int ORDER=1>
 __device__
 inline static bool spherical_rk_with_vertical_velocity(
     const double h,
     ftk::feature_point_lite_t& p, 
-    double *v0,         // return velocity
-    double *vv,         // vertical velocity
-    double *f,          // scalar attributs
-    const double *V,    // velocity field
-    const double *Vv,   // vertical velocities
-    const double *zTop, // top layer depth
-    const int nattrs,   // number of scalar attributes
-    const double *A,    // scalar attributes
-    const double *Xv,   // vertex locations
+    double *v0,                  // return velocity
+    double *vv,                  // vertical velocity
+    double *f,                   // scalar attributs
+    const double *const V[2],    // velocity field
+    const double *const Vv[2],   // vertical velocities
+    const double *const zTop[2], // top layer depth
+    const int nattrs,            // number of scalar attributes
+    const double *const A[2],    // scalar attributes
+    const double *const Xv,      // vertex locations
     const int max_edges,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
@@ -411,7 +450,7 @@ static void mpas_trace(
   if (i >= nparticles) return;
 
   ftk::feature_point_lite_t &p = particles[i];
-  double v0[3], vv[3], f[10];
+  double v0[3], vv[3], f[MAX_ATTRS];
 
   unsigned long long &hint_c = p.tag;
   unsigned int &hint_l = p.type;
@@ -419,7 +458,7 @@ static void mpas_trace(
   for (int j = 0; j < nsteps; j ++) {
     bool succ = spherical_rk_with_vertical_velocity<1>(
         h, p, v0, vv, f, 
-        V[0], Vv[0], zTop[0], nattrs, A[0], Xv, 
+        V, Vv, zTop, nattrs, A, Xv, 
         max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
         nlayers, hint_c, hint_l);
 
