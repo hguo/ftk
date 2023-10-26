@@ -423,7 +423,7 @@ static void interpolate_c2v(
     for (int k = 0; k < nch; k ++) {
       double &v = V[k + nch * (layer + vi * nlayers)];
       if (boundary) {
-        v = 0;
+          v = 0;
       } else {
         bool invalid = false;
         for (int l = 0; l < 3; l ++) {
@@ -695,6 +695,9 @@ static void load_cw_data(
     const int nlayers) // host pointer with cw data
 {
   // initialize buffers for vertexwise data in two adjacent timesteps
+  cudaDeviceSynchronize();
+  checkLastCudaError("memcpy to c2w buffer: load cw 0");
+
   double *d;
   if (dbuf[0] == NULL) {
     cudaMalloc((void**)&dbuf[0], 
@@ -711,13 +714,13 @@ static void load_cw_data(
     d = dbuf[1];
   }
  
-  // cudaDeviceSynchronize();
-  // checkLastCudaError("memcpy to c2w buffer: dev ptrs0");
+  cudaDeviceSynchronize();
+  checkLastCudaError("memcpy to c2w buffer: dev ptrs0");
   if (*ddbuf == NULL) {
     cudaMalloc((void**)ddbuf, sizeof(double*) * 2);
     checkLastCudaError("memcpy to c2w buffer: allocating ddbuf");
   }
-  // fprintf(stderr, "%p\n", ddbuf);
+  fprintf(stderr, "ddbuf=%p, dbuf=%p\n", *ddbuf, dbuf);
   cudaMemcpy(*ddbuf, dbuf, sizeof(double*) * 2, 
       cudaMemcpyHostToDevice);
   checkLastCudaError("memcpy to c2w buffer: dev ptrs");
@@ -727,8 +730,8 @@ static void load_cw_data(
   cudaMemcpy(c->dcw, cw, 
       sizeof(double) * c->ncells * nch * nlayers, 
       cudaMemcpyHostToDevice);
-  // cudaDeviceSynchronize();
-  // fprintf(stderr, "dcw=%p\n", c->dcw);
+  cudaDeviceSynchronize();
+  fprintf(stderr, "dcw=%p\n", c->dcw);
   checkLastCudaError("memcpy to c2w buffer");
 
   // c2w interpolation
@@ -748,7 +751,7 @@ static void load_cw_data(
         c->d_cells_on_vert,
         c->d_cell_on_boundary);
  
-    // cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
     checkLastCudaError("c2w interpolation");
   }
 }
@@ -775,7 +778,7 @@ void mop_load_data_cw(mop_ctx_t *c,
   if (c->dcw == NULL)
     cudaMalloc((void**)&c->dcw, 
         sizeof(double) * c->ncells * 3 * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
-  // cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   checkLastCudaError("malloc dcw");
 
   std::swap(c->T[0], c->T[1]);
@@ -784,10 +787,13 @@ void mop_load_data_cw(mop_ctx_t *c,
   load_cw_data(c, c->d_V, &c->dd_V, Vc, 3, c->nlayers); // V
   load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, 1, c->nlayers+1); // Vv
   load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, 1, c->nlayers); // zTop
-  load_cw_data(c, c->d_A, &c->dd_A, Ac, c->nattrs, c->nlayers); // f
+  load_cw_data(c, c->d_A, &c->dd_A, Ac, 2 /*c->nattrs*/, c->nlayers); // f
 }
 
-void mop_execute(mop_ctx_t *c, int current_timestep)
+void mop_execute(mop_ctx_t *c,
+    const double T, // duration
+    const int nsteps, 
+    const int nsubsteps)
 {
   size_t ntasks = c->nparticles;
   // fprintf(stderr, "ntasks=%zu\n", ntasks);
@@ -803,10 +809,14 @@ void mop_execute(mop_ctx_t *c, int current_timestep)
   // checkLastCudaError("[FTK-CUDA] mop_execute, pre");
   // fprintf(stderr, "%p, %p\n", c->d_V[0], c->d_V[1]);
 
-  const int nsteps = 32768;
+#if 0
+  const double duration = 86400.0 * 365 * 10; // 10 years
+  const int nsteps = 1024 * 365 * 10; // 1024; // 32768;
   const int nsubsteps = nsteps;
-
-  const double h = 2592000.0 / nsteps;
+  const double h = duration / nsteps;
+#endif
+  
+  const double h = T / nsteps;
 
   mpas_trace<<<gridSize, blockSize>>>(
       h,

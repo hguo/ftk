@@ -76,7 +76,7 @@ bool mpas_stream::advance_timestep()
   {
     const size_t st[3] = {current_timestep, 0, 0}, 
                  sz[3] = {1, m->n_cells(), m->n_layers()};
-    
+   
     ndarray<double> velocityX, velocityY, velocityZ; 
     velocityX.read_netcdf(ncid, "velocityX", st, sz);
     velocityY.read_netcdf(ncid, "velocityY", st, sz);
@@ -125,7 +125,22 @@ bool mpas_stream::advance_timestep()
     if (c2v) g->set("vertVelocityTop", m->interpolate_c2v(vertVelocityTop));
     else g->set("vertVelocityTop", vertVelocityTop);
   }
-  
+ 
+#if 0
+  {
+    NC_SAFE_CALL( nc_inq_dim(ncid, &dim_unlimited) );
+    NC_SAFE_CALL( nc_inq_dimlen(ncid, dim_unlimited, &ntimesteps) );
+    
+    const size_t st[2]
+
+    ndarray<char> xtime;
+    xtime.read_netcdf(ncid, "xtime");
+    std::string stime(xtime.data(), xtime.size());
+
+    fprintf(stderr, "xtime=%s\n", stime.c_str());
+  }
+#endif
+
   // fprintf(stderr, "callback..\n");
   callback(current_timestep, g);
 

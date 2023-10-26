@@ -121,7 +121,7 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
       for (auto k = 0; k < 3; k ++)
         p.x[k] = x0[k]; // m->xyzCells(k, i); 
       p.id = nparticles;
-      p.tag = i + 1;
+      p.tag = i + 1; // cell id for now for GPU code
 
       // fprintf(stderr, "cell=%zu, layer=%zu, thickness=%f, x0=%f, %f, %f\n", 
       //     i, j, thickness, x0[0], x0[1], x0[2]);
@@ -166,29 +166,41 @@ inline void particle_tracer_mpas_ocean::update_timestep()
 
     // if ((!streamlines) && this->snapshots.size() < 2)
     //   return; // nothing can be done
-    
-    auto t1 = clock_type::now();
-    mop_execute(ctx, current_timestep);
+  
+    const int nsteps_per_day = 1024;
+    const int years = 10;
+    const double T = 86400.0 * 365 * years; // 10 years
+    const int nsteps = nsteps_per_day * 365 * years; // 1024; // 32768;
+    const int nsubsteps = nsteps_per_day * 10; // 10 days
 
-    auto t2 = clock_type::now();
-    fprintf(stderr, "t_comp=%f\n", 
-        std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9);
+    for (int istep = 0; istep < nsteps; istep += nsubsteps) {
+      auto t1 = clock_type::now();
+      mop_execute(ctx, T, nsteps, nsubsteps);
 
-    // push resulting particles to the trajectory
-    for (int i = 0; i < ctx->nparticles; i ++) {
-      feature_point_lite_t &p = ctx->hparts[i];
-      feature_point_t pt(p);
+      auto t2 = clock_type::now();
+      fprintf(stderr, "day=%d, t_comp=%f\n", istep / nsteps_per_day,
+          std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9);
 
-      pt.v[0] = p.scalar[0];
-      pt.v[1] = p.scalar[1];
-      pt.v[2] = p.scalar[2];
-      p.scalar[0] = p.scalar[3]; // vertVel
-      p.scalar[1] = p.scalar[4]; // salinity
-      p.scalar[2] = p.scalar[5]; // temperature
-      pt.id = i;
+      // push resulting particles to the trajectory
+      for (int i = 0; i < ctx->nparticles; i ++) {
+        feature_point_lite_t &p = ctx->hparts[i];
+        feature_point_t pt(p);
 
-      auto &traj = trajectories.find(i)->second;
-      traj.push_back(pt);
+        pt.v[0] = p.scalar[0];
+        pt.v[1] = p.scalar[1];
+        pt.v[2] = p.scalar[2];
+        p.scalar[0] = p.scalar[3]; // vertVel
+        p.scalar[1] = p.scalar[4]; // salinity
+        p.scalar[2] = p.scalar[5]; // temperature
+        pt.id = i;
+
+        auto &traj = trajectories.find(i)->second;
+        traj.push_back(pt);
+      }
+      
+      auto t3 = clock_type::now();
+      fprintf(stderr, "t_unload=%f\n", 
+          std::chrono::duration_cast<std::chrono::nanoseconds>(t3 - t2).count() * 1e-9);
     }
 #endif
   } else 

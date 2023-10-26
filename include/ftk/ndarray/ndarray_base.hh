@@ -387,7 +387,9 @@ inline void ndarray_base::read_netcdf(int ncid, int varid, int ndims, const size
     NC_SAFE_CALL( nc_get_vara_double(ncid, varid, starts, sizes, (double*)pdata()) );
   } else if (nc_datatype() == NC_UINT) {
     NC_SAFE_CALL( nc_get_vara_uint(ncid, varid, starts, sizes, (unsigned int*)pdata()) );
-  } else 
+  } else if (nc_datatype() == NC_CHAR) {
+    NC_SAFE_CALL( nc_get_vara_text(ncid, varid, starts, sizes, (char*)pdata()) );
+  } else
     fatal(FTK_ERR_NOT_IMPLEMENTED);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);

@@ -788,6 +788,7 @@ template <> inline int ndarray<double>::nc_datatype() const { return NC_DOUBLE; 
 template <> inline int ndarray<float>::nc_datatype() const { return NC_FLOAT; }
 template <> inline int ndarray<int>::nc_datatype() const { return NC_INT; }
 template <> inline int ndarray<unsigned long>::nc_datatype() const { return NC_UINT; }
+template <> inline int ndarray<char>::nc_datatype() const { return NC_CHAR; }
 #else 
 template <typename T>
 inline int ndarray<T>::nc_datatype() const { return -1; } // linking without netcdf
@@ -1013,6 +1014,7 @@ template <> inline hid_t ndarray<int>::h5_mem_type_id() { return H5T_NATIVE_INT;
 template <> inline hid_t ndarray<unsigned long>::h5_mem_type_id() { return H5T_NATIVE_ULONG; }
 template <> inline hid_t ndarray<unsigned int>::h5_mem_type_id() { return H5T_NATIVE_UINT; }
 template <> inline hid_t ndarray<unsigned char>::h5_mem_type_id() { return H5T_NATIVE_UCHAR; }
+template <> inline hid_t ndarray<char>::h5_mem_type_id() { return H5T_NATIVE_CHAR; }
 #endif
 
 template <typename T>

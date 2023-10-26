@@ -70,7 +70,9 @@ void mop_load_particles(mop_ctx_t *c,
     const int n,
     ftk::feature_point_lite_t *);
 
-void mop_execute(mop_ctx_t *c, int current_timestep);
-void mop_swap(mop_ctx_t *c);
+void mop_execute(mop_ctx_t *c, 
+    const double T,
+    const int nsteps, 
+    const int nsubsteps);
 
 #endif
