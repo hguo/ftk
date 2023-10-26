@@ -343,7 +343,7 @@ static void initialize_c2v(
     const double *Xv, // vertex x
     const int *cells_on_vert,
     double *interpolants,
-    bool *cell_on_boundary)
+    bool *vert_on_boundary)
 {
   unsigned long long i = getGlobalIdx_3D_1D();
   if (i >= nverts) return;
@@ -375,9 +375,9 @@ static void initialize_c2v(
   }
 
   if (boundary) {
-    cell_on_boundary[vi] = true;
+    vert_on_boundary[vi] = true;
   } else {
-    cell_on_boundary[vi] = false;
+    vert_on_boundary[vi] = false;
     
     double mu[3];
     bool succ = ftk::inverse_lerp_s2v3_0(xc, xv, mu);
@@ -397,16 +397,19 @@ static void interpolate_c2v(
     const int nverts,
     const double *interpolants,
     const int *cells_on_vert,
-    const bool *cell_on_boundary)
+    const bool *vert_on_boundary)
 {
   // unsigned long long i = 192;
   // if (threadIdx.x > 0) return;
   unsigned long long i = getGlobalIdx_3D_1D();
   if (i >= nverts) return;
+  
+  // if (blockIdx.x == 0 && blockIdx.y == 481 && threadIdx.x == 192)
+  // printf("GEWWEGWEGWEGEWGWEG\n");
 
   const int vi = i;
 
-  const bool boundary = cell_on_boundary[vi];
+  const bool boundary = vert_on_boundary[vi];
   double lambda[3];
   int ci[3];
 
@@ -415,9 +418,13 @@ static void interpolate_c2v(
     ci[l] = c2ci(cells_on_vert[l + vi * 3]);
   }
 
-  // printf("ci=%d, %d, %d, boundary=%d, lambda=%f, %f, %f\n", 
-  //     ci[0], ci[1], ci[2], boundary, 
-  //     lambda[0], lambda[1], lambda[2]);
+#if 0
+  if (1) { // if (blockIdx.x == 0 && blockIdx.y == 481 && threadIdx.x == 192) {
+    printf("ci=%d, %d, %d, boundary=%d, lambda=%f, %f, %f\n", 
+        ci[0], ci[1], ci[2], boundary, 
+        lambda[0], lambda[1], lambda[2]);
+  }
+#endif
 
   for (int layer = 0; layer < nlayers; layer ++) {
     for (int k = 0; k < nch; k ++) {
@@ -529,7 +536,7 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   if (c->dd_A) cudaFree(c->dd_A);
 
   if (c->d_c2v_interpolants != NULL) cudaFree(c->d_c2v_interpolants);
-  if (c->d_cell_on_boundary != NULL) cudaFree(c->d_cell_on_boundary);
+  if (c->d_vert_on_boundary != NULL) cudaFree(c->d_vert_on_boundary);
   if (c->dcw != NULL) cudaFree(c->dcw);
 
   if (c->dparts != NULL) cudaFree(c->dparts);
@@ -568,7 +575,8 @@ void mop_load_particles(mop_ctx_t *c,
 
   cudaMemcpy(c->dparts, buf, n * sizeof(ftk::feature_point_lite_t), 
       cudaMemcpyHostToDevice);
-  
+ 
+  cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] load particles");
 }
 
@@ -634,8 +642,8 @@ void mop_load_mesh(mop_ctx_t *c,
     cudaMalloc((void**)&c->d_c2v_interpolants, 
         size_t(c->nverts) * 3 * sizeof(double));
 
-    cudaMalloc((void**)&c->d_cell_on_boundary,
-        size_t(c->ncells) * sizeof(bool));
+    cudaMalloc((void**)&c->d_vert_on_boundary,
+        size_t(c->nverts) * sizeof(bool));
     
     // cudaDeviceSynchronize();
     checkLastCudaError("[FTK-CUDA] initializing mpas c2v interpolants: malloc");
@@ -654,7 +662,7 @@ void mop_load_mesh(mop_ctx_t *c,
         c->d_Xv,
         c->d_cells_on_vert, 
         c->d_c2v_interpolants,
-        c->d_cell_on_boundary);
+        c->d_vert_on_boundary);
  
     fprintf(stderr, "c2v initialization done.\n");
     // cudaDeviceSynchronize();
@@ -749,7 +757,7 @@ static void load_cw_data(
         c->nverts,
         c->d_c2v_interpolants,
         c->d_cells_on_vert,
-        c->d_cell_on_boundary);
+        c->d_vert_on_boundary);
  
     cudaDeviceSynchronize();
     checkLastCudaError("c2w interpolation");
