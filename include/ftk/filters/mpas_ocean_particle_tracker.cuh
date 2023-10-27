@@ -22,7 +22,7 @@ typedef struct {
 
   // c2v interpolants
   double *d_c2v_interpolants;
-  bool *d_cell_on_boundary;
+  bool *d_vert_on_boundary;
   double *dcw; // a device buffer for c2v interpolation
 
   // time-varying data
