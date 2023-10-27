@@ -239,9 +239,9 @@ inline void particle_tracer_mpas_ocean::update_timestep()
     //   return; // nothing can be done
   
     const int nsteps_per_day = 1024;
-    const int years = 10;
-    const double T = 86400.0 * 365 * years; // 10 years
-    const int nsteps = nsteps_per_day * 365 * years; // 1024; // 32768;
+    const int years = 1;
+    const double T = 86400.0 * 365 * years;
+    const int nsteps = nsteps_per_day * 365 * years;
     const int nsubsteps = nsteps_per_day * 10; // 10 days
 
     for (int istep = 0; istep < nsteps; istep += nsubsteps) {
@@ -260,9 +260,9 @@ inline void particle_tracer_mpas_ocean::update_timestep()
         pt.v[0] = p.scalar[0];
         pt.v[1] = p.scalar[1];
         pt.v[2] = p.scalar[2];
-        p.scalar[0] = p.scalar[3]; // vertVel
-        p.scalar[1] = p.scalar[4]; // salinity
-        p.scalar[2] = p.scalar[5]; // temperature
+        pt.scalar[0] = p.scalar[3]; // vertVel
+        pt.scalar[1] = p.scalar[4]; // salinity
+        pt.scalar[2] = p.scalar[5]; // temperature
         pt.id = i;
 
         auto &traj = trajectories.find(i)->second;

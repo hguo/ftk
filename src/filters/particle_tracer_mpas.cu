@@ -320,7 +320,7 @@ inline static bool spherical_rk_with_vertical_velocity(
           nlayers, hint_c, hint_l))
       return false;
 
-    for (int k = 0; k < 4; k ++)
+    for (int k = 0; k < 3; k ++)
       v0[k] = v[k];
 
     ftk::angular_stepping(p.x, v, h, p.x);
