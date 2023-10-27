@@ -29,6 +29,7 @@ public:
 
   I locate_cell_i(const F x[]) const;
   I locate_cell_i(const F x[], const I prev_cell_i) const;
+  I locate_cell_i(const std::array<F, 3>& x, const I prev) const { const F y[3] = {x[0], x[1], x[2]}; return locate_cell_i(y, prev); }
 
   void cell_i_coords(const I cell_i, F x[3]) const { x[0] = xyzCells(0, cell_i); x[1] = xyzCells(1, cell_i); x[2] = xyzCells(2, cell_i); }
 

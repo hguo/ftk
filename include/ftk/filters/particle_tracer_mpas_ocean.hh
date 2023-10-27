@@ -8,6 +8,7 @@
 #include <ftk/utils/gather.hh>
 #include <ftk/numeric/wachspress_interpolation.hh>
 #include <ftk/numeric/vector_norm.hh>
+#include <ftk/numeric/rad.hh>
 
 #if FTK_HAVE_CUDA
 #include "mpas_ocean_particle_tracker.cuh"
@@ -37,6 +38,10 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 
   void initialize();
   void initialize_particles_at_grid_points(std::vector<int> strides);
+  void initialize_particles_latlonz(
+      const int nlat, const double lat0, const double lat1,
+      const int nlon, const double lon0, const double lon1,
+      const int nz,   const double z0,   const double z1);
 
   static constexpr double earth_radius = 6371229.0;
 
@@ -62,6 +67,7 @@ protected:
 #if FTK_HAVE_CUDA
   mop_ctx_t *ctx;
 #endif
+  void load_particles_cuda();
 };
 
 ////
@@ -85,6 +91,61 @@ inline void particle_tracer_mpas_ocean::initialize()
         m->cellsOnVertex.data());
 #endif
   }
+}
+
+inline void particle_tracer_mpas_ocean::initialize_particles_latlonz(
+      const int nlat, const double lat0, const double lat1,
+      const int nlon, const double lon0, const double lon1,
+      const int nz,   const double z0,   const double z1)
+{
+  fprintf(stderr, "initializing geo particles: nlat=%d, nlon=%d, nz=%d, lat0=%f, lat1=%f, lon0=%f, lon1=%f, z0=%f, z1=%f\n", 
+      nlat, nlon, nz, lat0, lat1, lon0, lon1, z0, z1);
+
+  const double dz   = nz == 1 ? 0.0 : (z1 - z0) / (nz - 1), 
+               dlat = nlat == 1 ? 0.0 : (lat1 - lat0) / (nlat - 1),
+               dlon = nlon == 1 ? 0.0 : (lon1 - lon0) / (nlon - 1);
+  int hint = 0;
+
+  for (int i = 0; i < nlat; i ++) {
+    const double lat = deg2rad(i * dlat + lat0);
+    const double slat = std::sin(lat), 
+                 clat = std::cos(lat);
+
+    for (int j = 0; j < nlon; j ++) {
+      const double lon = deg2rad(j * dlon + lon0);
+      const double clon = std::cos(lon),
+                   slon = std::sin(lon);
+
+      for (int k = 0; k < nz; k ++) {
+        const double z = k * dz + z0;
+        const double r = earth_radius + z;
+       
+        feature_curve_t curve;
+        curve.id = i*nlat*nz + j*nz + k;
+
+        feature_point_t p;
+        p.x[0] = r * clon * clat;
+        p.x[1] = r * slon * clat;
+        p.x[2] = r * slat;
+
+        p.id = curve.id;
+        p.tag = m->i2cid(
+            m->locate_cell_i({p.x[0], p.x[1], p.x[2]}, hint));
+       
+#if 0
+        fprintf(stderr, "lat=%f, lon=%f, z=%f, x=%f, %f, %f, tag=%llu\n", 
+            rad2deg(lat), rad2deg(lon), z, 
+            p.x[0], p.x[1], p.x[2], p.tag);
+#endif
+
+        curve.push_back(p);
+        trajectories.add(curve);
+      }
+    }
+  }
+
+  if (xl == FTK_XL_CUDA)
+    load_particles_cuda();
 }
 
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std::vector<int> strides)
@@ -131,20 +192,26 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
       nparticles ++;
     }
   }
- 
+  fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
+
   if (xl == FTK_XL_CUDA) {
     // fprintf(stderr, "loading particles to gpu...\n");
-#if FTK_HAVE_CUDA
-    std::vector<feature_point_lite_t> particles;
-    particles.reserve(trajectories.size());
-    for (const auto &traj : trajectories)
-      particles.push_back(traj.second[0].to_lite());
-
-    mop_load_particles(ctx, particles.size(), particles.data());
-#endif
+    load_particles_cuda();
   }
+}
 
-  fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
+inline void particle_tracer_mpas_ocean::load_particles_cuda()
+{
+#if FTK_HAVE_CUDA
+  std::vector<feature_point_lite_t> particles;
+  particles.reserve(trajectories.size());
+  for (const auto &traj : trajectories)
+    particles.push_back(traj.second[0].to_lite());
+
+  mop_load_particles(ctx, particles.size(), particles.data());
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
+#endif
 }
 
 inline void particle_tracer_mpas_ocean::update_timestep()

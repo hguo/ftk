@@ -88,6 +88,7 @@ int pt_nsteps_per_interval = 128;
 int pt_nsteps_per_checkpoint = 16;
 double pt_delta_t = 1.0;
 std::vector<int> pt_seed_strides;
+std::vector<double> pt_seed_box;
 
 // mpas-o specific
 std::shared_ptr<mpas_stream> mpas_data_stream;
@@ -588,7 +589,13 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   tracker_particle_mpas_ocean->set_delta_t( pt_delta_t );
 
   tracker_particle_mpas_ocean->initialize();
-  tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
+  if (pt_seed_box.size() > 0)
+    tracker_particle_mpas_ocean->initialize_particles_latlonz(
+        pt_seed_strides[0], pt_seed_box[0], pt_seed_box[1],
+        pt_seed_strides[1], pt_seed_box[2], pt_seed_box[3],
+        pt_seed_strides[2], pt_seed_box[4], pt_seed_box[5]);
+  else
+    tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
 
 #if 0
     ndarray<double> surfV;
@@ -909,6 +916,7 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("pt-nsteps-per-checkpoint", "Particle tracing: Number of steps per checkpoint", cxxopts::value<int>(pt_nsteps_per_checkpoint))
     ("pt-delta-t", "Particle tracing: Delta t per timestep", cxxopts::value<double>(pt_delta_t))
     ("pt-seed-strides", "Particle tracing: Seed strides, e.g., '4', '1,4', or '1,4,4'", cxxopts::value<std::string>())
+    ("pt-seed-geo", "Particle tracing: Seed in a geobox: nlat,lat0,lat1,nlon,lon0,lon1,nz,z0,z1", cxxopts::value<std::string>())
     // ("xgc-augmented-mesh", "XGC: read/write augmented mesh", cxxopts::value<std::string>(xgc_augmented_mesh_filename))
     // ("mpas-data-path", "MPAS: data path", cxxopts::value<std::string>(mpas_data_path))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
@@ -984,6 +992,23 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     const auto strs = split(str, ",");
     for (const auto s : strs)
       pt_seed_strides.push_back( std::atoi(s.c_str()) );
+  }
+
+  if (results.count("pt-seed-geo")) {
+    const auto str = results["pt-seed-geo"].as<std::string>();
+    const auto strs = split(str, ",");
+    if (strs.size() < 9)
+      fatal("Insufficient number for seeding geospatially.");
+
+    pt_seed_strides.push_back( std::atoi(strs[0].c_str()) ); // nlat
+    pt_seed_box.push_back( std::atof(strs[1].c_str()) );
+    pt_seed_box.push_back( std::atof(strs[2].c_str()) );
+    pt_seed_strides.push_back( std::atoi(strs[3].c_str()) ); // nlon
+    pt_seed_box.push_back( std::atof(strs[4].c_str()) );
+    pt_seed_box.push_back( std::atof(strs[5].c_str()) );
+    pt_seed_strides.push_back( std::atoi(strs[6].c_str()) ); // nz
+    pt_seed_box.push_back( std::atof(strs[7].c_str()) );
+    pt_seed_box.push_back( std::atof(strs[8].c_str()) );
   }
 
   if (results.count("quantization")) {
