@@ -90,6 +90,12 @@ double pt_delta_t = 1.0;
 std::vector<int> pt_seed_strides;
 std::vector<double> pt_seed_box;
 
+// geo particle tracer
+int ptgeo_nsteps_per_day = 1024;
+int ptgeo_checkpoint_per_timestep = 0;
+int ptgeo_checkpoint_months = 0;
+int ptgeo_checkpoint_days = 0;
+
 // mpas-o specific
 std::shared_ptr<mpas_stream> mpas_data_stream;
 bool geo_output = false;
@@ -916,7 +922,11 @@ int parse_arguments(int argc, char **argv, diy::mpi::communicator comm)
     ("pt-nsteps-per-checkpoint", "Particle tracing: Number of steps per checkpoint", cxxopts::value<int>(pt_nsteps_per_checkpoint))
     ("pt-delta-t", "Particle tracing: Delta t per timestep", cxxopts::value<double>(pt_delta_t))
     ("pt-seed-strides", "Particle tracing: Seed strides, e.g., '4', '1,4', or '1,4,4'", cxxopts::value<std::string>())
-    ("pt-seed-geo", "Particle tracing: Seed in a geobox: nlat,lat0,lat1,nlon,lon0,lon1,nz,z0,z1", cxxopts::value<std::string>())
+    ("ptgeo-seed-box", "Geo particle tracing: Seed in a geobox: nlat,lat0,lat1,nlon,lon0,lon1,nz,z0,z1", cxxopts::value<std::string>())
+    ("ptgeo-nsteps-per-day", "Geo particle tracing: Number of steps per earth day", cxxopts::value<int>(ptgeo_nsteps_per_day))
+    ("ptgeo-checkpoint-per-timestep", "Geo particle tracing: Number of checkpoints per timestep", cxxopts::value<int>(ptgeo_checkpoint_per_timestep))
+    ("ptgeo-checkpoint-days", "Geo particle tracing: Number of days per checkpoint", cxxopts::value<int>(ptgeo_checkpoint_days))
+    ("ptgeo-checkpoint-months", "Geo particle tracing: Number of months per checkpoint", cxxopts::value<int>(ptgeo_checkpoint_months))
     // ("xgc-augmented-mesh", "XGC: read/write augmented mesh", cxxopts::value<std::string>(xgc_augmented_mesh_filename))
     // ("mpas-data-path", "MPAS: data path", cxxopts::value<std::string>(mpas_data_path))
     ("o,output", "Output file, either one single file (e.g. out.vtp) or a pattern (e.g. out-%05d.vtp)", 
