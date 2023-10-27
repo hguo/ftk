@@ -4,6 +4,8 @@
 #include <ftk/object.hh>
 #include <ftk/ndarray.hh>
 #include <ftk/ndarray/ndarray_group.hh>
+#include <chrono>
+
 
 namespace ftk {
 
@@ -59,6 +61,23 @@ void mpas_stream::initialize()
   NC_SAFE_CALL( nc_inq_dimlen(ncid, dim_unlimited, &ntimesteps) );
 
   fprintf(stderr, "mpas_ntimesteps=%zu\n", ntimesteps);
+  
+  {
+    ndarray<char> xtime;
+    xtime.read_netcdf(ncid, "xtime");
+    std::string stime(xtime.data(), xtime.size());
+
+    for (int i = 0; i < xtime.dim(1); i ++) {
+      std::string str(stime, i*xtime.dim(0), xtime.dim(0));
+
+      std::tm t = {};
+      std::istringstream ss(str);
+      ss >> std::get_time(&t, "%Y-%m-%d_%H:%M:%S");
+
+      // fprintf(stderr, "xtime=%s\n", str.c_str());
+      // std::cout << std::put_time(&t, "%c") << std::endl;
+    }
+  }
 
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
@@ -126,21 +145,6 @@ bool mpas_stream::advance_timestep()
     else g->set("vertVelocityTop", vertVelocityTop);
   }
  
-#if 0
-  {
-    NC_SAFE_CALL( nc_inq_dim(ncid, &dim_unlimited) );
-    NC_SAFE_CALL( nc_inq_dimlen(ncid, dim_unlimited, &ntimesteps) );
-    
-    const size_t st[2]
-
-    ndarray<char> xtime;
-    xtime.read_netcdf(ncid, "xtime");
-    std::string stime(xtime.data(), xtime.size());
-
-    fprintf(stderr, "xtime=%s\n", stime.c_str());
-  }
-#endif
-
   // fprintf(stderr, "callback..\n");
   callback(current_timestep, g);
 
