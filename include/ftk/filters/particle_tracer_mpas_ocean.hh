@@ -129,8 +129,8 @@ inline void particle_tracer_mpas_ocean::initialize_particles_latlonz(
         p.x[2] = r * slat;
 
         p.id = curve.id;
-        p.tag = m->i2cid(
-            m->locate_cell_i({p.x[0], p.x[1], p.x[2]}, hint));
+        const int ci = m->locate_cell_i({p.x[0], p.x[1], p.x[2]}, hint);
+        p.tag = m->i2cid(ci);
        
 #if 0
         fprintf(stderr, "lat=%f, lon=%f, z=%f, x=%f, %f, %f, tag=%llu\n", 
@@ -138,11 +138,15 @@ inline void particle_tracer_mpas_ocean::initialize_particles_latlonz(
             p.x[0], p.x[1], p.x[2], p.tag);
 #endif
 
-        curve.push_back(p);
-        trajectories.add(curve);
+        if (ci >= 0) {
+          curve.push_back(p);
+          trajectories.add(curve);
+        }
       }
     }
   }
+
+  fprintf(stderr, "#traj=%zu\n", trajectories.size());
 
   if (xl == FTK_XL_CUDA)
     load_particles_cuda();
