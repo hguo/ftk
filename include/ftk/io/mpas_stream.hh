@@ -48,6 +48,10 @@ void mpas_stream::initialize()
   if (c2v)
     m->initialize_c2v_interpolants();
 
+  m->initialize_edge_normals();
+  m->initialize_cell_tangent_plane();
+  m->initialize_coeffs_reconstruct();
+
 #if FTK_HAVE_NETCDF
 #if NC_HAS_PARALLEL
   int rtn = nc_open_par(path.c_str(), NC_NOWRITE, comm, MPI_INFO_NULL, &ncid);

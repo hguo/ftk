@@ -16,15 +16,20 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
   void initialize_c2v_interpolants();
   ndarray<F> interpolate_c2v(const ndarray<F>& Vc) const; // velocites or whatever variables
 
+  void initialize_edge_normals();
+  void initialize_cell_tangent_plane();
+  void initialize_coeffs_reconstruct();
+
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> surface_cells_to_vtu(std::vector<ndarray_base*> attrs = {}) const;
 #endif
   void surface_cells_to_vtu(const std::string filename, std::vector<ndarray_base*> attrs = {}) const;
 
 public:
+  size_t n_vertices() const { return xyzVertices.dim(1); }
+  size_t n_edges() const { return xyzEdges.dim(1); }
   size_t n_cells() const { return xyzCells.dim(1); }
   size_t n_layers() const { return restingThickness.dim(0); }
-  size_t n_vertices() const { return xyzVertices.dim(1); }
   size_t max_edges_on_cell() const { return verticesOnCell.dim(0); }
 
   I locate_cell_i(const F x[]) const;
@@ -43,6 +48,15 @@ public:
     else {
       auto it = cellIdToIndex.find(cid); 
       if (it != cellIdToIndex.end()) return it->second; 
+      else return -1;  
+    }
+  }
+
+  I eid2i(I eid) const {
+    if (simple_idmap) return eid - 1;
+    else {
+      auto it = edgeIdToIndex.find(eid); 
+      if (it != edgeIdToIndex.end()) return it->second; 
       else return -1;  
     }
   }
@@ -68,10 +82,16 @@ public:
 public:
   std::shared_ptr<kd_t<F, 3>> kd_cells, kd_vertices;
   
-  ndarray<I> cellsOnVertex, cellsOnCell, verticesOnCell;
+  ndarray<I> cellsOnVertex, cellsOnEdge, cellsOnCell,
+             edgesOnCell,
+             verticesOnCell;
   ndarray<I> indexToVertexID, indexToEdgeID, indexToCellID;
-  ndarray<F> xyzCells, xyzVertices;
+  ndarray<F> xyzCells, xyzVertices, xyzEdges;
   ndarray<I> nEdgesOnCell;
+
+  ndarray<F> edgeNormalVectors;
+  ndarray<F> cellTangentPlane;
+  ndarray<F> coeffsReconstruct; // coeffs for edge->cell interpolation
 
   ndarray<F> c2v_interpolants;
   std::vector<bool> vertex_on_boundary;
@@ -216,6 +236,99 @@ I mpas_mesh<I, F>::verts_i_on_cell_i(const I i, I vi[]) const
 }
 
 template <typename I, typename F>
+void mpas_mesh<I, F>::initialize_edge_normals()
+{
+  edgeNormalVectors.reshape(xyzEdges);
+
+  F n[3];
+  for (auto ei = 0; ei < n_edges(); ei ++) {
+    const I ci1 = cid2i( cellsOnEdge(0, ei) ),
+            ci2 = cid2i( cellsOnEdge(1, ei) );
+
+    for (int i = 0; i < 3; i ++) {
+      if (ci1 < 0) // boundary edge case I
+        n[i] = xyzCells(i, ci2) - xyzEdges(i, ei);
+      else if (ci2 < 0) // boundary edge case II
+        n[i] = xyzEdges(i, ei) - xyzCells(i, ci1);
+      else
+        n[i] = xyzCells(i, ci2) - xyzCells(i, ci1);
+    }
+
+    vector_normalization2_3(n);
+    for (int i = 0; i < 3; i ++)
+      edgeNormalVectors[i] = n[i];
+  }
+}
+
+template <typename I, typename F>
+void mpas_mesh<I, F>::initialize_cell_tangent_plane()
+{
+  if (edgeNormalVectors.empty())
+    initialize_edge_normals();
+
+  cellTangentPlane.reshape(2, n_cells());
+  F p[2], // tangent plane
+    rhat[3], // unit vector for a cell,
+    xhat[3],
+    n[3]; // edge normal of the first edge
+
+  for (auto ci = 0; ci < n_cells(); ci ++) {
+    cell_i_coords(ci, rhat);
+    vector_normalization2_3(rhat);
+
+    const I ei = edgesOnCell(0, ci);
+    for (int i = 0; i < 3; i ++)
+      n[i] = edgeNormalVectors(i, ei);
+
+    const F normal_dot_r = vector_dot_product3(rhat, n);
+
+    for (int i = 0; i < 3; i ++)
+      xhat[i] = n[i] - normal_dot_r * rhat[i];
+   
+    cellTangentPlane(0, ci) = xhat[0];
+    cellTangentPlane(1, ci) = xhat[1];
+  }
+}
+
+template <typename I, typename F>
+void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
+{
+  if (cellTangentPlane.empty())
+    initialize_cell_tangent_plane();
+
+  const auto max_edges = max_edges_on_cell();
+  coeffsReconstruct.reshape(3, max_edges);
+
+  for (auto ci = 0; ci < n_cells(); ci ++) {
+    F x[3];
+    cell_i_coords(ci, x);
+
+    const auto ne = nEdgesOnCell[ci];
+    F Xe[max_edges][3], Ne[max_edges][3];
+    F alpha = 0;
+    for (auto i = 0; i < ne; i ++) {
+      const auto ei = eid2i( edgesOnCell(i, ci) );
+
+      for (auto j = 0; j < 3; j ++) {
+        Xe[i][j] = xyzEdges(j, ei);
+        Ne[i][j] = edgeNormalVectors(j, ei);
+      }
+
+      alpha += vector_dist_2norm_3(x, Xe[i]);
+    }
+
+    const F t[2] = {cellTangentPlane(0, ci), cellTangentPlane(1, ci)};
+
+    F coeffs[max_edges];
+    rbf3d_plane_vec_const_dir(
+        max_edges, Xe, Ne, x, alpha, t, coeffs);
+
+    for (auto i = 0; i < ne; i ++)
+      coeffsReconstruct(i, ci) = coeffs[i];
+  }
+}
+
+template <typename I, typename F>
 void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communicator comm)
 {
 #if FTK_HAVE_NETCDF
@@ -223,7 +336,9 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 
   cellsOnVertex.read_netcdf(ncid, "cellsOnVertex"); // "conn"
+  cellsOnEdge.read_netcdf(ncid, "cellsOnEdge");
   cellsOnCell.read_netcdf(ncid, "cellsOnCell");
+  edgesOnCell.read_netcdf(ncid, "edgesOnCell");
   verticesOnCell.read_netcdf(ncid, "verticesOnCell");
   nEdgesOnCell.read_netcdf(ncid, "nEdgesOnCell");
 
@@ -278,7 +393,8 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   conn.copy_vector(vconn);
   conn.reshape(3, vconn.size()/3);
 #endif
- 
+
+  // xyzCells
   ndarray<F> xCell, yCell, zCell;
   xCell.read_netcdf(ncid, "xCell");
   yCell.read_netcdf(ncid, "yCell");
@@ -293,6 +409,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
     xyzCells(2, i) = zCell[i];
   }
 
+  // xyzVerts
   ndarray<F> xVertex, yVertex, zVertex;
   xVertex.read_netcdf(ncid, "xVertex");
   yVertex.read_netcdf(ncid, "yVertex");
@@ -303,6 +420,19 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
     xyzVertices(0, i) = xVertex[i];
     xyzVertices(1, i) = yVertex[i];
     xyzVertices(2, i) = zVertex[i];
+  }
+
+  // xyzEdges
+  ndarray<F> xEdge, yEdge, zEdge;
+  xEdge.read_netcdf(ncid, "xEdge");
+  yEdge.read_netcdf(ncid, "yEdge");
+  zEdge.read_netcdf(ncid, "zEdge");
+
+  xyzEdges.reshape(3, xEdge.size());
+  for (size_t i = 0; i < xEdge.size(); i ++) {
+    xyzEdges(0, i) = xEdge[i];
+    xyzEdges(1, i) = yEdge[i];
+    xyzEdges(2, i) = zEdge[i];
   }
 
   restingThickness.read_netcdf(ncid, "restingThickness");
