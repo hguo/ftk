@@ -68,8 +68,12 @@ template <int n, typename T>
 __device__ __host__
 inline T vector_dist_2norm2(const T v[], const T w[])
 {
-  T u[3] = {v[0] - w[0], v[1] - w[1], v[2] - w[2]};
-  return vector_2norm2<n, T>(u);
+  T d2(0);
+  for (int i=0; i<n; i++) {
+    T d = v[i] - w[i];
+    d2 += d * d;
+  }
+  return d2;
 }
 
 }

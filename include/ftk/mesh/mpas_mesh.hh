@@ -266,10 +266,11 @@ void mpas_mesh<I, F>::initialize_cell_tangent_plane()
   if (edgeNormalVectors.empty())
     initialize_edge_normals();
 
-  cellTangentPlane.reshape(2, n_cells());
+  cellTangentPlane.reshape(3, 2, n_cells());
   F p[2], // tangent plane
     rhat[3], // unit vector for a cell,
     xhat[3],
+    yhat[3],
     n[3]; // edge normal of the first edge
 
   for (auto ci = 0; ci < n_cells(); ci ++) {
@@ -284,9 +285,15 @@ void mpas_mesh<I, F>::initialize_cell_tangent_plane()
 
     for (int i = 0; i < 3; i ++)
       xhat[i] = n[i] - normal_dot_r * rhat[i];
-   
-    cellTangentPlane(0, ci) = xhat[0];
-    cellTangentPlane(1, ci) = xhat[1];
+    vector_normalization2_3(xhat);
+
+    cross_product(rhat, xhat, yhat);
+    vector_normalization2_3(yhat); // not necesary but just make sure
+ 
+    for (int i = 0; i < 3; i ++) {
+      cellTangentPlane(i, 0, ci) = xhat[i];
+      cellTangentPlane(i, 1, ci) = yhat[i];
+    }
   }
 }
 
@@ -317,7 +324,10 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
       alpha += vector_dist_2norm_3(x, Xe[i]);
     }
 
-    const F t[2] = {cellTangentPlane(0, ci), cellTangentPlane(1, ci)};
+    const F t[2][3] = {
+      {cellTangentPlane(0, 0, ci), cellTangentPlane(1, 0, ci), cellTangentPlane(2, 0, ci)},
+      {cellTangentPlane(0, 1, ci), cellTangentPlane(1, 1, ci), cellTangentPlane(2, 1, ci)}
+    };
 
     F coeffs[max_edges];
     rbf3d_plane_vec_const_dir(
