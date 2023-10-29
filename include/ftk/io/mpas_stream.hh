@@ -31,9 +31,10 @@ public:
   
   std::shared_ptr<mpas_mesh<>> m;
   std::function<void(int, std::shared_ptr<ndarray_group>)> callback;
-  
+ 
   int ncid;
   size_t start_timestep = 0, current_timestep = 0, ntimesteps = 0;
+  size_t time_strlen;
   bool c2v = true;
 };
 
@@ -61,23 +62,10 @@ void mpas_stream::initialize()
   NC_SAFE_CALL( nc_inq_dimlen(ncid, dim_unlimited, &ntimesteps) );
 
   fprintf(stderr, "mpas_ntimesteps=%zu\n", ntimesteps);
-  
-  {
-    ndarray<char> xtime;
-    xtime.read_netcdf(ncid, "xtime");
-    std::string stime(xtime.data(), xtime.size());
-
-    for (int i = 0; i < xtime.dim(1); i ++) {
-      std::string str(stime, i*xtime.dim(0), xtime.dim(0));
-
-      std::tm t = {};
-      std::istringstream ss(str);
-      ss >> std::get_time(&t, "%Y-%m-%d_%H:%M:%S");
-
-      // fprintf(stderr, "xtime=%s\n", str.c_str());
-      // std::cout << std::put_time(&t, "%c") << std::endl;
-    }
-  }
+ 
+  int dim_strlen;
+  NC_SAFE_CALL( nc_inq_dimid(ncid, "StrLen", &dim_strlen) );
+  NC_SAFE_CALL( nc_inq_dimlen(ncid, dim_strlen, &time_strlen) );
 
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
@@ -91,6 +79,24 @@ bool mpas_stream::advance_timestep()
 
   // fprintf(stderr, "current_timestep=%zu\n", current_timestep);
   std::shared_ptr<ndarray_group> g(new ndarray_group);
+
+  // timestamp
+  {
+    const size_t st[3] = {current_timestep, 0},
+                 sz[3] = {1, time_strlen};
+
+    ndarray<char> xtime;
+    xtime.read_netcdf(ncid, "xtime", st, sz);
+    g->set("xtime", xtime);
+   
+#if 0
+    std::string str(xtime.data(), xtime.size());
+    std::tm t = {};
+    std::istringstream ss(str);
+    ss >> std::get_time(&t, "%Y-%m-%d_%H:%M:%S");
+    std::cerr << std::put_time(&t, "%c") << std::endl;
+#endif
+  }
 
   {
     const size_t st[3] = {current_timestep, 0, 0}, 

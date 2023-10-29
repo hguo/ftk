@@ -57,12 +57,15 @@ protected:
   int nch() const { return 7; }
   std::vector<std::string> scalar_names() const { return {"vertVelocity", "salinity", "temperature"}; }
 
+  static double deltaT(std::tm t0, std::tm t1);
+
 protected:
   // std::shared_ptr<ndarray<double>> V[2]; // inherited from particle_tracer
   std::shared_ptr<ndarray<double>> zTop[2];
   std::shared_ptr<ndarray<double>> vertVelocityTop[2];
   std::shared_ptr<ndarray<double>> salinity[2];
   std::shared_ptr<ndarray<double>> temperature[2];
+  std::tm timestamp[2];
 
 #if FTK_HAVE_CUDA
   mop_ctx_t *ctx;
@@ -220,14 +223,26 @@ inline void particle_tracer_mpas_ocean::load_particles_cuda()
 
 inline void particle_tracer_mpas_ocean::update_timestep()
 {
+  prepare_timestep();
+  
   typedef std::chrono::high_resolution_clock clock_type;
+    
+  const int ndays = current_delta_t / 86400.;
+  nsteps_per_interval = nsteps_per_day * ndays;
+
+  if (checkpoint_days) 
+    nsteps_per_checkpoint = nsteps_per_day * checkpoint_days;
+  else if (checkpoint_months)
+    nsteps_per_checkpoint = nsteps_per_day * 30 * checkpoint_months;
+  else 
+    nsteps_per_checkpoint = nsteps_per_interval;
   
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
-    if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d\n", current_timestep);
+    if (comm.rank() == 0) fprintf(stderr, "current_timestep=%d, delta_t=%f\n", 
+        current_timestep, current_delta_t);
+
     current_t = current_timestep;
-  
-    prepare_timestep();
 
     bool streamlines = false;
     if (this->ntimesteps == 1) {
@@ -237,20 +252,23 @@ inline void particle_tracer_mpas_ocean::update_timestep()
 
     // if ((!streamlines) && this->snapshots.size() < 2)
     //   return; // nothing can be done
-  
-    const int nsteps_per_day = 1024;
+
+#if 0
     const int years = 1;
     const double T = 86400.0 * 365 * years;
     const int nsteps = nsteps_per_day * 365 * years;
     const int nsubsteps = nsteps_per_day * 10; // 10 days
+#endif
 
-    for (int istep = 0; istep < nsteps; istep += nsubsteps) {
+    for (int istep = 0; istep < nsteps_per_interval; istep += nsteps_per_checkpoint) {
       auto t1 = clock_type::now();
-      mop_execute(ctx, T, nsteps, nsubsteps);
+      mop_execute(ctx, current_delta_t, nsteps_per_interval, nsteps_per_checkpoint);
 
       auto t2 = clock_type::now();
-      fprintf(stderr, "day=%d, t_comp=%f\n", istep / nsteps_per_day,
-          std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9);
+      fprintf(stderr, "checkpoint=%d, t_comp=%f, istep=%d, nsteps_per_interval=%d, nsteps_per_checkpoint=%d\n",
+          istep / nsteps_per_day,
+          std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() * 1e-9, 
+          istep, nsteps_per_interval, nsteps_per_checkpoint);
 
       // push resulting particles to the trajectory
       for (int i = 0; i < ctx->nparticles; i ++) {
@@ -320,6 +338,20 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
   particle_tracer::push_field_data_snapshot(g);
 }
 
+inline double particle_tracer_mpas_ocean::deltaT(std::tm tm0, std::tm tm1)
+{
+  if (tm0.tm_year < 2000) // a workaround for year before 1970
+    tm0.tm_year += 2000;
+
+  if (tm1.tm_year < 2000)
+    tm1.tm_year += 2000;
+
+  std::time_t t0 = std::mktime(&tm0),
+              t1 = std::mktime(&tm1);
+
+  return std::difftime(t1, t0);
+}
+
 inline void particle_tracer_mpas_ocean::prepare_timestep()
 {
   V[0] = snapshots[0]->get_ptr<double>("velocity");
@@ -336,6 +368,20 @@ inline void particle_tracer_mpas_ocean::prepare_timestep()
   
   temperature[0] = snapshots[0]->get_ptr<double>("temperature");
   temperature[1] = snapshots.size() > 1 ? snapshots[1]->get_ptr<double>("temperature") : nullptr;
+ 
+  // timestamp
+  for (int i = 0; i < snapshots.size(); i ++)
+  {
+    const auto xtime = snapshots[i]->get_ptr<char>("xtime");
+    const std::string xtimestr(xtime->data(), xtime->size());
+    std::istringstream ss(xtimestr);
+    ss >> std::get_time(&timestamp[i], "%Y-%m-%d_%H:%M:%S");
+  }
+
+  if (snapshots.size() > 1) {
+    // fprintf(stderr, "difftime=%f\n", deltaT(timestamp[0], timestamp[1]));
+    set_delta_t(deltaT(timestamp[0], timestamp[1]));
+  }
 }
 
 inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, double *v, int *hint)

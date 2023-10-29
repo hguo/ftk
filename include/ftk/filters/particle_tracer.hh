@@ -32,6 +32,12 @@ struct particle_tracer : public virtual tracker
   void write_trajectories(const std::string& filename);
   void write_geo_trajectories(const std::string& filename);
 
+public:
+  void set_nsteps_per_day(int n) { nsteps_per_day = n; }
+  void set_checkpoint_days(int n) { checkpoint_days = n; }
+  void set_checkpoint_months(int n) { checkpoint_months = n; }
+
+public: // will be overriden by above parameters
   void set_delta_t(double d) { current_delta_t = d; } // overriding delta t
   void set_nsteps_per_interval(int n) { nsteps_per_interval = n; }
   void set_nsteps_per_checkpoint(int n) { nsteps_per_checkpoint = 16; }
@@ -55,8 +61,12 @@ protected:
 
   double current_t = 0.0, current_delta_t = 1.0;
 
+  int nsteps_per_day = 1024;
+
   int nsteps_per_interval = 128;
   int nsteps_per_checkpoint = 16;
+
+  int checkpoint_days = 0, checkpoint_months = 0;
 
   const int nd_;
   int integrator = PARTICLE_TRACER_INTEGRATOR_RK4;

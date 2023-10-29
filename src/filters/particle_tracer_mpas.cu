@@ -728,7 +728,7 @@ static void load_cw_data(
     cudaMalloc((void**)ddbuf, sizeof(double*) * 2);
     checkLastCudaError("memcpy to c2w buffer: allocating ddbuf");
   }
-  fprintf(stderr, "ddbuf=%p, dbuf=%p\n", *ddbuf, dbuf);
+  // fprintf(stderr, "ddbuf=%p, dbuf=%p\n", *ddbuf, dbuf);
   cudaMemcpy(*ddbuf, dbuf, sizeof(double*) * 2, 
       cudaMemcpyHostToDevice);
   checkLastCudaError("memcpy to c2w buffer: dev ptrs");
@@ -739,7 +739,7 @@ static void load_cw_data(
       sizeof(double) * c->ncells * nch * nlayers, 
       cudaMemcpyHostToDevice);
   cudaDeviceSynchronize();
-  fprintf(stderr, "dcw=%p\n", c->dcw);
+  // fprintf(stderr, "dcw=%p\n", c->dcw);
   checkLastCudaError("memcpy to c2w buffer");
 
   // c2w interpolation
