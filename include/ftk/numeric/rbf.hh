@@ -2,6 +2,8 @@
 #define _FTK_RBF_HH
 
 #include <ftk/config.hh>
+#include <ftk/numeric/vector_dot_product.hh>
+#include <ftk/numeric/vector_norm.hh>
 
 namespace ftk {
 
