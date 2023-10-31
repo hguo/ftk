@@ -1,3 +1,6 @@
 [submodule "external/pybind11"]
 	path = python/pybind11
 	url = https://github.com/pybind/pybind11.git
+[submodule "DeformingSpacetimeMesh"]
+	path = DeformingSpacetimeMesh
+	url = git@github.com:rcrcarissa/DeformingSpacetimeMesh.git
