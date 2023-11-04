@@ -5,6 +5,19 @@ namespace ftk {
 
 template <typename T>
 __device__ __host__
+inline T vector_doc_product(
+    const int n,
+    const T A[],
+    const T B[])
+{
+  T dot;
+  for (int i = 0; i < n; i ++)
+    dot += A[i] * B[i];
+  return dot;
+}
+
+template <typename T>
+__device__ __host__
 inline T vector_dot_product2(const T A[2], const T B[2])
 {
   return A[0]*B[0] + A[1]*B[1];

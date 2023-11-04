@@ -304,7 +304,7 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
     initialize_cell_tangent_plane();
 
   const auto max_edges = max_edges_on_cell();
-  coeffsReconstruct.reshape(3, max_edges);
+  coeffsReconstruct.reshape(3, max_edges, n_cells());
 
   for (auto ci = 0; ci < n_cells(); ci ++) {
     F x[3];
@@ -329,12 +329,13 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
       {cellTangentPlane(0, 1, ci), cellTangentPlane(1, 1, ci), cellTangentPlane(2, 1, ci)}
     };
 
-    F coeffs[max_edges];
-    rbf3d_plane_vec_const_dir(
+    F coeffs[max_edges][3];
+    rbf3d_plane_vec_const_dir<F>(
         max_edges, Xe, Ne, x, alpha, t, coeffs);
 
     for (auto i = 0; i < ne; i ++)
-      coeffsReconstruct(i, ci) = coeffs[i];
+      for (auto j = 0; j < 3; j ++)
+        coeffsReconstruct(j, i, ci) = coeffs[i][j];
   }
 }
 
