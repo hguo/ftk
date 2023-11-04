@@ -6,14 +6,21 @@
 
 namespace ftk {
 
-template <int n, typename T>
+template <typename T>
 __device__ __host__
-inline T vector_2norm(const T v[])
+inline T vector_2norm(const int n, const T v[])
 {
   T norm(0);
   for (int i=0; i<n; i++) 
     norm += v[i] * v[i];
   return sqrt(norm);
+}
+
+template <int n, typename T>
+__device__ __host__
+inline T vector_2norm(const T v[])
+{
+  return vector_2norm(n, v);
 }
 
 template <typename T>
@@ -64,9 +71,9 @@ inline T vector_2norm2(const T v[])
   return d2;
 }
 
-template <int n, typename T>
+template <typename T>
 __device__ __host__
-inline T vector_dist_2norm2(const T v[], const T w[])
+inline T vector_dist_2norm2(const int n, const T v[], const T w[])
 {
   T d2(0);
   for (int i=0; i<n; i++) {
@@ -74,6 +81,13 @@ inline T vector_dist_2norm2(const T v[], const T w[])
     d2 += d * d;
   }
   return d2;
+}
+
+template <int n, typename T>
+__device__ __host__
+inline T vector_dist_2norm2(const T v[], const T w[])
+{
+  return vector_2norm2(n, v, w);
 }
 
 }

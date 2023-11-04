@@ -3,18 +3,31 @@
 
 namespace ftk {
 
-template <class T, int M, int K, int N>
+template <class T>
 __device__ __host__
-void matrix_matrix_multiplication(const T A[M][K], const T B[K][N], T C[M][N])
+void mulmat(
+    const int M, 
+    const int N, 
+    const int K,
+    const T *A, // m*k
+    const T *B, // k*n
+    T *C)       // m*n
 {
   for (int i=0; i<M; i++) {
     for (int j=0; j<N; j++) {
       T dot = T(0);
       for (int k=0; k<K; k++)
-        dot += A[i][k] * B[k][j];
-      C[i][j] = dot;
+        dot += A[i*K+k] * B[k*N+j]; // dot += A[i][k] * B[k][j];
+      C[i*N+j] = dot; // C[i][j] = dot;
     }
   }
+}
+
+template <class T, int M, int K, int N>
+__device__ __host__
+void matrix_matrix_multiplication(const T A[M][K], const T B[K][N], T C[M][N])
+{
+  return mulmat(M, N, K, A, B, C);
 }
 
 template <class T>

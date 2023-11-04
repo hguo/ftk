@@ -132,7 +132,7 @@ inline T solve_least_square4x3_3(const T A[4][3], const T B[4][3], T x[3][3],
 //////
 template <typename T>
 __device__ __host__
-void elgs(int n, T **A, int *indx)
+void elgs(int n, T *A, int *indx) // A in column-major
 {
   for (int i = 0; i < n; i ++)
     indx[i] = i;
@@ -142,17 +142,17 @@ void elgs(int n, T **A, int *indx)
   for (int i = 0; i < n; i ++) {
     T c1 = 0.0;
     for (int j = 0; j < n; j ++)
-      c1 = std::max(c1, std::abs(A[i][j]));
+      c1 = std::max(c1, std::abs(A[i*n+j]));
     c[i] = c1;
   }
-
+  
   // search for the pivoting element
   T pi, pj;
   int k;
   for (int j = 0; j < n-1; j ++) {
     T pi1 = 0.0;
     for (int i = j; i < n; i ++) {
-      pi = std::abs(A[indx[i]][j]) / c[indx[i]];
+      pi = std::abs(A[indx[i]*n+j]) / c[indx[i]];
       if (pi > pi1) {
         pi1 = pi;
         k = i;
@@ -161,33 +161,45 @@ void elgs(int n, T **A, int *indx)
     
     // interchange rows
     std::swap(indx[j], indx[k]);
-    for (int i = j; i < n; i ++) {
-      pj = A[indx[i]][j] / A[indx[j]][j];
-      A[indx[i]][j] = pj;
+    for (int i = j+1; i < n; i ++) {
+      pj = A[indx[i]*n+j] / A[indx[j]*n+j];
+      A[indx[i]*n+j] = pj;
 
-      for (int k = j; k < n; k ++) 
-        A[indx[i]][k] = A[indx[i]][k] - pj * A[indx[j]][k];
+      for (int k = j+1; k < n; k ++) 
+        A[indx[i]*n+k] = A[indx[i]*n+k] - pj * A[indx[j]*n+k];
     }
   }
 }
 
 template <typename T>
 __device__ __host__
-void legs(int n, T **A, T *b, T *x, int *indx)
+void legs(int n, T *A, T *b, T *x, int *indx)
 {
   elgs(n, A, indx);
-
+  
   for (int i = 0; i < n-1; i ++)
-    for (int j = i; j < n; j ++)
-      b[indx[j]] = b[indx[j]] - A[indx[j]][i] * b[indx[i]];
-
-  x[n-1] = b[indx[n-1]] / A[indx[n-1]][n-1];
+    for (int j = i+1; j < n; j ++)
+      b[indx[j]] = b[indx[j]] - A[indx[j]*n+i] * b[indx[i]];
+  
+  x[n-1] = b[indx[n-1]] / A[indx[n-1]*n + n-1];
   for (int i = n-2; i >= 0; i --) {
     x[i] = b[indx[i]];
-    for (int j = i; j < n; j ++)
-      x[i] = x[i] - A[indx[i]][j] * x[j];
-    x[i] = x[i] / A[indx[i]][i];
+    for (int j = i+1; j < n; j ++)
+      x[i] = x[i] - A[indx[i]*n+j] * x[j];
+    x[i] = x[i] / A[indx[i]*n+i];
   }
+}
+
+template <typename T>
+__device__ __host__
+void legsc(int n, const T *A, const T *b, T *x)
+{
+  T Aw[n*n], bw[n];
+  memcpy(Aw, A, sizeof(T)*n*n);
+  memcpy(bw, b, sizeof(T)*n);
+
+  int indx[n];
+  legs(n, Aw, bw, x, indx);
 }
 
 }

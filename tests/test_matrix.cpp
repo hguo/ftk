@@ -73,6 +73,23 @@ TEST_CASE("solve_linear3x3") {
   }
 }
 
+TEST_CASE("legs") {
+  for (int run = 0; run < nruns; run++) {
+    const int n = rand() % 10 + 1;
+    double A[n*n], b[n], x[n], bb[n];
+    // int indx[n];
+
+    ftk::rand<double>(n*n, A);
+    ftk::rand<double>(n, b);
+    ftk::legsc<double>(n, A, b, x); //, indx);
+
+    ftk::mulmat<double>(n, 1, n, A, x, bb); 
+    const double e = std::sqrt( ftk::vector_dist_2norm2<double>(n, b, bb) );
+
+    REQUIRE(e < epsilon);
+  }
+}
+
 TEST_CASE("solve_eigenvalues_symmetric2x2") {
   double A[2][2], eig[2];
   for (int run = 0; run < nruns; run ++) {

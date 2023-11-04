@@ -30,6 +30,25 @@ inline void print_matrix(std::ostream &os, const T A[m][n])
   }
 }
 
+template <typename T>
+inline void print_matrix(std::ostream &os, 
+    const int m, 
+    const int n, 
+    const T* A)
+{
+  for (int i = 0; i < m; i ++) {
+    if (i == 0) os << "[";
+    for (int j = 0; j < n; j ++) {
+      if (j == 0) os << "[";
+      os << A[i*n+j];
+      if (j == n-1) os << "]";
+      else os << ", ";
+    }
+    if (i == m-1) os << "]";
+    else os << ", ";
+  }
+}
+
 template <typename T, int m, int n>
 inline void print_matrix(const std::string& name, const T A[m][n])
 {
