@@ -1412,6 +1412,40 @@ bool ndarray<T>::mlerp(const F x[], T v[]) const
   return true;
 }
 
+/////
+template <typename T>
+inline T mse(const ndarray<T>& x, const ndarray<T>& y)
+{
+  T r(0);
+  const auto n = std::min(x.size(), y.size());
+  size_t m = 0;
+  for (auto i = 0; i < n; i ++) {
+    if (std::isnan(x[i]) || std::isinf(x[i]) ||
+        std::isnan(y[i]) || std::isinf(y[i]))
+      continue;
+    else {
+      const T d = x[i] - y[i];
+      r += d * d;
+      m ++;
+    }
+  }
+  return r / m;
+}
+
+template <typename T>
+T rmse(const ndarray<T>& x, const ndarray<T>& y) 
+{ 
+  return std::sqrt(mse(x, y)); 
+}
+
+template <typename T>
+T psnr(const ndarray<T>& x, const ndarray<T>& xp)
+{
+  const auto min_max = x.min_max();
+  const auto range = std::get<1>(min_max) - std::get<0>(min_max);
+  return 20.0 * log10(range) - 10.0 * log10(mse(x, xp));
+}
+
 } // namespace ftk
 
 ///////// serialization
