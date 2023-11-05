@@ -35,7 +35,7 @@ public:
   int ncid;
   size_t start_timestep = 0, current_timestep = 0, ntimesteps = 0;
   size_t time_strlen;
-  bool c2v = true;
+  bool c2v = true, e2c = true;
 };
 
 //////
@@ -48,9 +48,11 @@ void mpas_stream::initialize()
   if (c2v)
     m->initialize_c2v_interpolants();
 
-  m->initialize_edge_normals();
-  m->initialize_cell_tangent_plane();
-  m->initialize_coeffs_reconstruct();
+  if (e2c) {
+    m->initialize_edge_normals();
+    m->initialize_cell_tangent_plane();
+    m->initialize_coeffs_reconstruct();
+  }
 
 #if FTK_HAVE_NETCDF
 #if NC_HAS_PARALLEL
@@ -101,20 +103,36 @@ bool mpas_stream::advance_timestep()
     std::cerr << std::put_time(&t, "%c") << std::endl;
 #endif
   }
+      
+  if (e2c) {
+    const size_t st[3] = {current_timestep, 0, 0},
+                 sz[3] = {1, m->n_edges(), m->n_layers()};
+
+    ndarray<double> normalVelocity;
+    normalVelocity.read_netcdf(ncid, "normalVelocity", st, sz);
+    // std::cerr << normalVelocity.shape() << std::endl;
+  
+    ndarray<double> velocity = m->interpolate_e2c(normalVelocity);
+    if (c2v) g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
+    else g->set("velocity", velocity);
+  }
 
   {
     const size_t st[3] = {current_timestep, 0, 0}, 
                  sz[3] = {1, m->n_cells(), m->n_layers()};
-   
-    ndarray<double> velocityX, velocityY, velocityZ; 
-    velocityX.read_netcdf(ncid, "velocityX", st, sz);
-    velocityY.read_netcdf(ncid, "velocityY", st, sz);
-    velocityZ.read_netcdf(ncid, "velocityZ", st, sz);
-    // fprintf(stderr, "vectors read.\n");
   
-    ndarray<double> velocity = ndarray<double>::concat({velocityX, velocityY, velocityZ});
-    if (c2v) g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
-    else g->set("velocity", velocity);
+    if (!e2c) {
+      ndarray<double> velocityX, velocityY, velocityZ; 
+      
+      velocityX.read_netcdf(ncid, "velocityX", st, sz);
+      velocityY.read_netcdf(ncid, "velocityY", st, sz);
+      velocityZ.read_netcdf(ncid, "velocityZ", st, sz);
+      // fprintf(stderr, "vectors read.\n");
+    
+      ndarray<double> velocity = ndarray<double>::concat({velocityX, velocityY, velocityZ});
+      if (c2v) g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
+      else g->set("velocity", velocity);
+    }
 
     ndarray<double> salinity; 
     salinity.read_netcdf(ncid, "salinity", st, sz);

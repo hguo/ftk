@@ -19,6 +19,7 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
   void initialize_edge_normals();
   void initialize_cell_tangent_plane();
   void initialize_coeffs_reconstruct();
+  ndarray<F> interpolate_e2c(const ndarray<F>& Ve) const;
 
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> surface_cells_to_vtu(std::vector<ndarray_base*> attrs = {}) const;
@@ -164,6 +165,28 @@ void mpas_mesh<I, F>::initialize_c2v_interpolants()
 }
 
 template <typename I, typename F>
+ndarray<F> mpas_mesh<I, F>::interpolate_e2c(const ndarray<F> &Ve) const
+{
+  ndarray<F> V; // velocity field on cells
+  V.reshape(3, n_cells(), n_layers());
+
+  for (auto l = 0; l < n_layers(); l ++) {
+    for (auto i = 0; i < n_cells(); i ++) {
+      const auto ne = nEdgesOnCell[i];
+
+      for (auto j = 0; j < ne; j ++) {
+        const auto ei = eid2i( edgesOnCell(j, i) );
+
+        for (auto k = 0; k < 3; k ++) 
+          V(k, i, l) += Ve(ei, l) * coeffsReconstruct(k, j, i);
+      }
+    }
+  }
+
+  return V;
+}
+
+template <typename I, typename F>
 ndarray<F> mpas_mesh<I, F>::interpolate_c2v(const ndarray<F>& Vc) const
 {
   const I nvars = Vc.dim(0);
@@ -256,7 +279,7 @@ void mpas_mesh<I, F>::initialize_edge_normals()
 
     vector_normalization2_3(n);
     for (int i = 0; i < 3; i ++)
-      edgeNormalVectors[i] = n[i];
+      edgeNormalVectors(i, ei) = n[i];
   }
 }
 
@@ -277,7 +300,7 @@ void mpas_mesh<I, F>::initialize_cell_tangent_plane()
     cell_i_coords(ci, rhat);
     vector_normalization2_3(rhat);
 
-    const I ei = edgesOnCell(0, ci);
+    const I ei = eid2i( edgesOnCell(0, ci) );
     for (int i = 0; i < 3; i ++)
       n[i] = edgeNormalVectors(i, ei);
 
@@ -289,7 +312,11 @@ void mpas_mesh<I, F>::initialize_cell_tangent_plane()
 
     cross_product(rhat, xhat, yhat);
     vector_normalization2_3(yhat); // not necesary but just make sure
- 
+
+    // fprintf(stderr, "rhat=%f, %f, %f, n=%f, %f, %f, xhat=%f, %f, %f, yhat=%f, %f, %f\n", 
+    //     rhat[0], rhat[1], rhat[2], n[0], n[1], n[2], 
+    //     xhat[0], xhat[1], xhat[2], yhat[0], yhat[1], yhat[2]);
+
     for (int i = 0; i < 3; i ++) {
       cellTangentPlane(i, 0, ci) = xhat[i];
       cellTangentPlane(i, 1, ci) = yhat[i];
@@ -328,14 +355,19 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
       {cellTangentPlane(0, 0, ci), cellTangentPlane(1, 0, ci), cellTangentPlane(2, 0, ci)},
       {cellTangentPlane(0, 1, ci), cellTangentPlane(1, 1, ci), cellTangentPlane(2, 1, ci)}
     };
+    // print2x3("cellTangent", t);
 
     F coeffs[max_edges][3];
     rbf3d_plane_vec_const_dir<F>(
         max_edges, Xe, Ne, x, alpha, t, coeffs);
 
-    for (auto i = 0; i < ne; i ++)
+    for (auto i = 0; i < ne; i ++) {
       for (auto j = 0; j < 3; j ++)
         coeffsReconstruct(j, i, ci) = coeffs[i][j];
+
+      // fprintf(stderr, "ci=%d, e=%d, coeffs=%f, %f, %f\n",
+      //     ci, i, coeffs[i][0], coeffs[i][1], coeffs[i][2]);
+    }
   }
 }
 
