@@ -350,6 +350,7 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
 
       alpha += vector_dist_2norm_3(x, Xe[i]);
     }
+    alpha /= ne;
 
     const F t[2][3] = {
       {cellTangentPlane(0, 0, ci), cellTangentPlane(1, 0, ci), cellTangentPlane(2, 0, ci)},
