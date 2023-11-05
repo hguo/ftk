@@ -584,6 +584,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   if (accelerator == "cuda") {
     tracker_particle_mpas_ocean->use_accelerator(FTK_XL_CUDA);
     mpas_data_stream->set_c2v(false); // no need to do c2v interpolation on cpu
+    mpas_data_stream->set_e2c(false);
   }
  
   fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 

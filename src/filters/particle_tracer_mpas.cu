@@ -26,6 +26,9 @@ __device__ __host__
 inline static int c2ci(int c) { return c - 1; }
 
 __device__ __host__
+inline static int e2ei(int e) { return e - 1; }
+
+__device__ __host__
 inline static int v2vi(int v) { return v - 1; }
 
 __device__ __host__
@@ -386,6 +389,46 @@ static void initialize_c2v(
   }
 }
 
+__global__
+static void interpolate_e2c(
+    double *Vc, // velocity on cell; please memset to zero before calling this func
+    const double *Ve, // normal velocity on edge
+    const int nlayers,
+    const int nedges,
+    const int ncells,
+    const double *interpolants,
+    const int max_edges,
+    const int *nedges_on_cell,
+    const int *edges_on_cell)
+{
+  unsigned long long i = getGlobalIdx_3D_1D();
+  if (i >= ncells) return;
+  
+  const int ci = i;
+  const int ne = nedges_on_cell[ci];
+
+  for (int layer = 0; layer < nlayers; layer ++) {
+    // for (int k = 0; k < 3; k ++) 
+    //   Vc[k + 3 * (layer + ci *nlayers)] = 0.0;
+
+    for (int j = 0; j < ne; j ++) {
+      const int ei = e2ei( edges_on_cell[j + ci*max_edges] );
+      // printf("%f\n", ve);
+      // printf("ci=%d, ei=%d, v=%p\n", ci, ei, Ve); // layer + ei*nlayers]);
+      const double ve = Ve[layer + ei * nlayers];
+
+      for (int k = 0; k < 3; k ++) 
+        Vc[k + 3 * (layer + ci *nlayers)] += ve * interpolants[k + 3 * (j + max_edges * ci)];
+#if 0
+      if (ci == 0)
+        printf("ve=%f, vc=%f, %f, %f\n", ve, 
+          Vc[3*(layer+ci*nlayers)],
+          Vc[1+3*(layer+ci*nlayers)],
+          Vc[2+3*(layer+ci*nlayers)]);
+#endif
+    }
+  }
+}
 
 __global__
 static void interpolate_c2v(
@@ -403,10 +446,6 @@ static void interpolate_c2v(
   // if (threadIdx.x > 0) return;
   unsigned long long i = getGlobalIdx_3D_1D();
   if (i >= nverts) return;
-  
-  // if (blockIdx.x == 0 && blockIdx.y == 481 && threadIdx.x == 192)
-  // printf("GEWWEGWEGWEGEWGWEG\n");
-
   const int vi = i;
 
   const bool boundary = vert_on_boundary[vi];
@@ -520,8 +559,10 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   if (c->d_Xv != NULL) cudaFree(c->d_Xv);
   if (c->d_nedges_on_cell != NULL) cudaFree(c->d_nedges_on_cell);
   if (c->d_cells_on_cell != NULL) cudaFree(c->d_cells_on_cell);
-  if (c->d_verts_on_cell != NULL) cudaFree(c->d_verts_on_cell);
+  if (c->d_cells_on_edge != NULL) cudaFree(c->d_cells_on_edge);
   if (c->d_cells_on_vert != NULL) cudaFree(c->d_cells_on_vert);
+  if (c->d_edges_on_cell != NULL) cudaFree(c->d_edges_on_cell);
+  if (c->d_verts_on_cell != NULL) cudaFree(c->d_verts_on_cell);
 
   for (int i = 0; i < 2; i ++) {
     if (c->d_V[i] != NULL) cudaFree(c->d_V[i]);
@@ -538,6 +579,7 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   if (c->d_c2v_interpolants != NULL) cudaFree(c->d_c2v_interpolants);
   if (c->d_vert_on_boundary != NULL) cudaFree(c->d_vert_on_boundary);
   if (c->dcw != NULL) cudaFree(c->dcw);
+  if (c->dew != NULL) cudaFree(c->dew);
 
   if (c->dparts != NULL) cudaFree(c->dparts);
   if (c->hparts != NULL) free(c->hparts);
@@ -581,20 +623,24 @@ void mop_load_particles(mop_ctx_t *c,
 }
 
 void mop_load_mesh(mop_ctx_t *c,
-    const int ncells, 
-    const int nlayers, 
+    const int ncells,
+    const int nedges,
     const int nverts, 
+    const int nlayers, 
     const int max_edges,
     const int nattrs,
     const double *Xc,
     const double *Xv,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
-    const int *verts_on_cell,
-    const int *cells_on_vert)
+    const int *cells_on_edge,
+    const int *cells_on_vert,
+    const int *edges_on_cell,
+    const int *verts_on_cell)
 {
   c->ncells = ncells;
   c->nlayers = nlayers;
+  c->nedges = nedges;
   c->nverts = nverts;
   c->max_edges = max_edges;
   c->nattrs = nattrs;
@@ -622,17 +668,29 @@ void mop_load_mesh(mop_ctx_t *c,
   cudaMemcpy(c->d_cells_on_cell, cells_on_cell, 
       size_t(ncells) * max_edges * sizeof(int), 
       cudaMemcpyHostToDevice);
-
-  cudaMalloc((void**)&c->d_verts_on_cell, 
-      size_t(nverts) * max_edges * sizeof(int));
-  cudaMemcpy(c->d_verts_on_cell, verts_on_cell, 
-      size_t(nverts) * max_edges * sizeof(int), 
+  
+  cudaMalloc((void**)&c->d_cells_on_edge, 
+      size_t(nedges) * 2 * sizeof(int));
+  cudaMemcpy(c->d_cells_on_edge, cells_on_edge, 
+      size_t(nedges) * 2 * sizeof(int),
       cudaMemcpyHostToDevice);
 
   cudaMalloc((void**)&c->d_cells_on_vert, 
       size_t(nverts) * 3 * sizeof(int));
   cudaMemcpy(c->d_cells_on_vert, cells_on_vert, 
       size_t(nverts) * 3 * sizeof(int),
+      cudaMemcpyHostToDevice);
+  
+  cudaMalloc((void**)&c->d_edges_on_cell, 
+      size_t(ncells) * max_edges * sizeof(int));
+  cudaMemcpy(c->d_edges_on_cell, edges_on_cell, 
+      size_t(ncells) * max_edges * sizeof(int), 
+      cudaMemcpyHostToDevice);
+
+  cudaMalloc((void**)&c->d_verts_on_cell, 
+      size_t(ncells) * max_edges * sizeof(int));
+  cudaMemcpy(c->d_verts_on_cell, verts_on_cell, 
+      size_t(ncells) * max_edges * sizeof(int), 
       cudaMemcpyHostToDevice);
 
   checkLastCudaError("[FTK-CUDA] loading mpas mesh");
@@ -668,6 +726,23 @@ void mop_load_mesh(mop_ctx_t *c,
     // cudaDeviceSynchronize();
     checkLastCudaError("[FTK-CUDA] initializing mpas c2v interpolants");
   }
+
+  // initialize normal vectors
+  {
+
+  }
+}
+
+void mop_load_e2c_interpolants(mop_ctx_t *c, const double *p)
+{
+  cudaMalloc((void**)&c->d_e2c_interpolants,
+      size_t(c->ncells) * c->max_edges * sizeof(double) * 3);
+
+  cudaMemcpy(c->d_e2c_interpolants, p,
+      size_t(c->ncells) * c->max_edges * sizeof(double) * 3, cudaMemcpyHostToDevice);
+
+  cudaDeviceSynchronize();
+  checkLastCudaError("[FTK-CUDA] load e2c interpolants");
 }
 
 template <typename T=double>
@@ -699,6 +774,7 @@ static void load_cw_data(
     double **dbuf, // an array with two device pointers
     double ***ddbuf, // device array of pointers
     const double *cw,
+    bool cw_on_gpu,
     const int nch,
     const int nlayers) // host pointer with cw data
 {
@@ -734,13 +810,19 @@ static void load_cw_data(
   checkLastCudaError("memcpy to c2w buffer: dev ptrs");
   
   // copy data to c2w buffer
-  assert(c->dcw != NULL);
-  cudaMemcpy(c->dcw, cw, 
-      sizeof(double) * c->ncells * nch * nlayers, 
-      cudaMemcpyHostToDevice);
-  cudaDeviceSynchronize();
-  // fprintf(stderr, "dcw=%p\n", c->dcw);
-  checkLastCudaError("memcpy to c2w buffer");
+  double const* dcw; 
+  if (cw_on_gpu) {
+    dcw = cw; // cw data is already on gpu
+  } else {
+    dcw = c->dcw;
+    assert(c->dcw != NULL);
+    cudaMemcpy(c->dcw, cw, 
+        sizeof(double) * c->ncells * nch * nlayers, 
+        cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    // fprintf(stderr, "dcw=%p\n", c->dcw);
+    checkLastCudaError("memcpy to c2w buffer");
+  }
 
   // c2w interpolation
   {
@@ -752,7 +834,7 @@ static void load_cw_data(
     else gridSize = dim3(nBlocks);
 
     interpolate_c2v<<<gridSize, blockSize>>>(
-        d, c->dcw, nch, nlayers,
+        d, dcw, nch, nlayers,
         c->ncells,
         c->nverts,
         c->d_c2v_interpolants,
@@ -776,6 +858,24 @@ void mop_load_data(mop_ctx_t *c,
   load_data<double>(c->d_A, A, c->nattrs * c->nverts * c->nlayers, "f");
 }
 
+void mop_initialize_dcw(mop_ctx_t *c)
+{
+  if (c->dcw == NULL)
+    cudaMalloc((void**)&c->dcw, 
+        sizeof(double) * c->ncells * std::max(3, c->nattrs) * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
+  cudaDeviceSynchronize();
+  checkLastCudaError("malloc dcw");
+}
+
+void mop_initialize_dew(mop_ctx_t *c)
+{
+  if (c->dew == NULL)
+    cudaMalloc((void**)&c->dew, 
+        sizeof(double) * c->nedges * c->nlayers); // a sufficiently large buffer for loading edgewise data
+  cudaDeviceSynchronize();
+  checkLastCudaError("malloc dew");
+}
+
 void mop_load_data_cw(mop_ctx_t *c,
     const double t,
     const double *Vc,
@@ -783,19 +883,60 @@ void mop_load_data_cw(mop_ctx_t *c,
     const double *zTopc,
     const double *Ac)
 {
-  if (c->dcw == NULL)
-    cudaMalloc((void**)&c->dcw, 
-        sizeof(double) * c->ncells * 3 * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
-  cudaDeviceSynchronize();
-  checkLastCudaError("malloc dcw");
+  mop_initialize_dcw(c);
 
   std::swap(c->T[0], c->T[1]);
   c->T[0] = t;
 
-  load_cw_data(c, c->d_V, &c->dd_V, Vc, 3, c->nlayers); // V
-  load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, 1, c->nlayers+1); // Vv
-  load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, 1, c->nlayers); // zTop
-  load_cw_data(c, c->d_A, &c->dd_A, Ac, 2 /*c->nattrs*/, c->nlayers); // f
+  load_cw_data(c, c->d_V, &c->dd_V, Vc, false, 3, c->nlayers); // V
+  load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, false, 1, c->nlayers+1); // Vv
+  load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, false, 1, c->nlayers); // zTop
+  load_cw_data(c, c->d_A, &c->dd_A, Ac, false, 2 /*c->nattrs*/, c->nlayers); // f
+}
+
+void mop_load_data_with_normal_velocity(mop_ctx_t *c,
+    const double t,
+    const double *V, // normal velocity
+    const double *Vvc, 
+    const double *zTopc,
+    const double *Ac)
+{
+  mop_initialize_dcw(c);
+  mop_initialize_dew(c);
+
+  std::swap(c->T[0], c->T[1]);
+  c->T[0] = t;
+
+  // interpolate e2c
+  {
+    cudaDeviceSynchronize();
+    checkLastCudaError("e2c interpolation: 0");
+    cudaMemcpy(c->dew, V, sizeof(double) * c->nedges * c->nlayers, cudaMemcpyHostToDevice);
+    cudaMemset(c->dcw, 0, sizeof(double) * 3 * c->ncells * c->nlayers);
+    
+    cudaDeviceSynchronize();
+    checkLastCudaError("e2c interpolation: 1");
+    
+    size_t ntasks = c->ncells;
+    const int nBlocks = idivup(ntasks, blockSize);
+    dim3 gridSize;
+  
+    if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+    else gridSize = dim3(nBlocks);
+
+    interpolate_e2c<<<gridSize, blockSize>>>(
+       c->dcw, c->dew, c->nlayers, c->nedges, c->ncells,
+       c->d_e2c_interpolants, c->max_edges, 
+       c->d_nedges_on_cell, c->d_edges_on_cell);
+    
+    cudaDeviceSynchronize();
+    checkLastCudaError("e2c interpolation");
+  }
+
+  load_cw_data(c, c->d_V, &c->dd_V, c->dcw, true, 3, c->nlayers); // V
+  load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, false, 1, c->nlayers+1); // Vv
+  load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, false, 1, c->nlayers); // zTop
+  load_cw_data(c, c->d_A, &c->dd_A, Ac, false, 2 /*c->nattrs*/, c->nlayers); // f
 }
 
 void mop_execute(mop_ctx_t *c,

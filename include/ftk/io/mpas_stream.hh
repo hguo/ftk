@@ -23,6 +23,7 @@ struct mpas_stream : public object {
   void set_ntimesteps(int n) { ntimesteps = n; }
   bool advance_timestep();
 
+  void set_e2c(bool b) { e2c = b; }
   void set_c2v(bool b) { c2v = b; }
 
 public:
@@ -45,14 +46,8 @@ void mpas_stream::initialize()
   m->read_netcdf(path);
   m->initialize();
   
-  if (c2v)
-    m->initialize_c2v_interpolants();
-
-  if (e2c) {
-    m->initialize_edge_normals();
-    m->initialize_cell_tangent_plane();
-    m->initialize_coeffs_reconstruct();
-  }
+  m->initialize_c2v_interpolants();
+  m->initialize_coeffs_reconstruct();
 
 #if FTK_HAVE_NETCDF
 #if NC_HAS_PARALLEL
@@ -104,23 +99,26 @@ bool mpas_stream::advance_timestep()
 #endif
   }
       
-  if (e2c) {
+  {
     const size_t st[3] = {current_timestep, 0, 0},
                  sz[3] = {1, m->n_edges(), m->n_layers()};
 
     ndarray<double> normalVelocity;
     normalVelocity.read_netcdf(ncid, "normalVelocity", st, sz);
-    // std::cerr << normalVelocity.shape() << std::endl;
-  
-    ndarray<double> velocity = m->interpolate_e2c(normalVelocity);
-    if (c2v) g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
-    else g->set("velocity", velocity);
+    g->set("normalVelocity", normalVelocity);
+
+    if (e2c) {
+      ndarray<double> velocity = m->interpolate_e2c(normalVelocity);
+      if (c2v) g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
+      else g->set("velocity", velocity);
+    }
   }
 
   {
     const size_t st[3] = {current_timestep, 0, 0}, 
                  sz[3] = {1, m->n_cells(), m->n_layers()};
-  
+ 
+#if 0 // TODO: add options to use velocityXYZ directly from data if available
     if (!e2c) {
       ndarray<double> velocityX, velocityY, velocityZ; 
       
@@ -133,6 +131,7 @@ bool mpas_stream::advance_timestep()
       if (c2v) g->set("velocity", m->interpolate_c2v(velocity)); // vertexwise velocity
       else g->set("velocity", velocity);
     }
+#endif
 
     ndarray<double> salinity; 
     salinity.read_netcdf(ncid, "salinity", st, sz);

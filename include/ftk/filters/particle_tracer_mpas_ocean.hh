@@ -82,16 +82,22 @@ inline void particle_tracer_mpas_ocean::initialize()
     mop_create_ctx(&ctx);
     mop_load_mesh(ctx, 
         m->n_cells(),
-        m->n_layers(),
+        m->n_edges(),
         m->n_vertices(),
+        m->n_layers(),
         m->max_edges_on_cell(),
         2, // just temperature and salinity for now
         m->xyzCells.data(),
         m->xyzVertices.data(),
         m->nEdgesOnCell.data(),
         m->cellsOnCell.data(),
-        m->verticesOnCell.data(),
-        m->cellsOnVertex.data());
+        m->cellsOnEdge.data(),
+        m->cellsOnVertex.data(),
+        m->edgesOnCell.data(),
+        m->verticesOnCell.data());
+
+    // std::cerr << m->coeffsReconstruct.shape() << std::endl;
+    mop_load_e2c_interpolants(ctx, m->coeffsReconstruct.data());
 #endif
   }
 }
@@ -302,7 +308,8 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
 #if FTK_HAVE_CUDA
     auto t0 = clock_type::now();
     
-    const auto V = g->get_ptr<double>("velocity");
+    // const auto V = g->get_ptr<double>("velocity");
+    const auto V = g->get_ptr<double>("normalVelocity");
     const auto zTop = g->get_ptr<double>("zTop");
     const auto vertVelocityTop = g->get_ptr<double>("vertVelocityTop");
     const auto salinity = g->get_ptr<double>("salinity");
@@ -321,7 +328,7 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
         attrs(1, j, i) = temperature->at(0, j, i);
       }
     }
-    mop_load_data_cw(ctx,
+    mop_load_data_with_normal_velocity(ctx,
         (double)current_timestep,
         V->data(), 
         vertVelocityTop->data(),
