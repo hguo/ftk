@@ -87,7 +87,7 @@ template <int n, typename T>
 __device__ __host__
 inline T vector_dist_2norm2(const T v[], const T w[])
 {
-  return vector_dist_2norm2(n, v, w);
+  return vector_dist_2norm2<T>(n, v, w);
 }
 
 }
