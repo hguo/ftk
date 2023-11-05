@@ -168,7 +168,7 @@ template <typename I, typename F>
 ndarray<F> mpas_mesh<I, F>::interpolate_e2c(const ndarray<F> &Ve) const
 {
   ndarray<F> V; // velocity field on cells
-  V.reshape(3, n_cells(), n_layers());
+  V.reshape(3, n_layers(), n_cells());
 
   for (auto l = 0; l < n_layers(); l ++) {
     for (auto i = 0; i < n_cells(); i ++) {
@@ -178,7 +178,7 @@ ndarray<F> mpas_mesh<I, F>::interpolate_e2c(const ndarray<F> &Ve) const
         const auto ei = eid2i( edgesOnCell(j, i) );
 
         for (auto k = 0; k < 3; k ++) 
-          V(k, i, l) += Ve(ei, l) * coeffsReconstruct(k, j, i);
+          V(k, l, i) += Ve(l, ei) * coeffsReconstruct(k, j, i);
       }
     }
   }
