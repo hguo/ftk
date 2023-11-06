@@ -390,6 +390,23 @@ static void initialize_c2v(
 }
 
 __global__
+static void assign_attrs(
+    double *A, // all attributes
+    const double *a, // one of the attributes
+    const int iattr, 
+    const int nattrs,
+    const int nlayers,
+    const int ncells)
+{
+  unsigned long long i = getGlobalIdx_3D_1D();
+  if (i >= ncells) return;
+  const int ci = i;
+
+  for (int layer = 0; layer < nlayers; layer ++)
+    A[iattr + nattrs * (layer + ci * nlayers)] = a[layer + ci * nlayers];
+}
+
+__global__
 static void interpolate_e2c(
     double *Vc, // velocity on cell; please memset to zero before calling this func
     const double *Ve, // normal velocity on edge
@@ -871,7 +888,8 @@ void mop_initialize_dew(mop_ctx_t *c)
 {
   if (c->dew == NULL)
     cudaMalloc((void**)&c->dew, 
-        sizeof(double) * c->nedges * c->nlayers); // a sufficiently large buffer for loading edgewise data
+        sizeof(double) * std::max(c->nedges, c->ncells) * std::max(3, c->nattrs) * c->nlayers); // a sufficiently large buffer for loading edgewise data
+        // sizeof(double) * c->nedges * c->nlayers); // a sufficiently large buffer for loading edgewise data
   cudaDeviceSynchronize();
   checkLastCudaError("malloc dew");
 }
@@ -899,13 +917,20 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     const double *V, // normal velocity
     const double *Vvc, 
     const double *zTopc,
-    const double *Ac)
+    const double *Ac[])
 {
   mop_initialize_dcw(c);
   mop_initialize_dew(c);
 
   std::swap(c->T[0], c->T[1]);
   c->T[0] = t;
+    
+  size_t ntasks = c->ncells;
+  const int nBlocks = idivup(ntasks, blockSize);
+  dim3 gridSize;
+
+  if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else gridSize = dim3(nBlocks);
 
   // interpolate e2c
   {
@@ -917,13 +942,6 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     cudaDeviceSynchronize();
     checkLastCudaError("e2c interpolation: 1");
     
-    size_t ntasks = c->ncells;
-    const int nBlocks = idivup(ntasks, blockSize);
-    dim3 gridSize;
-  
-    if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
-    else gridSize = dim3(nBlocks);
-
     interpolate_e2c<<<gridSize, blockSize>>>(
        c->dcw, c->dew, c->nlayers, c->nedges, c->ncells,
        c->d_e2c_interpolants, c->max_edges, 
@@ -936,7 +954,16 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
   load_cw_data(c, c->d_V, &c->dd_V, c->dcw, true, 3, c->nlayers); // V
   load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, false, 1, c->nlayers+1); // Vv
   load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, false, 1, c->nlayers); // zTop
-  load_cw_data(c, c->d_A, &c->dd_A, Ac, false, 2 /*c->nattrs*/, c->nlayers); // f
+ 
+  double *tmp = c->dew;
+  for (int i = 0; i < c->nattrs; i ++) {
+    cudaMemcpy(tmp, Ac[i], sizeof(double) * c->ncells * c->nlayers, cudaMemcpyHostToDevice);
+
+    assign_attrs<<<gridSize, blockSize>>>(c->dcw, tmp, i, c->nattrs, c->nlayers, c->ncells);
+    
+    checkLastCudaError("load attrs: assign");
+  }
+  load_cw_data(c, c->d_A, &c->dd_A, c->dcw, true, c->nattrs, c->nlayers); // f
 }
 
 void mop_execute(mop_ctx_t *c,

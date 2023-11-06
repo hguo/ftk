@@ -77,6 +77,9 @@ bool mpas_stream::advance_timestep()
 {
   if (current_timestep >= ntimesteps)
     return false;
+  
+  typedef std::chrono::high_resolution_clock clock_type;
+  auto t0 = clock_type::now();
 
   // fprintf(stderr, "current_timestep=%zu\n", current_timestep);
   std::shared_ptr<ndarray_group> g(new ndarray_group);
@@ -171,6 +174,9 @@ bool mpas_stream::advance_timestep()
     if (c2v) g->set("vertVelocityTop", m->interpolate_c2v(vertVelocityTop));
     else g->set("vertVelocityTop", vertVelocityTop);
   }
+      
+  auto t1 = clock_type::now();
+  fprintf(stderr, "t_io=%f\n", std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9);
  
   // fprintf(stderr, "callback..\n");
   callback(current_timestep, g);

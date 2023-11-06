@@ -315,6 +315,7 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
     const auto salinity = g->get_ptr<double>("salinity");
     const auto temperature = g->get_ptr<double>("temperature");
 
+#if 0
     ndarray<double> attrs;
     attrs.reshape(2, m->n_vertices(), m->n_layers());
     for (auto i = 0; i < m->n_layers(); i ++) {
@@ -328,15 +329,19 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
         attrs(1, j, i) = temperature->at(0, j, i);
       }
     }
+#endif
+
+    const double *attrs[] = {salinity->data(), temperature->data()};
+
     mop_load_data_with_normal_velocity(ctx,
         (double)current_timestep,
         V->data(), 
         vertVelocityTop->data(),
-        zTop->data(),
-        attrs.data());
+        zTop->data(), 
+        attrs);
     
     auto t1 = clock_type::now();
-    fprintf(stderr, "t_load=%f\n", 
+    fprintf(stderr, "t_prep=%f\n", 
         std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9);
 
 #endif

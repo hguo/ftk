@@ -76,7 +76,7 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     const double *V, // normal velocity
     const double *Vv, 
     const double *zTop,
-    const double *A);
+    const double *A[]);
 
 void mop_load_data_cw(mop_ctx_t *c,
     const double t, // time

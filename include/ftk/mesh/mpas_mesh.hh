@@ -359,6 +359,7 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
     // print2x3("cellTangent", t);
 
     F coeffs[max_edges][3];
+#if 0
     rbf3d_plane_vec_const_dir<F>(
         max_edges, Xe, Ne, x, alpha, t, coeffs);
 
@@ -369,6 +370,13 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
       // fprintf(stderr, "ci=%d, e=%d, coeffs=%f, %f, %f\n",
       //     ci, i, coeffs[i][0], coeffs[i][1], coeffs[i][2]);
     }
+#else // very low-order approx
+    for (auto i = 0; i < ne; i ++) {
+      for (auto j = 0; j < 3; j ++) {
+        coeffsReconstruct(j, i, ci) = Ne[i][j] / ne;
+      }
+    }
+#endif
   }
 }
 
