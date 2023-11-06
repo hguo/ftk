@@ -107,7 +107,9 @@ bool mpas_stream::advance_timestep()
                  sz[3] = {1, m->n_edges(), m->n_layers()};
 
     ndarray<double> normalVelocity;
-    normalVelocity.read_netcdf(ncid, "normalVelocity", st, sz);
+    normalVelocity.try_read_netcdf(ncid, 
+        { "normalVelocity", "timeMonthly_avg_normalVelocity" },
+        st, sz);
     g->set("normalVelocity", normalVelocity);
 
     if (e2c) {
@@ -137,31 +139,38 @@ bool mpas_stream::advance_timestep()
 #endif
 
     ndarray<double> salinity; 
-    salinity.read_netcdf(ncid, "salinity", st, sz);
-    salinity.make_multicomponents();
-    if (c2v) g->set("salinity", m->interpolate_c2v(salinity));
-    else g->set("salinity", salinity);
-    
+    if (salinity.try_read_netcdf(ncid, {"salinity"}, st, sz)) {
+      salinity.make_multicomponents();
+      if (c2v) g->set("salinity", m->interpolate_c2v(salinity));
+      else g->set("salinity", salinity);
+    }
+   
     ndarray<double> temperature;
-    temperature.read_netcdf(ncid, "temperature", st, sz);
-    temperature.make_multicomponents();
-    if (c2v) g->set("temperature", m->interpolate_c2v(temperature));
-    else g->set("temperature", temperature);
+    if (temperature.try_read_netcdf(ncid, {"temperature"}, st, sz)) {
+      temperature.make_multicomponents();
+      if (c2v) g->set("temperature", m->interpolate_c2v(temperature));
+      else g->set("temperature", temperature);
+    }
 
-#if 0
     ndarray<double> layerThickness;
-    layerThickness.read_netcdf(ncid, "layerThickness", st, sz);
-    layerThickness.make_multicomponents();
-    g->set("layerThickness", m->interpolate_c2v(layerThickness));
-#endif
+    if (layerThickness.try_read_netcdf(ncid, {"layerThickness", "timeMonthly_avg_layerThickness"}, st, sz)) {
+      layerThickness.make_multicomponents();
+      g->set("layerThickness", m->interpolate_c2v(layerThickness));
+    }
 
     ndarray<double> zTop;
-    zTop.read_netcdf(ncid, "zTop", st, sz);
-    zTop.make_multicomponents();
-    if (c2v) g->set("zTop", m->interpolate_c2v(zTop));
-    else g->set("zTop", zTop);
+    if (zTop.try_read_netcdf(ncid, {"zTop"}, st, sz)) {
+      zTop.make_multicomponents();
+      if (c2v) g->set("zTop", m->interpolate_c2v(zTop));
+      else g->set("zTop", zTop);
+    }
     
-    // fprintf(stderr, "scalars read.\n");
+    ndarray<double> zMid;
+    if (zMid.try_read_netcdf(ncid, {"zMid", "timeMonthly_avg_zMid"}, st, sz)) {
+      zMid.make_multicomponents();
+      if (c2v) g->set("zMid", m->interpolate_c2v(zMid));
+      else g->set("zMid", zMid);
+    }
   }
 
   {
@@ -169,11 +178,12 @@ bool mpas_stream::advance_timestep()
                  sz[3] = {1, m->n_cells(), m->n_layers()+1};
     
     ndarray<double> vertVelocityTop;
-    vertVelocityTop.read_netcdf(ncid, "vertVelocityTop", st, sz);
-    vertVelocityTop.make_multicomponents();
-    if (c2v) g->set("vertVelocityTop", m->interpolate_c2v(vertVelocityTop));
-    else g->set("vertVelocityTop", vertVelocityTop);
-  }
+    if (vertVelocityTop.try_read_netcdf(ncid, {"vertVelocityTop", "timeMonthly_avg_vertVelocityTop"}, st, sz)) {
+      vertVelocityTop.make_multicomponents();
+      if (c2v) g->set("vertVelocityTop", m->interpolate_c2v(vertVelocityTop));
+      else g->set("vertVelocityTop", vertVelocityTop);
+    }
+  } 
       
   auto t1 = clock_type::now();
   fprintf(stderr, "t_io=%f\n", std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9);

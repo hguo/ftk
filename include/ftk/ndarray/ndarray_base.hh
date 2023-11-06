@@ -140,6 +140,8 @@ public: // netcdf
   void to_netcdf_unlimited_time(int ncid, int varid) const;
   void to_netcdf_multivariate_unlimited_time(int ncid, int varids[]) const;
   
+  bool try_read_netcdf(int ncid, const std::vector<std::string>& possible_varnames, const size_t st[], const size_t sz[], diy::mpi::communicator comm=MPI_COMM_WORLD);
+  
   virtual int nc_datatype() const = 0;
 
 public: // h5 i/o
@@ -364,7 +366,15 @@ inline void ndarray_base::read_netcdf(const std::string& filename, const std::st
 #else
   NC_SAFE_CALL( nc_open(filename.c_str(), NC_NOWRITE, &ncid) );
 #endif
-  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+
+  {
+    int rtn = nc_inq_varid(ncid, varname.c_str(), &varid);
+    if (rtn == NC_ENOTVAR)
+      throw FTK_ERR_NETCDF_MISSING_VARIABLE;
+  }
+
+  // NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
+  
   read_netcdf(ncid, varid, comm);
   NC_SAFE_CALL( nc_close(ncid) );
 #else
@@ -519,6 +529,37 @@ inline void ndarray_base::read_netcdf(int ncid, const std::string& varname, cons
   read_netcdf(ncid, varid, starts, sizes, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+  
+inline bool ndarray_base::try_read_netcdf(int ncid, 
+    const std::vector<std::string>& possible_varnames, 
+    const size_t st[], 
+    const size_t sz[], 
+    diy::mpi::communicator comm)
+{
+#ifdef FTK_HAVE_NETCDF
+  int varid = -1;
+
+  for (const auto varname : possible_varnames) {
+    const int rtn = nc_inq_varid(ncid, varname.c_str(), &varid);
+
+    if (rtn == NC_EBADID)
+      return false; // throw FTK_ERR_NETCDF_FILE_NOT_OPEN;
+    else if (rtn == NC_ENOTVAR)
+      continue;
+    else // no error; variable found
+      break;
+  }
+
+  if (varid >= 0) {
+    read_netcdf(ncid, varid, st, sz, comm);
+    return true;
+  } else 
+    return false;
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+  return false;
 #endif
 }
 
