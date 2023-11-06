@@ -304,6 +304,16 @@ inline void particle_tracer_mpas_ocean::update_timestep()
 
 inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr<ndarray_group> g)
 {
+  if (!g->has("zTop")) {
+    if (g->has("zMid") && g->has("layerThickness")) {
+      fprintf(stderr, "deriving zTop..\n");
+      ndarray<double> zTop = m->zTop_from_zMid_and_thickness(g->get<double>("zMid"), g->get<double>("layerThickness"));
+      g->set("zTop", zTop);
+    } else {
+      fatal("missing zTop or zMid/layerThickness");
+    }
+  }
+
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
     auto t0 = clock_type::now();
@@ -314,22 +324,6 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
     const auto vertVelocityTop = g->get_ptr<double>("vertVelocityTop");
     const auto salinity = g->get_ptr<double>("salinity");
     const auto temperature = g->get_ptr<double>("temperature");
-
-#if 0
-    ndarray<double> attrs;
-    attrs.reshape(2, m->n_vertices(), m->n_layers());
-    for (auto i = 0; i < m->n_layers(); i ++) {
-      for (auto j = 0; j < m->n_vertices(); j ++) {
-        // data(0, j, i) = V[0]->at(0, j, i);
-        // data(1, j, i) = V[0]->at(1, j, i);
-        // data(2, j, i) = V[0]->at(2, j, i);
-        // data(3, j, i) = zTop[0]->at(0, j, i);
-        // data(4, j, i) = vertVelocityTop[0]->at(0, j, i);
-        attrs(0, j, i) = salinity->at(0, j, i);
-        attrs(1, j, i) = temperature->at(0, j, i);
-      }
-    }
-#endif
 
     const double *attrs[] = {salinity->data(), temperature->data()};
 

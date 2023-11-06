@@ -90,7 +90,9 @@ bool mpas_stream::advance_timestep()
                  sz[3] = {1, time_strlen};
 
     ndarray<char> xtime;
-    xtime.read_netcdf(ncid, "xtime", st, sz);
+    xtime.try_read_netcdf(ncid, 
+        {"xtime", "xtime_startMonthly"},
+        st, sz);
     g->set("xtime", xtime);
    
 #if 0

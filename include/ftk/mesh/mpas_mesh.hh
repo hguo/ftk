@@ -21,6 +21,8 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
   void initialize_coeffs_reconstruct();
   ndarray<F> interpolate_e2c(const ndarray<F>& Ve) const;
 
+  ndarray<F> zTop_from_zMid_and_thickness(const ndarray<F>& zMid, const ndarray<F>& layerThickness) const;
+
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> surface_cells_to_vtu(std::vector<ndarray_base*> attrs = {}) const;
 #endif
@@ -184,6 +186,19 @@ ndarray<F> mpas_mesh<I, F>::interpolate_e2c(const ndarray<F> &Ve) const
   }
 
   return V;
+}
+
+template <typename I, typename F>
+ndarray<F> mpas_mesh<I, F>::zTop_from_zMid_and_thickness(const ndarray<F>& zMid, const ndarray<F>& layerThickness) const
+{
+  ndarray<F> zTop;
+  zTop.reshape(zMid);
+
+  for (auto i = 0; i < n_cells(); i ++)
+    for (auto j = 0; j < n_layers(); j ++)
+      zTop(j, i) = zMid(j, i) + layerThickness(j, i) * 0.5;
+
+  return zTop;
 }
 
 template <typename I, typename F>

@@ -514,8 +514,14 @@ inline void ndarray_base::read_netcdf(int ncid, const std::string& varname, diy:
 {
 #ifdef FTK_HAVE_NETCDF
   int varid;
-  NC_SAFE_CALL( nc_inq_varid(ncid, varname.c_str(), &varid) );
-  read_netcdf(ncid, varid, comm);
+  const int rtn = nc_inq_varid(ncid, varname.c_str(), &varid);
+    
+  if (rtn == NC_EBADID)
+    throw FTK_ERR_NETCDF_FILE_NOT_OPEN;
+  else if (rtn == NC_ENOTVAR)
+    throw FTK_ERR_NETCDF_MISSING_VARIABLE;
+  else // no error; variable found
+    read_netcdf(ncid, varid, comm);
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
