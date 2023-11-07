@@ -15,6 +15,9 @@ struct mpas_stream : public object {
   mpas_stream(const std::string path_, diy::mpi::communicator comm_=MPI_COMM_WORLD) :
     path(path_), comm(comm_) {}
   
+  mpas_stream(const std::string mesh_path_, const std::string path_, diy::mpi::communicator comm_=MPI_COMM_WORLD) :
+    mesh_path(mesh_path_), path(path_), comm(comm_) {}
+
   void initialize();
   void set_callback(std::function<void(int, std::shared_ptr<ndarray_group>)> f) { callback = f; }
 
@@ -28,7 +31,7 @@ struct mpas_stream : public object {
 
 public:
   diy::mpi::communicator comm;
-  std::string path;
+  std::string path, mesh_path;
   
   std::shared_ptr<mpas_mesh<>> m;
   std::function<void(int, std::shared_ptr<ndarray_group>)> callback;
@@ -37,13 +40,15 @@ public:
   size_t start_timestep = 0, current_timestep = 0, ntimesteps = 0;
   size_t time_strlen;
   bool c2v = true, e2c = true;
+
+  size_t nlayers;
 };
 
 //////
 void mpas_stream::initialize()
 {
   m.reset(new mpas_mesh<>);
-  m->read_netcdf(path);
+  m->read_netcdf(mesh_path.empty() ? path : mesh_path);
   m->initialize();
   
   m->initialize_c2v_interpolants();
@@ -57,6 +62,10 @@ void mpas_stream::initialize()
 #else
   NC_SAFE_CALL( nc_open(path.c_str(), NC_NOWRITE, &ncid) );
 #endif
+
+  int dim_layers;
+  NC_SAFE_CALL( nc_inq_dimid(ncid, "nVertLevels", &dim_layers) );
+  NC_SAFE_CALL( nc_inq_dimlen(ncid, dim_layers, &nlayers) );
 
   int dim_unlimited;
   NC_SAFE_CALL( nc_inq_unlimdim(ncid, &dim_unlimited) );
@@ -106,7 +115,7 @@ bool mpas_stream::advance_timestep()
       
   {
     const size_t st[3] = {current_timestep, 0, 0},
-                 sz[3] = {1, m->n_edges(), m->n_layers()};
+                 sz[3] = {1, m->n_edges(), nlayers}; // m->n_layers()};
 
     ndarray<double> normalVelocity;
     normalVelocity.try_read_netcdf(ncid, 
@@ -123,7 +132,7 @@ bool mpas_stream::advance_timestep()
 
   {
     const size_t st[3] = {current_timestep, 0, 0}, 
-                 sz[3] = {1, m->n_cells(), m->n_layers()};
+                 sz[3] = {1, m->n_cells(), nlayers}; // m->n_layers()};
  
 #if 0 // TODO: add options to use velocityXYZ directly from data if available
     if (!e2c) {
@@ -177,7 +186,7 @@ bool mpas_stream::advance_timestep()
 
   {
     const size_t st[3] = {current_timestep, 0, 0}, 
-                 sz[3] = {1, m->n_cells(), m->n_layers()+1};
+                 sz[3] = {1, m->n_cells(), nlayers}; // m->n_layers()+1};
     
     ndarray<double> vertVelocityTop;
     if (vertVelocityTop.try_read_netcdf(ncid, {"vertVelocityTop", "timeMonthly_avg_vertVelocityTop"}, st, sz)) {

@@ -175,6 +175,7 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
   // fprintf(stderr, "ncells=%zu, nlayers=%zu\n", m->n_cells(), m->n_layers());
 
   int nparticles = 0;
+  const int nlayers = 1; // TODO FIXME
 
   for (auto i = 0; i < m->n_cells(); i += stride_horizontal) {
     double x0[3];
@@ -182,8 +183,8 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
       x0[k] = m->xyzCells(k, i);
     const double R = vector_2norm<3>(x0);
 
-    for (auto j = 0; j < m->n_layers(); j += stride_vertical) {
-      const double thickness = m->accRestingThickness(j, i);
+    for (auto j = 0; j < nlayers; j += stride_vertical) {
+      const double thickness = 0.0; // m->accRestingThickness(j, i);
       const double r = R - thickness;
       for (auto k = 0; k < 3; k ++)
         x0[k] = x0[k] * r / R;
@@ -399,7 +400,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
 
   int verts_i[max_nverts]; //  = {-1};
   const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
-  const int nlayers = m->n_layers();
+  const int nlayers = zTop[0]->dim(0); // m->n_layers();
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
@@ -534,7 +535,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
   int verts_i[max_nverts]; //  = {-1};
   const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
-  const int nlayers = m->n_layers();
+  // const int nlayers = m->n_layers();
+  const int nlayers = zTop[0]->dim(0); // m->n_layers();
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);

@@ -570,7 +570,7 @@ void initialize_xgc_blob_threshold_tracker(diy::mpi::communicator comm)
 
 void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
 {
-  mpas_data_stream.reset(new mpas_stream(input_pattern, comm));
+  mpas_data_stream.reset(new mpas_stream(mesh_filename, input_pattern, comm));
   mpas_data_stream->initialize();
   if (ntimesteps != 0) {
     mpas_data_stream->set_ntimesteps(ntimesteps);

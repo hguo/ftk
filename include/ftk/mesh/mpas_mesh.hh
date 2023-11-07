@@ -32,7 +32,7 @@ public:
   size_t n_vertices() const { return xyzVertices.dim(1); }
   size_t n_edges() const { return xyzEdges.dim(1); }
   size_t n_cells() const { return xyzCells.dim(1); }
-  size_t n_layers() const { return restingThickness.dim(0); }
+  // size_t n_layers() const { return 0; } // return xyzCells.dim(0); }
   size_t max_edges_on_cell() const { return verticesOnCell.dim(0); }
 
   I locate_cell_i(const F x[]) const;
@@ -105,8 +105,8 @@ public:
   
   // ndarray<I> cells_i_on_cell_i, verts_i_on_cell_i;
 
-  ndarray<F> restingThickness, // Layer thickness when the ocean is at rest, i.e. without SSH or internal perturbations
-             accRestingThickness;
+  // ndarray<F> restingThickness, // Layer thickness when the ocean is at rest, i.e. without SSH or internal perturbations
+  //            accRestingThickness;
 
   bool simple_idmap = false;
 
@@ -169,10 +169,12 @@ void mpas_mesh<I, F>::initialize_c2v_interpolants()
 template <typename I, typename F>
 ndarray<F> mpas_mesh<I, F>::interpolate_e2c(const ndarray<F> &Ve) const
 {
-  ndarray<F> V; // velocity field on cells
-  V.reshape(3, n_layers(), n_cells());
+  const auto nlayers = Ve.dim(0);
 
-  for (auto l = 0; l < n_layers(); l ++) {
+  ndarray<F> V; // velocity field on cells
+  V.reshape(3, nlayers, n_cells());
+
+  for (auto l = 0; l < nlayers; l ++) {
     for (auto i = 0; i < n_cells(); i ++) {
       const auto ne = nEdgesOnCell[i];
 
@@ -193,9 +195,10 @@ ndarray<F> mpas_mesh<I, F>::zTop_from_zMid_and_thickness(const ndarray<F>& zMid,
 {
   ndarray<F> zTop;
   zTop.reshape(zMid);
+  const auto nlayers = zMid.dim(0);
 
   for (auto i = 0; i < n_cells(); i ++)
-    for (auto j = 0; j < n_layers(); j ++)
+    for (auto j = 0; j < nlayers; j ++)
       zTop(j, i) = zMid(j, i) + layerThickness(j, i) * 0.5;
 
   return zTop;
@@ -502,6 +505,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
     xyzEdges(2, i) = zEdge[i];
   }
 
+#if 0
   restingThickness.read_netcdf(ncid, "restingThickness");
   accRestingThickness.reshape(restingThickness);
 
@@ -511,6 +515,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
       else accRestingThickness(j, i) = accRestingThickness(j-1, i) + restingThickness(j, i);
     }
   }
+#endif
 
   NC_SAFE_CALL( nc_close(ncid) );
 
