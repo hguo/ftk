@@ -327,7 +327,12 @@ inline static bool spherical_rk_with_vertical_velocity(
       v0[k] = v[k];
 
     ftk::angular_stepping(p.x, v, h, p.x);
-
+#if 0
+    const double R = ftk::vector_2norm<3, double>(p.x); // radius
+    const double R1 = R + vv[0] * h; // new radius
+    for (int k = 0; k < 3; k ++)
+      p.x[k] = p.x[k] * R1 / R;
+#endif
     return true;
   } else if (ORDER == 4) {
     return true;
@@ -643,7 +648,7 @@ void mop_load_mesh(mop_ctx_t *c,
     const int ncells,
     const int nedges,
     const int nverts, 
-    const int nlayers, 
+    // const int nlayers, 
     const int max_edges,
     const int nattrs,
     const double *Xc,
@@ -656,7 +661,7 @@ void mop_load_mesh(mop_ctx_t *c,
     const int *verts_on_cell)
 {
   c->ncells = ncells;
-  c->nlayers = nlayers;
+  // c->nlayers = nlayers;
   c->nedges = nedges;
   c->nverts = nverts;
   c->max_edges = max_edges;

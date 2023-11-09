@@ -186,7 +186,7 @@ bool mpas_stream::advance_timestep()
 
   {
     const size_t st[3] = {current_timestep, 0, 0}, 
-                 sz[3] = {1, m->n_cells(), nlayers}; // m->n_layers()+1};
+                 sz[3] = {1, m->n_cells(), nlayers+1}; // m->n_layers()+1};
     
     ndarray<double> vertVelocityTop;
     if (vertVelocityTop.try_read_netcdf(ncid, {"vertVelocityTop", "timeMonthly_avg_vertVelocityTop"}, st, sz)) {

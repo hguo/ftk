@@ -50,7 +50,7 @@ void mop_load_mesh(mop_ctx_t *c,
     const int ncells,
     const int nedges,
     const int nverts, 
-    const int nlayers, 
+    // const int nlayers, 
     const int max_edges,
     const int nch,
     const double *Xc,
@@ -61,6 +61,8 @@ void mop_load_mesh(mop_ctx_t *c,
     const int *cells_on_vert,
     const int *edges_on_cell,
     const int *verts_on_cell);
+
+void mop_set_nlayers(mop_ctx_t *c, int n) {c->nlayers = n;}
 
 void mop_load_e2c_interpolants(mop_ctx_t *c,
     const double *p);

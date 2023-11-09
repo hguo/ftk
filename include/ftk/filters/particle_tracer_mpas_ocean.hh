@@ -84,7 +84,7 @@ inline void particle_tracer_mpas_ocean::initialize()
         m->n_cells(),
         m->n_edges(),
         m->n_vertices(),
-        m->n_layers(),
+        // m->n_layers(),
         m->max_edges_on_cell(),
         2, // just temperature and salinity for now
         m->xyzCells.data(),
@@ -328,6 +328,8 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
 
     const double *attrs[] = {salinity->data(), temperature->data()};
 
+    // std::cerr << zTop->shape() << std::endl;
+    mop_set_nlayers(ctx, zTop->dim(1));
     mop_load_data_with_normal_velocity(ctx,
         (double)current_timestep,
         V->data(), 
@@ -400,7 +402,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
 
   int verts_i[max_nverts]; //  = {-1};
   const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
-  const int nlayers = zTop[0]->dim(0); // m->n_layers();
+  const int nlayers = zTop[0]->dim(1); // m->n_layers();
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
@@ -536,7 +538,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   int verts_i[max_nverts]; //  = {-1};
   const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
   // const int nlayers = m->n_layers();
-  const int nlayers = zTop[0]->dim(0); // m->n_layers();
+  const int nlayers = zTop[0]->dim(1); // m->n_layers();
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
