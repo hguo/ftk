@@ -195,11 +195,14 @@ ndarray<F> mpas_mesh<I, F>::zTop_from_zMid_and_thickness(const ndarray<F>& zMid,
 {
   ndarray<F> zTop;
   zTop.reshape(zMid);
-  const auto nlayers = zMid.dim(0);
+  const auto nlayers = zMid.dim(1);
 
   for (auto i = 0; i < n_cells(); i ++)
-    for (auto j = 0; j < nlayers; j ++)
-      zTop(j, i) = zMid(j, i) + layerThickness(j, i) * 0.5;
+    for (auto j = 0; j < nlayers; j ++) {
+      zTop(0, j, i) = zMid(0, j, i) + layerThickness(0, j, i) * 0.5;
+      // fprintf(stderr, "ci=%d, l=%d, zTop=%f\n", 
+      //     i, j, zTop(0, j, i));
+    }
 
   return zTop;
 }

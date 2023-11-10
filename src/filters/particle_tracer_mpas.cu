@@ -220,7 +220,8 @@ inline static bool mpas_eval_static(
   // reset values before interpolation
   memset(v, 0, sizeof(double)*3);
   memset(f, 0, sizeof(double)*3);
-  *vv = 0.0;
+  if (vv)
+    *vv = 0.0;
 
   // interpolation
   for (int i = 0; i < nverts; i ++) {
@@ -234,8 +235,10 @@ inline static bool mpas_eval_static(
                 alpha * A[ k + attrs * (iv[i] * nlayers + layer) ]
               + beta  * A[ k + attrs * (iv[i] * nlayers + layer + 1) ]);
 
-    *vv +=   alpha * Vv[ iv[i] * (nlayers + 1) + layer ]
-           + beta  * Vv[ iv[i] * (nlayers + 1) + layer + 1];
+    if (vv) {
+      *vv +=   alpha * Vv[ iv[i] * (nlayers + 1) + layer ]
+             + beta  * Vv[ iv[i] * (nlayers + 1) + layer + 1];
+    }
   }
 
   return true;
@@ -1007,7 +1010,7 @@ void mop_execute(mop_ctx_t *c,
       c->dd_V,
       c->dd_Vv,
       c->dd_zTop, 
-      2, // c->nattrs, 
+      c->nattrs, 
       c->dd_A,
       c->d_Xv,
       c->max_edges, 

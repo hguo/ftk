@@ -166,7 +166,8 @@ bool mpas_stream::advance_timestep()
     ndarray<double> layerThickness;
     if (layerThickness.try_read_netcdf(ncid, {"layerThickness", "timeMonthly_avg_layerThickness"}, st, sz)) {
       layerThickness.make_multicomponents();
-      g->set("layerThickness", m->interpolate_c2v(layerThickness));
+      if (c2v) g->set("layerThickness", m->interpolate_c2v(layerThickness));
+      else g->set("layerThickness", layerThickness);
     }
 
     ndarray<double> zTop;

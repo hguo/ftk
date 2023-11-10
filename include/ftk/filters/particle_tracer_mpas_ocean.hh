@@ -86,7 +86,7 @@ inline void particle_tracer_mpas_ocean::initialize()
         m->n_vertices(),
         // m->n_layers(),
         m->max_edges_on_cell(),
-        2, // just temperature and salinity for now
+        0, // FIXME 2, // just temperature and salinity for now
         m->xyzCells.data(),
         m->xyzVertices.data(),
         m->nEdgesOnCell.data(),
@@ -326,10 +326,14 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
     const auto salinity = g->get_ptr<double>("salinity");
     const auto temperature = g->get_ptr<double>("temperature");
 
-    const double *attrs[] = {salinity->data(), temperature->data()};
+    // const double *attrs[] = {salinity->data(), temperature->data()};
+    const double *attrs[] = {}; // salinity->data(), temperature->data()};
 
     // std::cerr << zTop->shape() << std::endl;
     mop_set_nlayers(ctx, zTop->dim(1));
+    
+
+    fprintf(stderr, "v=%p, vv=%p, top=%p\n", V->data(), vertVelocityTop->data(), zTop->data());
     mop_load_data_with_normal_velocity(ctx,
         (double)current_timestep,
         V->data(), 
