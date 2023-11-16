@@ -231,6 +231,20 @@ inline void ndarray_base::reshapec(const std::vector<size_t>& dims_)
   reshapef(dims);
 }
 
+inline void ndarray_base::reshapec(const std::vector<int>& dims)
+{
+  std::vector<size_t> mydimsc;
+  for (int i = 0; i < dims.size(); i ++)
+    mydimsc.push_back(dims[i]);
+  reshapec(mydimsc);
+}
+
+inline void ndarray_base::reshapec(size_t ndims, const size_t dims[])
+{
+  std::vector<size_t> mydimsc(dims, dims+ndims);
+  reshapec(mydimsc);
+}
+
 inline void ndarray_base::reshapef(const std::vector<int>& dims)
 {
   std::vector<size_t> mydims;
