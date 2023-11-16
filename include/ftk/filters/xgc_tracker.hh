@@ -148,13 +148,13 @@ inline void xgc_tracker::push_field_data_snapshot(
     //   m2->array_to_vtu("nonsmooth-grad.vtu", "grad", grad);
     // f = slice;
     for (size_t k = 0; k < m2->n(0); k ++) {
-      F(k, i) = f(k);
-      G(0, k, i) = grad(0, k);
-      G(1, k, i) = grad(1, k);
-      J(0, 0, k, i) = j(0, 0, k);
-      J(1, 0, k, i) = j(1, 0, k);
-      J(1, 1, k, i) = j(1, 1, k);
-      J(0, 1, k, i) = j(0, 1, k);
+      F.f(k, i) = f.f(k);
+      G.f(0, k, i) = grad.f(0, k);
+      G.f(1, k, i) = grad.f(1, k);
+      J.f(0, 0, k, i) = j.f(0, 0, k);
+      J.f(1, 0, k, i) = j.f(1, 0, k);
+      J.f(1, 1, k, i) = j.f(1, 1, k);
+      J.f(0, 1, k, i) = j.f(0, 1, k);
     }
   }
 

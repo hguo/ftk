@@ -332,8 +332,8 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_edge(const I v_[2], I &i) const
     i = it->second;
     // fprintf(stderr, "edges(0,i)=%d, v[0]=%d\n", edges(0, i), v[0]);
     // fprintf(stderr, "edges(1,i)=%d, v[1]=%d\n", edges(1, i), v[1]);
-    assert(edges(0, i) == v[0]);
-    assert(edges(1, i) == v[1]);
+    assert(edges.f(0, i) == v[0]);
+    assert(edges.f(1, i) == v[1]);
     return true;
   }
 #endif
@@ -361,9 +361,9 @@ bool simplicial_unstructured_2d_mesh<I, F>::find_triangle(const I v_[3], I &i) c
   if (it == triangle_id_map.end()) return false;
   else {
     i = it->second;
-    assert(triangles(0, i) == v[0]);
-    assert(triangles(1, i) == v[1]);
-    assert(triangles(2, i) == v[2]);
+    assert(triangles.f(0, i) == v[0]);
+    assert(triangles.f(1, i) == v[1]);
+    assert(triangles.f(2, i) == v[2]);
     return true;
   }
 #endif
@@ -388,7 +388,7 @@ void simplicial_unstructured_2d_mesh<I, F>::build_triangles()
     // fprintf(stderr, "id=%d, nswaps=%d\n", i, nswaps);
 
     for (auto j = 0; j < 3; j ++)
-      triangles(j, i) = v[j];
+      triangles.f(j, i) = v[j];
 
     // triangle_id_map[ std::make_tuple(v[0], v[1], v[2]) ] = i;
     triangle_id_map.insert( { std::make_tuple(v[0], v[1], v[2]), i } );
@@ -426,7 +426,7 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
 #endif
 
     map_edges_side_of[id].insert(tid);
-    triangle_edges(k, tid) = id;
+    triangle_edges.f(k, tid) = id;
 
     // fprintf(stderr, "adding edge #%d (%d, %d) from triangle %d\n", id, v0, v1, tid);
     // if (v0 == 0 && v1 == 1) {
@@ -438,22 +438,22 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
   // fprintf(stderr, "triangles_88078=%d, %d, %d\n", triangles(0, 88078), triangles(1, 88078), triangles(2, 88078)); 
   triangle_edges.reshape(3, n(2));
   for (auto i = 0; i < n(2); i ++) {
-    add_edge(i, 0, triangles(0, i), triangles(1, i));
-    add_edge(i, 1, triangles(1, i), triangles(2, i));
-    add_edge(i, 2, triangles(2, i), triangles(0, i));
+    add_edge(i, 0, triangles.f(0, i), triangles.f(1, i));
+    add_edge(i, 1, triangles.f(1, i), triangles.f(2, i));
+    add_edge(i, 2, triangles.f(2, i), triangles.f(0, i));
   }
 
   edges.reshape(2, edge_id_map.size());
   edges_side_of.reshape({2, edge_id_map.size()}, -1);
   // int i = 0;
   for (const auto &kv : edge_id_map) {
-    edges(0, kv.second) = std::get<0>(kv.first);
-    edges(1, kv.second) = std::get<1>(kv.first);
+    edges.f(0, kv.second) = std::get<0>(kv.first);
+    edges.f(1, kv.second) = std::get<1>(kv.first);
 
     int j = 0;
     for (const auto tid : map_edges_side_of[kv.second])
     // for (const auto tid : map_edges_side_of[i])
-      edges_side_of(j++, kv.second) = tid;
+      edges_side_of.f(j++, kv.second) = tid;
   }
 
   // for (auto i = 0; i < edges_side_of.dim(1); i ++)
@@ -488,8 +488,8 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
   // triangle_edge_triangles
   triangle_edge_triangles.resize(n(2));
   for (int i = 0; i < n(2); i ++) {
-    const I t0 = edges_side_of(0, i), 
-            t1 = edges_side_of(1, i);
+    const I t0 = edges_side_of.f(0, i), 
+            t1 = edges_side_of.f(1, i);
     if (t0 >= 0 && t1 >= 0) {
       triangle_edge_triangles[t0].insert(t1);
       triangle_edge_triangles[t1].insert(t0);
@@ -513,11 +513,11 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
   object::parallel_for(n(0), [&](int i) {
     std::set<I> set;
     // const F xi[2] = {vertex_coords[i*2], vertex_coords[i*2+1]};
-    const F xi[2] = {vertex_coords(0, i), vertex_coords(1, i)};
+    const F xi[2] = {vertex_coords.f(0, i), vertex_coords.f(1, i)};
 
     auto criteron = [&](I j) {
       // const F xj[2] = {vertex_coords[j*2], vertex_coords[j*2+1]};
-      const F xj[2] = {vertex_coords(0, j), vertex_coords(1, j)};
+      const F xj[2] = {vertex_coords.f(0, j), vertex_coords.f(1, j)};
       if (vector_dist_2norm_2(xi, xj) < limit) {
         // fprintf(stderr, "%d (%f, %f) add %d (%f, %f)\n", i, xi[0], xi[1], j, xj[0], xj[1]);
         // fprintf(stderr, "i=%d, x={%f, %f}\n", i, xi[0], xi[1]);
@@ -534,7 +534,7 @@ inline void simplicial_unstructured_2d_mesh<I, F>::build_smoothing_kernel(const 
     auto &kernel = smoothing_kernel[i];
     for (auto k : set) {
       // const F xk[2] = {vertex_coords[2*k], vertex_coords[2*k+1]};
-      const F xk[2] = {vertex_coords(0, k), vertex_coords(1, k)};
+      const F xk[2] = {vertex_coords.f(0, k), vertex_coords.f(1, k)};
       const F d = vector_dist_2norm_2(xi, xk);
       const F w = std::exp(-(d*d) / (2*sigma*sigma)) / (sigma * std::sqrt(2.0 * M_PI));
       // fprintf(stderr, "d2=%f, w=%f\n", d2, w);
@@ -601,8 +601,8 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
     
       // const F d[2] = {vertex_coords[k*2] - vertex_coords[i*2], 
       //                 vertex_coords[k*2+1] - vertex_coords[i*2+1]};
-      const F d[2] = {vertex_coords(0, k) - vertex_coords(0, i),
-                      vertex_coords(1, k) - vertex_coords(1, i)};
+      const F d[2] = {vertex_coords.f(0, k) - vertex_coords.f(0, i),
+                      vertex_coords.f(1, k) - vertex_coords.f(1, i)};
       // const F r2 = d[0]*d[0] + d[1]*d[1];
       // const F r = std::sqrt(r2);
 
@@ -610,14 +610,14 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
       scalar[i] += f[k] * w;
 
       // gradient
-      grad(0, i) += - f[k] * w * d[0] / sigma2;
-      grad(1, i) += - f[k] * w * d[1] / sigma2;
+      grad.f(0, i) += - f[k] * w * d[0] / sigma2;
+      grad.f(1, i) += - f[k] * w * d[1] / sigma2;
 
       // jacobian
-      J(0, 0, i) += (d[0]*d[0] / sigma2 - 1) / sigma2 * f[k] * w;
-      J(0, 1, i) += d[0]*d[1] / sigma4 * f[k] * w;
-      J(1, 0, i) += d[0]*d[1] / sigma4 * f[k] * w;
-      J(1, 1, i) += (d[1]*d[1] / sigma2 - 1) / sigma2 * f[k] * w;
+      J.f(0, 0, i) += (d[0]*d[0] / sigma2 - 1) / sigma2 * f[k] * w;
+      J.f(0, 1, i) += d[0]*d[1] / sigma4 * f[k] * w;
+      J.f(1, 0, i) += d[0]*d[1] / sigma4 * f[k] * w;
+      J.f(1, 1, i) += (d[1]*d[1] / sigma2 - 1) / sigma2 * f[k] * w;
     }
   });
 }
@@ -636,19 +636,19 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<
     F X[3][2]; 
     for (int j = 0; j < 3; j ++) {
       const I k = tri[j];
-      X[j][0] = vertex_coords(0, k);
-      X[j][1] = vertex_coords(1, k);
+      X[j][0] = vertex_coords.f(0, k);
+      X[j][1] = vertex_coords.f(1, k);
     }
     
     for (int c = 0; c < vector.dim(0); c ++) {
       F f[3], gradf[2];
       for (int j = 0; j < 3; j ++) {
-        f[j] = vector(c, tri[j]);
+        f[j] = vector.f(c, tri[j]);
       }
 
       gradient_2dsimplex2(X, f, gradf);
-      cellgrad(0, c, i) = gradf[0];
-      cellgrad(1, c, i) = gradf[1];
+      cellgrad.f(0, c, i) = gradf[0];
+      cellgrad.f(1, c, i) = gradf[1];
     }
   }
   
@@ -662,14 +662,14 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<
 
     for (const auto tri : tris) {
       for (int c = 0; c < vector.dim(0); c ++) {
-        grad(0, c, i) += cellgrad(0, c, tri);
-        grad(1, c, i) += cellgrad(1, c, tri);
+        grad.f(0, c, i) += cellgrad.f(0, c, tri);
+        grad.f(1, c, i) += cellgrad.f(1, c, tri);
       }
     }
 
     for (int c = 0; c < vector.dim(0); c ++) {
-      grad(0, c, i) = grad(0, c, i) / ntris;
-      grad(1, c, i) = grad(0, c, i) / ntris;
+      grad.f(0, c, i) = grad.f(0, c, i) / ntris;
+      grad.f(1, c, i) = grad.f(0, c, i) / ntris;
     }
   }
   
@@ -750,8 +750,8 @@ std::set<I> simplicial_unstructured_2d_mesh<I, F>::side_of(int d, I i) const
   else if (d == 1) {
     std::set<I> results;
     for (int j = 0; j < 2; j ++) 
-      if (edges_side_of(j, i) >= 0) 
-        results.insert(edges_side_of(j, i));
+      if (edges_side_of.f(j, i) >= 0) 
+        results.insert(edges_side_of.f(j, i));
     return results;
 #if 0
     int v[2];
@@ -803,9 +803,9 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
     for (vtkIdType i = 0; i < npts; i ++) {
       double x[3] = {0};
       grid->GetPoint(i, x);
-      vertex_coords(0, i) = x[0];
-      vertex_coords(1, i) = x[1];
-      vertex_coords(2, i) = x[2];
+      vertex_coords.f(0, i) = x[0];
+      vertex_coords.f(1, i) = x[1];
+      vertex_coords.f(2, i) = x[2];
     }
   }
 
@@ -945,8 +945,8 @@ I simplicial_unstructured_2d_mesh<I, F>::get_edge(I i, I v[], bool part) const
   if (part)
     return get_edge(lid2gid(1, i), v, false);
   else {
-    v[0] = edges(i*2);
-    v[1] = edges(i*2+1);
+    v[0] = edges.f(i*2);
+    v[1] = edges.f(i*2+1);
     return i;
   }
   // v[0] = edges(0, i);
@@ -959,10 +959,10 @@ void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[], bool par
   if (part)
     get_coords(lid2gid(0, i), coords, false);
   else {
-    coords[0] = vertex_coords(0, i);
-    coords[1] = vertex_coords(1, i);
+    coords[0] = vertex_coords.f(0, i);
+    coords[1] = vertex_coords.f(1, i);
     if (vertex_coords.dim(0) > 2)
-      coords[2] = vertex_coords(2, i);
+      coords[2] = vertex_coords.f(2, i);
     else 
       coords[2] = F(0);
   }
@@ -976,7 +976,7 @@ I simplicial_unstructured_2d_mesh<I, F>::nearest(F x[]) const
   I imindist;
   for (int i = 0; i < n(0); i ++) {
     // F y[2] = {vertex_coords[2*i], vertex_coords[2*i+1]};
-    F y[2] = {vertex_coords(0, i), vertex_coords(1, i)};
+    F y[2] = {vertex_coords.f(0, i), vertex_coords.f(1, i)};
     F dist = vector_dist_2norm_2(x, y);
     if (mindist > dist) { 
       mindist = dist;

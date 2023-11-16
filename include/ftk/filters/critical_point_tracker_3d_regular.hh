@@ -371,9 +371,9 @@ inline void critical_point_tracker_3d_regular::simplex_coordinates(
     }
   } else if (mode_phys_coords == REGULAR_COORDS_EXPLICIT) {
     for (int i = 0; i < vertices.size(); i ++) {
-      X[i][0] = explicit_coords(0, vertices[i][0], vertices[i][1]); // x
-      X[i][1] = explicit_coords(1, vertices[i][0], vertices[i][1]); // y
-      X[i][2] = explicit_coords(2, vertices[i][0], vertices[i][1]);
+      X[i][0] = explicit_coords.f(0, vertices[i][0], vertices[i][1]); // x
+      X[i][1] = explicit_coords.f(1, vertices[i][0], vertices[i][1]); // y
+      X[i][2] = explicit_coords.f(2, vertices[i][0], vertices[i][1]);
       X[i][3] = vertices[i][2]; // t
     }
   }
@@ -385,7 +385,7 @@ inline void critical_point_tracker_3d_regular::simplex_vectors(
   for (int i = 0; i < 4; i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     for (int j = 0; j < 3; j ++)
-      v[i][j] = field_data_snapshots[iv].vector(j, 
+      v[i][j] = field_data_snapshots[iv].vector.f(j, 
           vertices[i][0] - local_array_domain.start(0), 
           vertices[i][1] - local_array_domain.start(1),
           vertices[i][2] - local_array_domain.start(2));
@@ -397,7 +397,7 @@ inline void critical_point_tracker_3d_regular::simplex_scalars(
 {
   for (int i = 0; i < 4; i ++) {
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
-    values[i] = field_data_snapshots[iv].scalar(
+    values[i] = field_data_snapshots[iv].scalar.f(
         vertices[i][0] - local_array_domain.start(0), 
         vertices[i][1] - local_array_domain.start(1), 
         vertices[i][2] - local_array_domain.start(2));
@@ -412,7 +412,7 @@ inline void critical_point_tracker_3d_regular::simplex_jacobians(
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     for (int j = 0; j < 3; j ++) {
       for (int k = 0; k < 3; k ++) {
-        Js[i][j][k] = field_data_snapshots[iv].jacobian(k, j, 
+        Js[i][j][k] = field_data_snapshots[iv].jacobian.f(k, j, 
             vertices[i][0] - local_array_domain.start(0), 
             vertices[i][1] - local_array_domain.start(1), 
             vertices[i][2] - local_array_domain.start(2));

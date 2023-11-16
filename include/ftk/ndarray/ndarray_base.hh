@@ -108,14 +108,22 @@ public:
   template <typename uint=size_t>
   std::vector<uint> from_indexc(uint i) const; // FIXME {return lattice().from_integer(i);}
 
-public:
-  virtual double get(size_t i0) const = 0;
-  virtual double get(size_t i0, size_t i1) const = 0;
-  virtual double get(size_t i0, size_t i1, size_t i2) const = 0;
-  virtual double get(size_t i0, size_t i1, size_t i2, size_t i3) const = 0;
-  virtual double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const = 0;
-  virtual double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const = 0;
-  virtual double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const = 0;
+// public: // accessor
+//   virtual double ac(size_t i0) const = 0;
+//   virtual double ac(size_t i0, size_t i1) const = 0;
+//   virtual double ac(size_t i0, size_t i1, size_t i2) const = 0;
+//   virtual double ac(size_t i0, size_t i1, size_t i2, size_t i3) const = 0;
+//   virtual double ac(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const = 0;
+//   virtual double ac(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const = 0;
+//   virtual double ac(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const = 0;
+
+//   virtual double af(size_t i0) const = 0;
+//   virtual double af(size_t i0, size_t i1) const = 0;
+//   virtual double af(size_t i0, size_t i1, size_t i2) const = 0;
+//   virtual double af(size_t i0, size_t i1, size_t i2, size_t i3) const = 0;
+//   virtual double af(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const = 0;
+//   virtual double af(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const = 0;
+//   virtual double af(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const = 0;
 
 public:  
   void set_multicomponents(size_t c=1) {ncd = c;}

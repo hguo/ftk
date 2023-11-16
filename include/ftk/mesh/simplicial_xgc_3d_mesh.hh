@@ -596,7 +596,7 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::smooth_scalar(const ndarray<F>& scalar)
     auto slice = scalar.slice_time(i);
     auto f = m2->smooth_scalar(slice);
     for (size_t k = 0; k < m2->n(0); k ++)
-      result(k, i) = f(k);
+      result.f(k, i) = f[k];
   }
 
   return result;
@@ -622,13 +622,13 @@ void simplicial_xgc_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
     auto slice = scalar.slice_time(i);
     m2->smooth_scalar_gradient_jacobian(slice, f, grad, j);
     for (size_t k = 0; k < m2->n(0); k ++) {
-      S(k, i) = f(k);
-      G(0, k, i) = grad(0, k);
-      G(1, k, i) = grad(1, k);
-      J(0, 0, k, i) = j(0, 0, k);
-      J(1, 0, k, i) = j(1, 0, k);
-      J(1, 1, k, i) = j(1, 1, k);
-      J(0, 1, k, i) = j(0, 1, k);
+      S.f(k, i) = f[k];
+      G.f(0, k, i) = grad.f(0, k);
+      G.f(1, k, i) = grad.f(1, k);
+      J.f(0, 0, k, i) = j.f(0, 0, k);
+      J.f(1, 0, k, i) = j.f(1, 0, k);
+      J.f(1, 1, k, i) = j.f(1, 1, k);
+      J.f(0, 1, k, i) = j.f(0, 1, k);
     }
   }
 }

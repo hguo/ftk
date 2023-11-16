@@ -39,18 +39,18 @@ LabelIdType hoshen_kopelman_2d(ndarray<LabelIdType>& matrix)
   // first pass
   for (auto j = 0; j < matrix.dim(1); j ++) {
     for (auto i = 0; i < matrix.dim(0); i ++) {
-      if (matrix(i, j)) {
-        LabelIdType left = (i == 0) ? 0 : matrix(i-1, j);
-        LabelIdType up = (j == 0) ? 0 : matrix(i, j-1);
+      if (matrix.f(i, j)) {
+        LabelIdType left = (i == 0) ? 0 : matrix.f(i-1, j);
+        LabelIdType up = (j == 0) ? 0 : matrix.f(i, j-1);
         switch (!!left + !!up) {
         case 0: 
-          matrix(i, j) = make_set(); 
+          matrix.f(i, j) = make_set(); 
           break;
         case 1:
-          matrix(i, j) = std::max(up, left);
+          matrix.f(i, j) = std::max(up, left);
           break;
         case 2:
-          matrix(i, j) = unite(up, left);
+          matrix.f(i, j) = unite(up, left);
           break;
         }
       }
@@ -61,13 +61,13 @@ LabelIdType hoshen_kopelman_2d(ndarray<LabelIdType>& matrix)
   std::vector<LabelIdType> new_labels(labels.size());
   for (auto j = 0; j < matrix.dim(1); j ++) {
     for (auto i = 0; i < matrix.dim(0); i ++) {
-      if (matrix(i, j)) {
-        LabelIdType x = find(matrix(i, j));
+      if (matrix.f(i, j)) {
+        LabelIdType x = find(matrix.f(i, j));
         if (new_labels[x] == 0) {
           new_labels[0] ++;
           new_labels[x] = new_labels[0];
         }
-        matrix(i, j) = new_labels[x];
+        matrix.f(i, j) = new_labels[x];
       }
     }
   }

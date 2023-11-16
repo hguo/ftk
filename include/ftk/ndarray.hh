@@ -143,6 +143,7 @@ public: // c-style access
   const T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i5+i4*s[1]+i3*s[2]+i2*s[3]+i1*s[4]+i0*s[5]];}
   const T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i6+i5*s[1]+i4*s[2]+i3*s[3]+i2*s[4]+i1*s[5]+i0*s[6]];}
 
+#if 0
 public: // legacy f-style access
   T& at(const std::vector<size_t>& idx) {return p[indexf(idx)];}
   const T& at(const std::vector<size_t>& idx) const {return p[indexf(idx)];}
@@ -196,7 +197,8 @@ public: // legacy f-style access
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
-
+#endif
+  
 public:
   friend std::ostream& operator<<(std::ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
   friend bool operator==(const ndarray<T>& lhs, const ndarray<T>& rhs) {return lhs.dims == rhs.dims && lhs.p == rhs.p;}
@@ -518,7 +520,7 @@ ndarray<T> ndarray<T>::subarray(const lattice& l0) const
   ndarray<T> arr(l.sizes());
   for (auto i = 0; i < arr.nelem(); i ++) {
     auto idx = l.from_integer(i);
-    arr[i] = at(idx);
+    arr[i] = f(idx);
   }
   
   arr.ncd = ncd;
@@ -803,8 +805,8 @@ std::tuple<T, T> ndarray<T>::min_max() const {
     max = std::numeric_limits<T>::min();
 
   for (size_t i = 0; i < nelem(); i ++) {
-    min = std::min(min, at(i));
-    max = std::max(max, at(i));
+    min = std::min(min, f(i));
+    max = std::max(max, f(i));
   }
 
   return std::make_tuple(min, max);
@@ -1077,7 +1079,7 @@ inline ndarray<T> ndarray<T>::slice(const lattice& l) const
   ndarray<T> array(l);
   for (auto i = 0; i < l.n(); i ++) {
     auto idx = l.from_integer(i);
-    array[i] = at(idx);
+    array[i] = f(idx);
   }
   return array;
 }
@@ -1136,15 +1138,15 @@ std::ostream& ndarray<T>::print(std::ostream& os) const
   if (nd() == 1) {
     os << "[";
     for (size_t i = 0; i < dims[0]; i ++)
-      if (i < dims[0]-1) os << at(i) << ", ";
-      else os << at(i) << "]";
+      if (i < dims[0]-1) os << f(i) << ", ";
+      else os << f(i) << "]";
   } else if (nd() == 2) {
     os << "[";
     for (size_t j = 0; j < dims[1]; j ++) {
       os << "[";
       for (size_t i = 0; i < dims[0]; i ++)
-        if (i < dims[0]-1) os << at(i, j) << ", ";
-        else os << at(i, j) << "]";
+        if (i < dims[0]-1) os << f(i, j) << ", ";
+        else os << f(i, j) << "]";
       if (j < dims[1]-1) os << "], ";
       else os << "]";
     }
@@ -1154,8 +1156,8 @@ std::ostream& ndarray<T>::print(std::ostream& os) const
       for (size_t j = 0; j < dims[1]; j ++) {
         os << "[";
         for (size_t i = 0; i < dims[0]; i ++)
-          if (i < dims[0]-1) os << at(i, j) << ", ";
-          else os << at(i, j) << "]";
+          if (i < dims[0]-1) os << f(i, j) << ", ";
+          else os << f(i, j) << "]";
         if (j < dims[1]-1) os << "], ";
         else os << "]";
       }
@@ -1184,14 +1186,14 @@ ndarray<T> ndarray<T>::get_transpose() const
     a.reshape(dim(1), dim(0));
     for (auto i = 0; i < dim(0); i ++) 
       for (auto j = 0; j < dim(1); j ++)
-        a(j, i) = at(i, j);
+        a.f(j, i) = f(i, j);
     return a;
   } else if (nd() == 3) {
     a.reshape(dim(2), dim(1), dim(0));
     for (auto i = 0; i < dim(0); i ++) 
       for (auto j = 0; j < dim(1); j ++)
         for (auto k = 0; k < dim(2); k ++)
-          a(k, j, i) = at(i, j, k);
+          a.f(k, j, i) = f(i, j, k);
     return a;
   } else if (nd() == 4) {
     a.reshape(dim(3), dim(2), dim(1), dim(0));
@@ -1199,7 +1201,7 @@ ndarray<T> ndarray<T>::get_transpose() const
       for (auto j = 0; j < dim(1); j ++)
         for (auto k = 0; k < dim(2); k ++)
           for (auto l = 0; l < dim(3); l ++)
-            a(l, k, j, i) = at(i, j, k, l);
+            a.f(l, k, j, i) = f(i, j, k, l);
     return a;
   } else {
     fatal(FTK_ERR_NDARRAY_UNSUPPORTED_DIMENSIONALITY);
@@ -1450,11 +1452,11 @@ bool ndarray<T>::mlerp(const F x[], T v[]) const
     // fprintf(stderr, "coef=%f\n", coef);
 
     if (nc == 0) // univariate
-      v[0] += coef * this->at(verts);
+      v[0] += coef * this->f(verts);
     else if (nc == 1) { // multiple channels
       for (int k = 0; k < dim(0); k ++) {
         verts[0] = k;
-        F val = this->at(verts);
+        F val = this->f(verts);
         v[k] += coef * val;
         // fprintf(stderr, "k=%d, verts=%zu, %zu, %zu, coef=%f, val=%f\n", k, verts[0], verts[1], verts[2], coef, val);
       }

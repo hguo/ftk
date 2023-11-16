@@ -103,7 +103,7 @@ void kd_t<F, n>::set_inputs(const ndarray<F>& arr)
   pts.resize(arr.dim(1));
   for (size_t i = 0; i < arr.dim(1); i ++)
     for (size_t k = 0; k < n; k ++)
-      pts[i][k] = arr.at(k, i);
+      pts[i][k] = arr.f(k, i);
 }
 
 template <typename F, size_t n>

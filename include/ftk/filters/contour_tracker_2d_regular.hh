@@ -242,7 +242,7 @@ inline void contour_tracker_2d_regular::simplex_scalars(
 {
   for (int i = 0; i < vertices.size(); i ++) {
     const int iv = vertices[i][2] == current_timestep ? 0 : 1;
-    values[i] = field_data_snapshots[iv].scalar(
+    values[i] = field_data_snapshots[iv].scalar.f(
         vertices[i][0] - local_array_domain.start(0), 
         vertices[i][1] - local_array_domain.start(1));
   }

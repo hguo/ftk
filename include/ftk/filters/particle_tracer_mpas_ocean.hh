@@ -180,7 +180,7 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
   for (auto i = 0; i < m->n_cells(); i += stride_horizontal) {
     double x0[3];
     for (auto k = 0; k < 3; k ++)
-      x0[k] = m->xyzCells(k, i);
+      x0[k] = m->xyzCells.f(k, i);
     const double R = vector_2norm<3>(x0);
 
     for (auto j = 0; j < nlayers; j += stride_vertical) {
@@ -419,7 +419,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
   double tops[max_nlayers] = {0};
   for (int l = 0; l < nlayers; l ++)
     for (int i = 0; i < nverts; i ++)
-      tops[l] += zTop[t]->at(0, l, verts_i[i]);
+      tops[l] += zTop[t]->f(0, l, verts_i[i]);
 
   // locate depth layer
   const double z = vector_2norm<3>(x) - earth_radius;
@@ -440,8 +440,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++) {
-      Vu[i][k] = V[t]->at(k, layer, verts_i[i]);
-      Vl[i][k] = V[t]->at(k, layer+1, verts_i[i]);
+      Vu[i][k] = V[t]->f(k, layer, verts_i[i]);
+      Vl[i][k] = V[t]->f(k, layer+1, verts_i[i]);
     }
   
   double vu[3] = {0}, vl[3] = {0};
@@ -489,7 +489,7 @@ inline bool particle_tracer_mpas_ocean::eval_v(
   double Vv[max_nverts][3]; // velocities on vertices
   for (int i = 0; i < nverts; i ++)
     for (int k = 0; k < 3; k ++)
-      Vv[i][k] = V[t]->at(k, 0, verts_i[i]);
+      Vv[i][k] = V[t]->f(k, 0, verts_i[i]);
   
   // for (int i = 0; i < nverts; i ++) 
   //   fprintf(stderr, "v%d=%f, %f, %f\n", i, Vv[i][0], Vv[i][1], Vv[i][2]);
@@ -569,8 +569,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
   if (layer >= 0) { // try if the point is still in the layer
     for (int i = 0; i < nverts; i ++) {
-      upper += omega[i] * zTop[t]->at(0, layer, verts_i[i]);
-      lower += omega[i] * zTop[t]->at(0, layer+1, verts_i[i]);
+      upper += omega[i] * zTop[t]->f(0, layer, verts_i[i]);
+      lower += omega[i] * zTop[t]->f(0, layer+1, verts_i[i]);
     }
 
     if (z > upper)
@@ -590,7 +590,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
       for (layer = layer + 1 ; layer < nlayers-1; layer ++) {
         lower = 0.0;
         for (int k = 0; k < nverts; k ++)
-          lower += omega[k] * zTop[t]->at(0, layer+1, verts_i[k]);
+          lower += omega[k] * zTop[t]->f(0, layer+1, verts_i[k]);
 
         if (z <= upper && z > lower) {
           succ = true;
@@ -603,7 +603,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
       for (layer = layer - 1; layer >= 0; layer --) {
         upper = 0.0;
         for (int k = 0; k < nverts; k ++)
-          upper += omega[k] * zTop[t]->at(0, layer, verts_i[k]);
+          upper += omega[k] * zTop[t]->f(0, layer, verts_i[k]);
 
         if (z <= upper && z > lower) {
           succ = true;
@@ -626,15 +626,15 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   // double Su[max_nverts], Sl[max_nverts]; // salinity
   for (int i = 0; i < nverts; i ++) {
     for (int k = 0; k < 3; k ++) {
-      Vu[i][k]  = V[t]->at(k, layer, verts_i[i]);
-      Vl[i][k]  = V[t]->at(k, layer+1, verts_i[i]);
+      Vu[i][k]  = V[t]->f(k, layer, verts_i[i]);
+      Vl[i][k]  = V[t]->f(k, layer+1, verts_i[i]);
     }
-    VVu[i] = vertVelocityTop[t]->at(0, layer, verts_i[i]);
-    VVl[i] = vertVelocityTop[t]->at(0, layer+1, verts_i[i]);
-    Su[i] = salinity[t]->at(0, layer, verts_i[i]);
-    Sl[i] = salinity[t]->at(0, layer+1, verts_i[i]);
-    Tu[i] = temperature[t]->at(0, layer, verts_i[i]);
-    Tl[i] = temperature[t]->at(0, layer+1, verts_i[i]);
+    VVu[i] = vertVelocityTop[t]->f(0, layer, verts_i[i]);
+    VVl[i] = vertVelocityTop[t]->f(0, layer+1, verts_i[i]);
+    Su[i] = salinity[t]->f(0, layer, verts_i[i]);
+    Sl[i] = salinity[t]->f(0, layer+1, verts_i[i]);
+    Tu[i] = temperature[t]->f(0, layer, verts_i[i]);
+    Tl[i] = temperature[t]->f(0, layer+1, verts_i[i]);
   }
 
   double vu[3] = {0}, vl[3] = {0};

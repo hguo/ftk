@@ -88,15 +88,15 @@ inline void critical_point_tracker_3d_unstructured::simplex_values(
 
     if (!data.scalar.empty())
       for (int j = 0; j < get_num_scalar_components(); j ++)
-        f[i][j] = data.scalar(j, k);
+        f[i][j] = data.scalar.f(j, k);
 
     for (int j = 0; j < 3; j ++) 
-      v[i][j] = data.vector(j, k);
+      v[i][j] = data.vector.f(j, k);
 
     if (!data.jacobian.empty())
       for (int j = 0; j < 3; j ++) 
         for (int j1 = 0; j1 < 3; j1 ++)
-          J[i][j][j1] = data.jacobian(j1, j, k);
+          J[i][j][j1] = data.jacobian.f(j1, j, k);
   }
 }
 

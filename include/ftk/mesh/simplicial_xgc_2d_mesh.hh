@@ -325,10 +325,10 @@ void simplicial_xgc_2d_mesh<I, F>::derive_curl_bfield0()
   curl_bfield0.reshape(3, bfield0.dim(1));
 
   for (int i = 0; i < bfield0.dim(1); i ++) {
-    const F R = this->vertex_coords(0, i);
-    curl_bfield0(0, i) = -gradRZ_bfield0(1, 2, i); // R
-    curl_bfield0(1, i) = bfield0(2, i) / R + gradRZ_bfield0(0, 2, i); // Z
-    curl_bfield0(2, i) = gradRZ_bfield0(1, 0, i) - gradRZ_bfield0(0, 1, i); // Phi
+    const F R = this->vertex_coords.f(0, i);
+    curl_bfield0.f(0, i) = -gradRZ_bfield0.f(1, 2, i); // R
+    curl_bfield0.f(1, i) = bfield0.f(2, i) / R + gradRZ_bfield0.f(0, 2, i); // Z
+    curl_bfield0.f(2, i) = gradRZ_bfield0.f(1, 0, i) - gradRZ_bfield0.f(0, 1, i); // Phi
   }
 }
 
@@ -338,13 +338,13 @@ void simplicial_xgc_2d_mesh<I, F>::derive_bfield0()
   bfield0.reshape(bfield);
   bfield0.set_multicomponents();
   for (int i = 0; i < bfield.dim(1); i ++) {
-    const F br = bfield(0, i), 
-            bz = bfield(1, i),
-            bphi = bfield(2, i);
+    const F br = bfield.f(0, i), 
+            bz = bfield.f(1, i),
+            bphi = bfield.f(2, i);
     const F norm = std::sqrt(br*br + bz*bz + bphi*bphi);
-    bfield0(0, i) = br / norm;
-    bfield0(1, i) = bz / norm;
-    bfield0(2, i) = bphi / norm;
+    bfield0.f(0, i) = br / norm;
+    bfield0.f(1, i) = bz / norm;
+    bfield0.f(2, i) = bphi / norm;
   }
 }
 
@@ -423,7 +423,7 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_b(const F x[], F b[]) const
     this->get_simplex(2, tid, tri);
     for (int i = 0; i < 3; i ++) 
       for (int j = 0; j < 3; j ++) 
-        B[i][j] = bfield(j, tri[i]);
+        B[i][j] = bfield.f(j, tri[i]);
     lerp_s2v3(B, mu, b);
     
     // print3x3("B", B);
@@ -506,7 +506,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
   for (auto i = 0; i < nn; i ++) {
     I node = roi_nodes[i];
     for (int j = 0; j < 2; j ++)
-      new_coords(j, i) = this->vertex_coords(j, node);
+      new_coords.f(j, i) = this->vertex_coords.f(j, node);
   }
 
   // updating node map
@@ -560,7 +560,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
       const auto k = roi_nodes[i];
       mx2->psifield[i] = psifield[k];
       for (int j = 0; j < 3; j ++) 
-        mx2->bfield(j, i) = bfield(j, k);
+        mx2->bfield.f(j, i) = bfield.f(j, k);
     }
   }
   return mx2;
@@ -586,8 +586,8 @@ void simplicial_xgc_2d_mesh<I, F>::initialize_roi(
   roi_nodes.clear();
 
   for (int i = 0; i < psifield.size(); i ++) {
-    const F r = this->vertex_coords(0, i), 
-            z = this->vertex_coords(1, i);
+    const F r = this->vertex_coords.f(0, i), 
+            z = this->vertex_coords.f(1, i);
     
     const F theta = atan2(z - z0, r - r0);
     if (theta < theta_min_rad || theta > theta_max_rad) continue;

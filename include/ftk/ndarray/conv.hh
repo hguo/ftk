@@ -34,12 +34,12 @@ ndarray<T> conv2D(const ndarray<T> &data, const ndarray<T> &kernel,
           auto realy = y - padding + ky,
                realx = x - padding + kx;
           if (realx >= 0 && realx < dimx && realy >= 0 && realy < dimy) {
-            res(x, y) += data(realx, realy) * kernel(kx, ky);
+            res.f(x, y) += data.f(realx, realy) * kernel.f(kx, ky);
           }
         }
       }
 
-      res(x, y) /= ksizey * ksizex;
+      res.f(x, y) /= ksizey * ksizex;
     }
   }
 
@@ -87,8 +87,8 @@ ndarray<T> gaussian_kernel2D(T sigma, size_t ksizex, size_t ksizey)
       double x = static_cast<double>(i) - centerx,
              y = static_cast<double>(j) - centery;
       r = x * x + y * y;
-      kernel(i, j) = std::exp(-r / s);
-      sum += kernel(i, j);
+      kernel.f(i, j) = std::exp(-r / s);
+      sum += kernel.f(i, j);
     }
   }
 
@@ -148,13 +148,13 @@ ndarray<T> conv3D(const ndarray<T> &data, const ndarray<T> &kernel,
               if (realx >= 0 && realx < dimx &&
                   realy >= 0 && realy < dimy &&
                   realz >= 0 && realz < dimz) {
-                res(x, y, z) += data(realx, realy, realz) * kernel(kx, ky, kz);
+                res.f(x, y, z) += data.f(realx, realy, realz) * kernel.f(kx, ky, kz);
               }
             }
           }
         }
 
-        res(x, y, z) /= ksizez * ksizey * ksizex;
+        res.f(x, y, z) /= ksizez * ksizey * ksizex;
       }
     }
   }
@@ -182,8 +182,8 @@ ndarray<T> gaussian_kernel3D(
                y = static_cast<double>(j) - centery,
                z = static_cast<double>(k) - centerz;
         r = x * x + y * y + z * z;
-        kernel(i, j, k) = std::exp(-r/ s);
-        sum += kernel(i, j, k);
+        kernel.f(i, j, k) = std::exp(-r/ s);
+        sum += kernel.f(i, j, k);
       }
     }
   }

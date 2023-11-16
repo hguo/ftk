@@ -37,7 +37,7 @@ ndarray<T> synthetic_woven_2D(int DW, int DH, T t = T(1e-4), T scaling_factor = 
     for (int i = 0; i < DW; i ++) {
       const T x = ((T(i) / (DW-1)) - 0.5) * scaling_factor,
               y = ((T(j) / (DH-1)) - 0.5) * scaling_factor;
-      scalar(i, j) = woven_function_2Dt(x, y, t);
+      scalar.f(i, j) = woven_function_2Dt(x, y, t);
     }
   }
 
@@ -79,7 +79,7 @@ ndarray<T> synthetic_woven_2D_part(const lattice& ext, const lattice& core, T t 
     for (int i = 0; i < core.size(0); i ++) {
       const T x = ((T(i + core.start(0)) / (DW-1)) - 0.5) * scaling_factor,
               y = ((T(j + core.start(1)) / (DH-1)) - 0.5) * scaling_factor;
-      scalar(i, j) = woven_function_2Dt(x, y, t);
+      scalar.f(i, j) = woven_function_2Dt(x, y, t);
     }
   }
 
@@ -207,8 +207,8 @@ ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=fal
               y = (T(j) / (DH-1));
 
       const auto uv = double_gyre(x, y, time, A, omega, epsilon);
-      Vf(0, i, j) = uv[0];
-      Vf(1, i, j) = uv[1];
+      Vf.f(0, i, j) = uv[0];
+      Vf.f(1, i, j) = uv[1];
       // if (zchannel) Vf(2, i, j) = T(0);
     }
   }
@@ -290,7 +290,7 @@ ndarray<T> synthetic_merger_2D(int DW, int DH, T t)
       // the domain is [-2, 2]x[-2, 2]
       const T x = ((T(i) / (DW-1)) - 0.5) * 4,
               y = ((T(j) / (DH-1)) - 0.5) * 4;
-      scalar(i, j) = merger_function_2Dt(x, y, t);
+      scalar.f(i, j) = merger_function_2Dt(x, y, t);
     }
   }
 

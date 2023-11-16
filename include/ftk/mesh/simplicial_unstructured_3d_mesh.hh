@@ -360,7 +360,7 @@ void simplicial_unstructured_3d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
     double x[3];
     grid->GetPoint(i, x);
     for (int j = 0; j < 3; j ++)
-      vertex_coords(j, i) = x[j];
+      vertex_coords.f(j, i) = x[j];
   }
 
   initialize();
@@ -478,9 +478,9 @@ void simplicial_unstructured_3d_mesh<I, F>::get_edge(I i, I v[]) const
 template <typename I, typename F>
 void simplicial_unstructured_3d_mesh<I, F>::get_coords(I i, F coords[]) const
 {
-  coords[0] = vertex_coords(0, i);
-  coords[1] = vertex_coords(1, i);
-  coords[2] = vertex_coords(2, i);
+  coords[0] = vertex_coords.f(0, i);
+  coords[1] = vertex_coords.f(1, i);
+  coords[2] = vertex_coords.f(2, i);
 }
 
 template <typename I, typename F>

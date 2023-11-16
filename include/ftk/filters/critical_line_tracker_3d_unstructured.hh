@@ -80,7 +80,7 @@ inline void critical_line_tracker_3d_unstructured::simplex_values(
 #endif
 
     for (int j = 0; j < 2; j ++) 
-      uv[i][j] = data.uv(j, k);
+      uv[i][j] = data.uv.f(j, k);
   }
 }
 

@@ -39,7 +39,7 @@ public:
   I locate_cell_i(const F x[], const I prev_cell_i) const;
   I locate_cell_i(const std::array<F, 3>& x, const I prev) const { const F y[3] = {x[0], x[1], x[2]}; return locate_cell_i(y, prev); }
 
-  void cell_i_coords(const I cell_i, F x[3]) const { x[0] = xyzCells(0, cell_i); x[1] = xyzCells(1, cell_i); x[2] = xyzCells(2, cell_i); }
+  void cell_i_coords(const I cell_i, F x[3]) const { x[0] = xyzCells.f(0, cell_i); x[1] = xyzCells.f(1, cell_i); x[2] = xyzCells.f(2, cell_i); }
 
   bool point_in_cell_i(const I cell_i, const F x[]) const;
   bool point_in_cell(const int nverts, const F Xv[][3], const F x[3]) const;
@@ -137,15 +137,15 @@ void mpas_mesh<I, F>::initialize_c2v_interpolants()
    
     bool boundary = false;
     for (I j = 0; j < 3; j ++) {
-      const I c = cid2i( cellsOnVertex(j, i) );
+      const I c = cid2i( cellsOnVertex.f(j, i) );
       if (c < 0) {
         boundary = true;
         break;
       }
       // fprintf(stderr, "cell=%d\n", c);
-      Xv[j] = xyzVertices(j, i);
+      Xv[j] = xyzVertices.f(j, i);
       for (I k = 0; k < 3; k ++)
-        Xc[j][k] = xyzCells(k, c);
+        Xc[j][k] = xyzCells.f(k, c);
     }
 
     if (boundary) {
@@ -159,7 +159,7 @@ void mpas_mesh<I, F>::initialize_c2v_interpolants()
     F mu[3];
     bool succ = inverse_lerp_s2v3_0(Xc, Xv, mu);
     for (I k = 0; k < 3; k ++)
-      c2v_interpolants(k, i) = mu[k];
+      c2v_interpolants.f(k, i) = mu[k];
 
     // fprintf(stderr, "mu=%f, %f, %f\n", 
     //     mu[0], mu[1], mu[2]);
@@ -179,10 +179,10 @@ ndarray<F> mpas_mesh<I, F>::interpolate_e2c(const ndarray<F> &Ve) const
       const auto ne = nEdgesOnCell[i];
 
       for (auto j = 0; j < ne; j ++) {
-        const auto ei = eid2i( edgesOnCell(j, i) );
+        const auto ei = eid2i( edgesOnCell.f(j, i) );
 
         for (auto k = 0; k < 3; k ++) 
-          V(k, l, i) += Ve(l, ei) * coeffsReconstruct(k, j, i);
+          V.f(k, l, i) += Ve.f(l, ei) * coeffsReconstruct.f(k, j, i);
       }
     }
   }
@@ -199,7 +199,7 @@ ndarray<F> mpas_mesh<I, F>::zTop_from_zMid_and_thickness(const ndarray<F>& zMid,
 
   for (auto i = 0; i < n_cells(); i ++)
     for (auto j = 0; j < nlayers; j ++) {
-      zTop(0, j, i) = zMid(0, j, i) + layerThickness(0, j, i) * 0.5;
+      zTop.f(0, j, i) = zMid.f(0, j, i) + layerThickness.f(0, j, i) * 0.5;
       // fprintf(stderr, "ci=%d, l=%d, zTop=%f\n", 
       //     i, j, zTop(0, j, i));
     }
@@ -224,28 +224,28 @@ ndarray<F> mpas_mesh<I, F>::interpolate_c2v(const ndarray<F>& Vc) const
     I c[3] = {0};
     if (!boundary) {
       for (auto k = 0; k < 3; k ++) {
-        lambda[k] = c2v_interpolants(k, i);
-        c[k] = cid2i( cellsOnVertex(k, i) );
+        lambda[k] = c2v_interpolants.f(k, i);
+        c[k] = cid2i( cellsOnVertex.f(k, i) );
       }
     }
 
     for (auto layer = 0; layer < Vc.dim(1); layer ++) {
       for (auto k = 0; k < nvars; k ++) {
         if (boundary) {
-          V(k, layer, i) = F(0);
+          V.f(k, layer, i) = F(0);
         } else {
           bool invalid = false;
           for (auto l = 0; l < 3; l ++) {
-            F val = Vc(k, layer, c[l]);
+            F val = Vc.f(k, layer, c[l]);
             if (val < -1e33) {
               invalid = true;
               break;
             }
-            V(k, layer, i) += lambda[l] * Vc(k, layer, c[l]);
+            V.f(k, layer, i) += lambda[l] * Vc.f(k, layer, c[l]);
           }
 
           if (invalid)
-            V(k, layer, i) = std::nan("1");
+            V.f(k, layer, i) = std::nan("1");
         }
       }
     }
@@ -260,7 +260,7 @@ template <typename I, typename F>
 void mpas_mesh<I, F>::vert_i_coords(const I i, F X[3]) const
 {
   for (int k = 0; k < 3; k ++)
-    X[k] = xyzVertices(k, i);
+    X[k] = xyzVertices.f(k, i);
 }
 
 template <typename I, typename F>
@@ -275,7 +275,7 @@ I mpas_mesh<I, F>::verts_i_on_cell_i(const I i, I vi[]) const
 {
   I n = nEdgesOnCell[i];
   for (auto j = 0; j < n; j ++)
-    vi[j] = vid2i( verticesOnCell(j, i) );
+    vi[j] = vid2i( verticesOnCell.f(j, i) );
   return n;
 }
 
@@ -286,21 +286,21 @@ void mpas_mesh<I, F>::initialize_edge_normals()
 
   F n[3];
   for (auto ei = 0; ei < n_edges(); ei ++) {
-    const I ci1 = cid2i( cellsOnEdge(0, ei) ),
-            ci2 = cid2i( cellsOnEdge(1, ei) );
+    const I ci1 = cid2i( cellsOnEdge.f(0, ei) ),
+            ci2 = cid2i( cellsOnEdge.f(1, ei) );
 
     for (int i = 0; i < 3; i ++) {
       if (ci1 < 0) // boundary edge case I
-        n[i] = xyzCells(i, ci2) - xyzEdges(i, ei);
+        n[i] = xyzCells.f(i, ci2) - xyzEdges.f(i, ei);
       else if (ci2 < 0) // boundary edge case II
-        n[i] = xyzEdges(i, ei) - xyzCells(i, ci1);
+        n[i] = xyzEdges.f(i, ei)  - xyzCells.f(i, ci1);
       else
-        n[i] = xyzCells(i, ci2) - xyzCells(i, ci1);
+        n[i] = xyzCells.f(i, ci2) - xyzCells.f(i, ci1);
     }
 
     vector_normalization2_3(n);
     for (int i = 0; i < 3; i ++)
-      edgeNormalVectors(i, ei) = n[i];
+      edgeNormalVectors.f(i, ei) = n[i];
   }
 }
 
@@ -321,9 +321,9 @@ void mpas_mesh<I, F>::initialize_cell_tangent_plane()
     cell_i_coords(ci, rhat);
     vector_normalization2_3(rhat);
 
-    const I ei = eid2i( edgesOnCell(0, ci) );
+    const I ei = eid2i( edgesOnCell.f(0, ci) );
     for (int i = 0; i < 3; i ++)
-      n[i] = edgeNormalVectors(i, ei);
+      n[i] = edgeNormalVectors.f(i, ei);
 
     const F normal_dot_r = vector_dot_product3(rhat, n);
 
@@ -339,8 +339,8 @@ void mpas_mesh<I, F>::initialize_cell_tangent_plane()
     //     xhat[0], xhat[1], xhat[2], yhat[0], yhat[1], yhat[2]);
 
     for (int i = 0; i < 3; i ++) {
-      cellTangentPlane(i, 0, ci) = xhat[i];
-      cellTangentPlane(i, 1, ci) = yhat[i];
+      cellTangentPlane.f(i, 0, ci) = xhat[i];
+      cellTangentPlane.f(i, 1, ci) = yhat[i];
     }
   }
 }
@@ -362,11 +362,11 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
     F Xe[max_edges][3], Ne[max_edges][3];
     F alpha = 0;
     for (auto i = 0; i < ne; i ++) {
-      const auto ei = eid2i( edgesOnCell(i, ci) );
+      const auto ei = eid2i( edgesOnCell.f(i, ci) );
 
       for (auto j = 0; j < 3; j ++) {
-        Xe[i][j] = xyzEdges(j, ei);
-        Ne[i][j] = edgeNormalVectors(j, ei);
+        Xe[i][j] = xyzEdges.f(j, ei);
+        Ne[i][j] = edgeNormalVectors.f(j, ei);
       }
 
       alpha += vector_dist_2norm_3(x, Xe[i]);
@@ -374,8 +374,8 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
     alpha /= ne;
 
     const F t[2][3] = {
-      {cellTangentPlane(0, 0, ci), cellTangentPlane(1, 0, ci), cellTangentPlane(2, 0, ci)},
-      {cellTangentPlane(0, 1, ci), cellTangentPlane(1, 1, ci), cellTangentPlane(2, 1, ci)}
+      {cellTangentPlane.f(0, 0, ci), cellTangentPlane.f(1, 0, ci), cellTangentPlane.f(2, 0, ci)},
+      {cellTangentPlane.f(0, 1, ci), cellTangentPlane.f(1, 1, ci), cellTangentPlane.f(2, 1, ci)}
     };
     // print2x3("cellTangent", t);
 
@@ -394,7 +394,7 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
 #else // very low-order approx
     for (auto i = 0; i < ne; i ++) {
       for (auto j = 0; j < 3; j ++) {
-        coeffsReconstruct(j, i, ci) = Ne[i][j] / ne;
+        coeffsReconstruct.f(j, i, ci) = Ne[i][j] / ne;
       }
     }
 #endif
@@ -477,9 +477,9 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   
   xyzCells.reshape(3, xCell.size());
   for (size_t i = 0; i < xCell.size(); i ++) {
-    xyzCells(0, i) = xCell[i];
-    xyzCells(1, i) = yCell[i];
-    xyzCells(2, i) = zCell[i];
+    xyzCells.f(0, i) = xCell[i];
+    xyzCells.f(1, i) = yCell[i];
+    xyzCells.f(2, i) = zCell[i];
   }
 
   // xyzVerts
@@ -490,9 +490,9 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
   xyzVertices.reshape(3, xVertex.size());
   for (size_t i = 0; i < xVertex.size(); i ++) {
-    xyzVertices(0, i) = xVertex[i];
-    xyzVertices(1, i) = yVertex[i];
-    xyzVertices(2, i) = zVertex[i];
+    xyzVertices.f(0, i) = xVertex[i];
+    xyzVertices.f(1, i) = yVertex[i];
+    xyzVertices.f(2, i) = zVertex[i];
   }
 
   // xyzEdges
@@ -503,9 +503,9 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
   xyzEdges.reshape(3, xEdge.size());
   for (size_t i = 0; i < xEdge.size(); i ++) {
-    xyzEdges(0, i) = xEdge[i];
-    xyzEdges(1, i) = yEdge[i];
-    xyzEdges(2, i) = zEdge[i];
+    xyzEdges.f(0, i) = xEdge[i];
+    xyzEdges.f(1, i) = yEdge[i];
+    xyzEdges.f(2, i) = zEdge[i];
   }
 
 #if 0
@@ -629,7 +629,7 @@ I mpas_mesh<I, F>::locate_cell_i(const F x[], const I prev_cell_i) const
 
     const int n = nEdgesOnCell[prev_cell_i];
     for (int i = 0; i < n; i ++) {
-      const I cell_i = cid2i( cellsOnCell(i, prev_cell_i) );
+      const I cell_i = cid2i( cellsOnCell.f(i, prev_cell_i) );
       if (cell_i < 0)
         continue;
 
