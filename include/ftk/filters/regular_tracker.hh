@@ -255,7 +255,7 @@ inline void regular_tracker::set_coords_explicit(vtkSmartPointer<vtkStructuredGr
     shape_coords.push_back(dims[i]);
 
   ndarray<double> coords;
-  coords.reshape(shape_coords);
+  coords.reshapef(shape_coords);
   const auto np = grid->GetNumberOfPoints();
   for (auto i = 0; i < np; i ++) {
     double *p = grid->GetPoint(i);

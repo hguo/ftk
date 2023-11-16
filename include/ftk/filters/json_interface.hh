@@ -529,7 +529,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
 
   auto push_timestep = [&](int k, const ftk::ndarray<double>& data) {
     auto dpot = data.get_transpose();
-    dpot.reshape(dpot.dim(0));
+    dpot.reshapef(dpot.dim(0));
 
     ftk::ndarray<double> scalar, grad, J;
     m2->smooth_scalar_gradient_jacobian(dpot, /*smoothing_kernel_size,*/ scalar, grad, J);

@@ -612,9 +612,9 @@ void simplicial_xgc_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
   ) const
 {
   S.reshape(scalar);
-  G.reshape(2, scalar.dim(0), scalar.dim(1));
+  G.reshapef(2, scalar.dim(0), scalar.dim(1));
   G.set_multicomponents(1);
-  J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
+  J.reshapef(2, 2, scalar.dim(0), scalar.dim(1));
   J.set_multicomponents(2);
   
   for (size_t i = 0; i < scalar.dim(1) /* nphi */; i ++) {
@@ -682,7 +682,7 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
 
   const int m2n0 = m2->n(0);
   ndarray<F> mean_eden; 
-  mean_eden.reshape(m2n0);
+  mean_eden.reshapef(m2n0);
   for (int i = 0; i < nphi; i ++) 
     for (int j = 0; j < m2n0; j ++) 
       mean_eden[j] += eden[i*m2n0+j]; // eden(j, i);
@@ -690,7 +690,7 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
     mean_eden[j] /= nphi;
 
   ndarray<F> mean_pot;
-  mean_pot.reshape(m2n0);
+  mean_pot.reshapef(m2n0);
   for (int i = 0; i < nphi; i ++) 
     for (int j = 0; j < m2n0; j ++) 
       mean_pot[j] += dpot[i*m2n0+j]; // eden(j, i);
@@ -741,7 +741,7 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::interpolate(
   const F dphi = 2 * M_PI / (nphi * iphi);
 
   ndarray<F> f;
-  f.reshape(m2n0, nvphi);
+  f.reshapef(m2n0, nvphi);
 
   for (int i = 0; i < nvphi; i ++) {
     if (i % vphi == 0) { // non-virtual plane, just copy the values

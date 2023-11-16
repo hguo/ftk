@@ -129,7 +129,7 @@ void mpas_mesh<I, F>::initialize()
 template <typename I, typename F>
 void mpas_mesh<I, F>::initialize_c2v_interpolants()
 {
-  c2v_interpolants.reshape(3, n_vertices());
+  c2v_interpolants.reshapef(3, n_vertices());
   vertex_on_boundary.resize(n_vertices());
 
   for (I i = 0; i < n_vertices(); i ++) {
@@ -172,7 +172,7 @@ ndarray<F> mpas_mesh<I, F>::interpolate_e2c(const ndarray<F> &Ve) const
   const auto nlayers = Ve.dim(0);
 
   ndarray<F> V; // velocity field on cells
-  V.reshape(3, nlayers, n_cells());
+  V.reshapef(3, nlayers, n_cells());
 
   for (auto l = 0; l < nlayers; l ++) {
     for (auto i = 0; i < n_cells(); i ++) {
@@ -213,7 +213,7 @@ ndarray<F> mpas_mesh<I, F>::interpolate_c2v(const ndarray<F>& Vc) const
   const I nvars = Vc.dim(0);
 
   ndarray<F> V; // variables on vertices
-  V.reshape(nvars, Vc.dim(1), n_vertices());
+  V.reshapef(nvars, Vc.dim(1), n_vertices());
 
   for (auto i = 0; i < n_vertices(); i ++) {
     const auto vid = i2vid(i);
@@ -310,7 +310,7 @@ void mpas_mesh<I, F>::initialize_cell_tangent_plane()
   if (edgeNormalVectors.empty())
     initialize_edge_normals();
 
-  cellTangentPlane.reshape(3, 2, n_cells());
+  cellTangentPlane.reshapef(3, 2, n_cells());
   F p[2], // tangent plane
     rhat[3], // unit vector for a cell,
     xhat[3],
@@ -352,7 +352,7 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
     initialize_cell_tangent_plane();
 
   const auto max_edges = max_edges_on_cell();
-  coeffsReconstruct.reshape(3, max_edges, n_cells());
+  coeffsReconstruct.reshapef(3, max_edges, n_cells());
 
   for (auto ci = 0; ci < n_cells(); ci ++) {
     F x[3];
@@ -464,7 +464,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
   ndarray<I> conn;
   conn.copy_vector(vconn);
-  conn.reshape(3, vconn.size()/3);
+  conn.reshapef(3, vconn.size()/3);
 #endif
 
   // xyzCells
@@ -475,7 +475,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   // latCell.from_netcdf(ncid, "latCell");
   // lonCell.from_netcdf(ncid, "lonCell");
   
-  xyzCells.reshape(3, xCell.size());
+  xyzCells.reshapef(3, xCell.size());
   for (size_t i = 0; i < xCell.size(); i ++) {
     xyzCells.f(0, i) = xCell[i];
     xyzCells.f(1, i) = yCell[i];
@@ -488,7 +488,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   yVertex.read_netcdf(ncid, "yVertex");
   zVertex.read_netcdf(ncid, "zVertex");
 
-  xyzVertices.reshape(3, xVertex.size());
+  xyzVertices.reshapef(3, xVertex.size());
   for (size_t i = 0; i < xVertex.size(); i ++) {
     xyzVertices.f(0, i) = xVertex[i];
     xyzVertices.f(1, i) = yVertex[i];
@@ -501,7 +501,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   yEdge.read_netcdf(ncid, "yEdge");
   zEdge.read_netcdf(ncid, "zEdge");
 
-  xyzEdges.reshape(3, xEdge.size());
+  xyzEdges.reshapef(3, xEdge.size());
   for (size_t i = 0; i < xEdge.size(); i ++) {
     xyzEdges.f(0, i) = xEdge[i];
     xyzEdges.f(1, i) = yEdge[i];
@@ -510,7 +510,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
 #if 0
   restingThickness.read_netcdf(ncid, "restingThickness");
-  accRestingThickness.reshape(restingThickness);
+  accRestingThickness.reshapef(restingThickness);
 
   for (auto i = 0; i < restingThickness.dim(1); i ++) { // cells
     for (auto j = 0; j < restingThickness.dim(0); j ++) { // vertical layers

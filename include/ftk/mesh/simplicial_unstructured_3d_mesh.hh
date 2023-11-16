@@ -105,14 +105,14 @@ simplicial_unstructured_3d_mesh<I, F>::simplicial_unstructured_3d_mesh(
     const std::vector<I>& tetrahedra_)
 {
   vertex_coords.copy_vector(coords_);
-  vertex_coords.reshape({3, coords_.size()/3});
+  vertex_coords.reshapef({3, coords_.size()/3});
 
   for (auto i = 0; i < tetrahedra_.size() / 4; i ++)
     tetrahedra.push_back(std::make_tuple(
           tetrahedra_[i*4], tetrahedra_[i*4+1], tetrahedra_[i*4+2], tetrahedra_[i*4+3]));
 
   // tetrahedra.copy_vector(tetrahedra_);
-  // tetrahedra.reshape({4, tetrahedra_.size()/4});
+  // tetrahedra.reshapef({4, tetrahedra_.size()/4});
 }
 
 template <typename I, typename F>
@@ -195,7 +195,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_triangles()
   }
 
 #if 0
-  triangles.reshape(3, triangle_id_map.size());
+  triangles.reshapef(3, triangle_id_map.size());
   triangle_side_of.resize(triangle_id_map.size());
   for (const auto &kv : triangle_id_map) {
     triangles(0, kv.second) = std::get<0>(kv.first);
@@ -257,7 +257,7 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
   }
 
 #if 0
-  edges.reshape(2, edge_id_map.size());
+  edges.reshapef(2, edge_id_map.size());
   edges_side_of.resize(edge_id_map.size());
   for (const auto &kv : edge_id_map) {
     edges(0, kv.second) = std::get<0>(kv.first);
@@ -351,11 +351,11 @@ void simplicial_unstructured_3d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
       //   tets.push_back(v[j]);
     }
   }
-  // tetrahedra.reshape({4, tets.size()/4});
+  // tetrahedra.reshapef({4, tets.size()/4});
   // tetrahedra.from_vector(tets);
 
   vtkIdType npts = grid->GetNumberOfPoints();
-  vertex_coords.reshape({3, size_t(npts)});
+  vertex_coords.reshapef({3, size_t(npts)});
   for (vtkIdType i = 0; i < npts; i ++) {
     double x[3];
     grid->GetPoint(i, x);
@@ -611,9 +611,9 @@ void simplicial_unstructured_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
   const F sigma2 = sigma * sigma, 
           sigma4 = sigma2 * sigma2;
 
-  scalar.reshape({n(0)});
-  grad.reshape({3, n(0)});
-  J.reshape({3, 3, n(0)});
+  scalar.reshapef({n(0)});
+  grad.reshapef({3, n(0)});
+  J.reshapef({3, 3, n(0)});
 
   // for (auto i = 0; i < smoothing_kernel.size(); i ++) {
   this->parallel_for(smoothing_kernel.size(), [&](int i) {

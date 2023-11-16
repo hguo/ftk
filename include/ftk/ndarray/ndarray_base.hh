@@ -84,9 +84,14 @@ struct ndarray_base {
   virtual const void* pdata() const = 0;
   virtual void* pdata() = 0;
 
-  virtual void reshape(const std::vector<size_t> &dims_) = 0;
-  void reshape(const std::vector<int>& dims);
-  void reshape(size_t ndims, const size_t sizes[]);
+  virtual void reshapef(const std::vector<size_t> &dims_) = 0;
+  void reshapef(const std::vector<int>& dims);
+  void reshapef(size_t ndims, const size_t sizes[]);
+  
+  void reshapec(const std::vector<size_t> &dims_);
+  void reshapec(const std::vector<int>& dims);
+  void reshapec(size_t ndims, const size_t sizes[]);
+
   void reshape(const ndarray_base& array); //! copy shape from another array
   template <typename T> void reshape(const ndarray<T>& array); //! copy shape from another array
 
@@ -219,23 +224,30 @@ inline size_t ndarray_base::ncomponents() const {
   return rtn;
 }
 
-inline void ndarray_base::reshape(const std::vector<int>& dims)
+inline void ndarray_base::reshapec(const std::vector<size_t>& dims_)
+{
+  std::vector<size_t> dims(dims_);
+  std::reverse(dims.begin(), dims.end());
+  reshapef(dims);
+}
+
+inline void ndarray_base::reshapef(const std::vector<int>& dims)
 {
   std::vector<size_t> mydims;
   for (int i = 0; i < dims.size(); i ++)
     mydims.push_back(dims[i]);
-  reshape(mydims);
+  reshapef(mydims);
 }
 
-inline void ndarray_base::reshape(size_t ndims, const size_t dims[])
+inline void ndarray_base::reshapef(size_t ndims, const size_t dims[])
 {
   std::vector<size_t> mydims(dims, dims+ndims);
-  reshape(mydims);
+  reshapef(mydims);
 }
 
 inline void ndarray_base::reshape(const ndarray_base& array)
 {
-  reshape(array.shape());
+  reshapef(array.shape());
 }
 
 inline size_t ndarray_base::indexf(const size_t idx[]) const {
@@ -261,7 +273,7 @@ inline void ndarray_base::make_multicomponents()
 {
   std::vector<size_t> s = shape();
   s.insert(s.begin(), 1);
-  reshape(s);
+  reshapef(s);
   set_multicomponents();
 }
 
@@ -404,7 +416,7 @@ inline void ndarray_base::read_netcdf(int ncid, int varid, int ndims, const size
 #if FTK_HAVE_NETCDF
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
-  reshape(mysizes);
+  reshapef(mysizes);
 
   if (nc_datatype() == NC_INT) {
     NC_SAFE_CALL( nc_get_vara_int(ncid, varid, starts, sizes, (int*)pdata()) );
@@ -500,7 +512,7 @@ inline void ndarray_base::read_netcdf(int ncid, int varid, const size_t starts[]
 
   std::vector<size_t> mysizes(sizes, sizes+ndims);
   std::reverse(mysizes.begin(), mysizes.end());
-  reshape(mysizes);
+  reshapef(mysizes);
 
   read_netcdf(ncid, varid, ndims, starts, sizes, comm);
 #else

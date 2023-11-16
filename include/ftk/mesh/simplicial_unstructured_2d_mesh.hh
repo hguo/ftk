@@ -264,10 +264,10 @@ template <typename I, typename F>
 simplicial_unstructured_2d_mesh<I, F>::simplicial_unstructured_2d_mesh(const std::vector<F> &coords_, const std::vector<I> &triangles_)
 {
   vertex_coords.copy_vector(coords_);
-  vertex_coords.reshape({2, coords_.size()/2});
+  vertex_coords.reshapef({2, coords_.size()/2});
   
   triangles.copy_vector(triangles_);
-  triangles.reshape({3, triangles_.size()/3});
+  triangles.reshapef({3, triangles_.size()/3});
 
   build_triangles();
 }
@@ -436,15 +436,15 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
   };
 
   // fprintf(stderr, "triangles_88078=%d, %d, %d\n", triangles(0, 88078), triangles(1, 88078), triangles(2, 88078)); 
-  triangle_edges.reshape(3, n(2));
+  triangle_edges.reshapef(3, n(2));
   for (auto i = 0; i < n(2); i ++) {
     add_edge(i, 0, triangles.f(0, i), triangles.f(1, i));
     add_edge(i, 1, triangles.f(1, i), triangles.f(2, i));
     add_edge(i, 2, triangles.f(2, i), triangles.f(0, i));
   }
 
-  edges.reshape(2, edge_id_map.size());
-  edges_side_of.reshape({2, edge_id_map.size()}, -1);
+  edges.reshapef(2, edge_id_map.size());
+  edges_side_of.reshapef({2, edge_id_map.size()}, -1);
   // int i = 0;
   for (const auto &kv : edge_id_map) {
     edges.f(0, kv.second) = std::get<0>(kv.first);
@@ -562,7 +562,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::smooth_scalar(const ndarray<F>
           sigma4 = sigma2 * sigma2;
 
   ndarray<F> scalar;
-  scalar.reshape({n(0)});
+  scalar.reshapef({n(0)});
 
   // for (auto i = 0; i < smoothing_kernel.size(); i ++) {
   this->parallel_for(smoothing_kernel.size(), [&](int i) {
@@ -588,9 +588,9 @@ void simplicial_unstructured_2d_mesh<I, F>::smooth_scalar_gradient_jacobian(
   const F sigma2 = sigma * sigma, 
           sigma4 = sigma2 * sigma2;
 
-  scalar.reshape({n(0)});
-  grad.reshape({2, n(0)});
-  J.reshape({2, 2, n(0)});
+  scalar.reshapef({n(0)});
+  grad.reshapef({2, n(0)});
+  J.reshapef({2, 2, n(0)});
 
   // for (auto i = 0; i < smoothing_kernel.size(); i ++) {
   this->parallel_for(smoothing_kernel.size(), [&](int i) {
@@ -627,7 +627,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<
 {
   // compute cellwise gradient
   ndarray<F> cellgrad;
-  cellgrad.reshape({2, vector.dim(0), n(2)});
+  cellgrad.reshapef({2, vector.dim(0), n(2)});
   cellgrad.set_multicomponents(2);
   for (int i = 0; i < n(2); i ++) {
     I tri[3];
@@ -654,7 +654,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<
   
   // compute pointwise gradient
   ndarray<F> grad;
-  grad.reshape({2, vector.dim(0), n(0)});
+  grad.reshapef({2, vector.dim(0), n(0)});
   grad.set_multicomponents(2);
   for (int i = 0; i < n(0); i ++) {
     const auto tris = vertex_triangles[i];
@@ -688,7 +688,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::scalar_gradient(const ndarray<
 {
   // compute cellwise gradient
   ndarray<F> cellgrad;
-  cellgrad.reshape({2, n(2)});
+  cellgrad.reshapef({2, n(2)});
   cellgrad.set_multicomponents();
   for (int i = 0; i < n(2); i ++) {
     I tri[3];
@@ -709,7 +709,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::scalar_gradient(const ndarray<
   
   // compute pointwise gradient
   ndarray<F> grad;
-  grad.reshape({2, n(0)});
+  grad.reshapef({2, n(0)});
   grad.set_multicomponents();
   for (int i = 0; i < n(0); i ++) {
     F gradf[2] = {0};
@@ -795,11 +795,11 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(vtkSmartPointer<vtkUnstruct
           m_triangles.push_back(v[j]);
       }
     }
-    triangles.reshape({3, m_triangles.size()/3});
+    triangles.reshapef({3, m_triangles.size()/3});
     triangles.from_vector(m_triangles);
 
     vtkIdType npts = grid->GetNumberOfPoints();
-    vertex_coords.reshape({3, size_t(npts)});
+    vertex_coords.reshapef({3, size_t(npts)});
     for (vtkIdType i = 0; i < npts; i ++) {
       double x[3] = {0};
       grid->GetPoint(i, x);

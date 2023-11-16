@@ -12,7 +12,7 @@ ndarray<T> gradient2D(const ndarray<T>& scalar)
 {
   const int DW = scalar.dim(0), DH = scalar.dim(1);
   ndarray<T> grad;
-  grad.reshape(2, DW, DH); 
+  grad.reshapef(2, DW, DH); 
 
   const auto f = [&](int i, int j) {
     i = std::min(std::max(0, i), DW-1);
@@ -56,7 +56,7 @@ ndarray<T> jacobian2D(const ndarray<T>& vec)
 {
   const int DW = vec.dim(1), DH = vec.dim(2);
   ndarray<T> grad;
-  grad.reshape(2, 2, DW, DH);
+  grad.reshapef(2, 2, DW, DH);
   
   const auto f = [&](int c, int i, int j) {
     i = std::min(std::max(0, i), DW-1);
@@ -92,7 +92,7 @@ ndarray<T> jacobian2DPL(const ndarray<T>& V)
 {
   const int DW = V.dim(1), DH = V.dim(2);
   ndarray<T> J;
-  J.reshape(2, 2, 2/*upper & lower triangles*/, DW, DH);
+  J.reshapef(2, 2, 2/*upper & lower triangles*/, DW, DH);
 
   simplicial_regular_mesh m(2);
   m.set_lb_ub({0, 0}, {DW-1, DH-1});
@@ -106,7 +106,7 @@ ndarray<T> jacobian2Dt(const ndarray<T>& vec)
 {
   const int DW = vec.dim(1), DH = vec.dim(2), DT = vec.dim(3);
   ndarray<T> grad;
-  grad.reshape(2, 2, DW, DH, DT);
+  grad.reshapef(2, 2, DW, DH, DT);
 
 #pragma omp parallel for collapse(3)
   for (int k = 0; k < DT; k ++) {
@@ -132,7 +132,7 @@ ndarray<T> gradient3D(const ndarray<T>& scalar)
 {
   const int DW = scalar.dim(0), DH = scalar.dim(1), DD = scalar.dim(2);
   ndarray<T> grad;
-  grad.reshape(3, DW, DH, DD);
+  grad.reshapef(3, DW, DH, DD);
 
 #pragma omp parallel for collapse(3)
   for (int k = 1; k < DD-1; k ++) {
@@ -153,7 +153,7 @@ ndarray<T> gradient3Dt(const ndarray<T>& scalar)
 {
   const int DW = scalar.dim(0), DH = scalar.dim(1), DD = scalar.dim(2), DT = scalar.dim(3);
   ndarray<T> grad;
-  grad.reshape(3, DW, DH, DD, DT);
+  grad.reshapef(3, DW, DH, DD, DT);
 
 #pragma omp parallel for collapse(4)
   for (int t = 0; t < DT; t ++) {
@@ -177,7 +177,7 @@ ndarray<T> jacobian3D(const ndarray<T>& V, int b = 2)
 {
   const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3);
   ndarray<T> J;
-  J.reshape(3, 3, DW, DH, DD);
+  J.reshapef(3, 3, DW, DH, DD);
   J.set_multicomponents(2);
 
 #pragma omp parallel for collapse(3)
@@ -217,7 +217,7 @@ ndarray<T> jacobian3Dt(const ndarray<T>& V)
 {
   const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3), DT = V.dim(4);
   ndarray<T> J;
-  J.reshape(3, 3, DW, DH, DD, DT);
+  J.reshapef(3, 3, DW, DH, DD, DT);
 
 #pragma omp parallel for collapse(4)
   for (int t = 0; t < DT; t ++) {

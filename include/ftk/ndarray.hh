@@ -35,9 +35,9 @@ struct ndarray : public ndarray_base {
   unsigned int hash() const;
 
   ndarray() {}
-  ndarray(const std::vector<size_t> &dims) {reshape(dims);}
-  ndarray(const std::vector<size_t> &dims, T val) {reshape(dims, val);}
-  ndarray(const lattice& l) {reshape(l.sizes());}
+  ndarray(const std::vector<size_t> &dims) {reshapef(dims);}
+  ndarray(const std::vector<size_t> &dims, T val) {reshapef(dims, val);}
+  ndarray(const lattice& l) {reshapef(l.sizes());}
   ndarray(const T *a, const std::vector<size_t> &shape);
   
   template <typename T1> ndarray(const ndarray<T1>& array1) { from_array<T1>(array1); }
@@ -67,18 +67,18 @@ struct ndarray : public ndarray_base {
 
   void swap(ndarray& x);
 
-  void reshape(const std::vector<size_t> &dims_);
-  void reshape(const std::vector<size_t> &dims, T val);
-  template <typename I> void reshape(const int ndims, const I sz[]);
+  void reshapef(const std::vector<size_t> &dims_);
+  void reshapef(const std::vector<size_t> &dims, T val);
+  template <typename I> void reshapef(const int ndims, const I sz[]);
   template <typename T1> void reshape(const ndarray<T1>& array); //! copy shape from another array
 
-  void reshape(size_t n0) {reshape(std::vector<size_t>({n0}));}
-  void reshape(size_t n0, size_t n1) {reshape({n0, n1});}
-  void reshape(size_t n0, size_t n1, size_t n2) {reshape({n0, n1, n2});}
-  void reshape(size_t n0, size_t n1, size_t n2, size_t n3) {reshape({n0, n1, n2, n3});}
-  void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4) {reshape({n0, n1, n2, n3, n4});}
-  void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5) {reshape({n0, n1, n2, n3, n4, n5});}
-  void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshape({n0, n1, n2, n3, n4, n5, n6});}
+  void reshapef(size_t n0) {reshapef(std::vector<size_t>({n0}));}
+  void reshapef(size_t n0, size_t n1) {reshapef({n0, n1});}
+  void reshapef(size_t n0, size_t n1, size_t n2) {reshapef({n0, n1, n2});}
+  void reshapef(size_t n0, size_t n1, size_t n2, size_t n3) {reshapef({n0, n1, n2, n3});}
+  void reshapef(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4) {reshapef({n0, n1, n2, n3, n4});}
+  void reshapef(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5) {reshapef({n0, n1, n2, n3, n4, n5});}
+  void reshapef(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshapef({n0, n1, n2, n3, n4, n5, n6});}
   void reset() { p.clear(); dims.clear(); s.clear(); set_multicomponents(0); set_has_time(false); }
 
   ndarray<T> slice(const lattice&) const;
@@ -431,7 +431,7 @@ template <typename T, typename T1>
 ndarray<T> operator/(const ndarray<T>& lhs, const T1& rhs) 
 {
   ndarray<T> array;
-  array.reshape(lhs);
+  array.reshapef(lhs);
   for (auto i = 0; i < array.nelem(); i ++)
     array[i] = lhs[i] / rhs;
   return array;
@@ -458,7 +458,7 @@ template <typename T>
 template <typename T1>
 void ndarray<T>::from_array(const ndarray<T1>& array1)
 {
-  reshape(array1.shape());
+  reshapef(array1.shape());
   for (auto i = 0; i < p.size(); i ++)
     p[i] = static_cast<T>(array1[i]);
   ncd = array1.multicomponents();
@@ -468,7 +468,7 @@ void ndarray<T>::from_array(const ndarray<T1>& array1)
 template <typename T>
 void ndarray<T>::from_array(const T *x, const std::vector<size_t>& shape)
 {
-  reshape(shape);
+  reshapef(shape);
   memcpy(&p[0], x, nelem() * sizeof(T));
 }
 
@@ -484,7 +484,7 @@ template <typename T>
 void ndarray<T>::copy_vector(const std::vector<T> &array)
 {
   p = array;
-  reshape({p.size()});
+  reshapef({p.size()});
 }
 
 template <typename T>
@@ -493,7 +493,7 @@ void ndarray<T>::copy(Iterator first, Iterator last)
 {
   p.clear();
   std::copy(first, last, std::back_inserter(p));
-  reshape({p.size()});
+  reshapef({p.size()});
 }
 
 template <typename T>
@@ -533,7 +533,7 @@ void ndarray<T>::bil_add_block_raw(const std::string& filename,
     const lattice& ext)
 {
 #if FTK_HAVE_MPI
-  reshape(ext.sizes());
+  reshapef(ext.sizes());
   std::vector<int> domain, st, sz;
  
   for (int i = 0; i < nd(); i ++) {
@@ -579,7 +579,7 @@ void ndarray<T>::read_binary_file_sequence(const std::string& pattern)
 
   std::vector<size_t> mydims = dims;
   mydims[nd() - 1] = filenames.size();
-  reshape(mydims);
+  reshapef(mydims);
  
   size_t npt = std::accumulate(dims.begin(), dims.end()-1, 1, std::multiplies<size_t>());
   for (int i = 0; i < filenames.size(); i ++) {
@@ -616,10 +616,10 @@ inline void ndarray<T>::from_vtk_data_array(
   const int nc = da->GetNumberOfComponents(), 
             ne = da->GetNumberOfTuples();
   if (nc > 1) {
-    reshape(nc, ne);
+    reshapef(nc, ne);
     set_multicomponents(1);
   } else {
-    reshape(ne);
+    reshapef(ne);
     set_multicomponents(0);
   }
 
@@ -656,15 +656,15 @@ inline void ndarray<T>::from_vtk_regular_data(
   d->GetDimensions(vdims);
 
   if (nd == 2) {
-    if (nc == 1) reshape(vdims[0], vdims[1]); //scalar field
+    if (nc == 1) reshapef(vdims[0], vdims[1]); //scalar field
     else {
-      reshape(nc, vdims[0], vdims[1]); // vector field
+      reshapef(nc, vdims[0], vdims[1]); // vector field
       ncd = 1; // multicomponent array
     };
   } else if (nd == 3) {
-    if (nc == 1) reshape(vdims[0], vdims[1], vdims[2]); // scalar field
+    if (nc == 1) reshapef(vdims[0], vdims[1], vdims[2]); // scalar field
     else {
-      reshape(nc, vdims[0], vdims[1], vdims[2]);
+      reshapef(nc, vdims[0], vdims[1], vdims[2]);
       ncd = 1; // multicomponent array
     }
   } else {
@@ -727,7 +727,7 @@ inline void ndarray<T>::read_vtk_image_data_file_sequence(const std::string& pat
 
   auto dims = array.dims;
   dims.push_back(filenames.size());
-  reshape(dims);
+  reshapef(dims);
 }
 #else
 template<typename T>
@@ -761,23 +761,23 @@ ndarray<T>::ndarray(const T *a, const std::vector<size_t> &dims_)
   
 template <typename T> 
 template <typename I> 
-void ndarray<T>::reshape(const int ndims, const I sz[])
+void ndarray<T>::reshapef(const int ndims, const I sz[])
 {
   std::vector<size_t> sizes(ndims);
   for (int i = 0; i < ndims; i ++)
     sizes[i] = sz[i];
-  reshape(sizes);
+  reshapef(sizes);
 }
 
 template <typename T>
 template <typename T1>
 void ndarray<T>::reshape(const ndarray<T1>& array)
 {
-  reshape(array.shape());
+  reshapef(array.shape());
 }
 
 template <typename T>
-void ndarray<T>::reshape(const std::vector<size_t> &dims_)
+void ndarray<T>::reshapef(const std::vector<size_t> &dims_)
 {
   dims = dims_;
   s.resize(dims.size());
@@ -793,9 +793,9 @@ void ndarray<T>::reshape(const std::vector<size_t> &dims_)
 }
 
 template <typename T>
-void ndarray<T>::reshape(const std::vector<size_t> &dims, T val)
+void ndarray<T>::reshapef(const std::vector<size_t> &dims, T val)
 {
-  reshape(dims);
+  reshapef(dims);
   std::fill(p.begin(), p.end(), val);
 }
 
@@ -871,15 +871,15 @@ inline void ndarray<T>::read_bp(adios2::IO &io, adios2::Engine &reader, adios2::
     if (shape.size()) { // array type
       std::vector<size_t> zeros(shape.size(), 0);
       // fprintf(stderr, "%zu, %zu\n", shape.size(), zeros.size());
-      reshape(shape);
+      reshapef(shape);
 
       var.SetSelection({zeros, shape}); // read everything
       reader.Get<T>(var, p);
 
       std::reverse(shape.begin(), shape.end()); // we use a different dimension ordering than adios..
-      reshape(shape);
+      reshapef(shape);
     } else { // scalar type
-      reshape(1);
+      reshapef(1);
       reader.Get<T>(var, p);
     }
   } else {
@@ -923,7 +923,7 @@ bool ndarray<T>::read_bp_legacy(ADIOS_FILE *fp, const std::string& varname)
   
   if (!mydims.empty()) {
     std::reverse(mydims.begin(), mydims.end());
-    reshape(mydims);
+    reshapef(mydims);
 
     ADIOS_SELECTION *sel = adios_selection_boundingbox(avi->ndim, st, sz);
     assert(sel->type == ADIOS_SELECTION_BOUNDINGBOX);
@@ -935,7 +935,7 @@ bool ndarray<T>::read_bp_legacy(ADIOS_FILE *fp, const std::string& varname)
     return true; // avi->ndim;
   } else {
     if (avi->type == adios_integer) { // TODO: other data types
-      reshape({1});
+      reshapef({1});
       p[0] = *((int*)avi->value);
       return true;
     }
@@ -1052,11 +1052,11 @@ inline bool ndarray<T>::read_h5_did(hid_t did)
     for (auto i = 0; i < h5ndims; i ++)
       dims[i] = h5dims[i];
     std::reverse(dims.begin(), dims.end()); // we use a different dimension ordering than hdf5..
-    reshape(dims);
+    reshapef(dims);
     
     H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
   } else if (type == H5S_SCALAR) {
-    reshape(1);
+    reshapef(1);
     H5Dread(did, h5_mem_type_id(), H5S_ALL, H5S_ALL, H5P_DEFAULT, p.data());
   } else 
     fatal("unsupported h5 extent type");
@@ -1097,7 +1097,7 @@ inline ndarray<T> ndarray<T>::slice_time(size_t t) const
   std::vector<size_t> mydims(dims);
   mydims.resize(nd()-1);
 
-  array.reshape(mydims);
+  array.reshapef(mydims);
   memcpy(&array[0], &p[t * s[nd()-1]], s[nd()-1] * sizeof(T));
 
   return array;
@@ -1183,20 +1183,20 @@ ndarray<T> ndarray<T>::get_transpose() const
   if (nd() == 0) return a;
   else if (nd() == 1) return *this;
   else if (nd() == 2) {
-    a.reshape(dim(1), dim(0));
+    a.reshapef(dim(1), dim(0));
     for (auto i = 0; i < dim(0); i ++) 
       for (auto j = 0; j < dim(1); j ++)
         a.f(j, i) = f(i, j);
     return a;
   } else if (nd() == 3) {
-    a.reshape(dim(2), dim(1), dim(0));
+    a.reshapef(dim(2), dim(1), dim(0));
     for (auto i = 0; i < dim(0); i ++) 
       for (auto j = 0; j < dim(1); j ++)
         for (auto k = 0; k < dim(2); k ++)
           a.f(k, j, i) = f(i, j, k);
     return a;
   } else if (nd() == 4) {
-    a.reshape(dim(3), dim(2), dim(1), dim(0));
+    a.reshapef(dim(3), dim(2), dim(1), dim(0));
     for (auto i = 0; i < dim(0); i ++) 
       for (auto j = 0; j < dim(1); j ++)
         for (auto k = 0; k < dim(2); k ++)
@@ -1215,7 +1215,7 @@ ndarray<T> ndarray<T>::concat(const std::vector<ndarray<T>>& arrays)
   ndarray<T> result;
   std::vector<size_t> result_shape = arrays[0].shape();
   result_shape.insert(result_shape.begin(), arrays.size());
-  result.reshape(result_shape);
+  result.reshapef(result_shape);
 
   const auto n = arrays[0].nelem();
   const auto n1 = arrays.size();
@@ -1233,7 +1233,7 @@ ndarray<T> ndarray<T>::stack(const std::vector<ndarray<T>>& arrays)
   ndarray<T> result;
   std::vector<size_t> result_shape = arrays[0].shape();
   result_shape.push_back(arrays.size());
-  result.reshape(result_shape);
+  result.reshapef(result_shape);
 
   const auto n = arrays[0].nelem();
   const auto n1 = arrays.size();
@@ -1259,7 +1259,7 @@ void ndarray<T>::from_numpy(const pybind11::array_t<T, pybind11::array::c_style 
   std::vector<size_t> shape;
   for (auto i = 0; i < buf.ndim; i ++)
     shape.push_back(array.shape(i));
-  reshape(shape);
+  reshapef(shape);
 
   from_array((T*)buf.ptr, shape);
 }
@@ -1284,9 +1284,9 @@ void ndarray<T>::to_png(const std::string& filename) const
 {
   ndarray<unsigned char> buf;
   if (nd() == 2) 
-    buf.reshape({4, dim(0), dim(1)});
+    buf.reshapef({4, dim(0), dim(1)});
   else if (nd() == 3 && dim(0) <= 4) 
-    buf.reshape({4, dim(1), dim(2)});
+    buf.reshapef({4, dim(1), dim(2)});
   else 
     fatal("unable to save to png");
 
@@ -1374,7 +1374,7 @@ inline bool ndarray<float>::read_amira(const std::string& filename)
     fgets(buffer, 2047, fp);
     fgets(buffer, 2047, fp);
 
-    reshape(NumComponents, xDim, yDim, zDim);
+    reshapef(NumComponents, xDim, yDim, zDim);
     set_multicomponents();
     read_binary_file(fp);
   }

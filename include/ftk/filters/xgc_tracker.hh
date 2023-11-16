@@ -132,9 +132,9 @@ inline void xgc_tracker::push_field_data_snapshot(
   ndarray<double> F, G, J;
 
   F.reshape(scalar);
-  G.reshape(2, scalar.dim(0), scalar.dim(1));
+  G.reshapef(2, scalar.dim(0), scalar.dim(1));
   G.set_multicomponents(1);
-  J.reshape(2, 2, scalar.dim(0), scalar.dim(1));
+  J.reshapef(2, 2, scalar.dim(0), scalar.dim(1));
   J.set_multicomponents(2);
   
   for (size_t i = 0; i < m3->get_nphi(); i ++) {

@@ -254,7 +254,7 @@ ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_total_B(const ndarray<F>& As) co
     totalB.set_multicomponents();
   } else if (As.nd() == 2) {
     const auto deltaB = derive_delta_B(As);
-    totalB.reshape(deltaB);
+    totalB.reshapef(deltaB);
     for (int p = 0; p < As.dim(1); p ++)
       for (int i = 0; i < this->n(0); i ++)
         for (int j = 0; j < 3; j ++)
@@ -271,7 +271,7 @@ ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_delta_B(const ndarray<F>& As) co
   if (As.nd() == 1) { // wrong..
 #if 0
     ndarray<F> gradAs = this->scalar_gradient(As);
-    deltaB.reshape(3, this->n(0));
+    deltaB.reshapef(3, this->n(0));
     deltaB.set_multicomponents();
 
     for (int i = 0; i < this->n(0); i ++) {
@@ -287,7 +287,7 @@ ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_delta_B(const ndarray<F>& As) co
 
     // ndarray<F> gradAs = this->vector_gradient(As.get_transpose()); // we only have dB/dR and dB/dZ
 
-    deltaB.reshape(3, this->n(0), As.dim(1));
+    deltaB.reshapef(3, this->n(0), As.dim(1));
     deltaB.set_multicomponents(2);
 
     for (int c = 0; c < As.dim(1); c ++) {
@@ -295,7 +295,7 @@ ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_delta_B(const ndarray<F>& As) co
                 cprev = (c + np - 1) % np;
 
       ndarray<F> Asp;
-      Asp.reshape(this->n(0));
+      Asp.reshapef(this->n(0));
       for (int i = 0; i < this->n(0); i ++)
         Asp[i] = As(i, c);
       ndarray<F> gradAs = this->scalar_gradient(As); // FIXME: this won't work as expected.  need to eval grad plane by plane
@@ -322,7 +322,7 @@ void simplicial_xgc_2d_mesh<I, F>::derive_curl_bfield0()
   if (bfield0.empty()) derive_bfield0();
   
   ndarray<F> gradRZ_bfield0 = this->vector_gradient(bfield0); // dbr/dphi, dbz/dphi, dbphi/dphi are zero
-  curl_bfield0.reshape(3, bfield0.dim(1));
+  curl_bfield0.reshapef(3, bfield0.dim(1));
 
   for (int i = 0; i < bfield0.dim(1); i ++) {
     const F R = this->vertex_coords.f(0, i);
@@ -537,7 +537,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
 
   ndarray<I> new_triangles_array;
   new_triangles_array.copy_vector(new_triangles);
-  new_triangles_array.reshape(3, new_triangles.size() / 3);
+  new_triangles_array.reshapef(3, new_triangles.size() / 3);
   
   // std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> m2( new simplicial_unstructured_2d_mesh<I, F>( new_coords, new_triangles_array ) );
   // return m2;
@@ -547,7 +547,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
  
   // updating psifield and bfield
   if (!psifield.empty()) {
-    mx2->psifield.reshape(nn);
+    mx2->psifield.reshapef(nn);
     for (int i = 0; i < nn; i ++) {
       const auto k = roi_nodes[i];
       mx2->psifield[i] = psifield[k];
@@ -555,7 +555,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::new_
   }
 
   if (!bfield.empty()) {
-    mx2->bfield.reshape(3, nn);
+    mx2->bfield.reshapef(3, nn);
     for (int i = 0; i < nn; i ++) {
       const auto k = roi_nodes[i];
       mx2->psifield[i] = psifield[k];
@@ -582,7 +582,7 @@ void simplicial_xgc_2d_mesh<I, F>::initialize_roi(
   const F theta_min_rad = theta_min_deg * M_PI / 180, 
           theta_max_rad = theta_max_deg * M_PI / 180;
 
-  roi.reshape(nextnodes.shape());
+  roi.reshapef(nextnodes.shape());
   roi_nodes.clear();
 
   for (int i = 0; i < psifield.size(); i ++) {

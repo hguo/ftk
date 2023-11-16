@@ -283,15 +283,15 @@ inline void xgc_eq_t::parse(const std::string& filename)
   ifs >> axis_r >> axis_z >> axis_b;
   ifs >> x_psi >> x_r >> x_z;
   
-  psigrid.reshape(mpsi);
+  psigrid.reshapef(mpsi);
   for (int i=0; i<mpsi; i++) 
     ifs >> psigrid[i];
 
-  I.reshape(mpsi);
+  I.reshapef(mpsi);
   for (int i=0; i<mpsi; i++) 
     ifs >> I[i];
 
-  psi_rz.reshape(mr, mz); // column major order, the dim of mr changes faster
+  psi_rz.reshapef(mr, mz); // column major order, the dim of mr changes faster
   // ndarray<double> psi_rz_column_major; 
   // psi_rz_column_major.reshape(mz, mr);
   for (int i=0; i<mr*mz; i++) 
@@ -307,11 +307,11 @@ inline void xgc_eq_t::parse(const std::string& filename)
 
   ifs.close();
 
-  rgrid.reshape(mr);
+  rgrid.reshapef(mr);
   for (int i=0; i<mr; i++)
     rgrid[i] = min_r + (max_r - min_r) / (mr - 1) * i;
 
-  zgrid.reshape(mz);
+  zgrid.reshapef(mz);
   for (int i=0; i<mz; i++) 
     zgrid[i] = min_z + (max_z - min_z) / (mz - 1) * i;
 
@@ -372,11 +372,11 @@ inline void xgc_eq_t::read_bp(adios2::IO &io, adios2::Engine& reader)
   read_double("eq_x_r", this->x_r);
   read_double("eq_x_z", this->x_z);
   
-  rgrid.reshape(mr);
+  rgrid.reshapef(mr);
   for (int i=0; i<mr; i++)
     rgrid[i] = min_r + (max_r - min_r) / (mr - 1) * i;
 
-  zgrid.reshape(mz);
+  zgrid.reshapef(mz);
   for (int i=0; i<mz; i++) 
     zgrid[i] = min_z + (max_z - min_z) / (mz - 1) * i;
 }

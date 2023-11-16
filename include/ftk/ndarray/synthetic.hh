@@ -1,3 +1,4 @@
+
 #ifndef _HYPERMESH_SYNTHETIC_DATA_H
 #define _HYPERMESH_SYNTHETIC_DATA_H
 
@@ -30,7 +31,7 @@ template <typename T>
 ndarray<T> synthetic_woven_2D(int DW, int DH, T t = T(1e-4), T scaling_factor = T(15))
 {
   ndarray<T> scalar;
-  scalar.reshape(DW, DH);
+  scalar.reshapef(DW, DH);
 
   // const T scaling_factor = 15; // the factor that controls the shape of the synthesize data
   for (int j = 0; j < DH; j ++) {
@@ -48,7 +49,7 @@ template <typename T>
 ndarray<T> synthetic_capped_woven_grad_2D(int DW, int DH, T t = T(1e-4), T cap = 10, T scaling_factor = T(15))
 {
   ndarray<T> vector;
-  vector.reshape(3, DW, DH);
+  vector.reshapef(3, DW, DH);
   vector.set_multicomponents(1);
 
   // const T scaling_factor = 15; // the factor that controls the shape of the synthesize data
@@ -72,7 +73,7 @@ template <typename T>
 ndarray<T> synthetic_woven_2D_part(const lattice& ext, const lattice& core, T t = T(1e-4), T scaling_factor = T(15))
 {
   ndarray<T> scalar;
-  scalar.reshape(core.sizes());
+  scalar.reshapef(core.sizes());
 
   const int DW = ext.size(0), DH = ext.size(1);
   for (int j = 0; j < core.size(1) ; j ++) {
@@ -91,7 +92,7 @@ template <typename T>
 ndarray<T> synthetic_woven_2Dt(int DW, int DH, int DT, T scaling_factor = T(15))
 {
   ndarray<T> scalar;
-  scalar.reshape(DW, DH, DT);
+  scalar.reshapef(DW, DH, DT);
 
   // const T scaling_factor = 15; // the factor that controls the shape of the synthesize data
   for (int k = 0; k < DT; k ++) {
@@ -116,7 +117,7 @@ ndarray<T> synthetic_woven_2D_unstructured(
     )
 {
   ndarray<T> scalar;
-  scalar.reshape(coords.dim(1));
+  scalar.reshapef(coords.dim(1));
 
   for (int i = 0; i < coords.dim(1); i ++) {
     double x = (coords(0, i) - center[0]) * scaling_factor,
@@ -177,7 +178,7 @@ ndarray<T> synthetic_double_gyre_unstructured(
     const T epsilon = 0.25)
 {
   ndarray<T> result; 
-  result.reshape(coords);
+  result.reshapef(coords);
   result.set_multicomponents();
 
   for (auto i = 0; i < coords.dim(1); i ++) {
@@ -197,7 +198,7 @@ ndarray<T> synthetic_double_gyre(int DW, int DH, const T time, bool zchannel=fal
     const T epsilon = 0.25)
 {
   ndarray<T> Vf;
-  Vf.reshape(2 + zchannel, DW, DH);
+  Vf.reshapef(2 + zchannel, DW, DH);
   Vf.set_multicomponents();
 
   for (int j = 0; j < DH; j ++) {
@@ -241,7 +242,7 @@ ndarray<T> synthetic_abc_flow(int DW, int DH, int DD,
     T A=std::sqrt(T(3)), T B=std::sqrt(T(2)), T C=T(1))
 {
   ndarray<T> Vf;
-  Vf.reshape(3, DW, DH, DD);
+  Vf.reshapef(3, DW, DH, DD);
   Vf.set_multicomponents();
 
   for (int k = 0; k < DD; k ++)
@@ -283,7 +284,7 @@ template <typename T>
 ndarray<T> synthetic_merger_2D(int DW, int DH, T t)
 {
   ndarray<T> scalar;
-  scalar.reshape(DW, DH);
+  scalar.reshapef(DW, DH);
   
   for (int j = 0; j < DH; j ++) {
     for (int i = 0; i < DW; i ++) {
@@ -361,7 +362,7 @@ ndarray<T> synthetic_moving_extremum_unstructured(
     T t)
 {
   ndarray<T> scalar;
-  scalar.reshape(coords.dim(1));
+  scalar.reshapef(coords.dim(1));
 
   std::array<T, N> xc;
   for (int j = 0; j < N; j ++)
@@ -386,7 +387,7 @@ ndarray<T> synthetic_moving_extremum_grad_unstructured(
     T t)
 {
   ndarray<T> V;
-  V.reshape(N, coords.dim(1));
+  V.reshapef(N, coords.dim(1));
 
   std::array<T, N> xc;
   for (int j = 0; j < N; j ++)
@@ -441,7 +442,7 @@ template <typename T>
 ndarray<T> synthetic_tornado(int xs, int ys, int zs, int time)
 {
   ndarray<T> array;
-  array.reshape({3, static_cast<size_t>(xs), static_cast<size_t>(ys), static_cast<size_t>(zs)});
+  array.reshapef({3, static_cast<size_t>(xs), static_cast<size_t>(ys), static_cast<size_t>(zs)});
   array.set_multicomponents();
   T *tornado = &array[0];
 
