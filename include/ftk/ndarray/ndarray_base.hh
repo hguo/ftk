@@ -89,15 +89,24 @@ struct ndarray_base {
   void reshape(size_t ndims, const size_t sizes[]);
   void reshape(const ndarray_base& array); //! copy shape from another array
   template <typename T> void reshape(const ndarray<T>& array); //! copy shape from another array
-  
-  size_t index(const std::vector<size_t>& idx) const;
-  size_t index(const std::vector<int>& idx) const;
-  size_t index(const size_t idx[]) const;
+
+public:
+  size_t indexf(const std::vector<size_t>& idx) const;
+  size_t indexf(const std::vector<int>& idx) const;
+  size_t indexf(const size_t idx[]) const;
   
   template <typename uint=size_t>
-  std::vector<uint> from_index(uint i) const {return lattice().from_integer(i);}
+  std::vector<uint> from_indexf(uint i) const {return lattice().from_integer(i);}
 
   lattice get_lattice() const;
+
+public:
+  size_t indexc(const std::vector<size_t>& idx) const;
+  size_t indexc(const std::vector<int>& idx) const;
+  size_t indexc(const size_t idx[]) const;
+  
+  template <typename uint=size_t>
+  std::vector<uint> from_indexc(uint i) const; // FIXME {return lattice().from_integer(i);}
 
 public:
   virtual double get(size_t i0) const = 0;
@@ -221,23 +230,23 @@ inline void ndarray_base::reshape(const ndarray_base& array)
   reshape(array.shape());
 }
 
-inline size_t ndarray_base::index(const size_t idx[]) const {
+inline size_t ndarray_base::indexf(const size_t idx[]) const {
   size_t i(idx[0]);
   for (size_t j = 1; j < nd(); j ++)
     i += idx[j] * s[j];
   return i;
 }
 
-inline size_t ndarray_base::index(const std::vector<size_t>& idx) const {
+inline size_t ndarray_base::indexf(const std::vector<size_t>& idx) const {
   size_t i(idx[0]);
   for (size_t j = 1; j < nd(); j ++)
     i += idx[j] * s[j];
   return i;
 }
 
-inline size_t ndarray_base::index(const std::vector<int>& idx) const {
+inline size_t ndarray_base::indexf(const std::vector<int>& idx) const {
   std::vector<size_t> myidx(idx.begin(), idx.end());
-  return index(myidx);
+  return indexf(myidx);
 }
 
 inline void ndarray_base::make_multicomponents()

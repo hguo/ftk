@@ -35,7 +35,7 @@ void levy_degani_seginer_tracker_3d_regular::simplex_residue_vorts(
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     const auto &f = field_data_snapshots[iv];
 
-    const auto idx = f.uv.index(std::vector<size_t>({
+    const auto idx = f.uv.indexf(std::vector<size_t>({
           0,
           vertices[i][0] - local_array_domain.start(0), 
           vertices[i][1] - local_array_domain.start(1), 

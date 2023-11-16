@@ -35,14 +35,14 @@ void sujudi_haimes_tracker_3d_regular::simplex_residue_J(
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     const auto &f = field_data_snapshots[iv];
 
-    const auto idx = f.uv.index(std::vector<size_t>({
+    const auto idx = f.uv.indexf(std::vector<size_t>({
           0,
           vertices[i][0] - local_array_domain.start(0), 
           vertices[i][1] - local_array_domain.start(1), 
           vertices[i][2] - local_array_domain.start(2)}));
     residues[i] = f.uv[idx+2];
 
-    const auto idxJ = f.J.index(std::vector<size_t>({
+    const auto idxJ = f.J.indexf(std::vector<size_t>({
           0, 0,
           vertices[i][0] - local_array_domain.start(0), 
           vertices[i][1] - local_array_domain.start(1), 

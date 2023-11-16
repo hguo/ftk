@@ -91,14 +91,67 @@ struct ndarray : public ndarray_base {
   static ndarray<T> concat(const std::vector<ndarray<T>>& arrays);
   static ndarray<T> stack(const std::vector<ndarray<T>>& arrays);
 
-  T& at(const std::vector<size_t>& idx) {return p[index(idx)];}
-  const T& at(const std::vector<size_t>& idx) const {return p[index(idx)];}
+public: // f-style access
+  T& f(const std::vector<size_t>& idx) {return p[indexf(idx)];}
+  const T& f(const std::vector<size_t>& idx) const {return p[indexf(idx)];}
   
-  T& at(const size_t idx[]) {return p[index(idx)];}
-  const T& at(const size_t idx[]) const {return p[index(idx)];}
+  T& f(const size_t idx[]) {return p[indexf(idx)];}
+  const T& f(const size_t idx[]) const {return p[indexf(idx)];}
   
-  T& at(const std::vector<int>& idx) {return p[index(idx)];}
-  const T& at(const std::vector<int>& idx) const {return p[index(idx)];}
+  T& f(const std::vector<int>& idx) {return p[indexf(idx)];}
+  const T& f(const std::vector<int>& idx) const {return p[indexf(idx)];}
+
+  T& f(size_t i0) {return p[i0];}
+  T& f(size_t i0, size_t i1) {return p[i0+i1*s[1]];}
+  T& f(size_t i0, size_t i1, size_t i2) {return p[i0+i1*s[1]+i2*s[2]];}
+  T& f(size_t i0, size_t i1, size_t i2, size_t i3) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
+  T& f(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
+  T& f(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
+  T& f(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
+
+  const T& f(size_t i0) const {return p[i0];}
+  const T& f(size_t i0, size_t i1) const {return p[i0+i1*s[1]];}
+  const T& f(size_t i0, size_t i1, size_t i2) const {return p[i0+i1*s[1]+i2*s[2]];}
+  const T& f(size_t i0, size_t i1, size_t i2, size_t i3) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
+  const T& f(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
+  const T& f(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
+  const T& f(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
+
+public: // c-style access
+  T& c(const std::vector<size_t>& idx) {return p[indexc(idx)];}
+  const T& c(const std::vector<size_t>& idx) const {return p[indexc(idx)];}
+  
+  T& c(const size_t idx[]) {return p[indexc(idx)];}
+  const T& c(const size_t idx[]) const {return p[indexc(idx)];}
+  
+  T& c(const std::vector<int>& idx) {return p[indexc(idx)];}
+  const T& c(const std::vector<int>& idx) const {return p[indexc(idx)];}
+
+  T& c(size_t i0) {return p[i0];}
+  T& c(size_t i0, size_t i1) {return p[i1+i0*s[1]];}
+  T& c(size_t i0, size_t i1, size_t i2) {return p[i2+i1*s[1]+i0*s[2]];}
+  T& c(size_t i0, size_t i1, size_t i2, size_t i3) {return p[i3+i2*s[1]+i1*s[2]+i0*s[3]];}
+  T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) {return p[i4+i3*s[1]+i2*s[2]+i1*s[3]+i0*s[4]];}
+  T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) {return p[i5+i4*s[1]+i3*s[2]+i2*s[3]+i1*s[4]+i0*s[5]];}
+  T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) {return p[i6+i5*s[1]+i4*s[2]+i3*s[3]+i2*s[4]+i1*s[5]+i0*s[6]];}
+
+  const T& c(size_t i0) const {return p[i0];}
+  const T& c(size_t i0, size_t i1) const {return p[i1+i0*s[1]];}
+  const T& c(size_t i0, size_t i1, size_t i2) const {return p[i2+i1*s[1]+i0*s[2]];}
+  const T& c(size_t i0, size_t i1, size_t i2, size_t i3) const {return p[i3+i2*s[1]+i1*s[2]+i0*s[3]];}
+  const T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i4+i3*s[1]+i2*s[2]+i1*s[3]+i0*s[4]];}
+  const T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i5+i4*s[1]+i3*s[2]+i2*s[3]+i1*s[4]+i0*s[5]];}
+  const T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i6+i5*s[1]+i4*s[2]+i3*s[3]+i2*s[4]+i1*s[5]+i0*s[6]];}
+
+public: // legacy f-style access
+  T& at(const std::vector<size_t>& idx) {return p[indexf(idx)];}
+  const T& at(const std::vector<size_t>& idx) const {return p[indexf(idx)];}
+  
+  T& at(const size_t idx[]) {return p[indexf(idx)];}
+  const T& at(const size_t idx[]) const {return p[indexf(idx)];}
+  
+  T& at(const std::vector<int>& idx) {return p[indexf(idx)];}
+  const T& at(const std::vector<int>& idx) const {return p[indexf(idx)];}
 
   T& at(size_t i0) {return p[i0];}
   T& at(size_t i0, size_t i1) {return p[i0+i1*s[1]];}
@@ -144,6 +197,7 @@ struct ndarray : public ndarray_base {
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
   const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
 
+public:
   friend std::ostream& operator<<(std::ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
   friend bool operator==(const ndarray<T>& lhs, const ndarray<T>& rhs) {return lhs.dims == rhs.dims && lhs.p == rhs.p;}
 

@@ -34,7 +34,7 @@ void ridge_valley_tracker_3d_regular::simplex_scalars(
     const int iv = vertices[i][3] == current_timestep ? 0 : 1;
     const auto &f = field_data_snapshots[iv];
 
-    const auto idx = f.scalar.index(std::vector<size_t>({
+    const auto idx = f.scalar.indexf(std::vector<size_t>({
           vertices[i][0] - local_array_domain.start(0), 
           vertices[i][1] - local_array_domain.start(1), 
           vertices[i][2] - local_array_domain.start(2)}));
