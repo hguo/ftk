@@ -696,13 +696,13 @@ inline vtkSmartPointer<vtkImageData> ndarray<T>::to_vtk_image_data(std::string v
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
   // fprintf(stderr, "to_vtk_image_data, ncd=%zu\n", ncd);
   if (ncd) { // multicomponent
-    if (nd() == 3) d->SetDimensions(shape(1), shape(2), 1);
-    else d->SetDimensions(shape(1), shape(2), shape(3)); // nd == 4
+    if (nd() == 3) d->SetDimensions(shapef(1), shapef(2), 1);
+    else d->SetDimensions(shapef(1), shapef(2), shapef(3)); // nd == 4
 
     if (varname.empty()) varname = "vector";
   } else {
-    if (nd() == 2) d->SetDimensions(shape(0), shape(1), 1);
-    else d->SetDimensions(shape(0), shape(1), shape(2)); // nd == 3
+    if (nd() == 2) d->SetDimensions(shapef(0), shapef(1), 1);
+    else d->SetDimensions(shapef(0), shapef(1), shapef(2)); // nd == 3
     
     if (varname.empty()) varname = "scalar";
   }

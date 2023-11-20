@@ -75,9 +75,19 @@ struct ndarray_base {
   virtual bool empty() const = 0;
 
   size_t nd() const {return dims.size();}
-  size_t dim(size_t i) const {return dims[i];}
-  size_t shape(size_t i) const {return dim(i);}
-  const std::vector<size_t> &shape() const {return dims;}
+  
+  size_t dimf(size_t i) const {return dims[i];}
+  size_t shapef(size_t i) const {return dim(i);}
+  const std::vector<size_t> &shapef() const {return dims;}
+
+  size_t dimc(size_t i) const {return dims[dims.size() - i -1];}
+  size_t shapec(size_t i) const {return dimc(i);}
+  const std::vector<size_t> shapec() const {std::vector<size_t> dc(dims); std::reverse(dc.begin(), dc.end()); return dc;}
+  
+  [[deprecated]] size_t dim(size_t i) const { return dimf(i); }
+  [[deprecated]] size_t shape(size_t i) const {return dimf(i);}
+  [[deprecated]] const std::vector<size_t> &shape() const {return shapef();}
+
   size_t nelem() const { if (empty()) return 0; else return std::accumulate(dims.begin(), dims.end(), 1, std::multiplies<size_t>()); }
   virtual size_t elem_size() const = 0;
  
@@ -91,6 +101,10 @@ struct ndarray_base {
   void reshapec(const std::vector<size_t> &dims_);
   void reshapec(const std::vector<int>& dims);
   void reshapec(size_t ndims, const size_t sizes[]);
+  
+  [[deprecated]] virtual void reshape(const std::vector<size_t> &dims_) { reshapef(dims_); }
+  [[deprecated]] void reshape(const std::vector<int>& dims) { reshapef(dims); }
+  [[deprecated]] void reshape(size_t ndims, const size_t sizes[]) { reshapef(ndims, sizes); }
 
   void reshape(const ndarray_base& array); //! copy shape from another array
   template <typename T> void reshape(const ndarray<T>& array); //! copy shape from another array
