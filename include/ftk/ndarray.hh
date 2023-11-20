@@ -143,61 +143,61 @@ public: // c-style access
   const T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i5+i4*s[1]+i3*s[2]+i2*s[3]+i1*s[4]+i0*s[5]];}
   const T& c(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i6+i5*s[1]+i4*s[2]+i3*s[3]+i2*s[4]+i1*s[5]+i0*s[6]];}
 
-#if 0
+
 public: // legacy f-style access
-  T& at(const std::vector<size_t>& idx) {return p[indexf(idx)];}
-  const T& at(const std::vector<size_t>& idx) const {return p[indexf(idx)];}
+  [[deprecated]] T& at(const std::vector<size_t>& idx) {return p[indexf(idx)];}
+  [[deprecated]] const T& at(const std::vector<size_t>& idx) const {return p[indexf(idx)];}
   
-  T& at(const size_t idx[]) {return p[indexf(idx)];}
-  const T& at(const size_t idx[]) const {return p[indexf(idx)];}
+  [[deprecated]] T& at(const size_t idx[]) {return p[indexf(idx)];}
+  [[deprecated]] const T& at(const size_t idx[]) const {return p[indexf(idx)];}
   
-  T& at(const std::vector<int>& idx) {return p[indexf(idx)];}
-  const T& at(const std::vector<int>& idx) const {return p[indexf(idx)];}
+  [[deprecated]] T& at(const std::vector<int>& idx) {return p[indexf(idx)];}
+  [[deprecated]] const T& at(const std::vector<int>& idx) const {return p[indexf(idx)];}
 
-  T& at(size_t i0) {return p[i0];}
-  T& at(size_t i0, size_t i1) {return p[i0+i1*s[1]];}
-  T& at(size_t i0, size_t i1, size_t i2) {return p[i0+i1*s[1]+i2*s[2]];}
-  T& at(size_t i0, size_t i1, size_t i2, size_t i3) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
-  T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
-  T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
-  T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
+  [[deprecated]] T& at(size_t i0) {return p[i0];}
+  [[deprecated]] T& at(size_t i0, size_t i1) {return p[i0+i1*s[1]];}
+  [[deprecated]] T& at(size_t i0, size_t i1, size_t i2) {return p[i0+i1*s[1]+i2*s[2]];}
+  [[deprecated]] T& at(size_t i0, size_t i1, size_t i2, size_t i3) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
+  [[deprecated]] T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
+  [[deprecated]] T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
+  [[deprecated]] T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
 
-  const T& at(size_t i0) const {return p[i0];}
-  const T& at(size_t i0, size_t i1) const {return p[i0+i1*s[1]];}
-  const T& at(size_t i0, size_t i1, size_t i2) const {return p[i0+i1*s[1]+i2*s[2]];}
-  const T& at(size_t i0, size_t i1, size_t i2, size_t i3) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
-  const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
-  const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
-  const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
+  [[deprecated]] const T& at(size_t i0) const {return p[i0];}
+  [[deprecated]] const T& at(size_t i0, size_t i1) const {return p[i0+i1*s[1]];}
+  [[deprecated]] const T& at(size_t i0, size_t i1, size_t i2) const {return p[i0+i1*s[1]+i2*s[2]];}
+  [[deprecated]] const T& at(size_t i0, size_t i1, size_t i2, size_t i3) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
+  [[deprecated]] const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
+  [[deprecated]] const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
+  [[deprecated]] const T& at(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
 
-  double get(size_t i0) const { return at(i0); }
-  double get(size_t i0, size_t i1) const { return at(i0, i1); }
-  double get(size_t i0, size_t i1, size_t i2) const { return at(i0, i1, i2); }
-  double get(size_t i0, size_t i1, size_t i2, size_t i3) const { return at(i0, i1, i2, i3); }
-  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const { return at(i0, i1, i2, i3, i4); }
-  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const { return at(i0, i1, i2, i3, i4, i5); }
-  double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const { return at(i0, i1, i2, i3, i4, i5, i6); }
+  [[deprecated]] double get(size_t i0) const { return at(i0); }
+  [[deprecated]] double get(size_t i0, size_t i1) const { return at(i0, i1); }
+  [[deprecated]] double get(size_t i0, size_t i1, size_t i2) const { return at(i0, i1, i2); }
+  [[deprecated]] double get(size_t i0, size_t i1, size_t i2, size_t i3) const { return at(i0, i1, i2, i3); }
+  [[deprecated]] double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const { return at(i0, i1, i2, i3, i4); }
+  [[deprecated]] double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const { return at(i0, i1, i2, i3, i4, i5); }
+  [[deprecated]] double get(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const { return at(i0, i1, i2, i3, i4, i5, i6); }
 
-  T& operator()(const std::vector<size_t>& idx) {return at(idx);}
-  T& operator()(const std::vector<int>& idx) {return at(idx);}
-  T& operator()(size_t i0) {return p[i0];}
-  T& operator()(size_t i0, size_t i1) {return p[i0+i1*s[1]];}
-  T& operator()(size_t i0, size_t i1, size_t i2) {return p[i0+i1*s[1]+i2*s[2]];}
-  T& operator()(size_t i0, size_t i1, size_t i2, size_t i3) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
-  T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
-  T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
-  T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
+  [[deprecated]] T& operator()(const std::vector<size_t>& idx) {return at(idx);}
+  [[deprecated]] T& operator()(const std::vector<int>& idx) {return at(idx);}
+  [[deprecated]] T& operator()(size_t i0) {return p[i0];}
+  [[deprecated]] T& operator()(size_t i0, size_t i1) {return p[i0+i1*s[1]];}
+  [[deprecated]] T& operator()(size_t i0, size_t i1, size_t i2) {return p[i0+i1*s[1]+i2*s[2]];}
+  [[deprecated]] T& operator()(size_t i0, size_t i1, size_t i2, size_t i3) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
+  [[deprecated]] T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
+  [[deprecated]] T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
+  [[deprecated]] T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
   
-  T& operator()(const std::vector<size_t>& idx) const {return at(idx);}
-  T& operator()(const std::vector<int>& idx) const {return at(idx);}
-  const T& operator()(size_t i0) const {return p[i0];}
-  const T& operator()(size_t i0, size_t i1) const {return p[i0+i1*s[1]];}
-  const T& operator()(size_t i0, size_t i1, size_t i2) const {return p[i0+i1*s[1]+i2*s[2]];}
-  const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
-  const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
-  const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
-  const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
-#endif
+  [[deprecated]] T& operator()(const std::vector<size_t>& idx) const {return at(idx);}
+  [[deprecated]] T& operator()(const std::vector<int>& idx) const {return at(idx);}
+  [[deprecated]] const T& operator()(size_t i0) const {return p[i0];}
+  [[deprecated]] const T& operator()(size_t i0, size_t i1) const {return p[i0+i1*s[1]];}
+  [[deprecated]] const T& operator()(size_t i0, size_t i1, size_t i2) const {return p[i0+i1*s[1]+i2*s[2]];}
+  [[deprecated]] const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]];}
+  [[deprecated]] const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]];}
+  [[deprecated]] const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]];}
+  [[deprecated]] const T& operator()(size_t i0, size_t i1, size_t i2, size_t i3, size_t i4, size_t i5, size_t i6) const {return p[i0+i1*s[1]+i2*s[2]+i3*s[3]+i4*s[4]+i5*s[5]+i6*s[6]];}
+
   
 public:
   friend std::ostream& operator<<(std::ostream& os, const ndarray<T>& arr) {arr.print(os); return os;}
