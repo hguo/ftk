@@ -67,11 +67,12 @@ struct ndarray : public ndarray_base {
   void* pdata() {return p.data();}
 
   void swap(ndarray& x);
+  
+  template <typename T1> void reshape(const ndarray<T1>& array); //! copy shape from another array
 
   void reshapef(const std::vector<size_t> &dims_);
   void reshapef(const std::vector<size_t> &dims, T val);
   template <typename I> void reshapef(const int ndims, const I sz[]);
-  template <typename T1> void reshape(const ndarray<T1>& array); //! copy shape from another array
 
   void reshapef(size_t n0) {reshapef(std::vector<size_t>({n0}));}
   void reshapef(size_t n0, size_t n1) {reshapef({n0, n1});}
@@ -80,6 +81,19 @@ struct ndarray : public ndarray_base {
   void reshapef(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4) {reshapef({n0, n1, n2, n3, n4});}
   void reshapef(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5) {reshapef({n0, n1, n2, n3, n4, n5});}
   void reshapef(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshapef({n0, n1, n2, n3, n4, n5, n6});}
+
+  [[deprecated]] void reshape(const std::vector<size_t> &dims_) {reshapef(dims_);}
+  [[deprecated]] void reshape(const std::vector<size_t> &dims, T val) {reshapef(dims, val);}
+  template <typename I> [[deprecated]] void reshape(const int ndims, const I sz[]) {reshapef(ndims, sz);}
+
+  [[deprecated]] void reshape(size_t n0) {reshapef(std::vector<size_t>({n0}));}
+  [[deprecated]] void reshape(size_t n0, size_t n1) {reshapef({n0, n1});}
+  [[deprecated]] void reshape(size_t n0, size_t n1, size_t n2) {reshapef({n0, n1, n2});}
+  [[deprecated]] void reshape(size_t n0, size_t n1, size_t n2, size_t n3) {reshapef({n0, n1, n2, n3});}
+  [[deprecated]] void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4) {reshapef({n0, n1, n2, n3, n4});}
+  [[deprecated]] void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5) {reshapef({n0, n1, n2, n3, n4, n5});}
+  [[deprecated]] void reshape(size_t n0, size_t n1, size_t n2, size_t n3, size_t n4, size_t n5, size_t n6) {reshapef({n0, n1, n2, n3, n4, n5, n6});}
+
   void reset() { p.clear(); dims.clear(); s.clear(); set_multicomponents(0); set_has_time(false); }
 
   ndarray<T> slice(const lattice&) const;

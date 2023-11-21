@@ -43,7 +43,7 @@ TEST_CASE("critical_point_tracking_moving_extremum_2d_unstructured") {
     sprintf(filename, "moving_extremum_grad-%02d.vtu", i);
     m->vector_to_vtk_unstructured_grid_data_file(filename, "grad", grad);
 
-    scalar.reshape({1, scalar.dim(0)});
+    scalar.reshapef({1, scalar.dim(0)});
     tracker.push_field_data_snapshot(scalar, grad, J);
 
     if (i != 0) tracker.advance_timestep();
