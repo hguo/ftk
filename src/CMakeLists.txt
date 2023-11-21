@@ -122,9 +122,9 @@ endif ()
 #  target_link_libraries (libftk ${CUDA_LIBRARIES})
 #endif ()
 
-#if (FTK_HAVE_PYBIND11)
-#  target_link_libraries (libftk ${PYTHON_LIBRARY})
-#endif ()
+if (FTK_HAVE_PYBIND11)
+  target_link_libraries (libftk ${PYTHON_LIBRARY})
+endif ()
 
 install (TARGETS libftk ftk
   EXPORT FTKTargets
