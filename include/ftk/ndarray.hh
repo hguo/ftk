@@ -37,8 +37,9 @@ struct ndarray : public ndarray_base {
   ndarray() {}
   ndarray(const std::vector<size_t> &dims) {reshapef(dims);}
   ndarray(const std::vector<size_t> &dims, T val) {reshapef(dims, val);}
-  ndarray(const lattice& l) {reshapef(l.sizes());}
-  ndarray(const T *a, const std::vector<size_t> &shape);
+
+  [[deprecated]] ndarray(const lattice& l) {reshapef(l.sizes());}
+  [[deprecated]] ndarray(const T *a, const std::vector<size_t> &shape);
   
   template <typename T1> ndarray(const ndarray<T1>& array1) { from_array<T1>(array1); }
   ndarray(const ndarray<T>& a) { dims = a.dims; s = a.s; ncd = a.ncd; tv = a.tv; p = a.p; }
