@@ -29,11 +29,11 @@ struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
   void surface_cells_to_vtu(const std::string filename, std::vector<ndarray_base*> attrs = {}) const;
 
 public:
-  size_t n_vertices() const { return xyzVertices.dim(1); }
-  size_t n_edges() const { return xyzEdges.dim(1); }
-  size_t n_cells() const { return xyzCells.dim(1); }
-  // size_t n_layers() const { return 0; } // return xyzCells.dim(0); }
-  size_t max_edges_on_cell() const { return verticesOnCell.dim(0); }
+  size_t n_vertices() const { return xyzVertices.dimf(1); }
+  size_t n_edges() const { return xyzEdges.dimf(1); }
+  size_t n_cells() const { return xyzCells.dimf(1); }
+  // size_t n_layers() const { return 0; } // return xyzCells.dimf(0); }
+  size_t max_edges_on_cell() const { return verticesOnCell.dimf(0); }
 
   I locate_cell_i(const F x[]) const;
   I locate_cell_i(const F x[], const I prev_cell_i) const;
@@ -169,7 +169,7 @@ void mpas_mesh<I, F>::initialize_c2v_interpolants()
 template <typename I, typename F>
 ndarray<F> mpas_mesh<I, F>::interpolate_e2c(const ndarray<F> &Ve) const
 {
-  const auto nlayers = Ve.dim(0);
+  const auto nlayers = Ve.dimf(0);
 
   ndarray<F> V; // velocity field on cells
   V.reshapef(3, nlayers, n_cells());
@@ -195,7 +195,7 @@ ndarray<F> mpas_mesh<I, F>::zTop_from_zMid_and_thickness(const ndarray<F>& zMid,
 {
   ndarray<F> zTop;
   zTop.reshape(zMid);
-  const auto nlayers = zMid.dim(1);
+  const auto nlayers = zMid.dimf(1);
 
   for (auto i = 0; i < n_cells(); i ++)
     for (auto j = 0; j < nlayers; j ++) {
@@ -210,10 +210,10 @@ ndarray<F> mpas_mesh<I, F>::zTop_from_zMid_and_thickness(const ndarray<F>& zMid,
 template <typename I, typename F>
 ndarray<F> mpas_mesh<I, F>::interpolate_c2v(const ndarray<F>& Vc) const
 {
-  const I nvars = Vc.dim(0);
+  const I nvars = Vc.dimf(0);
 
   ndarray<F> V; // variables on vertices
-  V.reshapef(nvars, Vc.dim(1), n_vertices());
+  V.reshapef(nvars, Vc.dimf(1), n_vertices());
 
   for (auto i = 0; i < n_vertices(); i ++) {
     const auto vid = i2vid(i);
@@ -229,7 +229,7 @@ ndarray<F> mpas_mesh<I, F>::interpolate_c2v(const ndarray<F>& Vc) const
       }
     }
 
-    for (auto layer = 0; layer < Vc.dim(1); layer ++) {
+    for (auto layer = 0; layer < Vc.dimf(1); layer ++) {
       for (auto k = 0; k < nvars; k ++) {
         if (boundary) {
           V.f(k, layer, i) = F(0);
@@ -451,7 +451,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
 
 #if 0
   std::vector<I> vconn;
-  for (int i = 0; i < cellsOnVertex.dim(1); i ++) {
+  for (int i = 0; i < cellsOnVertex.dimf(1); i ++) {
     if (cellsOnVertex(0, i) == 0 || 
         cellsOnVertex(1, i) == 0 ||
         cellsOnVertex(2, i) == 0) 
@@ -512,8 +512,8 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   restingThickness.read_netcdf(ncid, "restingThickness");
   accRestingThickness.reshapef(restingThickness);
 
-  for (auto i = 0; i < restingThickness.dim(1); i ++) { // cells
-    for (auto j = 0; j < restingThickness.dim(0); j ++) { // vertical layers
+  for (auto i = 0; i < restingThickness.dimf(1); i ++) { // cells
+    for (auto j = 0; j < restingThickness.dimf(0); j ++) { // vertical layers
       if (j == 0) accRestingThickness(j, i) = 0;
       else accRestingThickness(j, i) = accRestingThickness(j-1, i) + restingThickness(j, i);
     }
@@ -523,7 +523,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   NC_SAFE_CALL( nc_close(ncid) );
 
   // fprintf(stderr, "mpas mesh: #vert=%zu, #tri=%zu\n", 
-  //     xyzCells.dim(1), conn.dim(1));
+  //     xyzCells.dimf(1), conn.dimf(1));
 
   // return std::shared_ptr<mpas_mesh<I, F>>(
   //     new mpas_mesh<I, F>(xyz, conn));

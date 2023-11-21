@@ -146,7 +146,7 @@ public: // mesh access
   
   int get_triangle_chi(I i) const { return triangles_chi[i] ? -1 : 1; }
 
-  // virtual int ncoords() const { return vertex_coords.dim(0); } // { return 2; }
+  // virtual int ncoords() const { return vertex_coords.dimf(0); } // { return 2; }
   // virtual int ncoords() const { return 3; }
 
 public: // point locator and misc
@@ -221,7 +221,7 @@ bool simplicial_unstructured_2d_mesh<I, F>::eval(const ndarray<T>& f, const F x[
       val[0] = lerp_s2(fs, mu);
       return true;
     } else if (f.multicomponents() == 1) { // vector field
-      const int d = f.dim(0);
+      const int d = f.dimf(0);
       T fs[3][d];
 
       for (int i = 0; i < 3; i ++)
@@ -281,11 +281,11 @@ size_t simplicial_unstructured_2d_mesh<I, F>::n(int d, bool part) const
     else if (d == 2) return part_triangles.size();
     else return 0;
   } else {
-    if (d == 0) return vertex_coords.dim(1);
+    if (d == 0) return vertex_coords.dimf(1);
     else if (d == 1) {
-      return edges.dim(1);
+      return edges.dimf(1);
     } else if (d == 2)
-      return triangles.dim(1);
+      return triangles.dimf(1);
     else return 0;
   }
 }
@@ -456,7 +456,7 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
       edges_side_of.f(j++, kv.second) = tid;
   }
 
-  // for (auto i = 0; i < edges_side_of.dim(1); i ++)
+  // for (auto i = 0; i < edges_side_of.dimf(1); i ++)
   //   fprintf(stderr, "i=%d, tri0=%d, tri1=%d\n", i, edges_side_of(0, i), edges_side_of(1, i));
 
 #if 0
@@ -471,8 +471,8 @@ void simplicial_unstructured_2d_mesh<I, F>::build_edges()
 #endif
   // exit(1);
 
-  vertex_side_of.resize(vertex_coords.dim(1));
-  // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dim(1));
+  vertex_side_of.resize(vertex_coords.dimf(1));
+  // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dimf(1));
 
   vertex_edge_vertex.resize(n(0));
   for (const auto &kv : edge_id_map) {
@@ -627,7 +627,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<
 {
   // compute cellwise gradient
   ndarray<F> cellgrad;
-  cellgrad.reshapef({2, vector.dim(0), n(2)});
+  cellgrad.reshapef({2, vector.dimf(0), n(2)});
   cellgrad.set_multicomponents(2);
   for (int i = 0; i < n(2); i ++) {
     I tri[3];
@@ -640,7 +640,7 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<
       X[j][1] = vertex_coords.f(1, k);
     }
     
-    for (int c = 0; c < vector.dim(0); c ++) {
+    for (int c = 0; c < vector.dimf(0); c ++) {
       F f[3], gradf[2];
       for (int j = 0; j < 3; j ++) {
         f[j] = vector.f(c, tri[j]);
@@ -654,20 +654,20 @@ ndarray<F> simplicial_unstructured_2d_mesh<I, F>::vector_gradient(const ndarray<
   
   // compute pointwise gradient
   ndarray<F> grad;
-  grad.reshapef({2, vector.dim(0), n(0)});
+  grad.reshapef({2, vector.dimf(0), n(0)});
   grad.set_multicomponents(2);
   for (int i = 0; i < n(0); i ++) {
     const auto tris = vertex_triangles[i];
     const auto ntris = tris.size();
 
     for (const auto tri : tris) {
-      for (int c = 0; c < vector.dim(0); c ++) {
+      for (int c = 0; c < vector.dimf(0); c ++) {
         grad.f(0, c, i) += cellgrad.f(0, c, tri);
         grad.f(1, c, i) += cellgrad.f(1, c, tri);
       }
     }
 
-    for (int c = 0; c < vector.dim(0); c ++) {
+    for (int c = 0; c < vector.dimf(0); c ++) {
       grad.f(0, c, i) = grad.f(0, c, i) / ntris;
       grad.f(1, c, i) = grad.f(0, c, i) / ntris;
     }
@@ -961,7 +961,7 @@ void simplicial_unstructured_2d_mesh<I, F>::get_coords(I i, F coords[], bool par
   else {
     coords[0] = vertex_coords.f(0, i);
     coords[1] = vertex_coords.f(1, i);
-    if (vertex_coords.dim(0) > 2)
+    if (vertex_coords.dimf(0) > 2)
       coords[2] = vertex_coords.f(2, i);
     else 
       coords[2] = F(0);

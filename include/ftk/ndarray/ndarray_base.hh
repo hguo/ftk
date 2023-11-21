@@ -77,7 +77,7 @@ struct ndarray_base {
   size_t nd() const {return dims.size();}
   
   size_t dimf(size_t i) const {return dims[i];}
-  size_t shapef(size_t i) const {return dim(i);}
+  size_t shapef(size_t i) const {return dimf(i);}
   const std::vector<size_t> &shapef() const {return dims;}
 
   size_t dimc(size_t i) const {return dims[dims.size() - i -1];}
@@ -275,7 +275,7 @@ inline void ndarray_base::reshapef(size_t ndims, const size_t dims[])
 
 inline void ndarray_base::reshape(const ndarray_base& array)
 {
-  reshapef(array.shape());
+  reshapef(array.shapef());
 }
 
 inline size_t ndarray_base::indexf(const size_t idx[]) const {
@@ -299,7 +299,7 @@ inline size_t ndarray_base::indexf(const std::vector<int>& idx) const {
 
 inline void ndarray_base::make_multicomponents()
 {
-  std::vector<size_t> s = shape();
+  std::vector<size_t> s = shapef();
   s.insert(s.begin(), 1);
   reshapef(s);
   set_multicomponents();
@@ -398,7 +398,7 @@ inline vtkSmartPointer<vtkDataArray> ndarray_base::to_vtk_data_array(std::string
   // fprintf(stderr, "to_vtk_data_array, ncd=%zu\n", ncd);
 
   if (ncd == 1) {
-    d->SetNumberOfComponents(shape(0));
+    d->SetNumberOfComponents(shapef(0));
     d->SetNumberOfTuples( std::accumulate(dims.begin()+1, dims.end(), 1, std::multiplies<size_t>()) );
   }
   else if (ncd == 0) {

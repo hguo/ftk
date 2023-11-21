@@ -382,7 +382,7 @@ scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& scalar) const
   bool need_interpolation;
   if (vphi == 1) 
     need_interpolation = false;
-  else if (scalar.dim(1) == nphi)
+  else if (scalar.dimf(1) == nphi)
     need_interpolation = true;
   else need_interpolation = false;
 
@@ -612,12 +612,12 @@ void simplicial_xgc_3d_mesh<I, F>::smooth_scalar_gradient_jacobian(
   ) const
 {
   S.reshape(scalar);
-  G.reshapef(2, scalar.dim(0), scalar.dim(1));
+  G.reshapef(2, scalar.dimf(0), scalar.dimf(1));
   G.set_multicomponents(1);
-  J.reshapef(2, 2, scalar.dim(0), scalar.dim(1));
+  J.reshapef(2, 2, scalar.dimf(0), scalar.dimf(1));
   J.set_multicomponents(2);
   
-  for (size_t i = 0; i < scalar.dim(1) /* nphi */; i ++) {
+  for (size_t i = 0; i < scalar.dimf(1) /* nphi */; i ++) {
     ndarray<double> f, grad, j;
     auto slice = scalar.slice_time(i);
     m2->smooth_scalar_gradient_jacobian(slice, f, grad, j);
@@ -647,7 +647,8 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
   // see http://visit.ilight.com/svn/visit/trunk/src/databases/ADIOS/avtXGCFileFormat.C
   auto interpolate = [&](const ndarray<F>& x, const ndarray<F>& y, const ndarray<F>& xi) {
     const int n = x.size(), ni = xi.size();
-    ndarray<F> yi(xi.shape());
+    ndarray<F> yi;
+    yi.reshape(xi);
     for (int i = 0; i < ni; i ++) {
       F val = xi[i];
       if (val < x[0])
@@ -670,7 +671,8 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
 
   const ndarray<F>& psi = m2->get_psifield();
 
-  ndarray<F> temp(temp1.shape());
+  ndarray<F> temp;
+  temp.reshape(temp1);
   for (int i = 0 ; i < temp.size(); i ++)
     temp[i] = 2.0 * (temp1[i] + temp2[i]) / 3.0;
 
@@ -698,7 +700,8 @@ ndarray<F> simplicial_xgc_3d_mesh<I, F>::derive_turbulence(
     mean_pot[j] /= nphi;
 
   // ndarray<F> arr({size_t(m2n0), size_t(nphi)});
-  ndarray<F> arr(eden.shape());
+  ndarray<F> arr;
+  arr.reshape(eden);
   for (int i = 0; i < nphi; i ++) {
     for (int j = 0; j < m2n0; j ++) {
       const int idx = i*m2n0 + j;

@@ -406,7 +406,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_vertical(int t, const double *x, 
 
   int verts_i[max_nverts]; //  = {-1};
   const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
-  const int nlayers = zTop[0]->dim(1); // m->n_layers();
+  const int nlayers = zTop[0]->dimf(1); // m->n_layers();
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);
@@ -542,7 +542,7 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
   int verts_i[max_nverts]; //  = {-1};
   const int nverts = m->verts_i_on_cell_i(cell_i, verts_i);
   // const int nlayers = m->n_layers();
-  const int nlayers = zTop[0]->dim(1); // m->n_layers();
+  const int nlayers = zTop[0]->dimf(1); // m->n_layers();
 
   double Xv[max_nverts][3]; // coordinates of vertices
   m->verts_i_coords(nverts, verts_i, Xv);

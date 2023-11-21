@@ -127,7 +127,7 @@ bool simplicial_xgc_2d_mesh<I, F>::eval_total_B(const ndarray<F>& totalB, const 
     return false;
   } else {
     const F phin = mod2pi(rzp[2]) / (M_PI * 2);
-    const int np = totalB.dim(2);
+    const int np = totalB.dimf(2);
     const int i0 = (int(phin * np)) % np;
     const int i1 = (i0 + 1) % np;
 
@@ -255,7 +255,7 @@ ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_total_B(const ndarray<F>& As) co
   } else if (As.nd() == 2) {
     const auto deltaB = derive_delta_B(As);
     totalB.reshapef(deltaB);
-    for (int p = 0; p < As.dim(1); p ++)
+    for (int p = 0; p < As.dimf(1); p ++)
       for (int i = 0; i < this->n(0); i ++)
         for (int j = 0; j < 3; j ++)
           totalB(j, i, p) = deltaB(j, i, p) + bfield(j, i);
@@ -282,15 +282,15 @@ ndarray<F> simplicial_xgc_2d_mesh<I, F>::derive_delta_B(const ndarray<F>& As) co
 #endif
     assert(false);
   } else if (As.nd() == 2) {
-    const int np = As.dim(1);
+    const int np = As.dimf(1);
     const F dphi = 2 * M_PI / np;
 
     // ndarray<F> gradAs = this->vector_gradient(As.get_transpose()); // we only have dB/dR and dB/dZ
 
-    deltaB.reshapef(3, this->n(0), As.dim(1));
+    deltaB.reshapef(3, this->n(0), As.dimf(1));
     deltaB.set_multicomponents(2);
 
-    for (int c = 0; c < As.dim(1); c ++) {
+    for (int c = 0; c < As.dimf(1); c ++) {
       const int cnext = (c + 1) % np, 
                 cprev = (c + np - 1) % np;
 
@@ -322,9 +322,9 @@ void simplicial_xgc_2d_mesh<I, F>::derive_curl_bfield0()
   if (bfield0.empty()) derive_bfield0();
   
   ndarray<F> gradRZ_bfield0 = this->vector_gradient(bfield0); // dbr/dphi, dbz/dphi, dbphi/dphi are zero
-  curl_bfield0.reshapef(3, bfield0.dim(1));
+  curl_bfield0.reshapef(3, bfield0.dimf(1));
 
-  for (int i = 0; i < bfield0.dim(1); i ++) {
+  for (int i = 0; i < bfield0.dimf(1); i ++) {
     const F R = this->vertex_coords.f(0, i);
     curl_bfield0.f(0, i) = -gradRZ_bfield0.f(1, 2, i); // R
     curl_bfield0.f(1, i) = bfield0.f(2, i) / R + gradRZ_bfield0.f(0, 2, i); // Z
@@ -337,7 +337,7 @@ void simplicial_xgc_2d_mesh<I, F>::derive_bfield0()
 {
   bfield0.reshape(bfield);
   bfield0.set_multicomponents();
-  for (int i = 0; i < bfield.dim(1); i ++) {
+  for (int i = 0; i < bfield.dimf(1); i ++) {
     const F br = bfield.f(0, i), 
             bz = bfield.f(1, i),
             bphi = bfield.f(2, i);
@@ -582,7 +582,7 @@ void simplicial_xgc_2d_mesh<I, F>::initialize_roi(
   const F theta_min_rad = theta_min_deg * M_PI / 180, 
           theta_max_rad = theta_max_deg * M_PI / 180;
 
-  roi.reshapef(nextnodes.shape());
+  roi.reshape(nextnodes);
   roi_nodes.clear();
 
   for (int i = 0; i < psifield.size(); i ++) {

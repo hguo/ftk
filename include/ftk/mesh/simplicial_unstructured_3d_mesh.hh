@@ -269,8 +269,8 @@ void simplicial_unstructured_3d_mesh<I, F>::build_edges()
 #endif
 
   /////// 
-  vertex_side_of.resize(vertex_coords.dim(1));
-  // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dim(1));
+  vertex_side_of.resize(vertex_coords.dimf(1));
+  // fprintf(stderr, "resizing vertex_side_of, %zu\n", vertex_coords.dimf(1));
 
   vertex_edge_vertex.resize(n(0));
   for (const auto &kv : edge_id_map) {
@@ -288,15 +288,15 @@ template <typename I, typename F>
 size_t simplicial_unstructured_3d_mesh<I, F>::n(int d, bool part /* TODO */) const
 {
   if (d == 0) 
-    return vertex_coords.dim(1);
+    return vertex_coords.dimf(1);
   else if (d == 1)
-    // return edges.dim(1);
+    // return edges.dimf(1);
     return edges.size();
   else if (d == 2)
-    // return triangles.dim(1);
+    // return triangles.dimf(1);
     return triangles.size();
   else if (d == 3)
-    // return tetrahedra.dim(1);
+    // return tetrahedra.dimf(1);
     return tetrahedra.size();
   else return 0;
 }

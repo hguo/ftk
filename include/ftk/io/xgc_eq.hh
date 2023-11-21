@@ -168,7 +168,7 @@ inline vtkSmartPointer<vtkImageData> xgc_eq_t::to_vti() const
   vtkSmartPointer<vtkImageData> d = vtkImageData::New();
   vtkSmartPointer<vtkDataArray> psi_rz = this->psi_rz.to_vtk_data_array("psi_rz");
 
-  d->SetDimensions(this->rgrid.dim(0), this->zgrid.dim(0), 1);
+  d->SetDimensions(this->rgrid.dimf(0), this->zgrid.dimf(0), 1);
   d->GetPointData()->SetScalars(psi_rz);
   d->SetOrigin(this->min_r, this->min_z, 0.0);
   d->SetSpacing(
@@ -197,7 +197,7 @@ inline vtkSmartPointer<vtkRectilinearGrid> xgc_eq_t::to_vtr() const
   vtkSmartPointer<vtkDataArray> rgrid = this->rgrid.to_vtk_data_array("rgrid");
   vtkSmartPointer<vtkDataArray> zgrid = this->zgrid.to_vtk_data_array("zgrid");
 
-  grid->SetDimensions(this->rgrid.dim(0), this->zgrid.dim(0), 1);
+  grid->SetDimensions(this->rgrid.dimf(0), this->zgrid.dimf(0), 1);
   grid->GetPointData()->SetScalars(psi_rz);
   grid->SetXCoordinates(rgrid);
   grid->SetYCoordinates(zgrid);
@@ -406,7 +406,7 @@ inline void xgc_eq_t::to_h5(const std::string f) const
 
   { // rz grid
     auto sid_rz_grid = H5Screate(H5S_SIMPLE);
-    hsize_t rz_grid_dims[] = {this->psi_rz.dim(1), this->psi_rz.dim(0)};
+    hsize_t rz_grid_dims[] = {this->psi_rz.dimf(1), this->psi_rz.dimf(0)};
     H5Sset_extent_simple(sid_rz_grid, 2, rz_grid_dims, rz_grid_dims);
 
     auto did_psi_rz = H5Dcreate1(fid, "eq_psi_rz", H5T_NATIVE_DOUBLE, sid_rz_grid, H5P_DEFAULT);

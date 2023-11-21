@@ -51,7 +51,7 @@ template <typename TimeIndexType, typename LabelIdType>
 template <typename FloatType>
 void threshold_tracker<TimeIndexType, LabelIdType>::push_scalar_field_data_snapshot(const ndarray<FloatType>& array)
 {
-  input_shape = array.shape();
+  input_shape = array.shapef();
 
   ndarray<LabelIdType> labels; 
   labels.reshape(array);

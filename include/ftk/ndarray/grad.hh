@@ -10,7 +10,7 @@ namespace ftk {
 template <typename T>
 ndarray<T> gradient2D(const ndarray<T>& scalar)
 {
-  const int DW = scalar.dim(0), DH = scalar.dim(1);
+  const int DW = scalar.dimf(0), DH = scalar.dimf(1);
   ndarray<T> grad;
   grad.reshapef(2, DW, DH); 
 
@@ -34,7 +34,7 @@ ndarray<T> gradient2D(const ndarray<T>& scalar)
 template <typename T>
 ndarray<T> gradient2Dt(const ndarray<T>& scalar)
 {
-  const int DW = scalar.dim(0), DH = scalar.dim(1), DT = scalar.dim(2);
+  const int DW = scalar.dimf(0), DH = scalar.dimf(1), DT = scalar.dimf(2);
   ndarray<T> grad;
   grad.reshape(2, DW, DH, DT);
   
@@ -54,7 +54,7 @@ ndarray<T> gradient2Dt(const ndarray<T>& scalar)
 template <typename T, bool symmetric=false>
 ndarray<T> jacobian2D(const ndarray<T>& vec)
 {
-  const int DW = vec.dim(1), DH = vec.dim(2);
+  const int DW = vec.dimf(1), DH = vec.dimf(2);
   ndarray<T> grad;
   grad.reshapef(2, 2, DW, DH);
   
@@ -90,7 +90,7 @@ ndarray<T> jacobian2D(const ndarray<T>& vec)
 template <typename T>
 ndarray<T> jacobian2DPL(const ndarray<T>& V)
 {
-  const int DW = V.dim(1), DH = V.dim(2);
+  const int DW = V.dimf(1), DH = V.dimf(2);
   ndarray<T> J;
   J.reshapef(2, 2, 2/*upper & lower triangles*/, DW, DH);
 
@@ -104,7 +104,7 @@ ndarray<T> jacobian2DPL(const ndarray<T>& V)
 template <typename T>
 ndarray<T> jacobian2Dt(const ndarray<T>& vec)
 {
-  const int DW = vec.dim(1), DH = vec.dim(2), DT = vec.dim(3);
+  const int DW = vec.dimf(1), DH = vec.dimf(2), DT = vec.dimf(3);
   ndarray<T> grad;
   grad.reshapef(2, 2, DW, DH, DT);
 
@@ -130,7 +130,7 @@ ndarray<T> jacobian2Dt(const ndarray<T>& vec)
 template <typename T>
 ndarray<T> gradient3D(const ndarray<T>& scalar)
 {
-  const int DW = scalar.dim(0), DH = scalar.dim(1), DD = scalar.dim(2);
+  const int DW = scalar.dimf(0), DH = scalar.dimf(1), DD = scalar.dimf(2);
   ndarray<T> grad;
   grad.reshapef(3, DW, DH, DD);
 
@@ -151,7 +151,7 @@ ndarray<T> gradient3D(const ndarray<T>& scalar)
 template <typename T>
 ndarray<T> gradient3Dt(const ndarray<T>& scalar)
 {
-  const int DW = scalar.dim(0), DH = scalar.dim(1), DD = scalar.dim(2), DT = scalar.dim(3);
+  const int DW = scalar.dimf(0), DH = scalar.dimf(1), DD = scalar.dimf(2), DT = scalar.dimf(3);
   ndarray<T> grad;
   grad.reshapef(3, DW, DH, DD, DT);
 
@@ -175,7 +175,7 @@ ndarray<T> gradient3Dt(const ndarray<T>& scalar)
 template <typename T>
 ndarray<T> jacobian3D(const ndarray<T>& V, int b = 2)
 {
-  const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3);
+  const int DW = V.dimf(1), DH = V.dimf(2), DD = V.dimf(3);
   ndarray<T> J;
   J.reshapef(3, 3, DW, DH, DD);
   J.set_multicomponents(2);
@@ -215,7 +215,7 @@ ndarray<T> jacobian3D(const ndarray<T>& V, int b = 2)
 template <typename T>
 ndarray<T> jacobian3Dt(const ndarray<T>& V)
 {
-  const int DW = V.dim(1), DH = V.dim(2), DD = V.dim(3), DT = V.dim(4);
+  const int DW = V.dimf(1), DH = V.dimf(2), DD = V.dimf(3), DT = V.dimf(4);
   ndarray<T> J;
   J.reshapef(3, 3, DW, DH, DD, DT);
 
@@ -255,12 +255,13 @@ ndarray<T> jacobian3Dt(const ndarray<T>& V)
 template <typename T>
 ndarray<T> vorticity3D(const ndarray<T>& V)
 {
-  ndarray<T> vort(V.shape());
+  ndarray<T> vort;
+  vort.reshape(V);
   vort.set_multicomponents(1);
 
-  for (int k = 1; k < V.dim(3) - 1; k++) {
-    for (int j = 1; j < V.dim(2) - 1; j++) {
-      for (int i = 1; i < V.dim(1) - 1; i++) {
+  for (int k = 1; k < V.dimf(3) - 1; k++) {
+    for (int j = 1; j < V.dimf(2) - 1; j++) {
+      for (int i = 1; i < V.dimf(1) - 1; i++) {
         vort.f(0, i, j, k) =  (V.f(2, i, j+1, k) - V.f(2, i, j-1, k)) - (V.f(1, i, j, k+1) - V.f(1, i, j, k-1));
         vort.f(1, i, j, k) =  (V.f(0, i, j, k+1) - V.f(0, i, j, k-1)) - (V.f(2, i+1, j, k) - V.f(2, i-1, j, k));
         vort.f(2, i, j, k) =  (V.f(1, i+1, j, k) - V.f(1, i-1, j, k)) - (V.f(0, i, j+1, k) - V.f(0, i, j-1, k));
@@ -273,12 +274,13 @@ ndarray<T> vorticity3D(const ndarray<T>& V)
 template <typename T>
 ndarray<T> cross_product3D(const ndarray<T>& V, const ndarray<T>& W)
 {
-  ndarray<T> VW(V.shape());
+  ndarray<T> VW;
+  VW.reshape(V);
   VW.set_multicomponents(1);
   
-  for (int k = 1; k < V.dim(3) - 1; k++) {
-    for (int j = 1; j < V.dim(2) - 1; j++) {
-      for (int i = 1; i < V.dim(1) - 1; i++) {
+  for (int k = 1; k < V.dimf(3) - 1; k++) {
+    for (int j = 1; j < V.dimf(2) - 1; j++) {
+      for (int i = 1; i < V.dimf(1) - 1; i++) {
         VW.f(0, i, j, k) =  V.f(1, i, j, k) * W.f(2, i, j, k) - V.f(2, i, j, k) * W.f(1, i, j, k);
         VW.f(1, i, j, k) = -V.f(0, i, j, k) * W.f(2, i, j, k) + V.f(2, i, j, k) * W.f(0, i, j, k);
         VW.f(2, i, j, k) =  V.f(0, i, j, k) * W.f(1, i, j, k) - V.f(1, i, j, k) * W.f(0, i, j, k);
@@ -296,9 +298,9 @@ ndarray<T> JvT_dot_v(const ndarray<T>& V)
   ndarray<T> Jvv(V.shape());
   Jvv.set_multicomponents(1);
   
-  for (int k = 1; k < V.dim(3) - 1; k++) {
-    for (int j = 1; j < V.dim(2) - 1; j++) {
-      for (int i = 1; i < V.dim(1) - 1; i++) {
+  for (int k = 1; k < V.dimf(3) - 1; k++) {
+    for (int j = 1; j < V.dimf(2) - 1; j++) {
+      for (int i = 1; i < V.dimf(1) - 1; i++) {
         for (int v=0; v<3; v++) {
           Jvv(v, i, j, k) =
               J(0, v, i, j, k) * V(0, i, j, k)
@@ -315,12 +317,13 @@ template <typename T>
 ndarray<T> Jv_dot_v(const ndarray<T>& V)
 {
   auto J = jacobian3D(V, 1);
-  ndarray<T> Jvv(V.shape());
+  ndarray<T> Jvv; // 
+  Jvv.reshape(V);
   Jvv.set_multicomponents(1);
   
-  for (int k = 1; k < V.dim(3) - 1; k++) {
-    for (int j = 1; j < V.dim(2) - 1; j++) {
-      for (int i = 1; i < V.dim(1) - 1; i++) {
+  for (int k = 1; k < V.dimf(3) - 1; k++) {
+    for (int j = 1; j < V.dimf(2) - 1; j++) {
+      for (int i = 1; i < V.dimf(1) - 1; i++) {
         for (int v=0; v<3; v++) {
           Jvv.f(v, i, j, k) =
               J.f(v, 0, i, j, k) * V.f(0, i, j, k)

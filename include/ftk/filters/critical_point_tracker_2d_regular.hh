@@ -362,8 +362,8 @@ inline void critical_point_tracker_2d_regular::update_timestep()
         });
 
     ftk::lattice ext({0, 0}, 
-        {field_data_snapshots[0].vector.dim(1), 
-        field_data_snapshots[0].vector.dim(2)});
+        {field_data_snapshots[0].vector.dimf(1), 
+        field_data_snapshots[0].vector.dimf(2)});
     
     // ordinal
     auto results = extract_cp2dt_xl_wrapper(
@@ -519,7 +519,7 @@ inline void critical_point_tracker_2d_regular::simplex_coordinates(
     for (int i = 0; i < vertices.size(); i ++) {
       X[i][0] = explicit_coords.f(0, vertices[i][0], vertices[i][1]); // x
       X[i][1] = explicit_coords.f(1, vertices[i][0], vertices[i][1]); // y
-      if (explicit_coords.dim(0) > 2) // z
+      if (explicit_coords.dimf(0) > 2) // z
         X[i][2] = explicit_coords.f(2, vertices[i][0], vertices[i][1]);
       else 
         X[i][2] = 0.0;

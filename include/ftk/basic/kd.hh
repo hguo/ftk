@@ -100,8 +100,8 @@ F kd_t<F, n>::dist2(const std::array<F, n>& x, const std::array<F, n>& y)
 template <typename F, size_t n>
 void kd_t<F, n>::set_inputs(const ndarray<F>& arr)
 {
-  pts.resize(arr.dim(1));
-  for (size_t i = 0; i < arr.dim(1); i ++)
+  pts.resize(arr.dimf(1));
+  for (size_t i = 0; i < arr.dimf(1); i ++)
     for (size_t k = 0; k < n; k ++)
       pts[i][k] = arr.f(k, i);
 }

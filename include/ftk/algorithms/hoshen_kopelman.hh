@@ -37,8 +37,8 @@ LabelIdType hoshen_kopelman_2d(ndarray<LabelIdType>& matrix)
   };
 
   // first pass
-  for (auto j = 0; j < matrix.dim(1); j ++) {
-    for (auto i = 0; i < matrix.dim(0); i ++) {
+  for (auto j = 0; j < matrix.dimf(1); j ++) {
+    for (auto i = 0; i < matrix.dimf(0); i ++) {
       if (matrix.f(i, j)) {
         LabelIdType left = (i == 0) ? 0 : matrix.f(i-1, j);
         LabelIdType up = (j == 0) ? 0 : matrix.f(i, j-1);
@@ -59,8 +59,8 @@ LabelIdType hoshen_kopelman_2d(ndarray<LabelIdType>& matrix)
 
   // second pass
   std::vector<LabelIdType> new_labels(labels.size());
-  for (auto j = 0; j < matrix.dim(1); j ++) {
-    for (auto i = 0; i < matrix.dim(0); i ++) {
+  for (auto j = 0; j < matrix.dimf(1); j ++) {
+    for (auto i = 0; i < matrix.dimf(0); i ++) {
       if (matrix.f(i, j)) {
         LabelIdType x = find(matrix.f(i, j));
         if (new_labels[x] == 0) {

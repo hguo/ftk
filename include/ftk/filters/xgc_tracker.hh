@@ -91,7 +91,7 @@ inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group>
   field_data_snapshot_t s;
   
   auto density = g->get<double>("density"); // .get_transpose();
-  if (density.dim(0) < density.dim(1))
+  if (density.dimf(0) < density.dimf(1))
     density.transpose();
   m30->smooth_scalar_gradient_jacobian(density, s.scalar, s.vector, s.jacobian);
   
@@ -99,7 +99,7 @@ inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group>
     // auto Er = 
     // s.Er = m30->smooth_scalar(Er);
     s.Er = g->get<double>("Er"); // .get_transpose();
-    if (s.Er.dim(0) < s.Er.dim(1))
+    if (s.Er.dimf(0) < s.Er.dimf(1))
       s.Er.transpose();
   }
   
@@ -132,9 +132,9 @@ inline void xgc_tracker::push_field_data_snapshot(
   ndarray<double> F, G, J;
 
   F.reshape(scalar);
-  G.reshapef(2, scalar.dim(0), scalar.dim(1));
+  G.reshapef(2, scalar.dimf(0), scalar.dimf(1));
   G.set_multicomponents(1);
-  J.reshapef(2, 2, scalar.dim(0), scalar.dim(1));
+  J.reshapef(2, 2, scalar.dimf(0), scalar.dimf(1));
   J.set_multicomponents(2);
   
   for (size_t i = 0; i < m3->get_nphi(); i ++) {

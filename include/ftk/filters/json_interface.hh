@@ -529,7 +529,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
 
   auto push_timestep = [&](int k, const ftk::ndarray<double>& data) {
     auto dpot = data.get_transpose();
-    dpot.reshapef(dpot.dim(0));
+    dpot.reshapef(dpot.dimf(0));
 
     ftk::ndarray<double> scalar, grad, J;
     m2->smooth_scalar_gradient_jacobian(dpot, /*smoothing_kernel_size,*/ scalar, grad, J);
@@ -549,7 +549,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
     if (j["xgc"].contains("torus") && j["xgc"]["torus"] == true) { // tracking over torus
       auto dpot = field_data.get_transpose();
-      for (int k = 0; k < dpot.dim(1); k ++) {
+      for (int k = 0; k < dpot.dimf(1); k ++) {
         ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
         m2->smooth_scalar_gradient_jacobian(dpot_slice, /*smoothing_kernel_size,*/ scalar, grad, J);
 
@@ -557,7 +557,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
         tracker->push_field_data_snapshot(scalars, grad, J);
 
         if (k != 0) tracker->advance_timestep();
-        if (k == dpot.dim(1)-1) tracker->update_timestep();
+        if (k == dpot.dimf(1)-1) tracker->update_timestep();
       
         if (j["xgc"].contains("write_back_filename")) { // write data back to vtu files
           const std::string pattern = j["xgc"]["write_back_filename"];

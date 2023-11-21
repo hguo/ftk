@@ -12,10 +12,10 @@ template <typename T>
 ndarray<T> conv2D(const ndarray<T> &data, const ndarray<T> &kernel,
                   size_t padding = 0)
 {
-  const auto dimx = data.dim(0),
-             dimy = data.dim(1);
-  const auto ksizex = kernel.dim(0),
-             ksizey = kernel.dim(1);
+  const auto dimx = data.dimf(0),
+             dimy = data.dimf(1);
+  const auto ksizex = kernel.dimf(0),
+             ksizey = kernel.dimf(1);
   // dimensions for the resulting data
   const auto dimx_r = dimx + padding * 2 - ksizex + 1,
              dimy_r = dimy + padding * 2 - ksizey + 1;
@@ -118,12 +118,12 @@ template <typename T>
 ndarray<T> conv3D(const ndarray<T> &data, const ndarray<T> &kernel,
                   size_t padding = 0)
 {
-  const auto dimx = data.dim(0),
-             dimy = data.dim(1),
-             dimz = data.dim(2);
-  const auto ksizex = kernel.dim(0),
-             ksizey = kernel.dim(1),
-             ksizez = kernel.dim(2);
+  const auto dimx = data.dimf(0),
+             dimy = data.dimf(1),
+             dimz = data.dimf(2);
+  const auto ksizex = kernel.dimf(0),
+             ksizey = kernel.dimf(1),
+             ksizez = kernel.dimf(2);
   // dimensions for the resulting data
   const auto dimx_r = dimx + padding * 2 - ksizex + 1,
              dimy_r = dimy + padding * 2 - ksizey + 1,

@@ -399,7 +399,7 @@ ndarray<T>& ndarray<T>::operator+=(const ndarray<T>& x)
 {
   if (empty()) *this = x;
   else {
-    assert(this->shape() == x.shape());
+    assert(this->shapef() == x.shapef());
     for (auto i = 0; i < p.size(); i ++)
       p[i] += x.p[i];
   }
@@ -458,7 +458,7 @@ template <typename T>
 template <typename T1>
 void ndarray<T>::from_array(const ndarray<T1>& array1)
 {
-  reshapef(array1.shape());
+  reshapef(array1.shapef());
   for (auto i = 0; i < p.size(); i ++)
     p[i] = static_cast<T>(array1[i]);
   ncd = array1.multicomponents();
@@ -513,7 +513,7 @@ ndarray<T> ndarray<T>::subarray(const lattice& l0) const
   if (l0.nd_cuttable() < nd()) {
     for (int i = 0; i < ncd; i ++) {
       l.starts_.insert(l.starts_.begin(), 0);
-      l.sizes_.insert(l.starts_.begin(), this->shape(i));
+      l.sizes_.insert(l.starts_.begin(), this->shapef(i));
     }
   }
 
@@ -773,7 +773,7 @@ template <typename T>
 template <typename T1>
 void ndarray<T>::reshape(const ndarray<T1>& array)
 {
-  reshapef(array.shape());
+  reshape(array);
 }
 
 template <typename T>
@@ -1183,24 +1183,24 @@ ndarray<T> ndarray<T>::get_transpose() const
   if (nd() == 0) return a;
   else if (nd() == 1) return *this;
   else if (nd() == 2) {
-    a.reshapef(dim(1), dim(0));
-    for (auto i = 0; i < dim(0); i ++) 
-      for (auto j = 0; j < dim(1); j ++)
+    a.reshapef(dimf(1), dimf(0));
+    for (auto i = 0; i < dimf(0); i ++) 
+      for (auto j = 0; j < dimf(1); j ++)
         a.f(j, i) = f(i, j);
     return a;
   } else if (nd() == 3) {
-    a.reshapef(dim(2), dim(1), dim(0));
-    for (auto i = 0; i < dim(0); i ++) 
-      for (auto j = 0; j < dim(1); j ++)
-        for (auto k = 0; k < dim(2); k ++)
+    a.reshapef(dimf(2), dimf(1), dimf(0));
+    for (auto i = 0; i < dimf(0); i ++) 
+      for (auto j = 0; j < dimf(1); j ++)
+        for (auto k = 0; k < dimf(2); k ++)
           a.f(k, j, i) = f(i, j, k);
     return a;
   } else if (nd() == 4) {
-    a.reshapef(dim(3), dim(2), dim(1), dim(0));
-    for (auto i = 0; i < dim(0); i ++) 
-      for (auto j = 0; j < dim(1); j ++)
-        for (auto k = 0; k < dim(2); k ++)
-          for (auto l = 0; l < dim(3); l ++)
+    a.reshapef(dimf(3), dimf(2), dimf(1), dimf(0));
+    for (auto i = 0; i < dimf(0); i ++) 
+      for (auto j = 0; j < dimf(1); j ++)
+        for (auto k = 0; k < dimf(2); k ++)
+          for (auto l = 0; l < dimf(3); l ++)
             a.f(l, k, j, i) = f(i, j, k, l);
     return a;
   } else {
@@ -1213,7 +1213,7 @@ template <typename T>
 ndarray<T> ndarray<T>::concat(const std::vector<ndarray<T>>& arrays)
 {
   ndarray<T> result;
-  std::vector<size_t> result_shape = arrays[0].shape();
+  std::vector<size_t> result_shape = arrays[0].shapef();
   result_shape.insert(result_shape.begin(), arrays.size());
   result.reshapef(result_shape);
 
@@ -1284,9 +1284,9 @@ void ndarray<T>::to_png(const std::string& filename) const
 {
   ndarray<unsigned char> buf;
   if (nd() == 2) 
-    buf.reshapef({4, dim(0), dim(1)});
-  else if (nd() == 3 && dim(0) <= 4) 
-    buf.reshapef({4, dim(1), dim(2)});
+    buf.reshapef({4, dimf(0), dimf(1)});
+  else if (nd() == 3 && dimf(0) <= 4) 
+    buf.reshapef({4, dimf(1), dimf(2)});
   else 
     fatal("unable to save to png");
 
@@ -1454,7 +1454,7 @@ bool ndarray<T>::mlerp(const F x[], T v[]) const
     if (nc == 0) // univariate
       v[0] += coef * this->f(verts);
     else if (nc == 1) { // multiple channels
-      for (int k = 0; k < dim(0); k ++) {
+      for (int k = 0; k < dimf(0); k ++) {
         verts[0] = k;
         F val = this->f(verts);
         v[k] += coef * val;
