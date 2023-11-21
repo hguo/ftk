@@ -107,7 +107,7 @@ struct ndarray_base {
   [[deprecated]] void reshape(size_t ndims, const size_t sizes[]) { reshapef(ndims, sizes); }
 
   void reshape(const ndarray_base& array); //! copy shape from another array
-  template <typename T> void reshape(const ndarray<T>& array); //! copy shape from another array
+  // template <typename T> void reshape(const ndarray<T>& array); //! copy shape from another array
 
 public:
   size_t indexf(const std::vector<size_t>& idx) const;

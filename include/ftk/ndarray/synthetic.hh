@@ -101,7 +101,7 @@ ndarray<T> synthetic_woven_2Dt(int DW, int DH, int DT, T scaling_factor = T(15))
         const T x = ((T(i) / (DW-1)) - 0.5) * scaling_factor,
                 y = ((T(j) / (DH-1)) - 0.5) * scaling_factor, 
                 t = (T(k) / (DT-1)) + 1e-4;
-        scalar(i, j, k) = woven_function_2Dt(x, y, t);
+        scalar.f(i, j, k) = woven_function_2Dt(x, y, t);
       }
     }
   }

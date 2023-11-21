@@ -788,7 +788,7 @@ template <typename T>
 template <typename T1>
 void ndarray<T>::reshape(const ndarray<T1>& array)
 {
-  reshape(array);
+  reshapef(array.shapef());
 }
 
 template <typename T>
@@ -1246,7 +1246,7 @@ template <typename T>
 ndarray<T> ndarray<T>::stack(const std::vector<ndarray<T>>& arrays)
 {
   ndarray<T> result;
-  std::vector<size_t> result_shape = arrays[0].shape();
+  std::vector<size_t> result_shape = arrays[0].shapef();
   result_shape.push_back(arrays.size());
   result.reshapef(result_shape);
 
@@ -1283,7 +1283,7 @@ template <typename T>
 pybind11::array_t<T, pybind11::array::c_style> ndarray<T>::to_numpy() const
 {
   auto result = pybind11::array_t<T>(nelem());
-  result.resize(shape());
+  result.resize(shapef());
   pybind11::buffer_info buf = result.request();
 
   T *ptr = (T*)buf.ptr;

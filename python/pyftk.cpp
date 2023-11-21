@@ -18,8 +18,8 @@ PYBIND11_MODULE(pyftk, m) {
       throw std::runtime_error("Number of dimensions must be 4 (1, width, height, 1)");
 
     ftk::ndarray<double> data(array);
-    const size_t DW = data.dim(0), DH = data.dim(1);
-    data.reshape(DW, DH);
+    const size_t DW = data.dimf(0), DH = data.dimf(1);
+    data.reshapef(DW, DH);
 
     ftk::critical_point_tracker_2d_regular tracker(comm);
     tracker.set_scalar_field_source( ftk::SOURCE_GIVEN );
@@ -55,10 +55,10 @@ PYBIND11_MODULE(pyftk, m) {
       throw std::runtime_error("Number of dimensions must be 4 (2, width, height, 1)");
 
     ftk::ndarray<double> data(array);
-    if (data.dim(0) != 2) 
+    if (data.dimf(0) != 2) 
       throw std::runtime_error("The first dimension must be 2");
-    const size_t DW = data.dim(1), DH = data.dim(2);
-    data.reshape(2, DW, DH);
+    const size_t DW = data.dimf(1), DH = data.dimf(2);
+    data.reshapef(2, DW, DH);
 
     ftk::critical_point_tracker_2d_regular tracker(comm);
     tracker.set_scalar_field_source( ftk::SOURCE_NONE );
@@ -95,8 +95,8 @@ PYBIND11_MODULE(pyftk, m) {
       throw std::runtime_error("Number of dimensions must be 4: (1, width, height, time)");
 
     ftk::ndarray<double> data(array);
-    const size_t DW = data.dim(1), DH = data.dim(2), DT = data.dim(3);
-    data.reshape(DW, DH, DT);
+    const size_t DW = data.dimf(1), DH = data.dimf(2), DT = data.dimf(3);
+    data.reshapef(DW, DH, DT);
 
     ftk::critical_point_tracker_2d_regular tracker(comm);
     tracker.set_scalar_field_source( ftk::SOURCE_GIVEN );
@@ -144,21 +144,21 @@ PYBIND11_MODULE(pyftk, m) {
   py::module synth = m.def_submodule("synthesizers", "Synthetic data generator");
   synth.def("spiral_woven", [](int DW, int DH, int DT) {
     auto array = ftk::synthetic_woven_2Dt<double>(DW, DH, DT);
-    array.reshape(1, DW, DH, DT);
+    array.reshapef(1, DW, DH, DT);
     return array.to_numpy();
   }, R"pbdoc(Generate 2D spiral woven data)pbdoc");
 
   synth.def("double_gyre_flow", [](int DW, int DH, int DT) {
     if (DT == 1) {
       auto array = ftk::synthetic_double_gyre(DW, DH, 0.0);
-      array.reshape(2, DW, DH, 1);
+      array.reshapef(2, DW, DH, 1);
       return array.to_numpy();
     } else if (DT > 1) {
       std::vector<ftk::ndarray<double>> arrays;
       for (int i = 0; i < DT; i ++)
         arrays.push_back( ftk::synthetic_double_gyre(DW, DH, (double)i*0.1) );
       auto array = ftk::ndarray<double>::stack(arrays);
-      array.reshape(2, DW, DH, DT);
+      array.reshapef(2, DW, DH, DT);
       return array.to_numpy();
     } else {
       throw std::runtime_error("DT must be an integer greater than 1");
@@ -172,7 +172,7 @@ PYBIND11_MODULE(pyftk, m) {
     std::vector<size_t> shape = {(size_t)DW, (size_t)DH};
     for (int k = 0; k < DT; k ++) {
       auto a = ftk::synthetic_moving_extremum<double, 2>(shape, xc, dir, (double)k);
-      a.reshape(1, DW, DH);
+      a.reshapef(1, DW, DH);
       arrays.push_back( a );
     }
     return ftk::ndarray<double>::stack(arrays).to_numpy();
@@ -187,7 +187,7 @@ PYBIND11_MODULE(pyftk, m) {
     double M[4][4];
     for (int i = 0; i < 4; i ++)
       for (int j = 0; j < 4; j ++)
-        M[i][j] = m(j, i);
+        M[i][j] = m.f(j, i);
 
     return ftk::det4(M);
   });
@@ -200,7 +200,7 @@ PYBIND11_MODULE(pyftk, m) {
     double M[3][3];
     for (int i = 0; i < 3; i ++)
       for (int j = 0; j < 3; j ++)
-        M[i][j] = m(j, i);
+        M[i][j] = m.f(j, i);
 
     return ftk::det3(M);
   });
