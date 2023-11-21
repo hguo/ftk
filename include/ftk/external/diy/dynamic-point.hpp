@@ -12,11 +12,11 @@ namespace diy
 {
 
 template<class Coordinate_, size_t static_size = DIY_MAX_DIM>
-class DynamicPoint: public chobo::small_vector<Coordinate_, static_size>
+class DynamicPoint: public itlib::small_vector<Coordinate_, static_size>
 {
     public:
         using Coordinate    = Coordinate_;
-        using Parent        = chobo::small_vector<Coordinate_, static_size>;
+        using Parent        = itlib::small_vector<Coordinate_, static_size>;
 
         template<class U>
         struct rebind       { typedef DynamicPoint<U> type; };

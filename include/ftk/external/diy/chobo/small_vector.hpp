@@ -1,9 +1,11 @@
-// chobo-small-vector v1.02
+// itlib-small-vector v2.04
 //
 // std::vector-like class with a static buffer for initial capacity
 //
+// SPDX-License-Identifier: MIT
 // MIT License:
 // Copyright(c) 2016-2018 Chobolabs Inc.
+// Copyright(c) 2020-2022 Borislav Stanimirov
 //
 // Permission is hereby granted, free of charge, to any person obtaining
 // a copy of this software and associated documentation files(the
@@ -27,19 +29,27 @@
 //
 //                  VERSION HISTORY
 //
-//  1.02 (2018-04-24) Class inehrits from its allocator to make use of the
-//                    empty base class optimization.
-//                    emplace_back returns a reference to the inserted element
-//                    as per the c++17 standard.
-//  1.01 (2017-04-02) Fixed compilation error on (count, value) constructor and
-//                    assign, and insert methods when count or value is 0
-//  1.00 (2016-11-08) First public release
+//  2.04 (2022-04-29) Minor: Disable MSVC warning for constant conditional
+//  2.03 (2022-10-31) Minor: Removed unused local var
+//  2.02 (2022-09-24) Minor: Fixed leftover arguments in error handling macros
+//  2.01 (2022-08-26) Minor: renames, doc
+//  2.00 (2022-08-26) Redesign
+//                    * Smaller size
+//                    * Inherit from allocator to make use of EBO
+//  1.04 (2022-04-14) Noxcept move construct and assign
+//  1.03 (2021-10-05) Use allocator member instead of inheriting from allocator
+//                    Allow compare with small_vector of different static_size
+//                    Don't rely on operator!= from T. Use operator== instead
+//  1.02 (2021-09-15) Bugfix! Fixed bad deallocation when reverting to
+//                    static size on resize()
+//  1.01 (2021-08-05) Bugfix! Fixed return value of erase
+//  1.00 (2020-10-14) Rebranded release from chobo-small-vector
 //
 //
 //                  DOCUMENTATION
 //
 // Simply include this file wherever you need.
-// It defines the class chobo::small_vector, which is a drop-in replacement of
+// It defines the class itlib::small_vector, which is a drop-in replacement of
 // std::vector, but with an initial capacity as a template argument.
 // It gives you the benefits of using std::vector, at the cost of having a statically
 // allocated buffer for the initial capacity, which gives you cache-local data
@@ -48,7 +58,7 @@
 // When the size exceeds the capacity, the vector allocates memory via the provided
 // allocator, falling back to classic std::vector behavior.
 //
-// The second size_t template argument, RevertToStaticSize, is used when a
+// The second size_t template argument, RevertToStaticBelow, is used when a
 // small_vector which has already switched to dynamically allocated size reduces
 // its size to a number smaller than that. In this case the vector's buffer
 // switches back to the staticallly allocated one
@@ -58,7 +68,7 @@
 //
 // Example:
 //
-// chobo::small_vector<int, 4, 5> myvec; // a small_vector of size 0, initial capacity 4, and revert size 4 (smaller than 5)
+// itlib::small_vector<int, 4, 5> myvec; // a small_vector of size 0, initial capacity 4, and revert size 4 (below 5)
 // myvec.resize(2); // vector is {0,0} in static buffer
 // myvec[1] = 11; // vector is {0,11} in static buffer
 // myvec.push_back(7); // vector is {0,11,7}  in static buffer
@@ -70,24 +80,24 @@
 //
 // Reference:
 //
-// chobo::small_vector is fully compatible with std::vector with
+// itlib::small_vector is fully compatible with std::vector with
 // the following exceptions:
 // * when reducing the size with erase or resize the new size may fall below
-//   RevertToStaticSize (if it is not 0). In such a case the vector will
+//   RevertToStaticBelow (if it is not 0). In such a case the vector will
 //   revert to using its static buffer, invalidating all iterators (contrary
 //   to the standard)
 // * a method is added `revert_to_static()` which reverts to the static buffer
-//   if possible, but doesn't free the dynamically allocated one
+//   if possible and does nothing if the size doesn't allow it
 //
 // Other notes:
 //
-// * the default value for RevertToStaticSize is zero. This means that once a dynamic
+// * the default value for RevertToStaticBelow is zero. This means that once a dynamic
 //   buffer is allocated the data will never be put into the static one, even if the
 //   size allows it. Even if clear() is called. The only way to do so is to call
 //   shrink_to_fit() or revert_to_static()
 // * shrink_to_fit will free and reallocate if size != capacity and the data
 //   doesn't fit into the static buffer. It also will revert to the static buffer
-//   whenever possible regardless of the RevertToStaticSize value
+//   whenever possible regardless of the RevertToStaticBelow value
 //
 //
 //                  Configuration
@@ -104,18 +114,18 @@
 // called with an iterator that doesn't belong to the vector's current range.
 // For example: vec.erase(vec.end() + 1);
 //
-// This is set by defining CHOBO_SMALL_VECTOR_ERROR_HANDLING to one of the
+// This is set by defining ITLIB_SMALL_VECTOR_ERROR_HANDLING to one of the
 // following values:
-// * CHOBO_SMALL_VECTOR_ERROR_HANDLING_NONE - no error handling. Crashes WILL
+// * ITLIB_SMALL_VECTOR_ERROR_HANDLING_NONE - no error handling. Crashes WILL
 //      ensue if the error is triggered.
-// * CHOBO_SMALL_VECTOR_ERROR_HANDLING_THROW - std::out_of_range is thrown.
-// * CHOBO_SMALL_VECTOR_ERROR_HANDLING_ASSERT - asserions are triggered.
-// * CHOBO_SMALL_VECTOR_ERROR_HANDLING_ASSERT_AND_THROW - combines assert and
+// * ITLIB_SMALL_VECTOR_ERROR_HANDLING_THROW - std::out_of_range is thrown.
+// * ITLIB_SMALL_VECTOR_ERROR_HANDLING_ASSERT - asserions are triggered.
+// * ITLIB_SMALL_VECTOR_ERROR_HANDLING_ASSERT_AND_THROW - combines assert and
 //      throw to catch errors more easily in debug mode
 //
 // To set this setting by editing the file change the line:
 // ```
-// #   define CHOBO_SMALL_VECTOR_ERROR_HANDLING CHOBO_SMALL_VECTOR_ERROR_HANDLING_THROW
+// #   define ITLIB_SMALL_VECTOR_ERROR_HANDLING ITLIB_SMALL_VECTOR_ERROR_HANDLING_THROW
 // ```
 // to the default setting of your choice
 //
@@ -124,15 +134,14 @@
 // By default bounds checks are made in debug mode (via an asser) when accessing
 // elements (with `at` or `[]`). Iterators are not checked (yet...)
 //
-// To disable them, you can define CHOBO_SMALL_VECTOR_NO_DEBUG_BOUNDS_CHECK
+// To disable them, you can define ITLIB_SMALL_VECTOR_NO_DEBUG_BOUNDS_CHECK
 // before including the header.
 //
 //
 //                  TESTS
 //
-// The tests are included in the header file and use doctest (https://github.com/onqtam/doctest).
-// To run them, define CHOBO_SMALL_VECTOR_TEST_WITH_DOCTEST before including
-// the header in a file which has doctest.h already included.
+// You can find unit tests in the official repo:
+// https://github.com/iboB/itlib/blob/master/test/
 //
 #pragma once
 
@@ -140,65 +149,66 @@
 #include <cstddef>
 #include <memory>
 
-#define CHOBO_SMALL_VECTOR_ERROR_HANDLING_NONE  0
-#define CHOBO_SMALL_VECTOR_ERROR_HANDLING_THROW 1
-#define CHOBO_SMALL_VECTOR_ERROR_HANDLING_ASSERT 2
-#define CHOBO_SMALL_VECTOR_ERROR_HANDLING_ASSERT_AND_THROW 3
+#define ITLIB_SMALL_VECTOR_ERROR_HANDLING_NONE  0
+#define ITLIB_SMALL_VECTOR_ERROR_HANDLING_THROW 1
+#define ITLIB_SMALL_VECTOR_ERROR_HANDLING_ASSERT 2
+#define ITLIB_SMALL_VECTOR_ERROR_HANDLING_ASSERT_AND_THROW 3
 
-#if !defined(CHOBO_SMALL_VECTOR_ERROR_HANDLING)
-#   define CHOBO_SMALL_VECTOR_ERROR_HANDLING CHOBO_SMALL_VECTOR_ERROR_HANDLING_THROW
+#if !defined(ITLIB_SMALL_VECTOR_ERROR_HANDLING)
+#   define ITLIB_SMALL_VECTOR_ERROR_HANDLING ITLIB_SMALL_VECTOR_ERROR_HANDLING_THROW
 #endif
 
 
-#if CHOBO_SMALL_VECTOR_ERROR_HANDLING == CHOBO_SMALL_VECTOR_ERROR_HANDLING_NONE
-#   define _CHOBO_SMALL_VECTOR_OUT_OF_RANGE_IF(cond)
-#elif CHOBO_SMALL_VECTOR_ERROR_HANDLING == CHOBO_SMALL_VECTOR_ERROR_HANDLING_THROW
+#if ITLIB_SMALL_VECTOR_ERROR_HANDLING == ITLIB_SMALL_VECTOR_ERROR_HANDLING_NONE
+#   define I_ITLIB_SMALL_VECTOR_OUT_OF_RANGE_IF(cond)
+#elif ITLIB_SMALL_VECTOR_ERROR_HANDLING == ITLIB_SMALL_VECTOR_ERROR_HANDLING_THROW
 #   include <stdexcept>
-#   define _CHOBO_SMALL_VECTOR_OUT_OF_RANGE_IF(cond) if (cond) throw std::out_of_range("chobo::small_vector out of range")
-#elif CHOBO_SMALL_VECTOR_ERROR_HANDLING == CHOBO_SMALL_VECTOR_ERROR_HANDLING_ASSERT
+#   define I_ITLIB_SMALL_VECTOR_OUT_OF_RANGE_IF(cond) if (cond) throw std::out_of_range("itlib::small_vector out of range")
+#elif ITLIB_SMALL_VECTOR_ERROR_HANDLING == ITLIB_SMALL_VECTOR_ERROR_HANDLING_ASSERT
 #   include <cassert>
-#   define _CHOBO_SMALL_VECTOR_OUT_OF_RANGE_IF(cond, rescue_return) assert(!(cond) && "chobo::small_vector out of range")
-#elif CHOBO_SMALL_VECTOR_ERROR_HANDLING == CHOBO_SMALL_VECTOR_ERROR_HANDLING_ASSERT_AND_THROW
+#   define I_ITLIB_SMALL_VECTOR_OUT_OF_RANGE_IF(cond) assert(!(cond) && "itlib::small_vector out of range")
+#elif ITLIB_SMALL_VECTOR_ERROR_HANDLING == ITLIB_SMALL_VECTOR_ERROR_HANDLING_ASSERT_AND_THROW
 #   include <stdexcept>
 #   include <cassert>
-#   define _CHOBO_SMALL_VECTOR_OUT_OF_RANGE_IF(cond, rescue_return) \
-    do { if (cond) { assert(false && "chobo::small_vector out of range"); throw std::out_of_range("chobo::small_vector out of range"); } } while(false)
+#   define I_ITLIB_SMALL_VECTOR_OUT_OF_RANGE_IF(cond) \
+    do { if (cond) { assert(false && "itlib::small_vector out of range"); throw std::out_of_range("itlib::small_vector out of range"); } } while(false)
 #else
-#error "Unknown CHOBO_SMALL_VECTOR_ERRROR_HANDLING"
+#error "Unknown ITLIB_SMALL_VECTOR_ERRROR_HANDLING"
 #endif
 
 
-#if defined(CHOBO_SMALL_VECTOR_NO_DEBUG_BOUNDS_CHECK)
-#   define _CHOBO_SMALL_VECTOR_BOUNDS_CHECK(i)
+#if defined(ITLIB_SMALL_VECTOR_NO_DEBUG_BOUNDS_CHECK)
+#   define I_ITLIB_SMALL_VECTOR_BOUNDS_CHECK(i)
 #else
 #   include <cassert>
-#   define _CHOBO_SMALL_VECTOR_BOUNDS_CHECK(i) assert((i) < this->size())
+#   define I_ITLIB_SMALL_VECTOR_BOUNDS_CHECK(i) assert((i) < this->size())
 #endif
 
-namespace chobo
+namespace itlib
 {
 
-template<typename T, size_t StaticCapacity = 16, size_t RevertToStaticSize = 0, class Alloc = std::allocator<T>>
-struct small_vector: Alloc
+template<typename T, size_t StaticCapacity = 16, size_t RevertToStaticBelow = 0, class Alloc = std::allocator<T>>
+struct small_vector : private Alloc
 {
-    static_assert(RevertToStaticSize <= StaticCapacity + 1, "chobo::small_vector: the revert-to-static size shouldn't exceed the static capacity by more than one");
+    static_assert(RevertToStaticBelow <= StaticCapacity + 1, "itlib::small_vector: the RevertToStaticBelow shouldn't exceed the static capacity by more than one");
 
+    using atraits = std::allocator_traits<Alloc>;
 public:
     using allocator_type = Alloc;
-    using value_type = typename Alloc::value_type;
-    using size_type = typename Alloc::size_type;
-    using difference_type = typename Alloc::difference_type;
-    using reference = typename Alloc::reference;
-    using const_reference = typename Alloc::const_reference;
-    using pointer = typename Alloc::pointer;
-    using const_pointer = typename Alloc::const_pointer;
+    using value_type = typename atraits::value_type;
+    using size_type = typename atraits::size_type;
+    using difference_type = typename atraits::difference_type;
+    using reference = T&;
+    using const_reference = const T&;
+    using pointer = typename atraits::pointer;
+    using const_pointer = typename atraits::const_pointer;
     using iterator = pointer;
     using const_iterator = const_pointer;
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     static constexpr size_t static_capacity = StaticCapacity;
-    static constexpr intptr_t revert_to_static_size = RevertToStaticSize;
+    static constexpr intptr_t revert_to_static_below = RevertToStaticBelow;
 
     small_vector()
         : small_vector(Alloc())
@@ -207,8 +217,6 @@ public:
     small_vector(const Alloc& alloc)
         : Alloc(alloc)
         , m_capacity(StaticCapacity)
-        , m_dynamic_capacity(0)
-        , m_dynamic_data(nullptr)
     {
         m_begin = m_end = static_begin_ptr();
     }
@@ -222,86 +230,46 @@ public:
     explicit small_vector(size_t count, const T& value, const Alloc& alloc = Alloc())
         : small_vector(alloc)
     {
-        assign_impl(count, value);
+        assign_fill(count, value);
     }
 
     template <class InputIterator, typename = decltype(*std::declval<InputIterator>())>
     small_vector(InputIterator first, InputIterator last, const Alloc& alloc = Alloc())
         : small_vector(alloc)
     {
-        assign_impl(first, last);
+        assign_copy(first, last);
     }
 
     small_vector(std::initializer_list<T> l, const Alloc& alloc = Alloc())
         : small_vector(alloc)
     {
-        assign_impl(l);
+        assign_move(l.begin(), l.end());
     }
 
     small_vector(const small_vector& v)
-        : small_vector(v, std::allocator_traits<Alloc>::select_on_container_copy_construction(v.get_allocator()))
+        : small_vector(v, atraits::select_on_container_copy_construction(v.get_allocator()))
     {}
 
     small_vector(const small_vector& v, const Alloc& alloc)
-        : Alloc(alloc)
-        , m_dynamic_capacity(0)
-        , m_dynamic_data(nullptr)
+        : small_vector(alloc)
     {
-        if (v.size() > StaticCapacity)
-        {
-            m_dynamic_capacity = v.size();
-            m_begin = m_end = m_dynamic_data = get_alloc().allocate(m_dynamic_capacity);
-            m_capacity = v.size();
-        }
-        else
-        {
-            m_begin = m_end = static_begin_ptr();
-            m_capacity = StaticCapacity;
-        }
-
-        for (auto p = v.m_begin; p != v.m_end; ++p)
-        {
-            get_alloc().construct(m_end, *p);
-            ++m_end;
-        }
+        assign_copy(v.begin(), v.end());
     }
 
-    small_vector(small_vector&& v)
+    small_vector(small_vector&& v) noexcept
         : Alloc(std::move(v.get_alloc()))
         , m_capacity(v.m_capacity)
-        , m_dynamic_capacity(v.m_dynamic_capacity)
-        , m_dynamic_data(v.m_dynamic_data)
     {
-        if (v.m_begin == v.static_begin_ptr())
-        {
-            m_begin = m_end = static_begin_ptr();
-            for (auto p = v.m_begin; p != v.m_end; ++p)
-            {
-                get_alloc().construct(m_end, std::move(*p));
-                ++m_end;
-            }
-
-            v.clear();
-        }
-        else
-        {
-            m_begin = v.m_begin;
-            m_end = v.m_end;
-        }
-
-        v.m_dynamic_capacity = 0;
-        v.m_dynamic_data = nullptr;
-        v.m_begin = v.m_end = v.static_begin_ptr();
-        v.m_capacity = StaticCapacity;
+        take_impl(v);
     }
 
     ~small_vector()
     {
-        clear();
+        destroy_all();
 
-        if (m_dynamic_data)
+        if (!is_static())
         {
-            get_alloc().deallocate(m_dynamic_data, m_dynamic_capacity);
+            atraits::deallocate(get_alloc(), m_begin, m_capacity);
         }
     }
 
@@ -313,72 +281,51 @@ public:
             return *this;
         }
 
-        clear();
-
-        m_begin = m_end = choose_data(v.size());
-
-        for (auto p = v.m_begin; p != v.m_end; ++p)
-        {
-            get_alloc().construct(m_end, *p);
-            ++m_end;
-        }
-
-        update_capacity();
+        destroy_all();
+        assign_copy(v.begin(), v.end());
 
         return *this;
     }
 
-    small_vector& operator=(small_vector&& v)
+    small_vector& operator=(small_vector&& v) noexcept
     {
-        clear();
+        if (this == &v)
+        {
+            // prevent self usurp
+            return *this;
+        }
+
+        destroy_all();
+        if (!is_static())
+        {
+            atraits::deallocate(get_alloc(), m_begin, m_capacity);
+        }
 
         get_alloc() = std::move(v.get_alloc());
         m_capacity = v.m_capacity;
-        m_dynamic_capacity = v.m_dynamic_capacity;
-        m_dynamic_data = v.m_dynamic_data;
 
-        if (v.m_begin == v.static_begin_ptr())
-        {
-            m_begin = m_end = static_begin_ptr();
-            for (auto p = v.m_begin; p != v.m_end; ++p)
-            {
-                get_alloc().construct(m_end, std::move(*p));
-                ++m_end;
-            }
-
-            v.clear();
-        }
-        else
-        {
-            m_begin = v.m_begin;
-            m_end = v.m_end;
-        }
-
-        v.m_dynamic_capacity = 0;
-        v.m_dynamic_data = nullptr;
-        v.m_begin = v.m_end = v.static_begin_ptr();
-        v.m_capacity = StaticCapacity;
+        take_impl(v);
 
         return *this;
     }
 
     void assign(size_type count, const T& value)
     {
-        clear();
-        assign_impl(count, value);
+        destroy_all();
+        assign_fill(count, value);
     }
 
     template <class InputIterator, typename = decltype(*std::declval<InputIterator>())>
     void assign(InputIterator first, InputIterator last)
     {
-        clear();
-        assign_impl(first, last);
+        destroy_all();
+        assign_copy(first, last);
     }
 
     void assign(std::initializer_list<T> ilist)
     {
-        clear();
-        assign_impl(ilist);
+        destroy_all();
+        assign_move(ilist.begin(), ilist.end());
     }
 
     allocator_type get_allocator() const
@@ -388,13 +335,13 @@ public:
 
     const_reference at(size_type i) const
     {
-        _CHOBO_SMALL_VECTOR_BOUNDS_CHECK(i);
+        I_ITLIB_SMALL_VECTOR_BOUNDS_CHECK(i);
         return *(m_begin + i);
     }
 
     reference at(size_type i)
     {
-        _CHOBO_SMALL_VECTOR_BOUNDS_CHECK(i);
+        I_ITLIB_SMALL_VECTOR_BOUNDS_CHECK(i);
         return *(m_begin + i);
     }
 
@@ -512,46 +459,41 @@ public:
 
     size_t max_size() const noexcept
     {
-        return get_alloc().max_size();
+        return atraits::max_size();
     }
 
     void reserve(size_type new_cap)
     {
         if (new_cap <= m_capacity) return;
 
-        auto new_buf = choose_data(new_cap);
+        const auto cdr = choose_data(new_cap);
 
-        assert(new_buf != m_begin); // should've been handled by new_cap <= m_capacity
-        assert(new_buf != static_begin_ptr()); // we should never reserve into static memory
+        assert(cdr.ptr != m_begin); // should've been handled by new_cap <= m_capacity
+        assert(cdr.ptr != static_begin_ptr()); // we should never reserve into static memory
 
-        const auto s = size();
-        if(s < RevertToStaticSize)
-        {
-            // we've allocated enough memory for the dynamic buffer but don't move there until we have to
-            return;
-        }
+        auto s = size();
 
         // now we need to transfer the existing elements into the new buffer
         for (size_type i = 0; i < s; ++i)
         {
-            get_alloc().construct(new_buf + i, std::move(*(m_begin + i)));
+            atraits::construct(get_alloc(), cdr.ptr + i, std::move(*(m_begin + i)));
         }
 
         // free old elements
         for (size_type i = 0; i < s; ++i)
         {
-            get_alloc().destroy(m_begin + i);
+            atraits::destroy(get_alloc(), m_begin + i);
         }
 
-        if (m_begin != static_begin_ptr())
+        if (!is_static())
         {
             // we've moved from dyn to dyn memory, so deallocate the old one
-            get_alloc().deallocate(m_begin, m_capacity);
+            atraits::deallocate(get_alloc(), m_begin, m_capacity);
         }
 
-        m_begin = new_buf;
-        m_end = new_buf + s;
-        m_capacity = m_dynamic_capacity;
+        m_begin = cdr.ptr;
+        m_end = m_begin + s;
+        m_capacity = cdr.cap;
     }
 
     size_t capacity() const noexcept
@@ -563,10 +505,12 @@ public:
     {
         const auto s = size();
 
-        if (s == m_capacity) return;
-        if (m_begin == static_begin_ptr()) return;
+        if (s == m_capacity) return; // we're at max
+        if (is_static()) return; // can't shrink static buf
 
+        auto old_begin = m_begin;
         auto old_end = m_end;
+        auto old_cap = m_capacity;
 
         if (s < StaticCapacity)
         {
@@ -577,50 +521,45 @@ public:
         else
         {
             // alloc new smaller buffer
-            m_begin = m_end = get_alloc().allocate(s);
+            m_begin = m_end = atraits::allocate(get_alloc(), s);
             m_capacity = s;
         }
 
-        for (auto p = m_dynamic_data; p != old_end; ++p)
+        for (auto p = old_begin; p != old_end; ++p)
         {
-            get_alloc().construct(m_end, std::move(*p));
+            atraits::construct(get_alloc(), m_end, std::move(*p));
             ++m_end;
-            get_alloc().destroy(p);
+            atraits::destroy(get_alloc(), p);
         }
 
-        get_alloc().deallocate(m_dynamic_data, m_dynamic_capacity);
-        m_dynamic_data = nullptr;
-        m_dynamic_capacity = 0;
+        atraits::deallocate(get_alloc(), old_begin, old_cap);
     }
 
-    void revert_to_static()
+    // only revert if possible
+    // otherwise don't shrink
+    // return true if reverted
+    bool revert_to_static()
     {
         const auto s = size();
-        if (m_begin == static_begin_ptr()) return; //we're already there
-        if (s > StaticCapacity) return; // nothing we can do
+        if (is_static()) return true; //we're already there
+        if (s > StaticCapacity) return false; // nothing we can do
 
-        // revert to static capacity
-        auto old_end = m_end;
-        m_begin = m_end = static_begin_ptr();
-        m_capacity = StaticCapacity;
-        for (auto p = m_dynamic_data; p != old_end; ++p)
-        {
-            get_alloc().construct(m_end, std::move(*p));
-            ++m_end;
-            get_alloc().destroy(p);
-        }
+        shrink_to_fit();
+        return true;
     }
 
     // modifiers
     void clear() noexcept
     {
-        for (auto p = m_begin; p != m_end; ++p)
-        {
-            get_alloc().destroy(p);
-        }
+        destroy_all();
 
-        if (RevertToStaticSize > 0)
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4127) // conditional expression is constant
+#endif
+        if (RevertToStaticBelow > 0 && !is_static())
         {
+            atraits::deallocate(get_alloc(), m_begin, m_capacity);
             m_begin = m_end = static_begin_ptr();
             m_capacity = StaticCapacity;
         }
@@ -628,19 +567,22 @@ public:
         {
             m_end = m_begin;
         }
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
     }
 
     iterator insert(const_iterator position, const value_type& val)
     {
         auto pos = grow_at(position, 1);
-        get_alloc().construct(pos, val);
+        atraits::construct(get_alloc(), pos, val);
         return pos;
     }
 
     iterator insert(const_iterator position, value_type&& val)
     {
         auto pos = grow_at(position, 1);
-        get_alloc().construct(pos, std::move(val));
+        atraits::construct(get_alloc(), pos, std::move(val));
         return pos;
     }
 
@@ -649,7 +591,7 @@ public:
         auto pos = grow_at(position, count);
         for (size_type i = 0; i < count; ++i)
         {
-            get_alloc().construct(pos + i, val);
+            atraits::construct(get_alloc(), pos + i, val);
         }
         return pos;
     }
@@ -658,11 +600,10 @@ public:
     iterator insert(const_iterator position, InputIterator first, InputIterator last)
     {
         auto pos = grow_at(position, last - first);
-        size_type i = 0;
         auto np = pos;
         for (auto p = first; p != last; ++p, ++np)
         {
-            get_alloc().construct(np, *p);
+            atraits::construct(get_alloc(), np, *p);
         }
         return pos;
     }
@@ -673,7 +614,7 @@ public:
         size_type i = 0;
         for (auto& elem : ilist)
         {
-            get_alloc().construct(pos + i, elem);
+            atraits::construct(get_alloc(), pos + i, std::move(elem));
             ++i;
         }
         return pos;
@@ -683,7 +624,7 @@ public:
     iterator emplace(const_iterator position, Args&&... args)
     {
         auto pos = grow_at(position, 1);
-        get_alloc().construct(pos, std::forward<Args>(args)...);
+        atraits::construct(get_alloc(), pos, std::forward<Args>(args)...);
         return pos;
     }
 
@@ -694,27 +635,27 @@ public:
 
     iterator erase(const_iterator first, const_iterator last)
     {
-        _CHOBO_SMALL_VECTOR_OUT_OF_RANGE_IF(first > last);
+        I_ITLIB_SMALL_VECTOR_OUT_OF_RANGE_IF(first > last);
         return shrink_at(first, last - first);
     }
 
     void push_back(const_reference val)
     {
         auto pos = grow_at(m_end, 1);
-        get_alloc().construct(pos, val);
+        atraits::construct(get_alloc(), pos, val);
     }
 
     void push_back(T&& val)
     {
         auto pos = grow_at(m_end, 1);
-        get_alloc().construct(pos, std::move(val));
+        atraits::construct(get_alloc(), pos, std::move(val));
     }
 
     template<typename... Args>
     reference emplace_back(Args&&... args)
     {
         auto pos = grow_at(m_end, 1);
-        get_alloc().construct(pos, std::forward<Args>(args)...);
+        atraits::construct(get_alloc(), pos, std::forward<Args>(args)...);
         return *pos;
     }
 
@@ -725,136 +666,83 @@ public:
 
     void resize(size_type n, const value_type& v)
     {
-        auto new_buf = choose_data(n);
+        reserve(n);
 
-        if (new_buf == m_begin)
+        auto new_end = m_begin + n;
+
+        while (m_end > new_end)
         {
-            // no special transfers needed
-
-            auto new_end = m_begin + n;
-
-            while (m_end > new_end)
-            {
-                get_alloc().destroy(--m_end);
-            }
-
-            while (new_end > m_end)
-            {
-                get_alloc().construct(m_end++, v);
-            }
+            atraits::destroy(get_alloc(), --m_end);
         }
-        else
+
+        while (new_end > m_end)
         {
-            // we need to transfer the elements into the new buffer
-
-            const auto s = size();
-            const auto num_transfer = n < s ? n : s;
-
-            for (size_type i = 0; i < num_transfer; ++i)
-            {
-                get_alloc().construct(new_buf + i, std::move(*(m_begin + i)));
-            }
-
-            // free obsoletes
-            for (size_type i = 0; i < s; ++i)
-            {
-                get_alloc().destroy(m_begin + i);
-            }
-
-            // construct new elements
-            for (size_type i = num_transfer; i < n; ++i)
-            {
-                get_alloc().construct(new_buf + i, v);
-            }
-
-            if (m_begin != static_begin_ptr())
-            {
-                // we've moved from dyn to dyn memory, so deallocate the old one
-                get_alloc().deallocate(m_begin, m_capacity);
-            }
-
-            if (new_buf == static_begin_ptr())
-            {
-                m_capacity = StaticCapacity;
-            }
-            else
-            {
-                m_capacity = m_dynamic_capacity;
-            }
-
-            m_begin = new_buf;
-            m_end = new_buf + n;
+            atraits::construct(get_alloc(), m_end++, v);
         }
     }
 
     void resize(size_type n)
     {
-        auto new_buf = choose_data(n);
+        reserve(n);
 
-        if (new_buf == m_begin)
+        auto new_end = m_begin + n;
+
+        while (m_end > new_end)
         {
-            // no special transfers needed
-
-            auto new_end = m_begin + n;
-
-            while (m_end > new_end)
-            {
-                get_alloc().destroy(--m_end);
-            }
-
-            while (new_end > m_end)
-            {
-                get_alloc().construct(m_end++);
-            }
+            atraits::destroy(get_alloc(), --m_end);
         }
-        else
+
+        while (new_end > m_end)
         {
-            // we need to transfer the elements into the new buffer
-
-            const auto s = size();
-            const auto num_transfer = n < s ? n : s;
-
-            for (size_type i = 0; i < num_transfer; ++i)
-            {
-                get_alloc().construct(new_buf + i, std::move(*(m_begin + i)));
-            }
-
-            // free obsoletes
-            for (size_type i = 0; i < n; ++i)
-            {
-                get_alloc().destroy(m_begin + i);
-            }
-
-            // construct new elements
-            for (size_type i = num_transfer; i < s; ++i)
-            {
-                get_alloc().construct(new_buf + i);
-            }
-
-            if (m_begin != static_begin_ptr())
-            {
-                // we've moved from dyn to dyn memory, so deallocate the old one
-                get_alloc().deallocate(m_begin, m_capacity);
-            }
-
-            if (new_buf == static_begin_ptr())
-            {
-                m_capacity = StaticCapacity;
-            }
-            else
-            {
-                m_capacity = m_dynamic_capacity;
-            }
-
-            m_begin = new_buf;
-            m_end = new_buf + n;
+            atraits::construct(get_alloc(), m_end++);
         }
     }
 
+    bool is_static() const
+    {
+        return m_begin == static_begin_ptr();
+    }
+
 private:
+    const T* static_begin_ptr() const
+    {
+        return reinterpret_cast<const_pointer>(m_static_data + 0);
+    }
+
     T* static_begin_ptr()
     {
         return reinterpret_cast<pointer>(m_static_data + 0);
+    }
+
+    void destroy_all()
+    {
+        for (auto p = m_begin; p != m_end; ++p)
+        {
+            atraits::destroy(get_alloc(), p);
+        }
+    }
+
+    void take_impl(small_vector& v)
+    {
+        if (v.is_static())
+        {
+            m_begin = m_end = static_begin_ptr();
+            for (auto p = v.m_begin; p != v.m_end; ++p)
+            {
+                atraits::construct(get_alloc(), m_end, std::move(*p));
+                ++m_end;
+            }
+
+            v.destroy_all();
+        }
+        else
+        {
+            m_begin = v.m_begin;
+            m_end = v.m_end;
+        }
+
+        v.m_begin = v.m_end = v.static_begin_ptr();
+        v.m_capacity = StaticCapacity;
     }
 
     // increase the size by splicing the elements in such a way that
@@ -864,12 +752,12 @@ private:
     {
         auto position = const_cast<T*>(cp);
 
-        _CHOBO_SMALL_VECTOR_OUT_OF_RANGE_IF(position < m_begin || position > m_end);
+        I_ITLIB_SMALL_VECTOR_OUT_OF_RANGE_IF(position < m_begin || position > m_end);
 
         const auto s = size();
-        auto new_buf = choose_data(s + num);
+        const auto cdr = choose_data(s + num);
 
-        if (new_buf == m_begin)
+        if (cdr.ptr == m_begin)
         {
             // no special transfers needed
 
@@ -877,8 +765,8 @@ private:
 
             for (auto p = m_end - num - 1; p >= position; --p)
             {
-                get_alloc().construct(p + num, std::move(*p));
-                get_alloc().destroy(p);
+                atraits::construct(get_alloc(), p + num, std::move(*p));
+                atraits::destroy(get_alloc(), p);
             }
 
             return position;
@@ -887,38 +775,37 @@ private:
         {
             // we need to transfer the elements into the new buffer
 
-            position = new_buf + (position - m_begin);
+            position = cdr.ptr + (position - m_begin);
 
             auto p = m_begin;
-            auto np = new_buf;
+            auto np = cdr.ptr;
 
             for (; np != position; ++p, ++np)
             {
-                get_alloc().construct(np, std::move(*p));
+                atraits::construct(get_alloc(), np, std::move(*p));
             }
 
-            np += num;
+            np += num; // hole
             for (; p != m_end; ++p, ++np)
             {
-                get_alloc().construct(np, std::move(*p));
+                atraits::construct(get_alloc(), np, std::move(*p));
             }
 
             // destroy old
             for (p = m_begin; p != m_end; ++p)
             {
-                get_alloc().destroy(p);
+                atraits::destroy(get_alloc(), p);
             }
 
-            if (m_begin != static_begin_ptr())
+            if (!is_static())
             {
-                // we've moved from dyn to dyn memory, so deallocate the old one
-                get_alloc().deallocate(m_begin, m_capacity);
+                // we've moved from dyn memory, so deallocate the old one
+                atraits::deallocate(get_alloc(), m_begin, m_capacity);
             }
 
-            m_capacity = m_dynamic_capacity;
-
-            m_begin = new_buf;
-            m_end = new_buf + s + num;
+            m_begin = cdr.ptr;
+            m_end = m_begin + s + num;
+            m_capacity = cdr.cap;
 
             return position;
         }
@@ -928,7 +815,7 @@ private:
     {
         auto position = const_cast<T*>(cp);
 
-        _CHOBO_SMALL_VECTOR_OUT_OF_RANGE_IF(position < m_begin || position > m_end || position + num > m_end);
+        I_ITLIB_SMALL_VECTOR_OUT_OF_RANGE_IF(position < m_begin || position > m_end || position + num > m_end);
 
         const auto s = size();
         if (s - num == 0)
@@ -937,21 +824,21 @@ private:
             return m_end;
         }
 
-        auto new_buf = choose_data(s - num);
+        const auto cdr = choose_data(s - num);
 
-        if (new_buf == m_begin)
+        if (cdr.ptr == m_begin)
         {
             // no special transfers needed
 
             for (auto p = position, np = position + num; np != m_end; ++p, ++np)
             {
-                get_alloc().destroy(p);
-                get_alloc().construct(p, std::move(*np));
+                atraits::destroy(get_alloc(), p);
+                atraits::construct(get_alloc(), p, std::move(*np));
             }
 
             for (auto p = m_end - num; p != m_end; ++p)
             {
-                get_alloc().destroy(p);
+                atraits::destroy(get_alloc(), p);
             }
 
             m_end -= num;
@@ -960,172 +847,163 @@ private:
         {
             // we need to transfer the elements into the new buffer
 
-            assert(new_buf == static_begin_ptr()); // since we're shrinking that's the only way to have a new buffer
+            assert(cdr.ptr == static_begin_ptr()); // since we're shrinking that's the only way to have a new buffer
 
-            m_capacity = StaticCapacity;
-
-            auto p = m_begin, np = new_buf;
+            auto p = m_begin, np = cdr.ptr;
             for (; p != position; ++p, ++np)
             {
-                get_alloc().construct(np, std::move(*p));
-                get_alloc().destroy(p);
+                atraits::construct(get_alloc(), np, std::move(*p));
+                atraits::destroy(get_alloc(), p);
             }
 
             for (; p != position + num; ++p)
             {
-                get_alloc().destroy(p);
+                atraits::destroy(get_alloc(), p);
             }
 
-            for (; np != new_buf + s - num; ++p, ++np)
+            for (; np != cdr.ptr + s - num; ++p, ++np)
             {
-                get_alloc().construct(np, std::move(*p));
-                get_alloc().destroy(p);
+                atraits::construct(get_alloc(), np, std::move(*p));
+                atraits::destroy(get_alloc(), p);
             }
 
-            position = new_buf + (position - m_begin);
-            m_begin = new_buf;
+            // we've moved from dyn memory, so deallocate the old one
+            atraits::deallocate(get_alloc(), m_begin, m_capacity);
+
+            position = cdr.ptr + (position - m_begin);
+            m_begin = cdr.ptr;
             m_end = np;
+            m_capacity = StaticCapacity;
         }
 
-        return ++position;
+        return position;
     }
 
-    void assign_impl(size_type count, const T& value)
+    void assign_fill(size_type count, const T& value)
     {
-        assert(m_begin);
-        assert(m_begin == m_end);
+        const auto cdr = choose_data(count);
 
-        m_begin = m_end = choose_data(count);
-        for (size_type i = 0; i < count; ++i)
+        m_end = cdr.ptr;
+        for (size_t i=0; i<count; ++i)
         {
-            get_alloc().construct(m_end, value);
+            atraits::construct(get_alloc(), m_end, value);
             ++m_end;
         }
 
-        update_capacity();
+        if (!is_static() && m_begin != cdr.ptr)
+        {
+            atraits::deallocate(get_alloc(), m_begin, m_capacity);
+        }
+
+        m_begin = cdr.ptr;
+        m_capacity = cdr.cap;
     }
 
     template <class InputIterator>
-    void assign_impl(InputIterator first, InputIterator last)
+    void assign_copy(InputIterator first, InputIterator last)
     {
-        assert(m_begin);
-        assert(m_begin == m_end);
+        const auto cdr = choose_data(last - first);
 
-        m_begin = m_end = choose_data(last - first);
+        m_end = cdr.ptr;
         for (auto p = first; p != last; ++p)
         {
-            get_alloc().construct(m_end, *p);
+            atraits::construct(get_alloc(), m_end, *p);
             ++m_end;
         }
 
-        update_capacity();
+        if (!is_static() && m_begin != cdr.ptr)
+        {
+            atraits::deallocate(get_alloc(), m_begin, m_capacity);
+        }
+
+        m_begin = cdr.ptr;
+        m_capacity = cdr.cap;
     }
 
-    void assign_impl(std::initializer_list<T> ilist)
+    template <class InputIterator>
+    void assign_move(InputIterator first, InputIterator last)
     {
-        assert(m_begin);
-        assert(m_begin == m_end);
+        const auto cdr = choose_data(last - first);
 
-        m_begin = m_end = choose_data(ilist.size());
-        for (auto& elem : ilist)
+        m_end = cdr.ptr;
+        for (auto p = first; p != last; ++p)
         {
-            get_alloc().construct(m_end, elem);
+            atraits::construct(get_alloc(), m_end, std::move(*p));
             ++m_end;
         }
 
-        update_capacity();
+        if (!is_static() && m_begin != cdr.ptr)
+        {
+            atraits::deallocate(get_alloc(), m_begin, m_capacity);
+        }
+
+        m_begin = cdr.ptr;
+        m_capacity = cdr.cap;
     }
 
-    void update_capacity()
+    struct choose_data_result {
+        T* ptr;
+        size_t cap;
+    };
+    choose_data_result choose_data(size_t desired_capacity)
     {
-        if (m_begin == static_begin_ptr())
-        {
-            m_capacity = StaticCapacity;
-        }
-        else
-        {
-            m_capacity = m_dynamic_capacity;
-        }
-    }
+        choose_data_result ret = {m_begin, m_capacity};
 
-    T* choose_data(size_t desired_capacity)
-    {
-        if (m_begin == m_dynamic_data)
+        if (!is_static())
         {
             // we're at the dyn buffer, so see if it needs resize or revert to static
 
-            if (desired_capacity > m_dynamic_capacity)
+            if (desired_capacity > m_capacity)
             {
-                while (m_dynamic_capacity < desired_capacity)
+                while (ret.cap < desired_capacity)
                 {
                     // grow by roughly 1.5
-                    m_dynamic_capacity *= 3;
-                    ++m_dynamic_capacity;
-                    m_dynamic_capacity /= 2;
+                    ret.cap *= 3;
+                    ++ret.cap;
+                    ret.cap /= 2;
                 }
 
-                m_dynamic_data = get_alloc().allocate(m_dynamic_capacity);
-                return m_dynamic_data;
+                ret.ptr = atraits::allocate(get_alloc(), ret.cap);
             }
-            else if (desired_capacity < RevertToStaticSize)
+            else if (desired_capacity < RevertToStaticBelow)
             {
                 // we're reverting to the static buffer
-                return static_begin_ptr();
+                ret.ptr = static_begin_ptr();
+                ret.cap = StaticCapacity;
             }
-            else
-            {
-                // if the capacity and we don't revert to static, just do nothing
-                return m_dynamic_data;
-            }
+
+            // else, do nothing
+            // the capacity is enough and we don't revert to static
         }
-        else
+        else if (desired_capacity > StaticCapacity)
         {
-            assert(m_begin == static_begin_ptr()); // corrupt begin ptr?
+            // we must move to dyn memory
+            // first move to dyn memory, use desired cap
 
-            if (desired_capacity > StaticCapacity)
-            {
-                // we must move to dyn memory
-
-                // see if we have enough
-                if (desired_capacity > m_dynamic_capacity)
-                {
-                    // we need to allocate more
-                    // we don't have anything to destroy, so we can also deallocate the buffer
-                    if (m_dynamic_data)
-                    {
-                        get_alloc().deallocate(m_dynamic_data, m_dynamic_capacity);
-                    }
-
-                    m_dynamic_capacity = desired_capacity;
-                    m_dynamic_data = get_alloc().allocate(m_dynamic_capacity);
-                }
-
-                return m_dynamic_data;
-            }
-            else
-            {
-                // we have enough capacity as it is
-                return static_begin_ptr();
-            }
+            ret.cap = desired_capacity;
+            ret.ptr = atraits::allocate(get_alloc(), ret.cap);
         }
+        // else, do nothing
+        // the capacity is and we're in the static buffer
+
+        return ret;
     }
 
-    allocator_type& get_alloc() { return static_cast<allocator_type&>(*this); }
-    const allocator_type& get_alloc() const { return static_cast<const allocator_type&>(*this); }
+    allocator_type& get_alloc() { return *this; }
+    const allocator_type& get_alloc() const { return *this; }
 
-    pointer m_begin;
+    pointer m_begin; // begin either points to m_static_data or to new memory
     pointer m_end;
-
     size_t m_capacity;
     typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_static_data[StaticCapacity];
-
-    size_t m_dynamic_capacity;
-    pointer m_dynamic_data;
 };
 
-template<typename T, size_t StaticCapacity, size_t RevertToStaticSize, class Alloc>
-bool operator==(const small_vector<T, StaticCapacity, RevertToStaticSize, Alloc>& a,
-    const small_vector<T, StaticCapacity, RevertToStaticSize, Alloc>& b)
+template<typename T,
+    size_t StaticCapacityA, size_t RevertToStaticBelowA, class AllocA,
+    size_t StaticCapacityB, size_t RevertToStaticBelowB, class AllocB
+>
+bool operator==(const small_vector<T, StaticCapacityA, RevertToStaticBelowA, AllocA>& a,
+    const small_vector<T, StaticCapacityB, RevertToStaticBelowB, AllocB>& b)
 {
     if (a.size() != b.size())
     {
@@ -1134,583 +1012,22 @@ bool operator==(const small_vector<T, StaticCapacity, RevertToStaticSize, Alloc>
 
     for (size_t i = 0; i < a.size(); ++i)
     {
-        if (a[i] != b[i])
+        if (!(a[i] == b[i]))
             return false;
     }
 
     return true;
 }
 
-template<typename T, size_t StaticCapacity, size_t RevertToStaticSize, class Alloc>
-bool operator!=(const small_vector<T, StaticCapacity, RevertToStaticSize, Alloc>& a,
-    const small_vector<T, StaticCapacity, RevertToStaticSize, Alloc>& b)
+template<typename T,
+    size_t StaticCapacityA, size_t RevertToStaticBelowA, class AllocA,
+    size_t StaticCapacityB, size_t RevertToStaticBelowB, class AllocB
+>
+bool operator!=(const small_vector<T, StaticCapacityA, RevertToStaticBelowA, AllocA>& a,
+    const small_vector<T, StaticCapacityB, RevertToStaticBelowB, AllocB>& b)
+
 {
-    if (a.size() != b.size())
-    {
-        return true;
-    }
-
-    for (size_t i = 0; i < a.size(); ++i)
-    {
-        if (a[i] != b[i])
-            return true;
-    }
-
-    return false;
+    return !operator==(a, b);
 }
 
 }
-
-
-#if defined(CHOBO_SMALL_VECTOR_TEST_WITH_DOCTEST)
-
-#include <string>
-#include <utility>
-
-namespace chobo_small_vector_test
-{
-
-size_t allocations = 0;
-size_t deallocations = 0;
-size_t allocated_bytes = 0;
-size_t deallocated_bytes = 0;
-size_t constructions = 0;
-size_t destructions = 0;
-
-template <typename T>
-class counting_allocator : public std::allocator<T>
-{
-public:
-    typedef std::allocator<T> super;
-
-    T* allocate(size_t n, std::allocator<void>::const_pointer hint = 0)
-    {
-        ++allocations;
-        allocated_bytes += n * sizeof(T);
-        return super::allocate(n, hint);
-    }
-
-    void deallocate(T* p, size_t n)
-    {
-        ++deallocations;
-        deallocated_bytes += n * sizeof(T);
-        return super::deallocate(p, n);
-    }
-
-    template< class U, class... Args >
-    void construct(U* p, Args&&... args)
-    {
-        ++constructions;
-        return super::construct(p, std::forward<Args>(args)...);
-    }
-
-    template< class U >
-    void destroy(U* p)
-    {
-        ++destructions;
-        return super::destroy(p);
-    }
-};
-}
-
-TEST_CASE("[small_vector] static")
-{
-    using namespace chobo;
-    using namespace chobo_small_vector_test;
-    using namespace std;
-
-    static_assert(sizeof(small_vector<void*, 10>) - sizeof(small_vector<void*, 3>) == sizeof(void*) * 7, "small_vector needs to have a static buffer");
-    {
-        small_vector<int, 10, 0, counting_allocator<int>> ivec;
-        CHECK(ivec.size() == 0);
-        CHECK(ivec.capacity() == 10);
-        CHECK(ivec.begin() == ivec.end());
-        CHECK(ivec.cbegin() == ivec.cend());
-        CHECK(ivec.empty());
-
-        auto d = ivec.data();
-        ivec.reserve(9);
-        CHECK(ivec.capacity() == 10);
-        CHECK(d == ivec.data());
-
-        ivec.resize(2, 8);
-        CHECK(ivec.size() == 2);
-        CHECK(ivec.front() == 8);
-        CHECK(ivec.back() == 8);
-        CHECK(d == ivec.data());
-
-        ivec.clear();
-        CHECK(ivec.size() == 0);
-        CHECK(ivec.capacity() == 10);
-        CHECK(ivec.begin() == ivec.end());
-        CHECK(ivec.cbegin() == ivec.cend());
-        CHECK(ivec.empty());
-        CHECK(d == ivec.data());
-
-        ivec.push_back(5);
-        CHECK(ivec.size() == 1);
-        CHECK(ivec[0] == 5);
-        auto it = ivec.begin();
-        CHECK(it == ivec.data());
-        CHECK(it == ivec.cbegin());
-        CHECK(*it == 5);
-        ++it;
-        CHECK(it == ivec.end());
-        CHECK(it == ivec.cend());
-
-        auto& back = ivec.emplace_back(3);
-        CHECK(ivec.size() == 2);
-        auto rit = ivec.rbegin();
-        CHECK(*rit == 3);
-        ++rit;
-        *rit = 12;
-        ++rit;
-        CHECK(rit == ivec.rend());
-        CHECK(rit == ivec.crend());
-        CHECK(ivec.front() == 12);
-        CHECK(ivec.back() == 3);
-        CHECK(back == 3);
-        CHECK(&back == &ivec.back());
-
-        ivec.insert(ivec.begin(), 53);
-        ivec.insert(ivec.begin() + 2, 90);
-        ivec.insert(ivec.begin() + 4, 17);
-        ivec.insert(ivec.end(), 6);
-        ivec.insert(ivec.begin(), { 1, 2 });
-
-        int ints[] = { 1, 2, 53, 12, 90, 3, 17, 6 };
-        CHECK(ivec.size() == 8);
-        CHECK(memcmp(ivec.data(), ints, sizeof(ints)) == 0);
-
-        ivec.shrink_to_fit();
-        CHECK(ivec.size() == 8);
-        CHECK(ivec.capacity() == 10);
-        CHECK(d == ivec.data());
-
-        ivec.revert_to_static();
-        CHECK(ivec.size() == 8);
-        CHECK(ivec.capacity() == 10);
-        CHECK(d == ivec.data());
-
-        ivec.pop_back();
-        CHECK(ivec.size() == 7);
-        CHECK(memcmp(ivec.data(), ints, sizeof(ints) - sizeof(int)) == 0);
-
-        ivec.resize(8);
-        CHECK(ivec.size() == 8);
-        ints[7] = 0;
-        CHECK(memcmp(ivec.data(), ints, sizeof(ints)) == 0);
-
-        const small_vector<int, 5, 0, counting_allocator<int>> ivec2 = { 1, 2, 3, 4 };
-        CHECK(ivec2.size() == 4);
-        CHECK(*ivec2.begin() == 1);
-        CHECK(ivec2[1] == 2);
-        CHECK(ivec2.at(2) == 3);
-        CHECK(*ivec2.rbegin() == 4);
-
-        ivec.erase(ivec.begin());
-        CHECK(ivec.size() == 7);
-        CHECK(ivec.front() == 2);
-        CHECK(memcmp(ivec.data(), ints + 1, ivec.size() * sizeof(int)) == 0);
-
-        ivec.erase(ivec.begin() + 2, ivec.begin() + 4);
-        CHECK(ivec.size() == 5);
-        CHECK(ivec[3] == 17);
-
-        small_vector<string, 11, 0, counting_allocator<string>> svec;
-        svec.assign({ "as", "df" });
-        CHECK(svec.size() == 2);
-        string s1 = "the quick brown fox jumped over the lazy dog 1234567890";
-        auto& rs = svec.emplace_back(s1);
-        CHECK(svec.back() == s1);
-        CHECK(rs == s1);
-        CHECK(&rs == &svec.back());
-
-        auto svec1 = svec;
-        CHECK(svec1 == svec);
-
-        const void* cstr = svec.back().c_str();
-        auto svec2 = std::move(svec);
-        CHECK(svec2.size() == 3);
-        CHECK(svec2.back() == s1);
-
-        CHECK(svec.empty());
-        CHECK(svec2.back().c_str() == cstr);
-
-        svec = std::move(svec2);
-        CHECK(svec2.empty());
-        CHECK(svec.back().c_str() == cstr);
-
-        svec2 = svec;
-        CHECK(svec2.back() == s1);
-        CHECK(svec.back() == s1);
-        CHECK(svec == svec2);
-
-        svec.insert(svec.begin(), s1);
-        CHECK(svec.size() == 4);
-        CHECK(svec.back().c_str() == cstr);
-        CHECK(svec.front() == svec.back());
-
-        cstr = s1.c_str();
-        svec.emplace(svec.begin() + 2, std::move(s1));
-        CHECK(svec.size() == 5);
-        CHECK(svec.front() == svec[2]);
-        CHECK(svec[2].c_str() == cstr);
-
-        svec.clear();
-        CHECK(svec.empty());
-        svec2.clear();
-        CHECK(svec2.empty());
-        CHECK(svec == svec2);
-
-        svec.resize(svec.capacity());
-        CHECK(svec.size() == svec.capacity());
-
-        for (auto& s : svec)
-        {
-            CHECK(s.empty());
-        }
-
-        s1 = "asdf";
-        small_vector<char, 10, 10, counting_allocator<char>> cvec(s1.begin(), s1.end());
-        CHECK(cvec.size() == 4);
-        CHECK(cvec.front() == 'a');
-        CHECK(cvec.back() == 'f');
-
-        cvec.clear();
-        CHECK(cvec.size() == 0);
-        CHECK(cvec.empty());
-
-        s1 = "baz";
-        cvec.assign(s1.begin(), s1.end());
-        CHECK(cvec.size() == 3);
-        CHECK(cvec.front() == 'b');
-        CHECK(cvec.back() == 'z');
-
-        // 0 is implicitly castable to nullptr_t which can be an iterator in our case
-        small_vector<int, 4, 4> nullptr_test(2, 0);
-        CHECK(nullptr_test.size() == 2);
-        CHECK(nullptr_test.front() == 0);
-        CHECK(nullptr_test.back() == 0);
-
-        nullptr_test.assign(3, 0);
-        CHECK(nullptr_test.size() == 3);
-        CHECK(nullptr_test.front() == 0);
-        CHECK(nullptr_test.back() == 0);
-
-        nullptr_test.insert(nullptr_test.begin(), 1, 0);
-        CHECK(nullptr_test.size() == 4);
-        CHECK(nullptr_test.front() == 0);
-    }
-
-    CHECK(allocations == 0);
-    CHECK(deallocations == 0);
-    CHECK(allocated_bytes == 0);
-    CHECK(deallocated_bytes == 0);
-    CHECK(constructions == destructions);
-
-    constructions = destructions = 0;
-}
-
-
-TEST_CASE("[small_vector] dynamic")
-{
-    using namespace chobo;
-    using namespace chobo_small_vector_test;
-    using namespace std;
-    {
-        small_vector<int, 1, 0, counting_allocator<int>> ivec;
-        CHECK(ivec.size() == 0);
-        CHECK(ivec.capacity() == 1);
-        CHECK(ivec.begin() == ivec.end());
-        CHECK(ivec.cbegin() == ivec.cend());
-        CHECK(ivec.empty());
-
-        auto d = ivec.data();
-        ivec.reserve(2);
-        CHECK(ivec.capacity() == 2);
-        CHECK(d != ivec.data());
-        CHECK(allocations == 1);
-
-        ivec.resize(3, 8);
-        CHECK(ivec.capacity() == 3);
-        CHECK(ivec.size() == 3);
-        CHECK(ivec.front() == 8);
-        CHECK(ivec.back() == 8);
-        CHECK(d != ivec.data());
-        CHECK(allocations == 2);
-
-        ivec.clear();
-        CHECK(ivec.size() == 0);
-        CHECK(ivec.capacity() == 3);
-        CHECK(d != ivec.data());
-        CHECK(ivec.begin() == ivec.end());
-        CHECK(ivec.cbegin() == ivec.cend());
-        CHECK(ivec.empty());
-
-        ivec.push_back(5);
-        CHECK(ivec.size() == 1);
-        CHECK(ivec[0] == 5);
-        auto it = ivec.begin();
-        CHECK(it == ivec.data());
-        CHECK(it == ivec.cbegin());
-        CHECK(*it == 5);
-        ++it;
-        CHECK(it == ivec.end());
-        CHECK(it == ivec.cend());
-
-        auto& back = ivec.emplace_back(3);
-        CHECK(ivec.size() == 2);
-        auto rit = ivec.rbegin();
-        CHECK(*rit == 3);
-        ++rit;
-        *rit = 12;
-        ++rit;
-        CHECK(rit == ivec.rend());
-        CHECK(rit == ivec.crend());
-        CHECK(ivec.front() == 12);
-        CHECK(ivec.back() == 3);
-        CHECK(back == 3);
-        CHECK(&back == &ivec.back());
-
-        ivec.insert(ivec.begin(), 53);
-        CHECK(ivec.capacity() == 3);
-
-        ivec.insert(ivec.begin() + 2, 90);
-        ivec.insert(ivec.begin() + 4, 17);
-        ivec.insert(ivec.end(), 6);
-        ivec.insert(ivec.begin(), { 1, 2 });
-
-        int ints[] = { 1, 2, 53, 12, 90, 3, 17, 6 };
-        CHECK(ivec.capacity() >= 8);
-        CHECK(ivec.size() == 8);
-        CHECK(memcmp(ivec.data(), ints, sizeof(ints)) == 0);
-
-        ivec.pop_back();
-        CHECK(ivec.size() == 7);
-        CHECK(memcmp(ivec.data(), ints, sizeof(ints) - sizeof(int)) == 0);
-
-        ivec.resize(8);
-        CHECK(ivec.size() == 8);
-        ints[7] = 0;
-        CHECK(memcmp(ivec.data(), ints, sizeof(ints)) == 0);
-
-        const small_vector<int, 1, 0, counting_allocator<int>> ivec2 = { 1, 2, 3, 4 };
-        CHECK(ivec2.size() == 4);
-        CHECK(*ivec2.begin() == 1);
-        CHECK(ivec2[1] == 2);
-        CHECK(ivec2.at(2) == 3);
-        CHECK(*ivec2.rbegin() == 4);
-
-        ivec.erase(ivec.begin());
-        CHECK(ivec.size() == 7);
-        CHECK(ivec.front() == 2);
-        CHECK(memcmp(ivec.data(), ints + 1, ivec.size() * sizeof(int)) == 0);
-
-        ivec.erase(ivec.begin() + 2, ivec.begin() + 4);
-        CHECK(ivec.size() == 5);
-        CHECK(ivec[3] == 17);
-
-        small_vector<string, 1, 0, counting_allocator<string>> svec;
-        svec.assign({ "as", "df" });
-        CHECK(svec.size() == 2);
-        string s1 = "the quick brown fox jumped over the lazy dog 1234567890";
-        auto& rs = svec.emplace_back(s1);
-        CHECK(svec.back() == s1);
-        CHECK(rs == s1);
-        CHECK(&rs == &svec.back());
-
-        auto svec1 = svec;
-        CHECK(svec1 == svec);
-
-        const void* cstr = svec.back().c_str();
-        auto svec2 = std::move(svec);
-        CHECK(svec2.size() == 3);
-        CHECK(svec2.back() == s1);
-
-        CHECK(svec.empty());
-        CHECK(svec2.back().c_str() == cstr);
-
-        svec = std::move(svec2);
-        CHECK(svec2.empty());
-        CHECK(svec.back().c_str() == cstr);
-
-        svec2 = svec;
-        CHECK(svec2.back() == s1);
-        CHECK(svec.back() == s1);
-        CHECK(svec == svec2);
-
-        svec.insert(svec.begin(), s1);
-        CHECK(svec.size() == 4);
-        CHECK(svec.back().c_str() == cstr);
-        CHECK(svec.front() == svec.back());
-
-        cstr = s1.c_str();
-        svec.emplace(svec.begin() + 2, std::move(s1));
-        CHECK(svec.size() == 5);
-        CHECK(svec.front() == svec[2]);
-        CHECK(svec[2].c_str() == cstr);
-
-        svec.clear();
-        CHECK(svec.empty());
-        svec2.clear();
-        CHECK(svec2.empty());
-        CHECK(svec == svec2);
-
-        svec.resize(svec.capacity());
-        CHECK(svec.size() == svec.capacity());
-
-        for (auto& s : svec)
-        {
-            CHECK(s.empty());
-        }
-
-        s1 = "asdf";
-        small_vector<char, 1, 0, counting_allocator<char>> cvec(s1.begin(), s1.end());
-        CHECK(cvec.size() == 4);
-        CHECK(cvec.front() == 'a');
-        CHECK(cvec.back() == 'f');
-
-        cvec.clear();
-        CHECK(cvec.size() == 0);
-        CHECK(cvec.empty());
-
-        s1 = "baz";
-        cvec.assign(s1.begin(), s1.end());
-        CHECK(cvec.size() == 3);
-        CHECK(cvec.front() == 'b');
-        CHECK(cvec.back() == 'z');
-    }
-
-    CHECK(allocations == deallocations);
-    CHECK(allocated_bytes == deallocated_bytes);
-    CHECK(constructions == destructions);
-
-    allocations = deallocations = allocated_bytes = deallocated_bytes = constructions = destructions = 0;
-}
-
-TEST_CASE("[small_vector] static-dynamic")
-{
-    using namespace chobo;
-    using namespace chobo_small_vector_test;
-    using namespace std;
-
-    {
-        small_vector<int, 5, 3, counting_allocator<int>> ivec;
-        auto d = ivec.data();
-        ivec.reserve(20);
-        CHECK(ivec.data() == d);
-
-        ivec.push_back(1);
-        ivec.push_back(2);
-        ivec.push_back(3);
-
-        CHECK(ivec.data() == d);
-
-        ivec.insert(ivec.end(), 3u, 8);
-
-        CHECK(ivec.size() == 6);
-        CHECK(ivec.capacity() == 20);
-
-        auto dd = ivec.data();
-
-        ivec.erase(ivec.begin(), ivec.begin() + 6);
-        CHECK(ivec.data() == d);
-        CHECK(ivec.empty());
-
-        ivec.resize(19, 11);
-        CHECK(ivec.size() == 19);
-        CHECK(ivec.capacity() == 20);
-        CHECK(ivec.data() == dd);
-
-        ivec.resize(4);
-        CHECK(ivec.size() == 4);
-        CHECK(ivec.capacity() == 20);
-        CHECK(ivec.data() == dd);
-
-        ivec.revert_to_static();
-        CHECK(ivec.size() == 4);
-        CHECK(ivec.capacity() == 5);
-        CHECK(ivec.data() == d);
-
-        ivec.reserve(10);
-        CHECK(ivec.size() == 4);
-        CHECK(ivec.capacity() == 20);
-        CHECK(ivec.data() == dd);
-
-        ivec.shrink_to_fit();
-        CHECK(ivec.size() == 4);
-        CHECK(ivec.capacity() == 5);
-        CHECK(ivec.data() == d);
-
-        ivec.reserve(10);
-        CHECK(ivec.size() == 4);
-        CHECK(ivec.capacity() == 10);
-        CHECK(ivec.data() != d);
-
-        dd = ivec.data();
-        ivec.insert(ivec.begin() + 3, 5u, 88);
-        CHECK(ivec.size() == 9);
-        CHECK(ivec.capacity() == 10);
-        CHECK(ivec.data() == dd);
-        CHECK(ivec[2] == 11);
-        CHECK(ivec[7] == 88);
-        CHECK(ivec[8] == 11);
-
-        small_vector<int, 3, 4, counting_allocator<int>> ivec2(ivec.begin(), ivec.end());
-        CHECK(ivec2.size() == 9);
-        CHECK(ivec2.size() == 9);
-        CHECK(ivec2.capacity() == 9);
-        CHECK(ivec2[2] == 11);
-        CHECK(ivec2[7] == 88);
-        CHECK(ivec2[8] == 11);
-
-        ivec.erase(ivec.begin() + 1, ivec.end() - 2);
-        CHECK(ivec.size() == 3);
-        ivec.erase(ivec.end() - 1);
-        CHECK(ivec.size() == 2);
-        CHECK(ivec.capacity() == 5);
-        CHECK(ivec.data() == d);
-
-        ivec2.erase(ivec2.begin() + 1, ivec2.end() - 2);
-        CHECK(ivec2.size() == 3);
-        CHECK(ivec2.capacity() == 3);
-    }
-
-    CHECK(allocations == deallocations);
-    CHECK(allocated_bytes == deallocated_bytes);
-    CHECK(constructions == destructions);
-
-    allocations = deallocations = allocated_bytes = deallocated_bytes = constructions = destructions = 0;
-}
-
-#if !defined(__EMSCRIPTEN__) || !defined(NDEBUG) // emscripten allows exceptions with -O0
-TEST_CASE("[small_vector] out of range")
-{
-    using namespace chobo;
-    small_vector<int, 5> ivec;
-    ivec.resize(4);
-    CHECK(ivec.capacity() == 5);
-
-    CHECK_THROWS_AS(ivec.insert(ivec.begin() - 1, 1), std::out_of_range);
-    CHECK(ivec.size() == 4);
-    CHECK_THROWS_AS(ivec.insert(ivec.end() + 1, 1), std::out_of_range);
-    CHECK(ivec.size() == 4);
-    CHECK_THROWS_AS(ivec.erase(ivec.begin() - 1), std::out_of_range);
-    CHECK(ivec.size() == 4);
-    CHECK_THROWS_AS(ivec.erase(ivec.end() + 1), std::out_of_range);
-    CHECK(ivec.size() == 4);
-    CHECK_THROWS_AS(ivec.erase(ivec.begin() - 1, ivec.begin() + 1), std::out_of_range);
-    CHECK(ivec.size() == 4);
-    CHECK_THROWS_AS(ivec.erase(ivec.begin() + 2, ivec.end() + 1), std::out_of_range);
-    CHECK(ivec.size() == 4);
-    CHECK_THROWS_AS(ivec.erase(ivec.end() + 1, ivec.end() + 3), std::out_of_range);
-    CHECK(ivec.size() == 4);
-    CHECK_THROWS_AS(ivec.erase(ivec.end() - 1, ivec.begin() + 1), std::out_of_range);
-    CHECK(ivec.size() == 4);
-
-}
-#endif
-
-
-#endif
