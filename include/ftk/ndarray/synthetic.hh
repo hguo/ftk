@@ -178,7 +178,7 @@ ndarray<T> synthetic_double_gyre_unstructured(
     const T epsilon = 0.25)
 {
   ndarray<T> result; 
-  result.reshapef(coords);
+  result.reshape(coords);
   result.set_multicomponents();
 
   for (auto i = 0; i < coords.dim(1); i ++) {
