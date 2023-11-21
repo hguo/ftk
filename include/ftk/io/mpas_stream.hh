@@ -42,6 +42,9 @@ public:
   bool c2v = true, e2c = true;
 
   size_t nlayers;
+
+public:
+  std::vector<std::string> filenames;
 };
 
 //////

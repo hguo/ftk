@@ -61,7 +61,7 @@ struct object {
   static void parallel_for(int ntasks, std::function<void(int)> f, 
       int thread_backend = FTK_THREAD_PTHREAD, 
       int nthreads = std::thread::hardware_concurrency(), 
-      bool affinity = true)
+      bool affinity = false)
   {
     if (thread_backend == FTK_THREAD_PTHREAD) {
       nthreads = std::min(ntasks, nthreads);
@@ -75,7 +75,7 @@ struct object {
         }));
       }
 
-      if (affinity) set_affinity(0);
+      if (affinity) set_affinity(0); // FIXME: for MPI runs, it seems that all work is congested on cpu0
       for (auto j = 0; j < ntasks; j += nthreads) // the main thread
         f(j);
 
