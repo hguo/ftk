@@ -334,11 +334,11 @@ inline void critical_line_tracker_3d_regular::update_timestep()
         });
 
     ftk::lattice ext({0, 0, 0}, 
-        {field_data_snapshots[0].uv.dim(1), 
-         field_data_snapshots[0].uv.dim(2),
-         field_data_snapshots[0].uv.dim(3)});
+        {field_data_snapshots[0].uv.dimf(1), 
+         field_data_snapshots[0].uv.dimf(2),
+         field_data_snapshots[0].uv.dimf(3)});
 
-    const int nchannels = field_data_snapshots[0].uv.dim(0);
+    const int nchannels = field_data_snapshots[0].uv.dimf(0);
 
     // ordinal
     auto results = extract_3dclt_cuda(

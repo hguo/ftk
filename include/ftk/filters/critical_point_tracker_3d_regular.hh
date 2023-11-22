@@ -240,9 +240,9 @@ inline void critical_point_tracker_3d_regular::update_timestep()
         });
 
     ftk::lattice ext({0, 0, 0}, 
-        {field_data_snapshots[0].vector.dim(1), 
-         field_data_snapshots[0].vector.dim(2),
-         field_data_snapshots[0].vector.dim(3)});
+        {field_data_snapshots[0].vector.dimf(1), 
+         field_data_snapshots[0].vector.dimf(2),
+         field_data_snapshots[0].vector.dimf(3)});
 
     // ordinal
     auto results = extract_cp3dt_cuda(
