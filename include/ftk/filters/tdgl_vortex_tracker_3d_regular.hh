@@ -299,9 +299,9 @@ inline void tdgl_vortex_tracker_3d_regular::update_timestep()
         });
 
     ftk::lattice ext({0, 0, 0}, 
-        {field_data_snapshots[0].rho.dim(0), 
-         field_data_snapshots[0].rho.dim(1),
-         field_data_snapshots[0].rho.dim(2)});
+        {field_data_snapshots[0].rho.dimf(0), 
+         field_data_snapshots[0].rho.dimf(1),
+         field_data_snapshots[0].rho.dimf(2)});
 
     // ordinal
     auto results = extract_tdgl_vortex_3dt_cuda(

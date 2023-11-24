@@ -330,7 +330,7 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
     const double *attrs[] = {}; // salinity->data(), temperature->data()};
 
     // std::cerr << zTop->shape() << std::endl;
-    mop_set_nlayers(ctx, zTop->dim(1));
+    mop_set_nlayers(ctx, zTop->dimf(1));
     
 
     fprintf(stderr, "v=%p, vv=%p, top=%p\n", V->data(), vertVelocityTop->data(), zTop->data());
