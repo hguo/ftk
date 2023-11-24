@@ -650,16 +650,6 @@ inline void ndarray_base::read_netcdf(const std::string& filename, const std::st
 #endif
 }
 
-inline void ndarray_base::to_device(int device, int id)
-{
-#if FTK_HAVE_CUDA
-  if (dev_ptr() == 0)
-    cudaMalloc(&dev_ptr, size());
-#else
-  fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
-#endif
-}
-
 } // namespace ftk
 
 #endif

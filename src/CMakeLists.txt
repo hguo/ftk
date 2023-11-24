@@ -118,9 +118,9 @@ if (FTK_HAVE_OPENMP)
   target_link_libraries (libftk OpenMP::OpenMP_CXX)
 endif ()
 
-#if (FTK_HAVE_CUDA)
-#  target_link_libraries (libftk ${CUDA_LIBRARIES})
-#endif ()
+if (FTK_HAVE_CUDA)
+  target_link_libraries (libftk CUDA::cudart)
+endif ()
 
 if (FTK_HAVE_PYBIND11)
   target_link_libraries (libftk ${PYTHON_LIBRARY})

@@ -293,8 +293,10 @@ endif ()
 
 if (FTK_USE_CUDA STREQUAL AUTO)
   enable_language (CUDA OPTIONAL) #FIXME: FTK_HAVE_CUDA in AUTO mode
+  find_package (CUDAToolkit OPTIONAL)
 elseif (FTK_USE_CUDA)
   enable_language (CUDA)
+  find_package (CUDAToolkit)
   set (FTK_HAVE_CUDA TRUE)
 endif ()
 
