@@ -7,8 +7,8 @@
 #include <ftk/basic/murmurhash2.hh>
 
 #if FTK_HAVE_CUDA
-// #include <cuda.h>
-// #include <cuda_runtime.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
 #endif
 
 #if FTK_HAVE_MPI
@@ -354,7 +354,11 @@ public: // pybind11
   
   int nc_datatype() const;
 
-  void copy_to_cuda_device();
+public:
+  void to_device(int device, int id=0);
+  void to_host();
+
+  void *get_devptr() { return devptr; }
 
 public: // statistics & misc
   std::tuple<T, T> min_max() const;
@@ -368,12 +372,10 @@ public: // statistics & misc
 
 private:
   std::vector<T> p;
-    
-#if 0 // FTK_HAVE_CUDA
-  // arrays on GPU
-  size_t *d_dims = NULL, *d_prod = NULL;
-  T *d_p = NULL;
-#endif
+  
+  int device_type = FTK_XL_NONE;
+  int device_id = 0;
+  void *devptr = NULL;
 };
 
 //////////////////////////////////
@@ -794,17 +796,20 @@ void ndarray<T>::reshape(const ndarray<T1>& array)
 template <typename T>
 void ndarray<T>::reshapef(const std::vector<size_t> &dims_)
 {
-  dims = dims_;
-  s.resize(dims.size());
+  if (device_type == FTK_XL_NONE) {
+    dims = dims_;
+    s.resize(dims.size());
 
-  if (dims.size() == 0)
-    fatal(FTK_ERR_NDARRAY_RESHAPE_EMPTY);
+    if (dims.size() == 0)
+      fatal(FTK_ERR_NDARRAY_RESHAPE_EMPTY);
 
-  for (size_t i = 0; i < nd(); i ++)
-    if (i == 0) s[i] = 1;
-    else s[i] = s[i-1]*dims[i-1];
+    for (size_t i = 0; i < nd(); i ++)
+      if (i == 0) s[i] = 1;
+      else s[i] = s[i-1]*dims[i-1];
 
-  p.resize(s[nd()-1]*dims[nd()-1]);
+    p.resize(s[nd()-1]*dims[nd()-1]);
+  } else 
+    fatal(FTK_ERR_NDARRAY_RESHAPE_DEVICE);
 }
 
 template <typename T>
@@ -988,24 +993,54 @@ bool ndarray<T>::read_bp_legacy(const std::string& filename, const std::string& 
 
 
 template <typename T>
-inline void ndarray<T>::copy_to_cuda_device()
+inline void ndarray<T>::to_device(int dev, int id)
 {
-#if 0 // FTK_HAVE_CUDA
-  if (d_dims == NULL)
-    cudaMalloc((void**)&d_dims, sizeof(size_t) * dims.size());
-  cudaMemcpy(d_dims, dims.data(), sizeof(size_t) * dims.size(), cudaMemcpyHostToDevice);
+  if (dev == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    if (this->device_type == FTK_XL_CUDA) { // alreay on gpu
+      warn("array already on device");
+    } else {
+      this->device_type = FTK_XL_CUDA;
+      this->device_id = id;
 
-  if (d_prod == NULL)
-    cudaMalloc((void**)&d_prod, sizeof(size_t) * s.size());
-  cudaMemcpy(d_prod, s.data(), sizeof(size_t) * s.size(), cudaMemcpyHostToDevice);
-
-  if (d_p == NULL)
-    cudaMalloc((void**)&d_p, sizeof(T) * nelem());
-  cudaMemcpy(d_p, p.data(), sizeof(T) * p.size(), cudaMemcpyHostToDevice);
+      cudaSetDevice(id);
+      cudaMalloc(&devptr, sizeof(T) * nelem());
+      cudaMemcpy(devptr, p.data(), sizeof(T) * p.size(), 
+          cudaMemcpyHostToDevice);
+      p.clear();
+    }
 #else
-  fprintf(stderr, "[FTK] fatal: FTK not compiled with CUDA.\n");
-  assert(false);
+    fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
 #endif
+  } else 
+    fatal(FTK_ERR_NDARRAY_UNKNOWN_DEVICE);
+}
+
+template <typename T>
+inline void ndarray<T>::to_host()
+{
+  if (this->device_type == FTK_XL_NONE) {
+    warn("array already on host");
+  } else if (this->device_type == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    if (this->device_type == FTK_XL_CUDA) {
+      p.resize(nelem());
+      
+      cudaSetDevice(this->device_id);
+      cudaMemcpy(p.data(), devptr, sizeof(T) * p.size(), 
+          cudaMemcpyDeviceToHost);
+      cudaFree(devptr);
+     
+      this->device_type = FTK_XL_NONE;
+      this->device_id = 0;
+      devptr = nullptr;
+    } else 
+      fatal("array not on device");
+#else
+    fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
+#endif
+  } else
+    fatal(FTK_ERR_NDARRAY_UNKNOWN_DEVICE);
 }
 
 template <typename T>

@@ -219,6 +219,10 @@ public: // vtk data array
   virtual int vtk_data_type() const = 0;
 #endif
 
+public: // device/host
+  virtual void to_device(int device, int id=0) = 0;
+  virtual void to_host() = 0;
+
 protected:
   std::vector<size_t> dims, s;
   size_t ncd = 0; // number of dimensions for components.  For 3D vector field, nd=4, ncd=1.  For 3D jacobian field, nd=5, ncd=2
@@ -643,6 +647,16 @@ inline void ndarray_base::read_netcdf(const std::string& filename, const std::st
   NC_SAFE_CALL( nc_close(ncid) );
 #else
   fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+#endif
+}
+
+inline void ndarray_base::to_device(int device, int id)
+{
+#if FTK_HAVE_CUDA
+  if (dev_ptr() == 0)
+    cudaMalloc(&dev_ptr, size());
+#else
+  fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
 #endif
 }
 
