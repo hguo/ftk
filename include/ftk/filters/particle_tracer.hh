@@ -141,6 +141,9 @@ inline void particle_tracer::update_timestep()
   if (!streamlines && this->snapshots.size() < 2) 
     return; // nothing can be done
 
+  typedef std::chrono::high_resolution_clock clock_type;
+  auto t0 = clock_type::now();
+
   // fprintf(stderr, "#particles=%zu\n", this->particles.size());
   this->parallel_for_container(trajectories, [&](feature_curve_set_t::iterator it) {
   // for (auto &kv : trajectories) {
@@ -203,6 +206,10 @@ inline void particle_tracer::update_timestep()
 
     // fprintf(stderr, "%f, %f, %f\n", p.x[0], p.x[1], p.t);
   }, FTK_THREAD_PTHREAD, get_number_of_threads());
+  
+  auto t1 = clock_type::now();
+         
+  fprintf(stderr, "t_trace=%f\n", std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() * 1e-9);
 }
 
 inline bool particle_tracer::eval_vt(
