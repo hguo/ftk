@@ -8,7 +8,7 @@
 namespace ftk {
 
 struct mpas_ocean_tracker : public virtual tracker {
-  mpas_ocean_tracker(diy::mpi::communicator comm, std::shared_ptr<mpas_mesh<>> m_) : 
+  mpas_ocean_tracker(diy::mpi::communicator comm, const mpas_mesh<> *m_) :
     tracker(comm), 
     m(m_) {}
   virtual ~mpas_ocean_tracker() {}
@@ -17,7 +17,7 @@ public:
   void initialize() {}
 
 protected:
-  std::shared_ptr<mpas_mesh<>> m;
+  const mpas_mesh<> *m;
 };
 
 }

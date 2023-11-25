@@ -106,11 +106,17 @@ inline std::shared_ptr<ndarray_group> xgc_stream_adios2::request_step(int step)
   const auto f = filename_step(step);
   if (is_directory(f1d) && is_directory(f)) {
     try {
+      ndarray_base *psi_mks = new ndarray<double>,
+                   *e_gc_density_avg = new ndarray<double>, 
+                   *e_parallel_mean_en_avg = new ndarray<double>,
+                   *e_perp_temperature_avg = new ndarray<double>;
+#if 0
       std::shared_ptr<ndarray_base> // 1d profiles
         psi_mks( new ndarray<double> ),
         e_gc_density_avg( new ndarray<double> ), 
         e_parallel_mean_en_avg( new ndarray<double> ),
         e_perp_temperature_avg( new ndarray<double> );
+#endif
 
       psi_mks->read_bp(f1d, "psi_mks", istep);
       g->set("psi_mks", psi_mks);
@@ -151,11 +157,17 @@ inline std::shared_ptr<ndarray_group> xgc_stream_adios2::request_step(int step)
       }
       g->set("e_perp_temperature_avg", e_perp_temperature_avg);
 
+      ndarray_base *dpot = new ndarray<double>, 
+                   *pot0 = new ndarray<double>,
+                   *potm0 = new ndarray<double>,
+                   *eden = new ndarray<double>;
+#if 0
       std::shared_ptr<ndarray_base> // 3d
         dpot( new ndarray<double> ),
         pot0( new ndarray<double> ),
         potm0( new ndarray<double> ),
         eden( new ndarray<double> );
+#endif
 
       dpot->read_bp(f, "dpot");
       g->set("dpot", dpot);
@@ -202,7 +214,7 @@ inline bool xgc_stream_adios2::advance_timestep()
   fprintf(stderr, "advancing.., %d, %d, %d, filename=%s\n", start_timestep, current_timestep, ntimesteps, current_filename.c_str());
 
   if (is_directory( current_filename )) {
-    std::shared_ptr<ndarray_base> density( new ndarray<double> );
+    ndarray_base *density = new ndarray<double>;
     density->read_bp(current_filename, "dpot");
     g->set("density", density);
     

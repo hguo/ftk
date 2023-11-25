@@ -53,7 +53,7 @@ protected:
   virtual std::vector<std::string> scalar_names() const { return {}; }
 
 protected:
-  std::shared_ptr<ndarray<double>> V[2];
+  ndarray<double> *V[2];
 
 protected:
   std::vector<feature_point_lite_t> particles;

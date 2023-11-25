@@ -19,7 +19,7 @@ namespace ftk {
 struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tracker
 {
   particle_tracer_mpas_ocean(diy::mpi::communicator comm, 
-      std::shared_ptr<mpas_mesh<>> m) : 
+      const mpas_mesh<>* m) : 
     particle_tracer(comm, 3), 
     mpas_ocean_tracker(comm, m), 
     tracker(comm) 
@@ -61,10 +61,10 @@ protected:
 
 protected:
   // std::shared_ptr<ndarray<double>> V[2]; // inherited from particle_tracer
-  std::shared_ptr<ndarray<double>> zTop[2];
-  std::shared_ptr<ndarray<double>> vertVelocityTop[2];
-  std::shared_ptr<ndarray<double>> salinity[2];
-  std::shared_ptr<ndarray<double>> temperature[2];
+  ndarray<double> *zTop[2];
+  ndarray<double> *vertVelocityTop[2];
+  ndarray<double> *salinity[2];
+  ndarray<double> *temperature[2];
   std::tm timestamp[2];
 
 #if FTK_HAVE_CUDA

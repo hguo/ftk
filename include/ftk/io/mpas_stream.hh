@@ -21,7 +21,7 @@ struct mpas_stream : public object {
   void initialize();
   void set_callback(std::function<void(int, std::shared_ptr<ndarray_group>)> f) { callback = f; }
 
-  std::shared_ptr<mpas_mesh<>> mesh() { return m; }
+  mpas_mesh<>* mesh() { return m; }
 
   void set_ntimesteps(int n) { ntimesteps = n; }
   bool advance_timestep();
@@ -33,7 +33,7 @@ public:
   diy::mpi::communicator comm;
   std::string path, mesh_path;
   
-  std::shared_ptr<mpas_mesh<>> m;
+  mpas_mesh<> *m;
   std::function<void(int, std::shared_ptr<ndarray_group>)> callback;
  
   int ncid;
@@ -50,7 +50,7 @@ public:
 //////
 void mpas_stream::initialize()
 {
-  m.reset(new mpas_mesh<>);
+  m = new mpas_mesh<>();
   m->read_netcdf(mesh_path.empty() ? path : mesh_path);
   m->initialize();
   
