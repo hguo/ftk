@@ -621,8 +621,8 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
 
   double Vu[max_nverts][3], Vl[max_nverts][3]; // upper/lower velocities on vertices
   double VVu[max_nverts], VVl[max_nverts]; // upper/lower vertical velocities on vertices
-  double Su[max_nverts], Sl[max_nverts]; // salinity
-  double Tu[max_nverts], Tl[max_nverts]; // temperature
+  double Su[max_nverts] = {NAN}, Sl[max_nverts] = {NAN}; // salinity
+  double Tu[max_nverts] = {NAN}, Tl[max_nverts] = {NAN}; // temperature
   // double Su[max_nverts], Sl[max_nverts]; // salinity
   for (int i = 0; i < nverts; i ++) {
     for (int k = 0; k < 3; k ++) {
@@ -631,10 +631,16 @@ inline bool particle_tracer_mpas_ocean::eval_v_with_vertical_velocity(int t, con
     }
     VVu[i] = vertVelocityTop[t]->f(0, layer, verts_i[i]);
     VVl[i] = vertVelocityTop[t]->f(0, layer+1, verts_i[i]);
-    Su[i] = salinity[t]->f(0, layer, verts_i[i]);
-    Sl[i] = salinity[t]->f(0, layer+1, verts_i[i]);
-    Tu[i] = temperature[t]->f(0, layer, verts_i[i]);
-    Tl[i] = temperature[t]->f(0, layer+1, verts_i[i]);
+
+    if (salinity[t]) { // salinity is only optional
+      Su[i] = salinity[t]->f(0, layer, verts_i[i]);
+      Sl[i] = salinity[t]->f(0, layer+1, verts_i[i]);
+    }
+
+    if (temperature[t]) { // temperature is only optional
+      Tu[i] = temperature[t]->f(0, layer, verts_i[i]);
+      Tl[i] = temperature[t]->f(0, layer+1, verts_i[i]);
+    }
   }
 
   double vu[3] = {0}, vl[3] = {0};

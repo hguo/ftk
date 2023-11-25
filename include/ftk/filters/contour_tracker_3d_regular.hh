@@ -354,9 +354,9 @@ inline void contour_tracker_3d_regular::update_timestep()
         });
 
     ftk::lattice ext({0, 0, 0}, 
-        {field_data_snapshots[0].scalar.dim(0), 
-         field_data_snapshots[0].scalar.dim(1),
-         field_data_snapshots[0].scalar.dim(2)});
+        {field_data_snapshots[0].scalar.dimf(0), 
+         field_data_snapshots[0].scalar.dimf(1),
+         field_data_snapshots[0].scalar.dimf(2)});
 
     // ordinal
     auto results = extract_contour_3dt_cuda(

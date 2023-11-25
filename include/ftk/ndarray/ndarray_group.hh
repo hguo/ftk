@@ -53,10 +53,8 @@ inline void ndarray_group::remove(const std::string key)
 
 inline ndarray_group::~ndarray_group()
 {
-  for (auto kv : *this) {
+  for (auto &kv : *this)
     delete kv.second;
-    this->erase(kv.first);
-  }
 }
 
 }
