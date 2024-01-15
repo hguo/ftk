@@ -2,9 +2,9 @@
 #define _FTK_XGC_STREAM_HH
 
 #include <ftk/object.hh>
-#include <ftk/ndarray.hh>
+#include <ndarray/ndarray.hh>
 #include <ftk/external/json.hh>
-#include <ftk/ndarray/ndarray_group.hh>
+#include <ndarray/ndarray_group.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 

@@ -1,8 +1,8 @@
 #ifndef _FTK_CONTOUR_TRACKER_REGULAR_HH
 #define _FTK_CONTOUR_TRACKER_REGULAR_HH
 
-#include <ftk/ndarray.hh>
-#include <ftk/mesh/lattice_partitioner.hh>
+#include <ndarray/ndarray.hh>
+#include <ndarray/lattice_partitioner.hh>
 #include <ftk/filters/contour_tracker.hh>
 #include <ftk/filters/regular_tracker.hh>
 #include <ftk/utils/gather.hh>

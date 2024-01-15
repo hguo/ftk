@@ -43,7 +43,7 @@ if (FTK_HAVE_CUDA)
 endif ()
 
 add_library (libftk SHARED ${ftk_sources} ${ftk_cuda_sources} ${ftk_sycl_sources})
-target_link_libraries (libftk ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (libftk ndarray::ndarray ${CMAKE_THREAD_LIBS_INIT})
 
 if (FTK_HAVE_ADIOS1)
   target_link_libraries (libftk ${ADIOS_LIBRARIES})

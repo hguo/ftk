@@ -1,8 +1,8 @@
 #ifndef _FTK_PARTICLE_TRACER_MPAS_OCEAN_HH
 #define _FTK_PARTICLE_TRACER_MPAS_OCEAN_HH
 
-#include <ftk/ndarray.hh>
-#include <ftk/mesh/lattice_partitioner.hh>
+#include <ndarray/ndarray.hh>
+#include <ndarray/lattice_partitioner.hh>
 #include <ftk/filters/particle_tracer.hh>
 #include <ftk/filters/mpas_ocean_tracker.hh>
 #include <ftk/utils/gather.hh>
@@ -18,8 +18,8 @@ namespace ftk {
 
 struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tracker
 {
-  particle_tracer_mpas_ocean(diy::mpi::communicator comm, 
-      const mpas_mesh<>* m) : 
+  particle_tracer_mpas_ocean(diy::mpi::communicator comm,
+      std::shared_ptr<mpas_mesh<>> m) :
     particle_tracer(comm, 3), 
     mpas_ocean_tracker(comm, m), 
     tracker(comm) 
@@ -61,10 +61,10 @@ protected:
 
 protected:
   // std::shared_ptr<ndarray<double>> V[2]; // inherited from particle_tracer
-  ndarray<double> *zTop[2];
-  ndarray<double> *vertVelocityTop[2];
-  ndarray<double> *salinity[2];
-  ndarray<double> *temperature[2];
+  std::shared_ptr<ndarray<double>> zTop[2];
+  std::shared_ptr<ndarray<double>> vertVelocityTop[2];
+  std::shared_ptr<ndarray<double>> salinity[2];
+  std::shared_ptr<ndarray<double>> temperature[2];
   std::tm timestamp[2];
 
 #if FTK_HAVE_CUDA
@@ -308,7 +308,7 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
   if (!g->has("zTop")) {
     if (g->has("zMid") && g->has("layerThickness")) {
       fprintf(stderr, "deriving zTop..\n");
-      ndarray<double> zTop = m->zTop_from_zMid_and_thickness(g->get<double>("zMid"), g->get<double>("layerThickness"));
+      ndarray<double> zTop = m->zTop_from_zMid_and_thickness(g->get_arr<double>("zMid"), g->get_arr<double>("layerThickness"));
       g->set("zTop", zTop);
     } else {
       fatal("missing zTop or zMid/layerThickness");

@@ -44,11 +44,11 @@ inline bool xgc_stream_h5::advance_timestep()
   const auto current_filename = filename( current_timestep );
 
   if (file_exists( current_filename )) {
-    ndarray_base *density = new ndarray<double>;
+    std::shared_ptr<ndarray_base> density(new ndarray<double>);
     density->read_h5(current_filename, "dneOverne0");
     g->set("density", density);
     
-    ndarray_base *Er = new ndarray<double>;
+    std::shared_ptr<ndarray_base> Er(new ndarray<double>);
     Er->read_h5(current_filename, "Er");
     g->set("Er", Er);
   

@@ -2,7 +2,7 @@
 #define _TDGL_IO_HH
 
 #include <ftk/config.hh>
-#include <ftk/ndarray.hh>
+#include <ndarray/ndarray.hh>
 #include <ftk/io/tdgl_metadata.hh>
 #include <iostream>
 

@@ -3,6 +3,9 @@
 
 #include <ftk/config.hh>
 #include <ftk/filters/tracker.hh>
+#include <ftk/features/feature_point_lite.hh>
+#include <ftk/features/feature_curve_set.hh>
+#include <ftk/numeric/rk4.hh>
 
 namespace ftk {
 
@@ -53,7 +56,7 @@ protected:
   virtual std::vector<std::string> scalar_names() const { return {}; }
 
 protected:
-  ndarray<double> *V[2];
+  std::shared_ptr<ndarray<double>> V[2];
 
 protected:
   std::vector<feature_point_lite_t> particles;

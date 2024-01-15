@@ -2,7 +2,7 @@
 #define _FTK_XGC_EQ_HH
 
 #include <ftk/config.hh>
-#include <ftk/utils/string.hh>
+#include <ndarray/util.hh>
 #include <fstream>
 #include <string>
 #include <ftk/external/json.hh>

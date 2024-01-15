@@ -1,7 +1,7 @@
 #ifndef _FTK_CCL2D_HH
 #define _FTK_CCL2D_HH
 
-#include <ftk/ndarray.hh>
+#include <ndarray/ndarray.hh>
 
 namespace ftk {
 

@@ -2,7 +2,7 @@
 #define _FTK_REGULAR_TRACKER_HH
 
 #include <ftk/config.hh>
-#include <ftk/mesh/lattice_partitioner.hh>
+#include <ndarray/lattice_partitioner.hh>
 #include <ftk/filters/tracker.hh>
 #include <ftk/external/diy/master.hpp>
 #include <ftk/external/diy/decomposition.hpp>

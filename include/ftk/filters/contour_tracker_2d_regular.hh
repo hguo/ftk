@@ -15,8 +15,8 @@
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/geometry/curve2tube.hh>
 #include <ftk/geometry/curve2vtk.hh>
-#include <ftk/ndarray.hh>
-#include <ftk/ndarray/grad.hh>
+#include <ndarray/ndarray.hh>
+#include <ndarray/grad.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/filters/contour_tracker_regular.hh>
 #include <ftk/external/diy/serialization.hpp>

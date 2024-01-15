@@ -2,7 +2,7 @@
 #define _FTK_KD_HH
 
 #include <ftk/config.hh>
-#include <ftk/ndarray.hh>
+#include <ndarray/ndarray.hh>
 #include <vector>
 #include <list>
 

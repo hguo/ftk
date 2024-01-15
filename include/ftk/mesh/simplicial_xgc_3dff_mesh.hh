@@ -3,7 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
-#include <ftk/io/util.hh>
+#include <ndarray/util.hh>
 
 namespace ftk {
 

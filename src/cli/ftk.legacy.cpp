@@ -2,11 +2,12 @@
 #include <mutex>
 #include <set>
 #include <cassert>
+#include <ndarray/util.hh>
+#include <ndarray/synthetic.hh>
 #include "ftk/external/cxxopts.hpp"
-#include "ftk/ndarray/synthetic.hh"
 #include "ftk/filters/critical_point_tracker_2d_regular.hh"
 #include "ftk/filters/critical_point_tracker_3d_regular.hh"
-#include "ftk/filters/json_interface.hh"
+// #include "ftk/filters/json_interface.hh" // retired
 #include "ftk/filters/contour_tracker_2d_regular.hh"
 #include "ftk/filters/contour_tracker_3d_regular.hh"
 #include "ftk/filters/critical_line_tracker_3d_regular.hh"
@@ -22,11 +23,8 @@
 #include "ftk/filters/threshold_tracker.hh"
 #include "ftk/filters/streaming_filter.hh"
 #include "ftk/filters/feature_curve_set_post_processor.hh"
-#include "ftk/io/util.hh"
 #include "ftk/io/xgc_stream.hh"
 #include "ftk/io/mpas_stream.hh"
-#include "ftk/ndarray.hh"
-#include "ftk/ndarray/conv.hh"
 
 using namespace ftk;
   
@@ -106,7 +104,7 @@ int device_buffer_size = 512; // in MB
 
 // tracker and input stream
 std::shared_ptr<tracker> mtracker;
-std::shared_ptr<json_interface> wrapper;
+// std::shared_ptr<json_interface> wrapper;
 std::shared_ptr<contour_tracker_regular> tracker_contour;
 std::shared_ptr<tdgl_vortex_tracker_3d_regular> tracker_tdgl;
 std::shared_ptr<critical_line_tracker> tracker_critical_line;
@@ -115,7 +113,7 @@ std::shared_ptr<critical_line_tracker_3d_unstructured> tracker_critical_line_uns
 std::shared_ptr<particle_tracer> tracker_particle;
 std::shared_ptr<particle_tracer_mpas_ocean> tracker_particle_mpas_ocean;
 std::shared_ptr<threshold_tracker<>> tracker_threshold;
-std::shared_ptr<ndarray_stream<>> stream;
+// std::shared_ptr<ndarray_stream<>> stream;
 
 nlohmann::json j_input, j_tracker;
 

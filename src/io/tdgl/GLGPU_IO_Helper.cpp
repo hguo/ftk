@@ -1,5 +1,4 @@
 #include <ftk/config.hh>
-#include <ftk/ndarray.hh>
 #include "GLHeader.h"
 #include "BDATReader.h"
 #include "GLGPU_IO_Helper.h"

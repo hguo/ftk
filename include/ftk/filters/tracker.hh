@@ -2,8 +2,7 @@
 #define _FTK_TRACKER_HH
 
 #include <ftk/config.hh>
-#include <ftk/ndarray/field_data_snapshot.hh>
-#include <ftk/ndarray/ndarray_group.hh>
+#include <ndarray/ndarray_group.hh>
 #include <ftk/filters/filter.hh>
 #include <ftk/external/diy/master.hpp>
 

@@ -10,7 +10,7 @@
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/cc2curves.hh>
 #include <ftk/utils/gather.hh>
-#include <ftk/ndarray/field_data_snapshot.hh>
+// #include <ftk/ndarray/field_data_snapshot.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3dff_mesh.hh>
@@ -90,7 +90,7 @@ inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group>
 {
   field_data_snapshot_t s;
   
-  auto density = g->get<double>("density"); // .get_transpose();
+  auto density = g->get_arr<double>("density"); // .get_transpose();
   if (density.dimf(0) < density.dimf(1))
     density.transpose();
   m30->smooth_scalar_gradient_jacobian(density, s.scalar, s.vector, s.jacobian);
@@ -98,7 +98,7 @@ inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group>
   if (g->has("Er")) {
     // auto Er = 
     // s.Er = m30->smooth_scalar(Er);
-    s.Er = g->get<double>("Er"); // .get_transpose();
+    s.Er = g->get_arr<double>("Er"); // .get_transpose();
     if (s.Er.dimf(0) < s.Er.dimf(1))
       s.Er.transpose();
   }

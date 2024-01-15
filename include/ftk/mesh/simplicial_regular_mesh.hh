@@ -15,9 +15,9 @@
 #include <cassert>
 #include <iterator>
 #include <functional>
+#include <ndarray/ndarray.hh>
+#include <ndarray/lattice.hh>
 #include <ftk/object.hh>
-#include <ftk/ndarray.hh>
-#include <ftk/mesh/lattice.hh>
 #include <ftk/external/diy/serialization.hpp>
 
 #if FTK_HAVE_VTK

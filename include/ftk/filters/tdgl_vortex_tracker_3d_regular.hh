@@ -8,7 +8,7 @@
 #include <ftk/numeric/linear_interpolation.hh>
 #include <ftk/geometry/points2vtk.hh>
 #include <ftk/geometry/write_polydata.hh>
-#include <ftk/ndarray/writer.hh>
+// #include <ftk/ndarray/writer.hh>
 #include <ftk/numeric/fmod.hh>
 
 extern std::vector<ftk::feature_point_lite_t> 

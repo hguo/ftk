@@ -10,9 +10,9 @@
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh_implicit.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh_explicit.hh>
 #include <ftk/mesh/mpas_mesh.hh>
-#include <ftk/ndarray/stream.hh>
-#include <ftk/ndarray/writer.hh>
-#include <ftk/io/util.hh>
+// #include <ndarray/stream.hh> // legacy
+// #include <ndarray/writer.hh> // legacy
+#include <ndarray/ndarray_group_stream.hh>
 
 namespace ftk {
 

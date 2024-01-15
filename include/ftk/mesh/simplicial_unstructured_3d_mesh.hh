@@ -3,7 +3,6 @@
 
 #include <ftk/config.hh>
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
-#include <ftk/utils/string.hh>
 #include <ftk/numeric/sign_det.hh>
 
 namespace ftk {

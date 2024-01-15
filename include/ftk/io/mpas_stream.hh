@@ -2,8 +2,7 @@
 #define _FTK_MPAS_STREAM_HH
 
 #include <ftk/object.hh>
-#include <ftk/ndarray.hh>
-#include <ftk/ndarray/ndarray_group.hh>
+#include <ndarray/ndarray_group.hh>
 #include <chrono>
 
 
@@ -102,7 +101,7 @@ bool mpas_stream::advance_timestep()
                  sz[3] = {1, time_strlen};
 
     ndarray<char> xtime;
-    xtime.try_read_netcdf(ncid, 
+    xtime.try_read_netcdf<std::vector<std::string>>(ncid, 
         {"xtime", "xtime_startMonthly"},
         st, sz);
     g->set("xtime", xtime);

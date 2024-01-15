@@ -4,6 +4,7 @@
 #include <ftk/config.hh>
 #include <ftk/object.hh>
 #include <ftk/external/cxxopts.hpp>
+#include <ndarray/util.hh>
 #include <thread>
 #include <mutex>
 #include <thread>

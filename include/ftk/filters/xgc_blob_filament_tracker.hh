@@ -8,7 +8,7 @@
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/numeric/clamp.hh>
-#include <ftk/ndarray/writer.hh>
+// #include <ftk/ndarray/writer.hh>
 
 #if FTK_HAVE_TBB
 #include <tbb/concurrent_hash_map.h>

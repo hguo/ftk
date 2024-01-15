@@ -21,8 +21,8 @@
 #include <ftk/geometry/curve2vtk.hh>
 #include <ftk/filters/critical_point_tracker_regular.hh>
 #include <ftk/filters/unstructured_2d_tracker.hh>
-#include <ftk/ndarray.hh>
-#include <ftk/ndarray/grad.hh>
+#include <ndarray/ndarray.hh>
+#include <ndarray/grad.hh>
 #include <ftk/mesh/simplicial_regular_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
 #include <ftk/external/diy/serialization.hpp>

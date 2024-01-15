@@ -3,7 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/object.hh>
-#include <ftk/ndarray.hh>
+#include <ndarray/ndarray.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/algorithms/bfs.hh>
 #include <ftk/utils/serialization.hh>

@@ -2,7 +2,6 @@
 #define _FTK_WRITE_VTP_HH
 
 #include <ftk/config.hh>
-#include <ftk/utils/string.hh>
 #include <ftk/external/diy/mpi.hpp>
 
 #if FTK_HAVE_VTK

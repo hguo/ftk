@@ -3,7 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/features/feature_curve_set.hh>
-#include <ftk/utils/string.hh>
+#include <ndarray/util.hh>
 
 namespace ftk {
 

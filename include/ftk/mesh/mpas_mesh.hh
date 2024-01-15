@@ -10,6 +10,8 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
+  mpas_mesh(std::shared_ptr<ndarray_group> g);
+
   void read_netcdf(const std::string filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
   void initialize();
 
@@ -399,6 +401,130 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
     }
 #endif
   }
+}
+
+template <typename I, typename F>
+mpas_mesh<I, F>::mpas_mesh(std::shared_ptr<ndarray_group> g)
+{
+  // initialize the mesh directly from the array group
+
+  cellsOnVertex = g->get_arr<I>("cellsOnVertex");
+  cellsOnEdge = g->get_arr<I>("cellsOnEdge");
+  cellsOnCell = g->get_arr<I>("cellsOnCell");
+  edgesOnCell = g->get_arr<I>("edgesOnCell");
+  verticesOnCell = g->get_arr<I>("verticesOnCell");
+  nEdgesOnCell = g->get_arr<I>("nEdgesOnCell");
+
+  simple_idmap = true;
+
+  indexToCellID = g->get_arr<I>("indexToCellID");
+  for (auto i = 0; i < indexToCellID.size(); i ++) {
+    cellIdToIndex[indexToCellID[i]] = i;
+    if (indexToCellID[i] != i + 1)
+      simple_idmap = false;
+  }
+
+  indexToEdgeID = g->get_arr<I>("indexToEdgeID");
+  for (auto i = 0; i < indexToEdgeID.size(); i ++) {
+    edgeIdToIndex[indexToEdgeID[i]] = i;
+    if (indexToEdgeID[i] != i + 1) 
+      simple_idmap = false;
+  }
+  
+  indexToVertexID = g->get_arr<I>("indexToVertexID");
+  for (auto i = 0; i < indexToVertexID.size(); i ++) {
+    vertexIdToIndex[indexToVertexID[i]] = i;
+    if (indexToVertexID[i] != i + 1)
+      simple_idmap = false;
+  }
+  
+  // fprintf(stderr, "simple_idmap=%d\n", simple_idmap);
+  if (simple_idmap) {
+    indexToVertexID.reset();
+    indexToEdgeID.reset();
+    indexToCellID.reset();
+
+    cellIdToIndex.clear();
+    edgeIdToIndex.clear();
+    vertexIdToIndex.clear();
+  }
+
+#if 0
+  std::vector<I> vconn;
+  for (int i = 0; i < cellsOnVertex.dimf(1); i ++) {
+    if (cellsOnVertex(0, i) == 0 || 
+        cellsOnVertex(1, i) == 0 ||
+        cellsOnVertex(2, i) == 0) 
+      continue;
+    else {
+      for (int j = 0; j < 3; j ++) 
+        vconn.push_back(cellIdToIndex[cellsOnVertex(j, i)]);
+    }
+  }
+
+  ndarray<I> conn;
+  conn.copy_vector(vconn);
+  conn.reshapef(3, vconn.size()/3);
+#endif
+
+  // xyzCells
+  ndarray<F> xCell, yCell, zCell;
+  xCell = g->get_arr<F>("xCell");
+  yCell = g->get_arr<F>("yCell");
+  zCell = g->get_arr<F>("zCell");
+  // latCell.from_netcdf(ncid, "latCell");
+  // lonCell.from_netcdf(ncid, "lonCell");
+  
+  xyzCells.reshapef(3, xCell.size());
+  for (size_t i = 0; i < xCell.size(); i ++) {
+    xyzCells.f(0, i) = xCell[i];
+    xyzCells.f(1, i) = yCell[i];
+    xyzCells.f(2, i) = zCell[i];
+  }
+
+  // xyzVerts
+  ndarray<F> xVertex, yVertex, zVertex;
+  xVertex = g->get_arr<F>("xVertex");
+  yVertex = g->get_arr<F>("yVertex");
+  zVertex = g->get_arr<F>("zVertex");
+
+  xyzVertices.reshapef(3, xVertex.size());
+  for (size_t i = 0; i < xVertex.size(); i ++) {
+    xyzVertices.f(0, i) = xVertex[i];
+    xyzVertices.f(1, i) = yVertex[i];
+    xyzVertices.f(2, i) = zVertex[i];
+  }
+
+  // xyzEdges
+  ndarray<F> xEdge, yEdge, zEdge;
+  xEdge = g->get_arr<F>("xEdge");
+  yEdge = g->get_arr<F>("yEdge");
+  zEdge = g->get_arr<F>("zEdge");
+
+  xyzEdges.reshapef(3, xEdge.size());
+  for (size_t i = 0; i < xEdge.size(); i ++) {
+    xyzEdges.f(0, i) = xEdge[i];
+    xyzEdges.f(1, i) = yEdge[i];
+    xyzEdges.f(2, i) = zEdge[i];
+  }
+
+#if 0
+  restingThickness.read_netcdf(ncid, "restingThickness");
+  accRestingThickness.reshapef(restingThickness);
+
+  for (auto i = 0; i < restingThickness.dimf(1); i ++) { // cells
+    for (auto j = 0; j < restingThickness.dimf(0); j ++) { // vertical layers
+      if (j == 0) accRestingThickness(j, i) = 0;
+      else accRestingThickness(j, i) = accRestingThickness(j-1, i) + restingThickness(j, i);
+    }
+  }
+#endif
+
+  // fprintf(stderr, "mpas mesh: #vert=%zu, #tri=%zu\n", 
+  //     xyzCells.dimf(1), conn.dimf(1));
+
+  // return std::shared_ptr<mpas_mesh<I, F>>(
+  //     new mpas_mesh<I, F>(xyz, conn));
 }
 
 template <typename I, typename F>

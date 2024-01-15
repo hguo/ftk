@@ -5,7 +5,6 @@
 #include <ftk/mesh/simplicial_unstructured_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_3d_mesh.hh>
 #include <ftk/mesh/simplicial_unstructured_extruded_2d_mesh.hh>
-#include <ftk/utils/string.hh>
 
 namespace ftk {
 

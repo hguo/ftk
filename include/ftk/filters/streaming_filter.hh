@@ -4,7 +4,7 @@
 #include <deque>
 #include <vector>
 #include <functional>
-#include <ftk/ndarray/conv.hh>
+#include <ndarray/conv.hh>
 
 namespace ftk {
 
