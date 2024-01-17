@@ -9,6 +9,7 @@
 #include <ftk/numeric/wachspress_interpolation.hh>
 #include <ftk/numeric/vector_norm.hh>
 #include <ftk/numeric/rad.hh>
+#include <chrono>
 
 #if FTK_HAVE_CUDA
 #include "mpas_ocean_particle_tracker.cuh"
@@ -317,6 +318,7 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
 
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
+    typedef std::chrono::high_resolution_clock clock_type;
     auto t0 = clock_type::now();
     
     // const auto V = g->get_ptr<double>("velocity");
@@ -332,8 +334,7 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
     // std::cerr << zTop->shape() << std::endl;
     mop_set_nlayers(ctx, zTop->dimf(1));
     
-
-    fprintf(stderr, "v=%p, vv=%p, top=%p\n", V->data(), vertVelocityTop->data(), zTop->data());
+    // fprintf(stderr, "v=%p, vv=%p, top=%p\n", V->data(), vertVelocityTop->data(), zTop->data());
     mop_load_data_with_normal_velocity(ctx,
         (double)current_timestep,
         V->data(), 

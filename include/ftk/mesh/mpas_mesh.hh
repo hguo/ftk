@@ -5,6 +5,7 @@
 #include <ftk/basic/kd.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/numeric/mpas.hh>
+#include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 
 namespace ftk {
 

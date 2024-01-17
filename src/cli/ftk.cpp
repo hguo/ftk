@@ -3,6 +3,8 @@
 #include <ftk/external/cxxopts.hpp>
 #include <ftk/filters/particle_tracer_mpas_ocean.hh>
 
+MPI_Comm comm = MPI_COMM_WORLD;
+
 // global variables
 std::string feature;
 int ttype = 0; // feature type in integer
@@ -229,6 +231,50 @@ bool parse_arguments(int argc, char **argv)
   auto results = options.parse(argc, argv);
   // options.parse_positional({"input"});
 
+  // sanity check of arguments
+  if (set_valid_accelerator.find(accelerator) == set_valid_accelerator.end())
+    fatal(options, "invalid '--accelerator'");
+
+  if (output_pattern.empty())
+    fatal(options, "Missing '--output'.");
+
+  // adios2
+  if (results.count("adios-config")) { // use adios2 config file
+    // stream.reset(new ndarray_stream<>(adios_config_file, adios_name, comm));
+  } else { // no adios2
+    // stream.reset(new ndarray_stream<>(comm));
+  }
+
+  if (results.count("pt-seed-strides")) {
+    const auto str = results["pt-seed-strides"].as<std::string>();
+    const auto strs = ftk::split(str, ",");
+    for (const auto s : strs)
+      pt_seed_strides.push_back( std::atoi(s.c_str()) );
+  }
+
+  if (results.count("ptgeo-seeds")) {
+    const auto str = results["ptgeo-seeds"].as<std::string>();
+    const auto strs = ftk::split(str, ",");
+    if (strs.size() < 9)
+      ftk::fatal("Insufficient number for seeding geospatially.");
+
+    pt_seed_strides.push_back( std::atoi(strs[0].c_str()) ); // nlat
+    pt_seed_box.push_back( std::atof(strs[1].c_str()) );
+    pt_seed_box.push_back( std::atof(strs[2].c_str()) );
+    pt_seed_strides.push_back( std::atoi(strs[3].c_str()) ); // nlon
+    pt_seed_box.push_back( std::atof(strs[4].c_str()) );
+    pt_seed_box.push_back( std::atof(strs[5].c_str()) );
+    pt_seed_strides.push_back( std::atoi(strs[6].c_str()) ); // nz
+    pt_seed_box.push_back( std::atof(strs[7].c_str()) );
+    pt_seed_box.push_back( std::atof(strs[8].c_str()) );
+  }
+
+  if (results.count("quantization")) {
+    fixed_quantization_factor = true;
+    quantization_factor = results["quantization"].as<double>();
+  }
+
+  // input
   if (!results.count("input") || results.count("help")) {
     std::cerr << options.help() << std::endl;
     exit(0);
@@ -252,16 +298,14 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   gs->print_info(std::cerr);
 
   std::shared_ptr<ftk::mpas_mesh<>> mesh(new ftk::mpas_mesh<>(gs));
+  mesh->initialize();
+  mesh->initialize_c2v_interpolants();
+  mesh->initialize_coeffs_reconstruct();
 
   tracker_particle_mpas_ocean.reset(new ftk::particle_tracer_mpas_ocean(comm, mesh) );
-#if 0
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
-  if (accelerator == "cuda") {
-    tracker_particle_mpas_ocean->use_accelerator(FTK_XL_CUDA);
-    mpas_data_stream->set_c2v(false); // no need to do c2v interpolation on cpu
-    mpas_data_stream->set_e2c(false);
-  }
-#endif
+  if (accelerator == "cuda")
+    tracker_particle_mpas_ocean->use_accelerator(ftk::FTK_XL_CUDA);
  
   fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 
       pt_nsteps_per_interval, pt_nsteps_per_checkpoint, pt_delta_t);

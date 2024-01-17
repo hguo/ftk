@@ -8,7 +8,7 @@
 #include <ftk/numeric/fixed_point.hh>
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
-#include <ftk/mesh/lattice.hh>
+#include <ndarray/lattice.hh>
 // #include <ftk/filters/critical_point_lite.hh>
 #include "common.cuh"
 

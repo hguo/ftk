@@ -4,6 +4,7 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/filters/mpas_ocean_particle_tracker.cuh>
 #include <ftk/numeric/rk4.hh>
+#include <assert.h>
 #include "common.cuh"
 
 typedef mop_ctx_t ctx_t;
@@ -63,7 +64,7 @@ inline static bool point_in_cell(
 }
 
 __device__ __host__
-inline static int locate_cell_local( // local search among neighbors
+static int locate_cell_local( // local search among neighbors
     const int curr, // current cell
     const double *x,
     int iv[], // returns vertex ids
@@ -95,7 +96,7 @@ inline static int locate_cell_local( // local search among neighbors
 }
 
 __device__ __host__ 
-inline static bool mpas_eval_static(
+static bool mpas_eval_static(
     const double *x,    // location
     double *v,          // return velocity
     double *vv,         // vertical velocity
@@ -103,7 +104,7 @@ inline static bool mpas_eval_static(
     const double *V,    // velocity field
     const double *Vv,   // vertical velocities
     const double *zTop, // top layer depth
-    const int attrs,    // number of scalar attributes
+    const int nattrs,    // number of scalar attributes
     const double *A,    // scalar attributes
     const double *Xv,   // vertex locations
     const int max_edges,
@@ -118,9 +119,9 @@ inline static bool mpas_eval_static(
   double xv[MAX_VERTS][3];
 
 #if 0
-  printf("hc=%llu, hl=%lu, x=%f, %f, %f\n", 
+  printf("hc=%llu, hl=%u, x=%f, %f, %f\n", 
       hint_c, hint_l, x[0], x[1], x[2]);
-  printf("c=%llu, l=%lu, x=%f, %f, %f, v=%f, %f, %f, %f\n", 
+  printf("c=%llu, l=%u, x=%f, %f, %f, v=%f, %f, %f, %f\n", 
       hint_c, hint_l, 
       x[0], x[1], x[2], 
       v[0], v[1], v[2], v[3]);
@@ -149,6 +150,9 @@ inline static bool mpas_eval_static(
 
   // locate layer
   int layer = hint_l;
+  if (layer >= nlayers || layer < 0)
+    layer = 0;
+
   double upper = 0.0, lower = 0.0;
   const double R = ftk::vector_2norm<3>(x);
   const double z = R - R0;
@@ -158,7 +162,7 @@ inline static bool mpas_eval_static(
 
   bool succ = false;
   if (layer >= 0) { // interpolate upper/lower tops and check if x remains in the layer
-    layer = hint_l;
+    // layer = hint_l;
     for (int i = 0; i < nverts; i ++) {
       // printf("%d, %d, %d\n", iv[i], nlayers, layer);
       upper += omega[i] * zTop[ iv[i] * nlayers + layer ];
@@ -186,6 +190,9 @@ inline static bool mpas_eval_static(
         lower = 0.0;
         for (int k = 0; k < nverts; k ++)
           lower += omega[k] * zTop[ iv[k] * nlayers + layer + 1];
+        
+        // printf("moving downward, layer=%d, z=%f, upper=%f, lower=%f\n", 
+        //     layer, z, upper, lower);
 
         if (z <= upper && z > lower) {
           succ = true;
@@ -199,6 +206,9 @@ inline static bool mpas_eval_static(
         upper = 0.0;
         for (int k = 0; k < nverts; k ++)
           upper += omega[k] * zTop[ iv[k] * nlayers + layer];
+        
+        // printf("moving upward, layer=%d, z=%f, upper=%f, lower=%f\n", 
+        //     layer, z, upper, lower);
 
         if (z <= upper && z > lower) {
           succ = true;
@@ -213,13 +223,14 @@ inline static bool mpas_eval_static(
     return false;
 
   hint_l = layer;
+  // printf("setting hint_l to %u\n", hint_l);
 
   const double alpha = (z - lower) / (upper - lower), 
                beta = 1.0 - alpha;
 
   // reset values before interpolation
   memset(v, 0, sizeof(double)*3);
-  memset(f, 0, sizeof(double)*3);
+  memset(f, 0, sizeof(double)*nattrs);
   if (vv)
     *vv = 0.0;
 
@@ -230,10 +241,10 @@ inline static bool mpas_eval_static(
                 alpha * V[ k + 3 * (iv[i] * nlayers + layer) ]
               + beta  * V[ k + 3 * (iv[i] * nlayers + layer + 1) ]);
 
-    for (int k = 0; k < attrs; k ++)
+    for (int k = 0; k < nattrs; k ++)
       f[k] += omega[i] * (
-                alpha * A[ k + attrs * (iv[i] * nlayers + layer) ]
-              + beta  * A[ k + attrs * (iv[i] * nlayers + layer + 1) ]);
+                alpha * A[ k + nattrs * (iv[i] * nlayers + layer) ]
+              + beta  * A[ k + nattrs * (iv[i] * nlayers + layer + 1) ]);
 
     if (vv) {
       *vv +=   alpha * Vv[ iv[i] * (nlayers + 1) + layer ]
@@ -268,13 +279,15 @@ inline static bool mpas_eval(
   if (V[1]) { // two timesteps
     double _v[2][3], _vv[2], _f[2][MAX_ATTRS];
 
-    for (int i = 0; i < 2; i ++) 
+    for (int i = 0; i < 2; i ++) {
+      // printf("i=%d, nattrs=%d, nlayers=%d, A[i]=%p\n", i, nattrs, nlayers, A[i]);
       if (!mpas_eval_static(x, 
           _v[i], &_vv[i], _f[i], 
           V[i], Vv[i], zTop[i], nattrs, A[i], 
           Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
           nlayers, hint_c, hint_l))
         return false;
+    }
 
     // temporal interpolation
     const double beta = 1.0 - alpha;
@@ -330,12 +343,11 @@ inline static bool spherical_rk_with_vertical_velocity(
       v0[k] = v[k];
 
     ftk::angular_stepping(p.x, v, h, p.x);
-#if 0
     const double R = ftk::vector_2norm<3, double>(p.x); // radius
     const double R1 = R + vv[0] * h; // new radius
     for (int k = 0; k < 3; k ++)
       p.x[k] = p.x[k] * R1 / R;
-#endif
+
     return true;
   } else if (ORDER == 4) {
     return true;
@@ -387,6 +399,8 @@ static void initialize_c2v(
 
   if (boundary) {
     vert_on_boundary[vi] = true;
+    for (int k = 0; k < 3; k ++) // just make initchecker happy
+      interpolants[k + vi*3] = 0.0; 
   } else {
     vert_on_boundary[vi] = false;
     
@@ -497,6 +511,7 @@ static void interpolate_c2v(
           v = 0;
       } else {
         bool invalid = false;
+        v = 0;
         for (int l = 0; l < 3; l ++) {
           double val = C[k + nch * (layer + ci[l] * nlayers)];
           if (val < -1e32) {
@@ -535,6 +550,14 @@ static void mpas_trace(
 {
   unsigned long long i = getGlobalIdx_3D_1D();
   if (i >= nparticles) return;
+
+#if 0 // debuggin a specifc particle
+  if (getGlobalIdx_3D_1D() > 0) return;
+  int bid = 155;
+  int tid = bid * 167 + 130;
+  const auto i = tid; 
+  //(155,0,0), thread (130,0,0) in (167,1,1),(256,1,1);
+#endif
 
   ftk::feature_point_lite_t &p = particles[i];
   double v0[3], vv[3], f[MAX_ATTRS];
@@ -737,6 +760,9 @@ void mop_load_mesh(mop_ctx_t *c,
   
     if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
     else gridSize = dim3(nBlocks);
+
+    fprintf(stderr, "initializing c2v: ncells=%d, nverts=%d\n",
+        c->ncells, c->nverts);
 
     initialize_c2v<<<gridSize, blockSize>>>(
         c->ncells, 
@@ -1001,6 +1027,10 @@ void mop_execute(mop_ctx_t *c,
 #endif
   
   const double h = T / nsteps;
+
+  // fprintf(stderr, "h=%f, %p, %p, %p, %p, %d, %p, %p, %p, %p, %p\n", 
+  //     h, c->dparts, c->dd_V, c->dd_Vv, c->dd_zTop, c->nattrs,
+  //     c->dd_A, c->d_Xv, c->d_nedges_on_cell, c->d_cells_on_cell, c->d_verts_on_cell);
 
   mpas_trace<<<gridSize, blockSize>>>(
       h,

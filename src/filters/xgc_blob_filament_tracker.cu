@@ -8,6 +8,7 @@
 #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/numeric/critical_point_test.hh>
 #include <ftk/filters/xgc_blob_filament_tracker.cuh>
+#include <assert.h>
 #include "common.cuh"
 #include "locator2.cuh"
 #include "mx4.cuh"
