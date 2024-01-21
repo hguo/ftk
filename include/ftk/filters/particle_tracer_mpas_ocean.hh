@@ -116,12 +116,13 @@ inline void particle_tracer_mpas_ocean::initialize_particles_latlonz(
                dlon = nlon == 1 ? 0.0 : (lon1 - lon0) / (nlon - 1);
   int hint = 0;
 
+  #pragma omp parallel for collapse(2)
   for (int i = 0; i < nlat; i ++) {
-    const double lat = deg2rad(i * dlat + lat0);
-    const double slat = std::sin(lat), 
-                 clat = std::cos(lat);
-
     for (int j = 0; j < nlon; j ++) {
+      const double lat = deg2rad(i * dlat + lat0);
+      const double slat = std::sin(lat), 
+                   clat = std::cos(lat);
+
       const double lon = deg2rad(j * dlon + lon0);
       const double clon = std::cos(lon),
                    slon = std::sin(lon);
@@ -149,8 +150,11 @@ inline void particle_tracer_mpas_ocean::initialize_particles_latlonz(
 #endif
 
         if (ci >= 0) {
-          curve.push_back(p);
-          trajectories.add(curve);
+          #pragma omp critical
+          {
+            curve.push_back(p);
+            trajectories.add(curve);
+          }
         }
       }
     }
