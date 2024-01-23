@@ -236,10 +236,13 @@ static bool mpas_eval_static(
 
   // interpolation
   for (int i = 0; i < nverts; i ++) {
-    for (int k = 0; k < 3; k ++)
-      v[k] += omega[i] * (
-                alpha * V[ k + 3 * (iv[i] * nlayers + layer) ]
-              + beta  * V[ k + 3 * (iv[i] * nlayers + layer + 1) ]);
+    for (int k = 0; k < 3; k ++) {
+      const double Vu = V[ k + 3 * (iv[i] * nlayers + layer) ], 
+	           Vl = V[ k + 3 * (iv[i] * nlayers + layer + 1) ];
+      if (Vu > 1e10 || Vl > 1e10) // fill value
+        return false;
+      v[k] += omega[i] * ( alpha * Vu + beta * Vl );
+    }
 
     for (int k = 0; k < nattrs; k ++)
       f[k] += omega[i] * (
@@ -343,10 +346,12 @@ inline static bool spherical_rk_with_vertical_velocity(
       v0[k] = v[k];
 
     ftk::angular_stepping(p.x, v, h, p.x);
+#if 0
     const double R = ftk::vector_2norm<3, double>(p.x); // radius
     const double R1 = R + vv[0] * h; // new radius
     for (int k = 0; k < 3; k ++)
       p.x[k] = p.x[k] * R1 / R;
+#endif
 
     return true;
   } else if (ORDER == 4) {
