@@ -69,7 +69,7 @@ protected:
   std::tm timestamp[2];
 
 #if FTK_HAVE_CUDA
-  mop_ctx_t *ctx;
+  mop_ctx_t *ctx = NULL;
 #endif
   void load_particles_cuda();
 };
@@ -79,26 +79,6 @@ inline void particle_tracer_mpas_ocean::initialize()
 {
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
-    // fprintf(stderr, "loading mesh to gpu...\n");
-    mop_create_ctx(&ctx);
-    mop_load_mesh(ctx, 
-        m->n_cells(),
-        m->n_edges(),
-        m->n_vertices(),
-        // m->n_layers(),
-        m->max_edges_on_cell(),
-        0, // FIXME 2, // just temperature and salinity for now
-        m->xyzCells.data(),
-        m->xyzVertices.data(),
-        m->nEdgesOnCell.data(),
-        m->cellsOnCell.data(),
-        m->cellsOnEdge.data(),
-        m->cellsOnVertex.data(),
-        m->edgesOnCell.data(),
-        m->verticesOnCell.data());
-
-    // std::cerr << m->coeffsReconstruct.shape() << std::endl;
-    mop_load_e2c_interpolants(ctx, m->coeffsReconstruct.data());
 #endif
   }
 }
@@ -162,8 +142,8 @@ inline void particle_tracer_mpas_ocean::initialize_particles_latlonz(
 
   fprintf(stderr, "#traj=%zu\n", trajectories.size());
 
-  if (xl == FTK_XL_CUDA)
-    load_particles_cuda();
+  // if (xl == FTK_XL_CUDA)
+  //   load_particles_cuda();
 }
 
 inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std::vector<int> strides)
@@ -215,7 +195,7 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
 
   if (xl == FTK_XL_CUDA) {
     // fprintf(stderr, "loading particles to gpu...\n");
-    load_particles_cuda();
+    // load_particles_cuda();
   }
 }
 
@@ -310,11 +290,22 @@ inline void particle_tracer_mpas_ocean::update_timestep()
 
 inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr<ndarray_group> g)
 {
+  bool prec_var = true;
+
   if (!g->has("zTop")) {
     if (g->has("zMid") && g->has("layerThickness")) {
       fprintf(stderr, "deriving zTop..\n");
-      ndarray<double> zTop = m->zTop_from_zMid_and_thickness(g->get_arr<double>("zMid"), g->get_arr<double>("layerThickness"));
-      g->set("zTop", zTop);
+
+      auto p = g->get("zMid");
+      if (p->type() == NDARRAY_DTYPE_DOUBLE) {
+        ndarray<double> zTop = m->zTop_from_zMid_and_thickness(g->get_arr<double>("zMid"), g->get_arr<double>("layerThickness"));
+        g->set("zTop", zTop);
+        prec_var = true;
+      } else if (p->type() == NDARRAY_DTYPE_FLOAT) {
+        ndarray<float> zTop = m->zTop_from_zMid_and_thickness(g->get_arr<float>("zMid"), g->get_arr<float>("layerThickness"));
+        g->set("zTop", zTop);
+        prec_var = false;
+      }
     } else {
       fatal("missing zTop or zMid/layerThickness");
     }
@@ -322,18 +313,50 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
 
   if (xl == FTK_XL_CUDA) {
 #if FTK_HAVE_CUDA
+    if (!ctx) { // not initialized yet
+      // fprintf(stderr, "loading mesh to gpu...\n");
+      mop_create_ctx(&ctx, 0, true, true, prec_var);
+      mop_load_mesh(ctx, 
+          m->n_cells(),
+          m->n_edges(),
+          m->n_vertices(),
+          // m->n_layers(),
+          m->max_edges_on_cell(),
+          0, // FIXME 2, // just temperature and salinity for now
+          m->xyzCells.data(),
+          m->xyzVertices.data(),
+          m->nEdgesOnCell.data(),
+          m->cellsOnCell.data(),
+          m->cellsOnEdge.data(),
+          m->cellsOnVertex.data(),
+          m->edgesOnCell.data(),
+          m->verticesOnCell.data());
+
+      // std::cerr << m->coeffsReconstruct.shape() << std::endl;
+      mop_load_e2c_interpolants(ctx, m->coeffsReconstruct.data());
+     
+      load_particles_cuda();
+    }
+
     typedef std::chrono::high_resolution_clock clock_type;
     auto t0 = clock_type::now();
-    
+   
+#if 0
     // const auto V = g->get_ptr<double>("velocity");
     const auto V = g->get_ptr<double>("normalVelocity");
     const auto zTop = g->get_ptr<double>("zTop");
     const auto vertVelocityTop = g->get_ptr<double>("vertVelocityTop");
     const auto salinity = g->get_ptr<double>("salinity");
     const auto temperature = g->get_ptr<double>("temperature");
+#endif
+    const auto V = g->get("normalVelocity");
+    const auto zTop = g->get("zTop");
+    const auto vertVelocityTop = g->get("vertVelocityTop");
+    const auto salinity = g->get("salinity");
+    const auto temperature = g->get("temperature");
 
     // const double *attrs[] = {salinity->data(), temperature->data()};
-    const double *attrs[] = {}; // salinity->data(), temperature->data()};
+    const void *attrs[] = {}; // salinity->data(), temperature->data()};
 
     // std::cerr << zTop->shape() << std::endl;
     mop_set_nlayers(ctx, zTop->dimf(1));
@@ -341,9 +364,9 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
     // fprintf(stderr, "v=%p, vv=%p, top=%p\n", V->data(), vertVelocityTop->data(), zTop->data());
     mop_load_data_with_normal_velocity(ctx,
         (double)current_timestep,
-        V->data(), 
-        vertVelocityTop->data(),
-        zTop->data(), 
+        V->pdata(), 
+        vertVelocityTop->pdata(),
+        zTop->pdata(), 
         attrs);
     
     auto t1 = clock_type::now();

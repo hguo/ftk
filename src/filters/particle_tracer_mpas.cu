@@ -75,7 +75,7 @@ static int locate_cell_local( // local search among neighbors
     const int curr, // current cell
     const F *x,
     int iv[], // returns vertex ids
-    double xv[][3], // returns vertex coordinates
+    F xv[][3], // returns vertex coordinates
     const Fm *Xv,
     const int max_edges,
     const int *nedges_on_cell, // also n_verts_on_cell
@@ -519,7 +519,7 @@ static void interpolate_c2v(
 
   for (int layer = 0; layer < nlayers; layer ++) {
     for (int k = 0; k < nch; k ++) {
-      F &v = V[k + nch * (layer + vi * nlayers)];
+      Fv &v = V[k + nch * (layer + vi * nlayers)];
       if (boundary) {
           v = 0;
       } else {
@@ -602,11 +602,19 @@ static void mpas_trace(
 }
 
 ///////////////////////////
-void mop_create_ctx(mop_ctx_t **c_, int device)
+void mop_create_ctx(mop_ctx_t **c_, int device,
+    bool prec_compute, bool prec_mesh, bool prec_var)
 {
   *c_ = (ctx_t*)malloc(sizeof(ctx_t));
   ctx_t *c = *c_;
   memset(c, 0, sizeof(ctx_t));
+
+  c->prec_compute = prec_compute;
+  c->prec_mesh = prec_mesh;
+  c->prec_var = prec_var;
+
+  fprintf(stderr, "prec: compute (%d), mesh (%d), vars (%d)\n", 
+      prec_compute, prec_mesh, prec_var);
 
   c->device = device;
   cudaSetDevice(device);
@@ -691,8 +699,8 @@ void mop_load_mesh(mop_ctx_t *c,
     // const int nlayers, 
     const int max_edges,
     const int nattrs,
-    const double *Xc,
-    const double *Xv,
+    const void *Xc,
+    const void *Xv,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
     const int *cells_on_edge,
@@ -707,16 +715,18 @@ void mop_load_mesh(mop_ctx_t *c,
   c->max_edges = max_edges;
   c->nattrs = nattrs;
 
+  size_t fsize = c->prec_mesh ? sizeof(double) : sizeof(float);
+
   cudaMalloc((void**)&c->d_Xc, 
-      size_t(ncells) * sizeof(double) * 3);
+      size_t(ncells) * fsize * 3);
   cudaMemcpy(c->d_Xc, Xc, 
-      size_t(ncells) * sizeof(double) * 3, 
+      size_t(ncells) * fsize * 3,
       cudaMemcpyHostToDevice);
 
   cudaMalloc((void**)&c->d_Xv, 
-      size_t(nverts) * sizeof(double) * 3);
+      size_t(nverts) * fsize * 3);
   cudaMemcpy(c->d_Xv, Xv, 
-      size_t(nverts) * sizeof(double) * 3, 
+      size_t(nverts) * fsize * 3, 
       cudaMemcpyHostToDevice);
 
   cudaMalloc((void**)&c->d_nedges_on_cell, 
@@ -760,7 +770,7 @@ void mop_load_mesh(mop_ctx_t *c,
   // initialize interpolants
   {
     cudaMalloc((void**)&c->d_c2v_interpolants, 
-        size_t(c->nverts) * 3 * sizeof(double));
+        size_t(c->nverts) * 3 * sizeof(double)); // interpolants are in double, at least for now
 
     cudaMalloc((void**)&c->d_vert_on_boundary,
         size_t(c->nverts) * sizeof(bool));
@@ -778,14 +788,25 @@ void mop_load_mesh(mop_ctx_t *c,
     fprintf(stderr, "initializing c2v: ncells=%d, nverts=%d\n",
         c->ncells, c->nverts);
 
-    initialize_c2v<double, double><<<gridSize, blockSize>>>(
-        c->ncells, 
-        c->nverts, 
-        c->d_Xc,
-        c->d_Xv,
-        c->d_cells_on_vert, 
-        c->d_c2v_interpolants,
-        c->d_vert_on_boundary);
+    if (c->prec_mesh) {
+      initialize_c2v<double, double><<<gridSize, blockSize>>>(
+          c->ncells, 
+          c->nverts, 
+          (double*)c->d_Xc,
+          (double*)c->d_Xv,
+          c->d_cells_on_vert, 
+          (double*)c->d_c2v_interpolants,
+          c->d_vert_on_boundary);
+    } else {
+      initialize_c2v<double, float><<<gridSize, blockSize>>>(
+          c->ncells, 
+          c->nverts, 
+          (float*)c->d_Xc,
+          (float*)c->d_Xv,
+          c->d_cells_on_vert, 
+          (double*)c->d_c2v_interpolants,
+          c->d_vert_on_boundary);
+    }
  
     fprintf(stderr, "c2v initialization done.\n");
     // cudaDeviceSynchronize();
@@ -798,64 +819,68 @@ void mop_load_mesh(mop_ctx_t *c,
   }
 }
 
-void mop_load_e2c_interpolants(mop_ctx_t *c, const double *p)
+void mop_load_e2c_interpolants(mop_ctx_t *c, const void *p)
 {
+  size_t fsize = sizeof(double); 
+
   cudaMalloc((void**)&c->d_e2c_interpolants,
-      size_t(c->ncells) * c->max_edges * sizeof(double) * 3);
+      size_t(c->ncells) * c->max_edges * fsize * 3);
 
   cudaMemcpy(c->d_e2c_interpolants, p,
-      size_t(c->ncells) * c->max_edges * sizeof(double) * 3, cudaMemcpyHostToDevice);
+      size_t(c->ncells) * c->max_edges * fsize * 3, cudaMemcpyHostToDevice);
 
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] load e2c interpolants");
 }
 
-template <typename T=double>
 static void load_data(
-    T** dbuf,
-    const T *buf,
+    void** dbuf,
+    const void *buf,
+    const size_t fsize,
     const size_t n, 
     const char *name)
 {
-  T *d;
+  void *d;
   if (dbuf[0] == NULL) {
-    cudaMalloc((void**)&dbuf[0], sizeof(T) * n);
+    cudaMalloc((void**)&dbuf[0], fsize * n);
     checkLastCudaError("[FTK-CUDA] loading data 0");
     d = dbuf[0];
   } else if (dbuf[1] == NULL) {
-    cudaMalloc((void**)&dbuf[1], sizeof(T) * n);
+    cudaMalloc((void**)&dbuf[1], fsize * n);
     checkLastCudaError("[FTK-CUDA] loading data 1");
     d = dbuf[1];
   } else {
     std::swap(dbuf[0], dbuf[1]);
     d = dbuf[1];
   }
-  cudaMemcpy(d, buf, sizeof(T) * n, cudaMemcpyHostToDevice);
+  cudaMemcpy(d, buf, fsize * n, cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] cudaMemcpy");
 }
 
 static void load_cw_data(
     mop_ctx_t *c,
-    double **dbuf, // an array with two device pointers
-    double ***ddbuf, // device array of pointers
-    const double *cw,
+    void **dbuf, // an array with two device pointers
+    void ***ddbuf, // device array of pointers
+    const void *cw,
     bool cw_on_gpu,
     const int nch,
     const int nlayers) // host pointer with cw data
 {
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
   // initialize buffers for vertexwise data in two adjacent timesteps
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   checkLastCudaError("memcpy to c2w buffer: load cw 0");
 
-  double *d;
+  void *d;
   if (dbuf[0] == NULL) {
     cudaMalloc((void**)&dbuf[0], 
-        sizeof(double) * c->nverts * nch * nlayers);
+        fsize * c->nverts * nch * nlayers);
     d = dbuf[0];
     checkLastCudaError("malloc vw buffers 0");
   } else if (dbuf[1] == NULL) {
     cudaMalloc((void**)&dbuf[1], 
-        sizeof(double) * c->nverts * nch * nlayers);
+        fsize * c->nverts * nch * nlayers);
     d = dbuf[1];
     checkLastCudaError("malloc vw buffers 1");
   } else {
@@ -863,26 +888,26 @@ static void load_cw_data(
     d = dbuf[1];
   }
  
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   checkLastCudaError("memcpy to c2w buffer: dev ptrs0");
   if (*ddbuf == NULL) {
-    cudaMalloc((void**)ddbuf, sizeof(double*) * 2);
+    cudaMalloc((void**)ddbuf, sizeof(void*) * 2);
     checkLastCudaError("memcpy to c2w buffer: allocating ddbuf");
   }
   // fprintf(stderr, "ddbuf=%p, dbuf=%p\n", *ddbuf, dbuf);
-  cudaMemcpy(*ddbuf, dbuf, sizeof(double*) * 2, 
+  cudaMemcpy(*ddbuf, dbuf, sizeof(void*) * 2, 
       cudaMemcpyHostToDevice);
   checkLastCudaError("memcpy to c2w buffer: dev ptrs");
   
   // copy data to c2w buffer
-  double const* dcw; 
+  void const* dcw; 
   if (cw_on_gpu) {
     dcw = cw; // cw data is already on gpu
   } else {
     dcw = c->dcw;
     assert(c->dcw != NULL);
     cudaMemcpy(c->dcw, cw, 
-        sizeof(double) * c->ncells * nch * nlayers, 
+        fsize * c->ncells * nch * nlayers, 
         cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     // fprintf(stderr, "dcw=%p\n", c->dcw);
@@ -898,15 +923,26 @@ static void load_cw_data(
     if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
     else gridSize = dim3(nBlocks);
 
-    interpolate_c2v<double, double><<<gridSize, blockSize>>>(
-        d, dcw, nch, nlayers,
-        c->ncells,
-        c->nverts,
-        c->d_c2v_interpolants,
-        c->d_cells_on_vert,
-        c->d_vert_on_boundary);
+    // cudaDeviceSynchronize();
+    if (c->prec_var) { 
+      interpolate_c2v<double, double><<<gridSize, blockSize>>>(
+          (double*)d, (double*)dcw, nch, nlayers,
+          c->ncells,
+          c->nverts,
+          (double*)c->d_c2v_interpolants,
+          c->d_cells_on_vert,
+          c->d_vert_on_boundary);
+    } else {
+      interpolate_c2v<double, float><<<gridSize, blockSize>>>(
+          (float*)d, (float*)dcw, nch, nlayers,
+          c->ncells,
+          c->nverts,
+          (double*)c->d_c2v_interpolants,
+          c->d_cells_on_vert,
+          c->d_vert_on_boundary);
+    }
  
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("c2w interpolation");
   }
 }
@@ -917,37 +953,43 @@ void mop_load_data(mop_ctx_t *c,
     const double *zTop,
     const double *A)
 {
-  load_data<double>(c->d_V, V, 3 * c->nverts * c->nlayers, "V");
-  load_data<double>(c->d_Vv, Vv, c->nverts * (c->nlayers+1), "Vv");
-  load_data<double>(c->d_zTop, zTop, c->nverts * c->nlayers, "zTop");
-  load_data<double>(c->d_A, A, c->nattrs * c->nverts * c->nlayers, "f");
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
+  load_data(c->d_V, V, fsize, 3 * c->nverts * c->nlayers, "V");
+  load_data(c->d_Vv, Vv, fsize, c->nverts * (c->nlayers+1), "Vv");
+  load_data(c->d_zTop, zTop, fsize, c->nverts * c->nlayers, "zTop");
+  load_data(c->d_A, A, fsize, c->nattrs * c->nverts * c->nlayers, "f");
 }
 
 void mop_initialize_dcw(mop_ctx_t *c)
 {
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
   if (c->dcw == NULL)
     cudaMalloc((void**)&c->dcw, 
-        sizeof(double) * c->ncells * std::max(3, c->nattrs) * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
-  cudaDeviceSynchronize();
+        fsize * c->ncells * std::max(3, c->nattrs) * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
+  // cudaDeviceSynchronize();
   checkLastCudaError("malloc dcw");
 }
 
 void mop_initialize_dew(mop_ctx_t *c)
 {
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
   if (c->dew == NULL)
     cudaMalloc((void**)&c->dew, 
-        sizeof(double) * std::max(c->nedges, c->ncells) * std::max(3, c->nattrs) * c->nlayers); // a sufficiently large buffer for loading edgewise data
+        fsize * std::max(c->nedges, c->ncells) * std::max(3, c->nattrs) * c->nlayers); // a sufficiently large buffer for loading edgewise data
         // sizeof(double) * c->nedges * c->nlayers); // a sufficiently large buffer for loading edgewise data
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   checkLastCudaError("malloc dew");
 }
 
 void mop_load_data_cw(mop_ctx_t *c,
     const double t,
-    const double *Vc,
-    const double *Vvc,
-    const double *zTopc,
-    const double *Ac)
+    const void *Vc,
+    const void *Vvc,
+    const void *zTopc,
+    const void *Ac)
 {
   mop_initialize_dcw(c);
 
@@ -962,11 +1004,13 @@ void mop_load_data_cw(mop_ctx_t *c,
 
 void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     const double t,
-    const double *V, // normal velocity
-    const double *Vvc, 
-    const double *zTopc,
-    const double *Ac[])
+    const void *V, // normal velocity
+    const void *Vvc, 
+    const void *zTopc,
+    const void *Ac[])
 {
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
   mop_initialize_dcw(c);
   mop_initialize_dew(c);
 
@@ -982,36 +1026,46 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
 
   // interpolate e2c
   {
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("e2c interpolation: 0");
-    cudaMemcpy(c->dew, V, sizeof(double) * c->nedges * c->nlayers, cudaMemcpyHostToDevice);
-    cudaMemset(c->dcw, 0, sizeof(double) * 3 * c->ncells * c->nlayers);
+    cudaMemcpy(c->dew, V, fsize * c->nedges * c->nlayers, cudaMemcpyHostToDevice);
+    cudaMemset(c->dcw, 0, fsize * 3 * c->ncells * c->nlayers);
     
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("e2c interpolation: 1");
+   
+    if (c->prec_var) {
+      interpolate_e2c<double, double, double><<<gridSize, blockSize>>>(
+         (double*)c->dcw, (double*)c->dew, c->nlayers, c->nedges, c->ncells,
+         (double*)c->d_e2c_interpolants, c->max_edges, 
+         c->d_nedges_on_cell, c->d_edges_on_cell);
+    } else {
+      interpolate_e2c<double, double, float><<<gridSize, blockSize>>>(
+         (float*)c->dcw, (float*)c->dew, c->nlayers, c->nedges, c->ncells,
+         (double*)c->d_e2c_interpolants, c->max_edges, 
+         c->d_nedges_on_cell, c->d_edges_on_cell);
+    }
     
-    interpolate_e2c<double, double><<<gridSize, blockSize>>>(
-       c->dcw, c->dew, c->nlayers, c->nedges, c->ncells,
-       c->d_e2c_interpolants, c->max_edges, 
-       c->d_nedges_on_cell, c->d_edges_on_cell);
-    
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("e2c interpolation");
   }
 
-  fprintf(stderr, "loading V..\n");
+  // fprintf(stderr, "loading V..\n");
   load_cw_data(c, c->d_V, &c->dd_V, c->dcw, true, 3, c->nlayers); // V
-  fprintf(stderr, "loading Vv..\n");
+  // fprintf(stderr, "loading Vv..\n");
   load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, false, 1, c->nlayers+1); // Vv
-  fprintf(stderr, "loading zTop..\n");
+  // fprintf(stderr, "loading zTop..\n");
   load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, false, 1, c->nlayers); // zTop
  
-  double *tmp = c->dew;
+  void *tmp = c->dew;
   fprintf(stderr, "loading attrs..\n");
   for (int i = 0; i < c->nattrs; i ++) {
-    cudaMemcpy(tmp, Ac[i], sizeof(double) * c->ncells * c->nlayers, cudaMemcpyHostToDevice);
+    cudaMemcpy(tmp, Ac[i], fsize * c->ncells * c->nlayers, cudaMemcpyHostToDevice);
 
-    assign_attrs<double><<<gridSize, blockSize>>>(c->dcw, tmp, i, c->nattrs, c->nlayers, c->ncells);
+    if (c->prec_var) 
+      assign_attrs<double><<<gridSize, blockSize>>>((double*)c->dcw, (double*)tmp, i, c->nattrs, c->nlayers, c->ncells);
+    else
+      assign_attrs<float><<<gridSize, blockSize>>>((float*)c->dcw, (float*)tmp, i, c->nattrs, c->nlayers, c->ncells);
     
     checkLastCudaError("load attrs: assign");
   }
@@ -1050,22 +1104,63 @@ void mop_execute(mop_ctx_t *c,
   //     h, c->dparts, c->dd_V, c->dd_Vv, c->dd_zTop, c->nattrs,
   //     c->dd_A, c->d_Xv, c->d_nedges_on_cell, c->d_cells_on_cell, c->d_verts_on_cell);
 
-  mpas_trace<double, double, double><<<gridSize, blockSize>>>(
-      h,
-      nsteps, nsubsteps, 0,
-      ntasks, 
-      c->dparts,
-      c->dd_V,
-      c->dd_Vv,
-      c->dd_zTop, 
-      c->nattrs, 
-      c->dd_A,
-      c->d_Xv,
-      c->max_edges, 
-      c->d_nedges_on_cell, 
-      c->d_cells_on_cell,
-      c->d_verts_on_cell, 
-      c->nlayers);
+  if (c->prec_mesh) {
+    if (c->prec_var) {
+      mpas_trace<double, double, double><<<gridSize, blockSize>>>(
+          h,
+          nsteps, nsubsteps, 0,
+          ntasks, 
+          c->dparts,
+          (double**)c->dd_V,
+          (double**)c->dd_Vv,
+          (double**)c->dd_zTop, 
+          c->nattrs, 
+          (double**)c->dd_A,
+          (double*)c->d_Xv,
+          c->max_edges, 
+          c->d_nedges_on_cell, 
+          c->d_cells_on_cell,
+          c->d_verts_on_cell, 
+          c->nlayers);
+    } else {
+      mpas_trace<double, double, float><<<gridSize, blockSize>>>(
+          h,
+          nsteps, nsubsteps, 0,
+          ntasks, 
+          c->dparts,
+          (float**)c->dd_V,
+          (float**)c->dd_Vv,
+          (float**)c->dd_zTop, 
+          c->nattrs, 
+          (float**)c->dd_A,
+          (double*)c->d_Xv,
+          c->max_edges, 
+          c->d_nedges_on_cell, 
+          c->d_cells_on_cell,
+          c->d_verts_on_cell, 
+          c->nlayers);
+    }
+  } else {
+    if (c->prec_var) assert(false);
+    else {
+      mpas_trace<double, float, float><<<gridSize, blockSize>>>(
+          h,
+          nsteps, nsubsteps, 0,
+          ntasks, 
+          c->dparts,
+          (float**)c->dd_V,
+          (float**)c->dd_Vv,
+          (float**)c->dd_zTop, 
+          c->nattrs, 
+          (float**)c->dd_A,
+          (float*)c->d_Xv,
+          c->max_edges, 
+          c->d_nedges_on_cell, 
+          c->d_cells_on_cell,
+          c->d_verts_on_cell, 
+          c->nlayers);
+    }
+  }
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] mop_execute");
 
