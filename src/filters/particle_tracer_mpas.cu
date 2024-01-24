@@ -23,6 +23,11 @@ static const int blockSize = 256;
 // - zTop field
 // - scalar attribute fields
 
+// template type
+// - F, float type for computing
+// - Fm, float type for mesh coordinates
+// - Fv, float type for variables
+
 __device__ __host__
 inline static int c2ci(int c) { return c - 1; }
 
@@ -32,20 +37,21 @@ inline static int e2ei(int e) { return e - 1; }
 __device__ __host__
 inline static int v2vi(int v) { return v - 1; }
 
+template <typename F=double, typename Fm=double>
 __device__ __host__
 inline static bool point_in_cell(
     const int cell,
-    const double *x,
+    const F *x,
     int iv[],
-    double xv[][3], // returns vertex coordinates
+    F xv[][3], // returns vertex coordinates
     const int max_edges,
-    const double *Xv,
+    const Fm *Xv,
     const int *nedges_on_cell, 
     const int *verts_on_cell)
 {
   // if (cell < 0) return false;
   const int nverts = nedges_on_cell[c2ci(cell)];
-  // double xv[MAX_VERTS][3];
+  // F xv[MAX_VERTS][3];
 
   for (int i = 0; i < nverts; i ++) {
     const int vertex = verts_on_cell[c2ci(cell) * max_edges + i];
@@ -54,7 +60,7 @@ inline static bool point_in_cell(
       xv[i][k] = Xv[iv[i]*3+k];
   }
 
-  bool succ = ftk::point_in_mpas_cell<double>(nverts, xv, x);
+  bool succ = ftk::point_in_mpas_cell<F>(nverts, xv, x);
 #if 0
   printf("x=%f, %f, %f, cell=%d, nverts=%d, max_edges=%d, iv=%d, %d, %d, %d, %d, %d, %d, succ=%d\n", 
       x[0], x[1], x[2], cell, nverts, max_edges,
@@ -63,13 +69,14 @@ inline static bool point_in_cell(
   return succ;
 }
 
+template <typename F=double, typename Fm=double>
 __device__ __host__
 static int locate_cell_local( // local search among neighbors
     const int curr, // current cell
-    const double *x,
+    const F *x,
     int iv[], // returns vertex ids
-    double xv[][3], // returns vertex coordinates
-    const double *Xv,
+    F xv[][3], // returns vertex coordinates
+    const Fm *Xv,
     const int max_edges,
     const int *nedges_on_cell, // also n_verts_on_cell
     const int *cells_on_cell,
@@ -77,14 +84,14 @@ static int locate_cell_local( // local search among neighbors
 {
   if (curr < 0)
     return -1; // not found
-  else if (point_in_cell(
+  else if (point_in_cell<F, Fm>(
         curr, x, iv, xv, 
         max_edges, Xv, nedges_on_cell, verts_on_cell))
     return curr;
   else {
     for (int i = 0; i < nedges_on_cell[c2ci(curr)]; i ++) {
       const int cell = cells_on_cell[i + max_edges * c2ci(curr)];
-      if (point_in_cell(
+      if (point_in_cell<F, Fm>(
             cell, x, iv, xv,
             max_edges, Xv, nedges_on_cell, verts_on_cell)) {
         // printf("curr=%d, cell=%d\n", curr, cell);
@@ -95,18 +102,19 @@ static int locate_cell_local( // local search among neighbors
   }
 }
 
+template <typename F=double, typename Fm=double, typename Fv=double>
 __device__ __host__ 
 static bool mpas_eval_static(
-    const double *x,    // location
-    double *v,          // return velocity
-    double *vv,         // vertical velocity
-    double *f,          // scalar attributs
-    const double *V,    // velocity field
-    const double *Vv,   // vertical velocities
-    const double *zTop, // top layer depth
+    const F *x,    // location
+    F *v,          // return velocity
+    F *vv,         // vertical velocity
+    F *f,          // scalar attributs
+    const Fv *V,    // velocity field
+    const Fv *Vv,   // vertical velocities
+    const Fv *zTop, // top layer depth
     const int nattrs,    // number of scalar attributes
-    const double *A,    // scalar attributes
-    const double *Xv,   // vertex locations
+    const Fv *A,    // scalar attributes
+    const Fm *Xv,   // vertex locations
     const int max_edges,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
@@ -116,7 +124,7 @@ static bool mpas_eval_static(
     unsigned int &hint_l)        // hint for searching cell and layer
 {
   int iv[MAX_VERTS];
-  double xv[MAX_VERTS][3];
+  F xv[MAX_VERTS][3];
 
 #if 0
   printf("hc=%llu, hl=%u, x=%f, %f, %f\n", 
@@ -127,7 +135,7 @@ static bool mpas_eval_static(
       v[0], v[1], v[2], v[3]);
 #endif
 
-  const int cell = locate_cell_local(hint_c, 
+  const int cell = locate_cell_local<F, Fm>(hint_c, 
       x, iv, xv, 
       Xv, max_edges, nedges_on_cell, 
       cells_on_cell, verts_on_cell);
@@ -137,7 +145,7 @@ static bool mpas_eval_static(
   const int nverts = nedges_on_cell[c2ci(cell)];
 
   // compute weights based on xyzVerts
-  double omega[MAX_VERTS]; 
+  F omega[MAX_VERTS]; 
   ftk::wachspress_weights(nverts, xv, x, omega); 
 
 #if 0
@@ -153,9 +161,9 @@ static bool mpas_eval_static(
   if (layer >= nlayers || layer < 0)
     layer = 0;
 
-  double upper = 0.0, lower = 0.0;
-  const double R = ftk::vector_2norm<3>(x);
-  const double z = R - R0;
+  F upper = 0.0, lower = 0.0;
+  const F R = ftk::vector_2norm<3>(x);
+  const F z = R - R0;
   int dir; // 0=up, 1=down
 
   // printf("hint_l=%d\n", hint_l);
@@ -225,12 +233,12 @@ static bool mpas_eval_static(
   hint_l = layer;
   // printf("setting hint_l to %u\n", hint_l);
 
-  const double alpha = (z - lower) / (upper - lower), 
-               beta = 1.0 - alpha;
+  const F alpha = (z - lower) / (upper - lower), 
+           beta = 1.0 - alpha;
 
   // reset values before interpolation
-  memset(v, 0, sizeof(double)*3);
-  memset(f, 0, sizeof(double)*nattrs);
+  memset(v, 0, sizeof(F)*3);
+  memset(f, 0, sizeof(F)*nattrs);
   if (vv)
     *vv = 0.0;
 
@@ -258,19 +266,20 @@ static bool mpas_eval_static(
   return true;
 }
 
+template <typename F=double, typename Fm=double, typename Fv=double>
 __device__ __host__ 
 inline static bool mpas_eval(
-    const double *x,             // location
-    double *v,                   // return velocity
-    double *vv,                  // vertical velocity
-    double *f,                   // scalar attributs
-    const double alpha,          // temporal interpolation coef
-    const double *const V[2],    // velocity field
-    const double *const Vv[2],   // vertical velocities
-    const double *const zTop[2], // top layer depth
+    const F *x,             // location
+    F *v,                   // return velocity
+    F *vv,                  // vertical velocity
+    F *f,                   // scalar attributs
+    const F alpha,          // temporal interpolation coef
+    const Fv *const V[2],    // velocity field
+    const Fv *const Vv[2],   // vertical velocities
+    const Fv *const zTop[2], // top layer depth
     const int nattrs,             // number of scalar attributes
-    const double *const A[2],    // scalar attributes
-    const double *Xv,            // vertex locations
+    const Fv *const A[2],    // scalar attributes
+    const Fm *Xv,            // vertex locations
     const int max_edges,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
@@ -280,11 +289,11 @@ inline static bool mpas_eval(
     unsigned int &hint_l)        // hint for searching cell and layer
 {
   if (V[1]) { // two timesteps
-    double _v[2][3], _vv[2], _f[2][MAX_ATTRS];
+    F _v[2][3], _vv[2], _f[2][MAX_ATTRS];
 
     for (int i = 0; i < 2; i ++) {
       // printf("i=%d, nattrs=%d, nlayers=%d, A[i]=%p\n", i, nattrs, nlayers, A[i]);
-      if (!mpas_eval_static(x, 
+      if (!mpas_eval_static<F, Fm, Fv>(x, 
           _v[i], &_vv[i], _f[i], 
           V[i], Vv[i], zTop[i], nattrs, A[i], 
           Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
@@ -293,7 +302,7 @@ inline static bool mpas_eval(
     }
 
     // temporal interpolation
-    const double beta = 1.0 - alpha;
+    const F beta = 1.0 - alpha;
     for (int j = 0; j < 3; j ++)
       v[j] = alpha * _v[0][j] + beta * _v[1][j];
     *vv = alpha * _vv[0] + beta * _vv[1];
@@ -302,28 +311,28 @@ inline static bool mpas_eval(
 
     return true;
   } else
-    return mpas_eval_static(
+    return mpas_eval_static<F, Fm, Fv>(
         x, v, vv, f, V[0], Vv[0], zTop[0], nattrs, A[0], 
         Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
         nlayers, hint_c, hint_l);
 }
 
-template <int ORDER=1>
+template <int ORDER=1, typename F=double, typename Fm=double, typename Fv=double>
 __device__
 inline static bool spherical_rk_with_vertical_velocity(
-    const double h,
+    const F h,
     const int nsteps,
     const int istep,
     ftk::feature_point_lite_t& p, 
-    double *v0,                  // return velocity
-    double *vv,                  // vertical velocity
-    double *f,                   // scalar attributs
-    const double *const V[2],    // velocity field
-    const double *const Vv[2],   // vertical velocities
-    const double *const zTop[2], // top layer depth
+    F *v0,                  // return velocity
+    F *vv,                  // vertical velocity
+    F *f,                   // scalar attributs
+    const Fv *const V[2],    // velocity field
+    const Fv *const Vv[2],   // vertical velocities
+    const Fv *const zTop[2], // top layer depth
     const int nattrs,            // number of scalar attributes
-    const double *const A[2],    // scalar attributes
-    const double *const Xv,      // vertex locations
+    const Fv *const A[2],    // scalar attributes
+    const Fm *const Xv,      // vertex locations
     const int max_edges,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
@@ -333,9 +342,9 @@ inline static bool spherical_rk_with_vertical_velocity(
     unsigned int &hint_l)        // hint for searching cell and layer
 {
   if (ORDER == 1) {
-    const double alpha = (double)istep / nsteps;
+    const F alpha = (F)istep / nsteps;
 
-    double v[4];
+    F v[4];
     if (!mpas_eval(p.x, v, vv, f, alpha,
           V, Vv, zTop, nattrs, A, 
           Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
@@ -347,8 +356,8 @@ inline static bool spherical_rk_with_vertical_velocity(
 
     ftk::angular_stepping(p.x, v, h, p.x);
 #if 0
-    const double R = ftk::vector_2norm<3, double>(p.x); // radius
-    const double R1 = R + vv[0] * h; // new radius
+    const F R = ftk::vector_2norm<3, F>(p.x); // radius
+    const F R1 = R + vv[0] * h; // new radius
     for (int k = 0; k < 3; k ++)
       p.x[k] = p.x[k] * R1 / R;
 #endif
@@ -363,21 +372,22 @@ inline static bool spherical_rk_with_vertical_velocity(
   //     p.x[0], p.x[1], p.x[2], v[0], v[1], v[2], v[3]);
 }
 
+template <typename F=double, typename Fm=double>
 __global__
 static void initialize_c2v(
     const int ncells,
     const int nverts,
-    const double *Xc, // cell x
-    const double *Xv, // vertex x
+    const Fm *Xc, // cell x
+    const Fm *Xv, // vertex x
     const int *cells_on_vert,
-    double *interpolants,
+    F *interpolants,
     bool *vert_on_boundary)
 {
   unsigned long long i = getGlobalIdx_3D_1D();
   if (i >= nverts) return;
 
   bool boundary = false;
-  double xc[3][3], xv[3];
+  F xc[3][3], xv[3];
 
   const int vi = i;
 #if 0
@@ -409,17 +419,18 @@ static void initialize_c2v(
   } else {
     vert_on_boundary[vi] = false;
     
-    double mu[3];
+    F mu[3];
     bool succ = ftk::inverse_lerp_s2v3_0(xc, xv, mu);
     for (int k = 0; k < 3; k ++)
       interpolants[k + vi*3] = mu[k];
   }
 }
 
+template <typename Fv=double>
 __global__
 static void assign_attrs(
-    double *A, // all attributes
-    const double *a, // one of the attributes
+    Fv *A, // all attributes
+    const Fv *a, // one of the attributes
     const int iattr, 
     const int nattrs,
     const int nlayers,
@@ -433,14 +444,15 @@ static void assign_attrs(
     A[iattr + nattrs * (layer + ci * nlayers)] = a[layer + ci * nlayers];
 }
 
+template <typename F=double, typename Fm=double, typename Fv=double>
 __global__
 static void interpolate_e2c(
-    double *Vc, // velocity on cell; please memset to zero before calling this func
-    const double *Ve, // normal velocity on edge
+    Fv *Vc, // velocity on cell; please memset to zero before calling this func
+    const Fv *Ve, // normal velocity on edge
     const int nlayers,
     const int nedges,
     const int ncells,
-    const double *interpolants,
+    const F *interpolants,
     const int max_edges,
     const int *nedges_on_cell,
     const int *edges_on_cell)
@@ -459,7 +471,7 @@ static void interpolate_e2c(
       const int ei = e2ei( edges_on_cell[j + ci*max_edges] );
       // printf("%f\n", ve);
       // printf("ci=%d, ei=%d, v=%p\n", ci, ei, Ve); // layer + ei*nlayers]);
-      const double ve = Ve[layer + ei * nlayers];
+      const F ve = Ve[layer + ei * nlayers];
 
       for (int k = 0; k < 3; k ++) 
         Vc[k + 3 * (layer + ci *nlayers)] += ve * interpolants[k + 3 * (j + max_edges * ci)];
@@ -474,15 +486,16 @@ static void interpolate_e2c(
   }
 }
 
+template <typename F=double, typename Fv=double>
 __global__
 static void interpolate_c2v(
-    double *V, // vertexwise data
-    const double *C, // cellwise data
+    Fv *V, // vertexwise data
+    const Fv *C, // cellwise data
     const int nch,
     const int nlayers,
     const int ncells,
     const int nverts,
-    const double *interpolants,
+    const F *interpolants,
     const int *cells_on_vert,
     const bool *vert_on_boundary)
 {
@@ -493,7 +506,7 @@ static void interpolate_c2v(
   const int vi = i;
 
   const bool boundary = vert_on_boundary[vi];
-  double lambda[3];
+  F lambda[3];
   int ci[3];
 
   for (int l = 0; l < 3; l ++) {
@@ -511,14 +524,14 @@ static void interpolate_c2v(
 
   for (int layer = 0; layer < nlayers; layer ++) {
     for (int k = 0; k < nch; k ++) {
-      double &v = V[k + nch * (layer + vi * nlayers)];
+      Fv &v = V[k + nch * (layer + vi * nlayers)];
       if (boundary) {
           v = 0;
       } else {
         bool invalid = false;
         v = 0;
         for (int l = 0; l < 3; l ++) {
-          double val = C[k + nch * (layer + ci[l] * nlayers)];
+          F val = C[k + nch * (layer + ci[l] * nlayers)];
           if (val < -1e32) {
             invalid = true;
             break;
@@ -533,20 +546,21 @@ static void interpolate_c2v(
   }
 }
 
+template <typename F=double, typename Fm=double, typename Fv=double>
 __global__
 static void mpas_trace(
-    const double h,
+    const F h,
     const int nsteps,
     const int nsubsteps,
     const int isubstart,
     const int nparticles,
     ftk::feature_point_lite_t* particles,
-    const double *const V[2],    // velocity field
-    const double *const Vv[2],   // vertical velocities
-    const double *const zTop[2], // top layer depth
+    const Fv *const V[2],    // velocity field
+    const Fv *const Vv[2],   // vertical velocities
+    const Fv *const zTop[2], // top layer depth
     const int nattrs,   // number of scalar attributes
-    const double *const A[2],    // scalar attributes
-    const double *Xv,   // vertex locations
+    const Fv *const A[2],    // scalar attributes
+    const Fm *Xv,   // vertex locations
     const int max_edges,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
@@ -565,8 +579,8 @@ static void mpas_trace(
 #endif
 
   ftk::feature_point_lite_t &p = particles[i];
-  double v0[3], vv[3], f[MAX_ATTRS];
-  // const double h = 1.0 / nsteps;
+  F v0[3], vv[3], f[MAX_ATTRS];
+  // const D h = 1.0 / nsteps;
 
   unsigned long long &hint_c = p.tag;
   unsigned int &hint_l = p.type;
@@ -593,11 +607,19 @@ static void mpas_trace(
 }
 
 ///////////////////////////
-void mop_create_ctx(mop_ctx_t **c_, int device)
+void mop_create_ctx(mop_ctx_t **c_, int device,
+    bool prec_compute, bool prec_mesh, bool prec_var)
 {
   *c_ = (ctx_t*)malloc(sizeof(ctx_t));
   ctx_t *c = *c_;
   memset(c, 0, sizeof(ctx_t));
+
+  c->prec_compute = prec_compute;
+  c->prec_mesh = prec_mesh;
+  c->prec_var = prec_var;
+
+  fprintf(stderr, "prec: compute (%d), mesh (%d), vars (%d)\n", 
+      prec_compute, prec_mesh, prec_var);
 
   c->device = device;
   cudaSetDevice(device);
@@ -651,7 +673,7 @@ static void realloc_both(
   if (*hbuf == NULL)
     *hbuf = (T*)malloc(m * sizeof(T));
   else if (m != n)
-    *hbuf = (T*)realloc(hbuf, m * sizeof(T));
+    *hbuf = (T*)realloc(*hbuf, m * sizeof(T));
 
   if (*dbuf == NULL)
     cudaMalloc((void**)dbuf, m * sizeof(T));
@@ -682,8 +704,8 @@ void mop_load_mesh(mop_ctx_t *c,
     // const int nlayers, 
     const int max_edges,
     const int nattrs,
-    const double *Xc,
-    const double *Xv,
+    const void *Xc,
+    const void *Xv,
     const int *nedges_on_cell, 
     const int *cells_on_cell,
     const int *cells_on_edge,
@@ -698,16 +720,18 @@ void mop_load_mesh(mop_ctx_t *c,
   c->max_edges = max_edges;
   c->nattrs = nattrs;
 
+  size_t fsize = c->prec_mesh ? sizeof(double) : sizeof(float);
+
   cudaMalloc((void**)&c->d_Xc, 
-      size_t(ncells) * sizeof(double) * 3);
+      size_t(ncells) * fsize * 3);
   cudaMemcpy(c->d_Xc, Xc, 
-      size_t(ncells) * sizeof(double) * 3, 
+      size_t(ncells) * fsize * 3,
       cudaMemcpyHostToDevice);
 
   cudaMalloc((void**)&c->d_Xv, 
-      size_t(nverts) * sizeof(double) * 3);
+      size_t(nverts) * fsize * 3);
   cudaMemcpy(c->d_Xv, Xv, 
-      size_t(nverts) * sizeof(double) * 3, 
+      size_t(nverts) * fsize * 3, 
       cudaMemcpyHostToDevice);
 
   cudaMalloc((void**)&c->d_nedges_on_cell, 
@@ -751,7 +775,7 @@ void mop_load_mesh(mop_ctx_t *c,
   // initialize interpolants
   {
     cudaMalloc((void**)&c->d_c2v_interpolants, 
-        size_t(c->nverts) * 3 * sizeof(double));
+        size_t(c->nverts) * 3 * sizeof(double)); // interpolants are in double, at least for now
 
     cudaMalloc((void**)&c->d_vert_on_boundary,
         size_t(c->nverts) * sizeof(bool));
@@ -769,14 +793,25 @@ void mop_load_mesh(mop_ctx_t *c,
     fprintf(stderr, "initializing c2v: ncells=%d, nverts=%d\n",
         c->ncells, c->nverts);
 
-    initialize_c2v<<<gridSize, blockSize>>>(
-        c->ncells, 
-        c->nverts, 
-        c->d_Xc,
-        c->d_Xv,
-        c->d_cells_on_vert, 
-        c->d_c2v_interpolants,
-        c->d_vert_on_boundary);
+    if (c->prec_mesh) {
+      initialize_c2v<double, double><<<gridSize, blockSize>>>(
+          c->ncells, 
+          c->nverts, 
+          (double*)c->d_Xc,
+          (double*)c->d_Xv,
+          c->d_cells_on_vert, 
+          (double*)c->d_c2v_interpolants,
+          c->d_vert_on_boundary);
+    } else {
+      initialize_c2v<double, float><<<gridSize, blockSize>>>(
+          c->ncells, 
+          c->nverts, 
+          (float*)c->d_Xc,
+          (float*)c->d_Xv,
+          c->d_cells_on_vert, 
+          (double*)c->d_c2v_interpolants,
+          c->d_vert_on_boundary);
+    }
  
     fprintf(stderr, "c2v initialization done.\n");
     // cudaDeviceSynchronize();
@@ -789,64 +824,68 @@ void mop_load_mesh(mop_ctx_t *c,
   }
 }
 
-void mop_load_e2c_interpolants(mop_ctx_t *c, const double *p)
+void mop_load_e2c_interpolants(mop_ctx_t *c, const void *p)
 {
+  size_t fsize = sizeof(double); 
+
   cudaMalloc((void**)&c->d_e2c_interpolants,
-      size_t(c->ncells) * c->max_edges * sizeof(double) * 3);
+      size_t(c->ncells) * c->max_edges * fsize * 3);
 
   cudaMemcpy(c->d_e2c_interpolants, p,
-      size_t(c->ncells) * c->max_edges * sizeof(double) * 3, cudaMemcpyHostToDevice);
+      size_t(c->ncells) * c->max_edges * fsize * 3, cudaMemcpyHostToDevice);
 
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] load e2c interpolants");
 }
 
-template <typename T=double>
 static void load_data(
-    T** dbuf,
-    const T *buf,
+    void** dbuf,
+    const void *buf,
+    const size_t fsize,
     const size_t n, 
     const char *name)
 {
-  T *d;
+  void *d;
   if (dbuf[0] == NULL) {
-    cudaMalloc((void**)&dbuf[0], sizeof(T) * n);
+    cudaMalloc((void**)&dbuf[0], fsize * n);
     checkLastCudaError("[FTK-CUDA] loading data 0");
     d = dbuf[0];
   } else if (dbuf[1] == NULL) {
-    cudaMalloc((void**)&dbuf[1], sizeof(T) * n);
+    cudaMalloc((void**)&dbuf[1], fsize * n);
     checkLastCudaError("[FTK-CUDA] loading data 1");
     d = dbuf[1];
   } else {
     std::swap(dbuf[0], dbuf[1]);
     d = dbuf[1];
   }
-  cudaMemcpy(d, buf, sizeof(T) * n, cudaMemcpyHostToDevice);
+  cudaMemcpy(d, buf, fsize * n, cudaMemcpyHostToDevice);
   checkLastCudaError("[FTK-CUDA] cudaMemcpy");
 }
 
 static void load_cw_data(
     mop_ctx_t *c,
-    double **dbuf, // an array with two device pointers
-    double ***ddbuf, // device array of pointers
-    const double *cw,
+    void **dbuf, // an array with two device pointers
+    void ***ddbuf, // device array of pointers
+    const void *cw,
     bool cw_on_gpu,
     const int nch,
     const int nlayers) // host pointer with cw data
 {
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
   // initialize buffers for vertexwise data in two adjacent timesteps
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   checkLastCudaError("memcpy to c2w buffer: load cw 0");
 
-  double *d;
+  void *d;
   if (dbuf[0] == NULL) {
     cudaMalloc((void**)&dbuf[0], 
-        sizeof(double) * c->nverts * nch * nlayers);
+        fsize * c->nverts * nch * nlayers);
     d = dbuf[0];
     checkLastCudaError("malloc vw buffers 0");
   } else if (dbuf[1] == NULL) {
     cudaMalloc((void**)&dbuf[1], 
-        sizeof(double) * c->nverts * nch * nlayers);
+        fsize * c->nverts * nch * nlayers);
     d = dbuf[1];
     checkLastCudaError("malloc vw buffers 1");
   } else {
@@ -854,26 +893,26 @@ static void load_cw_data(
     d = dbuf[1];
   }
  
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   checkLastCudaError("memcpy to c2w buffer: dev ptrs0");
   if (*ddbuf == NULL) {
-    cudaMalloc((void**)ddbuf, sizeof(double*) * 2);
+    cudaMalloc((void**)ddbuf, sizeof(void*) * 2);
     checkLastCudaError("memcpy to c2w buffer: allocating ddbuf");
   }
   // fprintf(stderr, "ddbuf=%p, dbuf=%p\n", *ddbuf, dbuf);
-  cudaMemcpy(*ddbuf, dbuf, sizeof(double*) * 2, 
+  cudaMemcpy(*ddbuf, dbuf, sizeof(void*) * 2, 
       cudaMemcpyHostToDevice);
   checkLastCudaError("memcpy to c2w buffer: dev ptrs");
   
   // copy data to c2w buffer
-  double const* dcw; 
+  void const* dcw; 
   if (cw_on_gpu) {
     dcw = cw; // cw data is already on gpu
   } else {
     dcw = c->dcw;
     assert(c->dcw != NULL);
     cudaMemcpy(c->dcw, cw, 
-        sizeof(double) * c->ncells * nch * nlayers, 
+        fsize * c->ncells * nch * nlayers, 
         cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     // fprintf(stderr, "dcw=%p\n", c->dcw);
@@ -889,15 +928,26 @@ static void load_cw_data(
     if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
     else gridSize = dim3(nBlocks);
 
-    interpolate_c2v<<<gridSize, blockSize>>>(
-        d, dcw, nch, nlayers,
-        c->ncells,
-        c->nverts,
-        c->d_c2v_interpolants,
-        c->d_cells_on_vert,
-        c->d_vert_on_boundary);
+    // cudaDeviceSynchronize();
+    if (c->prec_var) { 
+      interpolate_c2v<double, double><<<gridSize, blockSize>>>(
+          (double*)d, (double*)dcw, nch, nlayers,
+          c->ncells,
+          c->nverts,
+          (double*)c->d_c2v_interpolants,
+          c->d_cells_on_vert,
+          c->d_vert_on_boundary);
+    } else {
+      interpolate_c2v<double, float><<<gridSize, blockSize>>>(
+          (float*)d, (float*)dcw, nch, nlayers,
+          c->ncells,
+          c->nverts,
+          (double*)c->d_c2v_interpolants,
+          c->d_cells_on_vert,
+          c->d_vert_on_boundary);
+    }
  
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("c2w interpolation");
   }
 }
@@ -908,37 +958,43 @@ void mop_load_data(mop_ctx_t *c,
     const double *zTop,
     const double *A)
 {
-  load_data<double>(c->d_V, V, 3 * c->nverts * c->nlayers, "V");
-  load_data<double>(c->d_Vv, Vv, c->nverts * (c->nlayers+1), "Vv");
-  load_data<double>(c->d_zTop, zTop, c->nverts * c->nlayers, "zTop");
-  load_data<double>(c->d_A, A, c->nattrs * c->nverts * c->nlayers, "f");
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
+  load_data(c->d_V, V, fsize, 3 * c->nverts * c->nlayers, "V");
+  load_data(c->d_Vv, Vv, fsize, c->nverts * (c->nlayers+1), "Vv");
+  load_data(c->d_zTop, zTop, fsize, c->nverts * c->nlayers, "zTop");
+  load_data(c->d_A, A, fsize, c->nattrs * c->nverts * c->nlayers, "f");
 }
 
 void mop_initialize_dcw(mop_ctx_t *c)
 {
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
   if (c->dcw == NULL)
     cudaMalloc((void**)&c->dcw, 
-        sizeof(double) * c->ncells * std::max(3, c->nattrs) * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
-  cudaDeviceSynchronize();
+        fsize * c->ncells * std::max(3, c->nattrs) * (c->nlayers+1)); // a sufficiently large buffer for loading cellwise data
+  // cudaDeviceSynchronize();
   checkLastCudaError("malloc dcw");
 }
 
 void mop_initialize_dew(mop_ctx_t *c)
 {
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
   if (c->dew == NULL)
     cudaMalloc((void**)&c->dew, 
-        sizeof(double) * std::max(c->nedges, c->ncells) * std::max(3, c->nattrs) * c->nlayers); // a sufficiently large buffer for loading edgewise data
+        fsize * std::max(c->nedges, c->ncells) * std::max(3, c->nattrs) * c->nlayers); // a sufficiently large buffer for loading edgewise data
         // sizeof(double) * c->nedges * c->nlayers); // a sufficiently large buffer for loading edgewise data
-  cudaDeviceSynchronize();
+  // cudaDeviceSynchronize();
   checkLastCudaError("malloc dew");
 }
 
 void mop_load_data_cw(mop_ctx_t *c,
     const double t,
-    const double *Vc,
-    const double *Vvc,
-    const double *zTopc,
-    const double *Ac)
+    const void *Vc,
+    const void *Vvc,
+    const void *zTopc,
+    const void *Ac)
 {
   mop_initialize_dcw(c);
 
@@ -953,11 +1009,13 @@ void mop_load_data_cw(mop_ctx_t *c,
 
 void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     const double t,
-    const double *V, // normal velocity
-    const double *Vvc, 
-    const double *zTopc,
-    const double *Ac[])
+    const void *V, // normal velocity
+    const void *Vvc, 
+    const void *zTopc,
+    const void *Ac[])
 {
+  size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
+  
   mop_initialize_dcw(c);
   mop_initialize_dew(c);
 
@@ -973,32 +1031,46 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
 
   // interpolate e2c
   {
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("e2c interpolation: 0");
-    cudaMemcpy(c->dew, V, sizeof(double) * c->nedges * c->nlayers, cudaMemcpyHostToDevice);
-    cudaMemset(c->dcw, 0, sizeof(double) * 3 * c->ncells * c->nlayers);
+    cudaMemcpy(c->dew, V, fsize * c->nedges * c->nlayers, cudaMemcpyHostToDevice);
+    cudaMemset(c->dcw, 0, fsize * 3 * c->ncells * c->nlayers);
     
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("e2c interpolation: 1");
+   
+    if (c->prec_var) {
+      interpolate_e2c<double, double, double><<<gridSize, blockSize>>>(
+         (double*)c->dcw, (double*)c->dew, c->nlayers, c->nedges, c->ncells,
+         (double*)c->d_e2c_interpolants, c->max_edges, 
+         c->d_nedges_on_cell, c->d_edges_on_cell);
+    } else {
+      interpolate_e2c<double, double, float><<<gridSize, blockSize>>>(
+         (float*)c->dcw, (float*)c->dew, c->nlayers, c->nedges, c->ncells,
+         (double*)c->d_e2c_interpolants, c->max_edges, 
+         c->d_nedges_on_cell, c->d_edges_on_cell);
+    }
     
-    interpolate_e2c<<<gridSize, blockSize>>>(
-       c->dcw, c->dew, c->nlayers, c->nedges, c->ncells,
-       c->d_e2c_interpolants, c->max_edges, 
-       c->d_nedges_on_cell, c->d_edges_on_cell);
-    
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
     checkLastCudaError("e2c interpolation");
   }
 
+  // fprintf(stderr, "loading V..\n");
   load_cw_data(c, c->d_V, &c->dd_V, c->dcw, true, 3, c->nlayers); // V
+  // fprintf(stderr, "loading Vv..\n");
   load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, false, 1, c->nlayers+1); // Vv
+  // fprintf(stderr, "loading zTop..\n");
   load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, false, 1, c->nlayers); // zTop
  
-  double *tmp = c->dew;
+  void *tmp = c->dew;
+  fprintf(stderr, "loading attrs..\n");
   for (int i = 0; i < c->nattrs; i ++) {
-    cudaMemcpy(tmp, Ac[i], sizeof(double) * c->ncells * c->nlayers, cudaMemcpyHostToDevice);
+    cudaMemcpy(tmp, Ac[i], fsize * c->ncells * c->nlayers, cudaMemcpyHostToDevice);
 
-    assign_attrs<<<gridSize, blockSize>>>(c->dcw, tmp, i, c->nattrs, c->nlayers, c->ncells);
+    if (c->prec_var) 
+      assign_attrs<double><<<gridSize, blockSize>>>((double*)c->dcw, (double*)tmp, i, c->nattrs, c->nlayers, c->ncells);
+    else
+      assign_attrs<float><<<gridSize, blockSize>>>((float*)c->dcw, (float*)tmp, i, c->nattrs, c->nlayers, c->ncells);
     
     checkLastCudaError("load attrs: assign");
   }
@@ -1037,22 +1109,63 @@ void mop_execute(mop_ctx_t *c,
   //     h, c->dparts, c->dd_V, c->dd_Vv, c->dd_zTop, c->nattrs,
   //     c->dd_A, c->d_Xv, c->d_nedges_on_cell, c->d_cells_on_cell, c->d_verts_on_cell);
 
-  mpas_trace<<<gridSize, blockSize>>>(
-      h,
-      nsteps, nsubsteps, 0,
-      ntasks, 
-      c->dparts,
-      c->dd_V,
-      c->dd_Vv,
-      c->dd_zTop, 
-      c->nattrs, 
-      c->dd_A,
-      c->d_Xv,
-      c->max_edges, 
-      c->d_nedges_on_cell, 
-      c->d_cells_on_cell,
-      c->d_verts_on_cell, 
-      c->nlayers);
+  if (c->prec_mesh) {
+    if (c->prec_var) {
+      mpas_trace<double, double, double><<<gridSize, blockSize>>>(
+          h,
+          nsteps, nsubsteps, 0,
+          ntasks, 
+          c->dparts,
+          (double**)c->dd_V,
+          (double**)c->dd_Vv,
+          (double**)c->dd_zTop, 
+          c->nattrs, 
+          (double**)c->dd_A,
+          (double*)c->d_Xv,
+          c->max_edges, 
+          c->d_nedges_on_cell, 
+          c->d_cells_on_cell,
+          c->d_verts_on_cell, 
+          c->nlayers);
+    } else {
+      mpas_trace<double, double, float><<<gridSize, blockSize>>>(
+          h,
+          nsteps, nsubsteps, 0,
+          ntasks, 
+          c->dparts,
+          (float**)c->dd_V,
+          (float**)c->dd_Vv,
+          (float**)c->dd_zTop, 
+          c->nattrs, 
+          (float**)c->dd_A,
+          (double*)c->d_Xv,
+          c->max_edges, 
+          c->d_nedges_on_cell, 
+          c->d_cells_on_cell,
+          c->d_verts_on_cell, 
+          c->nlayers);
+    }
+  } else {
+    if (c->prec_var) assert(false);
+    else {
+      mpas_trace<double, float, float><<<gridSize, blockSize>>>(
+          h,
+          nsteps, nsubsteps, 0,
+          ntasks, 
+          c->dparts,
+          (float**)c->dd_V,
+          (float**)c->dd_Vv,
+          (float**)c->dd_zTop, 
+          c->nattrs, 
+          (float**)c->dd_A,
+          (float*)c->d_Xv,
+          c->max_edges, 
+          c->d_nedges_on_cell, 
+          c->d_cells_on_cell,
+          c->d_verts_on_cell, 
+          c->nlayers);
+    }
+  }
   cudaDeviceSynchronize();
   checkLastCudaError("[FTK-CUDA] mop_execute");
 

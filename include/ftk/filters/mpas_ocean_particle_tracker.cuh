@@ -10,11 +10,14 @@ typedef struct {
   // gpu
   int device;
 
+  // precision
+  bool prec_compute, prec_mesh, prec_var; // true: double prec
+
   // mesh info
   int nverts, nedges, ncells, nlayers, nattrs, max_edges;
 
   // mesh
-  double *d_Xc, *d_Xe, *d_Xv; // cell/edge/vertex coordinates
+  void *d_Xc, *d_Xe, *d_Xv; // cell/edge/vertex coordinates
   int *d_nedges_on_cell, 
       *d_cells_on_cell,
       *d_cells_on_edge,
@@ -23,18 +26,18 @@ typedef struct {
       *d_verts_on_cell;
 
   // c2v interpolants
-  double *d_c2v_interpolants;
+  void *d_c2v_interpolants;
   bool *d_vert_on_boundary;
-  double *dcw; // a device buffer for c2v interpolation
-  double *dew; // a device buffer for e2c interpolation
+  void *dcw; // a device buffer for c2v interpolation
+  void *dew; // a device buffer for e2c interpolation
 
   // e2c interpolants
-  double *d_e2c_interpolants;
+  void *d_e2c_interpolants;
 
   // time-varying data
-  double *d_V[2], *d_Vv[2], *d_zTop[2], *d_A[2]; // velocity, verticalVelocity, zTop, and more
-  double **dd_V, **dd_Vv, **dd_zTop, **dd_A; // device pointers to pointers
-  double T[2];
+  void *d_V[2], *d_Vv[2], *d_zTop[2], *d_A[2]; // velocity, verticalVelocity, zTop, and more
+  void **dd_V, **dd_Vv, **dd_zTop, **dd_A; // device pointers to pointers
+  double T[2]; // time
 
   // particle data
   int nparticles;
@@ -43,7 +46,7 @@ typedef struct {
 
 } mop_ctx_t;
 
-void mop_create_ctx(mop_ctx_t **c_, int device=0);
+void mop_create_ctx(mop_ctx_t **c_, int device, bool prec_compute, bool prec_mesh, bool prec_var);
 void mop_destroy_ctx(mop_ctx_t **c_);
 
 void mop_load_mesh(mop_ctx_t *c,
@@ -53,8 +56,8 @@ void mop_load_mesh(mop_ctx_t *c,
     // const int nlayers, 
     const int max_edges,
     const int nch,
-    const double *Xc,
-    const double *Xv,
+    const void *Xc,
+    const void *Xv,
     const int *n_edges_on_cell, 
     const int *cells_on_cell,
     const int *cells_on_edge,
@@ -65,27 +68,27 @@ void mop_load_mesh(mop_ctx_t *c,
 void mop_set_nlayers(mop_ctx_t *c, int n) {c->nlayers = n;}
 
 void mop_load_e2c_interpolants(mop_ctx_t *c,
-    const double *p);
+    const void *p);
 
 void mop_load_data(mop_ctx_t *c, 
-    const double *V, 
-    const double *Vv, 
-    const double *zTop,
-    const double *A);
+    const void *V, 
+    const void *Vv, 
+    const void *zTop,
+    const void *A);
 
 void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     const double t,
-    const double *V, // normal velocity
-    const double *Vv, 
-    const double *zTop,
-    const double *A[]);
+    const void *V, // normal velocity
+    const void *Vv, 
+    const void *zTop,
+    const void *A[]);
 
 void mop_load_data_cw(mop_ctx_t *c,
     const double t, // time
-    const double *V, 
-    const double *Vv, 
-    const double *zTop,
-    const double *A);
+    const void *V, 
+    const void *Vv, 
+    const void *zTop,
+    const void *A);
 
 void mop_load_particles(mop_ctx_t *c, 
     const int n,

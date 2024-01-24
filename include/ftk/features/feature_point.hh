@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/features/feature_point_lite.hh>
+#include <ftk/features/mpas_particle.hh>
 // #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/external/diy/serialization.hpp>
 #include <ftk/external/json.hh>
@@ -47,6 +48,18 @@ struct feature_point_t {
       scalar[i] = cp.scalar[i];
     type = cp.type;
     tag = cp.tag;
+  }
+  feature_point_t(const mpas_particle_t<>& p) {
+    double x[3];
+    p.get_x(x);
+    for (int i = 0; i < 3; i ++) {
+      this->x[i] = x[i];
+      this->v[i] = p.v[i];
+    }
+    this->t = p.t;
+    this->scalar[0] = p.vv;
+    for (int i = 0; i < FTK_CP_MAX_NUM_VARS-1; i ++)
+      this->scalar[i+1] = p.scalar[i];
   }
 
   feature_point_lite_t to_lite() const {
