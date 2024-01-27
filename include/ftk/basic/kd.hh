@@ -255,13 +255,17 @@ std::shared_ptr<kd_node_t<F, n>> kd_t<F, n>::find_nearest_nonrecursive(const std
     if (d2 < best_d2) { // FIXME: this is actually not right.  need to go to a leaf node to get the min dist
       best = node;
       best_d2 = d2;
+      fprintf(stderr, "current_best_d2=%f\n", best_d2);
     }
 
-    if (next)
+    if (next) {
+      fprintf(stderr, "pushing next..\n");
       Q.push(std::make_tuple(next, depth + 1));
+    }
 
     // distance to the other side
     if (other) {
+      fprintf(stderr, "pushing other..\n");
       const F dp = x[axis] - pts[node->id][axis];
       const F dp2 = dp * dp;
 

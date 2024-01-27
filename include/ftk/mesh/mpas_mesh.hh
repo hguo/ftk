@@ -3,6 +3,7 @@
 
 #include <ftk/config.hh>
 #include <ftk/basic/kd.hh>
+#include <ftk/basic/kd_lite.hh>
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/numeric/mpas.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
@@ -87,6 +88,7 @@ public:
 
 public:
   std::shared_ptr<kd_t<F, 3>> kd_cells, kd_vertices;
+  std::vector<int> kdl_cells;
   
   ndarray<I> cellsOnVertex, cellsOnEdge, cellsOnCell,
              edgesOnCell,
@@ -127,6 +129,9 @@ void mpas_mesh<I, F>::initialize()
   kd_cells.reset(new kd_t<F, 3>);
   kd_cells->set_inputs(this->xyzCells);
   kd_cells->build();
+
+  kdl_cells.resize( n_cells()*2, -1 );
+  kd_build<3>((int)n_cells(), xyzCells.data(), kdl_cells.data());
 }
 
 template <typename I, typename F>
@@ -734,6 +739,16 @@ template <typename I, typename F>
 I mpas_mesh<I, F>::locate_cell_i(const F x[]) const
 {
   I cell_i = kd_cells->find_nearest(x);
+#if 0
+  I cell_i1 = kd_nearest<3, I, F>((int)n_cells(), 
+      xyzCells.data(), 
+      kdl_cells.data(), 
+      x);
+
+  fprintf(stderr, "cell_i=%d, %d\n", cell_i, cell_i1);
+  assert(cell_i == cell_i1);
+#endif
+
   if (point_in_cell_i(cell_i, x))
     return cell_i;
   else
