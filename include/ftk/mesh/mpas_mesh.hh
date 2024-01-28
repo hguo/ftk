@@ -130,7 +130,7 @@ void mpas_mesh<I, F>::initialize()
   // kd_cells->set_inputs(this->xyzCells);
   // kd_cells->build();
 
-  kdlite_heap.resize( n_cells()*3, -1 );
+  kdlite_heap.resize( n_cells(), -1 );
   kdlite_build<3>((int)n_cells(), xyzCells.data(), kdlite_heap.data());
 }
 

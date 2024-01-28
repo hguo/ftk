@@ -74,6 +74,19 @@ struct feature_point_t {
     return l;
   }
 
+  mpas_particle_t<> to_mpas() const {
+    mpas_particle_t<> p;
+    p.set_x( this->x.data() );
+    p.t = this->t;
+    p.hint_c = this->tag;
+    p.hint_l = this->type;
+    p.vv = this->scalar[0];
+    for (int i = 0; i < FTK_CP_MAX_NUM_VARS; i ++)
+      p.scalar[i] = this->scalar[i];
+
+    return p;
+  }
+
   double operator[](size_t i) const {return x[i];}
   double &operator[](size_t i) {return x[i];}
 
