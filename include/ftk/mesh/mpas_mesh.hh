@@ -88,7 +88,7 @@ public:
 
 public:
   std::shared_ptr<kd_t<F, 3>> kd_cells, kd_vertices;
-  std::vector<int> kdl_cells;
+  std::vector<int> kdlite_heap;
   
   ndarray<I> cellsOnVertex, cellsOnEdge, cellsOnCell,
              edgesOnCell,
@@ -126,12 +126,12 @@ public:
 template <typename I, typename F>
 void mpas_mesh<I, F>::initialize()
 {
-  kd_cells.reset(new kd_t<F, 3>);
-  kd_cells->set_inputs(this->xyzCells);
-  kd_cells->build();
+  // kd_cells.reset(new kd_t<F, 3>);
+  // kd_cells->set_inputs(this->xyzCells);
+  // kd_cells->build();
 
-  kdl_cells.resize( n_cells()*2, -1 );
-  kd_build<3>((int)n_cells(), xyzCells.data(), kdl_cells.data());
+  kdlite_heap.resize( n_cells()*3, -1 );
+  kdlite_build<3>((int)n_cells(), xyzCells.data(), kdlite_heap.data());
 }
 
 template <typename I, typename F>
@@ -738,14 +738,22 @@ bool mpas_mesh<I, F>::point_in_cell_i(const I cell_i, const F x[]) const
 template <typename I, typename F>
 I mpas_mesh<I, F>::locate_cell_i(const F x[]) const
 {
-  I cell_i = kd_cells->find_nearest(x);
+  const I cell_i = kdlite_nearest<3, I, F>(
+      (int)n_cells(), 
+      xyzCells.data(), 
+      kdlite_heap.data(),
+      x);
 #if 0
+  I cell_i = kd_cells->find_nearest(x);
   I cell_i1 = kd_nearest<3, I, F>((int)n_cells(), 
       xyzCells.data(), 
       kdl_cells.data(), 
       x);
 
-  fprintf(stderr, "cell_i=%d, %d\n", cell_i, cell_i1);
+  F d1 = vector_dist_2norm2<3>(x, xyzCells.data() + cell_i*3);
+  F d2 = vector_dist_2norm2<3>(x, xyzCells.data() + cell_i1*3);
+
+  fprintf(stderr, "cell_i=%d, %d, dist=%f, %f\n", cell_i, cell_i1, d1, d2);
   assert(cell_i == cell_i1);
 #endif
 
