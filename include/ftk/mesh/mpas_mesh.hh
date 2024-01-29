@@ -7,6 +7,7 @@
 #include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 #include <ftk/numeric/mpas.hh>
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
+#include <chrono>
 
 namespace ftk {
 
@@ -129,9 +130,18 @@ void mpas_mesh<I, F>::initialize()
   // kd_cells.reset(new kd_t<F, 3>);
   // kd_cells->set_inputs(this->xyzCells);
   // kd_cells->build();
+ 
+  fprintf(stderr, "building kdlite..\n");
 
+  typedef std::chrono::high_resolution_clock clock_type;
+  
+  auto t0 = clock_type::now();
   kdlite_heap.resize( n_cells(), -1 );
   kdlite_build<3>((int)n_cells(), xyzCells.data(), kdlite_heap.data());
+  
+  auto t1 = clock_type::now();
+  fprintf(stderr, "time_kdlite=%f\n",
+      std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0).count() * 1e-9);
 }
 
 template <typename I, typename F>
