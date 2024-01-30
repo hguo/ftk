@@ -89,7 +89,11 @@ inline I kdlite_nearest(I n, const F *X, const I *heap, const F *x)
     const I i = S[--top]; // pop stack
 
     const I xid = heap[i];
+#ifdef __CUDACC__
+    const I depth = 31 - __clz(i+1); // see https://forums.developer.nvidia.com/t/integer-logarithm-to-the-base-2-how/3722/6
+#else
     const I depth = std::log2(i+1);
+#endif
     const I axis = depth % nd;
     I next, other;
 

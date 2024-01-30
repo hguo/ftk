@@ -328,22 +328,26 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   // tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(pt_nsteps_per_checkpoint);
   tracker_particle_mpas_ocean->set_delta_t( pt_delta_t );
 
-  tracker_particle_mpas_ocean->initialize();
-  if (pt_seed_box.size() > 0)
-    tracker_particle_mpas_ocean->initialize_particles_latlonz(
-        pt_seed_strides[0], pt_seed_box[0], pt_seed_box[1],
-        pt_seed_strides[1], pt_seed_box[2], pt_seed_box[3],
-        pt_seed_strides[2], pt_seed_box[4], pt_seed_box[5]);
-  else
-    tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
-
   for (int i = 0; i < stream->total_timesteps(); i ++)  {
     auto g = stream->read(i);
     g->print_info(std::cerr);
     
     tracker_particle_mpas_ocean->push_field_data_snapshot(g); // field_data);
-    
-    if (i != 0) tracker_particle_mpas_ocean->advance_timestep();
+   
+    if (i == 0) { // initialize here; mainly because the cuda tracer needs to know the data precision first
+      tracker_particle_mpas_ocean->initialize();
+      if (pt_seed_box.size() > 0)
+        tracker_particle_mpas_ocean->initialize_particles_latlonz(
+            pt_seed_strides[0], pt_seed_box[0], pt_seed_box[1],
+            pt_seed_strides[1], pt_seed_box[2], pt_seed_box[3],
+            pt_seed_strides[2], pt_seed_box[4], pt_seed_box[5]);
+      else
+        tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
+    } else { // if (i != 0)
+      tracker_particle_mpas_ocean->advance_timestep();
+    }
+
+    // the last step
     if (i == stream->total_timesteps() - 1) tracker_particle_mpas_ocean->update_timestep();
   }
 

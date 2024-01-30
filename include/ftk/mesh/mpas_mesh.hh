@@ -215,6 +215,7 @@ ndarray<F> mpas_mesh<I, F>::zTop_from_zMid_and_thickness(const ndarray<F>& zMid,
   zTop.reshape(zMid);
   const auto nlayers = zMid.dimf(1);
 
+  #pragma omp parallel for collapse(2)
   for (auto i = 0; i < n_cells(); i ++)
     for (auto j = 0; j < nlayers; j ++) {
       zTop.f(0, j, i) = zMid.f(0, j, i) + layerThickness.f(0, j, i) * 0.5;

@@ -87,12 +87,15 @@ static int locate_cell_global( // global cell search
     const int *verts_on_cell)
 {
   const int c = ftk::kdlite_nearest<3, int, Fm>(
-      ncells, Xc, kdheap, x);
-  
+      ncells, Xc, kdheap, x) + 1; // to cell id
+ 
   if (point_in_cell<F, Fm>(
         c, x, iv, xv, 
-        max_edges, Xv, nedges_on_cell, verts_on_cell))
+        max_edges, Xv, nedges_on_cell, verts_on_cell)) {
+
+    // printf("cell=%d, x=%f, %f, %f\n", c, x[0], x[1], x[2]);
     return c;
+  }
   else 
     return -1;
 }
@@ -1179,7 +1182,12 @@ void mop_seed_latlonz(mop_ctx_t *c,
 
   if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
   else gridSize = dim3(nBlocks);
+  
+  // allocate
+  realloc_both(&c->hparts, &c->dparts, c->nparticles, ntasks);
+  c->nparticles = ntasks;
 
+  // seed
   seed_latlonz<double, double><<<gridSize, blockSize>>>(
       c->dparts, 
       nlat, lat0, lat1, 
@@ -1193,6 +1201,10 @@ void mop_seed_latlonz(mop_ctx_t *c,
       c->d_nedges_on_cell,
       c->d_cells_on_cell,
       c->d_verts_on_cell);
+  
+  cudaMemcpy(c->hparts, c->dparts, 
+      c->nparticles * sizeof(ftk::feature_point_lite_t), 
+      cudaMemcpyDeviceToHost);
   
   checkLastCudaError("[FTK-CUDA] mop_seed_latlonz");
 }

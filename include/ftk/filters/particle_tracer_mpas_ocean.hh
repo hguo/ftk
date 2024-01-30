@@ -71,7 +71,7 @@ protected:
 #if FTK_HAVE_CUDA
   mop_ctx_t *ctx = NULL;
 #endif
-  void load_particles_cuda();
+  void load_particles_cuda(); // this function is no longer needed now that all seeding are done on gpu
 };
 
 ////
@@ -91,49 +91,77 @@ inline void particle_tracer_mpas_ocean::initialize_particles_latlonz(
   fprintf(stderr, "initializing geo particles: nlat=%d, nlon=%d, nz=%d, lat0=%f, lat1=%f, lon0=%f, lon1=%f, z0=%f, z1=%f\n", 
       nlat, nlon, nz, lat0, lat1, lon0, lon1, z0, z1);
 
-  const double dz   = nz == 1 ? 0.0 : (z1 - z0) / (nz - 1), 
-               dlat = nlat == 1 ? 0.0 : (lat1 - lat0) / (nlat - 1),
-               dlon = nlon == 1 ? 0.0 : (lon1 - lon0) / (nlon - 1);
-  int hint = 0; // TODO: hint should be thread-local if openmp is used
+  if (xl == FTK_XL_CUDA) {
+#if FTK_HAVE_CUDA
+    mop_seed_latlonz(ctx, 
+        nlat, lat0, lat1, 
+        nlon, lon0, lon1, 
+        nz, z0, z1);
+      
+    for (int i = 0; i < ctx->nparticles; i ++) {
+      feature_point_lite_t &p = ctx->hparts[i];
+      feature_point_t pt(p);
 
-  #pragma omp parallel for collapse(3)
-  for (int i = 0; i < nlat; i ++) {
-    for (int j = 0; j < nlon; j ++) {
-      for (int k = 0; k < nz; k ++) {
-        const double lat = deg2rad(i * dlat + lat0);
-        const double slat = std::sin(lat), 
-                     clat = std::cos(lat);
+      pt.v[0] = p.scalar[0];
+      pt.v[1] = p.scalar[1];
+      pt.v[2] = p.scalar[2];
+      pt.scalar[0] = p.scalar[3]; // vertVel
+      pt.scalar[1] = p.scalar[4]; // salinity
+      pt.scalar[2] = p.scalar[5]; // temperature
+      pt.id = i;
+          
+      feature_curve_t curve;
+      curve.id = i;
+      curve.emplace_back(p);
 
-        const double lon = deg2rad(j * dlon + lon0);
-        const double clon = std::cos(lon),
-                     slon = std::sin(lon);
+      trajectories.add(curve);
+    }
+#endif
+  } else {
+    const double dz   = nz == 1 ? 0.0 : (z1 - z0) / (nz - 1), 
+                 dlat = nlat == 1 ? 0.0 : (lat1 - lat0) / (nlat - 1),
+                 dlon = nlon == 1 ? 0.0 : (lon1 - lon0) / (nlon - 1);
+    int hint = 0; // TODO: hint should be thread-local if openmp is used
 
-        const double z = k * dz + z0;
-        const double r = earth_radius + z;
-       
-        feature_curve_t curve;
-        curve.id = i*nlat*nz + j*nz + k;
+    #pragma omp parallel for collapse(3)
+    for (int i = 0; i < nlat; i ++) {
+      for (int j = 0; j < nlon; j ++) {
+        for (int k = 0; k < nz; k ++) {
+          const double lat = deg2rad(i * dlat + lat0);
+          const double slat = std::sin(lat), 
+                       clat = std::cos(lat);
 
-        feature_point_t p;
-        p.x[0] = r * clon * clat;
-        p.x[1] = r * slon * clat;
-        p.x[2] = r * slat;
+          const double lon = deg2rad(j * dlon + lon0);
+          const double clon = std::cos(lon),
+                       slon = std::sin(lon);
 
-        p.id = curve.id;
-        const int ci = m->locate_cell_i({p.x[0], p.x[1], p.x[2]}, hint);
-        p.tag = m->i2cid(ci);
-       
+          const double z = k * dz + z0;
+          const double r = earth_radius + z;
+         
+          feature_curve_t curve;
+          curve.id = i*nlat*nz + j*nz + k;
+
+          feature_point_t p;
+          p.x[0] = r * clon * clat;
+          p.x[1] = r * slon * clat;
+          p.x[2] = r * slat;
+
+          p.id = curve.id;
+          const int ci = m->locate_cell_i({p.x[0], p.x[1], p.x[2]}, hint);
+          p.tag = m->i2cid(ci);
+         
 #if 0
-        fprintf(stderr, "lat=%f, lon=%f, z=%f, x=%f, %f, %f, tag=%llu\n", 
-            rad2deg(lat), rad2deg(lon), z, 
-            p.x[0], p.x[1], p.x[2], p.tag);
+          fprintf(stderr, "lat=%f, lon=%f, z=%f, x=%f, %f, %f, tag=%llu\n", 
+              rad2deg(lat), rad2deg(lon), z, 
+              p.x[0], p.x[1], p.x[2], p.tag);
 #endif
 
-        if (ci >= 0) {
-          #pragma omp critical
-          {
-            curve.push_back(p);
-            trajectories.add(curve);
+          if (ci >= 0) {
+            #pragma omp critical
+            {
+              curve.push_back(p);
+              trajectories.add(curve);
+            }
           }
         }
       }
@@ -194,8 +222,8 @@ inline void particle_tracer_mpas_ocean::initialize_particles_at_grid_points(std:
   fprintf(stderr, "#trajectories=%zu\n", trajectories.size());
 
   if (xl == FTK_XL_CUDA) {
-    // fprintf(stderr, "loading particles to gpu...\n");
-    // load_particles_cuda();
+    fprintf(stderr, "loading particles to gpu...\n");
+    load_particles_cuda();
   }
 }
 
@@ -336,8 +364,6 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
 
       // std::cerr << m->coeffsReconstruct.shape() << std::endl;
       mop_load_e2c_interpolants(ctx, m->coeffsReconstruct.data());
-     
-      load_particles_cuda();
     }
 
     typedef std::chrono::high_resolution_clock clock_type;
