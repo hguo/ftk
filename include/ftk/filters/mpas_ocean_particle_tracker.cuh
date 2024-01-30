@@ -4,7 +4,7 @@
 #include <vector>
 #include <set>
 #include <ftk/features/feature_point_lite.hh>
-#include <ftk/mesh/bvh2d.hh>
+#include <ftk/basic/kd_lite.hh>
 
 typedef struct {
   // gpu
@@ -15,6 +15,9 @@ typedef struct {
 
   // mesh info
   int nverts, nedges, ncells, nlayers, nattrs, max_edges;
+
+  // kd-lite
+  int *d_kdheap;
 
   // mesh
   void *d_Xc, *d_Xe, *d_Xv; // cell/edge/vertex coordinates
@@ -67,8 +70,15 @@ void mop_load_mesh(mop_ctx_t *c,
 
 void mop_set_nlayers(mop_ctx_t *c, int n) {c->nlayers = n;}
 
+void mop_load_kdheap(mop_ctx_t *c, int *heap);
+
 void mop_load_e2c_interpolants(mop_ctx_t *c,
     const void *p);
+
+void mop_seed_latlonz(mop_ctx_t *c,
+      const int nlat, const double lat0, const double lat1,
+      const int nlon, const double lon0, const double lon1,
+      const int nz,   const double z0,   const double z1);
 
 void mop_load_data(mop_ctx_t *c, 
     const void *V, 

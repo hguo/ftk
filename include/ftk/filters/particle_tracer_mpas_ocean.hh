@@ -94,7 +94,7 @@ inline void particle_tracer_mpas_ocean::initialize_particles_latlonz(
   const double dz   = nz == 1 ? 0.0 : (z1 - z0) / (nz - 1), 
                dlat = nlat == 1 ? 0.0 : (lat1 - lat0) / (nlat - 1),
                dlon = nlon == 1 ? 0.0 : (lon1 - lon0) / (nlon - 1);
-  int hint = 0;
+  int hint = 0; // TODO: hint should be thread-local if openmp is used
 
   #pragma omp parallel for collapse(3)
   for (int i = 0; i < nlat; i ++) {
@@ -331,6 +331,8 @@ inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr
           m->cellsOnVertex.data(),
           m->edgesOnCell.data(),
           m->verticesOnCell.data());
+
+      mop_load_kdheap(ctx, m->kdlite_heap.data());
 
       // std::cerr << m->coeffsReconstruct.shape() << std::endl;
       mop_load_e2c_interpolants(ctx, m->coeffsReconstruct.data());

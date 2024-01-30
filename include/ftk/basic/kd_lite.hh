@@ -11,7 +11,7 @@ namespace ftk {
 // implementation of https://www.nvidia.com/content/gtc-2010/pdfs/2140_gtc2010.pdf
 template <int nd, typename I=int, typename F=double>
 __host__
-void kdlite_build_recursive(
+inline void kdlite_build_recursive(
     const I n,
     const I current,
     const F *X, // coordinates
@@ -55,7 +55,7 @@ void kdlite_build_recursive(
 
 template <int nd, typename I=int, typename F=double>
 __host__
-void kdlite_build(
+inline void kdlite_build(
     const I n, // number of points
     const F *X, // coordinates
     I *heap) // out: pre-allocated heap
@@ -73,9 +73,9 @@ void kdlite_build(
 
 template <int nd, typename I=int, typename F=double>
 __device__ __host__
-I kdlite_nearest(I n, const F *X, const I *heap, const F *x)
+inline I kdlite_nearest(I n, const F *X, const I *heap, const F *x)
 {
-  static size_t max_stack_size = 32; // TODO
+  static constexpr size_t max_stack_size = 32; // TODO
 
   I S[max_stack_size];
   I top = 0;

@@ -4,6 +4,8 @@
 #include <ftk/numeric/inverse_linear_interpolation_solver.hh>
 #include <ftk/filters/mpas_ocean_particle_tracker.cuh>
 #include <ftk/numeric/rk4.hh>
+#include <ftk/numeric/rad.hh>
+#include <ftk/basic/kd_lite.hh>
 #include <assert.h>
 #include "common.cuh"
 
@@ -67,6 +69,32 @@ inline static bool point_in_cell(
       iv[0], iv[1], iv[2], iv[3], iv[4], iv[5], iv[6], succ);
 #endif
   return succ;
+}
+
+template <typename F=double, typename Fm=double>
+__device__ __host__
+static int locate_cell_global( // global cell search
+    const F *x,
+    int iv[], // returns vertex ids
+    F xv[][3], // returns vertex coordinates
+    const int ncells,
+    const int *kdheap,
+    const Fm *Xc,
+    const Fm *Xv,
+    const int max_edges,
+    const int *nedges_on_cell, // also n_verts_on_cell
+    const int *cells_on_cell,
+    const int *verts_on_cell)
+{
+  const int c = ftk::kdlite_nearest<3, int, Fm>(
+      ncells, Xc, kdheap, x);
+  
+  if (point_in_cell<F, Fm>(
+        c, x, iv, xv, 
+        max_edges, Xv, nedges_on_cell, verts_on_cell))
+    return c;
+  else 
+    return -1;
 }
 
 template <typename F=double, typename Fm=double>
@@ -546,6 +574,56 @@ static void interpolate_c2v(
   }
 }
 
+template <typename F=double, typename Fm=double>
+__global__
+static void seed_latlonz(
+      ftk::feature_point_lite_t* particles,
+      const int nlat, const F lat0, const F lat1,
+      const int nlon, const F lon0, const F lon1,
+      const int nz,   const F z0,   const F z1, 
+      const int ncells, 
+      const int *kdheap,
+      const Fm *Xc,
+      const Fm *Xv,
+      const int max_edges,
+      const int *nedges_on_cell, // also n_verts_on_cell
+      const int *cells_on_cell,
+      const int *verts_on_cell)
+{
+  unsigned long long id = getGlobalIdx_3D_1D();
+  if (id >= nlat * nlon * nz) return;
+  
+  const F dz   = nz == 1 ? 0.0 : (z1 - z0) / (nz - 1), 
+          dlat = nlat == 1 ? 0.0 : (lat1 - lat0) / (nlat - 1),
+          dlon = nlon == 1 ? 0.0 : (lon1 - lon0) / (nlon - 1);
+
+  const int k = id % nz;
+  const int j = (id / nz) % nlon;
+  const int i = id / (nlon*nz);
+        
+  const F lat = ftk::deg2rad(i * dlat + lat0);
+  const F slat = sin(lat), 
+          clat = cos(lat);
+
+  const F lon = ftk::deg2rad(j * dlon + lon0);
+  const F clon = cos(lon),
+          slon = sin(lon);
+
+  const F z = k * dz + z0;
+  const F r = R0 + z;
+
+  ftk::feature_point_lite_t &p = particles[id];
+  p.x[0] = r * clon * clat;
+  p.x[1] = r * slon * clat;
+  p.x[2] = r * slat;
+  p.t = 0.0;
+  
+  int iv[7];
+  F xv[7][3];
+  p.tag /* hint_c */ = locate_cell_global(p.x, iv, xv, ncells, kdheap, 
+      Xc, Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell);
+}
+
 template <typename F=double, typename Fm=double, typename Fv=double>
 __global__
 static void mpas_trace(
@@ -638,6 +716,8 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   if (c->d_cells_on_vert != NULL) cudaFree(c->d_cells_on_vert);
   if (c->d_edges_on_cell != NULL) cudaFree(c->d_edges_on_cell);
   if (c->d_verts_on_cell != NULL) cudaFree(c->d_verts_on_cell);
+
+  if (c->d_kdheap != NULL) cudaFree(c->d_kdheap);
 
   for (int i = 0; i < 2; i ++) {
     if (c->d_V[i] != NULL) cudaFree(c->d_V[i]);
@@ -952,6 +1032,17 @@ static void load_cw_data(
   }
 }
 
+void mop_load_kdheap(mop_ctx_t *c, int *heap)
+{
+  if (c->d_kdheap == NULL)
+    cudaMalloc((void**)&c->d_kdheap, c->ncells * sizeof(int));
+
+  cudaMemcpy(c->d_kdheap, heap, c->ncells * sizeof(int), 
+      cudaMemcpyHostToDevice);
+  
+  checkLastCudaError("load kdheap");
+}
+
 void mop_load_data(mop_ctx_t *c, 
     const double *V,
     const double *Vv,
@@ -1075,6 +1166,35 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     checkLastCudaError("load attrs: assign");
   }
   load_cw_data(c, c->d_A, &c->dd_A, c->dcw, true, c->nattrs, c->nlayers); // f
+}
+
+void mop_seed_latlonz(mop_ctx_t *c,
+      const int nlat, const double lat0, const double lat1,
+      const int nlon, const double lon0, const double lon1,
+      const int nz,   const double z0,   const double z1)
+{
+  size_t ntasks = nlat * nlon * nz;
+  const int nBlocks = idivup(ntasks, blockSize);
+  dim3 gridSize;
+
+  if (nBlocks >= maxGridDim) gridSize = dim3(idivup(nBlocks, maxGridDim), maxGridDim);
+  else gridSize = dim3(nBlocks);
+
+  seed_latlonz<double, double><<<gridSize, blockSize>>>(
+      c->dparts, 
+      nlat, lat0, lat1, 
+      nlon, lon0, lon1,
+      nz, z0, z1,
+      c->ncells,
+      c->d_kdheap,
+      (double*)c->d_Xc, 
+      (double*)c->d_Xv, 
+      c->max_edges,
+      c->d_nedges_on_cell,
+      c->d_cells_on_cell,
+      c->d_verts_on_cell);
+  
+  checkLastCudaError("[FTK-CUDA] mop_seed_latlonz");
 }
 
 void mop_execute(mop_ctx_t *c,
