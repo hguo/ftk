@@ -311,8 +311,8 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   if (accelerator == "cuda")
     tracker_particle_mpas_ocean->use_accelerator(ftk::FTK_XL_CUDA);
  
-  fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 
-      pt_nsteps_per_interval, pt_nsteps_per_checkpoint, pt_delta_t);
+  // fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 
+  //     pt_nsteps_per_interval, pt_nsteps_per_checkpoint, pt_delta_t);
 
   tracker_particle_mpas_ocean->set_ntimesteps(stream->total_timesteps());
   if (ptgeo_nsteps_per_day)

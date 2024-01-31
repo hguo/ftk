@@ -38,8 +38,8 @@ typedef struct {
   void *d_e2c_interpolants;
 
   // time-varying data
-  void *d_V[2], *d_Vv[2], *d_zTop[2], *d_A[2]; // velocity, verticalVelocity, zTop, and more
-  void **dd_V, **dd_Vv, **dd_zTop, **dd_A; // device pointers to pointers
+  void *d_V[2], *d_Vv[2], *d_Z[2], *d_A[2]; // velocity, verticalVelocity, Z, and more
+  void **dd_V, **dd_Vv, **dd_Z, **dd_A; // device pointers to pointers
   double T[2]; // time
 
   // particle data
@@ -83,21 +83,23 @@ void mop_seed_latlonz(mop_ctx_t *c,
 void mop_load_data(mop_ctx_t *c, 
     const void *V, 
     const void *Vv, 
-    const void *zTop,
+    const void *Z,
     const void *A);
 
 void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     const double t,
     const void *V, // normal velocity
     const void *Vv, 
-    const void *zTop,
+    const void *z,
+    bool isZMid, // true if z is zMid; otherwise z is Z
+    const void *layerThickness, // if layerThickness is not null, Z will be derived
     const void *A[]);
 
 void mop_load_data_cw(mop_ctx_t *c,
     const double t, // time
     const void *V, 
     const void *Vv, 
-    const void *zTop,
+    const void *Z,
     const void *A);
 
 void mop_load_particles(mop_ctx_t *c, 

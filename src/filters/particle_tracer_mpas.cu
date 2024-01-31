@@ -22,7 +22,7 @@ static const int blockSize = 256;
 // what we need:
 // - velocity field
 // - vertical velocity field
-// - zTop field
+// - Z field
 // - scalar attribute fields
 
 // template type
@@ -142,7 +142,7 @@ static bool mpas_eval_static(
     F *f,          // scalar attributs
     const Fv *V,    // velocity field
     const Fv *Vv,   // vertical velocities
-    const Fv *zTop, // top layer depth
+    const Fv *Z, // top layer depth
     const int nattrs,    // number of scalar attributes
     const Fv *A,    // scalar attributes
     const Fm *Xv,   // vertex locations
@@ -204,8 +204,8 @@ static bool mpas_eval_static(
     // layer = hint_l;
     for (int i = 0; i < nverts; i ++) {
       // printf("%d, %d, %d\n", iv[i], nlayers, layer);
-      upper += omega[i] * zTop[ iv[i] * nlayers + layer ];
-      lower += omega[i] * zTop[ iv[i] * nlayers + layer+1 ];
+      upper += omega[i] * Z[ iv[i] * nlayers + layer ];
+      lower += omega[i] * Z[ iv[i] * nlayers + layer+1 ];
     }
 
     // printf("z=%f, lower=%f, upper=%f\n", z, lower, upper);
@@ -228,7 +228,7 @@ static bool mpas_eval_static(
       for (layer = layer + 1 ; layer < nlayers-1; layer ++) {
         lower = 0.0;
         for (int k = 0; k < nverts; k ++)
-          lower += omega[k] * zTop[ iv[k] * nlayers + layer + 1];
+          lower += omega[k] * Z[ iv[k] * nlayers + layer + 1];
         
         // printf("moving downward, layer=%d, z=%f, upper=%f, lower=%f\n", 
         //     layer, z, upper, lower);
@@ -244,7 +244,7 @@ static bool mpas_eval_static(
       for (layer = layer - 1; layer >= 0; layer --) {
         upper = 0.0;
         for (int k = 0; k < nverts; k ++)
-          upper += omega[k] * zTop[ iv[k] * nlayers + layer];
+          upper += omega[k] * Z[ iv[k] * nlayers + layer];
         
         // printf("moving upward, layer=%d, z=%f, upper=%f, lower=%f\n", 
         //     layer, z, upper, lower);
@@ -307,7 +307,7 @@ inline static bool mpas_eval(
     const F alpha,          // temporal interpolation coef
     const Fv *const V[2],    // velocity field
     const Fv *const Vv[2],   // vertical velocities
-    const Fv *const zTop[2], // top layer depth
+    const Fv *const Z[2], // top layer depth
     const int nattrs,             // number of scalar attributes
     const Fv *const A[2],    // scalar attributes
     const Fm *Xv,            // vertex locations
@@ -326,7 +326,7 @@ inline static bool mpas_eval(
       // printf("i=%d, nattrs=%d, nlayers=%d, A[i]=%p\n", i, nattrs, nlayers, A[i]);
       if (!mpas_eval_static<F, Fm, Fv>(x, 
           _v[i], &_vv[i], _f[i], 
-          V[i], Vv[i], zTop[i], nattrs, A[i], 
+          V[i], Vv[i], Z[i], nattrs, A[i], 
           Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
           nlayers, hint_c, hint_l))
         return false;
@@ -343,7 +343,7 @@ inline static bool mpas_eval(
     return true;
   } else
     return mpas_eval_static<F, Fm, Fv>(
-        x, v, vv, f, V[0], Vv[0], zTop[0], nattrs, A[0], 
+        x, v, vv, f, V[0], Vv[0], Z[0], nattrs, A[0], 
         Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
         nlayers, hint_c, hint_l);
 }
@@ -360,7 +360,7 @@ inline static bool spherical_rk_with_vertical_velocity(
     F *f,                   // scalar attributs
     const Fv *const V[2],    // velocity field
     const Fv *const Vv[2],   // vertical velocities
-    const Fv *const zTop[2], // top layer depth
+    const Fv *const Z[2], // top layer depth
     const int nattrs,            // number of scalar attributes
     const Fv *const A[2],    // scalar attributes
     const Fm *const Xv,      // vertex locations
@@ -377,7 +377,7 @@ inline static bool spherical_rk_with_vertical_velocity(
 
     F v[4];
     if (!mpas_eval(p.x, v, vv, f, alpha,
-          V, Vv, zTop, nattrs, A, 
+          V, Vv, Z, nattrs, A, 
           Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
           nlayers, hint_c, hint_l))
       return false;
@@ -577,6 +577,24 @@ static void interpolate_c2v(
   }
 }
 
+template <typename Fv=double>
+__global__
+static void derive_z_from_zMid(
+    Fv *Z, // output
+    const Fv *zMid, // input zMid
+    const Fv *layerThickness, // input layer thickness
+    const int ncells,
+    const int nlayers)
+{
+  unsigned long long i = getGlobalIdx_3D_1D();
+  if (i >= ncells) return;
+
+  for (int layer = 0; layer < nlayers; layer ++) {
+    const int idx = layer + i*nlayers;
+    Z[idx] = zMid[idx] + 0.5 * layerThickness[idx];
+  }
+}
+
 template <typename F=double, typename Fm=double>
 __global__
 static void seed_latlonz(
@@ -638,7 +656,7 @@ static void mpas_trace(
     ftk::feature_point_lite_t* particles,
     const Fv *const V[2],    // velocity field
     const Fv *const Vv[2],   // vertical velocities
-    const Fv *const zTop[2], // top layer depth
+    const Fv *const Z[2], // top layer depth
     const int nattrs,   // number of scalar attributes
     const Fv *const A[2],    // scalar attributes
     const Fm *Xv,   // vertex locations
@@ -670,7 +688,7 @@ static void mpas_trace(
     bool succ = spherical_rk_with_vertical_velocity<1>(
         h, nsteps, j, 
         p, v0, vv, f, 
-        V, Vv, zTop, nattrs, A, Xv, 
+        V, Vv, Z, nattrs, A, Xv, 
         max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
         nlayers, hint_c, hint_l);
 
@@ -725,13 +743,13 @@ void mop_destroy_ctx(mop_ctx_t **c_)
   for (int i = 0; i < 2; i ++) {
     if (c->d_V[i] != NULL) cudaFree(c->d_V[i]);
     if (c->d_Vv[i] != NULL) cudaFree(c->d_Vv[i]);
-    if (c->d_zTop[i] != NULL) cudaFree(c->d_zTop[i]);
+    if (c->d_Z[i] != NULL) cudaFree(c->d_Z[i]);
     if (c->d_A[i] != NULL) cudaFree(c->d_A[i]);
   }
 
   if (c->dd_V) cudaFree(c->dd_V);
   if (c->dd_Vv) cudaFree(c->dd_Vv);
-  if (c->dd_zTop) cudaFree(c->dd_zTop);
+  if (c->dd_Z) cudaFree(c->dd_Z);
   if (c->dd_A) cudaFree(c->dd_A);
 
   if (c->d_c2v_interpolants != NULL) cudaFree(c->d_c2v_interpolants);
@@ -976,7 +994,7 @@ static void load_cw_data(
     d = dbuf[1];
   }
  
-  // cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   checkLastCudaError("memcpy to c2w buffer: dev ptrs0");
   if (*ddbuf == NULL) {
     cudaMalloc((void**)ddbuf, sizeof(void*) * 2);
@@ -1049,14 +1067,14 @@ void mop_load_kdheap(mop_ctx_t *c, int *heap)
 void mop_load_data(mop_ctx_t *c, 
     const double *V,
     const double *Vv,
-    const double *zTop,
+    const double *Z,
     const double *A)
 {
   size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
   
   load_data(c->d_V, V, fsize, 3 * c->nverts * c->nlayers, "V");
   load_data(c->d_Vv, Vv, fsize, c->nverts * (c->nlayers+1), "Vv");
-  load_data(c->d_zTop, zTop, fsize, c->nverts * c->nlayers, "zTop");
+  load_data(c->d_Z, Z, fsize, c->nverts * c->nlayers, "Z");
   load_data(c->d_A, A, fsize, c->nattrs * c->nverts * c->nlayers, "f");
 }
 
@@ -1087,7 +1105,7 @@ void mop_load_data_cw(mop_ctx_t *c,
     const double t,
     const void *Vc,
     const void *Vvc,
-    const void *zTopc,
+    const void *Zc,
     const void *Ac)
 {
   mop_initialize_dcw(c);
@@ -1097,7 +1115,7 @@ void mop_load_data_cw(mop_ctx_t *c,
 
   load_cw_data(c, c->d_V, &c->dd_V, Vc, false, 3, c->nlayers); // V
   load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, false, 1, c->nlayers+1); // Vv
-  load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, false, 1, c->nlayers); // zTop
+  load_cw_data(c, c->d_Z, &c->dd_Z, Zc, false, 1, c->nlayers); // Z
   load_cw_data(c, c->d_A, &c->dd_A, Ac, false, 2 /*c->nattrs*/, c->nlayers); // f
 }
 
@@ -1105,7 +1123,9 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
     const double t,
     const void *V, // normal velocity
     const void *Vvc, 
-    const void *zTopc,
+    const void *Zc, // could be zTop or zMid
+    bool isZMid,
+    const void *layerThickness, // could be null if not zMid
     const void *Ac[])
 {
   size_t fsize = c->prec_var ? sizeof(double) : sizeof(float);
@@ -1153,8 +1173,36 @@ void mop_load_data_with_normal_velocity(mop_ctx_t *c,
   load_cw_data(c, c->d_V, &c->dd_V, c->dcw, true, 3, c->nlayers); // V
   // fprintf(stderr, "loading Vv..\n");
   load_cw_data(c, c->d_Vv, &c->dd_Vv, Vvc, false, 1, c->nlayers+1); // Vv
-  // fprintf(stderr, "loading zTop..\n");
-  load_cw_data(c, c->d_zTop, &c->dd_zTop, zTopc, false, 1, c->nlayers); // zTop
+  // fprintf(stderr, "loading Z..\n");
+  
+  if (isZMid) {
+    // copy layerThickness to dcw;
+    // - the length of dcw is at least ncells*3
+    //   - the first section is for output Z
+    //   - the second section is for zMid
+    //   - the third section is for layerThickness
+    
+    const size_t offset = c->ncells * c->nlayers;
+    if (c->prec_var) { // double 
+      cudaMemcpy((double*)c->dcw + offset, Zc, fsize*offset, cudaMemcpyHostToDevice);
+      cudaMemcpy((double*)c->dcw + 2*offset, layerThickness, fsize*offset, cudaMemcpyHostToDevice);
+      derive_z_from_zMid<double><<<gridSize, blockSize>>>(
+          (double*)c->dcw, (double*)c->dcw+offset, (double*)c->dcw+2*offset,
+          c->ncells, c->nlayers);
+    } else { // float
+      cudaMemcpy((float*)c->dcw + offset, Zc, fsize*offset, cudaMemcpyHostToDevice);
+      cudaMemcpy((float*)c->dcw + 2*offset, layerThickness, fsize*offset, cudaMemcpyHostToDevice);
+      derive_z_from_zMid<float><<<gridSize, blockSize>>>(
+          (float*)c->dcw, (float*)c->dcw+offset, (float*)c->dcw+2*offset,
+          c->ncells, c->nlayers);
+    }
+    
+    cudaDeviceSynchronize();
+    checkLastCudaError("derive z from zMid: exec");
+
+    load_cw_data(c, c->d_Z, &c->dd_Z, c->dcw, true /* dcw already on gpu */, 1, c->nlayers);
+  } else 
+    load_cw_data(c, c->d_Z, &c->dd_Z, Zc, false, 1, c->nlayers); // Z
  
   void *tmp = c->dew;
   fprintf(stderr, "loading attrs..\n");
@@ -1238,7 +1286,7 @@ void mop_execute(mop_ctx_t *c,
   const double h = T / nsteps;
 
   // fprintf(stderr, "h=%f, %p, %p, %p, %p, %d, %p, %p, %p, %p, %p\n", 
-  //     h, c->dparts, c->dd_V, c->dd_Vv, c->dd_zTop, c->nattrs,
+  //     h, c->dparts, c->dd_V, c->dd_Vv, c->dd_Z, c->nattrs,
   //     c->dd_A, c->d_Xv, c->d_nedges_on_cell, c->d_cells_on_cell, c->d_verts_on_cell);
 
   if (c->prec_mesh) {
@@ -1250,7 +1298,7 @@ void mop_execute(mop_ctx_t *c,
           c->dparts,
           (double**)c->dd_V,
           (double**)c->dd_Vv,
-          (double**)c->dd_zTop, 
+          (double**)c->dd_Z, 
           c->nattrs, 
           (double**)c->dd_A,
           (double*)c->d_Xv,
@@ -1267,7 +1315,7 @@ void mop_execute(mop_ctx_t *c,
           c->dparts,
           (float**)c->dd_V,
           (float**)c->dd_Vv,
-          (float**)c->dd_zTop, 
+          (float**)c->dd_Z, 
           c->nattrs, 
           (float**)c->dd_A,
           (double*)c->d_Xv,
@@ -1287,7 +1335,7 @@ void mop_execute(mop_ctx_t *c,
           c->dparts,
           (float**)c->dd_V,
           (float**)c->dd_Vv,
-          (float**)c->dd_zTop, 
+          (float**)c->dd_Z, 
           c->nattrs, 
           (float**)c->dd_A,
           (float*)c->d_Xv,
