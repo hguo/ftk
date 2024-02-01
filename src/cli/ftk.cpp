@@ -29,7 +29,7 @@ std::string input_pattern;
 std::string input_prefix;
 std::string &stream_yaml_filename(input_pattern); // alias
 std::string mesh_filename;
-size_t ntimesteps = 0, start_timestep = 0;
+int ntimesteps = -1, start_timestep = -1;
 
 // devices
 std::string device_ids;
@@ -151,8 +151,8 @@ bool parse_arguments(int argc, char **argv)
     ("h,height", "Height", cxxopts::value<size_t>())
     ("d,depth", "Depth (valid only for 3D regular grid data)", cxxopts::value<size_t>())
     ("bounds", "Bounds for resampling to regular grid data", cxxopts::value<std::string>())
-    ("n,timesteps", "Number of timesteps", cxxopts::value<size_t>(ntimesteps))
-    ("start-timestep", "Start timestep", cxxopts::value<size_t>(start_timestep))
+    ("n,timesteps", "Number of timesteps", cxxopts::value<int>(ntimesteps))
+    ("start-timestep", "Start timestep", cxxopts::value<int>(start_timestep))
     ("var", "Variable name(s), e.g. `scalar', `u,v,w'.  Valid only for NetCDF, HDF5, and VTK.", cxxopts::value<std::string>())
     ("adios-config", "ADIOS2 config file", cxxopts::value<std::string>(adios_config_file))
     ("adios-name", "ADIOS2 I/O name", cxxopts::value<std::string>(adios_name))
@@ -314,7 +314,12 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   // fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 
   //     pt_nsteps_per_interval, pt_nsteps_per_checkpoint, pt_delta_t);
 
-  tracker_particle_mpas_ocean->set_ntimesteps(stream->total_timesteps());
+  if (ntimesteps < 0)
+    ntimesteps = stream->total_timesteps();
+  if (start_timestep < 0)
+    start_timestep = 0;
+
+  tracker_particle_mpas_ocean->set_ntimesteps(ntimesteps); // stream->total_timesteps());
   if (ptgeo_nsteps_per_day)
     tracker_particle_mpas_ocean->set_nsteps_per_day( ptgeo_nsteps_per_day );
 
@@ -328,7 +333,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   // tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(pt_nsteps_per_checkpoint);
   tracker_particle_mpas_ocean->set_delta_t( pt_delta_t );
 
-  for (int i = 0; i < stream->total_timesteps(); i ++)  {
+  for (int i = start_timestep; i < ntimesteps; i ++)  {
     auto g = stream->read(i);
     g->print_info(std::cerr);
     
