@@ -598,6 +598,7 @@ static void derive_z_from_zMid(
 template <typename F=double, typename Fm=double>
 __global__
 static void seed_latlonz(
+      int *nparticles,
       ftk::feature_point_lite_t* particles,
       const int nlat, const F lat0, const F lat1,
       const int nlon, const F lon0, const F lon1,
@@ -633,16 +634,25 @@ static void seed_latlonz(
   const F z = k * dz + z0;
   const F r = R0 + z;
 
-  ftk::feature_point_lite_t &p = particles[id];
-  p.x[0] = r * clon * clat;
-  p.x[1] = r * slon * clat;
-  p.x[2] = r * slat;
-  p.t = 0.0;
-  
-  int iv[7];
-  F xv[7][3];
-  p.tag /* hint_c */ = locate_cell_global(p.x, iv, xv, ncells, kdheap, 
+  const F x[3] = {
+    r * clon * clat,
+    r * slon * clat,
+    r * slat
+  };
+  int iv[7]; // not used
+  F xv[7][3]; // not used
+
+  const int c = locate_cell_global(x, iv, xv, ncells, kdheap,
       Xc, Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell);
+
+  if (c >= 0) {
+    const int ii = atomicAdd(nparticles, 1);
+
+    ftk::feature_point_lite_t &p = particles[ii];
+    memcpy(p.x, x, sizeof(F)*3);
+    p.t = 0.0;
+    p.tag /* hint_c */ = c;
+  }
 }
 
 template <typename F=double, typename Fm=double, typename Fv=double>
@@ -1233,10 +1243,14 @@ void mop_seed_latlonz(mop_ctx_t *c,
   
   // allocate
   realloc_both(&c->hparts, &c->dparts, c->nparticles, ntasks);
-  c->nparticles = ntasks;
+  // c->nparticles = ntasks;
+
+  int *d_nparticles;
+  cudaMalloc(&d_nparticles, sizeof(int));
 
   // seed
   seed_latlonz<double, double><<<gridSize, blockSize>>>(
+      d_nparticles,
       c->dparts, 
       nlat, lat0, lat1, 
       nlon, lon0, lon1,
@@ -1249,7 +1263,10 @@ void mop_seed_latlonz(mop_ctx_t *c,
       c->d_nedges_on_cell,
       c->d_cells_on_cell,
       c->d_verts_on_cell);
-  
+ 
+  cudaMemcpy(&c->nparticles, d_nparticles, sizeof(int), cudaMemcpyDeviceToHost);
+  cudaFree(d_nparticles);
+
   cudaMemcpy(c->hparts, c->dparts, 
       c->nparticles * sizeof(ftk::feature_point_lite_t), 
       cudaMemcpyDeviceToHost);
