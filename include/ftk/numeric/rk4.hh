@@ -34,6 +34,35 @@ void angular_stepping(
   xn[3] = xn[3] + h;
 }
 
+template <int VERT=1, typename T=double>
+__device__ __host__
+void angular_and_vertical_stepping( // composition of angular and vertical velocities
+    const T *x,
+    const T *v, // horizontal
+    const T vv, // vertical
+    const T h, 
+    T *xn)
+{
+  const T R = vector_2norm<3, T>(x); // radius
+  
+  T axis[3]; // rotation axis
+  cross_product(x, v, axis);
+
+  const T vm = vector_2norm<3>(v); // velocity magnitude
+  const T w = vm / R; // angular velocity
+  const T dw = h * w; // angular step
+
+  axis_rotate_vector(axis, dw, x, xn);
+
+  if (VERT) {
+    const T R1 = R + vv * h; // new radius
+    for (int i = 0; i < 3; i ++)
+      xn[i] = xn[i] * R1 / R;
+  }
+
+  xn[3] = x[3] + h; // new time
+}
+
 template <typename T=double>
 __device__ __host__
 void angular_and_vertical_stepping( // composition of angular and vertical velocities

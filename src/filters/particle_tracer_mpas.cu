@@ -348,7 +348,7 @@ inline static bool mpas_eval(
         nlayers, hint_c, hint_l);
 }
 
-template <int ORDER=1, typename F=double, typename Fm=double, typename Fv=double>
+template <int ORDER=1, int VERT=1, typename F=double, typename Fm=double, typename Fv=double>
 __device__
 inline static bool spherical_rk_with_vertical_velocity(
     const F h,
@@ -375,7 +375,7 @@ inline static bool spherical_rk_with_vertical_velocity(
   if (ORDER == 1) {
     const F alpha = (F)istep / nsteps;
 
-    F v[4];
+    F v[3];
     if (!mpas_eval(p.x, v, vv, f, alpha,
           V, Vv, Z, nattrs, A, 
           Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
@@ -385,17 +385,56 @@ inline static bool spherical_rk_with_vertical_velocity(
     for (int k = 0; k < 3; k ++)
       v0[k] = v[k];
 
-    ftk::angular_stepping(p.x, v, h, p.x);
-#if 0
-    const F R = ftk::vector_2norm<3, F>(p.x); // radius
-    const F R1 = R + vv[0] * h; // new radius
-    for (int k = 0; k < 3; k ++)
-      p.x[k] = p.x[k] * R1 / R;
-#endif
-
+    ftk::angular_and_vertical_stepping(p.x, v, *vv, h, p.x);
     return true;
   } else if (ORDER == 4) {
+    const F alpha = (F)istep / nsteps;
+    const F half = 0.5 / nsteps;
+    
+    F k1[3], k2[3], k3[3], k4[3];
+    F k1v, k2v, k3v, k4v; // vertical
+
+    F x1[4] = {p.x[0], p.x[1], p.x[2], p.t};
+    if (!mpas_eval(x1, k1, &k1v, f, alpha,
+          V, Vv, Z, nattrs, A, 
+          Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+          nlayers, hint_c, hint_l))
+      return false;
+    
+    F x2[4];
+    ftk::angular_and_vertical_stepping<VERT>(x1, k1, k1v, h/2, x2);
+    if (!mpas_eval(x2, k2, &k2v, f, alpha+half,
+          V, Vv, Z, nattrs, A, 
+          Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+          nlayers, hint_c, hint_l))
+      return false;
+
+    F x3[4];
+    ftk::angular_and_vertical_stepping<VERT>(x1, k2, k2v, h/2, x3);
+    if (!mpas_eval(x3, k3, &k3v, f, alpha+half,
+          V, Vv, Z, nattrs, A, 
+          Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+          nlayers, hint_c, hint_l))
+      return false;
+
+    F x4[4];
+    ftk::angular_and_vertical_stepping<VERT>(x1, k3, k3v, h, x4);
+    if (!mpas_eval(x4, k4, &k4v, f, alpha+half*2,
+          V, Vv, Z, nattrs, A, 
+          Xv, max_edges, nedges_on_cell, cells_on_cell, verts_on_cell, 
+          nlayers, hint_c, hint_l))
+      return false;
+
+    F w[3], wv = (k1v + 2*k2v + 2*k3v + k4v) / 6.0;
+    for (int i = 0; i < 3; i ++) {
+      w[i] = (k1[i] + 2*k2[i] * 2*k3[i] + k4[i]) / 6.0;
+      v0[i] = k1[i];
+    }
+  
+    ftk::angular_and_vertical_stepping<VERT>(x1, w, wv, h, p.x);
+
     return true;
+
   } else
     return false;
   
@@ -695,7 +734,7 @@ static void mpas_trace(
   unsigned int &hint_l = p.type;
 
   for (int j = isubstart; j < nsubsteps; j ++) {
-    bool succ = spherical_rk_with_vertical_velocity<1>(
+    bool succ = spherical_rk_with_vertical_velocity<4, false>(
         h, nsteps, j, 
         p, v0, vv, f, 
         V, Vv, Z, nattrs, A, Xv, 
