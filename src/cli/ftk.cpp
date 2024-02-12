@@ -51,6 +51,7 @@ double threshold = 0.0;
 int pt_nsteps_per_interval = 128;
 int pt_nsteps_per_checkpoint = 16;
 double pt_delta_t = 1.0;
+std::string pt_delta_t_str;
 std::vector<int> pt_seed_strides;
 std::vector<double> pt_seed_box;
 
@@ -185,7 +186,7 @@ bool parse_arguments(int argc, char **argv)
     // particle tracing specific
     ("pt-nsteps-per-interval", "Particle tracing: Number of steps per interval", cxxopts::value<int>(pt_nsteps_per_interval))
     ("pt-nsteps-per-checkpoint", "Particle tracing: Number of steps per checkpoint", cxxopts::value<int>(pt_nsteps_per_checkpoint))
-    ("pt-delta-t", "Particle tracing: Delta t per timestep", cxxopts::value<double>(pt_delta_t))
+    ("pt-delta-t", "Particle tracing: Delta t per timestep (Y-m-d_H:M:S or simply S)", cxxopts::value<std::string>(pt_delta_t_str))
     ("pt-seed-strides", "Particle tracing: Seed strides, e.g., '4', '1,4', or '1,4,4'", cxxopts::value<std::string>())
     ("ptgeo-seeds", "Geo particle tracing: Seed in a geobox: nlat,lat0,lat1,nlon,lon0,lon1,nz,z0,z1", cxxopts::value<std::string>())
     ("ptgeo-nsteps-per-day", "Geo particle tracing: Number of steps per earth day", cxxopts::value<int>(ptgeo_nsteps_per_day))
@@ -249,6 +250,33 @@ bool parse_arguments(int argc, char **argv)
     // stream.reset(new ndarray_stream<>(comm));
   }
 
+  if (results.count("pt-delta-t")) {
+    int year = 0, month = 0, day = 0, 
+        hour = 0, minute = 0, second = 0;
+    bool formatted = true;
+    
+    if (pt_delta_t_str.find("_") != std::string::npos) { // date and time
+      std::vector<std::string> components = ftk::split(pt_delta_t_str, "_");
+      
+      sscanf(components[0].c_str(), "%d-%d-%d", &year, &month, &day);
+      sscanf(components[1].c_str(), "%d:%d:%d", &hour, &minute, &second);
+    } else if (pt_delta_t_str.find("-") != std::string::npos) { // date only
+      sscanf(pt_delta_t_str.c_str(), "%d-%d-%d", &year, &month, &day);
+    } else if (pt_delta_t_str.find(":") != std::string::npos) { // time only
+      sscanf(pt_delta_t_str.c_str(), "%d-%d-%d", &year, &month, &day);
+    } else {
+      pt_delta_t = atof(pt_delta_t_str.c_str());
+      formatted = false;
+    }
+
+    if (formatted)
+      pt_delta_t = year * 31536000.0 + month * 2592000.0 + day * 86400.0
+        + hour * 3600 + minute * 60 + second;
+
+    // fprintf(stderr, "pt_delta_t=%f\n", pt_delta_t);
+    // exit(1);
+  }
+
   if (results.count("pt-seed-strides")) {
     const auto str = results["pt-seed-strides"].as<std::string>();
     const auto strs = ftk::split(str, ",");
@@ -310,7 +338,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
   tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
   if (accelerator == "cuda")
     tracker_particle_mpas_ocean->use_accelerator(ftk::FTK_XL_CUDA);
- 
+
   // fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 
   //     pt_nsteps_per_interval, pt_nsteps_per_checkpoint, pt_delta_t);
 
@@ -353,7 +381,7 @@ void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
     }
 
     // the last step
-    if (i == stream->total_timesteps() - 1) tracker_particle_mpas_ocean->update_timestep();
+    if (i == ntimesteps - 1) tracker_particle_mpas_ocean->update_timestep();
   }
 
   tracker_particle_mpas_ocean->finalize();
