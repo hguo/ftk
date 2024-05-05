@@ -2,6 +2,11 @@
 #include <ndarray/ndarray_group_stream.hh>
 #include <ftk/external/cxxopts.hpp>
 #include <ftk/filters/particle_tracer_mpas_ocean.hh>
+#include <ftk/filters/critical_point_tracker_2d_regular.hh>
+#include <ftk/filters/critical_point_tracker_3d_regular.hh>
+#include <ftk/filters/critical_point_tracker_2d_unstructured.hh>
+#include <ftk/filters/critical_point_tracker_3d_unstructured.hh>
+#include <ftk/mesh/simplicial_unstructured_2d_mesh.hh>
 
 MPI_Comm comm = MPI_COMM_WORLD;
 
@@ -133,6 +138,83 @@ std::shared_ptr<ftk::stream> stream;
 
 // trackers
 std::shared_ptr<ftk::particle_tracer_mpas_ocean> tracker_particle_mpas_ocean;
+std::shared_ptr<ftk::critical_point_tracker> tracker_critical_point;
+
+
+void initialize_critical_point_tracer(diy::mpi::communicator comm)
+{
+  auto gs = stream->read_static();
+  gs->print_info(std::cerr);
+}
+
+void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
+{
+  auto gs = stream->read_static(); // static array group
+  gs->print_info(std::cerr);
+
+  std::shared_ptr<ftk::mpas_mesh<>> mesh(new ftk::mpas_mesh<>(gs));
+  mesh->initialize();
+  mesh->initialize_c2v_interpolants();
+  mesh->initialize_coeffs_reconstruct();
+
+  tracker_particle_mpas_ocean.reset(new ftk::particle_tracer_mpas_ocean(comm, mesh) );
+  tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
+  if (accelerator == "cuda")
+    tracker_particle_mpas_ocean->use_accelerator(ftk::FTK_XL_CUDA);
+
+  // fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 
+  //     pt_nsteps_per_interval, pt_nsteps_per_checkpoint, pt_delta_t);
+
+  if (ntimesteps < 0)
+    ntimesteps = stream->total_timesteps();
+  if (start_timestep < 0)
+    start_timestep = 0;
+
+  tracker_particle_mpas_ocean->set_ntimesteps(ntimesteps); // stream->total_timesteps());
+  if (ptgeo_nsteps_per_day)
+    tracker_particle_mpas_ocean->set_nsteps_per_day( ptgeo_nsteps_per_day );
+
+  // checkpoint
+  if (ptgeo_checkpoint_days)
+    tracker_particle_mpas_ocean->set_checkpoint_days(ptgeo_checkpoint_days);
+  else if (ptgeo_checkpoint_months)
+    tracker_particle_mpas_ocean->set_checkpoint_months(ptgeo_checkpoint_months);
+
+  // tracker_particle_mpas_ocean->set_nsteps_per_interval(pt_nsteps_per_interval);
+  // tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(pt_nsteps_per_checkpoint);
+  tracker_particle_mpas_ocean->set_delta_t( pt_delta_t );
+
+  for (int i = start_timestep; i < ntimesteps; i ++)  {
+    auto g = stream->read(i);
+    g->print_info(std::cerr);
+    
+    tracker_particle_mpas_ocean->push_field_data_snapshot(g); // field_data);
+   
+    if (i == 0) { // initialize here; mainly because the cuda tracer needs to know the data precision first
+      tracker_particle_mpas_ocean->initialize();
+      if (pt_seed_box.size() > 0)
+        tracker_particle_mpas_ocean->initialize_particles_latlonz(
+            pt_seed_strides[0], pt_seed_box[0], pt_seed_box[1],
+            pt_seed_strides[1], pt_seed_box[2], pt_seed_box[3],
+            pt_seed_strides[2], pt_seed_box[4], pt_seed_box[5]);
+      else
+        tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
+    } else { // if (i != 0)
+      tracker_particle_mpas_ocean->advance_timestep();
+    }
+
+    // the last step
+    if (i == ntimesteps - 1) tracker_particle_mpas_ocean->update_timestep();
+  }
+
+  tracker_particle_mpas_ocean->finalize();
+  
+  if (geo_output)
+    tracker_particle_mpas_ocean->write_geo_trajectories(output_pattern);
+  else 
+    tracker_particle_mpas_ocean->write_trajectories(output_pattern);
+}
+
 
 bool parse_arguments(int argc, char **argv)
 {
@@ -307,89 +389,47 @@ bool parse_arguments(int argc, char **argv)
   }
 
   // input
-  if (!results.count("input") || results.count("help")) {
+  if (!(results.count("input") || results.count("synthetic")) || results.count("help")) {
     std::cerr << options.help() << std::endl;
     exit(0);
   }
 
-  fprintf(stderr, "input stream yaml file: %s\n", stream_yaml_filename.c_str());
-
-  stream.reset(new ftk::stream);
+  if (results.count("input")) { 
+    fprintf(stderr, "input stream yaml file: %s\n", stream_yaml_filename.c_str());
+    stream.reset(new ftk::stream);
+  } else if (results.count("synthetic")) {
+    fprintf(stderr, "input synthetic stream: %s\n", results["synthetic"].as<std::string>().c_str());
+  }
 
   if (!input_prefix.empty())
     stream->set_path_prefix( input_prefix );
 
   stream->parse_yaml(stream_yaml_filename);
+ 
+  // initialize and execute
+  ttype = ftk::tracker::str2tracker(feature);
+  if (ttype == ftk::TRACKER_CRITICAL_POINT)
+    initialize_critical_point_tracer(comm);
+  else if (ttype == ftk::TRACKER_MPAS_O_PARTICLES)
+    initialize_particle_tracer_mpas_ocean(comm);
+#if 0
+  else if (ttype == TRACKER_CRITICAL_LINE)
+    initialize_critical_line_tracker(comm);
+  else if (ttype == TRACKER_CONTOUR)
+    initialize_contour_tracker(comm); 
+  else if (ttype == TRACKER_TDGL_VORTEX)
+    initialize_tdgl_tracker(comm);
+  else if (ttype == TRACKER_PARTICLE)
+    initialize_particle_tracer(comm);
+  else if (ttype == TRACKER_XGC_BLOB_FILAMENT)
+    initialize_xgc_blob_filament_tracker(comm);
+  else if (ttype == TRACKER_XGC_BLOB_THRESHOLD)
+    initialize_xgc_blob_threshold_tracker(comm);
+#endif
+  else 
+    fatal(options, "missing or invalid '--feature'");
 
   return 0;
-}
-
-void initialize_particle_tracer_mpas_ocean(diy::mpi::communicator comm)
-{
-  auto gs = stream->read_static(); // static array group
-  gs->print_info(std::cerr);
-
-  std::shared_ptr<ftk::mpas_mesh<>> mesh(new ftk::mpas_mesh<>(gs));
-  mesh->initialize();
-  mesh->initialize_c2v_interpolants();
-  mesh->initialize_coeffs_reconstruct();
-
-  tracker_particle_mpas_ocean.reset(new ftk::particle_tracer_mpas_ocean(comm, mesh) );
-  tracker_particle_mpas_ocean->set_number_of_threads(nthreads);
-  if (accelerator == "cuda")
-    tracker_particle_mpas_ocean->use_accelerator(ftk::FTK_XL_CUDA);
-
-  // fprintf(stderr, "pt_nsteps_per_interval=%d, pt_nsteps_per_checkpoint=%d, pt_delta_t=%f\n", 
-  //     pt_nsteps_per_interval, pt_nsteps_per_checkpoint, pt_delta_t);
-
-  if (ntimesteps < 0)
-    ntimesteps = stream->total_timesteps();
-  if (start_timestep < 0)
-    start_timestep = 0;
-
-  tracker_particle_mpas_ocean->set_ntimesteps(ntimesteps); // stream->total_timesteps());
-  if (ptgeo_nsteps_per_day)
-    tracker_particle_mpas_ocean->set_nsteps_per_day( ptgeo_nsteps_per_day );
-
-  // checkpoint
-  if (ptgeo_checkpoint_days)
-    tracker_particle_mpas_ocean->set_checkpoint_days(ptgeo_checkpoint_days);
-  else if (ptgeo_checkpoint_months)
-    tracker_particle_mpas_ocean->set_checkpoint_months(ptgeo_checkpoint_months);
-
-  // tracker_particle_mpas_ocean->set_nsteps_per_interval(pt_nsteps_per_interval);
-  // tracker_particle_mpas_ocean->set_nsteps_per_checkpoint(pt_nsteps_per_checkpoint);
-  tracker_particle_mpas_ocean->set_delta_t( pt_delta_t );
-
-  for (int i = start_timestep; i < ntimesteps; i ++)  {
-    auto g = stream->read(i);
-    g->print_info(std::cerr);
-    
-    tracker_particle_mpas_ocean->push_field_data_snapshot(g); // field_data);
-   
-    if (i == 0) { // initialize here; mainly because the cuda tracer needs to know the data precision first
-      tracker_particle_mpas_ocean->initialize();
-      if (pt_seed_box.size() > 0)
-        tracker_particle_mpas_ocean->initialize_particles_latlonz(
-            pt_seed_strides[0], pt_seed_box[0], pt_seed_box[1],
-            pt_seed_strides[1], pt_seed_box[2], pt_seed_box[3],
-            pt_seed_strides[2], pt_seed_box[4], pt_seed_box[5]);
-      else
-        tracker_particle_mpas_ocean->initialize_particles_at_grid_points(pt_seed_strides);
-    } else { // if (i != 0)
-      tracker_particle_mpas_ocean->advance_timestep();
-    }
-
-    // the last step
-    if (i == ntimesteps - 1) tracker_particle_mpas_ocean->update_timestep();
-  }
-
-  tracker_particle_mpas_ocean->finalize();
-  
-  if (geo_output)
-    tracker_particle_mpas_ocean->write_geo_trajectories(output_pattern);
-  else 
-    tracker_particle_mpas_ocean->write_trajectories(output_pattern);
 }
 
 int main(int argc, char **argv)
@@ -399,8 +439,6 @@ int main(int argc, char **argv)
 #endif
 
   parse_arguments(argc, argv);
-
-  initialize_particle_tracer_mpas_ocean(MPI_COMM_WORLD);
 
 #if NDARRAY_HAVE_MPI
   MPI_Finalize();
