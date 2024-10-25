@@ -66,6 +66,22 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package (Threads REQUIRED)
 
+# Henson
+if                          (NOT DEFINED HENSON AND DEFINED ENV{HENSON})
+    set                     (HENSON $ENV{HENSON})
+endif                       ()
+
+if                          (HENSON)
+    set                     (HENSON_LIBRARY ${HENSON}/lib/libhenson.a)
+    set                     (HENSON_PMPI_LIBRARY ${HENSON}/lib/libhenson-pmpi.so)
+else                        ()
+    message                 ("Looking for Henson")
+    find_package            (henson REQUIRED)
+endif                       ()
+message                     ("HENSON_LIBRARY = ${HENSON_LIBRARY}")
+message                     ("HENSON_PMPI_LIBRARY = ${HENSON_PMPI_LIBRARY}")
+set                         (libraries ${libraries} ${HENSON_PMPI_LIBRARY} ${HENSON_LIBRARY})
+
 if (FTK_USE_CGAL STREQUAL AUTO)
   find_package (CGAL QUIET)
 elseif (FTK_USE_CGAL)

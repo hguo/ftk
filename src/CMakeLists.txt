@@ -1,3 +1,10 @@
+if                          (NOT APPLE)
+   set                      (linker_flags "-pie -Wl,--export-dynamic")
+   set                      (linker_flags "${linker_flags} -Wl,-u,henson_set_contexts,-u,henson_set_namemap")
+else                        ()
+   set                      (linker_flags "-Wl,-u,_henson_set_contexts,-u,_henson_set_namemap")
+endif                       (NOT APPLE)
+
 if (FTK_BUILD_PYFTK)
   include_directories (${PYTHON_INCLUDE_DIRS})
 endif ()
@@ -44,6 +51,12 @@ endif ()
 
 add_library (libftk SHARED ${ftk_sources} ${ftk_cuda_sources} ${ftk_sycl_sources})
 target_link_libraries (libftk ndarray::ndarray ${CMAKE_THREAD_LIBS_INIT})
+
+add_library                 (ftk_shared SHARED cli/ftk.cpp)
+target_link_libraries       (ftk_shared PRIVATE libftk ${libraries})
+set_target_properties       (ftk_shared PROPERTIES PREFIX "")
+set_target_properties       (ftk_shared PROPERTIES SUFFIX ".so")
+set_target_properties       (ftk_shared PROPERTIES LINK_FLAGS ${linker_flags})
 
 if (FTK_HAVE_ADIOS1)
   target_link_libraries (libftk ${ADIOS_LIBRARIES})
@@ -131,6 +144,13 @@ install (TARGETS libftk ftk
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   # ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install (TARGETS ftk_shared
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+  GROUP_READ GROUP_WRITE GROUP_EXECUTE
+  WORLD_READ WORLD_WRITE WORLD_EXECUTE
 )
 
 install (EXPORT FTKTargets
