@@ -12,12 +12,15 @@ One needs to use the `find_package` function to find the FTK library.  Remember 
 
 ```cmake
 cmake_minimum_required(VERSION 3.17)
-project (ftk-cylinder2D)
+project (ftk-cylinder)
+
+set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package (FTK REQUIRED)
 
-add_executable (ftk-cylinder2D cylinder2D.cpp)
-target_link_libraries (ftk-cylinder2D FTK::libftk)
+add_executable (ftk-cylinder cylinder.cpp)
+target_link_libraries (ftk-cylinder FTK::libftk)
 ```
 
 Run the CMake executable to build the example.
@@ -59,6 +62,7 @@ int main(int argc, char **argv)
   // dimension x- and y-components of the time-varying vector field
   ftk::ndarray<float> array;
   array.read_amira(argv[1]);
+  array.set_has_time(true);
   array.to_vtk_image_data_file(argv[2]);
  
   // Get the width, height, and time dimensions of the domain

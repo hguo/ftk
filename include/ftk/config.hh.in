@@ -29,6 +29,7 @@
 #cmakedefine FTK_HAVE_QT 1
 #cmakedefine FTK_HAVE_TBB 1
 #cmakedefine FTK_HAVE_VTK 1
+#cmakedefine FTK_HAVE_VTK_JSON 1
 
 #define FTK_FP_PRECISION ${FTK_FP_PRECISION}
 #define FTK_CP_MAX_NUM_VARS ${FTK_CP_MAX_NUM_VARS}

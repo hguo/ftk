@@ -15,6 +15,11 @@
  * file docs/README.md.                                                     *
 \****************************************************************************/
 
+// #include <ftk/config.hh>
+#if FTK_HAVE_VTK_JSON
+#include <vtknlohmann/json.hpp>
+#else
+
 #ifndef INCLUDE_NLOHMANN_JSON_HPP_
 #define INCLUDE_NLOHMANN_JSON_HPP_
 
@@ -24638,3 +24643,5 @@ inline void swap(nlohmann::NLOHMANN_BASIC_JSON_TPL& j1, nlohmann::NLOHMANN_BASIC
 
 
 #endif  // INCLUDE_NLOHMANN_JSON_HPP_
+
+#endif // !FTK_HAVE_VTK_JSON
