@@ -17,6 +17,7 @@
 
 // #include <ftk/config.hh>
 #if FTK_HAVE_VTK_JSON
+#include <vtk_nlohmannjson.h>
 #include <vtknlohmann/json.hpp>
 #else
 
