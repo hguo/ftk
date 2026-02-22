@@ -27,8 +27,8 @@ enum {
 struct critical_point_tracker : public virtual tracker {
   critical_point_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
-  virtual void update() {}; 
-  void reset() {
+  void update() override {};
+  void reset() override {
     field_data_snapshots.clear();
     traced_critical_points.clear();
   }
@@ -61,7 +61,7 @@ public:
   // virtual void initialize() = 0;
   // virtual void finalize() = 0;
 
-  bool advance_timestep();
+  bool advance_timestep() override;
   // virtual void update_timestep() = 0;
 
 public: // i/o for traced critical points (trajectories)
@@ -123,9 +123,9 @@ public: // post-processing and simplification
   // void split_trajectories();
 
 public: // inputs
-  bool pop_field_data_snapshot();
+  bool pop_field_data_snapshot() override;
   virtual void push_field_data_snapshot(
-      const ndarray<double> &scalar, 
+      const ndarray<double> &scalar,
       const ndarray<double> &vector,
       const ndarray<double> &jacobian);
   virtual void push_scalar_field_snapshot(const ndarray<double> &scalar);

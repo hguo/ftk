@@ -19,23 +19,23 @@ struct tdgl_vortex_tracker : public virtual tracker {
   tdgl_vortex_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
   // int cpdims() const { return 3; }
-  
-  virtual void update() {}; 
-  void reset() {
+
+  void update() override {};
+  void reset() override {
     field_data_snapshots.clear();
   }
-  
-public:
-  bool advance_timestep();
 
 public:
-  bool pop_field_data_snapshot();
+  bool advance_timestep() override;
+
+public:
+  bool pop_field_data_snapshot() override;
   void push_field_data_snapshot(
       const tdgl_metadata_t &meta,
-      const ndarray<float> &rho, 
-      const ndarray<float> &phi, 
-      const ndarray<float> &re, 
-      const ndarray<float> &im 
+      const ndarray<float> &rho,
+      const ndarray<float> &phi,
+      const ndarray<float> &re,
+      const ndarray<float> &im
   );
   
 protected:

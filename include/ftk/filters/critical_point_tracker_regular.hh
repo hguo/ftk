@@ -23,7 +23,7 @@ protected:
 public: // cp io
   const std::map<element_t, feature_point_t>& get_discrete_critical_points() const {return discrete_critical_points;}
 
-  std::vector<feature_point_t> get_critical_points() const;
+  std::vector<feature_point_t> get_critical_points() const override;
   // void put_critical_points(const std::vector<feature_point_t>&);
 };
 

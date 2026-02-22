@@ -53,15 +53,15 @@ struct critical_point_tracker_2d_unstructured : public critical_point_tracker, p
   int cpdims() const { return 3; }
   // int cpdims() const { return m.ncoords() - 1; }
 
-  void initialize() {}
-  void finalize();
-  void reset() {}
+  void initialize() override {}
+  void finalize() override;
+  void reset() override {}
 
-  void update_timestep();
+  void update_timestep() override;
 
 public:
-  std::vector<feature_point_t> get_critical_points() const;
-  void put_critical_points(const std::vector<feature_point_t>&);
+  std::vector<feature_point_t> get_critical_points() const override;
+  void put_critical_points(const std::vector<feature_point_t>&) override;
 
 protected:
   bool check_simplex(int, feature_point_t& cp);

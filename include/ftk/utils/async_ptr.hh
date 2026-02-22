@@ -1,15 +1,17 @@
 #ifndef _FTK_ASYNC_PTR_HH
 #define _FTK_ASYNC_PTR_HH
 
+#include <memory>
+
 namespace ftk {
 
 template <typename T>
 struct async_ptr {
   template <typename Y> friend class async_ptr;
 
-  async_ptr() : p(NULL), count(new unsigned int(0)) {}
-  async_ptr(T *p_) : p(p_), count(new unsigned int(1)) {}
-  template <typename Y> async_ptr(Y *p_) : p(p_), count(new unsigned int(1)) {}
+  async_ptr() : p(NULL), count(std::make_shared<unsigned int>(0)) {}
+  async_ptr(T *p_) : p(p_), count(std::make_shared<unsigned int>(1)) {}
+  template <typename Y> async_ptr(Y *p_) : p(p_), count(std::make_shared<unsigned int>(1)) {}
   template <typename Y> async_ptr(async_ptr<Y> obj) : p(obj.p), count(obj.count) {
     if (obj.p != NULL)
       __sync_fetch_and_add(count, 1);
@@ -58,16 +60,15 @@ struct async_ptr {
 
 private:
   void clear() {
-    __sync_fetch_and_sub(count, 1);
+    __sync_fetch_and_sub(count.get(), 1);
     if (*count == 0) {
       if (p != NULL) delete p;
-      delete count;
     }
   }
 
 private:
   T *p = NULL;
-  unsigned int *count;
+  std::shared_ptr<unsigned int> count;
 };
 
 }

@@ -23,13 +23,13 @@ struct xgc_tracker : public tracker {
   xgc_tracker(diy::mpi::communicator comm,
       std::shared_ptr<simplicial_xgc_3d_mesh<>> mx);
 
-  void reset() { field_data_snapshots.clear(); }
+  void reset() override { field_data_snapshots.clear(); }
 
   void set_use_roi(bool b) { use_roi = b; }
 
 public:
   std::shared_ptr<simplicial_unstructured_2d_mesh<>> get_m2() { return m2; }
-  void initialize_ff_mesh(const std::string& filename) { mf3.reset(new simplicial_xgc_3dff_mesh<>(m2, m3->get_nphi(), m3->get_iphi(), m3->get_vphi()) ); mf3->initialize_ff_mesh(filename); }
+  void initialize_ff_mesh(const std::string& filename) { mf3 = std::make_shared<simplicial_xgc_3dff_mesh<>>(m2, m3->get_nphi(), m3->get_iphi(), m3->get_vphi()); mf3->initialize_ff_mesh(filename); }
 
 public:
   virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group<>>);
@@ -39,9 +39,9 @@ public:
       const ndarray<double> &vector,
       const ndarray<double> &jacobian);
   
-  bool pop_field_data_snapshot();
+  bool pop_field_data_snapshot() override;
 
-  bool advance_timestep();
+  bool advance_timestep() override;
 
 public:
   double derive_threshold(const ndarray<double>& scalar, double sigma_threshold = 2.5) const;
@@ -79,11 +79,11 @@ xgc_tracker::xgc_tracker(
   // initialize roi meshes
   m2->initialize_roi();
   mr2 = m2->new_roi_mesh(roi_node_map, roi_inverse_node_map);
-  mr3.reset(new simplicial_xgc_3d_mesh<>(mr2, 
-        m3->get_nphi(), m3->get_iphi(), m3->get_vphi()));
-  m30.reset(new simplicial_xgc_3d_mesh<>(m2, 
-        m3->get_nphi(), m3->get_iphi()));
-  mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(mr3));
+  mr3 = std::make_shared<simplicial_xgc_3d_mesh<>>(mr2,
+        m3->get_nphi(), m3->get_iphi(), m3->get_vphi());
+  m30 = std::make_shared<simplicial_xgc_3d_mesh<>>(m2,
+        m3->get_nphi(), m3->get_iphi());
+  mr4 = std::make_shared<simplicial_unstructured_extruded_3d_mesh<>>(mr3);
 }
 
 inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group<>> g) 

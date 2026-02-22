@@ -21,12 +21,12 @@ struct xgc_blob_threshold_tracker : public xgc_tracker {
   void set_threshold(double t) { threshold = t; }
 
   // int cpdims() const { return 0; }
-  
-  void initialize() {}
-  void update() {}
-  void finalize();
 
-  void update_timestep();
+  void initialize() override {}
+  void update() override {}
+  void finalize() override;
+
+  void update_timestep() override;
 
   void push_field_data_snapshot(const ndarray<double> &scalar);
 

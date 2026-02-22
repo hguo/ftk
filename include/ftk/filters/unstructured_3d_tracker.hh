@@ -15,7 +15,7 @@ struct unstructured_3d_tracker : public virtual tracker {
   virtual ~unstructured_3d_tracker() {}
 
 public:
-  void initialize() {}
+  void initialize() override {}
 
 protected:
   std::shared_ptr<simplicial_unstructured_3d_mesh<>> m3;

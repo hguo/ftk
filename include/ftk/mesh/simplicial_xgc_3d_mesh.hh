@@ -18,7 +18,7 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
 
   std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> get_m2() const {return m2;}
 
-  size_t n(int d, bool part = false) const;
+  size_t n(int d, bool part = false) const override;
   size_t np() const {return nphi * iphi * vphi;} // number of poloidal planes, incl. virtual planes defined by vphi
 
   bool probe_nphi_iphi(const std::string& filename);
@@ -46,20 +46,20 @@ struct simplicial_xgc_3d_mesh : public simplicial_unstructured_3d_mesh<I, F> {
   std::set<I> get_vertex_edge_vertex(I i) const;
   std::set<I> get_vertex_edge_vertex_nextnodes(I i) const;
 
-public: 
-  void element_for(int d, std::function<void(I)> f) {} // TODO
-  
 public:
-  virtual void get_simplex(int d, I i, I verts[]) const;
-  virtual bool find_simplex(int d, const I v[], I& i) const;
+  void element_for(int d, std::function<void(I)> f) override {} // TODO
+
+public:
+  void get_simplex(int d, I i, I verts[]) const override;
+  bool find_simplex(int d, const I v[], I& i) const override;
 
   void get_coords_rzp(I i, F coords[]) const { return m3->get_coords(i, coords); }
   void get_coords_xyz(I i, F coords[]) const;
   void get_coords(I i, F coords[]) const { get_coords_xyz(i, coords); }
  
 public:
-  virtual std::set<I> sides(int d, I i) const;
-  virtual std::set<I> side_of(int d, I i) const;
+  std::set<I> sides(int d, I i) const override;
+  std::set<I> side_of(int d, I i) const override;
 
   I transform(int d, I i) const;
 
@@ -81,7 +81,7 @@ public: // vtk
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> to_vtu_slices() const;
   vtkSmartPointer<vtkUnstructuredGrid> scalar_to_vtu_slices(const std::string& varname, const ndarray<F>& data) const;
-  virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtu_solid() const { return this->to_vtu(); }
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu_solid() const override { return this->to_vtu(); }
 #endif
 
 public: // smoothing

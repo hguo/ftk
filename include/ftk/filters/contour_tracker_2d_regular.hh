@@ -44,15 +44,15 @@ struct contour_tracker_2d_regular : public contour_tracker_regular {
 
   // int cpdims() const { return 2; }
 
-  void finalize();
-  void reset();
+  void finalize() override;
+  void reset() override;
 
-  void update_timestep();
+  void update_timestep() override;
 
   const feature_surface_t& get_surfaces() const { return surfaces; }
 
 public:
-  void write_isovolume_vtu(const std::string& filename) const;
+  void write_isovolume_vtu(const std::string& filename) const override;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkPolyData> get_isovolume_vtp() const;
   vtkSmartPointer<vtkPolyData> get_isovolume_vtu() const;
@@ -70,8 +70,8 @@ protected:
 
   void build_surfaces();
 
-  virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][3]) const;
-  virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const;
+  void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][3]) const override;
+  void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[]) const override;
 };
 
 

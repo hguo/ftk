@@ -27,20 +27,20 @@ struct critical_line_tracker_3d_regular : public virtual critical_line_tracker, 
     critical_line_tracker(comm), regular_tracker(comm, 3), tracker(comm) {}
   virtual ~critical_line_tracker_3d_regular() {}
 
-  void finalize();
-  void reset();
+  void finalize() override;
+  void reset() override;
 
-  void update_timestep();
+  void update_timestep() override;
 
 public:
   void build_vortex_surfaces();
 
   void read_surfaces(const std::string& filename, std::string format="auto");
 
-  void write_sliced(const std::string& pattern) const;
-  void write_surfaces(const std::string& filename, std::string format="auto") const;
+  void write_sliced(const std::string& pattern) const override;
+  void write_surfaces(const std::string& filename, std::string format="auto") const override;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
+  vtkSmartPointer<vtkPolyData> get_intersections_vtp() const override;
 #endif
 
   const feature_surface_t& get_traced_surfaces() const { return surfaces; }
@@ -59,8 +59,8 @@ protected:
   feature_surface_t surfaces;
 
 protected:
-  virtual bool check_simplex(const element_t& s, feature_point_t& cp) const;
-  
+  bool check_simplex(const element_t& s, feature_point_t& cp) const override;
+
   void simplex_values(
       const std::vector<std::vector<int>>& vertices,
       float X[][4],

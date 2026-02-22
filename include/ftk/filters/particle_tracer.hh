@@ -25,10 +25,10 @@ struct particle_tracer : public virtual tracker
   virtual void initialize_particles(size_t n, const double *p, size_t stride=3, bool has_time=false);
   virtual void initialize_particles_at_grid_points(std::vector<int> strides = {}) {};
 
-  void update() {}
-  void finalize() {}
-  void update_timestep();
-  bool advance_timestep();
+  void update() override {}
+  void finalize() override {}
+  void update_timestep() override;
+  bool advance_timestep() override;
 
   virtual void prepare_timestep();
 

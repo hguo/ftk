@@ -45,18 +45,18 @@ struct critical_point_tracker_3d_unstructured :
   
   // int cpdims() const { return 2; }
 
-  void initialize() {}
-  void finalize();
-  void reset() {}
+  void initialize() override {}
+  void finalize() override;
+  void reset() override {}
 
-  void update_timestep();
+  void update_timestep() override;
 
-  void push_scalar_field_snapshot(const ndarray<double>&) {} // TODO
-  void push_vector_field_snapshot(const ndarray<double>&) {} // TODO
+  void push_scalar_field_snapshot(const ndarray<double>&) override {} // TODO
+  void push_vector_field_snapshot(const ndarray<double>&) override {} // TODO
 
 public:
-  std::vector<feature_point_t> get_critical_points() const;
-  void put_critical_points(const std::vector<feature_point_t>&);
+  std::vector<feature_point_t> get_critical_points() const override;
+  void put_critical_points(const std::vector<feature_point_t>&) override;
 
 protected:
   bool check_simplex(int, feature_point_t& cp);

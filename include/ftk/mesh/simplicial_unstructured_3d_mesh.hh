@@ -17,8 +17,8 @@ struct simplicial_unstructured_3d_mesh : public simplicial_unstructured_mesh<I, 
       const std::vector<F>& coords, 
       const std::vector<I>& tetrahedra);
 
-  int nd() const {return 3;}
-  virtual size_t n(int d, bool part = false) const;
+  int nd() const override {return 3;}
+  size_t n(int d, bool part = false) const override;
   
   void build_smoothing_kernel(F sigma);
   void smooth_scalar_gradient_jacobian(
@@ -35,12 +35,12 @@ public: // io
 
   void to_vtu_file(const std::string& filename) const;
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
-  void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid);
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const override;
+  void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid) override;
 #endif
 
-public: 
-  virtual void element_for(int d, std::function<void(I)> f); // TODO
+public:
+  void element_for(int d, std::function<void(I)> f); // TODO
 
 private: // use get_simplex() and find_simplex instead
   void get_tetrahedron(I i, I tet[]) const;
@@ -54,14 +54,14 @@ private: // use get_simplex() and find_simplex instead
   const std::vector<std::tuple<I, I, I, I>>& get_tets() const {return tetrahedra;}
 
 public:
-  virtual std::set<I> sides(int d, I i) const { return std::set<int>(); } // TODO
-  virtual std::set<I> side_of(int d, I i) const;
+  std::set<I> sides(int d, I i) const { return std::set<int>(); } // TODO
+  std::set<I> side_of(int d, I i) const;
 
-  virtual void get_simplex(int d, I i, I simplex[]) const;
-  virtual bool find_simplex(int d, const I verts[], I& i) const;
-  virtual void get_coords(I i, F coords[]) const;
+  void get_simplex(int d, I i, I simplex[]) const;
+  bool find_simplex(int d, const I verts[], I& i) const;
+  void get_coords(I i, F coords[]) const;
 
-  virtual const ndarray<F>& get_coords() const {return vertex_coords;}
+  const ndarray<F>& get_coords() const {return vertex_coords;}
 
 private:
   void initialize(bool reorder = false);

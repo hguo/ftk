@@ -63,12 +63,12 @@ struct critical_point_tracker_3d_regular : public critical_point_tracker_regular
   
   // int cpdims() const { return 3; }
 
-  void finalize();
+  void finalize() override;
 
-  void update_timestep();
-  
-  void push_scalar_field_snapshot(const ndarray<double>&);
-  void push_vector_field_snapshot(const ndarray<double>&);
+  void update_timestep() override;
+
+  void push_scalar_field_snapshot(const ndarray<double>&) override;
+  void push_vector_field_snapshot(const ndarray<double>&) override;
   
 protected:
   typedef simplicial_regular_mesh_element element_t;
@@ -81,10 +81,10 @@ protected:
   virtual void simplex_coordinates(const std::vector<std::vector<int>>& vertices, double X[][4]) const;
   virtual void simplex_vectors(const std::vector<std::vector<int>>& vertices, double v[4][3]) const;
   virtual void simplex_scalars(const std::vector<std::vector<int>>& vertices, double values[4]) const;
-  virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices, 
+  virtual void simplex_jacobians(const std::vector<std::vector<int>>& vertices,
       double Js[4][3][3]) const;
-  
-  void put_critical_points(const std::vector<feature_point_t>&);
+
+  void put_critical_points(const std::vector<feature_point_t>&) override;
 };
 
 

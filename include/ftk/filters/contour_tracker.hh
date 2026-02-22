@@ -19,8 +19,8 @@ namespace ftk {
 struct contour_tracker : public virtual tracker {
   contour_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
-  virtual void update() {}; 
-  void reset() {
+  void update() override {};
+  void reset() override {
     field_data_snapshots.clear();
     // traced_contours.clear();
   }
@@ -32,10 +32,10 @@ struct contour_tracker : public virtual tracker {
   void set_threshold(double t) {threshold = t;}
 
 public:
-  virtual bool advance_timestep();
+  bool advance_timestep() override;
 
 public: // inputs
-  bool pop_field_data_snapshot();
+  bool pop_field_data_snapshot() override;
   virtual void push_field_data_snapshot(const ndarray<double> &scalar);
 
 public:

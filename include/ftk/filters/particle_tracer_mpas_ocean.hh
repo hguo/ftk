@@ -37,8 +37,8 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 #endif
   }
 
-  void initialize();
-  void initialize_particles_at_grid_points(std::vector<int> strides);
+  void initialize() override;
+  void initialize_particles_at_grid_points(std::vector<int> strides) override;
   void initialize_particles_latlonz(
       const int nlat, const double lat0, const double lat1,
       const int nlon, const double lon0, const double lon1,
@@ -46,17 +46,17 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 
   static constexpr double earth_radius = 6371229.0;
 
-  void push_field_data_snapshot(std::shared_ptr<ndarray_group<>> g);
-  void prepare_timestep();
-  void update_timestep();
+  void push_field_data_snapshot(std::shared_ptr<ndarray_group<>> g) override;
+  void prepare_timestep() override;
+  void update_timestep() override;
 
 protected:
-  bool eval_v(int t, const double* x, double *v, int *hint);
+  bool eval_v(int t, const double* x, double *v, int *hint) override;
   bool eval_v_vertical(int t, const double* x, double *v, int *hint);
   bool eval_v_with_vertical_velocity(int t, const double* x, double *v, int *hint);
 
-  int nch() const { return 7; }
-  std::vector<std::string> scalar_names() const { return {"vertVelocity", "salinity", "temperature"}; }
+  int nch() const override { return 7; }
+  std::vector<std::string> scalar_names() const override { return {"vertVelocity", "salinity", "temperature"}; }
 
   static double deltaT(std::tm t0, std::tm t1);
 

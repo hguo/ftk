@@ -244,8 +244,8 @@ namespace ftk {
 std::shared_ptr<xgc_stream> xgc_stream::new_xgc_stream(const std::string& path, diy::mpi::communicator comm)
 {
   std::shared_ptr<xgc_stream> s;
-  if (file_exists( path + "/xgc.mesh.h5" )) s.reset(new xgc_stream_h5(path, comm));
-  else if (is_directory( path + "/xgc.mesh.bp" )) s.reset(new xgc_stream_adios2(path, comm));
+  if (file_exists( path + "/xgc.mesh.h5" )) s = std::make_shared<xgc_stream_h5>(path, comm);
+  else if (is_directory( path + "/xgc.mesh.bp" )) s = std::make_shared<xgc_stream_adios2>(path, comm);
   else fatal("cannot find xgc.mesh file");
 
   return s;

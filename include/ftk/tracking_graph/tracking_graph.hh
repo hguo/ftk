@@ -219,10 +219,9 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
 }
 
 template <class TimeIndexType, class LabelIdType, class GlobalLabelIdType, class WeightType>
-void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generate_dot_file(const std::string& filename) const 
+void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::generate_dot_file(const std::string& filename) const
 {
-  using namespace std;
-  ofstream ofs(filename.c_str());
+  std::ofstream ofs(filename.c_str());
   if (!ofs.is_open()) return;
 
   auto node2str = [this](Node n) {
@@ -232,11 +231,11 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
     // return ss.str();
   };
 
-  ofs << "digraph {" << endl;
-  ofs << "ratio = compress;" << endl;
-  ofs << "rankdir = LR;" << endl;
-  ofs << "ranksep =\"1.0 equally\";" << endl;
-  ofs << "node [shape=circle];" << endl;
+  ofs << "digraph {" << std::endl;
+  ofs << "ratio = compress;" << std::endl;
+  ofs << "rankdir = LR;" << std::endl;
+  ofs << "ranksep =\"1.0 equally\";" << std::endl;
+  ofs << "node [shape=circle];" << std::endl;
   // ofs << "node [shape=point,width=0,height=0];" << endl;
  
   for (const auto &kv : nodes) {
@@ -253,7 +252,7 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
       else if (c == 5) color = "yellow";
 
       ofs << node2str(n)
-          << " [style=filled, fillcolor=" << color << "];" << endl;
+          << " [style=filled, fillcolor=" << color << "];" << std::endl;
     }
 
     ofs << "{rank=same; ";
@@ -261,15 +260,15 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
       ofs << node2str(n) << ",";
     }
     ofs.seekp(-1, std::ios_base::end);
-    ofs << "}" << endl;
+    ofs << "}" << std::endl;
   }
 
   for (const auto &kv : right_links) {
     const auto lNode = kv.first;
     // const int weight = kv.second.size() == 1 ? TODO: colsum & rowsum
     for (const auto &rNode : kv.second) {
-      ofs << node2str(lNode) << "->" 
-          << node2str(rNode) << endl;
+      ofs << node2str(lNode) << "->"
+          << node2str(rNode) << std::endl;
           // << " [weight = " << weight << "];" << endl;
     }
   }
@@ -278,8 +277,8 @@ void tracking_graph<TimeIndexType, LabelIdType, GlobalLabelIdType, WeightType>::
   // node colors
   for (const auto& kv : tr.labels()) {
   }
-#endif 
-  ofs << "}" << endl;
+#endif
+  ofs << "}" << std::endl;
   ofs.close();
 }
 

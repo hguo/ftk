@@ -62,10 +62,10 @@ struct simplicial_unstructured_2d_mesh : // 2D triangular mesh
     : vertex_coords(coords_), triangles(triangles_) {build_triangles(); build_edges(); build_partition();}
 
   // dimensionality of the mesh
-  int nd() const {return 2;}
+  int nd() const override {return 2;}
 
   // numer of d-dimensional elements
-  size_t n(int d, bool part=false) const;
+  size_t n(int d, bool part=false) const override;
 
   void build_edges();
   void build_triangles();
@@ -103,8 +103,8 @@ public: // io
   
   void from_vtu(const std::string filename);
 #if FTK_HAVE_VTK
-  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const;
-  void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid);
+  vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const override;
+  void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid) override;
 #endif
   void to_vtu(const std::string& filename) const;
 

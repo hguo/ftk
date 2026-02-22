@@ -31,16 +31,16 @@ struct xgc_blob_filament_tracker : public xgc_tracker {
   //     int nphi_, int iphi_);
 
   // int cpdims() const { return 3; }
- 
-  void initialize();
-  void reset() {
+
+  void initialize() override;
+  void reset() override {
     field_data_snapshots.clear();
   }
-  void update() {}
-  void finalize();
+  void update() override {}
+  void finalize() override;
 
 public:
-  void update_timestep();
+  void update_timestep() override;
   
   void push_field_data_snapshot(std::shared_ptr<ndarray_group<>> g) { xgc_tracker::push_field_data_snapshot(g); }
   void push_field_data_snapshot(
@@ -803,14 +803,14 @@ xgc_blob_filament_tracker::from_augmented_mesh_file(
 
   diy::load(bb, tracker->nphi);
   diy::load(bb, tracker->iphi);
-  
-  tracker->m2.reset(new simplicial_unstructured_2d_mesh<>);
+
+  tracker->m2 = std::make_shared<simplicial_unstructured_2d_mesh<>>();
   diy::load(bb, *tracker->m2);
 
-  tracker->m3.reset(new simplicial_unstructured_3d_mesh<>);
+  tracker->m3 = std::make_shared<simplicial_unstructured_3d_mesh<>>();
   diy::load(bb, *tracker->m3);
 
-  tracker->m4.reset(new simplicial_unstructured_extruded_3d_mesh<>(*tracker->m3));
+  tracker->m4 = std::make_shared<simplicial_unstructured_extruded_3d_mesh<>>(*tracker->m3);
   fclose(fp);
   return tracker;
 }

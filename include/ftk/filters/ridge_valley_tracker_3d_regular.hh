@@ -16,14 +16,14 @@ struct ridge_valley_tracker_3d_regular : public sujudi_haimes_tracker_3d_regular
   virtual ~ridge_valley_tracker_3d_regular() {};
 
 protected:
-  bool check_simplex(const element_t& s, feature_point_t& cp) const;
-  void push_field_data_snapshot(const ndarray<float>& data);
-  
+  bool check_simplex(const element_t& s, feature_point_t& cp) const override;
+  void push_field_data_snapshot(const ndarray<float>& data) override;
+
   void simplex_scalars(
       const std::vector<std::vector<int>>& vertices,
       float scalars[3]) const;
 
-  std::vector<std::string> varnames() const { return {"residue", "discJ", "scalar"}; }
+  std::vector<std::string> varnames() const override { return {"residue", "discJ", "scalar"}; }
 };
 
 void ridge_valley_tracker_3d_regular::simplex_scalars(

@@ -379,7 +379,7 @@ void json_interface::consume_mpas(ndarray_stream<> &stream, diy::mpi::communicat
   std::shared_ptr<mpas_mesh<>> m(new mpas_mesh<>);
   m->read_netcdf(filename0);
   // auto m = simplicial_mpas_2d_mesh<>::from_file(filename0);
-  tracker.reset(new critical_point_tracker_2d_unstructured(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m)));
+  tracker = std::make_shared<critical_point_tracker_2d_unstructured>(comm, *std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m));
   
   configure_tracker_general(comm);
   tracker->initialize();
@@ -429,11 +429,11 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
     }
 
     diy::mpi::broadcast(comm, nd, get_root_proc());
-    if (nd == 2) 
-      m.reset(new simplicial_unstructured_2d_mesh<>());
-    else if (nd == 3) 
-      m.reset(new simplicial_unstructured_3d_mesh<>());
-    else 
+    if (nd == 2)
+      m = std::make_shared<simplicial_unstructured_2d_mesh<>>();
+    else if (nd == 3)
+      m = std::make_shared<simplicial_unstructured_3d_mesh<>>();
+    else
       ftk::fatal(FTK_ERR_MESH_NONSIMPLICIAL);
 
     m->from_vtu(grid);
@@ -446,12 +446,12 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
 
   if (m->nd() == 2) {
     auto m2 = std::dynamic_pointer_cast<simplicial_unstructured_2d_mesh<>>(m);
-    std::shared_ptr<simplicial_unstructured_extruded_2d_mesh_implicit<>> m3i(new simplicial_unstructured_extruded_2d_mesh_implicit<>(m2));
+    auto m3i = std::make_shared<simplicial_unstructured_extruded_2d_mesh_implicit<>>(m2);
     auto m3 = std::dynamic_pointer_cast<simplicial_unstructured_extruded_2d_mesh<>>(m3i);
 
-    tracker.reset(new critical_point_tracker_2d_unstructured(comm, m3));
-  } else 
-    tracker.reset(new critical_point_tracker_3d_unstructured(comm, std::dynamic_pointer_cast<simplicial_unstructured_3d_mesh<>>(m)));
+    tracker = std::make_shared<critical_point_tracker_2d_unstructured>(comm, m3);
+  } else
+    tracker = std::make_shared<critical_point_tracker_3d_unstructured>(comm, std::dynamic_pointer_cast<simplicial_unstructured_3d_mesh<>>(m));
   
   configure_tracker_general(comm);
   tracker->initialize();
@@ -617,10 +617,10 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
 
   std::shared_ptr<critical_point_tracker_regular> rtracker;
   if (nd == 2) {
-    rtracker.reset(new critical_point_tracker_2d_regular(comm));
+    rtracker = std::make_shared<critical_point_tracker_2d_regular>(comm);
     rtracker->set_array_domain(ftk::lattice({0, 0}, {DW, DH}));
   } else {
-    rtracker.reset(new critical_point_tracker_3d_regular(comm));
+    rtracker = std::make_shared<critical_point_tracker_3d_regular>(comm);
     rtracker->set_array_domain(ftk::lattice({0, 0, 0}, {DW, DH, DD}));
   }
 

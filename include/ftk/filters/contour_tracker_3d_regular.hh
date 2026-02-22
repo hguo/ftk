@@ -54,10 +54,10 @@ struct contour_tracker_3d_regular : public contour_tracker_regular {
 
   // int cpdims() const { return 3; }
 
-  void finalize();
-  void reset();
+  void finalize() override;
+  void reset() override;
 
-  void update_timestep();
+  void update_timestep() override;
 
 public:
   const feature_volume_t& get_isovolume() { return isovolume; }
@@ -66,13 +66,13 @@ protected:
   void build_isovolume();
 
 protected:
-  void write_isovolume_vtu(const std::string& filename) const;
+  void write_isovolume_vtu(const std::string& filename) const override;
 #if FTK_HAVE_VTK
   vtkSmartPointer<vtkUnstructuredGrid> get_isovolume_vtu() const; // legacy
 #endif
 
   // void write_sliced_vtp(const std::string& pattern) const;
-  void write_sliced_vtu(const std::string& pattern) const;
+  void write_sliced_vtu(const std::string& pattern) const override;
 
 protected:
   typedef simplicial_regular_mesh_element element_t;

@@ -20,7 +20,7 @@ struct threshold_tracker : public connected_component_tracker<TimeIndexType, Lab
     connected_component_tracker<TimeIndexType, LabelIdType>(comm) {}
   virtual ~threshold_tracker() {};
 
-  void initialize() {}
+  void initialize() override {}
 
   void set_threshold(double threshold, int mode=FTK_COMPARE_GE);
   void set_input_shape(const lattice& shape);

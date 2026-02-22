@@ -16,15 +16,15 @@ struct levy_degani_seginer_tracker_3d_regular : public critical_line_tracker_3d_
   virtual ~levy_degani_seginer_tracker_3d_regular() {};
 
 protected:
-  bool check_simplex(const element_t& s, feature_point_t& cp) const;
+  bool check_simplex(const element_t& s, feature_point_t& cp) const override;
 
   void simplex_residue_vorts(
       const std::vector<std::vector<int>>& vertices,
       float residues[3], float vorts[3][3]) const;
 
-  void push_field_data_snapshot(const ndarray<float>& data);
+  void push_field_data_snapshot(const ndarray<float>& data) override;
 
-  std::vector<std::string> varnames() const { return {"residue", "vortmag"}; }
+  std::vector<std::string> varnames() const override { return {"residue", "vortmag"}; }
 };
 
 void levy_degani_seginer_tracker_3d_regular::simplex_residue_vorts(

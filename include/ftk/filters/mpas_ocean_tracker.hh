@@ -15,7 +15,7 @@ struct mpas_ocean_tracker : public virtual tracker {
   virtual ~mpas_ocean_tracker() {}
 
 public:
-  void initialize() {}
+  void initialize() override {}
 
 protected:
   std::shared_ptr<mpas_mesh<>> m;

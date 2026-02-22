@@ -19,10 +19,10 @@ struct particle_tracer_regular : public particle_tracer, public regular_tracker
 
   virtual ~particle_tracer_regular() {}
 
-  void initialize_particles_at_grid_points(std::vector<int> strides);
+  void initialize_particles_at_grid_points(std::vector<int> strides) override;
 
 protected:
-  virtual bool eval_v(int t, const double *x, double *v, int *hint);
+  bool eval_v(int t, const double *x, double *v, int *hint) override;
 };
 
 ////

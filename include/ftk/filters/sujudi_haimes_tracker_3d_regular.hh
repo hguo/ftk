@@ -16,15 +16,15 @@ struct sujudi_haimes_tracker_3d_regular : public critical_line_tracker_3d_regula
   virtual ~sujudi_haimes_tracker_3d_regular() {};
 
 protected:
-  bool check_simplex(const element_t& s, feature_point_t& cp) const;
+  bool check_simplex(const element_t& s, feature_point_t& cp) const override;
 
   void simplex_residue_J(
       const std::vector<std::vector<int>>& vertices,
       float residues[3], float Js[3][3][3]) const;
 
-  void push_field_data_snapshot(const ndarray<float>& data);
+  void push_field_data_snapshot(const ndarray<float>& data) override;
 
-  std::vector<std::string> varnames() const { return {"residue", "discJ"}; }
+  std::vector<std::string> varnames() const override { return {"residue", "discJ"}; }
 };
 
 void sujudi_haimes_tracker_3d_regular::simplex_residue_J(

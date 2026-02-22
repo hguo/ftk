@@ -4,6 +4,7 @@
 #include <ftk/mesh/point_locator_3d.hh>
 #include <ftk/mesh/bvh3d.hh>
 #include <stack>
+#include <memory>
 
 namespace ftk {
 
@@ -13,25 +14,26 @@ struct point_locator_3d_oct : public point_locator_3d<I, F> {
     : point_locator_3d<I, F>(m) { initialize(); }
   virtual ~point_locator_3d_oct();
 
-  void initialize();
+  void initialize() override;
   // I locate(const F x[], F mu[]) const { return locate_point_recursive(x, root, mu); }
-  I locate(const F x[], F mu[]) const { return locate_point_nonrecursive(x, mu); }
+  I locate(const F x[], F mu[]) const override { return locate_point_nonrecursive(x, mu); }
 
   std::vector<bvh3d_node_t<I, F>> to_bvh() const;
 
 protected:
   struct oct_node {
     oct_node *parent = NULL;
-    oct_node *children[8] = {NULL};
+    std::unique_ptr<oct_node> children[8];
     AABB<3, F> aabb;
     std::vector<AABB<3, F>> elements; // valid only for leaf nodes
 
-    ~oct_node();
+    ~oct_node() = default;
     bool is_leaf() const { return elements.size() > 0; }
     void update_bounds();
     void subdivide();
     void print() const;
-  } *root = NULL;
+  };
+  std::unique_ptr<oct_node> root;
 
   // void subdivide_oct_node(oct_node*);
 
@@ -40,12 +42,9 @@ protected:
   I locate_point_nonrecursive(const F x[], F mu[]) const;
 };
 
-/////  
+/////
 template <typename I, typename F>
-point_locator_3d_oct<I, F>::~point_locator_3d_oct()
-{
-  delete root;
-}
+point_locator_3d_oct<I, F>::~point_locator_3d_oct() = default;
 
 template <typename I, typename F>
 I point_locator_3d_oct<I, F>::locate_point_nonrecursive(const F x[], F mu[]) const
@@ -59,7 +58,7 @@ I point_locator_3d_oct<I, F>::locate_point_nonrecursive(const F x[], F mu[]) con
   // auto t1 = clock::now();
 
   std::stack<oct_node*> S;
-  S.push(root);
+  S.push(root.get());
 
   while (!S.empty()) {
     oct_node *o = S.top();
@@ -81,8 +80,8 @@ I point_locator_3d_oct<I, F>::locate_point_nonrecursive(const F x[], F mu[]) con
       }
     } else if (o->aabb[x].IsDefined()) {
       for (int j=0; j<8; j++)
-        if (o->children[j] != NULL)
-          S.push(o->children[j]);
+        if (o->children[j])
+          S.push(o->children[j].get());
     }
   }
   
@@ -110,8 +109,8 @@ I point_locator_3d_oct<I, F>::locate_point_recursive(const F x[], const oct_node
       }
     } else {
       for (int j=0; j<8; j++) {
-        if (o->children[j] != NULL) {
-          int result = locate_point_recursive(x, o->children[j], mu);
+        if (o->children[j]) {
+          int result = locate_point_recursive(x, o->children[j].get(), mu);
           if (result >= 0) return result;
         }
       }
@@ -120,25 +119,18 @@ I point_locator_3d_oct<I, F>::locate_point_recursive(const F x[], const oct_node
   return -1;
 }
 
-template <typename I, typename F>
-point_locator_3d_oct<I, F>::oct_node::~oct_node() 
-{
-  for (int j = 0; j < 8; j ++) 
-    if (children[j])
-      delete children[j];
-}
 
 template <typename I, typename F>
 void point_locator_3d_oct<I, F>::oct_node::print() const
 {
   fprintf(stderr, "parent=%p, A={%f, %f, %f}, B={%f, %f, %f}, \
-      centroid={%f, %f, %f}, children={%p, %p, %p, %p, %p, %p, %p, %p}, element=%d\n", 
+      centroid={%f, %f, %f}, children={%p, %p, %p, %p, %p, %p, %p, %p}, element=%d\n",
       parent,
       aabb.A[0], aabb.A[1], aabb.A[2],
-      aabb.B[0], aabb.B[1], aabb.B[2], 
+      aabb.B[0], aabb.B[1], aabb.B[2],
       aabb.C[0], aabb.C[1], aabb.C[2],
-      children[0], children[1], children[2], children[3], 
-      children[4], children[5], children[6], children[7], 
+      children[0].get(), children[1].get(), children[2].get(), children[3].get(),
+      children[4].get(), children[5].get(), children[6].get(), children[7].get(),
       elements.empty() ? -1 : elements[0].id);
 }
 
@@ -167,7 +159,7 @@ void point_locator_3d_oct<I, F>::oct_node::subdivide()
 
   // fprintf(stderr, "subdividing %p, parent=%p, #elements=%zu\n", o, o->parent, o->elements.size());
   for (int j=0; j<8; j++) {
-    children[j] = new oct_node;
+    children[j] = std::make_unique<oct_node>();
     children[j]->parent = this;
   }
 
@@ -258,8 +250,7 @@ void point_locator_3d_oct<I, F>::oct_node::subdivide()
 
   for (int j=0; j<8; j++) {
     if (children[j]->elements.empty()) {
-      delete children[j];
-      children[j] = NULL;
+      children[j].reset();
     } else {
       children[j]->subdivide();
     }
@@ -287,7 +278,7 @@ void point_locator_3d_oct<I, F>::initialize()
   auto m2 = this->m2;
   const auto &coords = m2.get_coords();
   const auto &conn = m2.get_tets();
-  root = new oct_node;
+  root = std::make_unique<oct_node>();
 
   // global bounds
   AABB<3, F> &aabb = root->aabb;
@@ -380,7 +371,7 @@ void point_locator_3d_oct<I, F>::initialize()
 template <typename I, typename F>
 std::vector<bvh3d_node_t<I, F>> point_locator_3d_oct<I, F>::to_bvh() const {
   // oct_node* r, const std::vector<int> &conn, const std::vector<double> &coords) {
-  oct_node *r = root;
+  oct_node *r = root.get();
   
   std::map<oct_node*, int> node_map;
   std::map<int, oct_node*> node_reverse_map;
@@ -399,9 +390,9 @@ std::vector<bvh3d_node_t<I, F>> point_locator_3d_oct<I, F>::to_bvh() const {
     node_map[o] = nodeId;
     node_reverse_map[nodeId] = o;
 
-    for (int j=0; j<8; j++) 
-      if (o->children[j] != NULL)
-        S.push(o->children[j]);
+    for (int j=0; j<8; j++)
+      if (o->children[j])
+        S.push(o->children[j].get());
   }
 
   std::vector<bvh3d_node_t<I, F>> rd(oct_node_count);
@@ -416,8 +407,8 @@ std::vector<bvh3d_node_t<I, F>> point_locator_3d_oct<I, F>::to_bvh() const {
 
     // children
     for (int j=0; j<8; j++)
-      if (o->children[j] == NULL) d.childrenIds[j] = -1;
-      else d.childrenIds[j] = node_map[o->children[j]];
+      if (!o->children[j]) d.childrenIds[j] = -1;
+      else d.childrenIds[j] = node_map[o->children[j].get()];
 
     // bounds
     d.Ax = o->aabb.A[0];

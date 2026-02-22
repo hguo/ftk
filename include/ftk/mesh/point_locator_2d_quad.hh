@@ -4,6 +4,7 @@
 #include <ftk/mesh/point_locator_2d.hh>
 #include <ftk/mesh/bvh2d.hh>
 #include <stack>
+#include <memory>
 
 namespace ftk {
 
@@ -13,25 +14,26 @@ struct point_locator_2d_quad : public point_locator_2d<I, F> {
     : point_locator_2d<I, F>(m) { initialize(); }
   virtual ~point_locator_2d_quad();
 
-  void initialize();
+  void initialize() override;
   // I locate(const F x[], F mu[]) const { return locate_point_recursive(x, root, mu); }
-  I locate(const F x[], F mu[]) const { return locate_point_nonrecursive(x, mu); }
+  I locate(const F x[], F mu[]) const override { return locate_point_nonrecursive(x, mu); }
 
   std::vector<bvh2d_node_t<I, F>> to_bvh() const;
 
 protected:
   struct quad_node {
     quad_node *parent = NULL;
-    quad_node *children[4] = {NULL};
+    std::unique_ptr<quad_node> children[4];
     AABB<2, F> aabb;
     std::vector<AABB<2, F>> elements; // valid only for leaf nodes
 
-    ~quad_node();
+    ~quad_node() = default;
     bool is_leaf() const { return elements.size() > 0; }
     void update_bounds();
     void subdivide();
     void print() const;
-  } *root = NULL;
+  };
+  std::unique_ptr<quad_node> root;
 
   // void subdivide_quad_node(quad_node*);
 
@@ -40,12 +42,9 @@ protected:
   I locate_point_nonrecursive(const F x[], F mu[]) const;
 };
 
-/////  
+/////
 template <typename I, typename F>
-point_locator_2d_quad<I, F>::~point_locator_2d_quad()
-{
-  delete root;
-}
+point_locator_2d_quad<I, F>::~point_locator_2d_quad() = default;
 
 template <typename I, typename F>
 I point_locator_2d_quad<I, F>::locate_point_nonrecursive(const F x[], F mu[]) const
@@ -59,7 +58,7 @@ I point_locator_2d_quad<I, F>::locate_point_nonrecursive(const F x[], F mu[]) co
   // auto t1 = clock::now();
 
   std::stack<quad_node*> S;
-  S.push(root);
+  S.push(root.get());
 
   while (!S.empty()) {
     quad_node *q = S.top();
@@ -80,8 +79,8 @@ I point_locator_2d_quad<I, F>::locate_point_nonrecursive(const F x[], F mu[]) co
       }
     } else if (q->aabb[x].IsDefined()) {
       for (int j=0; j<4; j++)
-        if (q->children[j] != NULL)
-          S.push(q->children[j]);
+        if (q->children[j])
+          S.push(q->children[j].get());
     }
   }
   
@@ -108,8 +107,8 @@ I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], const quad_no
       }
     } else {
       for (int j=0; j<4; j++) {
-        if (q->children[j] != NULL) {
-          int result = locate_point_recursive(x, q->children[j], mu);
+        if (q->children[j]) {
+          int result = locate_point_recursive(x, q->children[j].get(), mu);
           if (result >= 0) return result;
         }
       }
@@ -118,20 +117,13 @@ I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], const quad_no
   return -1;
 }
 
-template <typename I, typename F>
-point_locator_2d_quad<I, F>::quad_node::~quad_node() 
-{
-  for (int j = 0; j < 4; j ++) 
-    if (children[j])
-      delete children[j];
-}
 
 template <typename I, typename F>
 void point_locator_2d_quad<I, F>::quad_node::print() const
 {
-  fprintf(stderr, "parent=%p, A={%f, %f}, B={%f, %f}, centroid={%f, %f}, children={%p, %p, %p, %p}, element=%d\n", 
-      parent, aabb.A[0], aabb.A[1], aabb.B[0], aabb.B[1], aabb.C[0], aabb.C[1], 
-      children[0], children[1], children[2], children[3], 
+  fprintf(stderr, "parent=%p, A={%f, %f}, B={%f, %f}, centroid={%f, %f}, children={%p, %p, %p, %p}, element=%d\n",
+      parent, aabb.A[0], aabb.A[1], aabb.B[0], aabb.B[1], aabb.C[0], aabb.C[1],
+      children[0].get(), children[1].get(), children[2].get(), children[3].get(),
       elements.empty() ? -1 : elements[0].id);
 }
 
@@ -158,7 +150,7 @@ void point_locator_2d_quad<I, F>::quad_node::subdivide()
 
   // fprintf(stderr, "subdividing %p, parent=%p, #elements=%zu\n", q, q->parent, q->elements.size());
   for (int j=0; j<4; j++) {
-    children[j] = new quad_node;
+    children[j] = std::make_unique<quad_node>();
     children[j]->parent = this;
   }
 
@@ -205,8 +197,7 @@ void point_locator_2d_quad<I, F>::quad_node::subdivide()
 
   for (int j=0; j<4; j++) {
     if (children[j]->elements.empty()) {
-      delete children[j];
-      children[j] = NULL;
+      children[j].reset();
     } else {
       children[j]->subdivide();
     }
@@ -231,7 +222,7 @@ void point_locator_2d_quad<I, F>::initialize()
   auto m2 = this->m2;
   const auto &coords = m2.get_coords();
   const auto &conn = m2.get_triangles();
-  root = new quad_node;
+  root = std::make_unique<quad_node>();
 
   // global bounds
   AABB<2, F> &aabb = root->aabb;
@@ -313,7 +304,7 @@ void point_locator_2d_quad<I, F>::initialize()
 template <typename I, typename F>
 std::vector<bvh2d_node_t<I, F>> point_locator_2d_quad<I, F>::to_bvh() const {
   // quad_node* r, const std::vector<int> &conn, const std::vector<double> &coords) {
-  quad_node *r = root;
+  quad_node *r = root.get();
   
   std::map<quad_node*, int> node_map;
   std::map<int, quad_node*> node_reverse_map;
@@ -332,9 +323,9 @@ std::vector<bvh2d_node_t<I, F>> point_locator_2d_quad<I, F>::to_bvh() const {
     node_map[q] = nodeId;
     node_reverse_map[nodeId] = q;
 
-    for (int j=0; j<4; j++) 
-      if (q->children[j] != NULL)
-        S.push(q->children[j]);
+    for (int j=0; j<4; j++)
+      if (q->children[j])
+        S.push(q->children[j].get());
   }
 
   std::vector<bvh2d_node_t<I, F>> rd(quad_node_count);
@@ -349,8 +340,8 @@ std::vector<bvh2d_node_t<I, F>> point_locator_2d_quad<I, F>::to_bvh() const {
 
     // children
     for (int j=0; j<4; j++)
-      if (q->children[j] == NULL) d.childrenIds[j] = -1;
-      else d.childrenIds[j] = node_map[q->children[j]];
+      if (!q->children[j]) d.childrenIds[j] = -1;
+      else d.childrenIds[j] = node_map[q->children[j].get()];
 
     // bounds
     d.Ax = q->aabb.A[0];

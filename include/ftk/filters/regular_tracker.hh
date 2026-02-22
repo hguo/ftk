@@ -27,7 +27,7 @@ public:
   void set_local_domain(const lattice&); // rank-specific "core" region of the block
   void set_local_array_domain(const lattice&); // rank-specific "ext" region of the block
 
-  void initialize();
+  void initialize() override;
 
   lattice get_local_array_domain() const { return local_array_domain; }
   

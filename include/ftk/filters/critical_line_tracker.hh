@@ -19,17 +19,17 @@ struct critical_line_tracker : public virtual tracker {
   critical_line_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
   // int cpdims() const { return 3; }
-  
-  virtual void update() {}; 
-  void reset() {
+
+  void update() override {};
+  void reset() override {
     field_data_snapshots.clear();
   }
-  
-public:
-  bool advance_timestep();
 
 public:
-  bool pop_field_data_snapshot();
+  bool advance_timestep() override;
+
+public:
+  bool pop_field_data_snapshot() override;
   virtual void push_field_data_snapshot(const ndarray<float> &uv);
 
   virtual void write_intersections(const std::string& filename) const;

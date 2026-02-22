@@ -13,10 +13,10 @@ struct connected_component_tracker : public tracker
   connected_component_tracker(diy::mpi::communicator comm) : tracker(comm) {}
   virtual ~connected_component_tracker() {};
 
-  virtual bool advance_timestep();
-  virtual void update_timestep();
-  void update() {};
-  void finalize();
+  bool advance_timestep() override;
+  void update_timestep() override;
+  void update() override {};
+  void finalize() override;
 
   virtual void push_labeled_data_snapshot(const std::vector<LabelIdType>& labels);
   const std::vector<LabelIdType>& get_last_labeled_data_snapshot() const {return labeled_data_snapshots.back();}
