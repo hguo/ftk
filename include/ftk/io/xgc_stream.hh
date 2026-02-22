@@ -3,13 +3,13 @@
 
 #include <ftk/object.hh>
 #include <ndarray/ndarray.hh>
-#include <ftk/external/json.hh>
+#include <yaml-cpp/yaml.h>
 #include <ndarray/ndarray_group.hh>
 #include <ftk/mesh/simplicial_xgc_2d_mesh.hh>
 #include <ftk/mesh/simplicial_xgc_3d_mesh.hh>
 
 namespace ftk {
-using nlohmann::json;
+using json = YAML::Node;
 
 // step: time index in the simulation
 // timestep: index of all available steps
@@ -32,9 +32,9 @@ struct xgc_stream : public object {
   void set_smoothing_kernel_filename(const std::string f) { smoothing_kernel_filename = f; }
   void set_interpolant_filename(const std::string f) { interpolant_filename = f; }
 
-  void set_callback(std::function<void(int, std::shared_ptr<ndarray_group>)> f) { callback = f; }
+  void set_callback(std::function<void(int, std::shared_ptr<ndarray_group<>>)> f) { callback = f; }
 
-  virtual std::shared_ptr<ndarray_group> request_step(int i) = 0;
+  virtual std::shared_ptr<ndarray_group<>> request_step(int i) = 0;
 
   virtual bool read_oneddiag() = 0;
   virtual bool advance_timestep() = 0;
@@ -89,7 +89,7 @@ protected:
   std::shared_ptr<simplicial_xgc_2d_mesh<>> m2;
   std::shared_ptr<simplicial_xgc_3d_mesh<>> m3, mx3;
 
-  std::function<void(int, std::shared_ptr<ndarray_group>)> callback;
+  std::function<void(int, std::shared_ptr<ndarray_group<>>)> callback;
 };
 
 /////

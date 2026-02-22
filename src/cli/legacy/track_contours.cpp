@@ -86,8 +86,8 @@ int parse_arguments(int argc, char **argv)
   const auto js = stream.get_json();
   const size_t nd = stream.n_dimensions(),
                DW = js["dimensions"][0], 
-               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
-               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].as<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].as<int>() : 0;
   const int nt = js["n_timesteps"];
 
   ftk::contour_tracker_regular *tracker;

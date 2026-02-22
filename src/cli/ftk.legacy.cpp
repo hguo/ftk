@@ -262,8 +262,8 @@ void initialize_contour_tracker(diy::mpi::communicator comm)
   const auto js = stream->get_json();
   const size_t nd = stream->n_dimensions(),
                DW = js["dimensions"][0], 
-               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
-               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].as<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].as<int>() : 0;
   const int nt = js["n_timesteps"];
 
   if (DD == 0) {
@@ -644,8 +644,8 @@ void initialize_particle_tracer(diy::mpi::communicator comm)
   const auto js = stream->get_json();
   const size_t nd = stream->n_dimensions(),
                DW = js["dimensions"][0], 
-               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
-               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].as<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].as<int>() : 0;
   const int nt = js["n_timesteps"];
   // const int nd = DD == 0 ? 2 : 3;
 
@@ -696,8 +696,8 @@ void initialize_critical_line_tracker(diy::mpi::communicator comm)
   } else { // regular
     const size_t nd = stream->n_dimensions(),
                  DW = js["dimensions"][0], 
-                 DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
-                 DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0;
+                 DH = js["dimensions"].size() > 1 ? js["dimensions"][1].as<int>() : 0,
+                 DD = js["dimensions"].size() > 2 ? js["dimensions"][2].as<int>() : 0;
     const int nt = js["n_timesteps"];
 
     if (feature == "sujudi_haimes")
@@ -819,7 +819,7 @@ void execute_tdgl_tracker(diy::mpi::communicator comm)
 /////////////////
 static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& results)
 {
-  using nlohmann::json;
+  using json = YAML::Node;
   json j;
 
   if (results.count("input")) {
@@ -829,7 +829,7 @@ static inline nlohmann::json args_to_input_stream_json(cxxopts::ParseResult& res
       std::string str((std::istreambuf_iterator<char>(t)),
                        std::istreambuf_iterator<char>());
       t.close();
-      return json::parse(str);
+      return YAML::Load(str);
     }
     else 
       j["filenames"] = results["input"].as<std::string>();

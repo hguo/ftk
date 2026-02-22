@@ -429,40 +429,48 @@ inline void feature_curve_t::derive_velocity() // const std::vector<double> &ker
 } // namespace ftk
 
 
-// serialization w/ json
-namespace nlohmann
-{
+// serialization w/ yaml-cpp
+namespace YAML {
   using namespace ftk;
   template <>
-  struct adl_serializer<feature_curve_t> {
-    static void to_json(json &j, const feature_curve_t& t) {
-      j = {
-        {"id", t.id},
-        {"max", t.max},
-        {"min", t.min},
-        {"persistence", t.persistence},
-        {"bbmin", t.bbmin},
-        {"bbmax", t.bbmax},
-        {"tmin", t.tmin},
-        {"tmax", t.tmax},
-        {"consistent_type", t.consistent_type},
-        {"traj", static_cast<std::vector<feature_point_t>>(t)}
-      };
+  struct convert<feature_curve_t> {
+    static Node encode(const feature_curve_t& t) {
+      Node node;
+      node["id"] = t.id;
+      node["max"] = std::vector<double>(t.max.begin(), t.max.end());
+      node["min"] = std::vector<double>(t.min.begin(), t.min.end());
+      node["persistence"] = std::vector<double>(t.persistence.begin(), t.persistence.end());
+      node["bbmin"] = std::vector<double>(t.bbmin.begin(), t.bbmin.end());
+      node["bbmax"] = std::vector<double>(t.bbmax.begin(), t.bbmax.end());
+      node["tmin"] = t.tmin;
+      node["tmax"] = t.tmax;
+      node["consistent_type"] = t.consistent_type;
+      for (const auto& p : static_cast<std::vector<feature_point_t>>(t)) {
+        node["traj"].push_back(p);
+      }
+      return node;
     }
 
-    static void from_json(const json&j, feature_curve_t& t) {
-      t.id = j["id"];
-      t.max = j["max"];
-      t.min = j["min"];
-      t.persistence = j["persistence"];
-      t.bbmin = j["bbmin"];
-      t.bbmax = j["bbmax"];
-      t.tmin = j["tmin"];
-      t.tmax = j["tmax"];
-      t.consistent_type = j["consistent_type"];
-      std::vector<feature_point_t> traj = j["traj"];
+    static bool decode(const Node& node, feature_curve_t& t) {
+      if(!node.IsMap()) return false;
+      t.id = node["id"].as<size_t>();
+      auto max_vec = node["max"].as<std::vector<double>>();
+      std::copy_n(max_vec.begin(), std::min(max_vec.size(), t.max.size()), t.max.begin());
+      auto min_vec = node["min"].as<std::vector<double>>();
+      std::copy_n(min_vec.begin(), std::min(min_vec.size(), t.min.size()), t.min.begin());
+      auto persistence_vec = node["persistence"].as<std::vector<double>>();
+      std::copy_n(persistence_vec.begin(), std::min(persistence_vec.size(), t.persistence.size()), t.persistence.begin());
+      auto bbmin_vec = node["bbmin"].as<std::vector<double>>();
+      std::copy_n(bbmin_vec.begin(), std::min(bbmin_vec.size(), t.bbmin.size()), t.bbmin.begin());
+      auto bbmax_vec = node["bbmax"].as<std::vector<double>>();
+      std::copy_n(bbmax_vec.begin(), std::min(bbmax_vec.size(), t.bbmax.size()), t.bbmax.begin());
+      t.tmin = node["tmin"].as<double>();
+      t.tmax = node["tmax"].as<double>();
+      t.consistent_type = node["consistent_type"].as<int>();
+      std::vector<feature_point_t> traj = node["traj"].as<std::vector<feature_point_t>>();
       t.clear();
       t.insert(t.begin(), traj.begin(), traj.end());
+      return true;
     }
   };
 }

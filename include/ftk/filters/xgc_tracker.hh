@@ -32,7 +32,7 @@ public:
   void initialize_ff_mesh(const std::string& filename) { mf3.reset(new simplicial_xgc_3dff_mesh<>(m2, m3->get_nphi(), m3->get_iphi(), m3->get_vphi()) ); mf3->initialize_ff_mesh(filename); }
 
 public:
-  virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group>);
+  virtual void push_field_data_snapshot(std::shared_ptr<ndarray_group<>>);
   virtual void push_field_data_snapshot(const ndarray<double> &scalar);
   virtual void push_field_data_snapshot(
       const ndarray<double> &scalar, 
@@ -86,7 +86,7 @@ xgc_tracker::xgc_tracker(
   mr4.reset(new simplicial_unstructured_extruded_3d_mesh<>(mr3));
 }
 
-inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group> g) 
+inline void xgc_tracker::push_field_data_snapshot(std::shared_ptr<ndarray_group<>> g) 
 {
   field_data_snapshot_t s;
   

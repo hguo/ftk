@@ -6,11 +6,11 @@
 #include <ftk/features/mpas_particle.hh>
 // #include <ftk/numeric/critical_point_type.hh>
 #include <ftk/external/diy/serialization.hpp>
-#include <ftk/external/json.hh>
+#include <yaml-cpp/yaml.h>
 
 namespace ftk {
 
-using nlohmann::json;
+using json = YAML::Node;
 
 // template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
 struct feature_point_t {
@@ -147,37 +147,43 @@ public:
 
 }
 
-// serialization w/ json
-namespace nlohmann
-{
+// serialization w/ yaml-cpp
+namespace YAML {
   using namespace ftk;
 
-  template <>
-  struct adl_serializer<feature_point_t> {
-    static void to_json(json &j, const feature_point_t& cp) {
-      j["x"] = cp.x; 
-      j["t"] = cp.t;
-      // j["cond"] = cp.cond;
-      j["timestep"] = cp.timestep;
-      j["scalar"] = cp.scalar; 
-      j["v"] = cp.v;
-      j["type"] = cp.type;
-      j["ordinal"] = cp.ordinal;
-      j["tag"] = cp.tag;
-      j["id"] = cp.id;
+  template<>
+  struct convert<feature_point_t> {
+    static Node encode(const feature_point_t& cp) {
+      Node node;
+      node["x"] = cp.x;
+      node["t"] = cp.t;
+      // node["cond"] = cp.cond;
+      node["timestep"] = cp.timestep;
+      node["scalar"] = cp.scalar;
+      node["v"] = cp.v;
+      node["type"] = cp.type;
+      node["ordinal"] = cp.ordinal;
+      node["tag"] = cp.tag;
+      node["id"] = cp.id;
+      return node;
     }
 
-    static void from_json(const json& j,feature_point_t& cp) {
-      cp.x = j["x"];  
-      cp.t = j["t"];
-      // cp.cond = j["cond"];
-      cp.timestep = j["timestep"];
-      cp.scalar = j["scalar"];  
-      cp.v = j["v"];
-      cp.type = j["type"];
-      cp.ordinal = j["ordinal"];
-      cp.tag = j["tag"];
-      cp.id = j["id"];
+    static bool decode(const Node& node, feature_point_t& cp) {
+      if(!node.IsMap()) return false;
+      auto x_vec = node["x"].as<std::vector<double>>();
+      std::copy_n(x_vec.begin(), std::min(x_vec.size(), cp.x.size()), cp.x.begin());
+      cp.t = node["t"].as<double>();
+      // cp.cond = node["cond"].as<bool>();
+      cp.timestep = node["timestep"].as<int>();
+      auto scalar_vec = node["scalar"].as<std::vector<double>>();
+      std::copy_n(scalar_vec.begin(), std::min(scalar_vec.size(), cp.scalar.size()), cp.scalar.begin());
+      auto v_vec = node["v"].as<std::vector<double>>();
+      std::copy_n(v_vec.begin(), std::min(v_vec.size(), cp.v.size()), cp.v.begin());
+      cp.type = node["type"].as<int>();
+      cp.ordinal = node["ordinal"].as<size_t>();
+      cp.tag = node["tag"].as<unsigned long long>();
+      cp.id = node["id"].as<unsigned long long>();
+      return true;
     }
   };
 }

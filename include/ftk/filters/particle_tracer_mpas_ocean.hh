@@ -46,7 +46,7 @@ struct particle_tracer_mpas_ocean : public particle_tracer, public mpas_ocean_tr
 
   static constexpr double earth_radius = 6371229.0;
 
-  void push_field_data_snapshot(std::shared_ptr<ndarray_group> g);
+  void push_field_data_snapshot(std::shared_ptr<ndarray_group<>> g);
   void prepare_timestep();
   void update_timestep();
 
@@ -237,7 +237,7 @@ inline void particle_tracer_mpas_ocean::load_particles_cuda()
 
   mop_load_particles(ctx, particles.size(), particles.data());
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
 #endif
 }
 
@@ -316,7 +316,7 @@ inline void particle_tracer_mpas_ocean::update_timestep()
     particle_tracer::update_timestep();
 }
 
-inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr<ndarray_group> g)
+inline void particle_tracer_mpas_ocean::push_field_data_snapshot(std::shared_ptr<ndarray_group<>> g)
 {
   // figure out preceision
   bool prec_var = true;

@@ -2,27 +2,30 @@
 #define _DIYEXT_BCAST_HH
 
 #include <ftk/external/diy/mpi.hpp>
-#include <ftk/external/json.hh>
+#include <yaml-cpp/yaml.h>
 #include <ftk/utils/serialization.hh>
 #include <numeric>
 
 namespace diy { namespace mpi {
 
-using nlohmann::json;
+using json = YAML::Node;
 
 inline void bcastj(const communicator& comm, json& j, int root = 0)
 {
   if (comm.size() == 1) return;
 
-  std::vector<std::uint8_t> bson;
+  std::string yaml_str;
 
-  if (comm.rank() == root)
-    bson = json::to_bson(j);
+  if (comm.rank() == root) {
+    YAML::Emitter emitter;
+    emitter << j;
+    yaml_str = emitter.c_str();
+  }
 
-  diy::mpi::broadcast(comm, bson, root);
+  diy::mpi::broadcast(comm, yaml_str, root);
 
   if (comm.rank() != root)
-    j = json::from_bson(bson);
+    j = YAML::Load(yaml_str);
 }
 
 template <typename Obj>

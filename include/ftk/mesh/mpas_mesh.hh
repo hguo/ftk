@@ -13,7 +13,7 @@ namespace ftk {
 
 template <typename I=int, typename F=double>
 struct mpas_mesh { // : public simplicial_unstructured_2d_mesh<I, F> {
-  mpas_mesh(std::shared_ptr<ndarray_group> g);
+  mpas_mesh(std::shared_ptr<ndarray_group<>> g);
 
   void read_netcdf(const std::string filename, diy::mpi::communicator comm = MPI_COMM_WORLD);
   void initialize();
@@ -421,7 +421,7 @@ void mpas_mesh<I, F>::initialize_coeffs_reconstruct()
 }
 
 template <typename I, typename F>
-mpas_mesh<I, F>::mpas_mesh(std::shared_ptr<ndarray_group> g)
+mpas_mesh<I, F>::mpas_mesh(std::shared_ptr<ndarray_group<>> g)
 {
   // initialize the mesh directly from the array group
 
@@ -671,7 +671,7 @@ void mpas_mesh<I, F>::read_netcdf(const std::string filename, diy::mpi::communic
   // return std::shared_ptr<mpas_mesh<I, F>>(
   //     new mpas_mesh<I, F>(xyz, conn));
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
@@ -728,7 +728,7 @@ void mpas_mesh<I, F>::surface_cells_to_vtu(const std::string filename, const std
   writer->SetInputData( grid );
   writer->Write();
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 

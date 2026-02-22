@@ -72,19 +72,24 @@ protected:
 
 }
 
-namespace nlohmann
-{
+namespace YAML {
   using namespace ftk;
   template <>
-  struct adl_serializer<feature_curve_set_t> {
-    static void to_json(json& j, const feature_curve_set_t& s) {
-      j = {{"trajs", s.to_list()}};
+  struct convert<feature_curve_set_t> {
+    static Node encode(const feature_curve_set_t& s) {
+      Node node;
+      for (const auto& t : s.to_list()) {
+        node["trajs"].push_back(t);
+      }
+      return node;
     }
-   
+
     // TODO FIXME: json i/o w/ multimap has problem...
-    static void from_json(const json&j, feature_curve_set_t& s) {
-      std::list<feature_curve_t> list = j["trajs"];
+    static bool decode(const Node& node, feature_curve_set_t& s) {
+      if(!node.IsMap()) return false;
+      std::list<feature_curve_t> list = node["trajs"].as<std::list<feature_curve_t>>();
       s.from_list(list);
+      return true;
     }
   };
 }

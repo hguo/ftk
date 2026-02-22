@@ -71,7 +71,7 @@ struct disjoint_intervals {
 
   bool contains(T x) const {
     for (const auto &I : subintervals())
-      if (I.contains(x)) return true;
+      if (I[x].IsDefined()) return true;
     return false;
   }
 

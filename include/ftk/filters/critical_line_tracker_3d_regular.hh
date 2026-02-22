@@ -466,7 +466,7 @@ inline void critical_line_tracker_3d_regular::write_sliced(const std::string& pa
     }
   }
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 

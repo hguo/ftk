@@ -87,7 +87,7 @@ struct object {
       for (size_t j = 0; j < ntasks; j ++)
         f(j);
 #else
-      fatal(FTK_ERR_NOT_BUILT_WITH_OPENMP);
+      ftk::fatal(FTK_ERR_NOT_BUILT_WITH_OPENMP);
 #endif
     } else if (thread_backend == FTK_THREAD_TBB) {
 #if FTK_HAVE_TBB
@@ -98,10 +98,10 @@ struct object {
               f(i);
           });
 #else
-      fatal(FTK_ERR_NOT_BUILT_WITH_TBB);
+      ftk::fatal(FTK_ERR_NOT_BUILT_WITH_TBB);
 #endif
     } else 
-      fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
+      ftk::fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
   }
 
   template <typename T, typename Container=std::set<T>>

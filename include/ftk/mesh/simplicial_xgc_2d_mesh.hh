@@ -354,7 +354,7 @@ void simplicial_xgc_2d_mesh<I, F>::read_bfield(const std::string& filename, diy:
   auto ext = file_extension(filename);
   if (ext == FILE_EXT_BP) bfield.read_bp(filename, "/node_data[0]/values", -1, comm);
   else if (ext == FILE_EXT_HDF5) bfield.read_h5(filename, "/node_data[0]/values");
-  else fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
+  else ftk::fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
 
   bfield.set_multicomponents();
   // derive_bfield0();
@@ -442,7 +442,7 @@ std::shared_ptr<simplicial_xgc_2d_mesh<I, F>> simplicial_xgc_2d_mesh<I, F>::from
   if (ext == FILE_EXT_BP) return from_xgc_mesh_bp(filename, comm);
   else if (ext == FILE_EXT_HDF5) return from_xgc_mesh_h5(filename);
   else {
-    fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
+    ftk::fatal(FTK_ERR_FILE_UNRECOGNIZED_EXTENSION);
     return NULL;
   }
 }

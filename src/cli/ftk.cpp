@@ -134,7 +134,7 @@ static void fatal(const cxxopts::Options &options, const std::string& str) {
 };
  
 // input stream
-std::shared_ptr<ftk::stream> stream;
+std::shared_ptr<ftk::stream<>> stream;
 
 // trackers
 std::shared_ptr<ftk::particle_tracer_mpas_ocean> tracker_particle_mpas_ocean;

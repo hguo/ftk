@@ -1,13 +1,13 @@
 #ifndef _FTK_REGULAR_DATA_FEED_HH
 #define _FTK_REGULAR_DATA_FEED_HH
 
-#include <ftk/ndarray.hh>
+#include <ndarray/ndarray.hh>
 #include <ftk/io/data_group.hh>
-#include <ftk/external/json.hh>
+#include <yaml-cpp/yaml.h>
 
 namespace ftk {
 
-using nlohmann::json;
+using json = YAML::Node;
 
 enum {
   SYNTHETIC_NONE,
@@ -64,12 +64,12 @@ void data_stream::initialize()
 {
   std::cerr << j << std::endl;
 
-  if (j.contains("type")) {
+  if (j["type"].IsDefined()) {
     if (j["type"] == "synthetic") {
-      if (j.contains("name")) {
+      if (j["name"].IsDefined()) {
         if (j["name"] == "woven") {
           j["nd"] = 2;
-          if (!j.contains("scaling_factor")) j["scalaring_factor"] = 15.0;
+          if (!j["scaling_factor"].IsDefined()) j["scalaring_factor"] = 15.0;
         } else if (j["name"] == "double_gyre") {
           j["nd"] = 2;
         } else if (j["name"] == "merger") {
@@ -79,58 +79,58 @@ void data_stream::initialize()
      
 #if 0
       // default dimensions
-      if (j.contains("width")) assert(j["width"] != 0);
+      if (j["width"].IsDefined()) assert(j["width"] != 0);
       else j["width"] = 32;
       
-      if (j.contains("height")) assert(j["height"] != 0);
+      if (j["height"].IsDefined()) assert(j["height"] != 0);
       else j["height"] = 32;
         
       if (j["nd"] == 3) {
-        if (j.contains("depth")) assert(j["depth"] != 0);
+        if (j["depth"].IsDefined()) assert(j["depth"] != 0);
         else j["depth"] = 32;
       }
 #endif
 
-      if (j.contains("n_timesteps")) assert(j["n_timesteps"] != 0);
+      if (j["n_timesteps"].IsDefined()) assert(j["n_timesteps"] != 0);
       else j["n_timesteps"] = 32;
     } else if (j["type"] == "file") {
-      if (j.contains("filenames")) {
-        if (!j["filenames"].is_array()) {
+      if (j["filenames"].IsDefined()) {
+        if (!j["filenames"].IsSequence()) {
           auto filenames = ftk::ndarray<double>::glob(j["filenames"]);
           if (filenames.empty()) fatal("unable to find matching filename(s).");
-          if (j.contains("n_timesteps")) filenames.resize(j["n_timesteps"]);
+          if (j["n_timesteps"].IsDefined()) filenames.resize(j["n_timesteps"]);
           else j["n_timesteps"] = filenames.size();
           j["filenames"] = filenames;
         }
         const std::string filename0 = j["filenames"][0];
 
-        if (!j.contains("format")) { // probing file format
+        if (!j["format"].IsDefined()) { // probing file format
           if (ends_with(filename0, "vti")) j["format"] = "vti";
           else if (ends_with(filename0, "nc")) j["format"] = "nc";
           else if (ends_with(filename0, "h5")) j["format"] = "h5";
           else fatal("unabled to determine file format.");
         }
         
-        if (j.contains("variables")) { // sanity check of variables
-          if (j["variables"].is_array()) {
+        if (j["variables"].IsDefined()) { // sanity check of variables
+          if (j["variables"].IsSequence()) {
             for (const auto &v : j["variables"]) {
-              if (!v.contains("name")) fatal("missing variable name");
-              if (!v["name"].is_string()) fatal("invalid variable name");
-              if (!v.contains("components")) fatal("missing variable component list");
-              if (!v["components"].is_array()) fatal("variable components must be in an array");
+              if (!v["name"].IsDefined()) fatal("missing variable name");
+              if (!v["name"].IsScalar()) fatal("invalid variable name");
+              if (!v["components"].IsDefined()) fatal("missing variable component list");
+              if (!v["components"].IsSequence()) fatal("variable components must be in an array");
               for (const auto &c : j["components"])
-                if (!c.is_string()) fatal("invalid variable component");
+                if (!c.IsScalar()) fatal("invalid variable component");
             }
           } else fatal("variables must be an array");
         } else fatal("missing variable list");
 
         if (j["format"] == "float32" || j["format"] == "float64") {
-          if (j.contains("nd")) {
+          if (j["nd"].IsDefined()) {
             if (j["nd"] != 2 && j["nd"] != 3) fatal("unsupported spatial dimensionality");
           } else fatal("unable to determine spatial dimensionality");
 
-          // if ((j["nd"] == 2 && ((!j.contains("width") || !j.contains("height")))) || 
-          //     (j["nd"] == 3 && ((!j.contains("width") || !j.contains("height") || !j.contains("depth")))))
+          // if ((j["nd"] == 2 && ((!j["width"].IsDefined() || !j["height"].IsDefined()))) || 
+          //     (j["nd"] == 3 && ((!j["width"].IsDefined() || !j["height"].IsDefined() || !j["depth"].IsDefined()))))
           //   fatal("width, height, and/or depth not specified.");
         } else if (j["format"] == "vti") {
 
@@ -145,12 +145,12 @@ void data_stream::initialize()
   } else fatal("missing `type'");
 
 #if 0
-  if (j.contains("synthetic")) {
-    if (j.contains("nd")) warn("overriding nd.");
+  if (j["synthetic"].IsDefined()) {
+    if (j["nd"].IsDefined()) warn("overriding nd.");
 
   } else {
     } else {
-      if (!j.contains("input_source")) fatal("input_source empty.");
+      if (!j["input_source"].IsDefined()) fatal("input_source empty.");
       
     }
       

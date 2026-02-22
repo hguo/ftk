@@ -16,7 +16,7 @@
 diy::mpi::environment env;
 diy::mpi::communicator world;
 
-using nlohmann::json;
+using json = YAML::Node;
 
 std::string output_filename_pattern,
   output_format,

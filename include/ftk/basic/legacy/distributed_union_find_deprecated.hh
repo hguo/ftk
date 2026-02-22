@@ -984,10 +984,10 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
       // int total_changes;
       // for (int i = 0; i < master.size(); i++)
-      //     total_changes = master.proxy(i).get<size_t>();
+      //     total_changes = master.proxy(i).as<size_t>();
 
       int total_changes = master.proxy(master.loaded_block()).read<int>();
-      // int total_changes = master.proxy(master.loaded_block()).get<int>();
+      // int total_changes = master.proxy(master.loaded_block()).as<int>();
 
       if(ISDEBUG) {
         std::cout<<total_changes<<std::endl; 

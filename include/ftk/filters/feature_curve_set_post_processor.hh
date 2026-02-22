@@ -66,7 +66,7 @@ inline void feature_curve_set_post_processor_t::filter(feature_curve_set_t &traj
         t.update_statistics();
       });
     } else 
-      fatal(FTK_ERR_UNKNOWN_OPTIONS);
+      ftk::fatal(FTK_ERR_UNKNOWN_OPTIONS);
   }
 }
 

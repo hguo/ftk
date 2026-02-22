@@ -94,7 +94,7 @@ inline void critical_line_tracker::write_intersections(const std::string& filena
   if (comm.rank() == get_root_proc())
     write_polydata(filename, get_intersections_vtp());
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 

@@ -4,7 +4,7 @@
 // #include <ftk/io/xgc_stream.hh>
 
 namespace ftk {
-using nlohmann::json;
+using json = YAML::Node;
 
 struct xgc_stream_h5 : public xgc_stream
 {
@@ -12,7 +12,7 @@ struct xgc_stream_h5 : public xgc_stream
   
   std::string postfix() const { return ".h5"; }
   
-  std::shared_ptr<ndarray_group> request_step(int step) { return NULL; } // TODO
+  std::shared_ptr<ndarray_group<>> request_step(int step) { return NULL; } // TODO
 
   bool read_oneddiag();
   bool advance_timestep();
@@ -36,7 +36,7 @@ inline bool xgc_stream_h5::read_oneddiag()
 
 inline bool xgc_stream_h5::advance_timestep()
 {
-  std::shared_ptr<ndarray_group> g(new ndarray_group);
+  std::shared_ptr<ndarray_group<>> g(new ndarray_group<>);
 
   if (current_timestep >= start_timestep + ntimesteps)
     return false;

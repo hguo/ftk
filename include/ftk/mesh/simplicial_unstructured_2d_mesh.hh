@@ -775,7 +775,7 @@ void simplicial_unstructured_2d_mesh<I, F>::from_vtu(const std::string filename)
   vtkSmartPointer<vtkUnstructuredGrid> grid = reader->GetOutput();
   from_vtu(grid);
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -851,7 +851,7 @@ void simplicial_unstructured_2d_mesh<I, F>::to_vtu(const std::string& filename) 
   writer->SetInputData( grid );
   writer->Write();
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -875,7 +875,7 @@ void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(
   writer->SetInputData( grid );
   writer->Write();
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -895,7 +895,7 @@ void simplicial_unstructured_2d_mesh<I, F>::array_to_vtu(const std::string& file
   writer->SetInputData( grid );
   writer->Write();
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -1124,7 +1124,7 @@ std::shared_ptr<simplicial_unstructured_2d_mesh<I, F>> simplicial_unstructured_2
     reader->Update();
     m->from_vtu( reader->GetOutput() );
 #else
-    fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+    ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
   } else {
     diy::unserializeFromFile(filename, *m);

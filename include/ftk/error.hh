@@ -59,7 +59,7 @@ enum {
   FTK_ERR_UNKNOWN_OPTIONS = 10000
 };
 
-inline std::string err2str(int e)
+static inline std::string ftk_err2str(int e)
 {
   switch (e) {
   case FTK_ERR_NOT_IMPLEMENTED: return "not implemented yet";
@@ -113,7 +113,7 @@ inline std::string err2str(int e)
   }
 }
 
-inline void print_backtrace()
+static inline void ftk_print_backtrace()
 {
   void *array[10];
   size_t size;
@@ -131,31 +131,31 @@ inline void print_backtrace()
   free (strings);
 }
 
-inline void fatal(int err, std::string str = "")
+inline void ftk_fatal(int err, const std::string& str = "")
 {
-  std::cerr << "[FTK FATAL] " << err2str(err);
+  std::cerr << "[FTK FATAL] " << ftk_err2str(err);
   if (str.length()) std::cerr << ": " << str;
   std::cerr << std::endl;
   
-  print_backtrace();
+  ftk_print_backtrace();
   exit(1);
 }
 
-inline void warn(int err, std::string str = "")
+inline void ftk_warn(int err, const std::string& str = "")
 {
-  std::cerr << "[FTK WARN] " << err2str(err);
+  std::cerr << "[FTK WARN] " << ftk_err2str(err);
   if (str.length()) std::cerr << ": " << str;
   std::cerr << std::endl;
 }
 
-inline void fatal(const std::string& str) {
+inline void ftk_fatal(const std::string& str) {
   std::cerr << "[FTK FATAL] " << str << std::endl;
   
-  print_backtrace();
+  ftk_print_backtrace();
   exit(1);
 }
 
-inline void warn(const std::string& str) {
+inline void ftk_warn(const std::string& str) {
   std::cerr << "[FTK WARN] " << str << std::endl;
 }
 

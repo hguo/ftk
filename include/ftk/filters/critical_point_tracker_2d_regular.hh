@@ -84,18 +84,18 @@ extract_cp2dt_xl_wrapper(
 #if FTK_HAVE_CUDA
     return extract_cp2dt_cuda(scope, current_timestep, domain, core, ext, Vc, Vn, Jc, Jn, Sc, Sn, use_explicit_coords, coords);
 #else
-    fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
+    ftk::fatal(FTK_ERR_NOT_BUILT_WITH_CUDA);
     return std::vector<ftk::feature_point_lite_t>();
 #endif
   } else if (xl == FTK_XL_SYCL) {
 #if FTK_HAVE_SYCL
     return extract_cp2dt_sycl(scope, current_timestep, domain, core, ext, Vc, Vn, Jc, Jn, Sc, Sn, use_explicit_coords, coords);
 #else
-    fatal(FTK_ERR_NOT_BUILT_WITH_HIPSYCL);
+    ftk::fatal(FTK_ERR_NOT_BUILT_WITH_HIPSYCL);
     return std::vector<ftk::feature_point_lite_t>();
 #endif
   } else {
-    fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
+    ftk::fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
     return std::vector<ftk::feature_point_lite_t>();
   }
 }

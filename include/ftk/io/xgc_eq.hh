@@ -5,7 +5,7 @@
 #include <ndarray/util.hh>
 #include <fstream>
 #include <string>
-#include <ftk/external/json.hh>
+#include <yaml-cpp/yaml.h>
 
 #if FTK_HAVE_VTK
 #include <vtkCellLocator.h>

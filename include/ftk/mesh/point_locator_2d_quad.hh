@@ -78,7 +78,7 @@ I point_locator_2d_quad<I, F>::locate_point_nonrecursive(const F x[], F mu[]) co
         // fprintf(stderr, "tt0=%f, tt1=%f\n", tt0, tt1);
         return id;
       }
-    } else if (q->aabb.contains(x)) {
+    } else if (q->aabb[x].IsDefined()) {
       for (int j=0; j<4; j++)
         if (q->children[j] != NULL)
           S.push(q->children[j]);
@@ -97,7 +97,7 @@ I point_locator_2d_quad<I, F>::locate_point_recursive(const F x[], const quad_no
   const auto &coords = m2.get_coords();
   const auto &conn = m2.get_triangles();
   
-  if (q->aabb.contains(x)) {
+  if (q->aabb[x].IsDefined()) {
     if (q->is_leaf()) {
       const int id = q->elements[0].id;
       const int i0 = conn[id*3], i1 = conn[id*3+1], i2 = conn[id*3+2];
@@ -192,7 +192,7 @@ void point_locator_2d_quad<I, F>::quad_node::subdivide()
 
   for (int i = 0; i < elements.size(); i++) {
     for (int j = 0; j < 4; j ++) {
-      if (children[j]->aabb.contains(elements[i].C)) {
+      if (children[j]->aabb[elements[i].C].IsDefined()) {
         children[j]->elements.push_back(elements[i]);
         break;
       }

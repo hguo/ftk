@@ -103,8 +103,8 @@ void json_interface::configure(const json& j0)
 
   /////////
   auto add_boolean_option = [&](const std::string& key, bool default_value) {
-    if (j.contains(key)) {
-      if (j[key].is_boolean()) {
+    if (j[key].IsDefined()) {
+      if (j[key].IsScalar()) {
         // OK
       } else 
         fatal("invalid " + key);
@@ -113,15 +113,15 @@ void json_interface::configure(const json& j0)
   };
 
   auto add_number_option = [&](const std::string& key, double default_value) {
-    if (j.contains(key)) {
-      if (j[key].is_number()) { // OK
+    if (j[key].IsDefined()) {
+      if (j[key].IsScalar()) { // OK
       } else fatal("invalid +" + key);
     } else j[key] = default_value;
   };
 
   auto add_string_option = [&](json &j, const std::string& key, bool required=true) {
-    if (j.contains(key)) {
-      if (j[key].is_string()) { // OK
+    if (j[key].IsDefined()) {
+      if (j[key].IsScalar()) { // OK
       } else 
         fatal("invalid " + key);
     } else if (required) 
@@ -141,16 +141,16 @@ void json_interface::configure(const json& j0)
   add_number_option("nblocks", 1);
   
   /// application specific
-  if (j.contains("xgc")) {
+  if (j["xgc"].IsDefined()) {
     // mesh_filename
     // smoothing_kernel_filename
     // smoothing_kernel_size
     auto jx = j["xgc"];
-    if (jx.is_object()) {
+    if (jx.IsMap()) {
       add_string_option(jx, "mesh_filename");
       add_string_option(jx, "smoothing_kernel_filename");
-      if (jx.contains("smoothing_kernel_size")) {
-        if (jx["smoothing_kernel_size"].is_number()) { // OK
+      if (jx["smoothing_kernel_size"].IsDefined()) {
+        if (jx["smoothing_kernel_size"].IsScalar()) { // OK
         } else 
           fatal("missing xgc smoothing_kernel_size");
       }
@@ -158,21 +158,21 @@ void json_interface::configure(const json& j0)
       fatal("invalid xgc configuration");
   }
 
-  if (j.contains("mpas")) {
+  if (j["mpas"].IsDefined()) {
     // TODO
   }
 
   /// general options
-  if (j.contains("root_proc")) {
-    if (j["root_proc"].is_number()) {
+  if (j["root_proc"].IsDefined()) {
+    if (j["root_proc"].IsScalar()) {
       // OK
     } else
       fatal("invalid root_proc");
   } else 
     j["root_proc"] = 0; // default root proc
 
-  if (j.contains("type_filter")) {
-    if (j["type_filter"].is_string()) {
+  if (j["type_filter"].IsDefined()) {
+    if (j["type_filter"].IsScalar()) {
       // OK
     } else 
       fatal("invalid type_filter");
@@ -193,8 +193,8 @@ void json_interface::configure(const json& j0)
     "intercepted"
   };
   static const std::string default_output_type = "traced";
-  if (j.contains("output_type")) {
-    if (j["output_type"].is_string()) {
+  if (j["output_type"].IsDefined()) {
+    if (j["output_type"].IsScalar()) {
       if (valid_output_types.find(j["output_type"]) != valid_output_types.end()) {
         // OK
       } else 
@@ -211,8 +211,8 @@ void json_interface::configure(const json& j0)
   static const std::set<std::string> valid_output_formats = {"text", "vtp", "pvtp", "json"}; // , "binary"};
   bool output_format_determined = false;
   
-  if (j.contains("output_format")) {
-    if (j["output_format"].is_string()) {
+  if (j["output_format"].IsDefined()) {
+    if (j["output_format"].IsScalar()) {
       if (valid_output_formats.find(j["output_format"]) != valid_output_formats.end())
         output_format_determined = true;
       else
@@ -223,7 +223,7 @@ void json_interface::configure(const json& j0)
     output_format_determined = false;
 
   if (!output_format_determined) {
-    if (j.contains("output")) {
+    if (j["output"].IsDefined()) {
       if (ends_with(j["output"], "vtp")) j["output_format"] = "vtp";
       else if (ends_with(j["output"], "pvtp")) j["output_format"] = "pvtp";
       else if (ends_with(j["output"], "txt")) j["output_format"] = "text";
@@ -232,23 +232,23 @@ void json_interface::configure(const json& j0)
     }
   }
 
-  if (j.contains("mesh")) { // TODO
+  if (j["mesh"].IsDefined()) { // TODO
     static const std::set<std::string> valid_mesh_file_formats = {"vtu", "hdf5", "netcdf"};
     // filename (required)
     // format (optional if format can be derived)
     // connectivity (not required for vtu)
     // coordinates (not requried for vtu)
     auto jm = j["mesh"];  
-    if (jm.is_object()) {
-      if (jm.contains("filename")) {
-        if (jm.is_string()) {
+    if (jm.IsMap()) {
+      if (jm["filename"].IsDefined()) {
+        if (jm.IsScalar()) {
           // OK
         } else
           fatal("missing mesh filename");
       }
 
-      if (jm.contains("format")) {
-        if (jm["format"].is_string()) {
+      if (jm["format"].IsDefined()) {
+        if (jm["format"].IsScalar()) {
           if (valid_mesh_file_formats.find(jm["format"]) != valid_mesh_file_formats.end()) {
             // OK
           } else fatal("mesh format not supported");
@@ -261,8 +261,8 @@ void json_interface::configure(const json& j0)
         else fatal("unable to determin mesh format");
       }
 
-      if (jm.contains("connectivity")) {
-        if (jm["connectivity"].is_string()) {
+      if (jm["connectivity"].IsDefined()) {
+        if (jm["connectivity"].IsScalar()) {
           // OK
         } else fatal("invalid connectivity");
       } else {
@@ -271,8 +271,8 @@ void json_interface::configure(const json& j0)
         } else fatal("missing connectivity");
       }
       
-      if (jm.contains("coordinates")) {
-        if (jm["coordinates"].is_string()) {
+      if (jm["coordinates"].IsDefined()) {
+        if (jm["coordinates"].IsScalar()) {
           // OK
         } else fatal("invalid coordinates");
       } else {
@@ -290,24 +290,24 @@ void json_interface::configure_tracker_general(diy::mpi::communicator comm)
   tracker->set_communicator(comm);
   tracker->set_root_proc(j["root_proc"]);
  
-  if (j.contains("nthreads") && j["nthreads"].is_number())
+  if (j["nthreads"].IsDefined() && j["nthreads"].IsScalar())
     tracker->set_number_of_threads(j["nthreads"]);
 
-  if (j.contains("accelerator")) {
+  if (j["accelerator"].IsDefined()) {
     if (j["accelerator"] == "cuda")
       tracker->use_accelerator( FTK_XL_CUDA );
     else if (j["accelerator"] == "sycl")
       tracker->use_accelerator( FTK_XL_SYCL );
     else 
-      fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
+      ftk::fatal(FTK_ERR_ACCELERATOR_UNSUPPORTED);
   }
 
-  if (j.contains("thread_backend")) {
+  if (j["thread_backend"].IsDefined()) {
     std::string backend = j["thread_backend"];
     tracker->use_thread_backend( backend );
   }
 
-  if (j.contains("nblocks"))
+  if (j["nblocks"].IsDefined())
     tracker->set_number_of_blocks(j["nblocks"]);
 
   tracker->set_input_array_partial(false); // input data are not distributed
@@ -315,11 +315,11 @@ void json_interface::configure_tracker_general(diy::mpi::communicator comm)
   // if (use_type_filter)
   //   tracker->set_type_filter(type_filter);
 
-  if (j.contains("enable_robust_detection"))
-    tracker->set_enable_robust_detection( j["enable_robust_detection"].get<bool>() );
+  if (j["enable_robust_detection"].IsDefined())
+    tracker->set_enable_robust_detection( j["enable_robust_detection"].as<bool>() );
   
-  if (j.contains("enable_computing_degrees"))
-    tracker->set_enable_computing_degrees( j["enable_computing_degrees"].get<bool>() );
+  if (j["enable_computing_degrees"].IsDefined())
+    tracker->set_enable_computing_degrees( j["enable_computing_degrees"].as<bool>() );
 
   if (j["enable_streaming_trajectories"] == true)
     tracker->set_enable_streaming_trajectories(true);
@@ -333,7 +333,7 @@ void json_interface::configure_tracker_general(diy::mpi::communicator comm)
   if (j["enable_ignoring_degenerate_points"] == true)
     tracker->set_enable_ignoring_degenerate_points(true);
 
-  if (j.contains("type_filter")) {
+  if (j["type_filter"].IsDefined()) {
     const std::string str = j["type_filter"];
     unsigned int type_filter = 0;
     if (str.find("min") != std::string::npos)
@@ -354,14 +354,14 @@ void json_interface::consume(ndarray_stream<> &stream, diy::mpi::communicator co
     configure(j); // make default options
   // std::cerr << stream.get_json() << std::endl;
 
-  if (stream.get_json().contains("format") && stream.get_json()["format"] == "vtu")
+  if (stream.get_json()["format"].IsDefined() && stream.get_json()["format"] == "vtu")
     j["mesh_filename"] = stream.get_json()["filenames"][0];
 
-  if (j.contains("xgc"))
+  if (j["xgc"].IsDefined())
     consume_xgc(stream, comm);
-  else if (j.contains("mpas"))
+  else if (j["mpas"].IsDefined())
     consume_mpas(stream, comm);
-  else if (j.contains("mesh_filename"))
+  else if (j["mesh_filename"].IsDefined())
     consume_unstructured(stream, comm);
   else 
     consume_regular(stream, comm);
@@ -399,7 +399,7 @@ void json_interface::consume_mpas(ndarray_stream<> &stream, diy::mpi::communicat
     tracker->push_vector_field_snapshot(field_data);
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
-    // if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+    // if (k>0 && j["output"].IsDefined() && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
     //   write_sliced_results(k-1);
   });
 
@@ -434,14 +434,14 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
     else if (nd == 3) 
       m.reset(new simplicial_unstructured_3d_mesh<>());
     else 
-      fatal(FTK_ERR_MESH_NONSIMPLICIAL);
+      ftk::fatal(FTK_ERR_MESH_NONSIMPLICIAL);
 
     m->from_vtu(grid);
 #else
-    fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+    ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
   } else {
-    fatal(FTK_ERR_MESH_UNSUPPORTED_FORMAT);
+    ftk::fatal(FTK_ERR_MESH_UNSUPPORTED_FORMAT);
   }
 
   if (m->nd() == 2) {
@@ -463,7 +463,7 @@ void json_interface::consume_unstructured(ndarray_stream<> &stream, diy::mpi::co
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
     
-    // if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+    // if (k>0 && j["output"].IsDefined() && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
     //   write_sliced_results(k-1);
   });
 
@@ -504,14 +504,14 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
 
   tracker->set_scalar_components({"dneOverne0", "psi"});
 
-  if (j.contains("archived_traced_critical_points_filename")) {
+  if (j["archived_traced_critical_points_filename"].IsDefined()) {
     fprintf(stderr, "reading archived traced critical points...\n");
     const std::string filename = j["archived_traced_critical_points_filename"];
     if (ends_with(filename, "json")) tracker->read_traced_critical_points_json(filename);
     else tracker->read_traced_critical_points_binary(filename);
     // fprintf(stderr, "done reading.\n");
     return;
-  } else if (j.contains("archived_discrete_critical_points_filename")) {
+  } else if (j["archived_discrete_critical_points_filename"].IsDefined()) {
     const std::string filename = j["archived_discrete_critical_points_filename"];
     if (ends_with(filename, "json")) tracker->read_critical_points_json(filename);
     else tracker->read_critical_points_binary(filename);
@@ -538,7 +538,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
 
     tracker->push_field_data_snapshot(scalars, grad, J);
 
-    if (j["xgc"].contains("write_back_filename")) { // write data back to vtu files
+    if (j["xgc"]["write_back_filename"].IsDefined()) { // write data back to vtu files
       const std::string pattern = j["xgc"]["write_back_filename"];
       const std::string filename = series_filename(pattern, k);
       // m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
@@ -547,7 +547,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
   };
   
   stream.set_callback([&](int k, const ftk::ndarray<double> &field_data) {
-    if (j["xgc"].contains("torus") && j["xgc"]["torus"] == true) { // tracking over torus
+    if (j["xgc"]["torus"].IsDefined() && j["xgc"]["torus"] == true) { // tracking over torus
       auto dpot = field_data.get_transpose();
       for (int k = 0; k < dpot.dimf(1); k ++) {
         ftk::ndarray<double> dpot_slice = dpot.slice_time(k), scalar, grad, J;
@@ -559,7 +559,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
         if (k != 0) tracker->advance_timestep();
         if (k == dpot.dimf(1)-1) tracker->update_timestep();
       
-        if (j["xgc"].contains("write_back_filename")) { // write data back to vtu files
+        if (j["xgc"]["write_back_filename"].IsDefined()) { // write data back to vtu files
           const std::string pattern = j["xgc"]["write_back_filename"];
           const std::string filename = series_filename(pattern, k);
           // m.scalar_to_vtk_unstructured_grid_data_file(filename, "dneOverne0", dpot);
@@ -571,7 +571,7 @@ void json_interface::consume_xgc(ndarray_stream<> &stream, diy::mpi::communicato
       if (k != 0) tracker->advance_timestep();
       if (k == DT-1) tracker->update_timestep();
 
-      if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+      if (k>0 && j["output"].IsDefined() && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
         write_sliced_results(k-1);
     }
   });
@@ -597,7 +597,7 @@ void json_interface::write_intercepted_results(int k, int nt)
   const std::string filename = series_filename(pattern, k);
   if (j["output_format"] == "vtp" || j["output_format"] == "pvtp") {
     int nt = 2;
-    if (j.contains("intercept_length") && j["intercept_length"].is_number())
+    if (j["intercept_length"].IsDefined() && j["intercept_length"].IsScalar())
       nt = j["intercept_length"];
     tracker->write_intercepted_critical_points_vtk(k-nt, k, filename);
   }
@@ -610,8 +610,8 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
   const auto js = stream.get_json();
   const size_t nd = stream.n_dimensions(),
                DW = js["dimensions"][0], 
-               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].get<int>() : 0,
-               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].get<int>() : 0,
+               DH = js["dimensions"].size() > 1 ? js["dimensions"][1].as<int>() : 0,
+               DD = js["dimensions"].size() > 2 ? js["dimensions"][2].as<int>() : 0,
                DT = js["n_timesteps"];
   const size_t nv = stream.n_components();
 
@@ -626,8 +626,8 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
 
   // image bounds, if configured (usually from vti files);
   std::vector<double> bounds;
-  if (js.contains("bounds")) {
-    bounds = js["bounds"].get<std::vector<double>>();
+  if (js["bounds"].IsDefined()) {
+    bounds = js["bounds"].as<std::vector<double>>();
     rtracker->set_coords_bounds(bounds);
   }
 
@@ -662,14 +662,14 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
     tracker->set_input_array_partial(true); 
   tracker->initialize();
  
-  if (j.contains("archived_traced_critical_points_filename")) {
+  if (j["archived_traced_critical_points_filename"].IsDefined()) {
     fprintf(stderr, "reading archived traced critical points...\n");
     const std::string filename = j["archived_traced_critical_points_filename"];
     if (ends_with(filename, "json")) tracker->read_traced_critical_points_json(filename);
     else tracker->read_traced_critical_points_binary(filename);
     // fprintf(stderr, "done reading.\n");
     return;
-  } else if (j.contains("archived_discrete_critical_points_filename")) {
+  } else if (j["archived_discrete_critical_points_filename"].IsDefined()) {
     const std::string filename = j["archived_discrete_critical_points_filename"];
     if (ends_with(filename, "json")) tracker->read_critical_points_json(filename);
     else tracker->read_critical_points_binary(filename);
@@ -701,7 +701,7 @@ void json_interface::consume_regular(ndarray_stream<> &stream, diy::mpi::communi
     if (k != 0) tracker->advance_timestep();
     if (k == DT-1) tracker->update_timestep();
     
-    if (k>0 && j.contains("output") && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
+    if (k>0 && j["output"].IsDefined() && j["output_type"] == "sliced" && j["enable_streaming_trajectories"] == true)
       write_sliced_results(k-1);
   });
 
@@ -787,10 +787,10 @@ void json_interface::post_process()  // FIXME: legacy post processing code, to b
     t.update_statistics();
   });
   
-  if (j.contains("xgc") && j["xgc"].contains("post_process") && j["xgc"]["post_process"] == true)
+  if (j["xgc"].IsDefined() && j["xgc"]["post_process"].IsDefined() && j["xgc"]["post_process"] == true)
     xgc_post_process();
   
-  if (j.contains("enable_deriving_velocities")) {
+  if (j["enable_deriving_velocities"].IsDefined()) {
     trajs.foreach([](ftk::feature_curve_t& t) {
       t.discard_interval_points();
       t.derive_velocity();
@@ -801,7 +801,7 @@ void json_interface::post_process()  // FIXME: legacy post processing code, to b
 
 void json_interface::write()
 {
-  if (j.contains("output")) {
+  if (j["output"].IsDefined()) {
     if (j["output_type"] == "sliced") {
       fprintf(stderr, "slicing and writing..\n");
       if (tracker->get_sliced_critical_points().empty())

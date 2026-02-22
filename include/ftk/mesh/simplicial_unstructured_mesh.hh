@@ -73,7 +73,7 @@ void simplicial_unstructured_mesh<I, F>::from_legacy_vtk_file(const std::string&
   reader->Update();
   from_vtu(reader->GetOutput());
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -86,7 +86,7 @@ void simplicial_unstructured_mesh<I, F>::from_vtk_unstructured_grid_file(const s
   reader->Update();
   from_vtu(reader->GetOutput());
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -99,7 +99,7 @@ void simplicial_unstructured_mesh<I, F>::to_vtk_unstructured_grid_file(const std
   writer->SetInputData( to_vtu() );
   writer->Write();
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -115,7 +115,7 @@ void simplicial_unstructured_mesh<I, F>::scalar_to_vtk_unstructured_grid_data_fi
   writer->SetInputData( scalar_to_vtk_unstructured_grid_data(varname, scalar) );
   writer->Write();
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 
@@ -131,7 +131,7 @@ void simplicial_unstructured_mesh<I, F>::vector_to_vtk_unstructured_grid_data_fi
   writer->SetInputData( vector_to_vtk_unstructured_grid_data(varname, vector) );
   writer->Write();
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_VTK);
 #endif
 }
 

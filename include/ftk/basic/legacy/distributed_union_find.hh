@@ -1166,7 +1166,7 @@ void exec_distributed_union_find(diy::mpi::communicator& world, diy::Master& mas
 
       master.exchange();
       int total_changes = master.proxy(master.loaded_block()).read<int>();
-      // int total_changes = master.proxy(master.loaded_block()).get<int>();
+      // int total_changes = master.proxy(master.loaded_block()).as<int>();
       all_done = total_changes == 0;
 
       // =========================================

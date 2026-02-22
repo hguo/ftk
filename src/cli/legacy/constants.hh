@@ -58,7 +58,7 @@ static const std::set<std::string>
 
 static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
 {
-  using nlohmann::json;
+  using json = YAML::Node;
   json j;
 
   if (results.count("input")) {
@@ -68,7 +68,7 @@ static inline nlohmann::json args_to_json(cxxopts::ParseResult& results)
       std::string str((std::istreambuf_iterator<char>(t)),
                        std::istreambuf_iterator<char>());
       t.close();
-      return json::parse(str);
+      return YAML::Load(str);
     }
     else 
       j["filenames"] = results["input"].as<std::string>();

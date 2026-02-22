@@ -8,7 +8,7 @@
 
 namespace ftk {
 
-using nlohmann::json;
+using json = YAML::Node;
 
 struct mpas_stream : public object {
   mpas_stream(const std::string path_, diy::mpi::communicator comm_=MPI_COMM_WORLD) :
@@ -18,7 +18,7 @@ struct mpas_stream : public object {
     mesh_path(mesh_path_), path(path_), comm(comm_) {}
 
   void initialize();
-  void set_callback(std::function<void(int, std::shared_ptr<ndarray_group>)> f) { callback = f; }
+  void set_callback(std::function<void(int, std::shared_ptr<ndarray_group<>>)> f) { callback = f; }
 
   mpas_mesh<>* mesh() { return m; }
 
@@ -33,7 +33,7 @@ public:
   std::string path, mesh_path;
   
   mpas_mesh<> *m;
-  std::function<void(int, std::shared_ptr<ndarray_group>)> callback;
+  std::function<void(int, std::shared_ptr<ndarray_group<>>)> callback;
  
   int ncid;
   size_t start_timestep = 0, current_timestep = 0, ntimesteps = 0;
@@ -80,7 +80,7 @@ void mpas_stream::initialize()
   NC_SAFE_CALL( nc_inq_dimlen(ncid, dim_strlen, &time_strlen) );
 
 #else
-  fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
+  ftk::fatal(FTK_ERR_NOT_BUILT_WITH_NETCDF);
 #endif
 }
 
@@ -93,7 +93,7 @@ bool mpas_stream::advance_timestep()
   auto t0 = clock_type::now();
 
   // fprintf(stderr, "current_timestep=%zu\n", current_timestep);
-  std::shared_ptr<ndarray_group> g(new ndarray_group);
+  std::shared_ptr<ndarray_group<>> g(new ndarray_group<>);
 
   // timestamp
   {
