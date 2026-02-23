@@ -12,7 +12,26 @@ namespace ftk {
 
 using json = YAML::Node;
 
-// template <int N/*dimensionality*/, typename ValueType=double, typename IntegerType=unsigned long long>
+/**
+ * @brief Represents a detected feature point (critical point, particle, etc.)
+ *
+ * This structure stores comprehensive information about a single feature point
+ * detected in a scientific dataset. Feature points can represent:
+ * - Critical points in scalar/vector fields (minima, maxima, saddles)
+ * - Particles in flow fields
+ * - Intersection points in contour tracking
+ * - Blob centroids in threshold-based tracking
+ *
+ * The structure includes:
+ * - Spatial coordinates (x) and time (t)
+ * - Scalar values at the feature location
+ * - Velocity/motion vectors (v)
+ * - Type classification (minimum, maximum, saddle, etc.)
+ * - Tracking metadata (tag, id, timestep)
+ *
+ * Feature points can be serialized to JSON, binary, or text formats and
+ * are the building blocks of feature_curve_t trajectories.
+ */
 struct feature_point_t {
   feature_point_t() {}
   feature_point_t(const feature_point_t& p) {
@@ -87,15 +106,35 @@ struct feature_point_t {
     return p;
   }
 
+  /**
+   * @brief Access spatial coordinate by index (const)
+   * @param i Coordinate index (0=x, 1=y, 2=z)
+   * @return Coordinate value
+   */
   double operator[](size_t i) const {return x[i];}
+
+  /**
+   * @brief Access spatial coordinate by index (mutable)
+   * @param i Coordinate index (0=x, 1=y, 2=z)
+   * @return Reference to coordinate value
+   */
   double &operator[](size_t i) {return x[i];}
 
   // constexpr size_t size() const noexcept { return sizeof(feature_point_t); }
 
+  /**
+   * @brief Compute velocity magnitude
+   * @return Magnitude of the velocity vector
+   */
   double vmag() const { // velocity magnitude
     return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
   }
 
+  /**
+   * @brief Convert Cartesian coordinates to geographic coordinates
+   * @param R0 Reference radius (default: Earth radius in meters)
+   * @return Tuple of (longitude in degrees, latitude in degrees, altitude)
+   */
   std::tuple<double, double, double> lonlatz(const double R0 = 6371229.0) const {
     const double R = std::sqrt(x[0]*x[0] + x[1]*x[1] + x[2]*x[2]);
 
@@ -105,6 +144,12 @@ struct feature_point_t {
       R - R0);
   }
 
+  /**
+   * @brief Print feature point information to stream
+   * @param os Output stream
+   * @param scalar_components Names of scalar components
+   * @return Output stream reference
+   */
   std::ostream& print(std::ostream& os, const std::vector<std::string>& scalar_components) const {
     os << "x=(" << x[0] << ", " << x[1] << ", " << x[2] << "), ";
     os << "t=" << t << ", ";
@@ -125,24 +170,31 @@ struct feature_point_t {
     return os;
   }
 
+  /**
+   * @brief Compute spatiotemporal distance between two feature points
+   * @param a First feature point
+   * @param b Second feature point
+   * @return Distance in 4D spacetime
+   */
   friend double dist(const feature_point_t& a, const feature_point_t& b) {
-    return std::exp2(a.x[0] - b.x[0]) 
+    return std::exp2(a.x[0] - b.x[0])
       + std::exp2(a.x[1] - b.x[1])
       + std::exp2(a.x[2] - b.x[2])
       + std::exp2(a.t - b.t);
   }
 
 public:
-  std::array<double, 3> x = {0}; // double x[3] = {0}; // coordinates 
-  double t = 0.0; // time
+  std::array<double, 3> x = {0}; ///< Spatial coordinates (x, y, z)
+  double t = 0.0; ///< Time coordinate
   // double cond = 0.0; // condition number
-  int timestep = 0; 
+  int timestep = 0; ///< Discrete timestep index
   // double rx[4] = {0}; // coordinates in transformed (e.g. curvilinear) grid, if eligible
-  std::array<double, FTK_CP_MAX_NUM_VARS> scalar = {0}; // double scalar[FTK_CP_MAX_NUM_VARS] = {0};
-  std::array<double, 3> v = {0};
-  unsigned int type = 0;
-  bool ordinal = false;
-  unsigned long long tag = 0, id = 0;
+  std::array<double, FTK_CP_MAX_NUM_VARS> scalar = {0}; ///< Scalar field values at the feature point
+  std::array<double, 3> v = {0}; ///< Velocity or motion vector
+  unsigned int type = 0; ///< Feature type classification (e.g., min, max, saddle)
+  bool ordinal = false; ///< True if point occurs exactly at a timestep (not interpolated)
+  unsigned long long tag = 0; ///< Mesh element tag/identifier
+  unsigned long long id = 0; ///< Trajectory ID that this point belongs to
 };
 
 }

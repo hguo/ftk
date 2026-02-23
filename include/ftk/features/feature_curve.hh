@@ -4,52 +4,165 @@
 #include <ftk/features/feature_point.hh>
 
 namespace ftk {
-  
+
+/**
+ * @brief Represents a feature trajectory (curve) in spacetime
+ *
+ * A feature curve is a sequence of feature points that traces the temporal
+ * evolution of a feature (e.g., a critical point moving through space over time).
+ * It inherits from std::vector<feature_point_t> and adds trajectory-specific
+ * metadata and operations.
+ *
+ * Feature curves can represent:
+ * - Critical point trajectories showing feature motion over time
+ * - Particle paths in flow fields
+ * - Evolution of blob centroids
+ * - Loops (periodic features) or open curves
+ *
+ * The class provides methods for:
+ * - Statistical analysis (min/max values, persistence, bounding boxes)
+ * - Simplification (discarding interval points, removing noise)
+ * - Type smoothing (ensuring consistent feature classification)
+ * - Temporal slicing and filtering
+ * - Geographic coordinate conversion
+ */
 struct feature_curve_t : public std::vector<feature_point_t>
 {
   feature_curve_t() {}
   feature_curve_t(const feature_curve_t&);
   feature_curve_t& operator=(const feature_curve_t&);
 
-  void relabel(int i); // assign id for traj and each point in the traj
+  /**
+   * @brief Assign a new ID to the trajectory and all its points
+   * @param i New trajectory ID
+   */
+  void relabel(int i);
+
+  /**
+   * @brief Compute trajectory statistics (min/max, persistence, bounding boxes)
+   */
   void update_statistics();
-  void derive_velocity(); // (const std::vector<double> &dog_kernel); // assuming the traj contains only ordinal points (dt=1)
 
+  /**
+   * @brief Derive velocity from position changes between ordinal points
+   */
+  void derive_velocity();
+
+  /**
+   * @brief Convert Cartesian coordinates to geographic coordinates
+   */
   void convert_to_geo();
-  std::vector<feature_curve_t> split_geo() const; // assume coordinates are already converted to geo coordinates
 
-  std::vector<feature_curve_t> split() const; // split to consistent subtrajs
-  std::vector<int/*idx in original traj*/> to_ordinals() const;
-  std::vector<int/*idx in original traj*/> select(std::function<bool(const feature_point_t&)> f);
+  /**
+   * @brief Split trajectory at longitude discontinuities (for geographic data)
+   * @return Vector of sub-trajectories
+   */
+  std::vector<feature_curve_t> split_geo() const;
 
-  void rotate(); //! if the traj is a loop and the type is inconsistent, rotate the traj before splitting
-  void reorder(); //! reorder by timestep
-  void adjust_time(); //! assuming traj has only one single branch and is organized in ascending order, ensure that the time increases monotonously
+  /**
+   * @brief Split trajectory into segments with consistent type
+   * @return Vector of sub-trajectories, each with a single consistent type
+   */
+  std::vector<feature_curve_t> split() const;
 
-  void smooth_ordinal_types(const int half_window_size=2); // make types of ordinal points robust to noises
-  void smooth_interval_types(); //! make types in intervals consistent
+  /**
+   * @brief Get indices of ordinal (non-interpolated) points
+   * @return Vector of indices into the original trajectory
+   */
+  std::vector<int> to_ordinals() const;
 
+  /**
+   * @brief Select points matching a predicate
+   * @param f Predicate function
+   * @return Indices of matching points
+   */
+  std::vector<int> select(std::function<bool(const feature_point_t&)> f);
+
+  /**
+   * @brief Rotate loop trajectory to avoid type inconsistency at endpoints
+   */
+  void rotate();
+
+  /**
+   * @brief Reorder trajectory points in ascending time order
+   */
+  void reorder();
+
+  /**
+   * @brief Ensure time increases monotonically by adjusting interval points
+   */
+  void adjust_time();
+
+  /**
+   * @brief Smooth type classifications of ordinal points using a sliding window
+   * @param half_window_size Half-width of the smoothing window (default: 2)
+   */
+  void smooth_ordinal_types(const int half_window_size=2);
+
+  /**
+   * @brief Make type classifications consistent within temporal intervals
+   */
+  void smooth_interval_types();
+
+  /**
+   * @brief Remove points matching a predicate
+   * @param f Predicate function (returns true for points to discard)
+   */
   void discard(std::function<bool(const feature_point_t&)> f);
-  // void discard_high_cond(double threshold = 1e8); //! prune points with very high condition numbers, unless the point is ordinal
+
+  /**
+   * @brief Remove all interval (interpolated) points, keeping only ordinal points
+   */
   void discard_interval_points();
+
+  /**
+   * @brief Remove degenerate critical points (type 0 or 1)
+   */
   void discard_degenerate_points();
-  
-  int locate(double t, bool cap=false/*lower (false) or higher (true) cap*/) const; //! locate interval id of given t; assuming the traj is already reordered
-  
+
+  /**
+   * @brief Locate the interval containing a given time
+   * @param t Time value
+   * @param cap If true, cap to upper bound; otherwise lower bound
+   * @return Interval index
+   */
+  int locate(double t, bool cap=false) const;
+
+  /**
+   * @brief Copy trajectory metadata from another trajectory
+   * @param t Source trajectory
+   */
   void copy_info(feature_curve_t& t) {id = t.id; complete = t.complete; loop = t.loop;}
 
-  feature_curve_t intercept(int t0, int t1) const; //! assuming the traj is already reordered
+  /**
+   * @brief Extract sub-trajectory within a time range
+   * @param t0 Start time
+   * @param t1 End time
+   * @return Sub-trajectory containing points in [t0, t1]
+   */
+  feature_curve_t intercept(int t0, int t1) const;
 
-  template <int k=2> void unwrap(const double period); // unwrap the curve in a periodical domain
+  /**
+   * @brief Unwrap trajectory in a periodic domain
+   * @tparam k Coordinate dimension to unwrap (default: 2 for z)
+   * @param period Period of the domain
+   */
+  template <int k=2> void unwrap(const double period);
 
 public:
-  int id;
-  bool complete = false, loop = false;
-  std::array<double, FTK_CP_MAX_NUM_VARS> max, min, persistence;
-  std::array<double, 3> bbmin, bbmax; // bounding box
-  double tmin, tmax; // time bounding box
-  double vmmin, vmmax; // min/max moving speed
-  unsigned int consistent_type = 0; // 0 if no consistent type
+  int id; ///< Trajectory identifier
+  bool complete = false; ///< True if trajectory is complete (reached end of time)
+  bool loop = false; ///< True if trajectory forms a closed loop
+  std::array<double, FTK_CP_MAX_NUM_VARS> max; ///< Maximum scalar values along trajectory
+  std::array<double, FTK_CP_MAX_NUM_VARS> min; ///< Minimum scalar values along trajectory
+  std::array<double, FTK_CP_MAX_NUM_VARS> persistence; ///< Persistence (max - min) for each scalar
+  std::array<double, 3> bbmin; ///< Spatial bounding box minimum
+  std::array<double, 3> bbmax; ///< Spatial bounding box maximum
+  double tmin; ///< Minimum time value
+  double tmax; ///< Maximum time value
+  double vmmin; ///< Minimum velocity magnitude
+  double vmmax; ///< Maximum velocity magnitude
+  unsigned int consistent_type = 0; ///< Type if all points have same type, 0 otherwise
 };
 
 /////////

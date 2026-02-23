@@ -18,12 +18,45 @@
 
 namespace ftk {
 
+/**
+ * @brief Field data source specification
+ *
+ * Indicates how field data is provided to the tracker.
+ */
 enum {
-  SOURCE_NONE, 
-  SOURCE_GIVEN, // explicit
-  SOURCE_DERIVED // implicit
+  SOURCE_NONE,     ///< No field data provided
+  SOURCE_GIVEN,    ///< Field data explicitly provided by user
+  SOURCE_DERIVED   ///< Field data computed from other fields
 };
 
+/**
+ * @brief Critical point tracker for scalar and vector fields
+ *
+ * This class tracks critical points (extrema, saddles) in scalar fields
+ * and vector fields over time. Critical points are detected in each timestep
+ * and then connected into trajectories that show how features move, merge,
+ * split, or disappear over time.
+ *
+ * The tracker supports:
+ * - 2D and 3D scalar/vector fields on regular and unstructured meshes
+ * - Multiple detection algorithms (robust detection, interval arithmetic)
+ * - Type classification (minimum, maximum, saddle points)
+ * - Trajectory assembly and simplification
+ * - I/O in multiple formats (JSON, binary, VTK, text)
+ *
+ * Usage example:
+ * @code
+ * critical_point_tracker tracker(comm);
+ * tracker.initialize();
+ * for (int t = 0; t < num_timesteps; t++) {
+ *   tracker.push_field_data_snapshot(scalar, vector, jacobian);
+ *   tracker.update_timestep();
+ *   tracker.advance_timestep();
+ * }
+ * tracker.finalize();
+ * tracker.write_traced_critical_points_vtk("output.vtp");
+ * @endcode
+ */
 struct critical_point_tracker : public virtual tracker {
   critical_point_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
@@ -33,28 +66,107 @@ struct critical_point_tracker : public virtual tracker {
     traced_critical_points.clear();
   }
 
+  /**
+   * @brief Enable/disable robust critical point detection
+   * @param b True to use robust detection (default), false for faster but less accurate detection
+   */
   void set_enable_robust_detection(bool b) { enable_robust_detection = b; }
+
+  /**
+   * @brief Enable/disable topological degree computation
+   * @param b True to compute topological degrees for critical points
+   */
   void set_enable_computing_degrees(bool b) { enable_computing_degrees = b; }
+
+  /**
+   * @brief Enable/disable streaming mode for trajectories
+   * @param b True to output trajectories incrementally during tracking
+   */
   void set_enable_streaming_trajectories(bool b) { enable_streaming_trajectories = b; }
+
+  /**
+   * @brief Enable/disable discarding interval points
+   * @param b True to keep only ordinal (exact timestep) points in trajectories
+   */
   void set_enable_discarding_interval_points(bool b) { enable_discarding_interval_points = b; }
+
+  /**
+   * @brief Enable/disable discarding degenerate points
+   * @param b True to remove degenerate critical points from results
+   */
   void set_enable_discarding_degenerate_points(bool b) { enable_discarding_degenerate_points = b; }
+
+  /**
+   * @brief Enable/disable ignoring degenerate points during detection
+   * @param b True to skip degenerate points entirely
+   */
   void set_enable_ignoring_degenerate_points(bool b) { enable_ignoring_degenerate_points = b; }
 
+  /**
+   * @brief Set a filter mask for critical point types
+   * @param f Bitmask of critical point types to track
+   */
   void set_type_filter(unsigned int);
 
+  /**
+   * @brief Set the source of scalar field data
+   * @param s SOURCE_NONE, SOURCE_GIVEN, or SOURCE_DERIVED
+   */
   void set_scalar_field_source(int s) {scalar_field_source = s;}
+
+  /**
+   * @brief Set the source of vector field data
+   * @param s SOURCE_NONE, SOURCE_GIVEN, or SOURCE_DERIVED
+   */
   void set_vector_field_source(int s) {vector_field_source = s;}
+
+  /**
+   * @brief Set the source of Jacobian field data
+   * @param s SOURCE_NONE, SOURCE_GIVEN, or SOURCE_DERIVED
+   */
   void set_jacobian_field_source(int s) {jacobian_field_source = s;}
+
+  /**
+   * @brief Specify whether the Jacobian matrix is symmetric
+   * @param s True if Jacobian is symmetric
+   */
   void set_jacobian_symmetric(bool s) {is_jacobian_field_symmetric = s;}
 
+  /**
+   * @brief Set names for scalar field components
+   * @param c Vector of component names
+   */
   void set_scalar_components(const std::vector<std::string>& c);
+
+  /**
+   * @brief Get the number of scalar components
+   * @return Number of scalar field components
+   */
   int get_num_scalar_components() const {return scalar_components.size();}
 
+  /**
+   * @brief Update trajectory statistics (min, max, persistence, bounding boxes)
+   */
   void update_traj_statistics();
 
+  /**
+   * @brief Filter trajectories based on a predicate function
+   * @param f Predicate function that returns true for trajectories to keep
+   */
   void select_trajectories(std::function<bool(const feature_curve_t& traj)>);
+
+  /**
+   * @brief Filter sliced critical points based on a predicate function
+   * @param f Predicate function that returns true for points to keep
+   */
   void select_sliced_critical_points(std::function<bool(const feature_point_t& cp)>);
 
+  /**
+   * @brief Slice traced critical points by timestep
+   *
+   * Extracts critical points at specific timesteps from trajectories.
+   * Call after finalize() to populate sliced_critical_points.
+   */
   void slice_traced_critical_points(); // slice traces after finalization
 
 public:
@@ -65,18 +177,71 @@ public:
   // virtual void update_timestep() = 0;
 
 public: // i/o for traced critical points (trajectories)
+  /**
+   * @brief Get the traced critical point trajectories (const version)
+   * @return Const reference to feature curve set containing all trajectories
+   */
   const feature_curve_set_t& get_traced_critical_points() const {return traced_critical_points;}
+
+  /**
+   * @brief Get the traced critical point trajectories (mutable version)
+   * @return Reference to feature curve set containing all trajectories
+   */
   feature_curve_set_t& get_traced_critical_points() {return traced_critical_points;}
 
+  /**
+   * @brief Export traced critical points as JSON
+   * @return JSON representation of trajectories
+   */
   json get_traced_critical_points_json() const {return json(traced_critical_points);}
+
+  /**
+   * @brief Write traced critical points to JSON file
+   * @param filename Output filename
+   * @param indent Indentation level for pretty printing (0 for compact)
+   */
   void write_traced_critical_points_json(const std::string& filename, int indent=0) const;
+
+  /**
+   * @brief Read traced critical points from JSON file
+   * @param filename Input filename
+   */
   void read_traced_critical_points_json(const std::string& filename);
+
+  /**
+   * @brief Write traced critical points in binary format
+   * @param filename Output filename
+   */
   void write_traced_critical_points_binary(const std::string& filename) const;
+
+  /**
+   * @brief Read traced critical points from binary file
+   * @param filename Input filename
+   */
   void read_traced_critical_points_binary(const std::string& filename);
+
+  /**
+   * @brief Write traced critical points as text to stream
+   * @param os Output stream
+   */
   void write_traced_critical_points_text(std::ostream& os) const;
+
+  /**
+   * @brief Write traced critical points as text to file
+   * @param filename Output filename
+   */
   void write_traced_critical_points_text(const std::string& filename) const;
+
+  /**
+   * @brief Write traced critical points as VTK polydata
+   * @param filename Output .vtp filename
+   */
   void write_traced_critical_points_vtk(const std::string& filename) const;
 #if FTK_HAVE_VTK
+  /**
+   * @brief Get traced critical points as VTK polydata
+   * @return VTK polydata representation of trajectories
+   */
   vtkSmartPointer<vtkPolyData> get_traced_critical_points_vtk() const {return traced_critical_points.to_vtp(scalar_components);}
 #endif
 
@@ -123,12 +288,33 @@ public: // post-processing and simplification
   // void split_trajectories();
 
 public: // inputs
+  /**
+   * @brief Remove the oldest field data snapshot
+   * @return True if a snapshot was removed
+   */
   bool pop_field_data_snapshot() override;
+
+  /**
+   * @brief Push a complete field data snapshot with scalar, vector, and Jacobian
+   * @param scalar Scalar field data
+   * @param vector Vector field data
+   * @param jacobian Jacobian matrix field data
+   */
   virtual void push_field_data_snapshot(
       const ndarray<double> &scalar,
       const ndarray<double> &vector,
       const ndarray<double> &jacobian);
+
+  /**
+   * @brief Push a scalar field snapshot
+   * @param scalar Scalar field data
+   */
   virtual void push_scalar_field_snapshot(const ndarray<double> &scalar);
+
+  /**
+   * @brief Push a vector field snapshot
+   * @param vector Vector field data
+   */
   virtual void push_vector_field_snapshot(const ndarray<double> &vector);
 
 protected:

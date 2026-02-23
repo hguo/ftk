@@ -16,6 +16,34 @@
 
 namespace ftk {
 
+/**
+ * @brief Contour/isosurface tracker for scalar fields
+ *
+ * This class tracks contours (isosurfaces in 3D, isolines in 2D) of scalar
+ * fields over time. It detects where the scalar field equals a threshold
+ * value and tracks how these contours evolve, move, merge, or split across
+ * timesteps.
+ *
+ * The tracker can:
+ * - Extract isosurfaces at a specified threshold value
+ * - Track intersections with mesh elements
+ * - Output results in VTK formats for visualization
+ * - Process time-varying scalar fields
+ *
+ * Usage example:
+ * @code
+ * contour_tracker tracker(comm);
+ * tracker.set_threshold(0.5);
+ * tracker.initialize();
+ * for (int t = 0; t < num_timesteps; t++) {
+ *   tracker.push_field_data_snapshot(scalar);
+ *   tracker.update_timestep();
+ *   tracker.advance_timestep();
+ * }
+ * tracker.finalize();
+ * tracker.write_isovolume_vtu("contours.vtu");
+ * @endcode
+ */
 struct contour_tracker : public virtual tracker {
   contour_tracker(diy::mpi::communicator comm) : tracker(comm) {}
 
@@ -24,31 +52,89 @@ struct contour_tracker : public virtual tracker {
     field_data_snapshots.clear();
     // traced_contours.clear();
   }
-  
+
+  /**
+   * @brief Set names for scalar field components
+   * @param c Vector of component names
+   */
   void set_scalar_components(const std::vector<std::string>& c);
+
+  /**
+   * @brief Get the number of scalar components
+   * @return Number of scalar field components
+   */
   int get_num_scalar_components() const {return scalar_components.size();}
 
+  /**
+   * @brief Get the current threshold value
+   * @return Threshold value for contour extraction
+   */
   double get_threshold() const { return threshold; }
+
+  /**
+   * @brief Set the threshold value for contour extraction
+   * @param t Threshold value (scalar field value to track)
+   */
   void set_threshold(double t) {threshold = t;}
 
 public:
   bool advance_timestep() override;
 
 public: // inputs
+  /**
+   * @brief Remove the oldest field data snapshot
+   * @return True if a snapshot was removed
+   */
   bool pop_field_data_snapshot() override;
+
+  /**
+   * @brief Push a scalar field snapshot for the next timestep
+   * @param scalar Scalar field data
+   */
   virtual void push_field_data_snapshot(const ndarray<double> &scalar);
 
 public:
+  /**
+   * @brief Get contour intersections with mesh elements
+   * @return Vector of feature points representing contour intersections
+   */
   virtual std::vector<feature_point_t> get_intersections() const = 0;
 
+  /**
+   * @brief Write contour intersections to file
+   * @param filenames Output filename
+   */
   void write_intersections(const std::string& filenames) const;
+
+  /**
+   * @brief Write contour intersections as VTK polydata
+   * @param filenames Output .vtp filename
+   */
   void write_intersections_vtp(const std::string& filenames) const;
 #if FTK_HAVE_VTK
+  /**
+   * @brief Get contour intersections as VTK polydata
+   * @return VTK polydata representation of intersections
+   */
   vtkSmartPointer<vtkPolyData> get_intersections_vtp() const;
 #endif
 
+  /**
+   * @brief Write isovolume as VTK unstructured grid
+   * @param filename Output .vtu filename
+   */
   virtual void write_isovolume_vtu(const std::string& filename) const = 0;
+
+  /**
+   * @brief Write time-sliced contours as VTK unstructured grids
+   * @param pattern Filename pattern with timestep placeholder
+   */
   virtual void write_sliced_vtu(const std::string& pattern) const {}
+
+  /**
+   * @brief Write time-sliced contours as VTK polydata
+   * @param pattern Filename pattern with timestep placeholder
+   */
   virtual void write_sliced_vtp(const std::string& pattern) const {}
 
 protected:

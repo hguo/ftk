@@ -23,29 +23,70 @@
 
 namespace ftk {
 
+/**
+ * @brief Threading backend identifiers
+ */
 enum { // thread backend
-  FTK_THREAD_NONE = 0,
-  FTK_THREAD_PTHREAD = 0,
-  FTK_THREAD_OPENMP = 1,
-  FTK_THREAD_TBB = 6
+  FTK_THREAD_NONE = 0,     ///< No threading (serial execution)
+  FTK_THREAD_PTHREAD = 0,  ///< POSIX threads (default)
+  FTK_THREAD_OPENMP = 1,   ///< OpenMP threading
+  FTK_THREAD_TBB = 6       ///< Intel TBB threading
 };
 
-enum { 
-  FTK_XL_NONE = 0,
-  FTK_XL_SYCL = 2,
-  FTK_XL_CUDA = 4,
-  FTK_XL_KOKKOS_CUDA = 5
+/**
+ * @brief Hardware accelerator identifiers
+ */
+enum {
+  FTK_XL_NONE = 0,         ///< No accelerator (CPU only)
+  FTK_XL_SYCL = 2,         ///< SYCL acceleration
+  FTK_XL_CUDA = 4,         ///< CUDA acceleration
+  FTK_XL_KOKKOS_CUDA = 5   ///< Kokkos CUDA acceleration
 };
 
+/**
+ * @brief Base class for all FTK objects
+ *
+ * This class provides common functionality for all FTK classes:
+ * - MPI communicator management for distributed processing
+ * - Root process designation for I/O operations
+ * - Parallel loop execution with multiple threading backends
+ * - CPU affinity control for performance tuning
+ *
+ * The object class serves as the foundation of FTK's execution model,
+ * enabling both shared-memory and distributed-memory parallelism.
+ */
 struct object {
   object() {}
   object(diy::mpi::communicator c) {comm = c;}
 
+  /**
+   * @brief Set the MPI communicator
+   * @param comm_ MPI communicator to use
+   */
   void set_communicator(const diy::mpi::communicator comm_) {comm = comm_;}
+
+  /**
+   * @brief Set the root process for I/O operations
+   * @param p Root process rank
+   */
   void set_root_proc(int p) {root_proc = p;}
+
+  /**
+   * @brief Get the root process rank
+   * @return Root process rank
+   */
   int get_root_proc() const {return root_proc;}
+
+  /**
+   * @brief Check if this is the root process
+   * @return True if this process is the root process
+   */
   bool is_root_proc() const {return root_proc == comm.rank();}
 
+  /**
+   * @brief Set CPU affinity for the current thread
+   * @param cpu CPU core ID
+   */
   static void set_affinity(int cpu) {
 #if !defined(_MSC_VER) && !defined(__APPLE__)
     cpu_set_t cpu_set;
@@ -58,9 +99,17 @@ struct object {
 #endif
   }
 
-  static void parallel_for(int ntasks, std::function<void(int)> f, 
-      int thread_backend = FTK_THREAD_PTHREAD, 
-      int nthreads = std::thread::hardware_concurrency(), 
+  /**
+   * @brief Execute a parallel for loop
+   * @param ntasks Number of tasks to execute
+   * @param f Function to execute for each task (takes task index as parameter)
+   * @param thread_backend Threading backend to use (FTK_THREAD_*)
+   * @param nthreads Number of threads (default: hardware_concurrency)
+   * @param affinity Whether to set CPU affinity (default: false)
+   */
+  static void parallel_for(int ntasks, std::function<void(int)> f,
+      int thread_backend = FTK_THREAD_PTHREAD,
+      int nthreads = std::thread::hardware_concurrency(),
       bool affinity = false)
   {
     if (thread_backend == FTK_THREAD_PTHREAD) {

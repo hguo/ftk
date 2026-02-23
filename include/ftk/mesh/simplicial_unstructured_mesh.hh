@@ -33,32 +33,109 @@
 
 namespace ftk {
 
+/**
+ * @brief Base class for simplicial unstructured meshes
+ *
+ * This class provides the interface for unstructured meshes composed of
+ * simplices (triangles in 2D, tetrahedra in 3D). It supports I/O with VTK
+ * formats and provides methods for associating scalar and vector data with
+ * mesh vertices.
+ *
+ * Simplicial meshes are commonly used in finite element analysis and
+ * computational geometry. FTK uses them as the foundation for feature
+ * tracking on unstructured grids.
+ *
+ * @tparam I Index type (typically int or long)
+ * @tparam F Floating-point type for coordinates (typically float or double)
+ */
 template <typename I=int, typename F=double>
-struct simplicial_unstructured_mesh : public object { 
+struct simplicial_unstructured_mesh : public object {
   simplicial_unstructured_mesh() {}
 
-  // dimensionality of the mesh
+  /**
+   * @brief Get the dimensionality of the mesh
+   * @return Mesh dimension (2 for 2D triangular meshes, 3 for 3D tetrahedral meshes)
+   */
   virtual int nd() const = 0;
 
-  // numer of d-dimensional elements
+  /**
+   * @brief Get the number of d-dimensional elements
+   * @param d Dimension of elements (0=vertices, 1=edges, 2=faces, 3=cells)
+   * @param part If true, return count for local partition only
+   * @return Number of d-dimensional elements
+   */
   virtual size_t n(int d, bool part = false) const = 0;
 
 public: // io
+  /**
+   * @brief Load mesh from legacy VTK file format
+   * @param filename Path to .vtk file
+   */
   void from_legacy_vtk_file(const std::string& filename);
+
+  /**
+   * @brief Load mesh from VTK XML unstructured grid file (.vtu)
+   * @param filename Path to .vtu file
+   */
   void from_vtk_unstructured_grid_file(const std::string &filename);
+
+  /**
+   * @brief Save mesh to VTK XML unstructured grid file (.vtu)
+   * @param filename Path to output .vtu file
+   */
   void to_vtk_unstructured_grid_file(const std::string &filename) const;
 
+  /**
+   * @brief Save mesh with scalar data to VTK file
+   * @param filename Path to output .vtu file
+   * @param varname Name of the scalar variable
+   * @param scalar Scalar field data (one value per vertex)
+   */
   void scalar_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>&) const;
+
+  /**
+   * @brief Save mesh with vector data to VTK file
+   * @param filename Path to output .vtu file
+   * @param varname Name of the vector variable
+   * @param vector Vector field data (2 or 3 components per vertex)
+   */
   void vector_to_vtk_unstructured_grid_data_file(const std::string& filename, const std::string& varname, const ndarray<F>&) const;
 #if FTK_HAVE_VTK
+  /**
+   * @brief Create VTK unstructured grid with scalar data
+   * @param varname Name of the scalar variable
+   * @param scalar Scalar field data
+   * @return VTK unstructured grid object
+   */
   vtkSmartPointer<vtkUnstructuredGrid> scalar_to_vtk_unstructured_grid_data(const std::string& varname, const ndarray<F>&) const;
+
+  /**
+   * @brief Create VTK unstructured grid with vector data
+   * @param varname Name of the vector variable
+   * @param vector Vector field data
+   * @return VTK unstructured grid object
+   */
   vtkSmartPointer<vtkUnstructuredGrid> vector_to_vtk_unstructured_grid_data(const std::string& varname, const ndarray<F>&) const;
   // vtkSmartPointer<vtkUnstructuredGrid> scalars_to_vtk_unstructured_grid_data(
   //     const std::vector<std::string>& varname, const std::vector<ndarray<F>>& scalar) const;
 
+  /**
+   * @brief Convert mesh to VTK unstructured grid format
+   * @return VTK unstructured grid representation of the mesh
+   */
   virtual vtkSmartPointer<vtkUnstructuredGrid> to_vtu() const = 0;
+
+  /**
+   * @brief Initialize mesh from VTK unstructured grid
+   * @param grid VTK unstructured grid to import
+   */
   virtual void from_vtu(vtkSmartPointer<vtkUnstructuredGrid> grid) = 0;
 
+  /**
+   * @brief Check if a VTK grid is a simplicial mesh and get its dimension
+   * @param grid VTK unstructured grid to check
+   * @return 0 if non-simplicial, 2 for 2D triangular mesh, 3 for 3D tetrahedral mesh
+   */
   static int check_simplicial_mesh_dims(vtkSmartPointer<vtkUnstructuredGrid> grid); // 0: nonsimplicial, 2 or 3: 2D or 3D
 #endif
 };
