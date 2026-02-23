@@ -6,6 +6,19 @@ FTK is a library that scales, simplifies, and delivers feature tracking algorith
 
 See [documentation](docs/README.md) for more details.
 
+## Recent Updates (February 2026)
+
+FTK has undergone significant code quality improvements:
+
+- **Modern C++17**: Added 147 `override` keywords, smart pointers throughout (eliminated manual new/delete), and exception-based error handling
+- **Comprehensive Documentation**: 275+ doxygen API documentation tags, thread-safety guide, and complete build instructions
+- **Production Ready**: Safe exception handling (no more `exit()` calls), RAII-compliant memory management
+
+📚 **New Documentation**:
+- [BUILD.md](docs/BUILD.md) - Complete build instructions for all configurations
+- [THREAD_SAFETY.md](docs/THREAD_SAFETY.md) - Thread-safety guarantees and parallel execution guide
+- [IMPROVEMENTS_2026.md](docs/IMPROVEMENTS_2026.md) - Detailed summary of all improvements
+
 ![](docs/images/critical_point_tracking_2d_paraview.png)
 
 ## Installation
