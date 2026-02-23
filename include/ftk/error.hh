@@ -3,6 +3,9 @@
 
 #include <ftk/config.hh>
 #include <execinfo.h>
+#include <iostream>
+#include <string>
+#include <cstdlib>
 
 namespace ftk {
 
